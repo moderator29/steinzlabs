@@ -1,32 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Check, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(0);
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('[data-animate]').forEach((el) => {
-      observerRef.current?.observe(el);
-    });
-
-    return () => observerRef.current?.disconnect();
-  }, []);
 
   const faqs = [
     {
@@ -78,135 +57,106 @@ export default function LandingPage() {
     { icon: Shield, title: "Security Shield", desc: "AI rug detector, scam scanner, MEV protection" },
     { icon: Target, title: "Builder Funding Portal", desc: "Verified builders meet capital with milestone releases" },
     { icon: Users, title: "Multi-Chain Swap", desc: "Trade across 12+ chains with built-in safety" },
+    { icon: Search, title: "Project Discovery", desc: "Find verified Web3 projects and talent" },
+    { icon: BarChart3, title: "Portfolio Tracker", desc: "Real-time P&L and performance scoring" },
   ];
 
   const chains = ["Solana", "Ethereum", "BNB", "Polygon", "Avalanche", "Base", "Arbitrum", "Optimism", "Fantom", "Bitcoin", "Tron"];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
-      <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center shadow-lg shadow-[#00E5FF]/20">
-                <span className="text-2xl font-bold">S</span>
-              </div>
-              <span className="text-2xl font-heading font-bold">STEINZ</span>
-            </div>
-            <div className="hidden md:flex space-x-8">
-              <a href="#features" className="hover:text-[#00E5FF] transition-colors">Features</a>
-              <a href="#whitepaper" className="hover:text-[#00E5FF] transition-colors">Whitepaper</a>
-              <a href="#pricing" className="hover:text-[#00E5FF] transition-colors">Pricing</a>
-              <a href="#faq" className="hover:text-[#00E5FF] transition-colors">FAQ</a>
-            </div>
-            <Link href="/dashboard">
-              <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-2.5 rounded-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20">
-                Launch App
-              </button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <section className="pt-32 pb-20 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 grid-pattern"></div>
+    <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
+      <section className="pt-16 pb-12 px-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00E5FF] rounded-full blur-[120px] animate-pulse-glow"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#7C3AED] rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#00E5FF]/30 rounded-full blur-[100px] animate-float"></div>
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-[#00E5FF] rounded-full blur-[120px] animate-pulse-glow"></div>
+          <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-[#7C3AED] rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
         </div>
 
-        <div className="max-w-6xl mx-auto text-center relative z-10">
-          <div className="inline-block px-4 py-2 bg-[#00E5FF]/10 border border-[#00E5FF]/30 rounded-full mb-6 backdrop-blur-sm animate-fadeInUp">
-            <span className="text-[#00E5FF] text-sm font-semibold">🚀 Now Live on 12+ Chains</span>
+        <div className="max-w-md mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#00E5FF]/10 border border-[#00E5FF]/30 rounded-full mb-8 backdrop-blur-sm">
+            <div className="w-2 h-2 bg-[#10B981] rounded-full"></div>
+            <span className="text-[#00E5FF] text-sm font-semibold">Now Live on 12+ Chains</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-heading font-bold mb-6 leading-tight animate-fadeInUp stagger-1">
-            The Intelligence Layer<br />
-            the On-Chain Economy
-            <br />
-            <span className="bg-gradient-to-r from-[#00E5FF] via-[#7C3AED] to-[#00E5FF] bg-clip-text text-transparent bg-[length:200%_auto] animate-textGradient">
+          <h1 className="text-4xl font-heading font-bold mb-6 leading-tight">
+            The Intelligence Layer the On-Chain Economy{' '}
+            <span className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">
               Has Been Missing
             </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-4xl mx-auto leading-relaxed animate-fadeInUp stagger-2">
+          <p className="text-base text-gray-300 mb-8 leading-relaxed px-2">
             Real-time AI analysis. Multi-chain intelligence. Security built in. Never get rugged again.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fadeInUp stagger-3">
+          <div className="flex flex-col gap-3 max-w-xs mx-auto mb-6">
             <Link href="/dashboard">
-              <button className="group bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg shadow-[#00E5FF]/25 relative overflow-hidden">
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                <span className="relative">Launch Dashboard</span> <ArrowRight className="w-5 h-5 relative group-hover:translate-x-1 transition-transform" />
+              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3.5 rounded-xl font-semibold text-base hover:scale-105 transition-transform">
+                Launch Dashboard
               </button>
             </Link>
             <a href="#whitepaper">
-              <button className="glass px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors border border-[#00E5FF]/30 hover:border-[#00E5FF]/60 hover:shadow-lg hover:shadow-[#00E5FF]/10">
+              <button className="w-full glass px-6 py-3.5 rounded-xl font-semibold text-base hover:bg-white/10 transition-colors border border-white/20">
                 Read Whitepaper
               </button>
             </a>
           </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto animate-fadeInUp stagger-4">
-            <div className="flex flex-col items-center gap-2">
-              <Check className="w-5 h-5 text-[#10B981]" />
-              <span className="text-sm text-gray-400">Real-time tracking</span>
+      <section className="px-4 pb-6">
+        <div className="max-w-md mx-auto">
+          <div className="flex gap-6 overflow-x-auto scrollbar-hide py-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-sm font-semibold">BTC</span>
+              <span className="text-white font-mono text-sm">Loading...</span>
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <Check className="w-5 h-5 text-[#10B981]" />
-              <span className="text-sm text-gray-400">AI-powered signals</span>
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-sm font-semibold">ETH</span>
+              <span className="text-white font-mono text-sm">Loading...</span>
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <Check className="w-5 h-5 text-[#10B981]" />
-              <span className="text-sm text-gray-400">Zero noise</span>
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-sm font-semibold">SOL</span>
+              <span className="text-white font-mono text-sm">Loading...</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-12 px-4 border-y border-white/10 bg-[#111827]/30 relative overflow-hidden">
-        <div className="absolute inset-0 dot-pattern opacity-50"></div>
-        <div className="max-w-6xl mx-auto relative z-10">
-          <p className="text-center text-gray-400 text-sm uppercase tracking-wider mb-6">Supported Chains</p>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-300">
+      <section className="py-8 px-4 border-y border-white/10 bg-[#111827]/30">
+        <div className="max-w-md mx-auto">
+          <p className="text-center text-gray-400 text-xs uppercase tracking-widest mb-4">Supported Chains</p>
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-gray-300">
             {chains.map((chain) => (
-              <span key={chain} className="hover:text-[#00E5FF] transition-colors cursor-default">{chain}</span>
+              <span key={chain}>{chain}</span>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="features" className="py-20 px-4 relative" data-animate>
-        <div className="absolute inset-0 grid-pattern opacity-50"></div>
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-heading font-bold mb-4">
+      <section id="features" className="py-12 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-heading font-bold mb-2">
               Everything You Need,<br />
               <span className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">
                 Nothing You Don&apos;t
               </span>
             </h2>
-            <p className="text-gray-400 text-lg">Built for serious traders and builders</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, i) => {
+          <div className="space-y-3">
+            {features.map((feature) => {
               const Icon = feature.icon;
               return (
                 <div
                   key={feature.title}
-                  className={`glow-card glass rounded-2xl p-8 hover:scale-[1.03] transition-all duration-300 border border-white/10 hover:border-[#00E5FF]/30 opacity-0 ${
-                    visibleSections.has('features') ? 'animate-fadeInUp' : ''
-                  } stagger-${i + 1}`}
-                  id={i === 0 ? 'features-trigger' : undefined}
-                  data-animate
+                  className="glass rounded-xl p-5 border border-white/10 hover:border-[#00E5FF]/20 transition-all"
                 >
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-[#00E5FF]/20">
-                    <Icon className="w-7 h-7" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-[#00E5FF]" />
                   </div>
-                  <h3 className="text-2xl font-heading font-bold mb-3">{feature.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{feature.desc}</p>
+                  <h3 className="text-base font-heading font-bold mb-1">{feature.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
                 </div>
               );
             })}
@@ -214,75 +164,76 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 px-4 bg-gradient-to-b from-transparent to-[#00E5FF]/5 relative">
-        <div className="absolute inset-0 dot-pattern opacity-30"></div>
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#00E5FF]/20 animate-float">
-            <Shield className="w-10 h-10" />
-          </div>
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6">
-            Every Token. Every Wallet.<br />Every Transaction.
-            <br />
-            <span className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">
+      <section className="py-12 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="glass rounded-2xl p-6 border border-[#00E5FF]/20 bg-gradient-to-b from-[#00E5FF]/5 to-transparent text-center">
+            <div className="w-14 h-14 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-7 h-7 text-[#00E5FF]" />
+            </div>
+            <h2 className="text-2xl font-heading font-bold mb-2">
+              Every Token. Every Wallet. Every Transaction.
+            </h2>
+            <p className="text-lg font-heading font-bold bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent mb-6">
               Scored Before You Touch It.
-            </span>
-          </h2>
-          <p className="text-xl text-gray-300 mb-10 leading-relaxed">
-            0-100 safety scoring on every asset
-          </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              { title: "AI Risk Engine", desc: "0-100 safety scoring on every asset" },
-              { title: "Contract Analyzer", desc: "Instant smart contract audit verification" },
-              { title: "Rug Detection", desc: "Serial scammer identification & alerts" },
-              { title: "Phishing Detector", desc: "Protect against malicious websites" },
-            ].map((item) => (
-              <div key={item.title} className="glow-card glass rounded-xl p-6 border border-white/10 hover:border-[#00E5FF]/30 transition-all duration-300">
-                <h4 className="font-bold text-lg mb-2 text-[#00E5FF]">{item.title}</h4>
-                <p className="text-gray-400 text-sm">{item.desc}</p>
-              </div>
-            ))}
+            </p>
+
+            <div className="space-y-3">
+              {[
+                { icon: Zap, title: "AI Risk Engine", desc: "0-100 safety scoring on every asset" },
+                { icon: Search, title: "Contract Analyzer", desc: "Instant smart contract audit verification" },
+                { icon: Shield, title: "Rug Detection", desc: "Serial scammer identification & alerts" },
+                { icon: Compass, title: "Phishing Detector", desc: "Protect against malicious websites" },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.title} className="glass rounded-xl p-4 border border-white/10 text-center">
+                    <Icon className="w-6 h-6 text-[#00E5FF] mx-auto mb-2" />
+                    <h4 className="font-bold text-sm mb-1">{item.title}</h4>
+                    <p className="text-gray-400 text-xs">{item.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="whitepaper" className="py-20 px-4 bg-[#111827]/30 relative">
-        <div className="absolute inset-0 grid-pattern opacity-30"></div>
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+      <section id="whitepaper" className="py-12 px-4 bg-[#111827]/30">
+        <div className="max-w-md mx-auto text-center">
+          <h2 className="text-2xl font-heading font-bold mb-4">
             Read the Whitepaper
           </h2>
-          <p className="text-xl text-gray-300 mb-10 leading-relaxed">
+          <p className="text-gray-300 mb-6 text-sm leading-relaxed">
             Deep dive into our architecture, AI models, and vision for on-chain intelligence.
           </p>
-          <button className="glass px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors border border-[#00E5FF]/30 hover:border-[#00E5FF]/60 hover:shadow-lg hover:shadow-[#00E5FF]/10">
+          <button className="glass px-6 py-3 rounded-xl font-semibold text-sm hover:bg-white/10 transition-colors border border-[#00E5FF]/30">
             Download Whitepaper (PDF)
           </button>
         </div>
       </section>
 
-      <section id="faq" className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold text-center mb-4">
+      <section id="faq" className="py-12 px-4">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-heading font-bold text-center mb-2">
             Frequently Asked Questions
           </h2>
-          <p className="text-gray-400 text-center mb-12 text-lg">Everything you need to know</p>
+          <p className="text-gray-400 text-center mb-8 text-sm">Everything you need to know</p>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {faqs.map((faq, index) => (
               <div
                 key={index}
                 className={`glass rounded-xl overflow-hidden transition-all duration-300 border ${
-                  openFAQ === index ? 'border-[#00E5FF]/50 bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5 shadow-lg shadow-[#00E5FF]/5' : 'border-white/10'
+                  openFAQ === index ? 'border-[#00E5FF]/50 bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5' : 'border-white/10'
                 }`}
               >
                 <button
                   onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                  className="w-full px-6 py-5 flex justify-between items-center text-left hover:bg-white/5 transition-colors"
+                  className="w-full px-4 py-4 flex justify-between items-center text-left hover:bg-white/5 transition-colors"
                 >
-                  <span className="font-semibold text-lg pr-4">{faq.q}</span>
+                  <span className="font-semibold text-sm pr-3">{faq.q}</span>
                   <ChevronDown
-                    className={`w-5 h-5 text-[#00E5FF] transition-transform flex-shrink-0 ${
+                    className={`w-4 h-4 text-[#00E5FF] transition-transform flex-shrink-0 ${
                       openFAQ === index ? 'rotate-180' : ''
                     }`}
                   />
@@ -292,7 +243,7 @@ export default function LandingPage() {
                     openFAQ === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-6 pb-5 text-gray-300 leading-relaxed">
+                  <div className="px-4 pb-4 text-gray-300 text-sm leading-relaxed">
                     {faq.a}
                   </div>
                 </div>
@@ -302,134 +253,36 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="py-20 px-4 bg-gradient-to-b from-transparent to-[#00E5FF]/5">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold text-center mb-12">
-            Choose Your Edge
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="glow-card glass rounded-2xl p-8 hover:scale-[1.03] transition-all duration-300 border border-white/10 hover:border-[#00E5FF]/30">
-              <h3 className="text-2xl font-heading font-bold mb-2">Free</h3>
-              <div className="text-5xl font-bold mb-6">$0</div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">20 events/day</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">1 wallet tracking</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Basic scanner</span>
-                </li>
-              </ul>
-              <Link href="/dashboard">
-                <button className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors">
-                  Get Started
-                </button>
-              </Link>
-            </div>
-
-            <div className="glow-card glass rounded-2xl p-8 hover:scale-[1.03] transition-all duration-300 border-2 border-[#00E5FF] relative shadow-lg shadow-[#00E5FF]/10">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1 rounded-full text-sm font-semibold">
-                MOST POPULAR
-              </div>
-              <h3 className="text-2xl font-heading font-bold mb-2">Pro</h3>
-              <div className="text-5xl font-bold mb-6">
-                $4<span className="text-lg text-gray-400">/mo</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Unlimited events</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Unlimited wallets</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Whale alerts</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">VTX AI (50/day)</span>
-                </li>
-              </ul>
-              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20">
-                Upgrade to Pro
-              </button>
-            </div>
-
-            <div className="glow-card glass rounded-2xl p-8 hover:scale-[1.03] transition-all duration-300 border border-white/10 hover:border-[#00E5FF]/30">
-              <h3 className="text-2xl font-heading font-bold mb-2">Premium</h3>
-              <div className="text-5xl font-bold mb-6">
-                $15<span className="text-lg text-gray-400">/mo</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Everything in Pro</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Predictions Market</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">Copy Trading</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#10B981] mt-1 flex-shrink-0" />
-                  <span className="text-gray-300">API Access</span>
-                </li>
-              </ul>
-              <button className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors">
-                Go Premium
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 px-4 relative">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-full blur-[150px]"></div>
-        </div>
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+      <section className="py-12 px-4">
+        <div className="max-w-md mx-auto text-center">
+          <h2 className="text-2xl font-heading font-bold mb-4">
             Ready to Level Up?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
+          <p className="text-gray-300 mb-6 text-sm">
             Join the future of on-chain intelligence.
           </p>
           <Link href="/dashboard">
-            <button className="group bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-10 py-4 rounded-xl font-semibold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/25 relative overflow-hidden">
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <span className="relative">Launch Platform</span> <ArrowRight className="w-5 h-5 relative group-hover:translate-x-1 transition-transform" />
+            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-3.5 rounded-xl font-semibold text-base inline-flex items-center gap-2 hover:scale-105 transition-transform">
+              Launch Platform <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-12 px-4 bg-[#111827]/50">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
-                  <span className="text-2xl font-bold">S</span>
-                </div>
-                <span className="text-2xl font-heading font-bold">STEINZ</span>
-              </div>
-              <p className="text-gray-400 text-sm">Cultivate Intelligence. Navigate Risk. Grow Without Fear.</p>
+      <footer className="border-t border-white/10 py-8 px-4 bg-[#111827]/50">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+              <span className="text-lg font-bold">S</span>
             </div>
+            <span className="text-lg font-heading font-bold">STEINZ LABS</span>
+          </div>
+          <p className="text-gray-400 text-xs mb-6">Cultivate Intelligence. Navigate Risk. Grow Without Fear.</p>
+
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div>
-              <h4 className="font-bold mb-4">Product</h4>
-              <div className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-bold text-sm mb-2">Product</h4>
+              <div className="space-y-1 text-gray-400 text-xs">
                 <div><Link href="/dashboard">Dashboard</Link></div>
                 <div>Markets</div>
                 <div>Security</div>
@@ -437,8 +290,8 @@ export default function LandingPage() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Resources</h4>
-              <div className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-bold text-sm mb-2">Resources</h4>
+              <div className="space-y-1 text-gray-400 text-xs">
                 <div>Whitepaper</div>
                 <div>Docs</div>
                 <div>API</div>
@@ -446,15 +299,15 @@ export default function LandingPage() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Community</h4>
-              <div className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-bold text-sm mb-2">Community</h4>
+              <div className="space-y-1 text-gray-400 text-xs">
                 <div>Twitter</div>
                 <div>Telegram</div>
                 <div>Discord</div>
               </div>
             </div>
           </div>
-          <div className="text-center text-gray-500 text-sm border-t border-white/10 pt-8">
+          <div className="text-center text-gray-500 text-xs border-t border-white/10 pt-4">
             &copy; 2025 STEINZ Labs. Built on Ethereum & Solana.
           </div>
         </div>
