@@ -59,9 +59,7 @@ export default function Dashboard() {
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3 flex-1">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold">S</span>
-            </div>
+            <img src="/steinz-logo.svg" alt="STEINZ" className="w-8 h-8 flex-shrink-0" />
             <div className="flex items-center gap-2 bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 flex-1 max-w-[240px]">
               <Search className="w-4 h-4 text-gray-400" />
               <input

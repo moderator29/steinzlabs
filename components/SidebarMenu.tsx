@@ -1,6 +1,6 @@
 'use client';
 
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, Copy, MessageCircle } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, PieChart, ShieldCheck, DollarSign, MessageCircle, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
@@ -18,7 +18,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="absolute right-0 top-0 h-full w-80 bg-[#0A0E1A] border-l border-white/10 p-6 overflow-y-auto"
+        className="absolute right-0 top-0 h-full w-80 bg-[#0A0E1A] border-l border-white/10 p-6 overflow-y-auto scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -32,8 +32,10 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Core</h3>
             <div className="space-y-1">
-              <SidebarItem icon={BarChart3} label="Portfolio Dashboard" onClick={() => handleNavigation('/dashboard')} />
-              <SidebarItem icon={Dna} label="Trading DNA Analyzer" badge="NEW" onClick={() => handleNavigation('/dashboard/dna-analyzer')} />
+              <SidebarItem icon={BarChart3} label="Dashboard" onClick={() => handleNavigation('/dashboard')} />
+              <SidebarItem icon={PieChart} label="Portfolio" badge="NEW" onClick={() => handleNavigation('/dashboard/portfolio')} />
+              <SidebarItem icon={Dna} label="Trading DNA Analyzer" badge="AI" onClick={() => handleNavigation('/dashboard/dna-analyzer')} />
+              <SidebarItem icon={DollarSign} label="Pricing" onClick={() => handleNavigation('/dashboard/pricing')} />
             </div>
           </div>
 
@@ -56,8 +58,9 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
               <SidebarItem icon={Bot} label="VTX AI Assistant" onClick={() => handleNavigation('/dashboard/vtx-ai')} />
               <SidebarItem icon={Bell} label="Smart Alerts" onClick={() => handleNavigation('/dashboard/alerts')} />
               <SidebarItem icon={Users} label="Social Trading" onClick={() => handleNavigation('/dashboard/social-trading')} />
-              <SidebarItem icon={Shield} label="Security Center" badge="NEW" onClick={() => handleNavigation('/dashboard/security')} />
-              <SidebarItem icon={Target} label="AI Risk Scanner" badge="NEW" onClick={() => handleNavigation('/dashboard/risk-scanner')} />
+              <SidebarItem icon={Copy} label="Copy Trading" onClick={() => handleNavigation('/dashboard/copy-trading')} />
+              <SidebarItem icon={Shield} label="Security Center" onClick={() => handleNavigation('/dashboard/security')} />
+              <SidebarItem icon={Target} label="AI Risk Scanner" onClick={() => handleNavigation('/dashboard/risk-scanner')} />
             </div>
           </div>
 
@@ -66,8 +69,16 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             <div className="space-y-1">
               <SidebarItem icon={Compass} label="Project Discovery" onClick={() => handleNavigation('/dashboard/project-discovery')} />
               <SidebarItem icon={Building2} label="Builder Network" onClick={() => handleNavigation('/dashboard/builder-network')} />
-              <SidebarItem icon={Briefcase} label="Builder Funding Portal" badge="NEW" onClick={() => handleNavigation('/dashboard/builder-funding')} />
+              <SidebarItem icon={Briefcase} label="Builder Funding Portal" onClick={() => handleNavigation('/dashboard/builder-funding')} />
               <SidebarItem icon={Rocket} label="Launchpad" onClick={() => handleNavigation('/dashboard/launchpad')} />
+              <SidebarItem icon={MessageCircle} label="Community" onClick={() => handleNavigation('/dashboard/community')} />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Admin</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={ShieldCheck} label="Admin Panel" onClick={() => handleNavigation('/admin')} />
             </div>
           </div>
         </div>
@@ -85,7 +96,11 @@ function SidebarItem({ icon: Icon, label, badge, onClick }: { icon: React.Elemen
       <Icon className="w-4 h-4 text-[#00E5FF]" />
       <span>{label}</span>
       {badge && (
-        <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">{badge}</span>
+        <span className={`ml-auto px-1.5 py-0.5 rounded text-xs font-semibold ${
+          badge === 'AI' ? 'bg-[#7C3AED]/20 text-[#7C3AED]' :
+          badge === 'NEW' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' :
+          'bg-[#00E5FF]/20 text-[#00E5FF]'
+        }`}>{badge}</span>
       )}
     </button>
   );
