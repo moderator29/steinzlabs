@@ -17,6 +17,19 @@ interface ContextEvent {
   timestamp: string;
   txHash: string;
   blockNumber: number;
+  tokenName?: string;
+  tokenSymbol?: string;
+  tokenPrice?: string;
+  tokenVolume24h?: number;
+  tokenLiquidity?: number;
+  tokenMarketCap?: number;
+  tokenPriceChange24h?: number;
+  pairAddress?: string;
+  dexUrl?: string;
+  tokenIcon?: string;
+  platform?: string;
+  buys24h?: number;
+  sells24h?: number;
 }
 
 export function useContextFeed(limit: number = 15) {
