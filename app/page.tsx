@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass, ExternalLink, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass, ExternalLink, Sparkles, Activity, Lock, Eye, Globe, Layers, Cpu } from 'lucide-react';
 import Link from 'next/link';
 import PriceTicker from '@/components/PriceTicker';
+import SteinzLogo from '@/components/SteinzLogo';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const [display, setDisplay] = useState('0');
@@ -55,16 +56,17 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
   );
 }
 
-const PARTICLES = Array.from({ length: 20 }).map((_, i) => {
+const PARTICLES = Array.from({ length: 25 }).map((_, i) => {
   const seed = (i * 7 + 13) % 100;
   const seed2 = (i * 11 + 29) % 100;
   return {
     left: `${(seed * 37 + i * 17) % 100}%`,
     top: `${(seed2 * 43 + i * 23) % 100}%`,
     color: i % 3 === 0 ? '#00E5FF' : i % 3 === 1 ? '#7C3AED' : '#10B981',
-    opacity: 0.15 + (seed % 25) / 100,
-    delay: `${(i * 0.4) % 8}s`,
+    opacity: 0.12 + (seed % 20) / 100,
+    delay: `${(i * 0.35) % 8}s`,
     duration: `${6 + (seed2 % 8)}s`,
+    size: i % 5 === 0 ? 'w-1.5 h-1.5' : 'w-1 h-1',
   };
 });
 
@@ -74,7 +76,7 @@ function FloatingParticles() {
       {PARTICLES.map((p, i) => (
         <div
           key={i}
-          className="absolute w-1 h-1 rounded-full animate-particle"
+          className={`absolute rounded-full animate-particle ${p.size}`}
           style={{
             left: p.left,
             top: p.top,
@@ -82,9 +84,34 @@ function FloatingParticles() {
             opacity: p.opacity,
             animationDelay: p.delay,
             animationDuration: p.duration,
+            boxShadow: `0 0 6px ${p.color}40`,
           }}
         />
       ))}
+    </div>
+  );
+}
+
+function DataStream() {
+  return (
+    <div className="absolute right-[5%] top-24 bottom-0 w-px hidden lg:block pointer-events-none overflow-hidden">
+      <div className="data-stream-line"></div>
+    </div>
+  );
+}
+
+function HexGrid() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
+      <svg className="absolute top-0 left-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="hexGrid" width="56" height="100" patternUnits="userSpaceOnUse" patternTransform="scale(1.5)">
+            <path d="M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100" fill="none" stroke="#00E5FF" strokeWidth="0.5"/>
+            <path d="M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34" fill="none" stroke="#7C3AED" strokeWidth="0.3"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hexGrid)" />
+      </svg>
     </div>
   );
 }
@@ -156,6 +183,13 @@ export default function LandingPage() {
     { value: "50K+", label: "Active Users" },
   ];
 
+  const howItWorks = [
+    { step: "01", icon: Globe, title: "Connect", desc: "Link your wallet or enter any address. We read public data only.", color: "#00E5FF" },
+    { step: "02", icon: Cpu, title: "Analyze", desc: "Our AI processes millions of on-chain signals in real-time.", color: "#7C3AED" },
+    { step: "03", icon: Eye, title: "Discover", desc: "Get actionable intelligence: whale moves, risks, and alpha.", color: "#10B981" },
+    { step: "04", icon: Layers, title: "Act", desc: "Execute trades, track portfolios, and stay ahead of the market.", color: "#F59E0B" },
+  ];
+
   const [scrolled, setScrolled] = useState(false);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
@@ -202,13 +236,12 @@ export default function LandingPage() {
       <nav className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-all duration-500 ${scrolled ? 'bg-[#0A0E1A]/90 border-white/10 shadow-lg shadow-black/20' : 'bg-transparent border-white/5'}`}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/20 animate-float-subtle logo-glow">
-              <span className="text-sm font-bold">S</span>
-            </div>
+            <SteinzLogo size={32} className="shadow-lg shadow-[#00E5FF]/20 animate-float-subtle" />
             <span className="text-base font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
             <a href="#features" className="hover:text-[#00E5FF] transition-colors relative group">Features<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
+            <a href="#how-it-works" className="hover:text-[#00E5FF] transition-colors relative group">How It Works<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
             <a href="#security" className="hover:text-[#00E5FF] transition-colors relative group">Security<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
             <a href="#faq" className="hover:text-[#00E5FF] transition-colors relative group">FAQ<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
           </div>
@@ -220,10 +253,12 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-24 pb-16 px-4 relative overflow-hidden">
+      <section className="pt-24 pb-16 px-4 relative overflow-hidden min-h-[85vh] flex items-center">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="absolute inset-0 grid-pattern pointer-events-none"></div>
+        <HexGrid />
         <FloatingParticles />
+        <DataStream />
 
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[15%] left-[20%] w-96 h-96 bg-[#00E5FF] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow"></div>
@@ -235,7 +270,7 @@ export default function LandingPage() {
           ref={spotlightRef}
           className="absolute w-[400px] h-[400px] rounded-full pointer-events-none hidden md:block"
           style={{
-            background: 'radial-gradient(circle, rgba(0,229,255,0.03) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 70%)',
             opacity: 0,
             transition: 'opacity 0.3s ease',
           }}
@@ -250,11 +285,17 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-8 backdrop-blur-sm animate-fadeInUp hover:bg-[#00E5FF]/10 transition-colors cursor-default">
+        <div className="absolute bottom-32 left-[8%] hidden lg:block">
+          <div className="hero-ring w-32 h-32" style={{ animationDuration: '40s' }}>
+            <div className="hero-ring-inner"></div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto text-center relative z-10 w-full">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-8 backdrop-blur-sm animate-fadeInUp hover:bg-[#00E5FF]/10 transition-colors cursor-default group">
             <div className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></div>
             <span className="text-[#00E5FF] text-xs font-semibold tracking-wide">Now Live on 12+ Chains</span>
-            <Sparkles className="w-3 h-3 text-[#00E5FF]/60" />
+            <Sparkles className="w-3 h-3 text-[#00E5FF]/60 group-hover:text-[#00E5FF] transition-colors" />
           </div>
 
           <h1 className="text-4xl md:text-6xl font-heading font-bold mb-6 leading-[1.1] tracking-tight animate-fadeInUp stagger-1">
@@ -271,10 +312,10 @@ export default function LandingPage() {
             <span className="text-gray-300 font-medium"> Never get rugged again.</span>
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-12 animate-fadeInUp stagger-3">
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-14 animate-fadeInUp stagger-3">
             <Link href="/dashboard" className="flex-1">
-              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3.5 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 flex items-center justify-center gap-2 btn-glow">
-                Launch Dashboard <ArrowRight className="w-4 h-4" />
+              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3.5 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 flex items-center justify-center gap-2 btn-glow relative overflow-hidden">
+                <span className="relative z-10 flex items-center gap-2">Launch Dashboard <ArrowRight className="w-4 h-4" /></span>
               </button>
             </Link>
             <a href="#whitepaper" className="flex-1">
@@ -286,11 +327,15 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto animate-fadeInUp stagger-4">
             {stats.map((stat) => (
-              <AnimatedCounter key={stat.label} value={stat.value} label={stat.label} />
+              <div key={stat.label} className="stat-card rounded-lg p-3">
+                <AnimatedCounter value={stat.value} label={stat.label} />
+              </div>
             ))}
           </div>
         </div>
       </section>
+
+      <div className="section-divider"></div>
 
       <section className="py-6 px-4 border-y border-white/5 bg-[#111827]/20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#0A0E1A] via-transparent to-[#0A0E1A] z-10 pointer-events-none"></div>
@@ -298,7 +343,7 @@ export default function LandingPage() {
           <p className="text-center text-gray-500 text-[10px] uppercase tracking-[0.2em] mb-3">Supported Chains</p>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-400 relative z-20">
             {chains.map((chain, i) => (
-              <span key={chain} className="hover:text-[#00E5FF] transition-colors cursor-default animate-fadeIn hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,229,255,0.3)] transition-all duration-300" style={{ animationDelay: `${i * 0.05}s` }}>{chain}</span>
+              <span key={chain} className="hover:text-[#00E5FF] transition-all duration-300 cursor-default animate-fadeIn hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,229,255,0.3)]" style={{ animationDelay: `${i * 0.05}s` }}>{chain}</span>
             ))}
           </div>
         </div>
@@ -309,6 +354,8 @@ export default function LandingPage() {
           <PriceTicker />
         </div>
       </section>
+
+      <div className="section-divider"></div>
 
       <section id="features" ref={(el) => { sectionRefs.current['features'] = el; }} className="py-16 px-4 relative">
         <div className="absolute inset-0 dot-pattern pointer-events-none opacity-50"></div>
@@ -330,7 +377,7 @@ export default function LandingPage() {
               return (
                 <div
                   key={feature.title}
-                  className={`feature-card glass rounded-xl p-5 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-500 glow-card group animate-slide-up stagger-${Math.min(i + 1, 8)}`}
+                  className={`feature-card glass rounded-xl p-5 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-500 glow-card group ${visibleSections.has('features') ? `animate-slide-up stagger-${Math.min(i + 1, 8)}` : 'opacity-0'}`}
                 >
                   <div className="flex items-start gap-4">
                     <div className={`w-10 h-10 bg-gradient-to-br ${feature.accent} rounded-lg flex items-center justify-center flex-shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl`}>
@@ -348,12 +395,58 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <div className="section-divider"></div>
+
+      <section id="how-it-works" ref={(el) => { sectionRefs.current['how-it-works'] = el; }} className="py-16 px-4 relative">
+        <div className="absolute inset-0 grid-pattern pointer-events-none opacity-30"></div>
+        <div className={`max-w-4xl mx-auto relative z-10 transition-all duration-700 ${visibleSections.has('how-it-works') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="text-center mb-12">
+            <p className="text-[#7C3AED] text-xs font-semibold uppercase tracking-[0.2em] mb-3">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-3">
+              From Zero to Alpha<br />
+              <span className="bg-gradient-to-r from-[#7C3AED] to-[#00E5FF] bg-clip-text text-transparent">
+                in Four Steps
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#00E5FF]/10 to-transparent hidden lg:block -translate-y-1/2"></div>
+
+            {howItWorks.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.step}
+                  className={`relative glass rounded-xl p-6 border border-white/[0.06] hover:border-white/10 transition-all duration-500 group step-card ${visibleSections.has('how-it-works') ? `animate-slide-up stagger-${i + 1}` : 'opacity-0'}`}
+                >
+                  <div className="absolute -top-3 -left-1 text-4xl font-heading font-bold opacity-[0.06] select-none" style={{ color: item.color }}>{item.step}</div>
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                    style={{ background: `${item.color}10`, boxShadow: `0 0 0 1px ${item.color}15` }}
+                  >
+                    <Icon className="w-6 h-6" style={{ color: item.color }} />
+                  </div>
+                  <h3 className="text-sm font-heading font-bold mb-2 group-hover:text-white transition-colors">{item.title}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
+                  <div className="absolute bottom-0 left-0 w-full h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `linear-gradient(90deg, transparent, ${item.color}30, transparent)` }}></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <div className="section-divider"></div>
+
       <section id="security" ref={(el) => { sectionRefs.current['security'] = el; }} className="py-16 px-4">
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent relative overflow-hidden">
             <div className="absolute inset-0 grid-pattern pointer-events-none opacity-30"></div>
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/30 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#7C3AED]/20 to-transparent"></div>
+            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-[#00E5FF]/10 via-transparent to-[#7C3AED]/10"></div>
+            <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-[#7C3AED]/10 via-transparent to-[#00E5FF]/10"></div>
             <div className="relative z-10">
               <div className="text-center mb-8">
                 <div className="w-14 h-14 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-xl flex items-center justify-center mx-auto mb-4 animate-float border border-white/5 security-icon-glow">
@@ -408,6 +501,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <div className="section-divider"></div>
+
       <section id="faq" ref={(el) => { sectionRefs.current['faq'] = el; }} className="py-16 px-4">
         <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-10">
@@ -452,23 +547,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 px-4 relative overflow-hidden">
+      <div className="section-divider"></div>
+
+      <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[120px] animate-breathe"></div>
         </div>
+        <FloatingParticles />
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">
-            Ready to Level Up?
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#10B981]/10 border border-[#10B981]/20 rounded-full mb-6">
+            <Activity className="w-3 h-3 text-[#10B981]" />
+            <span className="text-[#10B981] text-[11px] font-semibold">Free to start</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+            Ready to <span className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">Level Up</span>?
           </h2>
-          <p className="text-gray-400 mb-8 text-sm max-w-md mx-auto">
-            Join the future of on-chain intelligence. Free to start, powerful from day one.
+          <p className="text-gray-400 mb-10 text-sm max-w-md mx-auto leading-relaxed">
+            Join the future of on-chain intelligence. Free to start, powerful from day one. No credit card required.
           </p>
-          <Link href="/dashboard">
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-4 rounded-xl font-semibold text-sm inline-flex items-center gap-2 hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 btn-glow">
-              Launch Platform <ArrowRight className="w-5 h-5" />
-            </button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
+            <Link href="/dashboard" className="flex-1">
+              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-4 rounded-xl font-semibold text-sm inline-flex items-center justify-center gap-2 hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 btn-glow">
+                Launch Platform <ArrowRight className="w-5 h-5" />
+              </button>
+            </Link>
+            <Link href="/dashboard/pricing" className="flex-1">
+              <button className="w-full glass px-8 py-4 rounded-xl font-semibold text-sm hover:bg-white/10 transition-all border border-white/10 gradient-border">
+                View Pricing
+              </button>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -476,9 +585,7 @@ export default function LandingPage() {
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/10 to-transparent"></div>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/10">
-              <span className="text-sm font-bold">S</span>
-            </div>
+            <SteinzLogo size={32} />
             <span className="text-base font-heading font-bold">STEINZ LABS</span>
           </div>
           <p className="text-gray-500 text-xs mb-8">Cultivate Intelligence. Navigate Risk. Grow Without Fear.</p>

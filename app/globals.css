@@ -554,3 +554,55 @@ h1, h2, h3, h4, h5, h6 {
 .security-icon-glow {
   box-shadow: 0 0 30px rgba(0, 229, 255, 0.1), 0 0 60px rgba(124, 58, 237, 0.05);
 }
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.08) 30%, rgba(124, 58, 237, 0.08) 70%, transparent);
+  max-width: 80%;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(0, 229, 255, 0.03);
+  border-color: rgba(0, 229, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.05);
+}
+
+.step-card {
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 229, 255, 0.04);
+}
+
+@keyframes data-stream {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.data-stream-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, #00E5FF, transparent);
+  animation: data-stream 4s linear infinite;
+  opacity: 0.15;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(0, 229, 255, 0); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}

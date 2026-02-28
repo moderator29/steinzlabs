@@ -1,4 +1,10 @@
 import { ReactNode } from 'react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'STEINZ Dashboard - On-Chain Intelligence',
+  description: 'Real-time AI-powered crypto intelligence dashboard',
+};
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (

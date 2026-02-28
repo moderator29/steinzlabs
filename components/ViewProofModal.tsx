@@ -257,10 +257,10 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
           </div>
 
           <div className="flex items-center justify-center gap-6 text-[10px] text-gray-500 pb-2">
-            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {event.views.toLocaleString()}</span>
-            <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {event.comments.toLocaleString()}</span>
-            <span className="flex items-center gap-1"><Link2 className="w-3 h-3" /> {event.shares.toLocaleString()}</span>
-            <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {event.likes.toLocaleString()}</span>
+            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {(event.views ?? 0).toLocaleString()}</span>
+            <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {(event.comments ?? 0).toLocaleString()}</span>
+            <span className="flex items-center gap-1"><Link2 className="w-3 h-3" /> {(event.shares ?? 0).toLocaleString()}</span>
+            <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {(event.likes ?? 0).toLocaleString()}</span>
           </div>
         </div>
       </div>

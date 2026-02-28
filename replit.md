@@ -72,7 +72,7 @@ app/api/
 ```
 
 ## Pages & Navigation
-- `/` — Landing page with scroll-reactive nav, animated hero with gradient mesh + intersection observer section reveals, live PriceTicker, stats row, feature cards, security suite, whitepaper, FAQ, CTA, footer
+- `/` — Landing page with scroll-reactive nav, animated hero with gradient mesh + hex grid + floating particles + data stream + spotlight effect + concentric hero rings, intersection observer section reveals, live PriceTicker, stats row, feature cards, "How It Works" 4-step section, security suite, whitepaper, FAQ, CTA with pricing link, footer
 - `/dashboard` — Main app with 6-tab bottom nav, AuthModal gate, theme toggle, live PriceTicker:
   - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with live price ticker bar)
   - **Social** — Social trading with messages & connect wallet
@@ -100,8 +100,8 @@ app/api/
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
 - **Theme Modes**: Dark (default), Light, Bingo — toggled via ThemeToggle component, stored in localStorage, applied via `[data-theme]` CSS selectors
-- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.feature-card`, `.security-card`, `.security-icon-glow`
-- **Animations**: `animate-float`, `animate-float-subtle`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`
+- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.feature-card`, `.security-card`, `.security-icon-glow`, `.section-divider`, `.stat-card`, `.step-card`, `.data-stream-line`, `.pulse-dot`
+- **Animations**: `animate-float`, `animate-float-subtle`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`, `data-stream`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
 - **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
 - **Auth System**: AuthModal with email sign in/up, Google OAuth (mock), wallet connect (MetaMask or mock). Session stored in localStorage as `steinz_user`.
