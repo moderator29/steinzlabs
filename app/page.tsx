@@ -253,11 +253,6 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link href="/dashboard">
-              <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20 shimmer-btn">
-                Launch App
-              </button>
-            </Link>
           </div>
         </div>
       </nav>
