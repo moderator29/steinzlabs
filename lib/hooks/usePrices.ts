@@ -5,23 +5,21 @@ import { useEffect, useState } from 'react';
 interface PriceData {
   price: number;
   change24h: number;
-}
-
-interface Prices {
-  btc: PriceData | null;
-  eth: PriceData | null;
-  sol: PriceData | null;
+  name?: string;
+  image?: string;
+  marketCap?: number;
+  volume?: number;
 }
 
 export function usePrices() {
-  const [prices, setPrices] = useState<Prices>({ btc: null, eth: null, sol: null });
+  const [allPrices, setAllPrices] = useState<Record<string, PriceData>>({});
   const [loading, setLoading] = useState(true);
 
   const fetchPrices = async () => {
     try {
       const response = await fetch('/api/prices');
       const data = await response.json();
-      setPrices(data);
+      setAllPrices(data);
     } catch (error) {
       console.error('Failed to fetch prices:', error);
     } finally {
@@ -35,5 +33,9 @@ export function usePrices() {
     return () => clearInterval(interval);
   }, []);
 
-  return { ...prices, loading };
+  const btc = allPrices['BTC'] || allPrices['btc'] || null;
+  const eth = allPrices['ETH'] || allPrices['eth'] || null;
+  const sol = allPrices['SOL'] || allPrices['sol'] || null;
+
+  return { prices: allPrices, btc, eth, sol, loading };
 }

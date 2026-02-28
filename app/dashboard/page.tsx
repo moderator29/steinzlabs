@@ -64,10 +64,12 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button className="relative" onClick={() => !user && setShowAuthModal(true)}>
-              <div className="w-2 h-2 bg-[#00E5FF] rounded-full absolute -top-0.5 -right-0.5 animate-pulse"></div>
-              <Bell className="w-5 h-5 text-gray-400" />
-            </button>
+            {user && (
+              <button className="relative">
+                <div className="w-2 h-2 bg-[#00E5FF] rounded-full absolute -top-0.5 -right-0.5 animate-pulse"></div>
+                <Bell className="w-5 h-5 text-gray-400" />
+              </button>
+            )}
             <button onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -115,8 +117,8 @@ export default function Dashboard() {
                   setActiveNav(item.id);
                   if (item.id === 'home') setActiveTab('context');
                 }}
-                className={`flex flex-col items-center gap-0.5 py-1 transition-colors ${
-                  isActive ? 'text-[#00E5FF]' : 'text-gray-400'
+                className={`flex flex-col items-center gap-0.5 py-1 transition-colors bottom-nav-item ${
+                  isActive ? 'text-[#00E5FF] active' : 'text-gray-400'
                 }`}
               >
                 <Icon className="w-5 h-5" />

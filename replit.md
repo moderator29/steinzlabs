@@ -64,11 +64,17 @@ lib/
     ├── useAuth.ts            # Auth hook (sign in/up, wallet connect, localStorage session)
     ├── usePrices.ts          # Live price feed hook (BTC, ETH, SOL from /api/prices)
     └── useTheme.ts           # Theme toggle hook (dark/light/bingo modes)
+lib/
+├── wallet.ts                 # MetaMask + Phantom wallet connect/disconnect utilities
 app/api/
-├── prices/route.ts           # Real-time crypto prices (CoinGecko)
+├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
 ├── token-scanner/route.ts    # Token contract security scanner
-└── context-feed/route.ts     # On-chain whale events feed
+├── context-feed/route.ts     # On-chain whale events feed (Alchemy ETH + Helius Solana)
+├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
+├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
+├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)
+└── portfolio/route.ts        # Portfolio API (Alchemy token balances + CoinGecko prices)
 ```
 
 ## Pages & Navigation
@@ -100,11 +106,12 @@ app/api/
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
 - **Theme Modes**: Dark (default), Light, Bingo — toggled via ThemeToggle component, stored in localStorage, applied via `[data-theme]` CSS selectors
-- **CSS Utilities**: `.glass`, `.glass-card-enhanced`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.aurora-bg`, `.morph-blob`, `.shimmer-btn`, `.gradient-border`, `.holographic-border`, `.neon-text`, `.cyber-line`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.feature-card`, `.security-card`, `.security-icon-glow`, `.section-divider`, `.stat-card`, `.step-card`, `.data-stream-line`, `.pulse-dot`, `.depth-shadow`, `.radial-spotlight`
-- **Animations**: `animate-float`, `animate-float-subtle`, `animate-float-3d`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-glow-pulse`, `animate-spin-slow`, `animate-slide-up`, `animate-slide-in-left`, `animate-slide-in-right`, `animate-reveal-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`, `data-stream`
+- **CSS Utilities**: `.glass`, `.glass-card-enhanced`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.aurora-bg`, `.morph-blob`, `.shimmer-btn`, `.gradient-border`, `.holographic-border`, `.neon-text`, `.neon-text-subtle`, `.cyber-line`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.hero-title`, `.feature-card`, `.security-card`, `.security-icon-glow`, `.section-divider`, `.stat-card`, `.stat-card-glow`, `.step-card`, `.data-stream-line`, `.pulse-dot`, `.depth-shadow`, `.radial-spotlight`, `.gradient-flow-bg`, `.dashboard-card-enter`, `.bottom-nav-item`, `.tab-indicator`, `.animate-ripple`
+- **Animations**: `animate-float`, `animate-float-subtle`, `animate-float-3d`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-glow-pulse`, `animate-spin-slow`, `animate-slide-up`, `animate-slide-in-left`, `animate-slide-in-right`, `animate-reveal-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`, `data-stream`, `ripple`, `gradient-flow`, `border-trace`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
 - **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
-- **Auth System**: AuthModal with email sign in/up, Google OAuth (mock), wallet connect (MetaMask or mock). Session stored in localStorage as `steinz_user`.
+- **Auth System**: AuthModal with email sign in/up (Supabase), Google OAuth (Supabase), wallet connect (MetaMask + Phantom via lib/wallet.ts). Session stored in localStorage.
+- **Dashboard Nav**: Bottom nav uses `.bottom-nav-item` with `.active` indicator; notification bell hidden when not signed in
 
 ## Running
 - **Dev**: `npm run dev` (port 5000)

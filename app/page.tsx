@@ -266,6 +266,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="absolute inset-0 aurora-bg pointer-events-none"></div>
         <div className="absolute inset-0 grid-pattern pointer-events-none"></div>
+        <div className="absolute inset-0 radial-spotlight pointer-events-none"></div>
         <HexGrid />
         <FloatingParticles />
         <DataStream />
@@ -275,6 +276,7 @@ export default function LandingPage() {
           <div className="absolute bottom-[10%] right-[15%] w-96 h-96 bg-[#7C3AED] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow morph-blob" style={{ animationDelay: '2s' }}></div>
           <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[100px] animate-breathe morph-blob" style={{ animationDelay: '4s' }}></div>
           <div className="absolute top-[30%] right-[30%] w-72 h-72 bg-[#10B981] rounded-full blur-[200px] opacity-[0.03] morph-blob" style={{ animationDelay: '6s' }}></div>
+          <div className="absolute bottom-[20%] left-[10%] w-60 h-60 bg-[#F59E0B] rounded-full blur-[200px] opacity-[0.02] morph-blob" style={{ animationDelay: '8s' }}></div>
         </div>
 
         <div
@@ -315,11 +317,11 @@ export default function LandingPage() {
             <Sparkles className="w-3 h-3 text-[#00E5FF]/60 group-hover:text-[#00E5FF] transition-colors" />
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-heading font-bold mb-6 leading-[1.1] tracking-tight animate-fadeInUp stagger-1">
+          <h1 className="text-4xl md:text-6xl font-heading font-bold mb-6 leading-[1.1] tracking-tight animate-fadeInUp stagger-1 hero-title">
             The Intelligence Layer{' '}
             <br className="hidden md:block" />
             the On-Chain Economy{' '}
-            <span className="bg-gradient-to-r from-[#00E5FF] via-[#7C3AED] to-[#00E5FF] bg-clip-text text-transparent animate-textGradient bg-[length:200%_200%] inline-block">
+            <span className="bg-gradient-to-r from-[#00E5FF] via-[#7C3AED] to-[#00E5FF] bg-clip-text text-transparent animate-textGradient bg-[length:200%_200%] inline-block neon-text-subtle">
               Has Been Missing
             </span>
           </h1>
@@ -343,8 +345,8 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto animate-fadeInUp stagger-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="stat-card rounded-lg p-3">
+            {stats.map((stat, i) => (
+              <div key={stat.label} className="stat-card rounded-lg p-3 stat-card-glow" style={{ animationDelay: `${i * 0.1}s` }}>
                 <AnimatedCounter value={stat.value} label={stat.label} />
               </div>
             ))}
