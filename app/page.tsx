@@ -5,6 +5,7 @@ import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users,
 import Link from 'next/link';
 import PriceTicker from '@/components/PriceTicker';
 import SteinzLogo from '@/components/SteinzLogo';
+import ThemeToggle from '@/components/ThemeToggle';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const [display, setDisplay] = useState('0');
@@ -94,9 +95,14 @@ function FloatingParticles() {
 
 function DataStream() {
   return (
-    <div className="absolute right-[5%] top-24 bottom-0 w-px hidden lg:block pointer-events-none overflow-hidden">
-      <div className="data-stream-line"></div>
-    </div>
+    <>
+      <div className="absolute right-[5%] top-24 bottom-0 w-px hidden lg:block pointer-events-none overflow-hidden">
+        <div className="data-stream-line"></div>
+      </div>
+      <div className="absolute left-[5%] top-48 bottom-0 w-px hidden lg:block pointer-events-none overflow-hidden">
+        <div className="data-stream-line" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
+      </div>
+    </>
   );
 }
 
@@ -240,30 +246,35 @@ export default function LandingPage() {
             <span className="text-base font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
-            <a href="#features" className="hover:text-[#00E5FF] transition-colors relative group">Features<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
-            <a href="#how-it-works" className="hover:text-[#00E5FF] transition-colors relative group">How It Works<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
-            <a href="#security" className="hover:text-[#00E5FF] transition-colors relative group">Security<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
-            <a href="#faq" className="hover:text-[#00E5FF] transition-colors relative group">FAQ<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
+            <a href="#features" className="hover:text-[#00E5FF] transition-colors cyber-line">Features</a>
+            <a href="#how-it-works" className="hover:text-[#00E5FF] transition-colors cyber-line">How It Works</a>
+            <a href="#security" className="hover:text-[#00E5FF] transition-colors cyber-line">Security</a>
+            <a href="#faq" className="hover:text-[#00E5FF] transition-colors cyber-line">FAQ</a>
           </div>
-          <Link href="/dashboard">
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20 shimmer-btn">
-              Launch App
-            </button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link href="/dashboard">
+              <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20 shimmer-btn">
+                Launch App
+              </button>
+            </Link>
+          </div>
         </div>
       </nav>
 
       <section className="pt-24 pb-16 px-4 relative overflow-hidden min-h-[85vh] flex items-center">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
+        <div className="absolute inset-0 aurora-bg pointer-events-none"></div>
         <div className="absolute inset-0 grid-pattern pointer-events-none"></div>
         <HexGrid />
         <FloatingParticles />
         <DataStream />
 
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[15%] left-[20%] w-96 h-96 bg-[#00E5FF] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow"></div>
-          <div className="absolute bottom-[10%] right-[15%] w-96 h-96 bg-[#7C3AED] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[100px] animate-breathe"></div>
+          <div className="absolute top-[15%] left-[20%] w-96 h-96 bg-[#00E5FF] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow morph-blob"></div>
+          <div className="absolute bottom-[10%] right-[15%] w-96 h-96 bg-[#7C3AED] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow morph-blob" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[100px] animate-breathe morph-blob" style={{ animationDelay: '4s' }}></div>
+          <div className="absolute top-[30%] right-[30%] w-72 h-72 bg-[#10B981] rounded-full blur-[200px] opacity-[0.03] morph-blob" style={{ animationDelay: '6s' }}></div>
         </div>
 
         <div
@@ -279,14 +290,20 @@ export default function LandingPage() {
         <div className="absolute top-20 left-10 w-px h-32 bg-gradient-to-b from-transparent via-[#00E5FF]/20 to-transparent animate-scanline hidden md:block"></div>
         <div className="absolute top-40 right-16 w-px h-24 bg-gradient-to-b from-transparent via-[#7C3AED]/20 to-transparent animate-scanline hidden md:block" style={{ animationDelay: '3s' }}></div>
 
-        <div className="absolute top-32 right-[10%] hidden lg:block">
-          <div className="hero-ring w-48 h-48">
+        <div className="absolute top-32 right-[10%] hidden lg:block animate-float-3d">
+          <div className="hero-ring w-48 h-48 animate-glow-pulse">
             <div className="hero-ring-inner"></div>
           </div>
         </div>
 
-        <div className="absolute bottom-32 left-[8%] hidden lg:block">
+        <div className="absolute bottom-32 left-[8%] hidden lg:block animate-float-3d" style={{ animationDelay: '2s' }}>
           <div className="hero-ring w-32 h-32" style={{ animationDuration: '40s' }}>
+            <div className="hero-ring-inner"></div>
+          </div>
+        </div>
+
+        <div className="absolute top-[60%] right-[5%] hidden lg:block">
+          <div className="hero-ring w-20 h-20 opacity-30" style={{ animationDuration: '50s' }}>
             <div className="hero-ring-inner"></div>
           </div>
         </div>
@@ -318,11 +335,11 @@ export default function LandingPage() {
                 <span className="relative z-10 flex items-center gap-2">Launch Dashboard <ArrowRight className="w-4 h-4" /></span>
               </button>
             </Link>
-            <a href="#whitepaper" className="flex-1">
+            <Link href="/whitepaper" className="flex-1">
               <button className="w-full glass px-6 py-3.5 rounded-xl font-semibold text-sm hover:bg-white/10 transition-all border border-white/10 gradient-border hover:border-white/20">
                 Read Whitepaper
               </button>
-            </a>
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto animate-fadeInUp stagger-4">
@@ -377,10 +394,11 @@ export default function LandingPage() {
               return (
                 <div
                   key={feature.title}
-                  className={`feature-card glass rounded-xl p-5 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-500 glow-card group ${visibleSections.has('features') ? `animate-slide-up stagger-${Math.min(i + 1, 8)}` : 'opacity-0'}`}
+                  className={`glass-card-enhanced rounded-xl p-5 glow-card group holographic-border ${visibleSections.has('features') ? `animate-reveal-up` : 'opacity-0'}`}
+                  style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${feature.accent} rounded-lg flex items-center justify-center flex-shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl`}>
+                  <div className="relative z-10 flex items-start gap-4">
+                    <div className={`w-10 h-10 bg-gradient-to-br ${feature.accent} rounded-lg flex items-center justify-center flex-shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl group-hover:animate-glow-pulse`}>
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -418,7 +436,8 @@ export default function LandingPage() {
               return (
                 <div
                   key={item.step}
-                  className={`relative glass rounded-xl p-6 border border-white/[0.06] hover:border-white/10 transition-all duration-500 group step-card ${visibleSections.has('how-it-works') ? `animate-slide-up stagger-${i + 1}` : 'opacity-0'}`}
+                  className={`relative glass-card-enhanced rounded-xl p-6 group step-card holographic-border ${visibleSections.has('how-it-works') ? `animate-reveal-up` : 'opacity-0'}`}
+                  style={{ animationDelay: `${i * 0.12}s` }}
                 >
                   <div className="absolute -top-3 -left-1 text-4xl font-heading font-bold opacity-[0.06] select-none" style={{ color: item.color }}>{item.step}</div>
                   <div
@@ -470,12 +489,14 @@ export default function LandingPage() {
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-300 card-hover text-left group security-card">
-                      <div className="w-8 h-8 bg-[#00E5FF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#00E5FF]/20 transition-colors group-hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]">
-                        <Icon className="w-4 h-4 text-[#00E5FF]" />
+                    <div key={item.title} className="glass-card-enhanced rounded-xl p-4 text-left group security-card holographic-border">
+                      <div className="relative z-10">
+                        <div className="w-8 h-8 bg-[#00E5FF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#00E5FF]/20 transition-colors group-hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]">
+                          <Icon className="w-4 h-4 text-[#00E5FF]" />
+                        </div>
+                        <h4 className="font-bold text-xs mb-1">{item.title}</h4>
+                        <p className="text-gray-500 text-[10px] leading-relaxed">{item.desc}</p>
                       </div>
-                      <h4 className="font-bold text-xs mb-1">{item.title}</h4>
-                      <p className="text-gray-500 text-[10px] leading-relaxed">{item.desc}</p>
                     </div>
                   );
                 })}
@@ -495,9 +516,11 @@ export default function LandingPage() {
           <p className="text-gray-400 mb-8 text-sm leading-relaxed max-w-md mx-auto">
             Deep dive into our architecture, AI models, and vision for on-chain intelligence.
           </p>
-          <button className="glass px-8 py-3 rounded-xl font-semibold text-sm hover:bg-white/10 transition-all border border-[#00E5FF]/20 gradient-border inline-flex items-center gap-2 hover:scale-[1.03]">
-            <ExternalLink className="w-4 h-4" /> Download Whitepaper (PDF)
-          </button>
+          <Link href="/whitepaper">
+            <button className="glass px-8 py-3 rounded-xl font-semibold text-sm hover:bg-white/10 transition-all border border-[#00E5FF]/20 gradient-border inline-flex items-center gap-2 hover:scale-[1.03]">
+              <ExternalLink className="w-4 h-4" /> Read Full Whitepaper
+            </button>
+          </Link>
         </div>
       </section>
 
@@ -551,8 +574,9 @@ export default function LandingPage() {
 
       <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
+        <div className="absolute inset-0 aurora-bg pointer-events-none"></div>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[120px] animate-breathe"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[120px] animate-breathe morph-blob"></div>
         </div>
         <FloatingParticles />
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -594,27 +618,27 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-xs mb-3 text-gray-300">Product</h4>
               <div className="space-y-2 text-gray-500 text-xs">
-                <div><Link href="/dashboard" className="hover:text-[#00E5FF] transition-colors">Dashboard</Link></div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Markets</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Security</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">DNA Analyzer</div>
+                <div><Link href="/dashboard" className="hover:text-[#00E5FF] transition-colors cyber-line">Dashboard</Link></div>
+                <div><Link href="/dashboard" className="hover:text-[#00E5FF] transition-colors cyber-line">Markets</Link></div>
+                <div><Link href="/dashboard" className="hover:text-[#00E5FF] transition-colors cyber-line">Security</Link></div>
+                <div><Link href="/dashboard/dna-analyzer" className="hover:text-[#00E5FF] transition-colors cyber-line">DNA Analyzer</Link></div>
               </div>
             </div>
             <div>
               <h4 className="font-bold text-xs mb-3 text-gray-300">Resources</h4>
               <div className="space-y-2 text-gray-500 text-xs">
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Whitepaper</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Docs</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">API</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Blog</div>
+                <div><Link href="/whitepaper" className="hover:text-[#00E5FF] transition-colors cyber-line">Whitepaper</Link></div>
+                <div><Link href="/whitepaper#architecture" className="hover:text-[#00E5FF] transition-colors cyber-line">Docs</Link></div>
+                <div><Link href="/whitepaper#business" className="hover:text-[#00E5FF] transition-colors cyber-line">API</Link></div>
+                <div><Link href="/whitepaper#roadmap" className="hover:text-[#00E5FF] transition-colors cyber-line">Blog</Link></div>
               </div>
             </div>
             <div>
               <h4 className="font-bold text-xs mb-3 text-gray-300">Community</h4>
               <div className="space-y-2 text-gray-500 text-xs">
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Twitter</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Telegram</div>
-                <div className="hover:text-[#00E5FF] transition-colors cursor-pointer">Discord</div>
+                <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Twitter</span></div>
+                <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Telegram</span></div>
+                <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Discord</span></div>
               </div>
             </div>
           </div>

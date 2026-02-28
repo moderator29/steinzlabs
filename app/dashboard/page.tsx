@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell, Search } from 'lucide-react';
+import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell } from 'lucide-react';
 import ContextFeed from '@/components/ContextFeed';
 import Markets from '@/components/Markets';
 import Predictions from '@/components/Predictions';
@@ -58,16 +58,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <img src="/steinz-logo.svg" alt="STEINZ" className="w-8 h-8 flex-shrink-0" />
-            <div className="flex items-center gap-2 bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 flex-1 max-w-[240px]">
-              <Search className="w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search tokens, wallets..."
-                className="bg-transparent focus:outline-none text-sm w-full text-gray-300 placeholder-gray-500"
-              />
-            </div>
+            <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
