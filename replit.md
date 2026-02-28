@@ -25,6 +25,11 @@ app/
 └── dashboard/
     ├── layout.tsx           # Dashboard layout wrapper
     └── page.tsx             # Dashboard with 3 tabs (Context Feed, Markets, Predictions)
+components/
+├── ContextFeed.tsx          # Context Feed tab content (whale alerts, token events)
+├── Markets.tsx              # Markets tab content (token list with filters)
+├── Predictions.tsx          # Predictions tab content (coming soon state)
+└── SidebarMenu.tsx          # Slide-out sidebar menu (Intelligence, Tools, Account sections)
 lib/
 └── supabase.ts              # Supabase client + admin (service role) client
 ```
