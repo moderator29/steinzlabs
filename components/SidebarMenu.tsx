@@ -1,79 +1,92 @@
 'use client';
 
-import { X, Home, BarChart3, TrendingUp, Search, Layers, Activity, Radar, Users, ArrowLeftRight, Brain, Bell, Shield, Zap, Compass, ChevronRight, Globe, Landmark, Grid3X3, Lock, Scan } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
   onClose: () => void;
 }
 
 export default function SidebarMenu({ onClose }: SidebarMenuProps) {
+  const router = useRouter();
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="absolute right-0 top-0 h-full w-72 bg-[#0A0E1A] border-l border-white/10 overflow-y-auto"
+        className="absolute right-0 top-0 h-full w-80 bg-[#0A0E1A] border-l border-white/10 p-6 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <span className="text-sm font-heading font-bold">Menu</span>
-          <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-400" />
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-heading font-bold">Menu</h2>
+          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-4 space-y-0.5">
-          <MenuItem icon={Home} label="Home / Context Feed" />
-          <MenuItem icon={BarChart3} label="Portfolio Dashboard" />
-          <MenuItem icon={TrendingUp} label="Trading DNA Analyzer" badge="NEW" />
 
-          <SectionTitle>Intelligence</SectionTitle>
-          <MenuItem icon={Search} label="Wallet Intelligence" />
-          <MenuItem icon={Layers} label="Wallet Clusters" />
-          <MenuItem icon={Activity} label="On-Chain Trends" />
-          <MenuItem icon={Radar} label="Smart Money Watchlist" />
-          <MenuItem icon={Activity} label="Network Metrics" />
-          <MenuItem icon={Compass} label="Whale Tracker" />
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Core</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={BarChart3} label="Portfolio Dashboard" onClick={() => handleNavigation('/dashboard')} />
+              <SidebarItem icon={Dna} label="Trading DNA Analyzer" badge="NEW" onClick={() => handleNavigation('/dashboard/dna-analyzer')} />
+            </div>
+          </div>
 
-          <SectionTitle>Tools</SectionTitle>
-          <MenuItem icon={ArrowLeftRight} label="Multi-Chain Swap" />
-          <MenuItem icon={Brain} label="VTX AI Assistant" />
-          <MenuItem icon={Bell} label="Smart Alerts" />
-          <MenuItem icon={Users} label="Social Trading" />
-          <MenuItem icon={Shield} label="Security Center" badge="NEW" />
-          <MenuItem icon={Zap} label="AI Risk Scanner" badge="NEW" />
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Intelligence</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={Search} label="Wallet Intelligence" onClick={() => handleNavigation('/dashboard/wallet-intelligence')} />
+              <SidebarItem icon={Link2} label="Wallet Clusters" onClick={() => handleNavigation('/dashboard/wallet-clusters')} />
+              <SidebarItem icon={TrendingUp} label="On-Chain Trends" onClick={() => handleNavigation('/dashboard/trends')} />
+              <SidebarItem icon={Trophy} label="Smart Money Watchlist" onClick={() => handleNavigation('/dashboard/smart-money')} />
+              <SidebarItem icon={Radio} label="Network Metrics" onClick={() => handleNavigation('/dashboard/network-metrics')} />
+              <SidebarItem icon={Fish} label="Whale Tracker" onClick={() => handleNavigation('/dashboard/whale-tracker')} />
+            </div>
+          </div>
 
-          <SectionTitle>Discover</SectionTitle>
-          <MenuItem icon={Search} label="Project Discovery" active />
-          <MenuItem icon={Globe} label="Builder Network" />
-          <MenuItem icon={Landmark} label="Builder Funding Portal" badge="NEW" />
-          <MenuItem icon={Grid3X3} label="Launchpad" />
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Tools</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={ArrowLeftRight} label="Multi-Chain Swap" onClick={() => handleNavigation('/dashboard/swap')} />
+              <SidebarItem icon={Bot} label="VTX AI Assistant" onClick={() => handleNavigation('/dashboard/vtx-ai')} />
+              <SidebarItem icon={Bell} label="Smart Alerts" onClick={() => handleNavigation('/dashboard/alerts')} />
+              <SidebarItem icon={Users} label="Social Trading" onClick={() => handleNavigation('/dashboard/social-trading')} />
+              <SidebarItem icon={Shield} label="Security Center" badge="NEW" onClick={() => handleNavigation('/dashboard/security')} />
+              <SidebarItem icon={Target} label="AI Risk Scanner" badge="NEW" onClick={() => handleNavigation('/dashboard/risk-scanner')} />
+            </div>
+          </div>
 
-          <SectionTitle>Security</SectionTitle>
-          <MenuItem icon={Shield} label="Token Safety Scanner" />
-          <MenuItem icon={Scan} label="Contract Analyzer" />
-          <MenuItem icon={Lock} label="Rug Detector" />
-          <MenuItem icon={Globe} label="Phishing Detector" />
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Discover</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={Compass} label="Project Discovery" onClick={() => handleNavigation('/dashboard/project-discovery')} />
+              <SidebarItem icon={Building2} label="Builder Network" onClick={() => handleNavigation('/dashboard/builder-network')} />
+              <SidebarItem icon={Briefcase} label="Builder Funding Portal" badge="NEW" onClick={() => handleNavigation('/dashboard/builder-funding')} />
+              <SidebarItem icon={Rocket} label="Launchpad" onClick={() => handleNavigation('/dashboard/launchpad')} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SidebarItem({ icon: Icon, label, badge, onClick }: { icon: React.ElementType; label: string; badge?: string; onClick: () => void }) {
   return (
-    <div className="pt-5 pb-1">
-      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{children}</span>
-    </div>
-  );
-}
-
-function MenuItem({ icon: Icon, label, badge, active }: { icon: React.ElementType; label: string; badge?: string; active?: boolean }) {
-  return (
-    <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${active ? 'bg-[#00E5FF]/10 text-[#00E5FF]' : 'text-gray-300 hover:bg-white/5'}`}>
-      <Icon className="w-4 h-4 flex-shrink-0" />
-      <span className="flex-1 text-left">{label}</span>
+    <button
+      onClick={onClick}
+      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+    >
+      <Icon className="w-4 h-4 text-[#00E5FF]" />
+      <span>{label}</span>
       {badge && (
-        <span className="px-1.5 py-0.5 bg-[#10B981]/20 text-[#10B981] rounded text-[10px] font-semibold">{badge}</span>
+        <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">{badge}</span>
       )}
-      {active && <ChevronRight className="w-3.5 h-3.5 text-gray-600" />}
     </button>
   );
 }

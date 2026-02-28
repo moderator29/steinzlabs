@@ -1,0 +1,260 @@
+URGENT FIX: MAKE ALL NAVIGATION WORK
+
+The sidebar menu and all navigation is currently broken. Fix this NOW:
+
+========================================
+FIX 1: Update components/SidebarMenu.tsx
+========================================
+
+Replace the ENTIRE SidebarMenu component with this working version:
+
+'use client';
+
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Whale, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface SidebarMenuProps {
+  onClose: () => void;
+}
+
+export default function SidebarMenu({ onClose }: SidebarMenuProps) {
+  const router = useRouter();
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="absolute right-0 top-0 h-full w-80 bg-[#0A0E1A] border-l border-white/10 p-6 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-heading font-bold">Menu</h2>
+          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* CORE */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Core</h3>
+            <div className="space-y-1">
+              <button 
+                onClick={() => handleNavigation('/dashboard')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <BarChart3 className="w-4 h-4 text-[#00E5FF]" />
+                <span>Portfolio Dashboard</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/dna-analyzer')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Dna className="w-4 h-4 text-[#00E5FF]" />
+                <span>Trading DNA Analyzer</span>
+                <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">NEW</span>
+              </button>
+            </div>
+          </div>
+
+          {/* INTELLIGENCE */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Intelligence</h3>
+            <div className="space-y-1">
+              <button 
+                onClick={() => handleNavigation('/dashboard/wallet-intelligence')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Search className="w-4 h-4 text-[#00E5FF]" />
+                <span>Wallet Intelligence</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/wallet-clusters')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Link2 className="w-4 h-4 text-[#00E5FF]" />
+                <span>Wallet Clusters</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/trends')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <TrendingUp className="w-4 h-4 text-[#00E5FF]" />
+                <span>On-Chain Trends</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/smart-money')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Trophy className="w-4 h-4 text-[#00E5FF]" />
+                <span>Smart Money Watchlist</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/network-metrics')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Radio className="w-4 h-4 text-[#00E5FF]" />
+                <span>Network Metrics</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/whale-tracker')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Whale className="w-4 h-4 text-[#00E5FF]" />
+                <span>Whale Tracker</span>
+              </button>
+            </div>
+          </div>
+
+          {/* TOOLS */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Tools</h3>
+            <div className="space-y-1">
+              <button 
+                onClick={() => handleNavigation('/dashboard/swap')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <ArrowLeftRight className="w-4 h-4 text-[#00E5FF]" />
+                <span>Multi-Chain Swap</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/vtx-ai')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Bot className="w-4 h-4 text-[#00E5FF]" />
+                <span>VTX AI Assistant</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/alerts')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Bell className="w-4 h-4 text-[#00E5FF]" />
+                <span>Smart Alerts</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/social-trading')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Users className="w-4 h-4 text-[#00E5FF]" />
+                <span>Social Trading</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/security')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Shield className="w-4 h-4 text-[#00E5FF]" />
+                <span>Security Center</span>
+                <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">NEW</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/risk-scanner')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Target className="w-4 h-4 text-[#00E5FF]" />
+                <span>AI Risk Scanner</span>
+                <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">NEW</span>
+              </button>
+            </div>
+          </div>
+
+          {/* DISCOVER */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Discover</h3>
+            <div className="space-y-1">
+              <button 
+                onClick={() => handleNavigation('/dashboard/project-discovery')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Compass className="w-4 h-4 text-[#00E5FF]" />
+                <span>Project Discovery</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/builder-network')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Building2 className="w-4 h-4 text-[#00E5FF]" />
+                <span>Builder Network</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/builder-funding')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Briefcase className="w-4 h-4 text-[#00E5FF]" />
+                <span>Builder Funding Portal</span>
+                <span className="ml-auto px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-xs font-semibold">NEW</span>
+              </button>
+              <button 
+                onClick={() => handleNavigation('/dashboard/launchpad')}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+              >
+                <Rocket className="w-4 h-4 text-[#00E5FF]" />
+                <span>Launchpad</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+========================================
+FIX 2: Update bottom navigation in app/dashboard/page.tsx
+========================================
+
+In app/dashboard/page.tsx, replace the bottom navigation section with this:
+
+'use client';
+
+import { useRouter } from 'next/navigation';
+
+// Add to component:
+const router = useRouter();
+
+// Replace bottom navigation section:
+<div className="fixed bottom-0 w-full glass backdrop-blur-xl border-t border-white/10 z-50">
+  <div className="grid grid-cols-5 gap-1 px-2 py-3">
+    <button 
+      onClick={() => router.push('/dashboard')}
+      className="flex flex-col items-center gap-1 py-2 text-[#00E5FF]"
+    >
+      <Home className="w-6 h-6" />
+      <span className="text-xs font-semibold">Home</span>
+    </button>
+    <button 
+      onClick={() => router.push('/dashboard/social-trading')}
+      className="flex flex-col items-center gap-1 py-2 text-gray-400 hover:text-white transition-colors"
+    >
+      <Users className="w-6 h-6" />
+      <span className="text-xs">Social</span>
+    </button>
+    <button 
+      onClick={() => router.push('/dashboard/vtx-ai')}
+      className="flex flex-col items-center gap-1 py-2 text-gray-400 hover:text-white transition-colors"
+    >
+      <MessageSquare className="w-6 h-6" />
+      <span className="text-xs">VTX AI</span>
+    </button>
+    <button 
+      onClick={() => router.push('/dashboard/project-discovery')}
+      className="flex flex-col items-center gap-1 py-2 text-gray-400 hover:text-white transition-colors"
+    >
+      <Compass className="w-6 h-6" />
+      <span className="text-xs">Discover</span>
+    </button>
+    <button 
+      onClick={() => router.push('/dashboard/profile')}
+      className="flex flex-col items-center gap-1 py-2 text-gray-400 hover:text-white transition-colors"
+    >
+      <User className="w-6 h-6" />
+      <span className="text-xs">Profile</span>
+    </button>
+  </div>
+</div>
+
+Apply these navigation fixes NOW before continuing.

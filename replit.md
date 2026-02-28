@@ -27,22 +27,37 @@ app/
 └── dashboard/
     ├── layout.tsx           # Dashboard layout wrapper
     ├── page.tsx             # Dashboard with 6-tab bottom nav + Home sub-tabs
-    ├── project-discovery/   # Project discovery with search & filters
+    ├── alerts/              # Smart Alerts management (toggle, delete, create)
     ├── builder-funding/     # Builder funding portal with milestone escrow
-    ├── predictions/         # Full predictions market with voting
+    ├── builder-network/     # Builder directory with skills, ratings, availability
+    ├── dna-analyzer/        # Trading DNA Analyzer (traits, win rate, AI recs)
+    ├── launchpad/           # Project launchpad (fundraising progress, filters)
     ├── messages/            # Group messaging (Telegram-style)
+    ├── network-metrics/     # Network stats per chain (gas, TPS, TVL, validators)
+    ├── predictions/         # Full predictions market with voting
+    ├── profile/             # Full profile with Activity/Settings/Achievements tabs
+    ├── project-discovery/   # Project discovery with search & filters
+    ├── risk-scanner/        # AI Portfolio Risk Scanner (full scan, risk breakdown)
+    ├── security/            # Security Center (token scanner, contract analyzer, rug/phishing)
+    ├── smart-money/         # Smart Money Watchlist (top wallets, follow/unfollow)
     ├── social-trading/      # Social/copy trading with leaderboard
-    └── profile/             # Full profile with Activity/Settings/Achievements tabs
+    ├── swap/                # Multi-Chain Swap (token swap with slippage, routing)
+    ├── trends/              # On-Chain Trends (metrics per chain, hot indicators)
+    ├── vtx-ai/              # VTX AI full-page assistant (chat, quick actions)
+    ├── wallet-clusters/     # Wallet Clusters (grouped wallets, risk tags)
+    ├── wallet-intelligence/ # Wallet Intelligence (scan any address, AI assessment)
+    └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
-├── ContextFeed.tsx          # Context Feed tab (whale alerts, token events, trust scores)
+├── ContextFeed.tsx          # Context Feed tab (whale alerts with View Proof modal)
+├── ViewProofModal.tsx       # On-chain proof analysis modal (chart, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
 ├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
 ├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
 ├── VtxAiTab.tsx             # VTX AI assistant tab (chat + quick actions)
-├── DiscoverTab.tsx          # Security Center / Discover tab (scanners)
+├── DiscoverTab.tsx          # Project Discovery tab (search, filters, project cards)
 ├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect)
 ├── ProfileTab.tsx           # Profile tab (stats, settings, achievements)
-└── SidebarMenu.tsx          # Slide-out sidebar (Intelligence, Tools, Discover, Security sections)
+└── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover)
 lib/
 └── supabase.ts              # Supabase client + admin (service role) client
 ```
