@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { X, Mail, Chrome, Wallet } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -13,28 +13,28 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const { signIn, signUp, connectWallet } = useAuth();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
-      if (!email || !password) throw new Error('Please fill in all fields');
-      if (password.length < 6) throw new Error('Password must be at least 6 characters');
-
       if (mode === 'signup') {
-        signUp(email, password);
-        setSuccess('Account created successfully!');
-        setTimeout(() => onSuccess(), 800);
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        setError('Check your email for confirmation link!');
       } else {
-        signIn(email, password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
         onSuccess();
       }
     } catch (err: any) {
@@ -47,8 +47,13 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      signIn('demo@steinz.io', 'google-oauth');
-      onSuccess();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      if (error) throw error;
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -58,8 +63,40 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const handleWalletConnect = async () => {
     setLoading(true);
     setError('');
+
     try {
-      await connectWallet();
+      if (typeof (window as any).ethereum === 'undefined') {
+        throw new Error('Please install MetaMask to connect your wallet');
+      }
+
+      const accounts = await (window as any).ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      const walletAddress = accounts[0];
+
+      const message = `Sign this message to authenticate with STEINZ\n\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
+      const signature = await (window as any).ethereum.request({
+        method: 'personal_sign',
+        params: [message, walletAddress]
+      });
+
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .single();
+
+      if (!existingUser) {
+        await supabase.from('users').insert({
+          wallet_address: walletAddress,
+          username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+        });
+      }
+
+      localStorage.setItem('wallet_address', walletAddress);
+      localStorage.setItem('wallet_signature', signature);
+
       onSuccess();
     } catch (err: any) {
       setError(err.message);
@@ -69,69 +106,90 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#0A0E1A] border border-white/10 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0A0E1A] border border-white/10 rounded-2xl max-w-md w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-heading font-bold">{mode === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Access the full STEINZ platform</p>
-          </div>
-          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+          <h2 className="text-2xl font-bold">
+            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+          </h2>
+          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-xs text-[#EF4444]">{error}</div>
-        )}
-        {success && (
-          <div className="mb-4 p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg text-xs text-[#10B981]">{success}</div>
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+            {error}
+          </div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="space-y-3 mb-4">
-          <div>
-            <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Email</label>
-            <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50 transition-colors" required />
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Password</label>
-            <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50 transition-colors pr-10" required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <button type="submit" disabled={loading}
-            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
-            <Mail className="w-4 h-4" />
-            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+        <form onSubmit={handleEmailAuth} className="space-y-4 mb-4">
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
+            required
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Mail className="w-5 h-5" />
+            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
           </button>
         </form>
 
-        <div className="flex items-center gap-4 my-5">
+        <div className="flex items-center gap-4 my-6">
           <div className="flex-1 h-px bg-white/10" />
-          <span className="text-[10px] text-gray-500 uppercase">or continue with</span>
+          <span className="text-sm text-gray-400">OR</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
-        <div className="space-y-2 mb-5">
-          <button onClick={handleGoogleAuth} disabled={loading}
-            className="w-full glass px-4 py-3 rounded-lg text-sm font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10">
-            <Chrome className="w-4 h-4" /> Google
+        <div className="space-y-3 mb-6">
+          <button
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
+          >
+            <Chrome className="w-5 h-5" />
+            Continue with Google
           </button>
-          <button onClick={handleWalletConnect} disabled={loading}
-            className="w-full glass px-4 py-3 rounded-lg text-sm font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10">
-            <Wallet className="w-4 h-4" /> Connect Wallet
+
+          <button
+            onClick={handleWalletConnect}
+            disabled={loading}
+            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
+          >
+            <Wallet className="w-5 h-5" />
+            Connect Wallet
           </button>
         </div>
 
-        <div className="text-center text-xs">
-          <span className="text-gray-500">{mode === 'signin' ? "Don't have an account? " : "Already have an account? "}</span>
-          <button onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setSuccess(''); }}
-            className="text-[#00E5FF] font-semibold hover:underline">
+        <div className="text-center text-sm">
+          <span className="text-gray-400">
+            {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
+          </span>
+          <button
+            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+            className="text-[#00E5FF] font-semibold hover:underline"
+          >
             {mode === 'signin' ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
