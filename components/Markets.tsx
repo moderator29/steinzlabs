@@ -1,31 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface Token {
+  id: string;
+  symbol: string;
+  name: string;
+  price: number;
+  change24h: number;
+  volume24h: number;
+  marketCap: number;
+  image: string;
+}
 
 export default function Markets() {
-  const [activeFilter, setActiveFilter] = useState('All');
-  const filters = ['All', 'Trending', 'DeFi', 'Meme', 'Gainers', 'Losers'];
+  const [activeFilter, setActiveFilter] = useState('trending');
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const [loading, setLoading] = useState(true);
+  const filters = ['trending', 'gainers', 'losers'];
 
-  const tokens = [
-    { name: 'Bitcoin', symbol: 'BTC', price: '$97,245', change: '+2.4%', positive: true, mcap: '$1.91T' },
-    { name: 'Ethereum', symbol: 'ETH', price: '$3,412', change: '+1.8%', positive: true, mcap: '$410B' },
-    { name: 'Solana', symbol: 'SOL', price: '$178.50', change: '+5.2%', positive: true, mcap: '$82B' },
-    { name: 'BNB', symbol: 'BNB', price: '$612', change: '-0.3%', positive: false, mcap: '$91B' },
-    { name: 'Cardano', symbol: 'ADA', price: '$0.89', change: '+3.1%', positive: true, mcap: '$31B' },
-    { name: 'Polygon', symbol: 'MATIC', price: '$1.12', change: '-1.2%', positive: false, mcap: '$10B' },
-  ];
+  const fetchMarketData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/market-data?category=${activeFilter}&limit=25`);
+      const data = await response.json();
+      if (data.tokens) {
+        setTokens(data.tokens);
+      }
+    } catch (error) {
+      console.error('Failed to fetch market data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketData();
+  }, [activeFilter]);
 
   return (
     <div>
-      <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
         {filters.map((filter) => (
           <button
             key={filter}
             onClick={() => setActiveFilter(filter)}
-            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors capitalize ${
               activeFilter === filter
-                ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
-                : 'bg-[#111827] hover:bg-[#1A2235] text-gray-400'
+                ? 'bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/30'
+                : 'text-gray-400 border border-white/10 hover:text-white'
             }`}
           >
             {filter}
@@ -33,31 +56,45 @@ export default function Markets() {
         ))}
       </div>
 
-      <div className="space-y-2">
-        {tokens.map((token) => (
-          <div key={token.symbol} className="glass rounded-xl p-4 border border-white/10 hover:border-[#00E5FF]/20 transition-all flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                <span className="text-sm font-bold">{token.symbol.charAt(0)}</span>
+      {loading ? (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-3xl mb-3 animate-pulse">&#x1F4CA;</div>
+          <p className="text-sm">Loading market data...</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tokens.map((token) => (
+            <div
+              key={token.id}
+              className="glass rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all flex items-center gap-3"
+            >
+              <img
+                src={token.image}
+                alt={token.name}
+                className="w-8 h-8 rounded-full"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold">{token.symbol}</span>
+                  <span className="text-xs text-gray-500 truncate">{token.name}</span>
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  Vol: ${(token.volume24h / 1e9).toFixed(2)}B | MCap: ${(token.marketCap / 1e9).toFixed(1)}B
+                </div>
               </div>
-              <div>
-                <div className="font-semibold">{token.name}</div>
-                <div className="text-sm text-gray-400">{token.symbol}</div>
+              <div className="text-right">
+                <div className="text-sm font-mono font-semibold">
+                  ${token.price < 1 ? token.price.toFixed(4) : token.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div className={`text-xs font-semibold ${token.change24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                  {token.change24h >= 0 ? '+' : ''}{token.change24h?.toFixed(2) || '0.00'}%
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="font-mono font-semibold">{token.price}</div>
-              <div className={`text-sm font-semibold ${token.positive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                {token.change}
-              </div>
-            </div>
-            <div className="hidden sm:block text-right">
-              <div className="text-sm text-gray-400">MCap</div>
-              <div className="text-sm font-mono">{token.mcap}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

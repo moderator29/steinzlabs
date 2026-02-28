@@ -1,135 +1,160 @@
 'use client';
 
 import { useState } from 'react';
+import { useContextFeed } from '@/lib/hooks/useContextFeed';
 import ViewProofModal from './ViewProofModal';
 
-interface FeedEvent {
-  id: string;
-  sentiment: string;
-  sentimentColor: string;
-  title: string;
-  summary: string;
-  value: string;
-  wallet: string;
-  chain: string;
-  trustScore: number;
-  trustColor: string;
-  trustLabel: string;
-  time: string;
-  views: number;
-  comments: number;
-  shares: number;
-  likes: number;
-  from: string;
-  to: string;
-  valueNum: number;
-  valueUsd: number;
-  txHash: string;
-}
-
-const EVENTS: FeedEvent[] = [
-  {
-    id: '1', sentiment: 'BULLISH', sentimentColor: '#10B981',
-    title: '🐋 Large SOL → USDC swap detected',
-    summary: 'Whale wallet 0x742d...3a7f swapped 25,000 SOL ($4.46M) for USDC on Jupiter. Wallet has 87% historical accuracy on market timing.',
-    value: '$4.46M', wallet: '0x742d...3a7f', chain: 'Solana', trustScore: 82, trustColor: '#10B981', trustLabel: 'TRUSTED', time: '5m ago',
-    views: 12400, comments: 754, shares: 412, likes: 2600,
-    from: '0x742d4Dc64C3647c5c5A20e1A2A0B3c8d91D3a7f', to: '0xJupiterProtocolAddress', valueNum: 25000, valueUsd: 4460000,
-    txHash: '0x7f8c9a1b2e3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
-  },
-  {
-    id: '2', sentiment: 'HYPE', sentimentColor: '#F59E0B',
-    title: '🚀 New memecoin $FIZZ launched on Pump.fun',
-    summary: 'Token raised 16,000 SOL in first hour. Top investor wallet linked to 3 previous 100x launches. Community growing rapidly.',
-    value: '$2.8M', wallet: '0x9f3a...b21c', chain: 'Solana', trustScore: 45, trustColor: '#EF4444', trustLabel: 'DANGER', time: '12m ago',
-    views: 8900, comments: 1240, shares: 890, likes: 4100,
-    from: '0x9f3a4Bc72D1e5F6a7B8c9D0e1F2a3B4c5D6e7F8a', to: '0xPumpFunContractAddress', valueNum: 16000, valueUsd: 2800000,
-    txHash: '0xa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
-  },
-  {
-    id: '3', sentiment: 'BEAR', sentimentColor: '#EF4444',
-    title: '⚠️ Massive ETH liquidity removal on Uniswap',
-    summary: 'Developer wallet removed $1.2M liquidity from PEPE/ETH pool. Wallet previously associated with 2 rug pulls in the last 90 days.',
-    value: '$1.2M', wallet: '0x3e7b...f4d8', chain: 'Ethereum', trustScore: 18, trustColor: '#EF4444', trustLabel: 'DANGER', time: '23m ago',
-    views: 15600, comments: 2100, shares: 1800, likes: 890,
-    from: '0x3e7b8Fc42D1a5E6b7C8d9E0f1A2b3C4d5E6f7F8a', to: '0xUniswapV3PoolAddress', valueNum: 450, valueUsd: 1200000,
-    txHash: '0xb2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
-  },
-  {
-    id: '4', sentiment: 'BULLISH', sentimentColor: '#10B981',
-    title: '💎 Smart money accumulating LINK',
-    summary: '14 wallets with >80% win rate bought LINK in the last 2 hours. Combined position: $8.2M. On-chain metrics bullish.',
-    value: '$8.2M', wallet: '14 wallets', chain: 'Ethereum', trustScore: 91, trustColor: '#10B981', trustLabel: 'TRUSTED', time: '34m ago',
-    views: 6300, comments: 420, shares: 310, likes: 1900,
-    from: '0x5a6b7C8d9E0f1A2b3C4d5E6f7A8b9C0d1E2f3A4b', to: '0xChainlinkTokenAddress', valueNum: 3200, valueUsd: 8200000,
-    txHash: '0xc3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
-  },
-];
-
 export default function ContextFeed() {
-  const [selectedEvent, setSelectedEvent] = useState<FeedEvent | null>(null);
+  const { events, loading, refresh } = useContextFeed(10);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [engagement, setEngagement] = useState<{ [key: string]: { views: number; comments: number; shares: number; likes: number; liked: boolean; shared: boolean } }>({});
+
+  const getEngagement = (eventId: string) => {
+    if (!engagement[eventId]) {
+      const base = {
+        views: Math.floor(Math.random() * 20000 + 5000),
+        comments: Math.floor(Math.random() * 1000 + 200),
+        shares: Math.floor(Math.random() * 500 + 100),
+        likes: Math.floor(Math.random() * 3000 + 500),
+        liked: false,
+        shared: false,
+      };
+      setEngagement(prev => ({ ...prev, [eventId]: base }));
+      return base;
+    }
+    return engagement[eventId];
+  };
+
+  const handleLike = (eventId: string) => {
+    setEngagement(prev => {
+      const e = prev[eventId] || getEngagement(eventId);
+      return { ...prev, [eventId]: { ...e, likes: e.liked ? e.likes - 1 : e.likes + 1, liked: !e.liked } };
+    });
+  };
+
+  const handleShare = (eventId: string) => {
+    setEngagement(prev => {
+      const e = prev[eventId] || getEngagement(eventId);
+      if (e.shared) return prev;
+      return { ...prev, [eventId]: { ...e, shares: e.shares + 1, shared: true } };
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-4xl mb-3">&#x23F3;</div>
+        <p className="text-lg mb-1 font-semibold">Loading Context Feed...</p>
+        <p className="text-sm text-gray-400">Fetching real-time on-chain events</p>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-4xl mb-3">&#x1F4E1;</div>
+        <p className="text-lg mb-1 font-semibold">No Events Found</p>
+        <p className="text-sm text-gray-400">Waiting for whale activity...</p>
+        <button
+          onClick={refresh}
+          className="mt-4 px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg font-semibold"
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {EVENTS.map((event) => (
-        <div key={event.id} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
-          <div className="flex items-start justify-between mb-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: `${event.sentimentColor}20`, color: event.sentimentColor }}>
-              {event.sentiment}
-            </span>
-            <span className="text-gray-500 text-xs">{event.time}</span>
-          </div>
-          <h3 className="text-sm font-bold mb-1.5">{event.title}</h3>
-          <p className="text-gray-400 text-xs mb-3 leading-relaxed">{event.summary}</p>
-          <div className="flex items-center gap-3 mb-3 text-xs">
-            <span className="text-gray-500">💰 {event.value}</span>
-            <span className="text-gray-500">🔑 {event.wallet}</span>
-            <span className="text-gray-500">⛓️ {event.chain}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-16 rounded-full h-1.5" style={{ backgroundColor: `${event.trustColor}20` }}>
-                <div className="h-1.5 rounded-full" style={{ width: `${event.trustScore}%`, backgroundColor: event.trustColor }}></div>
-              </div>
-              <span className="text-xs font-semibold" style={{ color: event.trustColor }}>{event.trustScore}</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${event.trustColor}20`, color: event.trustColor }}>{event.trustLabel}</span>
+    <div className="space-y-4">
+      {events.map((event) => {
+        const isPositive = event.sentiment === 'BULLISH';
+        const isNegative = event.sentiment === 'BEARISH';
+        const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
+        const eng = getEngagement(event.id);
+
+        return (
+          <div
+            key={event.id}
+            className="glass rounded-2xl p-5 border border-white/10 hover:border-[#00E5FF]/30 transition-all"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <span
+                className="px-3 py-1 rounded-full text-xs font-semibold"
+                style={{
+                  backgroundColor: `${sentimentColor}20`,
+                  color: sentimentColor
+                }}
+              >
+                {event.sentiment}
+              </span>
+              <span className="text-gray-400 text-xs">
+                {new Date(event.timestamp).toLocaleTimeString()}
+              </span>
             </div>
-            <button
-              onClick={() => setSelectedEvent(event)}
-              className="text-[#00E5FF] font-semibold text-xs hover:underline"
-            >
-              View Proof →
-            </button>
+
+            <h3 className="text-lg font-bold mb-2">{event.title}</h3>
+
+            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+              {event.summary}
+            </p>
+
+            <div className="flex items-center gap-4 mb-4 text-xs">
+              <span className="text-gray-400">&#x1F4B0; ${event.valueUsd.toLocaleString()}</span>
+              <span className="text-gray-400">&#x1F464; {event.from.slice(0, 6)}...{event.from.slice(-4)}</span>
+              <span className="text-gray-400">&#x26D3;&#xFE0F; {event.chain}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-20 bg-white/20 rounded-full h-1.5">
+                  <div
+                    className="h-1.5 rounded-full"
+                    style={{
+                      width: `${event.trustScore}%`,
+                      backgroundColor: event.trustScore > 70 ? '#10B981' : event.trustScore > 40 ? '#F59E0B' : '#EF4444'
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-semibold" style={{ color: sentimentColor }}>
+                  {event.trustScore}
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  style={{
+                    backgroundColor: `${sentimentColor}20`,
+                    color: sentimentColor
+                  }}
+                >
+                  {event.trustScore > 70 ? 'TRUSTED' : event.trustScore > 40 ? 'MEDIUM' : 'LOW'}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(event)}
+                className="text-[#00E5FF] font-semibold text-xs hover:underline"
+              >
+                View Proof &#x2192;
+              </button>
+            </div>
+
+            <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
+              <span>&#x1F441;&#xFE0F; {eng.views.toLocaleString()}</span>
+              <span>&#x1F4AC; {eng.comments.toLocaleString()}</span>
+              <button onClick={() => handleShare(event.id)} className={`hover:text-[#00E5FF] transition-colors ${eng.shared ? 'text-[#00E5FF]' : ''}`}>
+                &#x1F517; {eng.shares.toLocaleString()}
+              </button>
+              <button onClick={() => handleLike(event.id)} className={`hover:text-[#EF4444] transition-colors ${eng.liked ? 'text-[#EF4444]' : ''}`}>
+                &#x2764;&#xFE0F; {eng.likes.toLocaleString()}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10 text-[10px] text-gray-500">
-            <span>👁 {event.views.toLocaleString()}</span>
-            <span>💬 {event.comments.toLocaleString()}</span>
-            <span>🔗 {event.shares.toLocaleString()}</span>
-            <span>❤️ {event.likes.toLocaleString()}</span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {selectedEvent && (
         <ViewProofModal
-          event={{
-            id: selectedEvent.id,
-            title: selectedEvent.title,
-            summary: selectedEvent.summary,
-            from: selectedEvent.from,
-            to: selectedEvent.to,
-            value: selectedEvent.valueNum,
-            valueUsd: selectedEvent.valueUsd,
-            chain: selectedEvent.chain,
-            trustScore: selectedEvent.trustScore,
-            txHash: selectedEvent.txHash,
-            timestamp: new Date().toISOString(),
-            sentiment: selectedEvent.sentiment,
-            views: selectedEvent.views,
-            comments: selectedEvent.comments,
-            shares: selectedEvent.shares,
-            likes: selectedEvent.likes,
-          }}
+          event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
         />
       )}
