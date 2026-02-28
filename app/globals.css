@@ -15,6 +15,8 @@ body {
   color: #F9FAFB;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -22,35 +24,36 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #1F2937;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4B5563;
+  background: #374151;
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .card-hover {
-  transition: transform 200ms, box-shadow 200ms;
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 300ms ease;
 }
 
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .gradient-text {
@@ -67,7 +70,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-gradient:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 16px rgba(0, 229, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 229, 255, 0.25);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -80,12 +83,12 @@ h1, h2, h3, h4, h5, h6 {
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-12px); }
 }
 
 @keyframes float-delayed {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(3deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
 }
 
 @keyframes shimmer {
@@ -99,8 +102,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes grid-pulse {
-  0%, 100% { opacity: 0.03; }
-  50% { opacity: 0.08; }
+  0%, 100% { opacity: 0.02; }
+  50% { opacity: 0.06; }
 }
 
 @keyframes glow-line {
@@ -119,14 +122,19 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.9); }
+  from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes borderGlow {
-  0%, 100% { border-color: rgba(0, 229, 255, 0.1); }
-  50% { border-color: rgba(0, 229, 255, 0.4); }
+  0%, 100% { border-color: rgba(0, 229, 255, 0.05); }
+  50% { border-color: rgba(0, 229, 255, 0.2); }
 }
 
 @keyframes textGradientShift {
@@ -136,8 +144,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
 }
 
 @keyframes spin-slow {
@@ -162,8 +170,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes breathe {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes scanline {
+  0% { opacity: 0; transform: translateY(-20px); }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(100px); }
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  5% { opacity: 0.8; }
+  10% { opacity: 1; }
+  50% { opacity: 0.95; }
+  55% { opacity: 0.85; }
+  60% { opacity: 1; }
 }
 
 .animate-float {
@@ -180,7 +204,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .animate-fadeInUp {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
 }
 
 .animate-fadeInScale {
@@ -201,7 +230,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
+  animation: pulse-glow 6s ease-in-out infinite;
 }
 
 .animate-spin-slow {
@@ -214,19 +243,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-scanline {
+  animation: scanline 5s ease-in-out infinite;
+}
+
+.animate-neon-flicker {
+  animation: neon-flicker 8s ease-in-out infinite;
 }
 
 .grid-pattern {
   background-image:
-    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
   background-size: 60px 60px;
   animation: grid-pulse 8s ease-in-out infinite;
 }
 
 .dot-pattern {
-  background-image: radial-gradient(rgba(0, 229, 255, 0.07) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px);
   background-size: 30px 30px;
 }
 
@@ -242,8 +279,8 @@ h1, h2, h3, h4, h5, h6 {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.05), transparent);
-  transition: left 0.5s ease;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.03), transparent);
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .glow-card:hover::before {
@@ -251,7 +288,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .glow-card:hover {
-  box-shadow: 0 0 30px rgba(0, 229, 255, 0.1), 0 0 60px rgba(124, 58, 237, 0.05);
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.06), 0 0 80px rgba(124, 58, 237, 0.03);
 }
 
 .shimmer-btn {
@@ -266,8 +303,8 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-  animation: shimmer-btn 2.5s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  animation: shimmer-btn 3s ease-in-out infinite;
 }
 
 .gradient-border {
@@ -279,7 +316,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(124, 58, 237, 0.3), rgba(0, 229, 255, 0.3));
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(124, 58, 237, 0.2), rgba(0, 229, 255, 0.2));
   background-size: 200% 200%;
   animation: gradient-shift 4s ease infinite;
   z-index: -1;
@@ -292,16 +329,32 @@ h1, h2, h3, h4, h5, h6 {
 
 .hero-mesh {
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(0, 229, 255, 0.03) 0%, transparent 70%);
+    radial-gradient(ellipse at 30% 20%, rgba(0, 229, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 229, 255, 0.02) 0%, transparent 70%);
 }
 
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
-.stagger-5 { animation-delay: 0.5s; }
-.stagger-6 { animation-delay: 0.6s; }
-.stagger-7 { animation-delay: 0.7s; }
-.stagger-8 { animation-delay: 0.8s; }
+.hero-mesh-enhanced {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(0, 229, 255, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 30%, rgba(124, 58, 237, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 40% 70%, rgba(0, 229, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 90%, rgba(124, 58, 237, 0.04) 0%, transparent 40%);
+}
+
+.neon-text {
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.3), 0 0 40px rgba(0, 229, 255, 0.1);
+}
+
+[id] {
+  scroll-margin-top: 80px;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
