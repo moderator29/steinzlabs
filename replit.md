@@ -21,10 +21,18 @@ Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain 
 app/
 ├── globals.css              # Global styles, fonts, animations, glass/gradient/glow utilities
 ├── layout.tsx               # Root layout
-├── page.tsx                 # Landing page (hero, features, security, whitepaper, FAQ, CTA, footer)
+├── page.tsx                 # Landing page (fixed nav, hero, stats, features, security, whitepaper, FAQ, CTA, footer)
+├── admin/
+│   └── page.tsx             # Admin panel (password: 195656, review system with 6 tabs)
 └── dashboard/
     ├── layout.tsx           # Dashboard layout wrapper
-    └── page.tsx             # Dashboard with 6-tab bottom nav + Home sub-tabs
+    ├── page.tsx             # Dashboard with 6-tab bottom nav + Home sub-tabs
+    ├── project-discovery/   # Project discovery with search & filters
+    ├── builder-funding/     # Builder funding portal with milestone escrow
+    ├── predictions/         # Full predictions market with voting
+    ├── messages/            # Group messaging (Telegram-style)
+    ├── social-trading/      # Social/copy trading with leaderboard
+    └── profile/             # Full profile with Activity/Settings/Achievements tabs
 components/
 ├── ContextFeed.tsx          # Context Feed tab (whale alerts, token events, trust scores)
 ├── Markets.tsx              # Markets tab (token list with filters)
@@ -40,7 +48,7 @@ lib/
 ```
 
 ## Pages & Navigation
-- `/` — Landing page with animated hero, feature cards, security section, whitepaper, FAQ, CTA
+- `/` — Landing page with fixed nav, animated hero with gradient mesh, stats row (12+ chains, 89% accuracy, $2.4B volume, 50K+ users), feature cards, security suite, whitepaper section, FAQ, CTA, footer
 - `/dashboard` — Main app with 6-tab bottom navigation:
   - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with price ticker bar)
   - **Social** — Social trading with messages & connect wallet
@@ -48,6 +56,17 @@ lib/
   - **Discover** — Security Center with Token Safety Scanner, Contract Analyzer, Rug/Phishing Detector
   - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
   - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
+- `/dashboard/project-discovery` — Project grid with category filters and search
+- `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
+- `/dashboard/predictions` — Full predictions market with YES/NO voting, pool sizes, payout calculator
+- `/dashboard/messages` — Telegram-style group chat with sidebar, message bubbles, reactions
+- `/dashboard/social-trading` — Top traders, copy trading, leaderboard, following
+- `/dashboard/profile` — Extended profile with Activity, Settings (notifications/preferences/privacy), Achievements
+- `/admin` — Password-protected admin panel (195656) with:
+  - Overview stats (Pending/Approved/Rejected/Active)
+  - Submission list with AI risk scores and automated checks
+  - Detail review with 6 tabs: Project Info, Team, Technical, Checks, AI Analysis, Actions
+  - Quick Approve / Reject / Request More Info actions
 
 ## Design System
 - **Background**: #0A0E1A (dark navy)
@@ -55,9 +74,10 @@ lib/
 - **Accent Colors**: Cyan (#00E5FF), Purple (#7C3AED)
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
-- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.shimmer-btn`, `.gradient-border`, `.scrollbar-hide`
-- **Animations**: `animate-float`, `animate-fadeInUp`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`
+- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`
+- **Animations**: `animate-float`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
+- **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
 
 ## Running
 - **Dev**: `npm run dev` (port 5000)
@@ -80,4 +100,5 @@ Configured in `.env.local`:
 - Project uses root-level `app/` and `lib/` directories (no `src/` prefix)
 - `@/*` path alias maps to project root (`./`)
 - Frontend only for now — will be connected to real data/engineering later
-- Landing page is static (no horizontal scroll), no pricing section
+- Landing page uses CSS-only entrance animations (no React state transitions)
+- Admin panel password: 195656
