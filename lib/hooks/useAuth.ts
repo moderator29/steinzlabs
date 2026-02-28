@@ -7,6 +7,12 @@ interface User {
   id: string;
   email?: string;
   wallet_address?: string;
+  created_at?: string;
+  user_metadata?: {
+    avatar_url?: string;
+    full_name?: string;
+    [key: string]: unknown;
+  };
 }
 
 export function useAuth() {
@@ -19,9 +25,9 @@ export function useAuth() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: User } | null } }) => {
       if (session?.user) {
-        setUser(session.user as any);
+        setUser(session.user as User);
       }
       setLoading(false);
     });
@@ -32,8 +38,8 @@ export function useAuth() {
       setLoading(false);
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user as any || null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
+      setUser(session?.user as User || null);
     });
 
     return () => subscription.unsubscribe();
