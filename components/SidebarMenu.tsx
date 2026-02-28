@@ -1,6 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { X, Home, BarChart3, TrendingUp, Search, Layers, Activity, Radar, Users, ArrowLeftRight, Brain, Bell, Shield, Zap, Compass, ChevronRight } from 'lucide-react';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -10,60 +10,65 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="absolute right-0 top-0 h-full w-80 bg-[#0A0E1A] border-l border-white/10 p-6 overflow-y-auto"
+        className="absolute right-0 top-0 h-full w-72 bg-[#0A0E1A] border-l border-white/10 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-heading font-bold">Menu</h2>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <span className="text-sm font-heading font-bold">Menu</span>
           <button onClick={onClose}>
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
+        <div className="p-4 space-y-1">
+          <MenuItem icon={Home} label="Home / Context Feed" />
+          <MenuItem icon={BarChart3} label="Portfolio Dashboard" />
+          <MenuItem icon={TrendingUp} label="Trading DNA Analyzer" badge="NEW" />
 
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Intelligence</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Whale Tracker
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Smart Money Watchlist
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Network Metrics
-              </button>
-            </div>
-          </div>
+          <SectionTitle>Intelligence</SectionTitle>
+          <MenuItem icon={Search} label="Wallet Intelligence" />
+          <MenuItem icon={Layers} label="Wallet Clusters" />
+          <MenuItem icon={Activity} label="On-Chain Trends" />
+          <MenuItem icon={Radar} label="Smart Money Watchlist" />
+          <MenuItem icon={Activity} label="Network Metrics" />
+          <MenuItem icon={Compass} label="Whale Tracker" />
 
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Tools</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Token Scanner
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Multi-Chain Swap
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Trading DNA
-              </button>
-            </div>
-          </div>
+          <SectionTitle>Tools</SectionTitle>
+          <MenuItem icon={ArrowLeftRight} label="Multi-Chain Swap" />
+          <MenuItem icon={Brain} label="VTX AI Assistant" active />
+          <MenuItem icon={Bell} label="Smart Alerts" />
+          <MenuItem icon={Users} label="Social Trading" />
+          <MenuItem icon={Shield} label="Security Center" badge="NEW" />
+          <MenuItem icon={Zap} label="AI Risk Scanner" badge="NEW" />
 
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Account</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Settings
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
-                Upgrade Plan
-              </button>
-            </div>
-          </div>
+          <SectionTitle>Discover</SectionTitle>
+          <MenuItem icon={Search} label="Project Discovery" />
+
+          <SectionTitle>Account</SectionTitle>
+          <MenuItem icon={Bell} label="Notifications" />
+          <MenuItem icon={Shield} label="Settings" />
         </div>
       </div>
     </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="pt-4 pb-1">
+      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{children}</span>
+    </div>
+  );
+}
+
+function MenuItem({ icon: Icon, label, badge, active }: { icon: React.ElementType; label: string; badge?: string; active?: boolean }) {
+  return (
+    <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${active ? 'bg-[#00E5FF]/10 text-[#00E5FF]' : 'text-gray-300 hover:bg-white/5'}`}>
+      <Icon className="w-4 h-4 flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {badge && (
+        <span className="px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">{badge}</span>
+      )}
+      <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+    </button>
   );
 }
