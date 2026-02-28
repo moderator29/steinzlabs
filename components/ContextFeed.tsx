@@ -1,44 +1,102 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Eye, MessageSquare, Link2, Heart, RefreshCw } from 'lucide-react';
 import { useContextFeed } from '@/lib/hooks/useContextFeed';
 import ViewProofModal from './ViewProofModal';
 
+interface EngagementData {
+  views: number;
+  comments: number;
+  shares: number;
+  likes: number;
+  liked: boolean;
+  shared: boolean;
+}
+
 export default function ContextFeed() {
   const { events, loading, refresh } = useContextFeed(10);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [engagement, setEngagement] = useState<{ [key: string]: { views: number; comments: number; shares: number; likes: number; liked: boolean; shared: boolean } }>({});
+  const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
 
-  const getEngagement = (eventId: string) => {
-    if (!engagement[eventId]) {
-      const base = {
-        views: Math.floor(Math.random() * 20000 + 5000),
-        comments: Math.floor(Math.random() * 1000 + 200),
-        shares: Math.floor(Math.random() * 500 + 100),
-        likes: Math.floor(Math.random() * 3000 + 500),
+  const fetchEngagement = useCallback(async (eventId: string) => {
+    if (engagement[eventId]) return engagement[eventId];
+
+    try {
+      const res = await fetch(`/api/engagement?eventId=${eventId}`);
+      const data = await res.json();
+      const eng: EngagementData = {
+        views: data.views || 0,
+        comments: data.comments || 0,
+        shares: data.shares || 0,
+        likes: data.likes || 0,
         liked: false,
         shared: false,
       };
-      setEngagement(prev => ({ ...prev, [eventId]: base }));
-      return base;
+      setEngagement(prev => ({ ...prev, [eventId]: eng }));
+      return eng;
+    } catch {
+      const fallback: EngagementData = { views: 0, comments: 0, shares: 0, likes: 0, liked: false, shared: false };
+      setEngagement(prev => ({ ...prev, [eventId]: fallback }));
+      return fallback;
     }
-    return engagement[eventId];
+  }, [engagement]);
+
+  useEffect(() => {
+    events.forEach(event => {
+      if (!engagement[event.id]) {
+        fetchEngagement(event.id);
+      }
+    });
+  }, [events]);
+
+  useEffect(() => {
+    events.forEach(event => {
+      fetch('/api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: event.id, action: 'view' })
+      }).catch(() => {});
+    });
+  }, [events]);
+
+  const handleLike = async (eventId: string) => {
+    const eng = engagement[eventId];
+    if (!eng) return;
+
+    const newLiked = !eng.liked;
+    setEngagement(prev => ({
+      ...prev,
+      [eventId]: {
+        ...eng,
+        likes: newLiked ? eng.likes + 1 : eng.likes - 1,
+        liked: newLiked,
+      }
+    }));
+
+    if (newLiked) {
+      fetch('/api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, action: 'like' })
+      }).catch(() => {});
+    }
   };
 
-  const handleLike = (eventId: string) => {
-    setEngagement(prev => {
-      const e = prev[eventId] || getEngagement(eventId);
-      return { ...prev, [eventId]: { ...e, likes: e.liked ? e.likes - 1 : e.likes + 1, liked: !e.liked } };
-    });
-  };
+  const handleShare = async (eventId: string) => {
+    const eng = engagement[eventId];
+    if (!eng || eng.shared) return;
 
-  const handleShare = (eventId: string) => {
-    setEngagement(prev => {
-      const e = prev[eventId] || getEngagement(eventId);
-      if (e.shared) return prev;
-      return { ...prev, [eventId]: { ...e, shares: e.shares + 1, shared: true } };
-    });
+    setEngagement(prev => ({
+      ...prev,
+      [eventId]: { ...eng, shares: eng.shares + 1, shared: true }
+    }));
+
+    fetch('/api/engagement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, action: 'share' })
+    }).catch(() => {});
   };
 
   if (loading) {
@@ -73,7 +131,7 @@ export default function ContextFeed() {
         const isPositive = event.sentiment === 'BULLISH';
         const isNegative = event.sentiment === 'BEARISH';
         const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
-        const eng = getEngagement(event.id);
+        const eng = engagement[event.id] || { views: 0, comments: 0, shares: 0, likes: 0, liked: false, shared: false };
 
         return (
           <div

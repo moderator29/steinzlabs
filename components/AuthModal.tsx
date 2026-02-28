@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Mail, Chrome, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { connectWallet } from '@/lib/wallet';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -78,39 +79,28 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setError('');
 
     try {
-      if (typeof (window as any).ethereum === 'undefined') {
-        throw new Error('Please install MetaMask to connect your wallet');
-      }
-
-      const accounts = await (window as any).ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      const walletAddress = accounts[0];
-
-      const message = `Sign this message to authenticate with STEINZ\n\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
-      const signature = await (window as any).ethereum.request({
-        method: 'personal_sign',
-        params: [message, walletAddress]
-      });
+      const walletData = await connectWallet();
 
       if (supabase) {
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('wallet_address', walletAddress)
-          .single();
+        try {
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('wallet_address', walletData.address)
+            .single();
 
-        if (!existingUser) {
-          await supabase.from('users').insert({
-            wallet_address: walletAddress,
-            username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-          });
+          if (!existingUser) {
+            await supabase.from('users').insert({
+              wallet_address: walletData.address,
+              username: `${walletData.address.slice(0, 6)}...${walletData.address.slice(-4)}`
+            });
+          }
+        } catch {
         }
       }
 
-      localStorage.setItem('wallet_address', walletAddress);
-      localStorage.setItem('wallet_signature', signature);
+      localStorage.setItem('wallet_address', walletData.address);
+      localStorage.setItem('wallet_provider', walletData.provider);
 
       onSuccess();
     } catch (err: any) {
