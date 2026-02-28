@@ -1,7 +1,7 @@
 'use client';
 
-import { X, ExternalLink, CheckCircle, AlertTriangle, ThumbsUp, ThumbsDown, Eye, MessageSquare, Link2, Heart } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, MessageSquare, Link2, Heart, ShoppingCart } from 'lucide-react';
+import { useState } from 'react';
 
 interface ViewProofEvent {
   id: string;
@@ -20,56 +20,21 @@ interface ViewProofEvent {
   comments: number;
   shares: number;
   likes: number;
+  pairAddress?: string;
+  dexUrl?: string;
+  tokenName?: string;
+  tokenSymbol?: string;
+  tokenPrice?: string;
+  platform?: string;
+  tokenVolume24h?: number;
+  tokenLiquidity?: number;
+  tokenMarketCap?: number;
+  tokenPriceChange24h?: number;
 }
 
 interface ViewProofModalProps {
   event: ViewProofEvent;
   onClose: () => void;
-}
-
-function TradingViewChart({ chain }: { chain: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const symbolMap: Record<string, string> = {
-    'Ethereum': 'BINANCE:ETHUSDT',
-    'Solana': 'BINANCE:SOLUSDT',
-    'Bitcoin': 'BINANCE:BTCUSDT',
-    'BNB': 'BINANCE:BNBUSDT',
-    'Polygon': 'BINANCE:MATICUSDT',
-    'Arbitrum': 'BINANCE:ARBUSDT',
-    'Multi': 'BINANCE:BTCUSDT',
-  };
-
-  const symbol = symbolMap[chain] || 'BINANCE:BTCUSDT';
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = '';
-
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
-    script.type = 'text/javascript';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      symbol: symbol,
-      width: '100%',
-      height: '100%',
-      locale: 'en',
-      dateRange: '1D',
-      colorTheme: 'dark',
-      isTransparent: true,
-      autosize: true,
-      largeChartUrl: '',
-      noTimeScale: false,
-      chartOnly: false,
-    });
-
-    containerRef.current.appendChild(script);
-  }, [symbol]);
-
-  return (
-    <div ref={containerRef} className="h-44 w-full overflow-hidden rounded-lg" />
-  );
 }
 
 export default function ViewProofModal({ event, onClose }: ViewProofModalProps) {
@@ -82,11 +47,19 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
   const trustColor = event.trustScore >= 70 ? '#10B981' : event.trustScore >= 40 ? '#F59E0B' : '#EF4444';
   const trustLabel = event.trustScore >= 70 ? 'TRUSTED' : event.trustScore >= 40 ? 'CAUTION' : 'DANGER';
 
-  const explorerUrl = event.chain === 'Ethereum'
+  const chainId = event.chain || 'solana';
+  const hasPair = !!event.pairAddress;
+  const chartUrl = hasPair
+    ? `https://dexscreener.com/${chainId}/${event.pairAddress}?embed=1&theme=dark&trades=0&info=0`
+    : null;
+
+  const dexPageUrl = event.dexUrl || (hasPair ? `https://dexscreener.com/${chainId}/${event.pairAddress}` : null);
+
+  const explorerUrl = chainId === 'ethereum'
     ? `https://etherscan.io/tx/${event.txHash}`
-    : event.chain === 'Solana'
+    : chainId === 'solana'
     ? `https://solscan.io/tx/${event.txHash}`
-    : event.chain === 'BNB'
+    : chainId === 'bsc'
     ? `https://bscscan.com/tx/${event.txHash}`
     : `https://etherscan.io/tx/${event.txHash}`;
 
@@ -107,6 +80,13 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const fmtNum = (n: number) => {
+    if (!n) return '$0';
+    if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
+    return `$${n.toFixed(0)}`;
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center"
@@ -117,38 +97,95 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0">
               <CheckCircle className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold">On-Chain Proof Analysis</h2>
-              <p className="text-[10px] text-gray-500">Verified by Steinz AI Engine</p>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold truncate">{event.tokenName || 'On-Chain Proof'}</h2>
+              <p className="text-[10px] text-gray-500 truncate">
+                {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Verified by Steinz AI'}
+                {event.tokenPrice ? ` · ${event.tokenPrice}` : ''}
+                {event.platform ? ` · ${event.platform}` : ''}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="glass rounded-xl p-4 border border-white/10">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-bold text-sm flex-1">{event.title}</h3>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ml-2 flex-shrink-0`} style={{ backgroundColor: `${trustColor}20`, color: trustColor }}>
+          <div className="glass rounded-xl p-4 border border-white/10 overflow-hidden">
+            <div className="flex items-start justify-between mb-2 gap-2">
+              <h3 className="font-bold text-sm flex-1 break-words line-clamp-2">{event.title}</h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold flex-shrink-0" style={{ backgroundColor: `${trustColor}20`, color: trustColor }}>
                 VERIFIED
               </span>
             </div>
-            <p className="text-xs text-gray-400 leading-relaxed">{event.summary}</p>
+            <p className="text-xs text-gray-400 leading-relaxed break-words line-clamp-3">{event.summary}</p>
+
+            {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {event.tokenVolume24h ? (
+                  <span className="px-2 py-1 bg-[#111827] rounded text-[10px] text-gray-300">Vol: {fmtNum(event.tokenVolume24h)}</span>
+                ) : null}
+                {event.tokenLiquidity ? (
+                  <span className="px-2 py-1 bg-[#111827] rounded text-[10px] text-gray-300">Liq: {fmtNum(event.tokenLiquidity)}</span>
+                ) : null}
+                {event.tokenMarketCap ? (
+                  <span className="px-2 py-1 bg-[#111827] rounded text-[10px] text-gray-300">MCap: {fmtNum(event.tokenMarketCap)}</span>
+                ) : null}
+                {event.tokenPriceChange24h ? (
+                  <span className={`px-2 py-1 bg-[#111827] rounded text-[10px] ${(event.tokenPriceChange24h || 0) >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                    {(event.tokenPriceChange24h || 0) >= 0 ? '+' : ''}{event.tokenPriceChange24h?.toFixed(1)}% 24h
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
 
-          <div className="glass rounded-xl p-4 border border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-sm">Live Chart</h3>
-              <span className="text-[10px] text-gray-500">{event.chain}</span>
+          {chartUrl && (
+            <div className="glass rounded-xl border border-white/10 overflow-hidden">
+              <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                <h3 className="font-bold text-sm">Live Chart</h3>
+                <span className="text-[10px] text-gray-500">{chainId} · DexScreener</span>
+              </div>
+              <div className="w-full" style={{ height: '320px' }}>
+                <iframe
+                  src={chartUrl}
+                  className="w-full h-full border-0"
+                  title="DexScreener Chart"
+                  allow="clipboard-write"
+                  loading="lazy"
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                />
+              </div>
             </div>
-            <TradingViewChart chain={event.chain} />
-          </div>
+          )}
+
+          {dexPageUrl && (
+            <div className="flex gap-2">
+              <a
+                href={dexPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Buy {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}
+              </a>
+              <a
+                href={dexPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-4 py-3 border border-white/10 rounded-xl text-xs font-semibold hover:bg-white/5 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                DexScreener
+              </a>
+            </div>
+          )}
 
           <div className="glass rounded-xl p-4 border border-white/10">
             <div className="flex items-center gap-2 mb-3">
@@ -175,12 +212,12 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
             <h3 className="font-bold text-sm mb-3">Blockchain Verification</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="bg-[#111827] rounded-lg p-3">
-                <div className="text-[10px] text-gray-500 mb-1">Tx Hash</div>
-                <div className="text-xs font-mono">{event.txHash.slice(0, 8)}...{event.txHash.slice(-4)}</div>
+                <div className="text-[10px] text-gray-500 mb-1">Tx / Token</div>
+                <div className="text-xs font-mono truncate">{event.tokenSymbol ? `$${event.tokenSymbol}` : `${event.txHash.slice(0, 8)}...${event.txHash.slice(-4)}`}</div>
               </div>
               <div className="bg-[#111827] rounded-lg p-3">
                 <div className="text-[10px] text-gray-500 mb-1">Chain</div>
-                <div className="text-xs font-mono">{event.chain}</div>
+                <div className="text-xs font-mono">{chainId}</div>
               </div>
               <div className="bg-[#111827] rounded-lg p-3">
                 <div className="text-[10px] text-gray-500 mb-1">Timestamp</div>
@@ -199,7 +236,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                 className="flex items-center justify-center gap-1.5 py-2 border border-[#00E5FF]/30 rounded-lg text-[#00E5FF] text-xs font-semibold hover:bg-[#00E5FF]/10 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                View on {event.chain === 'Solana' ? 'Solscan' : 'Etherscan'}
+                View on {chainId === 'solana' ? 'Solscan' : 'Etherscan'}
               </a>
             )}
           </div>

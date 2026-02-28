@@ -48,8 +48,8 @@ app/
     ├── wallet-intelligence/ # Wallet Intelligence (scan any address, AI assessment)
     └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
-├── ContextFeed.tsx          # Context Feed tab (whale alerts with View Proof modal)
-├── ViewProofModal.tsx       # On-chain proof analysis modal (chart, trust score, voting)
+├── ContextFeed.tsx          # Context Feed tab (whale alerts with View Proof modal, overflow-safe cards, rich token data)
+├── ViewProofModal.tsx       # On-chain proof modal (DexScreener embedded live chart, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
 ├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
 ├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
@@ -70,7 +70,7 @@ app/api/
 ├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
 ├── token-scanner/route.ts    # Token contract security scanner
-├── context-feed/route.ts     # On-chain whale events feed (Alchemy ETH + Helius Solana)
+├── context-feed/route.ts     # On-chain whale events feed (Alchemy ETH + Helius Solana + Pump.fun + DexScreener with full pair data)
 ├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
 ├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
 ├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)

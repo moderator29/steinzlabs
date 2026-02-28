@@ -136,11 +136,11 @@ export default function ContextFeed() {
         return (
           <div
             key={event.id}
-            className="glass rounded-2xl p-5 border border-white/10 hover:border-[#00E5FF]/30 transition-all"
+            className="glass rounded-2xl p-5 border border-white/10 hover:border-[#00E5FF]/30 transition-all overflow-hidden"
           >
             <div className="flex items-start justify-between mb-3">
               <span
-                className="px-3 py-1 rounded-full text-xs font-semibold"
+                className="px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0"
                 style={{
                   backgroundColor: `${sentimentColor}20`,
                   color: sentimentColor
@@ -148,26 +148,33 @@ export default function ContextFeed() {
               >
                 {event.sentiment}
               </span>
-              <span className="text-gray-400 text-xs">
+              <span className="text-gray-400 text-xs flex-shrink-0 ml-2">
                 {new Date(event.timestamp).toLocaleTimeString()}
               </span>
             </div>
 
-            <h3 className="text-lg font-bold mb-2">{event.title}</h3>
+            <h3 className="text-base font-bold mb-2 break-words line-clamp-2">{event.title}</h3>
 
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+            <p className="text-gray-300 text-sm mb-4 leading-relaxed break-words line-clamp-3">
               {event.summary}
             </p>
 
-            <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
-              <span>${event.valueUsd.toLocaleString()}</span>
-              <span>{event.from.slice(0, 6)}...{event.from.slice(-4)}</span>
-              <span>{event.chain}</span>
+            <div className="flex items-center gap-3 mb-4 text-xs text-gray-400 overflow-hidden">
+              {event.tokenPrice && (
+                <span className="flex-shrink-0">{event.tokenPrice}</span>
+              )}
+              {event.valueUsd > 0 && (
+                <span className="flex-shrink-0">${event.valueUsd.toLocaleString()}</span>
+              )}
+              {event.platform && (
+                <span className="flex-shrink-0 truncate max-w-[80px]">{event.platform}</span>
+              )}
+              <span className="flex-shrink-0">{event.chain}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-20 bg-white/20 rounded-full h-1.5">
+                <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                   <div
                     className="h-1.5 rounded-full"
                     style={{
@@ -176,11 +183,11 @@ export default function ContextFeed() {
                     }}
                   />
                 </div>
-                <span className="text-xs font-semibold" style={{ color: sentimentColor }}>
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: sentimentColor }}>
                   {event.trustScore}
                 </span>
                 <span
-                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  className="px-2 py-0.5 rounded text-xs font-semibold flex-shrink-0"
                   style={{
                     backgroundColor: `${sentimentColor}20`,
                     color: sentimentColor
@@ -191,7 +198,7 @@ export default function ContextFeed() {
               </div>
               <button
                 onClick={() => setSelectedEvent(event)}
-                className="text-[#00E5FF] font-semibold text-xs hover:underline"
+                className="text-[#00E5FF] font-semibold text-xs hover:underline flex-shrink-0 ml-2"
               >
                 View Proof &rarr;
               </button>
@@ -223,6 +230,7 @@ export default function ContextFeed() {
 
       {selectedEvent && (
         <ViewProofModal
+          key={selectedEvent.id}
           event={{
             id: selectedEvent.id,
             title: selectedEvent.title,
@@ -240,6 +248,16 @@ export default function ContextFeed() {
             comments: engagement[selectedEvent.id]?.comments || 0,
             shares: engagement[selectedEvent.id]?.shares || 0,
             likes: engagement[selectedEvent.id]?.likes || 0,
+            pairAddress: selectedEvent.pairAddress || '',
+            dexUrl: selectedEvent.dexUrl || '',
+            tokenName: selectedEvent.tokenName || '',
+            tokenSymbol: selectedEvent.tokenSymbol || '',
+            tokenPrice: selectedEvent.tokenPrice || '',
+            platform: selectedEvent.platform || '',
+            tokenVolume24h: selectedEvent.tokenVolume24h || 0,
+            tokenLiquidity: selectedEvent.tokenLiquidity || 0,
+            tokenMarketCap: selectedEvent.tokenMarketCap || 0,
+            tokenPriceChange24h: selectedEvent.tokenPriceChange24h || 0,
           }}
           onClose={() => setSelectedEvent(null)}
         />
