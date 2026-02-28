@@ -27,7 +27,7 @@ async function fetchEthPrice(): Promise<number> {
     if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana&vs_currencies=usd', {
       headers,
-      next: { revalidate: 60 }
+      next: { revalidate: 30 }
     });
     const data = await res.json();
     return data?.ethereum?.usd || 3500;
@@ -42,7 +42,7 @@ async function fetchSolPrice(): Promise<number> {
     if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
       headers,
-      next: { revalidate: 60 }
+      next: { revalidate: 30 }
     });
     const data = await res.json();
     return data?.solana?.usd || 180;
@@ -73,7 +73,7 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
         id: 2,
         method: 'alchemy_getAssetTransfers',
         params: [{
-          fromBlock: `0x${(latestBlock - 50).toString(16)}`,
+          fromBlock: `0x${(latestBlock - 20).toString(16)}`,
           toBlock: 'latest',
           category: ['external'],
           order: 'desc',
@@ -155,189 +155,160 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
   try {
     const solPrice = await fetchSolPrice();
 
-    const res = await fetch(`https://api.helius.xyz/v0/transactions?api-key=${HELIUS_KEY}&type=TRANSFER`, {
-      method: 'GET',
+    const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getRecentPerformanceSamples',
+        params: [5],
+      }),
     });
 
-    if (!res.ok) {
-      const enhancedRes = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getRecentPrioritizationFees',
-          params: [],
-        }),
-      });
-
-      if (enhancedRes.ok) {
-        return generateSolanaEvents(solPrice);
-      }
-      return [];
-    }
-
+    if (!res.ok) return [];
     const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      return generateSolanaEvents(solPrice);
-    }
+    const samples = data.result || [];
 
-    return data.slice(0, 5).map((tx: any, i: number) => {
-      const nativeAmount = (tx.nativeTransfers?.[0]?.amount || 0) / 1e9;
-      const valueUsd = nativeAmount * solPrice;
-
-      const sentiments = ['BULLISH', 'HYPE', 'BULLISH', 'BEARISH', 'HYPE'];
+    return samples.slice(0, 3).map((sample: any, i: number) => {
+      const txCount = sample.numTransactions || 0;
+      const slot = sample.slot || 0;
+      const sentiments = ['BULLISH', 'HYPE', 'BULLISH'];
       const sentiment = sentiments[i % sentiments.length];
 
       return {
-        id: tx.signature || `sol-${i}-${Date.now()}`,
-        type: nativeAmount > 100 ? 'whale_transfer' : 'smart_money',
+        id: `sol-perf-${slot}-${Date.now()}`,
+        type: 'network_activity',
         sentiment,
-        title: nativeAmount > 1000
-          ? `Large Solana transfer: ${nativeAmount.toFixed(0)} SOL ($${(valueUsd / 1000).toFixed(0)}K)`
-          : `SOL activity detected: ${nativeAmount.toFixed(2)} SOL`,
-        summary: `${nativeAmount.toFixed(2)} SOL ($${valueUsd.toFixed(0)}) ${tx.type === 'TRANSFER' ? 'transferred' : 'moved'} on Solana. ${sentiment === 'BULLISH' ? 'On-chain activity suggests accumulation pattern.' : sentiment === 'BEARISH' ? 'Movement to exchange wallet detected.' : 'Smart money wallet activity flagged.'}`,
-        from: tx.feePayer || 'SolanaWallet',
-        to: tx.nativeTransfers?.[0]?.toUserAccount || 'SolanaWallet',
-        value: nativeAmount,
-        valueUsd: Math.round(valueUsd),
+        title: `Solana network: ${txCount.toLocaleString()} txns in slot ${slot.toLocaleString()}`,
+        summary: `Solana processed ${txCount.toLocaleString()} transactions at slot ${slot.toLocaleString()}. SOL price: $${solPrice.toFixed(2)}. ${txCount > 3000 ? 'High activity period — potential whale movements.' : 'Normal network throughput.'}`,
+        from: 'Solana Network',
+        to: 'Validators',
+        value: txCount,
+        valueUsd: Math.round(txCount * 0.01 * solPrice),
         chain: 'Solana',
-        trustScore: 55 + Math.floor(Math.random() * 35),
-        txHash: tx.signature || '',
-        blockNumber: tx.slot || 0,
-        timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
+        trustScore: 80 + Math.floor(Math.random() * 15),
+        txHash: `slot-${slot}`,
+        blockNumber: slot,
+        timestamp: new Date(Date.now() - i * 60000).toISOString(),
       };
     });
   } catch (error) {
     console.error('Helius fetch error:', error);
-    try {
-      const solPrice = await fetchSolPrice();
-      return generateSolanaEvents(solPrice);
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 
-function generateSolanaEvents(solPrice: number): WhaleEvent[] {
-  const now = Date.now();
-  return [
-    {
-      id: `sol-live-1-${now}`, type: 'whale_transfer', sentiment: 'BULLISH',
-      title: 'Large SOL to USDC swap on Jupiter',
-      summary: `Whale wallet swapped 25,000 SOL ($${(25000 * solPrice / 1000000).toFixed(1)}M) for USDC on Jupiter DEX. Wallet has 87% historical accuracy on market timing. Possible profit-taking or rebalancing.`,
-      from: '7xKB...9mPq', to: 'JUP4...swapRouter',
-      value: 25000, valueUsd: Math.round(25000 * solPrice), chain: 'Solana', trustScore: 82,
-      txHash: '5KtP8vLwJ7xNm4JhH9qR2mZcYdVe3bFg6wTjK8nL4fHd', blockNumber: 248912445,
-      timestamp: new Date(now - 3 * 60000).toISOString(),
-    },
-    {
-      id: `sol-live-2-${now}`, type: 'token_launch', sentiment: 'HYPE',
-      title: 'New token launched on Pump.fun with high volume',
-      summary: `Token raised 12,000 SOL ($${(12000 * solPrice / 1000).toFixed(0)}K) in first 30 minutes on Pump.fun. Top investor wallet linked to 3 previous successful launches. Community driven.`,
-      from: '9f3a...8a7b', to: 'Pump.fun',
-      value: 12000, valueUsd: Math.round(12000 * solPrice), chain: 'Solana', trustScore: 42,
-      txHash: '3hKxN9mJQ2rPvYwB5dLfS8gT7uC4xW6zE1nM0kJ9iHa', blockNumber: 248912400,
-      timestamp: new Date(now - 12 * 60000).toISOString(),
-    },
-    {
-      id: `sol-live-3-${now}`, type: 'smart_money', sentiment: 'BULLISH',
-      title: 'BONK whale accumulation detected',
-      summary: `Smart money wallet accumulated 2.5B BONK tokens ($${(2500000000 * 0.000024).toFixed(0)}K) across 3 transactions on Raydium. Historical holder with 90%+ win rate on meme tokens.`,
-      from: 'BonkWhale...3x7', to: 'BonkToken',
-      value: 2500000000, valueUsd: 60000, chain: 'Solana', trustScore: 76,
-      txHash: '4mRxQ8nKP3sLwZA6tGhU5vB7cX9yD2eF0jI1kM8oN', blockNumber: 248912380,
-      timestamp: new Date(now - 18 * 60000).toISOString(),
-    },
-  ];
+async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
+  try {
+    const res = await fetch(
+      'https://client-api-2-74b1891ee9f9.herokuapp.com/coins?offset=0&limit=10&sort=last_trade_timestamp&order=DESC&includeNsfw=false',
+      { next: { revalidate: 15 } }
+    );
+
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.slice(0, 5).map((token: any) => {
+      const mcap = token.usd_market_cap || 0;
+      const replyCount = token.reply_count || 0;
+      const trustScore = Math.min(90, Math.max(20, replyCount * 3 + 25));
+
+      let sentiment = 'HYPE';
+      if (mcap > 100000) sentiment = 'BULLISH';
+      if (mcap < 5000 && replyCount < 3) sentiment = 'BEARISH';
+
+      return {
+        id: token.mint || `pump-${Date.now()}-${Math.random()}`,
+        type: 'token_launch',
+        sentiment,
+        title: `New token ${token.symbol || '???'} launched on Pump.fun`,
+        summary: `${token.name || 'Unknown'} (${token.symbol || '???'}) launched on Pump.fun. Market cap: $${mcap > 1000 ? (mcap / 1000).toFixed(1) + 'K' : mcap.toFixed(0)}. ${replyCount} community replies. Creator: ${(token.creator || '').slice(0, 8)}...`,
+        from: (token.creator || '').slice(0, 12) || 'PumpFun',
+        to: 'Pump.fun',
+        value: 0,
+        valueUsd: mcap,
+        chain: 'Solana',
+        trustScore,
+        txHash: token.mint || '',
+        blockNumber: 0,
+        timestamp: token.created_timestamp ? new Date(token.created_timestamp).toISOString() : new Date().toISOString(),
+      };
+    });
+  } catch (error) {
+    console.error('Pump.fun fetch error:', error);
+    return [];
+  }
 }
 
-function generateFallbackEvents(): WhaleEvent[] {
-  const now = Date.now();
-  return [
-    {
-      id: `live-1-${now}`, type: 'smart_money', sentiment: 'BULLISH',
-      title: 'Smart money accumulating LINK',
-      summary: '14 wallets with >80% win rate bought LINK in the last 2 hours. Combined position: $8.2M. Historical pattern suggests 72-hour rally incoming.',
-      from: '0x5a6b...3A4b', to: '0xChainlink',
-      value: 3200, valueUsd: 8200000, chain: 'Ethereum', trustScore: 91,
-      txHash: '0xc3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2', blockNumber: 19451800,
-      timestamp: new Date(now - 8 * 60000).toISOString(),
-    },
-    {
-      id: `live-2-${now}`, type: 'liquidity_removal', sentiment: 'BEARISH',
-      title: 'Massive ETH liquidity removal on Uniswap',
-      summary: 'Developer wallet removed $1.2M liquidity from PEPE/ETH pool. Wallet previously associated with 2 rug pulls. High risk alert.',
-      from: '0x3e7b...7F8a', to: '0xUniswapV3Pool',
-      value: 450, valueUsd: 1200000, chain: 'Ethereum', trustScore: 18,
-      txHash: '0xb2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1', blockNumber: 19451823,
-      timestamp: new Date(now - 15 * 60000).toISOString(),
-    },
-    {
-      id: `live-3-${now}`, type: 'whale_transfer', sentiment: 'BULLISH',
-      title: 'BlackRock ETF wallet moves 5,000 BTC',
-      summary: 'Institutional wallet associated with BlackRock iShares moved 5,000 BTC ($485M) to cold storage. Accumulation signal confirmed by on-chain analysis.',
-      from: '0xBlackRock', to: '0xColdStorage',
-      value: 5000, valueUsd: 485000000, chain: 'Bitcoin', trustScore: 95,
-      txHash: '0xd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3', blockNumber: 830245,
-      timestamp: new Date(now - 22 * 60000).toISOString(),
-    },
-    {
-      id: `live-4-${now}`, type: 'smart_money', sentiment: 'HYPE',
-      title: 'DeFi whale opens $5M AAVE position',
-      summary: 'Top 20 DeFi wallet deposited $5M USDC into AAVE V3 on Polygon. Borrowing ETH against it. Likely leveraged long position on ETH.',
-      from: '0xDefiWhale', to: '0xAAVEV3Polygon',
-      value: 5000000, valueUsd: 5000000, chain: 'Polygon', trustScore: 88,
-      txHash: '0xe5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4', blockNumber: 54821333,
-      timestamp: new Date(now - 35 * 60000).toISOString(),
-    },
-    {
-      id: `live-5-${now}`, type: 'whale_transfer', sentiment: 'BEARISH',
-      title: 'Whale dumps 10M DOGE on Binance',
-      summary: 'Dormant wallet (inactive 8 months) deposited 10M DOGE ($1.5M) to Binance hot wallet. Historically signals sell-off within 24 hours.',
-      from: '0xWhaleDogeHolder', to: '0xBinanceHot',
-      value: 10000000, valueUsd: 1500000, chain: 'BNB', trustScore: 35,
-      txHash: '0xa1b2c3d4e5f6789abcdef0123456789abcdef01', blockNumber: 37821456,
-      timestamp: new Date(now - 42 * 60000).toISOString(),
-    },
-  ];
+async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.slice(0, 4).map((token: any, i: number) => {
+      const boosts = token.amount || 0;
+      return {
+        id: `dex-${token.tokenAddress?.slice(0, 12) || i}-${Date.now()}`,
+        type: 'trending',
+        sentiment: boosts > 100 ? 'BULLISH' : 'HYPE',
+        title: `Trending on DexScreener: ${token.tokenAddress?.slice(0, 8)}...`,
+        summary: `Token on ${token.chainId || 'unknown'} chain is trending with ${boosts} boosts on DexScreener. ${token.description || 'High community interest detected.'} ${token.url ? `Link: ${token.url}` : ''}`,
+        from: 'DexScreener',
+        to: token.tokenAddress?.slice(0, 12) || 'Unknown',
+        value: boosts,
+        valueUsd: 0,
+        chain: token.chainId || 'Multi',
+        trustScore: Math.min(85, 40 + boosts),
+        txHash: token.tokenAddress || '',
+        blockNumber: 0,
+        timestamp: new Date().toISOString(),
+      };
+    });
+  } catch (error) {
+    console.error('DexScreener fetch error:', error);
+    return [];
+  }
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '15');
 
-    const [alchemyEvents, heliusEvents] = await Promise.all([
+    const [alchemyEvents, heliusEvents, pumpEvents, dexEvents] = await Promise.all([
       fetchAlchemyTransfers(),
       fetchHeliusTransactions(),
+      fetchPumpFunTokens(),
+      fetchDexScreenerTrending(),
     ]);
 
-    let events: WhaleEvent[] = [...alchemyEvents, ...heliusEvents];
-
-    if (events.length < 5) {
-      const fallback = generateFallbackEvents();
-      const existingIds = new Set(events.map(e => e.id));
-      for (const fb of fallback) {
-        if (!existingIds.has(fb.id)) {
-          events.push(fb);
-        }
-      }
-    }
+    let events: WhaleEvent[] = [...alchemyEvents, ...heliusEvents, ...pumpEvents, ...dexEvents];
 
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     const sources: string[] = [];
-    if (ALCHEMY_KEY) sources.push('alchemy');
-    if (HELIUS_KEY) sources.push('helius');
-    if (sources.length === 0) sources.push('curated');
+    if (alchemyEvents.length > 0) sources.push('alchemy');
+    if (heliusEvents.length > 0) sources.push('helius');
+    if (pumpEvents.length > 0) sources.push('pumpfun');
+    if (dexEvents.length > 0) sources.push('dexscreener');
 
     return NextResponse.json({
       events: events.slice(0, limit),
       total: events.length,
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
+      counts: {
+        alchemy: alchemyEvents.length,
+        helius: heliusEvents.length,
+        pumpfun: pumpEvents.length,
+        dexscreener: dexEvents.length,
+      },
     });
   } catch (error) {
     console.error('Context feed error:', error);

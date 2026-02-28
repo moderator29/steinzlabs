@@ -1,11 +1,30 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2 } from 'lucide-react';
+import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+const STORAGE_KEY = 'vtx-ai-chat-history';
+
+function loadChatHistory(): Message[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function saveChatHistory(messages: Message[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)));
+  } catch {}
 }
 
 export default function VtxAiTab() {
@@ -13,6 +32,21 @@ export default function VtxAiTab() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      const saved = loadChatHistory();
+      if (saved.length > 0) setMessages(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialized.current && messages.length > 0) {
+      saveChatHistory(messages);
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,6 +62,11 @@ export default function VtxAiTab() {
     { icon: AlertTriangle, label: 'Risk Analysis', prompt: 'What are the biggest risks in the crypto market right now? Any red flags to watch?' },
     { icon: Radio, label: 'Signal Analysis', prompt: 'What on-chain signals are showing the most bullish or bearish activity right now?' },
   ];
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -74,18 +113,29 @@ export default function VtxAiTab() {
         </div>
         <div className="flex-1">
           <div className="text-sm font-bold">VTX AI</div>
-          <div className="text-[10px] text-gray-400">Powered by Anthropic Claude</div>
+          <div className="text-[10px] text-gray-400">Powered by Claude &bull; Live market data</div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
-          <span className="text-[10px] text-[#10B981] font-semibold">Live</span>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              title="Clear chat"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-gray-500" />
+            </button>
+          )}
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
+            <span className="text-[10px] text-[#10B981] font-semibold">Live</span>
+          </div>
         </div>
       </div>
 
       {messages.length === 0 ? (
         <>
           <p className="text-sm text-gray-300 text-center mb-6 leading-relaxed px-2">
-            Ask me anything about crypto markets, on-chain data, token safety, or trading strategies. I analyze real-time data across 12+ chains.
+            Ask me anything — I search for real-time prices, trends, and on-chain data before answering. Try asking about current BTC price or market trends.
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-6">
@@ -136,7 +186,7 @@ export default function VtxAiTab() {
               <div className="glass border border-white/10 rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing...
+                  Searching live data...
                 </div>
               </div>
             </div>
