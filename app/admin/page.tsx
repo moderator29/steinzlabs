@@ -318,7 +318,7 @@ export default function AdminPanel() {
                 <div>
                   <div className="text-[10px] text-gray-500 mb-1 mt-3">Wallet History</div>
                   {selected.teamHistory.map((h, i) => (
-                    <div key={i} className="text-xs text-gray-300">✅ "{h.project}" - {h.rating} rating ({h.status})</div>
+                    <div key={i} className="text-xs text-gray-300">✅ &quot;{h.project}&quot; - {h.rating} rating ({h.status})</div>
                   ))}
                   <div className="text-xs text-[#10B981] mt-2 font-semibold">Verdict: Experienced, trusted team</div>
                 </div>
