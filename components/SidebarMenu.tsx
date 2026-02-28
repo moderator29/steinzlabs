@@ -1,6 +1,6 @@
 'use client';
 
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, Copy, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {

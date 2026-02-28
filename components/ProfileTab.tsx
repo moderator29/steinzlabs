@@ -1,16 +1,47 @@
 'use client';
 
-import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function ProfileTab() {
+  const { user, signOut } = useAuth();
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('wallet_address');
+    if (stored) setWalletAddress(stored);
+  }, []);
+
+  const displayName = user?.email
+    ? user.email.split('@')[0]
+    : walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : 'Guest User';
+
+  const isConnected = !!user || !!walletAddress;
+
+  const handleSignOut = async () => {
+    await signOut();
+    setWalletAddress(null);
+    window.location.reload();
+  };
+
   return (
     <div>
       <div className="flex flex-col items-center mb-6">
-        <div className="w-20 h-20 bg-[#1A2235] rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
-          <User className="w-10 h-10 text-gray-500" />
+        <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
+          <User className="w-10 h-10 text-[#00E5FF]" />
         </div>
-        <h2 className="text-lg font-heading font-bold">Guest User</h2>
-        <p className="text-xs text-gray-400">Connect wallet to unlock features</p>
+        <h2 className="text-lg font-heading font-bold">{displayName}</h2>
+        <p className="text-xs text-gray-400">
+          {isConnected ? 'Free Tier' : 'Connect wallet to unlock features'}
+        </p>
+        {isConnected && (
+          <a href="/dashboard/pricing" className="mt-2 px-4 py-1.5 bg-gradient-to-r from-[#FFD700]/20 to-[#FFA500]/20 border border-[#FFD700]/30 rounded-full text-xs text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1.5">
+            <Crown className="w-3 h-3" /> Upgrade to Pro
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-6">
@@ -28,6 +59,20 @@ export default function ProfileTab() {
         </div>
       </div>
 
+      {user?.email && (
+        <div className="glass rounded-lg p-3 mb-4 border border-white/10">
+          <div className="text-[10px] text-gray-500 mb-1">Email</div>
+          <div className="text-xs text-gray-300">{user.email}</div>
+        </div>
+      )}
+
+      {walletAddress && (
+        <div className="glass rounded-lg p-3 mb-4 border border-white/10">
+          <div className="text-[10px] text-gray-500 mb-1">Wallet</div>
+          <div className="text-xs text-gray-300 font-mono">{walletAddress}</div>
+        </div>
+      )}
+
       <SectionLabel>Activity</SectionLabel>
       <ProfileRow icon={Award} label="Achievements" sub="Track your progress" />
       <ProfileRow icon={BarChart3} label="Analytics" sub="View your stats" />
@@ -40,10 +85,15 @@ export default function ProfileTab() {
       <SectionLabel>Support</SectionLabel>
       <ProfileRow icon={HelpCircle} label="Help Center" sub="FAQs & support" />
 
-      <button className="flex items-center gap-3 w-full px-3 py-3 mt-2 text-[#EF4444] text-sm hover:bg-white/5 rounded-lg transition-colors">
-        <LogOut className="w-4 h-4" />
-        <span className="font-semibold">Sign Out</span>
-      </button>
+      {isConnected && (
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 w-full px-3 py-3 mt-2 text-[#EF4444] text-sm hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="font-semibold">Sign Out</span>
+        </button>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Eye, MessageSquare, Link2, Heart, RefreshCw } from 'lucide-react';
 import { useContextFeed } from '@/lib/hooks/useContextFeed';
 import ViewProofModal from './ViewProofModal';
 
@@ -43,7 +44,7 @@ export default function ContextFeed() {
   if (loading) {
     return (
       <div className="text-center py-20">
-        <div className="text-4xl mb-3">&#x23F3;</div>
+        <RefreshCw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin" />
         <p className="text-lg mb-1 font-semibold">Loading Context Feed...</p>
         <p className="text-sm text-gray-400">Fetching real-time on-chain events</p>
       </div>
@@ -53,7 +54,7 @@ export default function ContextFeed() {
   if (events.length === 0) {
     return (
       <div className="text-center py-20">
-        <div className="text-4xl mb-3">&#x1F4E1;</div>
+        <Eye className="w-8 h-8 text-gray-500 mx-auto mb-3" />
         <p className="text-lg mb-1 font-semibold">No Events Found</p>
         <p className="text-sm text-gray-400">Waiting for whale activity...</p>
         <button
@@ -100,10 +101,10 @@ export default function ContextFeed() {
               {event.summary}
             </p>
 
-            <div className="flex items-center gap-4 mb-4 text-xs">
-              <span className="text-gray-400">&#x1F4B0; ${event.valueUsd.toLocaleString()}</span>
-              <span className="text-gray-400">&#x1F464; {event.from.slice(0, 6)}...{event.from.slice(-4)}</span>
-              <span className="text-gray-400">&#x26D3;&#xFE0F; {event.chain}</span>
+            <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
+              <span>${event.valueUsd.toLocaleString()}</span>
+              <span>{event.from.slice(0, 6)}...{event.from.slice(-4)}</span>
+              <span>{event.chain}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -134,18 +135,28 @@ export default function ContextFeed() {
                 onClick={() => setSelectedEvent(event)}
                 className="text-[#00E5FF] font-semibold text-xs hover:underline"
               >
-                View Proof &#x2192;
+                View Proof &rarr;
               </button>
             </div>
 
             <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
-              <span>&#x1F441;&#xFE0F; {eng.views.toLocaleString()}</span>
-              <span>&#x1F4AC; {eng.comments.toLocaleString()}</span>
-              <button onClick={() => handleShare(event.id)} className={`hover:text-[#00E5FF] transition-colors ${eng.shared ? 'text-[#00E5FF]' : ''}`}>
-                &#x1F517; {eng.shares.toLocaleString()}
+              <span className="flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" /> {eng.comments.toLocaleString()}
+              </span>
+              <button
+                onClick={() => handleShare(event.id)}
+                className={`flex items-center gap-1.5 hover:text-[#00E5FF] transition-colors ${eng.shared ? 'text-[#00E5FF]' : ''}`}
+              >
+                <Link2 className="w-3.5 h-3.5" /> {eng.shares.toLocaleString()}
               </button>
-              <button onClick={() => handleLike(event.id)} className={`hover:text-[#EF4444] transition-colors ${eng.liked ? 'text-[#EF4444]' : ''}`}>
-                &#x2764;&#xFE0F; {eng.likes.toLocaleString()}
+              <button
+                onClick={() => handleLike(event.id)}
+                className={`flex items-center gap-1.5 hover:text-[#EF4444] transition-colors ${eng.liked ? 'text-[#EF4444]' : ''}`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${eng.liked ? 'fill-current' : ''}`} /> {eng.likes.toLocaleString()}
               </button>
             </div>
           </div>
@@ -154,7 +165,24 @@ export default function ContextFeed() {
 
       {selectedEvent && (
         <ViewProofModal
-          event={selectedEvent}
+          event={{
+            id: selectedEvent.id,
+            title: selectedEvent.title,
+            summary: selectedEvent.summary,
+            from: selectedEvent.from,
+            to: selectedEvent.to,
+            value: selectedEvent.value,
+            valueUsd: selectedEvent.valueUsd,
+            chain: selectedEvent.chain,
+            trustScore: selectedEvent.trustScore,
+            txHash: selectedEvent.txHash,
+            timestamp: selectedEvent.timestamp,
+            sentiment: selectedEvent.sentiment,
+            views: engagement[selectedEvent.id]?.views || 0,
+            comments: engagement[selectedEvent.id]?.comments || 0,
+            shares: engagement[selectedEvent.id]?.shares || 0,
+            likes: engagement[selectedEvent.id]?.likes || 0,
+          }}
           onClose={() => setSelectedEvent(null)}
         />
       )}

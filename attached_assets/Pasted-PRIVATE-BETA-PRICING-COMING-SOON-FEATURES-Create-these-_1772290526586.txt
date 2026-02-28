@@ -1,0 +1,645 @@
+PRIVATE BETA PRICING + COMING SOON FEATURES
+
+Create these final pages for beta pricing and upcoming features.
+
+========================================
+FILE 1: app/dashboard/pricing/page.tsx (PRIVATE BETA)
+========================================
+
+/**
+ * PRIVATE BETA PRICING PAGE
+ * 
+ * Shows 2 tiers:
+ * - Pro: $2/month
+ * - Max: $6/month
+ */
+
+'use client';
+
+import { Check, Zap, Crown, ArrowRight } from 'lucide-react';
+
+export default function PricingPage() {
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-block px-4 py-2 bg-[#00E5FF]/10 border border-[#00E5FF]/30 rounded-full mb-6">
+            <span className="text-[#00E5FF] text-sm font-semibold">🚀 PRIVATE BETA ACCESS</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">
+            Join the Private Beta
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Get early access to STEINZ with exclusive pricing. Limited spots available.
+          </p>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* PRO TIER */}
+          <div className="glass rounded-2xl p-8 border border-white/10 hover:border-[#00E5FF]/30 transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-heading font-bold">Pro</h3>
+                <p className="text-sm text-gray-400">For active traders</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-5xl font-bold">$2</span>
+                <span className="text-gray-400">/month</span>
+              </div>
+              <p className="text-sm text-[#00E5FF]">🔥 90% OFF - Beta Pricing</p>
+              <p className="text-xs text-gray-400 line-through">Regular: $20/month</p>
+            </div>
+
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Unlimited Context Feed events</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Real-time whale tracking</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">VTX AI Assistant (50 queries/day)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Token safety scanner</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Multi-chain portfolio tracking</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Smart alerts & notifications</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Community access</span>
+              </li>
+            </ul>
+
+            <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-4 rounded-xl font-semibold text-lg hover:scale-105 transition-transform flex items-center justify-center gap-2">
+              Get Pro <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* MAX TIER */}
+          <div className="glass rounded-2xl p-8 border-2 border-[#FFD700] relative hover:scale-105 transition-transform">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FFD700] to-[#FFA500] px-6 py-1 rounded-full text-sm font-bold text-black">
+              MOST POPULAR
+            </div>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#FFD700] to-[#FFA500] rounded-xl flex items-center justify-center">
+                <Crown className="w-6 h-6 text-black" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-heading font-bold">Max</h3>
+                <p className="text-sm text-gray-400">For serious traders</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-5xl font-bold">$6</span>
+                <span className="text-gray-400">/month</span>
+              </div>
+              <p className="text-sm text-[#FFD700]">🔥 88% OFF - Beta Pricing</p>
+              <p className="text-xs text-gray-400 line-through">Regular: $50/month</p>
+            </div>
+
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-white font-semibold">Everything in Pro, plus:</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Unlimited VTX AI queries</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Predictions Market access</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Copy Trading (Coming Soon)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Trading DNA Analyzer (Coming Soon)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Advanced charting & analytics</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">Priority support</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#FFD700] mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300">API access</span>
+              </li>
+            </ul>
+
+            <button className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] text-black px-6 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform flex items-center justify-center gap-2">
+              Get Max <Crown className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Beta Notice */}
+        <div className="mt-12 max-w-2xl mx-auto glass rounded-xl p-6 border border-[#00E5FF]/30 text-center">
+          <p className="text-sm text-gray-300 leading-relaxed">
+            🎉 <span className="font-semibold text-[#00E5FF]">Beta users lock in this pricing forever.</span> Price increases to regular rates after beta ends. No credit card required during beta - pay with crypto only. Cancel anytime.
+          </p>
+        </div>
+
+        {/* Compare Features */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold text-center mb-8">Compare Features</h2>
+          <div className="glass rounded-xl border border-white/10 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left p-4 text-sm text-gray-400 font-normal">Feature</th>
+                  <th className="text-center p-4 text-sm font-semibold">Pro</th>
+                  <th className="text-center p-4 text-sm font-semibold">Max</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-white/10">
+                  <td className="p-4 text-sm">Context Feed Events</td>
+                  <td className="p-4 text-center">
+                    <Check className="w-5 h-5 text-[#10B981] mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="w-5 h-5 text-[#FFD700] mx-auto" />
+                  </td>
+                </tr>
+                <tr className="border-b border-white/10">
+                  <td className="p-4 text-sm">VTX AI Queries</td>
+                  <td className="p-4 text-center text-sm">50/day</td>
+                  <td className="p-4 text-center text-sm">Unlimited</td>
+                </tr>
+                <tr className="border-b border-white/10">
+                  <td className="p-4 text-sm">Predictions Market</td>
+                  <td className="p-4 text-center">—</td>
+                  <td className="p-4 text-center">
+                    <Check className="w-5 h-5 text-[#FFD700] mx-auto" />
+                  </td>
+                </tr>
+                <tr className="border-b border-white/10">
+                  <td className="p-4 text-sm">Copy Trading</td>
+                  <td className="p-4 text-center">—</td>
+                  <td className="p-4 text-center">
+                    <span className="text-xs text-gray-400">Coming Soon</span>
+                  </td>
+                </tr>
+                <tr className="border-b border-white/10">
+                  <td className="p-4 text-sm">Trading DNA Report</td>
+                  <td className="p-4 text-center">—</td>
+                  <td className="p-4 text-center">
+                    <span className="text-xs text-gray-400">Coming Soon</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-4 text-sm">API Access</td>
+                  <td className="p-4 text-center">—</td>
+                  <td className="p-4 text-center">
+                    <Check className="w-5 h-5 text-[#FFD700] mx-auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE 2: app/dashboard/dna-analyzer/page.tsx (COMING SOON)
+========================================
+
+/**
+ * TRADING DNA ANALYZER - COMING SOON
+ */
+
+'use client';
+
+import { Dna, Bell, ArrowRight } from 'lucide-react';
+
+export default function DNAAnalyzerPage() {
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+      <div className="max-w-4xl mx-auto text-center">
+        <div className="w-24 h-24 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <Dna className="w-12 h-12" />
+        </div>
+
+        <div className="inline-block px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-full mb-6">
+          <span className="text-[#F59E0B] text-sm font-semibold">🚧 COMING SOON</span>
+        </div>
+
+        <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+          Trading DNA Analyzer
+        </h1>
+
+        <p className="text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto">
+          Get a complete breakdown of your on-chain trading profile. Discover your trading style, strengths, weaknesses, and personalized improvement tips powered by AI.
+        </p>
+
+        {/* Features Preview */}
+        <div className="grid md:grid-cols-2 gap-6 mb-12 text-left">
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🧬</span>
+              Trading Style Profile
+            </h3>
+            <p className="text-sm text-gray-400">
+              Identify if you're a scalper, swing trader, or long-term holder based on actual on-chain behavior.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">📊</span>
+              Performance Analytics
+            </h3>
+            <p className="text-sm text-gray-400">
+              Win rate, average returns, best/worst trades, risk tolerance, and profit consistency.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🎯</span>
+              Strengths & Weaknesses
+            </h3>
+            <p className="text-sm text-gray-400">
+              AI identifies what you're good at and where you need improvement with actionable advice.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🔮</span>
+              AI Recommendations
+            </h3>
+            <p className="text-sm text-gray-400">
+              Personalized strategy suggestions based on your unique trading DNA and market conditions.
+            </p>
+          </div>
+        </div>
+
+        {/* Notify Me */}
+        <div className="glass rounded-2xl p-8 border border-[#00E5FF]/30 max-w-md mx-auto">
+          <Bell className="w-8 h-8 text-[#00E5FF] mx-auto mb-4" />
+          <h3 className="font-bold text-xl mb-3">Get Notified</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Be the first to know when Trading DNA Analyzer launches. Available to Max tier users.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50 text-sm"
+            />
+            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
+              Notify Me
+            </button>
+          </div>
+        </div>
+
+        {/* Upgrade CTA */}
+        <div className="mt-8">
+          <a href="/dashboard/pricing">
+            <button className="glass px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors inline-flex items-center gap-2">
+              Upgrade to Max Tier <ArrowRight className="w-4 h-4" />
+            </button>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE 3: app/dashboard/copy-trading/page.tsx (COMING SOON)
+========================================
+
+/**
+ * COPY TRADING - COMING SOON
+ */
+
+'use client';
+
+import { Users, Bell, ArrowRight, Copy } from 'lucide-react';
+
+export default function CopyTradingPage() {
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+      <div className="max-w-4xl mx-auto text-center">
+        <div className="w-24 h-24 bg-gradient-to-br from-[#10B981] to-[#00E5FF] rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <Copy className="w-12 h-12" />
+        </div>
+
+        <div className="inline-block px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-full mb-6">
+          <span className="text-[#F59E0B] text-sm font-semibold">🚧 COMING SOON</span>
+        </div>
+
+        <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+          Copy Trading Protocol
+        </h1>
+
+        <p className="text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto">
+          Automatically mirror the trades of proven whale wallets and top traders. Set it and forget it - let the pros trade for you.
+        </p>
+
+        {/* Features Preview */}
+        <div className="grid md:grid-cols-2 gap-6 mb-12 text-left">
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🐋</span>
+              Follow Top Whales
+            </h3>
+            <p className="text-sm text-gray-400">
+              Copy wallets with proven track records. Filter by win rate, total profit, and trading style.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">⚡</span>
+              Instant Execution
+            </h3>
+            <p className="text-sm text-gray-400">
+              Trades execute within seconds of the whale's transaction. No manual work required.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🎛️</span>
+              Custom Settings
+            </h3>
+            <p className="text-sm text-gray-400">
+              Set allocation amounts, stop-loss limits, and risk parameters for each trader you copy.
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-2xl">🔒</span>
+              Non-Custodial
+            </h3>
+            <p className="text-sm text-gray-400">
+              Your funds stay in your wallet. We never have access to your private keys.
+            </p>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
+          <h3 className="font-bold text-2xl mb-6">How It Works</h3>
+          <div className="grid md:grid-cols-3 gap-6 text-left">
+            <div>
+              <div className="w-10 h-10 bg-[#00E5FF]/20 rounded-lg flex items-center justify-center mb-3">
+                <span className="text-[#00E5FF] font-bold">1</span>
+              </div>
+              <h4 className="font-semibold mb-2">Choose Trader</h4>
+              <p className="text-sm text-gray-400">
+                Browse verified traders, filter by performance, and select who to copy
+              </p>
+            </div>
+            <div>
+              <div className="w-10 h-10 bg-[#00E5FF]/20 rounded-lg flex items-center justify-center mb-3">
+                <span className="text-[#00E5FF] font-bold">2</span>
+              </div>
+              <h4 className="font-semibold mb-2">Set Allocation</h4>
+              <p className="text-sm text-gray-400">
+                Decide how much to allocate and configure risk settings
+              </p>
+            </div>
+            <div>
+              <div className="w-10 h-10 bg-[#00E5FF]/20 rounded-lg flex items-center justify-center mb-3">
+                <span className="text-[#00E5FF] font-bold">3</span>
+              </div>
+              <h4 className="font-semibold mb-2">Auto-Pilot</h4>
+              <p className="text-sm text-gray-400">
+                System automatically mirrors their trades in real-time
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Notify Me */}
+        <div className="glass rounded-2xl p-8 border border-[#00E5FF]/30 max-w-md mx-auto">
+          <Bell className="w-8 h-8 text-[#00E5FF] mx-auto mb-4" />
+          <h3 className="font-bold text-xl mb-3">Get Early Access</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Copy Trading launches next month for Max tier users. Join the waitlist now.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50 text-sm"
+            />
+            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
+              Join Waitlist
+            </button>
+          </div>
+        </div>
+
+        {/* Upgrade CTA */}
+        <div className="mt-8">
+          <a href="/dashboard/pricing">
+            <button className="glass px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors inline-flex items-center gap-2">
+              Upgrade to Max Tier <ArrowRight className="w-4 h-4" />
+            </button>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE 4: app/dashboard/community/page.tsx (STEINZ COMMUNITY)
+========================================
+
+/**
+ * STEINZ COMMUNITY DASHBOARD - COMING SOON
+ */
+
+'use client';
+
+import { Users, Bell, ArrowRight, MessageCircle, Trophy, TrendingUp } from 'lucide-react';
+
+export default function CommunityPage() {
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+      <div className="max-w-4xl mx-auto text-center">
+        <div className="w-24 h-24 bg-gradient-to-br from-[#7C3AED] to-[#00E5FF] rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <Users className="w-12 h-12" />
+        </div>
+
+        <div className="inline-block px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-full mb-6">
+          <span className="text-[#F59E0B] text-sm font-semibold">🚧 COMING SOON</span>
+        </div>
+
+        <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+          Steinz Community Dashboard
+        </h1>
+
+        <p className="text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto">
+          Connect with thousands of on-chain traders. Share strategies, discuss signals, and learn from the best in the game.
+        </p>
+
+        {/* Features Preview */}
+        <div className="grid md:grid-cols-3 gap-6 mb-12 text-left">
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <MessageCircle className="w-10 h-10 text-[#00E5FF] mb-3" />
+            <h3 className="font-bold text-lg mb-2">Live Discussions</h3>
+            <p className="text-sm text-gray-400">
+              Real-time chat channels for different chains, strategies, and topics
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <Trophy className="w-10 h-10 text-[#FFD700] mb-3" />
+            <h3 className="font-bold text-lg mb-2">Leaderboards</h3>
+            <p className="text-sm text-gray-400">
+              See top performers, most accurate predictors, and community leaders
+            </p>
+          </div>
+
+          <div className="glass rounded-xl p-6 border border-white/10">
+            <TrendingUp className="w-10 h-10 text-[#10B981] mb-3" />
+            <h3 className="font-bold text-lg mb-2">Strategy Sharing</h3>
+            <p className="text-sm text-gray-400">
+              Post your trades, get feedback, and learn from successful strategies
+            </p>
+          </div>
+        </div>
+
+        {/* Community Stats Preview */}
+        <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
+          <h3 className="font-bold text-2xl mb-6">What to Expect</h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div>
+              <div className="text-4xl font-bold text-[#00E5FF] mb-2">10K+</div>
+              <div className="text-sm text-gray-400">Active Members</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-[#7C3AED] mb-2">50+</div>
+              <div className="text-sm text-gray-400">Discussion Channels</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-[#10B981] mb-2">24/7</div>
+              <div className="text-sm text-gray-400">Global Activity</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview Features */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8 text-left text-sm">
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ Chain-specific channels (Solana, Ethereum, etc)
+          </div>
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ Alpha sharing with proof verification
+          </div>
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ AMA sessions with successful traders
+          </div>
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ Community-voted signal rankings
+          </div>
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ Reputation system & badges
+          </div>
+          <div className="glass rounded-xl p-4 border border-white/10">
+            ✅ Private groups for premium members
+          </div>
+        </div>
+
+        {/* Notify Me */}
+        <div className="glass rounded-2xl p-8 border border-[#00E5FF]/30 max-w-md mx-auto">
+          <Bell className="w-8 h-8 text-[#00E5FF] mx-auto mb-4" />
+          <h3 className="font-bold text-xl mb-3">Join the Community</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Community Dashboard launches in 2 weeks. Be part of the first cohort.
+          </p>
+          <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
+            Get Notified
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE 5: Update components/SidebarMenu.tsx - Add Pricing Link
+========================================
+
+Add this new section to the SidebarMenu before closing:
+
+{/* ACCOUNT */}
+<div>
+  <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Account</h3>
+  <div className="space-y-1">
+    <button 
+      onClick={() => handleNavigation('/dashboard/pricing')}
+      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-3 text-sm border border-[#FFD700]/30 bg-[#FFD700]/5"
+    >
+      <Crown className="w-4 h-4 text-[#FFD700]" />
+      <span className="text-[#FFD700] font-semibold">Upgrade to Beta</span>
+      <span className="ml-auto px-2 py-0.5 bg-[#FFD700]/20 text-[#FFD700] rounded text-xs font-bold">$2</span>
+    </button>
+    <button 
+      onClick={() => handleNavigation('/dashboard/community')}
+      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 text-sm"
+    >
+      <Users className="w-4 h-4 text-[#00E5FF]" />
+      <span>Community</span>
+      <span className="ml-auto px-1.5 py-0.5 bg-[#F59E0B]/20 text-[#F59E0B] rounded text-xs font-semibold">SOON</span>
+    </button>
+  </div>
+</div>
+
+
+========================================
+ALL FEATURES COMPLETE!
+
+You now have:
+✅ Private Beta Pricing ($2 Pro, $6 Max)
+✅ Trading DNA Analyzer (Coming Soon page)
+✅ Copy Trading (Coming Soon page)
+✅ Community Dashboard (Coming Soon page)
+✅ Proper "Coming Soon" states for all features
+✅ Upgrade CTAs throughout
+✅ Email waitlist forms
+
+FINAL STEP: Test everything and verify all navigation works!
+========================================

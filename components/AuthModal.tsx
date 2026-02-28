@@ -15,20 +15,32 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
+      if (!supabase) throw new Error('Authentication service unavailable');
+
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const signupRes = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const signupData = await signupRes.json();
+        if (!signupRes.ok) throw new Error(signupData.error);
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        setError('Check your email for confirmation link!');
+        if (signInError) throw signInError;
+        onSuccess();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -47,6 +59,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
+      if (!supabase) throw new Error('Authentication service unavailable');
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -81,17 +94,19 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         params: [message, walletAddress]
       });
 
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('wallet_address', walletAddress)
-        .single();
+      if (supabase) {
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('wallet_address', walletAddress)
+          .single();
 
-      if (!existingUser) {
-        await supabase.from('users').insert({
-          wallet_address: walletAddress,
-          username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-        });
+        if (!existingUser) {
+          await supabase.from('users').insert({
+            wallet_address: walletAddress,
+            username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+          });
+        }
       }
 
       localStorage.setItem('wallet_address', walletAddress);
@@ -129,12 +144,19 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           </div>
         )}
 
+        {success && (
+          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleEmailAuth} className="space-y-4 mb-4">
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
             required
           />
@@ -143,6 +165,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
             className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
             required
           />
@@ -187,7 +210,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
           </span>
           <button
-            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setSuccess(''); }}
             className="text-[#00E5FF] font-semibold hover:underline"
           >
             {mode === 'signin' ? 'Sign Up' : 'Sign In'}
