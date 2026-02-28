@@ -59,23 +59,33 @@ components/
 ├── ProfileTab.tsx           # Profile tab (stats, settings, achievements)
 └── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover)
 lib/
-└── supabase.ts              # Supabase client + admin (service role) client
+├── supabase.ts              # Supabase client + admin (service role) client
+└── hooks/
+    ├── useAuth.ts            # Auth hook (sign in/up, wallet connect, localStorage session)
+    ├── usePrices.ts          # Live price feed hook (BTC, ETH, SOL from /api/prices)
+    └── useTheme.ts           # Theme toggle hook (dark/light/bingo modes)
+app/api/
+├── prices/route.ts           # Real-time crypto prices (CoinGecko)
+├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
+├── token-scanner/route.ts    # Token contract security scanner
+└── context-feed/route.ts     # On-chain whale events feed
 ```
 
 ## Pages & Navigation
-- `/` — Landing page with fixed nav, animated hero with gradient mesh, stats row (12+ chains, 89% accuracy, $2.4B volume, 50K+ users), feature cards, security suite, whitepaper section, FAQ, CTA, footer
-- `/dashboard` — Main app with 6-tab bottom navigation:
-  - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with price ticker bar)
+- `/` — Landing page with scroll-reactive nav, animated hero with gradient mesh + intersection observer section reveals, live PriceTicker, stats row, feature cards, security suite, whitepaper, FAQ, CTA, footer
+- `/dashboard` — Main app with 6-tab bottom nav, AuthModal gate, theme toggle, live PriceTicker:
+  - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with live price ticker bar)
   - **Social** — Social trading with messages & connect wallet
   - **VTX AI** — AI assistant with chat input + quick actions (Market Overview, Portfolio, Risk, Signals)
-  - **Discover** — Security Center with Token Safety Scanner, Contract Analyzer, Rug/Phishing Detector
+  - **Discover** — Project Discovery with search, category filters, project cards
   - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
   - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
 - `/dashboard/project-discovery` — Project grid with category filters and search
 - `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
 - `/dashboard/predictions` — Full predictions market with YES/NO voting, pool sizes, payout calculator
-- `/dashboard/messages` — Telegram-style group chat with sidebar, message bubbles, reactions
+- `/dashboard/messages` — Discord/Telegram hybrid chat with channels, reactions, pinned messages
 - `/dashboard/social-trading` — Top traders, copy trading, leaderboard, following
+- `/dashboard/portfolio` — Wallet holdings, token balances, P&L tracking
 - `/dashboard/profile` — Extended profile with Activity, Settings (notifications/preferences/privacy), Achievements
 - `/admin` — Password-protected admin panel (195656) with:
   - Overview stats (Pending/Approved/Rejected/Active)
@@ -89,10 +99,12 @@ lib/
 - **Accent Colors**: Cyan (#00E5FF), Purple (#7C3AED)
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
-- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`
-- **Animations**: `animate-float`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`
+- **Theme Modes**: Dark (default), Light, Bingo — toggled via ThemeToggle component, stored in localStorage, applied via `[data-theme]` CSS selectors
+- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`
+- **Animations**: `animate-float`, `animate-float-subtle`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
 - **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
+- **Auth System**: AuthModal with email sign in/up, Google OAuth (mock), wallet connect (MetaMask or mock). Session stored in localStorage as `steinz_user`.
 
 ## Running
 - **Dev**: `npm run dev` (port 5000)
