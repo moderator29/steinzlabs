@@ -100,8 +100,8 @@ app/api/
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
 - **Theme Modes**: Dark (default), Light, Bingo — toggled via ThemeToggle component, stored in localStorage, applied via `[data-theme]` CSS selectors
-- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`
-- **Animations**: `animate-float`, `animate-float-subtle`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`
+- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.shimmer-btn`, `.gradient-border`, `.neon-text`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.feature-card`, `.security-card`, `.security-icon-glow`
+- **Animations**: `animate-float`, `animate-float-subtle`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
 - **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
 - **Auth System**: AuthModal with email sign in/up, Google OAuth (mock), wallet connect (MetaMask or mock). Session stored in localStorage as `steinz_user`.

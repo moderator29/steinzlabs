@@ -5,8 +5,93 @@ import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users,
 import Link from 'next/link';
 import PriceTicker from '@/components/PriceTicker';
 
+function AnimatedCounter({ value, label }: { value: string; label: string }) {
+  const [display, setDisplay] = useState('0');
+  const ref = useRef<HTMLDivElement>(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          const numericPart = value.replace(/[^0-9.]/g, '');
+          const prefix = value.match(/^[^0-9]*/)?.[0] || '';
+          const suffix = value.match(/[^0-9.]*$/)?.[0] || '';
+          const target = parseFloat(numericPart);
+          const duration = 1800;
+          const start = performance.now();
+
+          const animate = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 4);
+            const current = target * eased;
+
+            if (numericPart.includes('.')) {
+              setDisplay(`${prefix}${current.toFixed(1)}${suffix}`);
+            } else {
+              setDisplay(`${prefix}${Math.floor(current)}${suffix}`);
+            }
+
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return (
+    <div ref={ref} className="text-center group">
+      <div className="text-xl md:text-2xl font-heading font-bold bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300">
+        {display}
+      </div>
+      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+const PARTICLES = Array.from({ length: 20 }).map((_, i) => {
+  const seed = (i * 7 + 13) % 100;
+  const seed2 = (i * 11 + 29) % 100;
+  return {
+    left: `${(seed * 37 + i * 17) % 100}%`,
+    top: `${(seed2 * 43 + i * 23) % 100}%`,
+    color: i % 3 === 0 ? '#00E5FF' : i % 3 === 1 ? '#7C3AED' : '#10B981',
+    opacity: 0.15 + (seed % 25) / 100,
+    delay: `${(i * 0.4) % 8}s`,
+    duration: `${6 + (seed2 % 8)}s`,
+  };
+});
+
+function FloatingParticles() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {PARTICLES.map((p, i) => (
+        <div
+          key={i}
+          className="absolute w-1 h-1 rounded-full animate-particle"
+          style={{
+            left: p.left,
+            top: p.top,
+            background: p.color,
+            opacity: p.opacity,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(0);
+  const spotlightRef = useRef<HTMLDivElement>(null);
 
   const faqs = [
     {
@@ -82,6 +167,18 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (spotlightRef.current) {
+        spotlightRef.current.style.left = `${e.clientX - 200}px`;
+        spotlightRef.current.style.top = `${e.clientY - 200}px`;
+        spotlightRef.current.style.opacity = '1';
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -100,10 +197,12 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
-      <nav className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-all duration-300 ${scrolled ? 'bg-[#0A0E1A]/90 border-white/10 shadow-lg shadow-black/20' : 'bg-transparent border-white/5'}`}>
+      <div className="noise-overlay"></div>
+
+      <nav className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-all duration-500 ${scrolled ? 'bg-[#0A0E1A]/90 border-white/10 shadow-lg shadow-black/20' : 'bg-transparent border-white/5'}`}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/20 animate-float-subtle">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/20 animate-float-subtle logo-glow">
               <span className="text-sm font-bold">S</span>
             </div>
             <span className="text-base font-heading font-bold tracking-tight">STEINZ</span>
@@ -124,6 +223,7 @@ export default function LandingPage() {
       <section className="pt-24 pb-16 px-4 relative overflow-hidden">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="absolute inset-0 grid-pattern pointer-events-none"></div>
+        <FloatingParticles />
 
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[15%] left-[20%] w-96 h-96 bg-[#00E5FF] rounded-full blur-[180px] opacity-[0.07] animate-pulse-glow"></div>
@@ -131,11 +231,27 @@ export default function LandingPage() {
           <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[100px] animate-breathe"></div>
         </div>
 
+        <div
+          ref={spotlightRef}
+          className="absolute w-[400px] h-[400px] rounded-full pointer-events-none hidden md:block"
+          style={{
+            background: 'radial-gradient(circle, rgba(0,229,255,0.03) 0%, transparent 70%)',
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+          }}
+        />
+
         <div className="absolute top-20 left-10 w-px h-32 bg-gradient-to-b from-transparent via-[#00E5FF]/20 to-transparent animate-scanline hidden md:block"></div>
         <div className="absolute top-40 right-16 w-px h-24 bg-gradient-to-b from-transparent via-[#7C3AED]/20 to-transparent animate-scanline hidden md:block" style={{ animationDelay: '3s' }}></div>
 
+        <div className="absolute top-32 right-[10%] hidden lg:block">
+          <div className="hero-ring w-48 h-48">
+            <div className="hero-ring-inner"></div>
+          </div>
+        </div>
+
         <div className="max-w-2xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-8 backdrop-blur-sm animate-fadeInUp">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-8 backdrop-blur-sm animate-fadeInUp hover:bg-[#00E5FF]/10 transition-colors cursor-default">
             <div className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></div>
             <span className="text-[#00E5FF] text-xs font-semibold tracking-wide">Now Live on 12+ Chains</span>
             <Sparkles className="w-3 h-3 text-[#00E5FF]/60" />
@@ -157,7 +273,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-12 animate-fadeInUp stagger-3">
             <Link href="/dashboard" className="flex-1">
-              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3.5 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 flex items-center justify-center gap-2">
+              <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3.5 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 flex items-center justify-center gap-2 btn-glow">
                 Launch Dashboard <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
@@ -170,10 +286,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto animate-fadeInUp stagger-4">
             {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-xl md:text-2xl font-heading font-bold bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">{stat.value}</div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">{stat.label}</div>
-              </div>
+              <AnimatedCounter key={stat.label} value={stat.value} label={stat.label} />
             ))}
           </div>
         </div>
@@ -185,7 +298,7 @@ export default function LandingPage() {
           <p className="text-center text-gray-500 text-[10px] uppercase tracking-[0.2em] mb-3">Supported Chains</p>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-400 relative z-20">
             {chains.map((chain, i) => (
-              <span key={chain} className="hover:text-[#00E5FF] transition-colors cursor-default animate-fadeIn" style={{ animationDelay: `${i * 0.05}s` }}>{chain}</span>
+              <span key={chain} className="hover:text-[#00E5FF] transition-colors cursor-default animate-fadeIn hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,229,255,0.3)] transition-all duration-300" style={{ animationDelay: `${i * 0.05}s` }}>{chain}</span>
             ))}
           </div>
         </div>
@@ -217,10 +330,10 @@ export default function LandingPage() {
               return (
                 <div
                   key={feature.title}
-                  className={`glass rounded-xl p-5 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-500 glow-card group animate-slide-up stagger-${Math.min(i + 1, 8)}`}
+                  className={`feature-card glass rounded-xl p-5 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-500 glow-card group animate-slide-up stagger-${Math.min(i + 1, 8)}`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${feature.accent} rounded-lg flex items-center justify-center flex-shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 shadow-lg`}>
+                    <div className={`w-10 h-10 bg-gradient-to-br ${feature.accent} rounded-lg flex items-center justify-center flex-shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl`}>
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -240,9 +353,10 @@ export default function LandingPage() {
           <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent relative overflow-hidden">
             <div className="absolute inset-0 grid-pattern pointer-events-none opacity-30"></div>
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/30 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#7C3AED]/20 to-transparent"></div>
             <div className="relative z-10">
               <div className="text-center mb-8">
-                <div className="w-14 h-14 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-xl flex items-center justify-center mx-auto mb-4 animate-float border border-white/5">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-xl flex items-center justify-center mx-auto mb-4 animate-float border border-white/5 security-icon-glow">
                   <Shield className="w-7 h-7 text-[#00E5FF]" />
                 </div>
                 <p className="text-[#00E5FF] text-xs font-semibold uppercase tracking-[0.2em] mb-2">Security Suite</p>
@@ -263,8 +377,8 @@ export default function LandingPage() {
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-300 card-hover text-left group">
-                      <div className="w-8 h-8 bg-[#00E5FF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#00E5FF]/20 transition-colors">
+                    <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all duration-300 card-hover text-left group security-card">
+                      <div className="w-8 h-8 bg-[#00E5FF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#00E5FF]/20 transition-colors group-hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]">
                         <Icon className="w-4 h-4 text-[#00E5FF]" />
                       </div>
                       <h4 className="font-bold text-xs mb-1">{item.title}</h4>
@@ -278,8 +392,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="whitepaper" className="py-16 px-4 bg-[#111827]/20">
-        <div className="max-w-4xl mx-auto text-center">
+      <section id="whitepaper" className="py-16 px-4 bg-[#111827]/20 relative">
+        <div className="absolute inset-0 dot-pattern pointer-events-none opacity-30"></div>
+        <div className="max-w-4xl mx-auto text-center relative z-10">
           <p className="text-[#7C3AED] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Deep Dive</p>
           <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">
             Read the Whitepaper
@@ -308,7 +423,7 @@ export default function LandingPage() {
               <div
                 key={index}
                 className={`glass rounded-xl overflow-hidden transition-all duration-300 border ${
-                  openFAQ === index ? 'border-[#00E5FF]/30 bg-gradient-to-r from-[#00E5FF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06] hover:border-white/10'
+                  openFAQ === index ? 'border-[#00E5FF]/30 bg-gradient-to-r from-[#00E5FF]/[0.03] to-[#7C3AED]/[0.03] shadow-[0_0_30px_rgba(0,229,255,0.05)]' : 'border-white/[0.06] hover:border-white/10'
                 }`}
               >
                 <button
@@ -340,7 +455,7 @@ export default function LandingPage() {
       <section className="py-16 px-4 relative overflow-hidden">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[120px]"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-full blur-[120px] animate-breathe"></div>
         </div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">
@@ -350,14 +465,15 @@ export default function LandingPage() {
             Join the future of on-chain intelligence. Free to start, powerful from day one.
           </p>
           <Link href="/dashboard">
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-4 rounded-xl font-semibold text-sm inline-flex items-center gap-2 hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20">
+            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-4 rounded-xl font-semibold text-sm inline-flex items-center gap-2 hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 btn-glow">
               Launch Platform <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-white/5 py-10 px-4 bg-[#111827]/30">
+      <footer className="border-t border-white/5 py-10 px-4 bg-[#111827]/30 relative">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/10 to-transparent"></div>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/10">
