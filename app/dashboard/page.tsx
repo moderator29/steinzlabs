@@ -5,11 +5,42 @@ import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell, Searc
 import ContextFeed from '@/components/ContextFeed';
 import Markets from '@/components/Markets';
 import Predictions from '@/components/Predictions';
+import SocialTab from '@/components/SocialTab';
+import VtxAiTab from '@/components/VtxAiTab';
+import DiscoverTab from '@/components/DiscoverTab';
+import WalletTab from '@/components/WalletTab';
+import ProfileTab from '@/components/ProfileTab';
 import SidebarMenu from '@/components/SidebarMenu';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('context');
+  const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const showHomeTabs = activeNav === 'home';
+
+  const navItems = [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'social', icon: Users, label: 'Social' },
+    { id: 'vtxai', icon: MessageSquare, label: 'VTX AI' },
+    { id: 'discover', icon: Compass, label: 'Discover' },
+    { id: 'wallet', icon: Wallet, label: 'Wallet' },
+    { id: 'profile', icon: User, label: 'Profile' },
+  ];
+
+  const renderContent = () => {
+    if (activeNav === 'home') {
+      if (activeTab === 'context') return <ContextFeed />;
+      if (activeTab === 'markets') return <Markets />;
+      if (activeTab === 'predictions') return <Predictions />;
+    }
+    if (activeNav === 'social') return <SocialTab />;
+    if (activeNav === 'vtxai') return <VtxAiTab />;
+    if (activeNav === 'discover') return <DiscoverTab />;
+    if (activeNav === 'wallet') return <WalletTab />;
+    if (activeNav === 'profile') return <ProfileTab />;
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
@@ -40,88 +71,68 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="fixed top-14 w-full bg-[#111827]/80 backdrop-blur-sm border-b border-white/10 z-30">
-        <div className="flex gap-6 px-4 py-2 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <span className="text-gray-400 text-xs font-semibold">BTC</span>
-            <span className="text-white font-mono text-xs">Loading...</span>
-          </div>
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <span className="text-gray-400 text-xs font-semibold">ETH</span>
-            <span className="text-white font-mono text-xs">Loading...</span>
-          </div>
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <span className="text-gray-400 text-xs font-semibold">SOL</span>
-            <span className="text-white font-mono text-xs">Loading...</span>
+      {showHomeTabs && (
+        <div className="fixed top-14 w-full bg-[#111827]/80 backdrop-blur-sm border-b border-white/10 z-30">
+          <div className="flex gap-6 px-4 py-2 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-xs font-semibold">BTC</span>
+              <span className="text-white font-mono text-xs">Loading...</span>
+            </div>
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-xs font-semibold">ETH</span>
+              <span className="text-white font-mono text-xs">Loading...</span>
+            </div>
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-gray-400 text-xs font-semibold">SOL</span>
+              <span className="text-white font-mono text-xs">Loading...</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="pt-[104px] px-3">
-        <div className="flex gap-1 mb-4 bg-[#111827] p-1.5 rounded-xl max-w-sm mx-auto">
-          <button
-            onClick={() => setActiveTab('context')}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all text-xs ${
-              activeTab === 'context'
-                ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Context Feed
-          </button>
-          <button
-            onClick={() => setActiveTab('markets')}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all text-xs ${
-              activeTab === 'markets'
-                ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Markets
-          </button>
-          <button
-            onClick={() => setActiveTab('predictions')}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all text-xs ${
-              activeTab === 'predictions'
-                ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Predictions
-          </button>
-        </div>
+      <div className={`${showHomeTabs ? 'pt-[104px]' : 'pt-[68px]'} px-3`}>
+        {showHomeTabs && (
+          <div className="flex gap-1 mb-4 bg-[#111827] p-1.5 rounded-xl max-w-sm mx-auto">
+            {['context', 'markets', 'predictions'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all text-xs ${
+                  activeTab === tab
+                    ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {tab === 'context' ? 'Context Feed' : tab === 'markets' ? 'Markets' : 'Predictions'}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {activeTab === 'context' && <ContextFeed />}
-        {activeTab === 'markets' && <Markets />}
-        {activeTab === 'predictions' && <Predictions />}
+        {renderContent()}
       </div>
 
       <div className="fixed bottom-0 w-full glass backdrop-blur-xl border-t border-white/10 z-50">
         <div className="grid grid-cols-6 gap-0 px-1 py-2">
-          <button className="flex flex-col items-center gap-0.5 py-1 text-[#00E5FF]">
-            <Home className="w-5 h-5" />
-            <span className="text-[10px] font-semibold">Home</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 py-1 text-gray-400">
-            <Users className="w-5 h-5" />
-            <span className="text-[10px]">Social</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 py-1 text-gray-400">
-            <MessageSquare className="w-5 h-5" />
-            <span className="text-[10px]">VTX AI</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 py-1 text-gray-400">
-            <Compass className="w-5 h-5" />
-            <span className="text-[10px]">Discover</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 py-1 text-gray-400">
-            <Wallet className="w-5 h-5" />
-            <span className="text-[10px]">Wallet</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 py-1 text-gray-400">
-            <User className="w-5 h-5" />
-            <span className="text-[10px]">Profile</span>
-          </button>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeNav === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveNav(item.id);
+                  if (item.id === 'home') setActiveTab('context');
+                }}
+                className={`flex flex-col items-center gap-0.5 py-1 transition-colors ${
+                  isActive ? 'text-[#00E5FF]' : 'text-gray-400'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className={`text-[10px] ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

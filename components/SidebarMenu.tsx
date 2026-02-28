@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Home, BarChart3, TrendingUp, Search, Layers, Activity, Radar, Users, ArrowLeftRight, Brain, Bell, Shield, Zap, Compass, ChevronRight } from 'lucide-react';
+import { X, Home, BarChart3, TrendingUp, Search, Layers, Activity, Radar, Users, ArrowLeftRight, Brain, Bell, Shield, Zap, Compass, ChevronRight, Globe, Landmark, Grid3X3, Lock, Scan } from 'lucide-react';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -19,7 +19,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
-        <div className="p-4 space-y-1">
+        <div className="p-4 space-y-0.5">
           <MenuItem icon={Home} label="Home / Context Feed" />
           <MenuItem icon={BarChart3} label="Portfolio Dashboard" />
           <MenuItem icon={TrendingUp} label="Trading DNA Analyzer" badge="NEW" />
@@ -34,18 +34,23 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
 
           <SectionTitle>Tools</SectionTitle>
           <MenuItem icon={ArrowLeftRight} label="Multi-Chain Swap" />
-          <MenuItem icon={Brain} label="VTX AI Assistant" active />
+          <MenuItem icon={Brain} label="VTX AI Assistant" />
           <MenuItem icon={Bell} label="Smart Alerts" />
           <MenuItem icon={Users} label="Social Trading" />
           <MenuItem icon={Shield} label="Security Center" badge="NEW" />
           <MenuItem icon={Zap} label="AI Risk Scanner" badge="NEW" />
 
           <SectionTitle>Discover</SectionTitle>
-          <MenuItem icon={Search} label="Project Discovery" />
+          <MenuItem icon={Search} label="Project Discovery" active />
+          <MenuItem icon={Globe} label="Builder Network" />
+          <MenuItem icon={Landmark} label="Builder Funding Portal" badge="NEW" />
+          <MenuItem icon={Grid3X3} label="Launchpad" />
 
-          <SectionTitle>Account</SectionTitle>
-          <MenuItem icon={Bell} label="Notifications" />
-          <MenuItem icon={Shield} label="Settings" />
+          <SectionTitle>Security</SectionTitle>
+          <MenuItem icon={Shield} label="Token Safety Scanner" />
+          <MenuItem icon={Scan} label="Contract Analyzer" />
+          <MenuItem icon={Lock} label="Rug Detector" />
+          <MenuItem icon={Globe} label="Phishing Detector" />
         </div>
       </div>
     </div>
@@ -54,7 +59,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="pt-4 pb-1">
+    <div className="pt-5 pb-1">
       <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{children}</span>
     </div>
   );
@@ -66,9 +71,9 @@ function MenuItem({ icon: Icon, label, badge, active }: { icon: React.ElementTyp
       <Icon className="w-4 h-4 flex-shrink-0" />
       <span className="flex-1 text-left">{label}</span>
       {badge && (
-        <span className="px-1.5 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">{badge}</span>
+        <span className="px-1.5 py-0.5 bg-[#10B981]/20 text-[#10B981] rounded text-[10px] font-semibold">{badge}</span>
       )}
-      <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+      {active && <ChevronRight className="w-3.5 h-3.5 text-gray-600" />}
     </button>
   );
 }
