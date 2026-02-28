@@ -136,3 +136,4 @@ Configured in `.env.local`:
 - Frontend only for now — will be connected to real data/engineering later
 - Landing page uses CSS-only entrance animations (no React state transitions)
 - Admin panel password: 195656
+- Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.

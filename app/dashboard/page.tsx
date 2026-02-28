@@ -59,7 +59,7 @@ export default function Dashboard() {
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <img src="/steinz-logo.svg" alt="STEINZ" className="w-8 h-8 flex-shrink-0" />
+            <img src="/steinz-logo-128.png" alt="STEINZ" className="w-8 h-8 flex-shrink-0" style={{ objectFit: 'contain' }} />
             <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="flex items-center gap-2">
