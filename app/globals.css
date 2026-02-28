@@ -358,3 +358,109 @@ h1, h2, h3, h4, h5, h6 {
 .stagger-6 { animation-delay: 0.3s; }
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
+
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+.font-heading {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+[data-theme="light"] body,
+[data-theme="light"] .min-h-screen {
+  background: #F8FAFC !important;
+  color: #1E293B !important;
+}
+
+[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light"] .bg-\[\#0A0E1A\] {
+  background: #F8FAFC !important;
+}
+
+[data-theme="light"] .bg-\[\#111827\] {
+  background: #E2E8F0 !important;
+}
+
+[data-theme="light"] .bg-\[\#111827\]\/80 {
+  background: rgba(226, 232, 240, 0.8) !important;
+}
+
+[data-theme="light"] .text-white {
+  color: #1E293B !important;
+}
+
+[data-theme="light"] .text-gray-400,
+[data-theme="light"] .text-gray-500 {
+  color: #64748B !important;
+}
+
+[data-theme="light"] .text-gray-300 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="bingo"] body,
+[data-theme="bingo"] .min-h-screen {
+  background: #0D0015 !important;
+}
+
+[data-theme="bingo"] .glass {
+  background: rgba(124, 58, 237, 0.06) !important;
+  border-color: rgba(124, 58, 237, 0.15) !important;
+}
+
+[data-theme="bingo"] .bg-\[\#0A0E1A\] {
+  background: #0D0015 !important;
+}
+
+[data-theme="bingo"] .bg-\[\#111827\] {
+  background: #1A0A2E !important;
+}
+
+[data-theme="bingo"] .bg-\[\#111827\]\/80 {
+  background: rgba(26, 10, 46, 0.8) !important;
+}
+
+[data-theme="bingo"] .border-white\/10 {
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+[data-theme="bingo"] .text-\[\#00E5FF\] {
+  color: #E040FB !important;
+}
+
+[data-theme="bingo"] .from-\[\#00E5FF\] {
+  --tw-gradient-from: #E040FB !important;
+}
+
+[data-theme="bingo"] .to-\[\#7C3AED\] {
+  --tw-gradient-to: #FF6D00 !important;
+}
+
+[data-theme="bingo"] .shadow-\[\#00E5FF\]\/20 {
+  --tw-shadow-color: rgba(224, 64, 251, 0.2) !important;
+}
+
+[data-theme="bingo"] .grid-pattern {
+  background-image:
+    linear-gradient(rgba(224, 64, 251, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224, 64, 251, 0.03) 1px, transparent 1px) !important;
+}
+
+[data-theme="bingo"] .dot-pattern {
+  background-image: radial-gradient(rgba(224, 64, 251, 0.05) 1px, transparent 1px) !important;
+}

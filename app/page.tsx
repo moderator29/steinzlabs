@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass, ExternalLink, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import PriceTicker from '@/components/PriceTicker';
 
 export default function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(0);
@@ -70,23 +71,50 @@ export default function LandingPage() {
     { value: "50K+", label: "Active Users" },
   ];
 
+  const [scrolled, setScrolled] = useState(false);
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    );
+    Object.values(sectionRefs.current).forEach((el) => {
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
-      <nav className="fixed top-0 w-full z-50 glass backdrop-blur-xl border-b border-white/5">
+      <nav className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-all duration-300 ${scrolled ? 'bg-[#0A0E1A]/90 border-white/10 shadow-lg shadow-black/20' : 'bg-transparent border-white/5'}`}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/20">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center shadow-lg shadow-[#00E5FF]/20 animate-float-subtle">
               <span className="text-sm font-bold">S</span>
             </div>
             <span className="text-base font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#security" className="hover:text-white transition-colors">Security</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <a href="#features" className="hover:text-[#00E5FF] transition-colors relative group">Features<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
+            <a href="#security" className="hover:text-[#00E5FF] transition-colors relative group">Security<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
+            <a href="#faq" className="hover:text-[#00E5FF] transition-colors relative group">FAQ<span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-[#00E5FF] transition-all"></span></a>
           </div>
           <Link href="/dashboard">
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20">
+            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform shadow-lg shadow-[#00E5FF]/20 shimmer-btn">
               Launch App
             </button>
           </Link>
@@ -163,28 +191,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-6 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex gap-6 overflow-x-auto scrollbar-hide py-2 justify-center">
-            {[
-              { name: 'BTC', color: '#F59E0B' },
-              { name: 'ETH', color: '#627EEA' },
-              { name: 'SOL', color: '#00E5FF' },
-            ].map((coin) => (
-              <div key={coin.name} className="flex items-center gap-2 whitespace-nowrap">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: coin.color }}></div>
-                <span className="text-gray-500 text-xs font-semibold">{coin.name}</span>
-                <span className="text-white font-mono text-xs">Loading...</span>
-              </div>
-            ))}
-          </div>
+      <section className="py-4 px-4">
+        <div className="max-w-4xl mx-auto flex justify-center">
+          <PriceTicker />
         </div>
       </section>
 
-      <section id="features" className="py-16 px-4 relative">
+      <section id="features" ref={(el) => { sectionRefs.current['features'] = el; }} className="py-16 px-4 relative">
         <div className="absolute inset-0 dot-pattern pointer-events-none opacity-50"></div>
         <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center mb-12">
+          <div className={`text-center mb-12 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <p className="text-[#00E5FF] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Platform Features</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-3">
               Everything You Need,<br />
@@ -219,8 +235,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="security" className="py-16 px-4">
-        <div className="max-w-4xl mx-auto">
+      <section id="security" ref={(el) => { sectionRefs.current['security'] = el; }} className="py-16 px-4">
+        <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent relative overflow-hidden">
             <div className="absolute inset-0 grid-pattern pointer-events-none opacity-30"></div>
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/30 to-transparent"></div>
@@ -277,8 +293,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="py-16 px-4">
-        <div className="max-w-2xl mx-auto">
+      <section id="faq" ref={(el) => { sectionRefs.current['faq'] = el; }} className="py-16 px-4">
+        <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-10">
             <p className="text-[#00E5FF] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Support</p>
             <h2 className="text-2xl md:text-3xl font-heading font-bold mb-2">
@@ -380,7 +396,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="text-center text-gray-600 text-[11px] border-t border-white/5 pt-6">
-            &copy; 2025 STEINZ Labs. Built on Ethereum & Solana.
+            &copy; 2026 STEINZ Labs. Built on Ethereum & Solana.
           </div>
         </div>
       </footer>

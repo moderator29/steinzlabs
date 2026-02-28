@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell, Search } from 'lucide-react';
 import ContextFeed from '@/components/ContextFeed';
 import Markets from '@/components/Markets';
@@ -11,11 +11,23 @@ import DiscoverTab from '@/components/DiscoverTab';
 import WalletTab from '@/components/WalletTab';
 import ProfileTab from '@/components/ProfileTab';
 import SidebarMenu from '@/components/SidebarMenu';
+import PriceTicker from '@/components/PriceTicker';
+import AuthModal from '@/components/AuthModal';
+import ThemeToggle from '@/components/ThemeToggle';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setShowAuthModal(true);
+    }
+  }, [user, authLoading]);
 
   const showHomeTabs = activeNav === 'home';
 
@@ -59,8 +71,9 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="relative">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button className="relative" onClick={() => !user && setShowAuthModal(true)}>
               <div className="w-2 h-2 bg-[#00E5FF] rounded-full absolute -top-0.5 -right-0.5 animate-pulse"></div>
               <Bell className="w-5 h-5 text-gray-400" />
             </button>
@@ -73,20 +86,7 @@ export default function Dashboard() {
 
       {showHomeTabs && (
         <div className="fixed top-14 w-full bg-[#111827]/80 backdrop-blur-sm border-b border-white/10 z-30">
-          <div className="flex gap-6 px-4 py-2 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-gray-400 text-xs font-semibold">BTC</span>
-              <span className="text-white font-mono text-xs">Loading...</span>
-            </div>
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-gray-400 text-xs font-semibold">ETH</span>
-              <span className="text-white font-mono text-xs">Loading...</span>
-            </div>
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-gray-400 text-xs font-semibold">SOL</span>
-              <span className="text-white font-mono text-xs">Loading...</span>
-            </div>
-          </div>
+          <PriceTicker />
         </div>
       )}
 
@@ -137,6 +137,13 @@ export default function Dashboard() {
       </div>
 
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
+
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => setShowAuthModal(false)}
+        />
+      )}
     </div>
   );
 }
