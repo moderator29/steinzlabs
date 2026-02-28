@@ -21,22 +21,33 @@ Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain 
 app/
 ├── globals.css              # Global styles, fonts, animations, glass/gradient/glow utilities
 ├── layout.tsx               # Root layout
-├── page.tsx                 # Landing page (hero, features, whitepaper, FAQ, pricing, CTA, footer)
+├── page.tsx                 # Landing page (hero, features, security, whitepaper, FAQ, CTA, footer)
 └── dashboard/
     ├── layout.tsx           # Dashboard layout wrapper
-    └── page.tsx             # Dashboard with 3 tabs (Context Feed, Markets, Predictions)
+    └── page.tsx             # Dashboard with 6-tab bottom nav + Home sub-tabs
 components/
-├── ContextFeed.tsx          # Context Feed tab content (whale alerts, token events)
-├── Markets.tsx              # Markets tab content (token list with filters)
-├── Predictions.tsx          # Predictions tab content (coming soon state)
-└── SidebarMenu.tsx          # Slide-out sidebar menu (Intelligence, Tools, Account sections)
+├── ContextFeed.tsx          # Context Feed tab (whale alerts, token events, trust scores)
+├── Markets.tsx              # Markets tab (token list with filters)
+├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
+├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
+├── VtxAiTab.tsx             # VTX AI assistant tab (chat + quick actions)
+├── DiscoverTab.tsx          # Security Center / Discover tab (scanners)
+├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect)
+├── ProfileTab.tsx           # Profile tab (stats, settings, achievements)
+└── SidebarMenu.tsx          # Slide-out sidebar (Intelligence, Tools, Discover, Security sections)
 lib/
 └── supabase.ts              # Supabase client + admin (service role) client
 ```
 
-## Pages
-- `/` — Landing page with animated hero, feature cards, whitepaper section, FAQ accordion, pricing tiers, CTA
-- `/dashboard` — Main app dashboard with Context Feed (whale alerts), Markets tab, Predictions tab, bottom nav, side menu
+## Pages & Navigation
+- `/` — Landing page with animated hero, feature cards, security section, whitepaper, FAQ, CTA
+- `/dashboard` — Main app with 6-tab bottom navigation:
+  - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with price ticker bar)
+  - **Social** — Social trading with messages & connect wallet
+  - **VTX AI** — AI assistant with chat input + quick actions (Market Overview, Portfolio, Risk, Signals)
+  - **Discover** — Security Center with Token Safety Scanner, Contract Analyzer, Rug/Phishing Detector
+  - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
+  - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
 
 ## Design System
 - **Background**: #0A0E1A (dark navy)
@@ -44,9 +55,9 @@ lib/
 - **Accent Colors**: Cyan (#00E5FF), Purple (#7C3AED)
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
-- **CSS Utilities**: `.glass` (glassmorphism), `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.scrollbar-hide`
-- **Animations**: `animate-float`, `animate-float-delayed`, `animate-fadeInUp`, `animate-fadeInScale`, `animate-borderGlow`, `animate-orbit`, `animate-textGradient`, `animate-shimmer`
-- **Stagger classes**: `.stagger-1` through `.stagger-6` for sequential entrance animations
+- **CSS Utilities**: `.glass`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.shimmer-btn`, `.gradient-border`, `.scrollbar-hide`
+- **Animations**: `animate-float`, `animate-fadeInUp`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-spin-slow`, `animate-slide-up`, `animate-breathe`
+- **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
 
 ## Running
 - **Dev**: `npm run dev` (port 5000)
@@ -68,3 +79,5 @@ Configured in `.env.local`:
 - `image-hash` version updated from ^5.5.0 to ^7.0.1 (v5.x does not exist on npm)
 - Project uses root-level `app/` and `lib/` directories (no `src/` prefix)
 - `@/*` path alias maps to project root (`./`)
+- Frontend only for now — will be connected to real data/engineering later
+- Landing page is static (no horizontal scroll), no pricing section
