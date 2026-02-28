@@ -6,10 +6,10 @@ const userActions: Set<string> = new Set();
 function getEngagement(eventId: string) {
   if (!engagementStore[eventId]) {
     engagementStore[eventId] = {
-      views: Math.floor(Math.random() * 500 + 50),
-      likes: Math.floor(Math.random() * 100 + 10),
-      shares: Math.floor(Math.random() * 50 + 5),
-      comments: Math.floor(Math.random() * 30 + 3),
+      views: 0,
+      likes: 0,
+      shares: 0,
+      comments: 0,
     };
   }
   return engagementStore[eventId];
@@ -27,7 +27,10 @@ export async function POST(request: Request) {
     const actionKey = `${eventId}:${userId || 'anon'}:${action}`;
 
     if (action === 'view') {
-      engagement.views += 1;
+      if (!userActions.has(actionKey)) {
+        engagement.views += 1;
+        userActions.add(actionKey);
+      }
     } else if (action === 'like') {
       if (!userActions.has(actionKey)) {
         engagement.likes += 1;

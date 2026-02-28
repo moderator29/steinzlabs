@@ -1,5 +1,63 @@
 import { NextResponse } from 'next/server';
 
+async function fetchLiveMarketData(): Promise<string> {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=1h,24h,7d',
+      {
+        headers: process.env.COINGECKO_API_KEY
+          ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+          : {},
+        next: { revalidate: 30 },
+      }
+    );
+    if (!res.ok) return '';
+    const coins = await res.json();
+    const lines = coins.map((c: any) =>
+      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(1)}%, 7d: ${c.price_change_percentage_7d_in_currency?.toFixed(1)}%, MCap: $${(c.market_cap / 1e9).toFixed(1)}B, Vol: $${(c.total_volume / 1e6).toFixed(0)}M)`
+    );
+    return lines.join('\n');
+  } catch {
+    return '';
+  }
+}
+
+async function fetchTrendingTokens(): Promise<string> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    if (!Array.isArray(data)) return '';
+    const lines = data.slice(0, 8).map((t: any) =>
+      `${t.tokenAddress?.slice(0, 8)}... on ${t.chainId} — ${t.description || 'trending'} (${t.amount || 0} boosts)`
+    );
+    return lines.length > 0 ? 'DexScreener trending tokens:\n' + lines.join('\n') : '';
+  } catch {
+    return '';
+  }
+}
+
+async function fetchCryptoNews(): Promise<string> {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/search/trending', {
+      headers: process.env.COINGECKO_API_KEY
+        ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+        : {},
+      next: { revalidate: 120 },
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    const coins = data.coins?.slice(0, 7).map((c: any) =>
+      `${c.item.symbol}: rank #${c.item.market_cap_rank || '?'}, price $${c.item.data?.price?.toFixed(6) || '?'}, 24h: ${c.item.data?.price_change_percentage_24h?.usd?.toFixed(1) || '?'}%`
+    ) || [];
+    return coins.length > 0 ? 'Trending on CoinGecko:\n' + coins.join('\n') : '';
+  } catch {
+    return '';
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { message, history } = await request.json();
@@ -12,6 +70,18 @@ export async function POST(request: Request) {
     if (!apiKey) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
+
+    const [marketData, trending, news] = await Promise.all([
+      fetchLiveMarketData(),
+      fetchTrendingTokens(),
+      fetchCryptoNews(),
+    ]);
+
+    const liveDataSection = [
+      marketData ? `LIVE MARKET DATA (updated just now):\n${marketData}` : '',
+      trending || '',
+      news || '',
+    ].filter(Boolean).join('\n\n');
 
     const systemPrompt = `You are VTX AI, the intelligent assistant built into STEINZ LABS — a crypto and on-chain intelligence platform.
 
@@ -31,13 +101,19 @@ Your expertise (when crypto/blockchain topics come up):
 - Trading strategies: entry/exit points, risk management, portfolio allocation
 - Multi-chain ecosystems: Ethereum, Solana, BSC, Polygon, Arbitrum, Base, and more
 
+CRITICAL RULE — REAL DATA ONLY:
+You have access to LIVE market data below. When users ask about prices, markets, or trends, USE THIS DATA. Give exact current prices. Never say "I don't have access to real-time data" — you DO have it right here. If a specific coin isn't in the data below, say you'll need to check but give what you know.
+
+${liveDataSection}
+
 Rules:
 - Match response length to question complexity. "What is ETH?" = 1-2 sentences. "Explain how AMMs work" = detailed breakdown.
 - When discussing specific tokens or trades, add a brief risk note at the end
 - Never fabricate exact price predictions
 - Reference real protocols and tools by name when relevant
 - Format with markdown only when it actually helps readability (lists, code, etc.)
-- Be honest when you don't know something`;
+- Be honest when you don't know something
+- ALWAYS use the live data above for current prices — never estimate or use old data`;
 
     const messages = [];
     if (history && Array.isArray(history)) {

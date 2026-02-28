@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check } from 'lucide-react';
+import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
@@ -9,15 +9,48 @@ interface Message {
   content: string;
 }
 
+const STORAGE_KEY = 'vtx-ai-page-history';
+
+function loadHistory(): Message[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [
+    { role: 'assistant', content: 'Hey! I\'m VTX AI — I search live market data before answering so you always get current prices and trends. Ask me anything about crypto, markets, or really anything else.' },
+  ];
+}
+
+function saveHistory(messages: Message[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)));
+  } catch {}
+}
+
 export default function VtxAiPage() {
   const router = useRouter();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Welcome to VTX AI. I can analyze markets, assess risk, track whale movements, decode smart contracts, and generate trading signals across 12+ chains. What would you like to know?' },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      setMessages(loadHistory());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialized.current && messages.length > 0) {
+      saveHistory(messages);
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,6 +66,14 @@ export default function VtxAiPage() {
     { icon: Shield, label: 'Risk Assessment', query: 'What are the biggest risks in the crypto market right now? Flag any red flags, potential rug pulls, or macro concerns.' },
     { icon: Zap, label: 'Trading Signals', query: 'What on-chain signals are showing the most bullish or bearish activity right now? Include whale movements and smart money flows.' },
   ];
+
+  const clearChat = () => {
+    const fresh = [
+      { role: 'assistant' as const, content: 'Chat cleared! Ask me anything — I search live market data before answering.' },
+    ];
+    setMessages(fresh);
+    saveHistory(fresh);
+  };
 
   const handleSend = async (text?: string) => {
     const msg = text || input;
@@ -90,9 +131,14 @@ export default function VtxAiPage() {
             <h1 className="text-sm font-heading font-bold">VTX AI Assistant</h1>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
-              <span className="text-[10px] text-[#10B981]">Powered by Claude</span>
+              <span className="text-[10px] text-[#10B981]">Live market data</span>
             </div>
           </div>
+          {messages.length > 1 && (
+            <button onClick={clearChat} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Clear chat">
+              <Trash2 className="w-4 h-4 text-gray-500" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -137,7 +183,7 @@ export default function VtxAiPage() {
             <div className="glass border border-white/10 rounded-2xl px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin text-[#00E5FF]" />
-                Analyzing on-chain data...
+                Searching live data...
               </div>
             </div>
           </div>
