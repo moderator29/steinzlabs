@@ -1,10 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft } from 'lucide-react';
+import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
+
+interface Notification {
+  id: string;
+  type: 'whale' | 'price' | 'prediction' | 'trending' | 'security';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
+
+const defaultNotifications: Notification[] = [
+  { id: '1', type: 'whale', title: 'Whale Alert', message: '🐋 500 BTC ($32.4M) transferred from unknown wallet to Coinbase', time: '2m ago', read: false },
+  { id: '2', type: 'price', title: 'Price Break', message: 'ETH broke above $3,800 resistance — up 5.2% in 1h', time: '8m ago', read: false },
+  { id: '3', type: 'prediction', title: 'Prediction Result', message: 'Your SOL bullish prediction was correct! +150 points earned', time: '23m ago', read: false },
+  { id: '4', type: 'trending', title: 'Trending Token', message: '🔥 PEPE volume surged 340% in the last hour across DEXs', time: '45m ago', read: false },
+  { id: '5', type: 'security', title: 'Security Alert', message: '⚠️ Suspicious contract detected on token "SafeYield" — avoid interaction', time: '1h ago', read: false },
+  { id: '6', type: 'whale', title: 'Whale Alert', message: '🐋 10,000 ETH unstaked from Lido by top-100 wallet', time: '2h ago', read: true },
+  { id: '7', type: 'price', title: 'Price Break', message: 'BNB dropped below $580 support — down 3.1% in 30m', time: '3h ago', read: true },
+];
 
 type SubPage = null | 'privacy' | 'help' | 'preferences';
 
@@ -14,6 +33,28 @@ export default function ProfileTab() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [subPage, setSubPage] = useState<SubPage>(null);
+  const [notifList, setNotifList] = useState<Notification[]>(defaultNotifications);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const unreadCount = notifList.filter(n => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifList(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const markAllRead = () => {
+    setNotifList(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const getNotifIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'whale': return <AlertTriangle className="w-4 h-4 text-[#00E5FF]" />;
+      case 'price': return <TrendingUp className="w-4 h-4 text-[#10B981]" />;
+      case 'prediction': return <Target className="w-4 h-4 text-[#F59E0B]" />;
+      case 'trending': return <Flame className="w-4 h-4 text-[#EF4444]" />;
+      case 'security': return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
+    }
+  };
   const [notifications, setNotifications] = useState({
     whaleAlerts: true,
     priceAlerts: true,
@@ -270,6 +311,58 @@ export default function ProfileTab() {
 
   return (
     <div>
+      <div className="glass rounded-xl border border-white/10 mb-5 overflow-hidden">
+        <button
+          onClick={() => setShowNotifications(!showNotifications)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Bell className="w-5 h-5 text-[#00E5FF]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-bold flex items-center justify-center text-white">{unreadCount}</span>
+              )}
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-semibold">Notifications</div>
+              <div className="text-[10px] text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</div>
+            </div>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${showNotifications ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showNotifications && (
+          <div className="border-t border-white/5">
+            {unreadCount > 0 && (
+              <div className="flex justify-end px-4 py-2 border-b border-white/5">
+                <button onClick={markAllRead} className="text-[10px] text-[#00E5FF] hover:text-[#00E5FF]/80 font-semibold transition-colors">
+                  Mark all read
+                </button>
+              </div>
+            )}
+            <div className="max-h-[320px] overflow-y-auto">
+              {notifList.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => markAsRead(n.id)}
+                  className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
+                >
+                  <div className="mt-0.5 flex-shrink-0">{getNotifIcon(n.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold">{n.title}</span>
+                      {!n.read && <span className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full flex-shrink-0" />}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
+                    <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-col items-center mb-6">
         <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
           {user?.user_metadata?.avatar_url ? (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell } from 'lucide-react';
+import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X } from 'lucide-react';
 import ContextFeed from '@/components/ContextFeed';
 import Markets from '@/components/Markets';
 import Predictions from '@/components/Predictions';
@@ -64,12 +64,6 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            {user && (
-              <button className="relative">
-                <div className="w-2 h-2 bg-[#00E5FF] rounded-full absolute -top-0.5 -right-0.5 animate-pulse"></div>
-                <Bell className="w-5 h-5 text-gray-400" />
-              </button>
-            )}
             <button onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>

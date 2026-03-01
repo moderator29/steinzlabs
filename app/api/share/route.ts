@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
+
+const shareStore = new Map<string, Record<string, string>>();
 
 function encodeSharePayload(data: Record<string, string>): string {
   const json = JSON.stringify(data);
@@ -29,11 +32,13 @@ export async function POST(request: Request) {
       tk: tokenSymbol || '',
       p: platform || '',
     };
-    const encoded = encodeSharePayload(payload);
+
+    const shortId = crypto.randomBytes(4).toString('hex');
+    shareStore.set(shortId, payload);
 
     const host = request.headers.get('host') || 'steinzlabs.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const shareUrl = `${protocol}://${host}/share/${encoded}`;
+    const shareUrl = `${protocol}://${host}/s/${shortId}`;
 
     const shareText = `${title}\n\n${summary}\n\nPowered by Steinz Labs — Real-time on-chain intelligence\n${shareUrl}`;
 
@@ -49,10 +54,25 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const encoded = searchParams.get('payload');
 
+  const shortId = searchParams.get('id');
+  if (shortId) {
+    const data = shareStore.get(shortId);
+    if (!data) {
+      return NextResponse.json({ error: 'Share not found' }, { status: 404 });
+    }
+    return NextResponse.json({
+      title: data.t || '',
+      summary: data.s || '',
+      chain: data.c || '',
+      tokenSymbol: data.tk || '',
+      platform: data.p || '',
+    });
+  }
+
+  const encoded = searchParams.get('payload');
   if (!encoded) {
-    return NextResponse.json({ error: 'Missing payload' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing payload or id' }, { status: 400 });
   }
 
   const data = decodeSharePayload(encoded);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Eye, MessageSquare, Heart, Share2, ExternalLink, Copy, X, Check } from 'lucide-react';
+import { Eye, Heart, Share2, ExternalLink, Copy, X, Check } from 'lucide-react';
 import { useContextFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AllChainsIcon } from './ChainIcons';
 import ViewProofModal from './ViewProofModal';
@@ -470,9 +470,6 @@ export default function ContextFeed() {
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5" /> {eng.comments.toLocaleString()}
                 </span>
                 <button
                   onClick={() => handleShare(event)}
