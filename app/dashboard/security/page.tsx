@@ -35,6 +35,10 @@ const CHAINS = [
   { id: '1', label: 'Ethereum', key: 'ethereum' },
   { id: '56', label: 'BSC', key: 'bsc' },
   { id: '137', label: 'Polygon', key: 'polygon' },
+  { id: 'solana', label: 'Solana', key: 'solana' },
+  { id: '8453', label: 'Base', key: 'base' },
+  { id: '43114', label: 'Avalanche', key: 'avalanche' },
+  { id: '42161', label: 'Arbitrum', key: 'arbitrum' },
 ];
 
 export default function SecurityPage() {
@@ -90,6 +94,10 @@ export default function SecurityPage() {
     const chain = CHAINS.find(c => c.key === selectedChain);
     if (chain?.id === '56') return `https://bscscan.com/address/${addr}`;
     if (chain?.id === '137') return `https://polygonscan.com/address/${addr}`;
+    if (chain?.id === 'solana') return `https://solscan.io/token/${addr}`;
+    if (chain?.id === '8453') return `https://basescan.org/address/${addr}`;
+    if (chain?.id === '43114') return `https://snowtrace.io/address/${addr}`;
+    if (chain?.id === '42161') return `https://arbiscan.io/address/${addr}`;
     return `https://etherscan.io/address/${addr}`;
   };
 
@@ -111,12 +119,12 @@ export default function SecurityPage() {
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {CHAINS.map((chain) => (
             <button
               key={chain.id}
               onClick={() => setSelectedChain(chain.key)}
-              className={`flex-1 rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#00E5FF]/10 border-[#00E5FF]/30 text-[#00E5FF]' : 'glass border-white/10 hover:border-white/20 text-gray-400'}`}
+              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#00E5FF]/10 border-[#00E5FF]/30 text-[#00E5FF]' : 'glass border-white/10 hover:border-white/20 text-gray-400'}`}
             >
               {chain.label}
             </button>

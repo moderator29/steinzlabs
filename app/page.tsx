@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass, ExternalLink, Sparkles, Activity, Lock, Eye, Globe, Layers, Cpu } from 'lucide-react';
+import { ChevronDown, ArrowRight, Zap, Brain, TrendingUp, Shield, Target, Users, Search, BarChart3, Compass, ExternalLink, Sparkles, Activity, Lock, Eye, Globe, Layers, Cpu, Send } from 'lucide-react';
 import Link from 'next/link';
 import PriceTicker from '@/components/PriceTicker';
 import SteinzLogo from '@/components/SteinzLogo';
@@ -639,8 +639,18 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="text-center text-gray-600 text-[11px] border-t border-white/5 pt-6">
-            &copy; 2026 STEINZ Labs. Built on Ethereum & Solana.
+          <div className="flex flex-col items-center gap-3 border-t border-white/5 pt-6 mb-4">
+            <p className="text-gray-500 text-[10px] uppercase tracking-[0.15em]">Proudly Powered by</p>
+            <div className="flex items-center gap-3">
+              <img src="/nakago-logo.jpg" alt="NAKA GO" className="w-8 h-8 rounded-full object-cover" />
+              <span className="text-sm font-heading font-bold text-white">NAKA GO</span>
+              <a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="w-7 h-7 bg-[#00E5FF]/10 rounded-full flex items-center justify-center hover:bg-[#00E5FF]/20 transition-colors">
+                <Send className="w-3.5 h-3.5 text-[#00E5FF]" />
+              </a>
+            </div>
+          </div>
+          <div className="text-center text-gray-600 text-[11px]">
+            &copy; 2026 STEINZ Labs &times; NAKA GO. Built on Ethereum & Solana.
           </div>
         </div>
       </footer>

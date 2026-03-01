@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, memo } from 'react';
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, PieChart, DollarSign, MessageCircle, Copy, Zap } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, PieChart, DollarSign, MessageCircle, Copy, Zap, Gamepad2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
@@ -90,6 +90,13 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             </div>
           </div>
 
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Play</h3>
+            <div className="space-y-1">
+              <SidebarItem icon={Gamepad2} label="HODL Runner" badge="PLAY" onClick={() => handleNavigation('/dashboard/hodl-runner')} onHover={() => handleHoverPrefetch('/dashboard/hodl-runner')} />
+            </div>
+          </div>
+
           <div className="border-t border-white/5 pt-4">
             <SidebarItem icon={Shield} label="Admin Panel" onClick={() => handleNavigation('/admin')} onHover={() => handleHoverPrefetch('/admin')} />
           </div>
@@ -114,6 +121,7 @@ const SidebarItem = memo(function SidebarItem({ icon: Icon, label, badge, onClic
           badge === 'AI' ? 'bg-[#7C3AED]/20 text-[#7C3AED]' :
           badge === 'HOT' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
           badge === 'NEW' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' :
+          badge === 'PLAY' ? 'bg-[#10B981]/20 text-[#10B981]' :
           'bg-[#00E5FF]/20 text-[#00E5FF]'
         }`}>{badge}</span>
       )}

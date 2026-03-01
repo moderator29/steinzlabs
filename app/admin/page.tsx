@@ -9,7 +9,8 @@ import {
   ArrowUpRight, ArrowDownRight, Coins, PieChart, Send, Trash2, Ban,
   UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search,
   ExternalLink, Copy, ChevronLeft, Server, Cpu, HardDrive, ToggleLeft,
-  ToggleRight, Hash, Filter, Download, Upload, Star, Flag, Bookmark
+  ToggleRight, Hash, Filter, Download, Upload, Star, Flag, Bookmark,
+  Gamepad2, Trophy
 } from 'lucide-react';
 
 const ADMIN_PASSWORD = '195656';
@@ -75,6 +76,25 @@ interface WhaleEvent {
   address?: string;
 }
 
+interface GameScoreData {
+  id: string;
+  username: string;
+  score: number;
+  coins: number;
+  distance: number;
+  timestamp: number;
+  gamesPlayed: number;
+  bestStreak: number;
+}
+
+interface GameStats {
+  leaderboard: GameScoreData[];
+  totalPlayers: number;
+  totalGamesPlayed: number;
+  highestScore: number;
+  topPlayer: string;
+}
+
 interface ApiHealth {
   name: string;
   status: 'online' | 'degraded' | 'offline';
@@ -92,6 +112,7 @@ const ADMIN_SECTIONS = [
   { id: 'whales', label: 'Whale Activity', icon: Activity },
   { id: 'security', label: 'Security', icon: ShieldCheck },
   { id: 'api-health', label: 'API Health', icon: Server },
+  { id: 'game-stats', label: 'Game Stats', icon: Gamepad2 },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -115,6 +136,8 @@ export default function AdminPanel() {
   const [loadingPredictions, setLoadingPredictions] = useState(false);
   const [loadingBuilders, setLoadingBuilders] = useState(false);
   const [loadingWhales, setLoadingWhales] = useState(false);
+  const [gameStats, setGameStats] = useState<GameStats>({ leaderboard: [], totalPlayers: 0, totalGamesPlayed: 0, highestScore: 0, topPlayer: 'N/A' });
+  const [loadingGames, setLoadingGames] = useState(false);
 
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
@@ -201,6 +224,28 @@ export default function AdminPanel() {
     setLoadingWhales(false);
   }, []);
 
+  const fetchGames = useCallback(async () => {
+    setLoadingGames(true);
+    try {
+      const res = await fetch('/api/game-scores');
+      if (res.ok) {
+        const data = await res.json();
+        setGameStats(data);
+      }
+    } catch (e) { console.error('Failed to fetch game stats:', e); }
+    setLoadingGames(false);
+  }, []);
+
+  const handleDeleteGameScore = async (id?: string) => {
+    try {
+      const url = id
+        ? `/api/game-scores?password=${ADMIN_PASSWORD}&id=${id}`
+        : `/api/game-scores?password=${ADMIN_PASSWORD}`;
+      await fetch(url, { method: 'DELETE' });
+      fetchGames();
+    } catch (e) { console.error('Delete failed:', e); }
+  };
+
   const checkApiHealth = useCallback(async () => {
     const apis = [
       { name: 'CoinGecko Market Data', url: 'https://api.coingecko.com/api/v3/ping' },
@@ -240,10 +285,10 @@ export default function AdminPanel() {
 
   const refreshAll = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchTokens(), fetchPredictions(), fetchBuilders(), fetchWhales(), checkApiHealth()]);
+    await Promise.all([fetchTokens(), fetchPredictions(), fetchBuilders(), fetchWhales(), fetchGames(), checkApiHealth()]);
     setLastRefresh(new Date());
     setIsRefreshing(false);
-  }, [fetchTokens, fetchPredictions, fetchBuilders, fetchWhales, checkApiHealth]);
+  }, [fetchTokens, fetchPredictions, fetchBuilders, fetchWhales, fetchGames, checkApiHealth]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -970,6 +1015,84 @@ export default function AdminPanel() {
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'game-stats' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="Total Players" value={gameStats.totalPlayers.toString()} sub="Registered players" color="text-[#10B981]" loading={loadingGames} />
+                <StatCard icon={<Trophy className="w-4 h-4" />} label="Highest Score" value={gameStats.highestScore.toLocaleString()} sub={`by ${gameStats.topPlayer}`} color="text-[#F59E0B]" loading={loadingGames} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="Games Played" value={gameStats.totalGamesPlayed.toString()} sub="Total rounds" color="text-[#00E5FF]" loading={loadingGames} />
+                <StatCard icon={<Star className="w-4 h-4" />} label="Top Player" value={gameStats.topPlayer} sub="Current leader" color="text-[#7C3AED]" loading={loadingGames} />
+              </div>
+
+              <div className="glass rounded-xl p-4 border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-bold flex items-center gap-2">
+                    <Gamepad2 className="w-3.5 h-3.5 text-[#10B981]" />
+                    HODL Runner Leaderboard
+                  </div>
+                  <button
+                    onClick={() => handleDeleteGameScore()}
+                    className="text-[10px] text-[#EF4444] hover:bg-[#EF4444]/10 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear All
+                  </button>
+                </div>
+
+                {loadingGames ? (
+                  <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-10 bg-white/5 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : gameStats.leaderboard.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 text-xs">No game scores yet</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-white/5">
+                          <th className="text-left py-2 px-2">#</th>
+                          <th className="text-left py-2 px-2">Player</th>
+                          <th className="text-right py-2 px-2">Score</th>
+                          <th className="text-right py-2 px-2">Coins</th>
+                          <th className="text-right py-2 px-2">Distance</th>
+                          <th className="text-right py-2 px-2">Games</th>
+                          <th className="text-right py-2 px-2">Best Streak</th>
+                          <th className="text-right py-2 px-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gameStats.leaderboard.map((player, idx) => (
+                          <tr key={player.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-2 px-2">
+                              <span className={`font-bold ${idx === 0 ? 'text-[#F59E0B]' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-[#CD7F32]' : 'text-gray-500'}`}>
+                                {idx + 1}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 font-semibold text-white">{player.username}</td>
+                            <td className="py-2 px-2 text-right text-[#10B981] font-bold">{player.score.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right text-[#F59E0B]">{player.coins.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right text-gray-300">{player.distance.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right text-gray-400">{player.gamesPlayed}</td>
+                            <td className="py-2 px-2 text-right text-[#00E5FF]">{player.bestStreak.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right">
+                              <button
+                                onClick={() => handleDeleteGameScore(player.id)}
+                                className="text-[#EF4444] hover:bg-[#EF4444]/10 p-1 rounded transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}

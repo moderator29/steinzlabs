@@ -21,6 +21,9 @@ interface WalletData {
   ethValueUsd?: string;
   solBalance?: string;
   solValueUsd?: string;
+  nativeBalance?: string;
+  nativeValueUsd?: string;
+  explorerUrl?: string;
 }
 
 interface AiAnalysis {
@@ -35,21 +38,35 @@ interface AiAnalysis {
   marketOutlook: string;
 }
 
-function detectChain(address: string): string {
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'ETH';
+const CHAIN_OPTIONS = [
+  { key: 'auto', label: 'Auto Detect', color: '#9CA3AF' },
+  { key: 'ethereum', label: 'Ethereum', color: '#627EEA' },
+  { key: 'base', label: 'Base', color: '#0052FF' },
+  { key: 'polygon', label: 'Polygon', color: '#8247E5' },
+  { key: 'avalanche', label: 'Avalanche', color: '#E84142' },
+  { key: 'solana', label: 'Solana', color: '#14F195' },
+];
+
+function detectAddressType(address: string): 'EVM' | 'SOL' | 'UNKNOWN' {
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'EVM';
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return 'SOL';
   return 'UNKNOWN';
 }
 
-function getExplorerUrl(address: string, chain: string): string {
-  if (chain === 'Ethereum' || chain === 'ETH') return `https://etherscan.io/address/${address}`;
+function getExplorerUrl(address: string, chain: string, explorerUrl?: string): string {
+  if (explorerUrl) return `${explorerUrl}/address/${address}`;
   if (chain === 'Solana' || chain === 'SOL') return `https://solscan.io/account/${address}`;
+  if (chain === 'Ethereum' || chain === 'ETH') return `https://etherscan.io/address/${address}`;
+  if (chain === 'Base') return `https://basescan.org/address/${address}`;
+  if (chain === 'Polygon') return `https://polygonscan.com/address/${address}`;
+  if (chain === 'Avalanche') return `https://snowtrace.io/address/${address}`;
   return '#';
 }
 
 export default function WalletIntelligencePage() {
   const router = useRouter();
   const [address, setAddress] = useState('');
+  const [selectedChain, setSelectedChain] = useState('auto');
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,9 +77,17 @@ export default function WalletIntelligencePage() {
     const trimmed = address.trim();
     if (!trimmed) return;
 
-    const chain = detectChain(trimmed);
-    if (chain === 'UNKNOWN') {
-      setError('Invalid address format. Enter an ETH (0x...) or SOL address.');
+    const addrType = detectAddressType(trimmed);
+    if (addrType === 'UNKNOWN') {
+      setError('Invalid address format. Enter an EVM (0x...) or SOL address.');
+      return;
+    }
+
+    let chainParam = selectedChain;
+    if (addrType === 'SOL') {
+      chainParam = 'solana';
+    } else if (chainParam === 'solana') {
+      setError('SOL chain selected but EVM address detected. Select an EVM chain or use Auto Detect.');
       return;
     }
 
@@ -72,7 +97,11 @@ export default function WalletIntelligencePage() {
     setAiAnalysis(null);
 
     try {
-      const res = await fetch(`/api/wallet-intelligence?address=${encodeURIComponent(trimmed)}`);
+      const params = new URLSearchParams({ address: trimmed });
+      if (chainParam !== 'auto' && chainParam !== 'solana') {
+        params.set('chain', chainParam);
+      }
+      const res = await fetch(`/api/wallet-intelligence?${params.toString()}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -100,7 +129,6 @@ export default function WalletIntelligencePage() {
           setAiAnalysis(aiData.analysis);
         }
       } catch {
-        // AI analysis is optional
       }
       setAiLoading(false);
     } catch (err: any) {
@@ -141,6 +169,24 @@ export default function WalletIntelligencePage() {
         <div className="glass rounded-xl p-4 border border-white/10">
           <h2 className="font-bold text-sm mb-2">Analyze Any Wallet</h2>
           <p className="text-[10px] text-gray-500 mb-3">Get AI-powered insights on any wallet address across chains</p>
+
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {CHAIN_OPTIONS.map((chain) => (
+              <button
+                key={chain.key}
+                onClick={() => setSelectedChain(chain.key)}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border"
+                style={{
+                  borderColor: selectedChain === chain.key ? chain.color : 'rgba(255,255,255,0.1)',
+                  backgroundColor: selectedChain === chain.key ? `${chain.color}20` : 'transparent',
+                  color: selectedChain === chain.key ? chain.color : '#9CA3AF',
+                }}
+              >
+                {chain.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex gap-2">
             <input
               type="text"
@@ -192,7 +238,7 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
                 <a
-                  href={getExplorerUrl(walletData.address, walletData.chain)}
+                  href={getExplorerUrl(walletData.address, walletData.chain, walletData.explorerUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[10px] text-[#00E5FF] hover:underline"
@@ -318,7 +364,7 @@ export default function WalletIntelligencePage() {
           <div className="text-center py-12">
             <Search className="w-12 h-12 text-gray-700 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-gray-500">Enter a wallet address to begin</h3>
-            <p className="text-xs text-gray-600 mt-1">Supports ETH (0x...) and SOL addresses</p>
+            <p className="text-xs text-gray-600 mt-1">Supports Ethereum, Base, Polygon, Avalanche & Solana</p>
           </div>
         )}
       </div>
