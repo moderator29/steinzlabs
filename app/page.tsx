@@ -633,8 +633,8 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-xs mb-3 text-gray-300">Community</h4>
               <div className="space-y-2 text-gray-500 text-xs">
-                <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Twitter</span></div>
-                <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Telegram</span></div>
+                <div><a href="https://x.com/steinzlabs" target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF] transition-colors cyber-line">Twitter / X</a></div>
+                <div><a href="https://t.me/steinzlabs" target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF] transition-colors cyber-line">Telegram</a></div>
                 <div><span className="hover:text-[#00E5FF] transition-colors cyber-line cursor-pointer">Discord</span></div>
               </div>
             </div>
