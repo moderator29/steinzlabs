@@ -478,15 +478,16 @@ async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
 }
 
 function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
-  const seen = new Set<string>();
-  let counter = 0;
+  const seenIds = new Set<string>();
+  const seenKeys = new Set<string>();
   return events.filter(e => {
+    if (seenIds.has(e.id)) return false;
+    seenIds.add(e.id);
     const addr = e.pairAddress || e.txHash || '';
     const platform = e.platform || '';
     const key = `${platform}-${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.slice(0, 10)}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    counter++;
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
     return true;
   });
 }
