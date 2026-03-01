@@ -138,7 +138,20 @@ export default function TradingSuitePage() {
         SEI: 'BINANCE:SEIUSDT', BONK: 'BYBIT:BONKUSDT', WIF: 'BYBIT:WIFUSDT',
       };
       if (!symbolMap[selectedToken.symbol]) {
-        chartRef.current.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#6b7280;font-size:14px;flex-direction:column;gap:8px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Chart not available for ${selectedToken.symbol}. Only major tokens supported.</div>`;
+        const fallback = document.createElement('div');
+        fallback.setAttribute('style', 'display:flex;align-items:center;justify-content:center;height:100%;color:#6b7280;font-size:14px;flex-direction:column;gap:8px');
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('width', '32'); svg.setAttribute('height', '32');
+        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2');
+        const p1 = document.createElementNS(svgNS, 'path'); p1.setAttribute('d', 'M3 3v18h18'); svg.appendChild(p1);
+        const p2 = document.createElementNS(svgNS, 'path'); p2.setAttribute('d', 'm19 9-5 5-4-4-3 3'); svg.appendChild(p2);
+        const msg = document.createElement('span');
+        msg.textContent = `Chart not available for ${selectedToken.symbol}. Only major tokens supported.`;
+        fallback.appendChild(svg);
+        fallback.appendChild(msg);
+        chartRef.current.replaceChildren(fallback);
         return;
       }
       const tvSymbol = symbolMap[selectedToken.symbol];
