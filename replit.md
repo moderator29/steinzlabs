@@ -34,7 +34,7 @@ app/
     ├── launchpad/           # Project launchpad (fundraising progress, filters)
     ├── messages/            # Group messaging (Telegram-style)
     ├── network-metrics/     # Network stats per chain (gas, TPS, TVL, validators)
-    ├── predictions/         # Full predictions market with voting
+    ├── predictions/         # Polymarket-style predictions market (auto-generated from CoinGecko/Pump.fun, YES/NO pools, payout calculator, DexScreener charts, countdown timers, resolved tab)
     ├── profile/             # Full profile with Activity/Settings/Achievements tabs
     ├── project-discovery/   # Project discovery with search & filters
     ├── risk-scanner/        # AI Portfolio Risk Scanner (full scan, risk breakdown)
@@ -73,6 +73,7 @@ app/api/
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
 ├── token-scanner/route.ts    # Token contract security scanner
 ├── context-feed/route.ts     # Multi-chain context feed with ?chain= param (all/solana/ethereum/bsc/polygon). Sources: Alchemy ETH whales, Helius Solana network, Pump.fun launches, DexScreener trending/chain-specific (Raydium, Meteora, Jupiter, Orca, PancakeSwap, FourMeme, Uniswap, QuickSwap). 5-second refresh interval.
+├── predictions/route.ts      # Predictions market API (auto-generates from CoinGecko/Pump.fun, in-memory pools, POST to place predictions with 3% fee, payout math)
 ├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
 ├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
 ├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)
