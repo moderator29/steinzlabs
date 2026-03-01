@@ -207,7 +207,7 @@ export default function BuilderFundingPage() {
 
         {submitted && (
           <div className="glass rounded-xl p-3 border border-[#10B981]/30 bg-[#10B981]/5 text-center mb-4">
-            <p className="text-xs text-[#10B981] font-semibold">Project submitted for review! You'll be notified within 48 hours.</p>
+            <p className="text-xs text-[#10B981] font-semibold">Project submitted for review! You&apos;ll be notified within 48 hours.</p>
           </div>
         )}
 
