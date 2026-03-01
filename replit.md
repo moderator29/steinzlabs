@@ -160,11 +160,11 @@ Configured in `.env.local`:
 - Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
 - Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656, URL: `/admin` (hidden from nav, direct URL only). Features: hamburger sidebar with 10 sections (Overview, Market Data, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Notifications, Settings). Pulls real data from CoinGecko, predictions API, builder-submissions API, whale-tracker API.
+- Admin panel password: 195656, URL: `/admin` (also accessible via sidebar menu). Features: hamburger sidebar with 11 sections (Overview, Market Data, Trading Suite, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Notifications, Settings). Builder Network + Funding Portal sections fetch real data from /api/builder-submissions. Admin can approve/reject builders and projects, approve milestones.
 - Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
 - Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
 - Trading Suite: `/dashboard/trading-suite` — 7 tabs (Trending, Top, New Pairs, Pulse, Perpetuals, Positions, LIVE). Real CoinGecko trending + market data, DexScreener new pairs, Fear & Greed index. Paste CA feature, watchlist (localStorage). Perpetuals & LIVE streams = coming soon. API: `/api/trading-suite/route.ts` (30s cache)
-- Social Trading: Shows "Coming Soon" page with feature preview and link to Trading Suite
+- Social Trading: Functional hub with 3 tabs (Leaderboard, My Profile, Following). Trader cards with PnL%, win rate, followers, strategy tags. Copy trading with allocation settings. Profile creation stored in localStorage. Verified badge for top traders.
 - Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools (Pricing moved here) → Discover
 - Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
 - TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`

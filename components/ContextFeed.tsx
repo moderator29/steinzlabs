@@ -376,7 +376,7 @@ export default function ContextFeed() {
           </button>
         </div>
       ) : (
-        events.map((event) => {
+        events.map((event, i) => {
           const isPositive = event.sentiment === 'BULLISH';
           const isNegative = event.sentiment === 'BEARISH';
           const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
@@ -386,7 +386,7 @@ export default function ContextFeed() {
 
           return (
             <div
-              key={event.id}
+              key={`${event.id}-${i}`}
               className="glass rounded-2xl p-5 border border-white/10 hover:border-[#00E5FF]/30 transition-all overflow-hidden"
             >
               <div className="flex items-start justify-between mb-3">

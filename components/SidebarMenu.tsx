@@ -90,6 +90,10 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             </div>
           </div>
 
+          <div className="border-t border-white/5 pt-4">
+            <SidebarItem icon={Shield} label="Admin Panel" onClick={() => handleNavigation('/admin')} onHover={() => handleHoverPrefetch('/admin')} />
+          </div>
+
         </div>
       </div>
     </div>
