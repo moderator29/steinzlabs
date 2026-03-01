@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 
 type SubPage = null | 'privacy' | 'help' | 'preferences';
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
+  const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
   const router = useRouter();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [subPage, setSubPage] = useState<SubPage>(null);
   const [notifications, setNotifications] = useState({
@@ -38,9 +39,6 @@ export default function ProfileTab() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    if (stored) setWalletAddress(stored);
-
     const savedNotifs = localStorage.getItem('steinz_notifications');
     if (savedNotifs) {
       try { setNotifications(JSON.parse(savedNotifs)); } catch {}
@@ -81,8 +79,7 @@ export default function ProfileTab() {
 
   const handleSignOut = async () => {
     await signOut();
-    localStorage.removeItem('wallet_address');
-    setWalletAddress(null);
+    disconnectWallet();
     window.location.reload();
   };
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RefreshCw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useWallet } from '@/lib/hooks/useWallet';
 
 interface Token {
   symbol: string;
@@ -16,7 +17,7 @@ interface Token {
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { address: walletAddress, provider, isConnected, connectAuto, connecting } = useWallet();
   const [portfolio, setPortfolio] = useState<Token[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [totalChange, setTotalChange] = useState(0);
@@ -24,12 +25,10 @@ export default function PortfolioPage() {
   const [tokenCount, setTokenCount] = useState(0);
 
   useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    if (stored) {
-      setWalletAddress(stored);
-      fetchPortfolio(stored);
+    if (walletAddress) {
+      fetchPortfolio(walletAddress);
     }
-  }, []);
+  }, [walletAddress]);
 
   const fetchPortfolio = async (address: string) => {
     setLoading(true);
@@ -46,22 +45,6 @@ export default function PortfolioPage() {
       console.error('Portfolio fetch error:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const connectWallet = async () => {
-    try {
-      if (typeof (window as any).ethereum === 'undefined') {
-        alert('Please install MetaMask');
-        return;
-      }
-      const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-      localStorage.setItem('wallet_address', address);
-      setWalletAddress(address);
-      fetchPortfolio(address);
-    } catch (error: any) {
-      console.error('Connect error:', error);
     }
   };
 
@@ -96,10 +79,11 @@ export default function PortfolioPage() {
             <h2 className="text-2xl font-heading font-bold mb-2">Track Your Portfolio</h2>
             <p className="text-gray-400 text-sm mb-6">Connect your wallet to see real-time portfolio tracking, P&L, and performance metrics.</p>
             <button
-              onClick={connectWallet}
-              className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-3 rounded-xl font-semibold hover:scale-[1.02] transition-transform"
+              onClick={connectAuto}
+              disabled={connecting}
+              className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-3 rounded-xl font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50"
             >
-              Connect Wallet
+              {connecting ? 'Connecting...' : 'Connect Wallet'}
             </button>
           </div>
         ) : (
@@ -223,12 +207,12 @@ export default function PortfolioPage() {
 
             <div className="flex gap-3">
               <a
-                href={`https://etherscan.io/address/${walletAddress}`}
+                href={provider === 'phantom' ? `https://solscan.io/account/${walletAddress}` : `https://etherscan.io/address/${walletAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 glass rounded-xl p-3 border border-white/10 text-center text-xs text-gray-400 hover:text-[#00E5FF] transition-colors flex items-center justify-center gap-2"
               >
-                View on Etherscan <ExternalLink className="w-3 h-3" />
+                View on {provider === 'phantom' ? 'Solscan' : 'Etherscan'} <ExternalLink className="w-3 h-3" />
               </a>
               <button
                 onClick={() => router.push('/dashboard/dna-analyzer')}

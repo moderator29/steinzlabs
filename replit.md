@@ -55,17 +55,18 @@ components/
 ├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
 ├── VtxAiTab.tsx             # VTX AI assistant tab (chat + quick actions)
 ├── DiscoverTab.tsx          # Project Discovery tab (search, filters, project cards)
-├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect)
-├── ProfileTab.tsx           # Profile tab (stats, settings, achievements)
+├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect via useWallet hook)
+├── WalletConnectButton.tsx  # Reusable wallet connect/disconnect button with dropdown (MetaMask + Phantom, mobile deep links)
+├── ProfileTab.tsx           # Profile tab (stats, settings, achievements, uses useWallet hook)
 └── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover)
 lib/
 ├── supabase.ts              # Supabase client + admin (service role) client
+├── wallet.ts                # MetaMask + Phantom wallet connect/disconnect utilities
 └── hooks/
     ├── useAuth.ts            # Auth hook (sign in/up, wallet connect, localStorage session)
+    ├── useWallet.ts          # Centralized wallet state hook (connect/disconnect MetaMask & Phantom, Supabase upsert, cross-component sync via custom events, mobile deep links)
     ├── usePrices.ts          # Live price feed hook (BTC, ETH, SOL from /api/prices)
     └── useTheme.ts           # Theme toggle hook (dark/light/bingo modes)
-lib/
-├── wallet.ts                 # MetaMask + Phantom wallet connect/disconnect utilities
 app/api/
 ├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)

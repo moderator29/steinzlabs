@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useWallet } from '@/lib/hooks/useWallet';
 
 interface DNAAnalysis {
   tradingStyle: string;
@@ -26,16 +27,11 @@ interface DNAAnalysis {
 
 export default function DNAAnalyzerPage() {
   const router = useRouter();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { address: walletAddress, connectAuto, connecting: walletConnecting } = useWallet();
   const [analysis, setAnalysis] = useState<DNAAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [manualAddress, setManualAddress] = useState('');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    if (stored) setWalletAddress(stored);
-  }, []);
 
   const runAnalysis = async (address: string) => {
     setLoading(true);
@@ -73,15 +69,10 @@ export default function DNAAnalyzerPage() {
 
   const connectAndAnalyze = async () => {
     try {
-      if (typeof (window as any).ethereum === 'undefined') {
-        setError('Please install MetaMask');
-        return;
+      const addr = await connectAuto();
+      if (addr) {
+        runAnalysis(addr);
       }
-      const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-      const addr = accounts[0];
-      localStorage.setItem('wallet_address', addr);
-      setWalletAddress(addr);
-      runAnalysis(addr);
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
     }

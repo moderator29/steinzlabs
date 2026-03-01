@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, ArrowDown, ArrowUp, Camera, Plus, RefreshCw, ExternalLink } from 'lucide-react';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { Wallet, ArrowDown, ArrowUp, Camera, RefreshCw, ExternalLink } from 'lucide-react';
+import { useWallet } from '@/lib/hooks/useWallet';
 
 interface TokenBalance {
   symbol: string;
@@ -14,19 +14,19 @@ interface TokenBalance {
 }
 
 export default function WalletTab() {
-  const { user } = useAuth();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { address: walletAddress, shortAddress, provider, isConnected, connectAuto, connecting } = useWallet();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    if (stored) {
-      setWalletAddress(stored);
-      fetchBalances(stored);
+    if (walletAddress) {
+      fetchBalances(walletAddress);
+    } else {
+      setBalances([]);
+      setTotalBalance(0);
     }
-  }, []);
+  }, [walletAddress]);
 
   const fetchBalances = async (address: string) => {
     setLoading(true);
@@ -52,25 +52,9 @@ export default function WalletTab() {
     }
   };
 
-  const connectWallet = async () => {
-    try {
-      if (typeof (window as any).ethereum === 'undefined') {
-        alert('Please install MetaMask to connect your wallet');
-        return;
-      }
-
-      const accounts = await (window as any).ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      const address = accounts[0];
-      localStorage.setItem('wallet_address', address);
-      setWalletAddress(address);
-      fetchBalances(address);
-    } catch (error: any) {
-      console.error('Wallet connect error:', error);
-    }
-  };
+  const explorerUrl = provider === 'phantom'
+    ? `https://solscan.io/account/${walletAddress}`
+    : `https://etherscan.io/address/${walletAddress}`;
 
   return (
     <div>
@@ -81,7 +65,7 @@ export default function WalletTab() {
         <div>
           <h2 className="text-base font-heading font-bold">Wallet</h2>
           <p className="text-[10px] text-gray-400">
-            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not connected'}
+            {shortAddress || 'Not connected'}
           </p>
         </div>
         {walletAddress && (
@@ -140,29 +124,30 @@ export default function WalletTab() {
 
       {walletAddress && (
         <a
-          href={`https://etherscan.io/address/${walletAddress}`}
+          href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 glass rounded-xl p-3 border border-white/10 text-xs text-gray-400 hover:text-[#00E5FF] transition-colors mb-4"
         >
-          View on Etherscan <ExternalLink className="w-3 h-3" />
+          View on {provider === 'phantom' ? 'Solscan' : 'Etherscan'} <ExternalLink className="w-3 h-3" />
         </a>
       )}
 
-      {!walletAddress && (
+      {!isConnected && (
         <div className="glass rounded-xl p-6 border border-white/10 text-center bg-gradient-to-b from-[#00E5FF]/5 to-transparent">
           <div className="w-10 h-10 bg-[#1A2235] rounded-full flex items-center justify-center mx-auto mb-3">
-            <Plus className="w-5 h-5 text-gray-400" />
+            <Wallet className="w-5 h-5 text-gray-400" />
           </div>
           <h3 className="text-sm font-heading font-bold mb-1">Connect Your Wallet</h3>
           <p className="text-gray-400 text-xs mb-4 leading-relaxed">
             Link your Web3 wallet to track your portfolio and participate in predictions
           </p>
           <button
-            onClick={connectWallet}
-            className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 transition-transform"
+            onClick={connectAuto}
+            disabled={connecting}
+            className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
           >
-            Connect Wallet
+            {connecting ? 'Connecting...' : 'Connect Wallet'}
           </button>
         </div>
       )}
