@@ -1,0 +1,30 @@
+Security Center
+The Security Center is the fortress of STEINZ a comprehensive suite of AI powered protection tools that
+scan, analyze, and alert on every potential threat before it can harm your funds. Security is not a feature
+on this platform. It is the foundation every interaction is built on.
+5.1 Token Safety Scanner
+Enter any token contract address and receive an instant comprehensive safety analysis. The platform
+returns a Trust Score from 0 to 100 covering contract verification, liquidity lock details, holder
+distribution, buy and sell tax breakdown, developer wallet history, honeypot simulation, and a final
+verdict of SAFE, CAUTION, or DANGER with a full written explanation.
+5.2 Contract Analyzer
+Paste any contract address and VTX AI analyzes the ABI and bytecode, then explains what the contract
+does in plain English. It flags owner and admin functions, pause mechanisms, mint authority, blacklist
+functions, and hidden fees everything you need to know before you sign anything.
+5.3 Rug Detector
+The most advanced rug pull detection in Web3. Enter any token or deployer address and receive a
+complete risk profile: full timeline of past deployments, serial rugger identification with pattern matching,
+liquidity removal behavior analysis, historical success and failure rates, and honeypot simulation results.
+5.4 Phishing Detector
+Enter any URL or wallet address and instantly verify its safety. The platform checks domain age,
+registration information, cross references against known scam databases, shows community reports,
+and gives a clear verdict of SAFE, SUSPICIOUS, or PHISHING with a direct recommendation.
+5.5 Wallet Approval Manager
+Connect your wallet and see every single token approval ever granted the approved contract, the limit,
+the date, and a risk rating. Any suspicious approval can be revoked with one click. A Revoke All
+Dangerous button handles bulk cleanup instantly. High-risk approvals are highlighted in red so they
+cannot be missed.
+5.6 MEV Protection Dashboard
+Toggle MEV protection on and off and monitor your protection status in real time. When active, the
+dashboard shows the count of MEV attacks blocked, the dollar amount saved from sandwich attack
+prevention, private RPC routing status, gas optimization statistics, and live protection alerts.

@@ -479,11 +479,14 @@ async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
 
 function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
   const seen = new Set<string>();
+  let counter = 0;
   return events.filter(e => {
     const addr = e.pairAddress || e.txHash || '';
-    const key = `${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.slice(0, 10)}`;
+    const platform = e.platform || '';
+    const key = `${platform}-${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.slice(0, 10)}`;
     if (seen.has(key)) return false;
     seen.add(key);
+    counter++;
     return true;
   });
 }
@@ -504,6 +507,8 @@ export async function GET(request: Request) {
         source: cached.sources.join('+'),
         chain,
         cached: true,
+      }, {
+        headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
       });
     }
 
@@ -579,6 +584,8 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,
+    }, {
+      headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
     });
   } catch (error) {
     console.error('Context feed error:', error);
