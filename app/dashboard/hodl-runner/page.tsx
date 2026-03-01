@@ -82,10 +82,14 @@ export default function HodlRunnerPage() {
     fetchLeaderboard();
   };
 
-  const startGame = useCallback(() => {
+  const startGame = () => {
     if (!username.trim()) return;
     localStorage.setItem('hodl_runner_username', username.trim());
     setGameState('playing');
+  };
+
+  useEffect(() => {
+    if (gameState !== 'playing') return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -623,7 +627,7 @@ export default function HodlRunnerPage() {
       canvas.removeEventListener('click', handleClick);
       cancelAnimationFrame(animRef.current);
     };
-  }, [gameState === 'playing']);
+  }, [gameState]);
 
   useEffect(() => { fetchLeaderboard(); }, []);
 

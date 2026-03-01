@@ -48,7 +48,7 @@ app/
     ├── wallet-intelligence/ # Wallet Intelligence (scan any address, AI assessment)
     └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
-├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs (All Chains, Solana, Ethereum, BSC, Polygon), gradient tab styling, chain badges, live indicator, 5s auto-refresh
+├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs (All Chains, Solana, Ethereum, BSC, Polygon, Bookmarks, Archive), gradient tab styling, chain badges, live indicator, 5s auto-refresh, bookmark toggle per post (localStorage)
 ├── TradingViewChart.tsx     # TradingView candlestick widget with SYMBOL_MAP (60+ tokens), getTradingViewSymbol(), isKnownTradingViewSymbol()
 ├── ViewProofModal.tsx       # On-chain proof modal (TradingView chart + DexScreener fallback, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
