@@ -147,11 +147,43 @@ export default function AdminPanel() {
   const fetchBuilders = useCallback(async () => {
     setLoadingBuilders(true);
     try {
-      const res = await fetch('/api/builder-submissions');
-      if (res.ok) {
-        const data = await res.json();
-        setBuilders(data.builders || []);
-        setProjects(data.projects || []);
+      const [buildersRes, projectsRes] = await Promise.all([
+        fetch('/api/builder-submissions?type=builders&status=all'),
+        fetch('/api/builder-submissions?type=projects&status=all'),
+      ]);
+      if (buildersRes.ok) {
+        const bData = await buildersRes.json();
+        setBuilders((bData.builders || []).map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          role: b.role,
+          skills: Array.isArray(b.skills) ? b.skills.join(', ') : b.skills || '',
+          wallet: b.walletAddress || b.wallet || '',
+          status: b.status,
+          appliedAt: b.appliedAt,
+          verified: b.verified,
+          endorsements: b.endorsements || 0,
+        })));
+      }
+      if (projectsRes.ok) {
+        const pData = await projectsRes.json();
+        setProjects((pData.projects || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+          chain: p.chain,
+          fundingGoal: p.goal || p.fundingGoal || 0,
+          currentFunding: p.raised || p.currentFunding || 0,
+          status: p.status,
+          submittedAt: p.submittedAt,
+          builderId: p.builder || p.builderId || '',
+          milestones: (p.milestones || []).map((m: any) => ({
+            name: m.name,
+            amount: m.amount,
+            status: m.status,
+          })),
+        })));
       }
     } catch (e) { console.error('Failed to fetch builders:', e); }
     setLoadingBuilders(false);
@@ -234,19 +266,35 @@ export default function AdminPanel() {
       await fetch('/api/builder-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action === 'approve' ? 'admin_approve' : 'admin_reject', builderId, password: ADMIN_PASSWORD }),
+        body: JSON.stringify({
+          action: action === 'approve' ? 'admin_approve' : 'admin_reject',
+          targetType: 'builder',
+          targetId: builderId,
+          password: ADMIN_PASSWORD,
+        }),
       });
       fetchBuilders();
     } catch (e) { console.error('Action failed:', e); }
   };
 
-  const handleProjectAction = async (projectId: string, action: string) => {
+  const handleProjectAction = async (projectId: string, action: string, milestoneIndex?: number) => {
     try {
-      if (action === 'approve_milestone') {
+      if (action === 'approve_milestone' && milestoneIndex !== undefined) {
         await fetch('/api/builder-submissions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'approve_milestone', projectId, milestoneIndex: 0, password: ADMIN_PASSWORD }),
+          body: JSON.stringify({ action: 'approve_milestone', projectId, milestoneIndex, password: ADMIN_PASSWORD }),
+        });
+      } else {
+        await fetch('/api/builder-submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: action === 'approve' ? 'admin_approve' : 'admin_reject',
+            targetType: 'project',
+            targetId: projectId,
+            password: ADMIN_PASSWORD,
+          }),
         });
       }
       fetchBuilders();
@@ -721,11 +769,19 @@ export default function AdminPanel() {
                         <div className="mb-3">
                           <div className="text-[10px] font-bold text-gray-400 mb-1">Milestones</div>
                           {project.milestones.map((m, i) => (
-                            <div key={i} className="flex items-center justify-between text-[10px] py-0.5">
+                            <div key={i} className="flex items-center justify-between text-[10px] py-1">
                               <span className="text-gray-300">{i + 1}. {m.name}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-500">{formatNumber(m.amount)}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${m.status === 'completed' ? 'bg-[#10B981]/20 text-[#10B981]' : m.status === 'in_progress' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-white/10 text-gray-500'}`}>{m.status || 'pending'}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${m.status === 'completed' ? 'bg-[#10B981]/20 text-[#10B981]' : m.status === 'in_progress' || m.status === 'pending_review' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-white/10 text-gray-500'}`}>{m.status || 'pending'}</span>
+                                {(m.status === 'in_progress' || m.status === 'pending_review') && (
+                                  <button
+                                    onClick={() => handleProjectAction(project.id, 'approve_milestone', i)}
+                                    className="px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] text-[8px] font-bold hover:bg-[#10B981]/30 transition-colors flex items-center gap-0.5"
+                                  >
+                                    <CheckCircle className="w-2.5 h-2.5" /> Approve
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -733,11 +789,11 @@ export default function AdminPanel() {
                       )}
                       {(project.status === 'pending' || project.status === 'submitted') && (
                         <div className="flex gap-2">
-                          <button onClick={() => handleProjectAction(project.id, 'approve_milestone')} className="flex-1 py-1.5 rounded-lg bg-[#10B981]/20 text-[#10B981] text-[11px] font-semibold hover:bg-[#10B981]/30 transition-colors">
-                            Approve
+                          <button onClick={() => handleProjectAction(project.id, 'approve')} className="flex-1 py-1.5 rounded-lg bg-[#10B981]/20 text-[#10B981] text-[11px] font-semibold hover:bg-[#10B981]/30 transition-colors flex items-center justify-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Approve Project
                           </button>
-                          <button className="flex-1 py-1.5 rounded-lg bg-[#EF4444]/20 text-[#EF4444] text-[11px] font-semibold hover:bg-[#EF4444]/30 transition-colors">
-                            Reject
+                          <button onClick={() => handleProjectAction(project.id, 'reject')} className="flex-1 py-1.5 rounded-lg bg-[#EF4444]/20 text-[#EF4444] text-[11px] font-semibold hover:bg-[#EF4444]/30 transition-colors flex items-center justify-center gap-1">
+                            <XCircle className="w-3 h-3" /> Reject
                           </button>
                         </div>
                       )}
