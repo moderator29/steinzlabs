@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark } from 'lucide-react';
-import { useContextFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
+import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive } from 'lucide-react';
+import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import ViewProofModal from './ViewProofModal';
 
@@ -19,7 +19,13 @@ function BookmarkIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return <Bookmark className={className} />;
 }
 
-const CHAIN_TABS: { id: ChainFilter; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
+function ArchiveIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return <Archive className={className} />;
+}
+
+type FeedMode = ChainFilter | 'archive';
+
+const CHAIN_TABS: { id: FeedMode; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
   { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#00E5FF', gradient: 'from-[#00E5FF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
   { id: 'ethereum', label: 'Ethereum', icon: EthereumIcon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
@@ -27,6 +33,7 @@ const CHAIN_TABS: { id: ChainFilter; label: string; icon: typeof AllChainsIcon; 
   { id: 'polygon', label: 'Polygon', icon: PolygonIcon, color: '#8247E5', gradient: 'from-[#8247E5] to-[#A76BFF]' },
   { id: 'avalanche', label: 'Avalanche', icon: AvalancheIcon, color: '#E84142', gradient: 'from-[#E84142] to-[#FF6B6B]' },
   { id: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, color: '#FBBF24', gradient: 'from-[#FBBF24] to-[#F59E0B]' },
+  { id: 'archive', label: 'Archive', icon: ArchiveIcon, color: '#94A3B8', gradient: 'from-[#94A3B8] to-[#64748B]' },
 ];
 
 function getChainBadgeIcon(chain: string) {
@@ -195,9 +202,12 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
 }
 
 export default function ContextFeed() {
-  const [activeChain, setActiveChain] = useState<ChainFilter>('all');
+  const [activeMode, setActiveMode] = useState<FeedMode>('all');
+  const isArchive = activeMode === 'archive';
+  const activeChain: ChainFilter = isArchive ? 'all' : activeMode as ChainFilter;
   const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
-  const { events, loading, refresh } = useContextFeed(20, feedChain);
+  const { events, loading, refresh, hasArchive } = useContextFeed(20, feedChain);
+  const { events: archivedEvents, loading: archiveLoading, refresh: refreshArchive } = useArchivedFeed(feedChain);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -225,9 +235,11 @@ export default function ContextFeed() {
     });
   }, []);
 
+  const currentEvents = isArchive ? archivedEvents : events;
+  const currentLoading = isArchive ? archiveLoading : loading;
   const displayEvents = activeChain === 'bookmarks'
-    ? events.filter(e => bookmarks.has(e.id))
-    : events;
+    ? currentEvents.filter(e => bookmarks.has(e.id))
+    : currentEvents;
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];
@@ -281,7 +293,11 @@ export default function ContextFeed() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refresh();
+    if (isArchive) {
+      await refreshArchive();
+    } else {
+      await refresh();
+    }
     setTimeout(() => setRefreshing(false), 600);
   };
 
@@ -330,18 +346,18 @@ export default function ContextFeed() {
     }).catch(() => {});
   };
 
-  const activeTab = CHAIN_TABS.find(t => t.id === activeChain)!;
+  const activeTab = CHAIN_TABS.find(t => t.id === activeMode)!;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
         {CHAIN_TABS.map(tab => {
-          const isActive = activeChain === tab.id;
+          const isActive = activeMode === tab.id;
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveChain(tab.id)}
+              onClick={() => setActiveMode(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 border ${
                 isActive
                   ? `bg-gradient-to-r ${tab.gradient} text-white border-transparent shadow-lg`
@@ -369,7 +385,7 @@ export default function ContextFeed() {
             />
           </div>
           <span className="text-xs text-gray-400">
-            Live — {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}
+            {isArchive ? 'Archive' : 'Live'} — {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}{isArchive ? ' (>24hrs old)' : ''}
           </span>
         </div>
         <button
@@ -381,7 +397,7 @@ export default function ContextFeed() {
         </button>
       </div>
 
-      {loading ? (
+      {currentLoading ? (
         <div className="text-center py-16">
           <div className="relative w-12 h-12 mx-auto mb-4">
             <div
@@ -398,7 +414,13 @@ export default function ContextFeed() {
         </div>
       ) : displayEvents.length === 0 ? (
         <div className="text-center py-16">
-          {activeChain === 'bookmarks' ? (
+          {isArchive ? (
+            <>
+              <Archive className="w-8 h-8 text-gray-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold mb-1">No Archived Events</p>
+              <p className="text-xs text-gray-400 mb-4">Events older than 24 hours will appear here. Keep the feed running to accumulate events.</p>
+            </>
+          ) : activeChain === 'bookmarks' ? (
             <>
               <Bookmark className="w-8 h-8 text-gray-500 mx-auto mb-3" />
               <p className="text-sm font-semibold mb-1">No Bookmarks Yet</p>

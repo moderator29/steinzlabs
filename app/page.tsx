@@ -8,19 +8,24 @@ import SteinzLogo from '@/components/SteinzLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
-  const [display, setDisplay] = useState('0');
+  const numericPart = value.replace(/[^0-9.]/g, '');
+  const target = parseFloat(numericPart);
+  const isNumeric = !isNaN(target) && target > 0;
+  const [display, setDisplay] = useState(isNumeric ? '0' : value);
   const ref = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
+    if (!isNumeric) {
+      setDisplay(value);
+      return;
+    }
+    const prefix = value.match(/^[^0-9]*/)?.[0] || '';
+    const suffix = value.match(/[^0-9.]*$/)?.[0] || '';
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
           hasAnimated.current = true;
-          const numericPart = value.replace(/[^0-9.]/g, '');
-          const prefix = value.match(/^[^0-9]*/)?.[0] || '';
-          const suffix = value.match(/[^0-9.]*$/)?.[0] || '';
-          const target = parseFloat(numericPart);
           const duration = 1800;
           const start = performance.now();
 
@@ -41,7 +46,7 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
           requestAnimationFrame(animate);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.1 }
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -145,7 +150,7 @@ export default function LandingPage() {
     },
     {
       q: "Can I trust the AI predictions?",
-      a: "Our AI doesn't predict prices - it analyzes on-chain patterns and whale behavior to surface signals. Historically, signals have 89% accuracy in directional movement within 48 hours. Always DYOR."
+      a: "Our AI doesn't predict prices - it analyzes on-chain patterns and whale behavior to surface signals. We're in private beta and building accuracy data from real resolved predictions. Always DYOR."
     },
     {
       q: "How accurate is the whale tracking?",
@@ -183,10 +188,10 @@ export default function LandingPage() {
   const chains = ["Solana", "Ethereum", "BNB", "Polygon", "Avalanche", "Base", "Arbitrum", "Optimism", "Fantom", "Bitcoin", "Tron"];
 
   const [stats, setStats] = useState([
-    { value: "12+", label: "Chains" },
-    { value: "89%", label: "Signal Accuracy" },
-    { value: "$2.4B", label: "Volume Tracked" },
-    { value: "50K+", label: "Active Users" },
+    { value: "12+", label: "Chains Supported" },
+    { value: "7", label: "AI Tools" },
+    { value: "24/7", label: "Live Monitoring" },
+    { value: "100%", label: "Non-Custodial" },
   ]);
 
   useEffect(() => {
@@ -194,10 +199,10 @@ export default function LandingPage() {
       .then(res => res.json())
       .then(data => {
         setStats([
-          { value: `${data.chains}+`, label: "Chains" },
-          { value: `${data.signalAccuracy}%`, label: "Signal Accuracy" },
-          { value: data.volumeTracked, label: "Volume Tracked" },
-          { value: data.activeUsers, label: "Active Users" },
+          { value: `${data.chains}+`, label: "Chains Supported" },
+          { value: "7", label: "AI Tools" },
+          { value: "24/7", label: "Live Monitoring" },
+          { value: "100%", label: "Non-Custodial" },
         ]);
       })
       .catch(() => {});
@@ -353,7 +358,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto animate-fadeInUp stagger-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto animate-fadeInUp stagger-4">
             {stats.map((stat, i) => (
               <div key={stat.label} className="stat-card rounded-lg p-3 stat-card-glow" style={{ animationDelay: `${i * 0.1}s` }}>
                 <AnimatedCounter value={stat.value} label={stat.label} />

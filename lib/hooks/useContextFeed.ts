@@ -40,6 +40,7 @@ const POLL_INTERVAL_HIDDEN = 60000;
 export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasArchive, setHasArchive] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
   const currentChain = useRef<ChainFilter>(chain);
   const abortRef = useRef<AbortController | null>(null);
@@ -55,6 +56,7 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
       });
       const data = await response.json();
       const rawEvents: ContextEvent[] = data.events || [];
+      if (data.hasArchive !== undefined) setHasArchive(data.hasArchive);
       const dedupMap = new Map<string, ContextEvent>();
       rawEvents.forEach(e => { if (!dedupMap.has(e.id)) dedupMap.set(e.id, e); });
       const newEvents = Array.from(dedupMap.values());
@@ -116,5 +118,44 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
     };
   }, [fetchEvents]);
 
-  return { events, loading, refresh: fetchEvents };
+  return { events, loading, refresh: fetchEvents, hasArchive };
+}
+
+export function useArchivedFeed(chain: ChainFilter = 'all') {
+  const [events, setEvents] = useState<ContextEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const fetchArchived = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const feedChain = chain === 'bookmarks' ? 'all' : chain;
+      const response = await fetch(`/api/context-feed?limit=200&chain=${feedChain}&archived=true`, {
+        signal: controller.signal,
+      });
+      const data = await response.json();
+      setEvents(data.events || []);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Failed to fetch archived feed:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [chain]);
+
+  useEffect(() => {
+    setLoading(true);
+    setEvents([]);
+    fetchArchived();
+  }, [fetchArchived]);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  return { events, loading, refresh: fetchArchived };
 }

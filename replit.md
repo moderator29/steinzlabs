@@ -161,7 +161,7 @@ Configured in `.env.local`:
 - Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
 - Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656, URL: `/admin` (hidden from sidebar). Features: hamburger sidebar with 13 sections (Overview, Market Data, Trading Suite, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Game Stats, Token Listings, Notifications, Settings). Overview shows platform stats from `/api/platform-stats`. Token Listings section shows submissions from `/api/project-listing` with approve/reject actions. Game Stats section shows HODL Runner leaderboard with delete controls.
+- Admin panel password: 195656, URL: `/admin` (hidden from sidebar). Features: hamburger sidebar with 13 sections. NO demo/mock data - all sections show real data or honest empty states. Token Listings has multi-step flow: pending → approve → send payment email → confirm payment → list on discovery. Overview shows real platform stats. Trading Suite shows real feature statuses (all Live).
 - Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
 - NAKA GO branding: Logo at `/public/nakago-logo.jpg` (Shiba Inu mascot), displayed in landing page footer with "Proudly Powered by NAKA GO" + Telegram link (https://t.me/NakaGoCult)
 - Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
@@ -170,9 +170,10 @@ Configured in `.env.local`:
 - Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools (STEINZ Wallet NEW, Swap, VTX AI, Alerts, Pricing, Social, Copy, Security, Risk) → Discover → Play (HODL Runner with PLAY badge)
 - Non-custodial wallet: ethers@6.13.4, `/dashboard/wallet-page`, XOR+base64 encrypted key storage in localStorage, dispatches `steinz_wallet_changed` event for portfolio sync
 - VTX AI tiers: Free = 15 msgs/day (IP-tracked in-memory), Pro = unlimited, web search toggle, model: claude-sonnet-4-20250514
-- Context feed: History preserved (200 events), bookmarks in localStorage `steinz_bookmarks`, Avalanche chain tab
-- Project listing API: `/api/project-listing` (GET needs password 195656, POST public, PUT for approve/reject), in-memory storage
-- Platform stats API: `/api/platform-stats` — aggregates chains count, signal accuracy, volume from CoinGecko, active users, 5-min cache
+- Context feed: History preserved (200 events), bookmarks in localStorage `steinz_bookmarks`, Avalanche chain tab, 24hr retention with Archive tab for old events (>24hrs), server-side event store
+- Project listing API: `/api/project-listing` — Multi-step flow: POST submits (returns preview URL), PUT with actions: approve/send_payment_email/confirm_payment/list/reject. Preview page at `/dashboard/token-preview/[id]`. In-memory storage.
+- Platform stats API: `/api/platform-stats` — Real data: chains count (12), signal accuracy (Beta), global volume from CoinGecko, 5-min cache
+- AI Customer Service: `/api/customer-service` — Anthropic Claude-powered support chat on Profile tab. Answers platform questions, escalates complex issues. Chat history in localStorage `steinz_support_chat`.
 - Verified badge (new): `/public/verified-badge-new.png` (gold wavy checkmark)
 - Wallet Intelligence: Multi-chain support — ETH (Alchemy), SOL (Solana RPC), Base, Polygon, Avalanche (public RPCs). Chain selector in UI. Token balances only on Alchemy-supported chains.
 - Security Center (token-scanner): Multi-chain via GoPlus — ETH, BSC, Polygon, Solana, Base, Avalanche, Arbitrum. Chain selector in UI.

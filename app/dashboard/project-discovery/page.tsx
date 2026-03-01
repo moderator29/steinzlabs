@@ -288,6 +288,7 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const handleSubmit = async () => {
     if (!form.tokenName || !form.symbol || !form.contractAddress || !form.email) return;
@@ -298,7 +299,11 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (res.ok) setSubmitted(true);
+      if (res.ok) {
+        const data = await res.json();
+        setPreviewUrl(data.previewUrl || '');
+        setSubmitted(true);
+      }
     } catch {
     } finally {
       setSubmitting(false);
@@ -319,8 +324,14 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
               <Send className="w-8 h-8 text-[#10B981]" />
             </div>
             <h3 className="text-lg font-bold mb-2">Submitted!</h3>
-            <p className="text-gray-400 text-sm">Your token listing has been submitted for review. You will receive an email at <span className="text-white">{form.email}</span> once verified.</p>
-            <button onClick={onClose} className="mt-4 px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg text-sm font-semibold">Close</button>
+            <p className="text-gray-400 text-sm mb-3">Your token listing has been submitted for review. You will receive an email at <span className="text-white">{form.email}</span> once approved.</p>
+            {previewUrl && (
+              <a href={previewUrl} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A2235] border border-[#00E5FF]/30 rounded-lg text-xs text-[#00E5FF] hover:bg-[#00E5FF]/10 transition-colors mb-3">
+                <ExternalLink className="w-3 h-3" /> View Your Token Preview
+              </a>
+            )}
+            <p className="text-gray-500 text-[10px] mb-4">Share this preview link to see how your token will appear on STEINZ Discovery. Once approved, you will receive payment instructions via email.</p>
+            <button onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg text-sm font-semibold">Close</button>
           </div>
         ) : (
           <div className="space-y-3">

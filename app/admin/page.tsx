@@ -262,12 +262,12 @@ export default function AdminPanel() {
     } catch (e) { console.error('Failed to fetch platform stats:', e); }
   }, []);
 
-  const handleListingAction = async (id: string, action: 'approved' | 'rejected') => {
+  const handleListingAction = async (id: string, action: string) => {
     try {
       await fetch('/api/project-listing', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: action, password: ADMIN_PASSWORD }),
+        body: JSON.stringify({ id, action, password: ADMIN_PASSWORD }),
       });
       fetchTokenListings();
     } catch (e) { console.error('Listing action failed:', e); }
@@ -550,16 +550,16 @@ export default function AdminPanel() {
                       <div className="text-[9px] text-gray-400">Chains Supported</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-[#10B981]">{platformStats.signalAccuracy}%</div>
+                      <div className="text-lg font-bold text-[#10B981]">{platformStats.signalAccuracy}</div>
                       <div className="text-[9px] text-gray-400">Signal Accuracy</div>
                     </div>
                     <div className="text-center">
                       <div className="text-lg font-bold text-[#7C3AED]">{platformStats.volumeTracked}</div>
-                      <div className="text-[9px] text-gray-400">Volume Tracked</div>
+                      <div className="text-[9px] text-gray-400">Global Volume (CoinGecko)</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-[#F59E0B]">{platformStats.activeUsers?.toLocaleString()}</div>
-                      <div className="text-[9px] text-gray-400">Active Users</div>
+                      <div className="text-lg font-bold text-[#F59E0B]">{platformStats.activeUsers}</div>
+                      <div className="text-[9px] text-gray-400">Platform Status</div>
                     </div>
                   </div>
                 </div>
@@ -706,10 +706,10 @@ export default function AdminPanel() {
           {activeSection === 'trading' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Zap className="w-4 h-4" />} label="Status" value="Demo" sub="Preview mode" color="text-[#F59E0B]" loading={false} />
+                <StatCard icon={<Zap className="w-4 h-4" />} label="Status" value={tokens.length > 0 ? 'Active' : 'Offline'} sub={tokens.length > 0 ? 'All systems operational' : 'No data'} color={tokens.length > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'} loading={loadingTokens} />
                 <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Trending" value={tokens.length > 0 ? 'Live' : 'Loading'} sub="CoinGecko data" color="text-[#10B981]" loading={loadingTokens} />
-                <StatCard icon={<Layers className="w-4 h-4" />} label="Perpetuals" value="Q2 2026" sub="Coming soon" color="text-[#7C3AED]" loading={false} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="Live Streams" value="Q3 2026" sub="Coming soon" color="text-[#EF4444]" loading={false} />
+                <StatCard icon={<BarChart3 className="w-4 h-4" />} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="text-[#7C3AED]" loading={loadingTokens} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="24h Volume" value={formatNumber(totalVolume)} sub="Across tracked tokens" color="text-[#00E5FF]" loading={loadingTokens} />
               </div>
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3">Trading Suite Features</div>
@@ -721,10 +721,10 @@ export default function AdminPanel() {
                     { label: 'Market Pulse & Fear/Greed', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'Paste CA / Token Scanner', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'Watchlist', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Perpetual Futures', status: 'Planned Q2', color: 'text-[#F59E0B]' },
-                    { label: 'LIVE Trading Streams', status: 'Planned Q3', color: 'text-[#F59E0B]' },
-                    { label: 'Spot Trading (Buy/Sell)', status: 'Planned', color: 'text-[#F59E0B]' },
-                    { label: 'Position Tracking', status: 'UI Ready', color: 'text-[#00E5FF]' },
+                    { label: 'TradingView Charts', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'STEINZ Terminal', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Multi-Chain Support', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'AI Risk Scanner', status: 'Live', color: 'text-[#10B981]' },
                   ].map((f, i) => (
                     <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0">
                       <span className="text-gray-300">{f.label}</span>
@@ -1166,8 +1166,8 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="text-[#00E5FF]" loading={loadingListings} />
                 <StatCard icon={<Clock className="w-4 h-4" />} label="Pending Review" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting action" color="text-[#F59E0B]" loading={loadingListings} />
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Approved" value={tokenListings.filter(l => l.status === 'approved').length.toString()} sub="Listed tokens" color="text-[#10B981]" loading={loadingListings} />
-                <StatCard icon={<XCircle className="w-4 h-4" />} label="Rejected" value={tokenListings.filter(l => l.status === 'rejected').length.toString()} sub="Declined" color="text-[#EF4444]" loading={loadingListings} />
+                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Listed" value={tokenListings.filter(l => l.status === 'listed').length.toString()} sub="Live on discovery" color="text-[#10B981]" loading={loadingListings} />
+                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved tokens" color="text-[#7C3AED]" loading={loadingListings} />
               </div>
 
               <div className="glass rounded-xl p-4 border border-white/10">
@@ -1202,10 +1202,14 @@ export default function AdminPanel() {
                                 {listing.tokenName} <span className="text-gray-500">({listing.symbol})</span>
                                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
                                   listing.status === 'pending' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
-                                  listing.status === 'approved' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                                  'bg-[#EF4444]/20 text-[#EF4444]'
+                                  listing.status === 'listed' ? 'bg-[#10B981]/20 text-[#10B981]' :
+                                  listing.status === 'rejected' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
+                                  listing.status === 'paid' ? 'bg-[#10B981]/20 text-[#10B981]' :
+                                  'bg-[#00E5FF]/20 text-[#00E5FF]'
                                 }`}>
-                                  {listing.status?.toUpperCase()}
+                                  {listing.status === 'approved_pending_payment' ? 'APPROVED' :
+                                   listing.status === 'payment_sent' ? 'PAYMENT SENT' :
+                                   listing.status?.toUpperCase()}
                                 </span>
                               </div>
                               <div className="text-[10px] text-gray-500 mt-0.5">
@@ -1223,22 +1227,39 @@ export default function AdminPanel() {
                               </div>
                             </div>
                           </div>
-                          {listing.status === 'pending' && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                onClick={() => handleListingAction(listing.id, 'approved')}
-                                className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1"
-                              >
-                                <CheckCircle className="w-3 h-3" /> Approve
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            {listing.status === 'pending' && (
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => handleListingAction(listing.id, 'approve')} className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" /> Approve
+                                </button>
+                                <button onClick={() => handleListingAction(listing.id, 'reject')} className="px-2.5 py-1 bg-[#EF4444]/20 text-[#EF4444] text-[10px] font-semibold rounded hover:bg-[#EF4444]/30 transition-colors flex items-center gap-1">
+                                  <XCircle className="w-3 h-3" /> Reject
+                                </button>
+                              </div>
+                            )}
+                            {listing.status === 'approved_pending_payment' && (
+                              <button onClick={() => handleListingAction(listing.id, 'send_payment_email')} className="px-2.5 py-1 bg-[#7C3AED]/20 text-[#7C3AED] text-[10px] font-semibold rounded hover:bg-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                                <Send className="w-3 h-3" /> Send Payment Email
                               </button>
-                              <button
-                                onClick={() => handleListingAction(listing.id, 'rejected')}
-                                className="px-2.5 py-1 bg-[#EF4444]/20 text-[#EF4444] text-[10px] font-semibold rounded hover:bg-[#EF4444]/30 transition-colors flex items-center gap-1"
-                              >
-                                <XCircle className="w-3 h-3" /> Reject
+                            )}
+                            {listing.status === 'payment_sent' && (
+                              <button onClick={() => handleListingAction(listing.id, 'confirm_payment')} className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" /> Confirm Payment
                               </button>
-                            </div>
-                          )}
+                            )}
+                            {listing.status === 'paid' && (
+                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-2.5 py-1 bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 text-[#00E5FF] text-[10px] font-semibold rounded hover:from-[#00E5FF]/30 hover:to-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" /> List on Discovery
+                              </button>
+                            )}
+                            {listing.status === 'listed' && (
+                              <span className="text-[9px] text-[#10B981] font-semibold">Live on Discovery</span>
+                            )}
+                            <a href={`/dashboard/token-preview/${listing.id}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-500 hover:text-[#00E5FF] transition-colors">
+                              Preview Link
+                            </a>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1256,24 +1277,11 @@ export default function AdminPanel() {
                   Platform Configuration
                 </div>
                 <div className="space-y-4">
-                  {[
-                    { label: 'Auto-refresh Market Data', desc: 'Fetch live prices every 60 seconds', enabled: true },
-                    { label: 'Whale Alert Notifications', desc: 'Push alerts for large transactions', enabled: true },
-                    { label: 'Builder Auto-screening', desc: 'AI risk assessment for new applications', enabled: true },
-                    { label: 'Prediction Market Fees', desc: '3% fee on prediction payouts', enabled: true },
-                    { label: 'Context Feed Spam Filter', desc: 'AI-powered spam detection', enabled: true },
-                    { label: 'Maintenance Mode', desc: 'Temporarily disable new user access', enabled: false },
-                  ].map((setting, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                      <div>
-                        <div className="text-xs font-semibold">{setting.label}</div>
-                        <div className="text-[10px] text-gray-500">{setting.desc}</div>
-                      </div>
-                      <div className={`w-10 h-5 rounded-full flex items-center px-0.5 cursor-pointer transition-colors ${setting.enabled ? 'bg-[#10B981]' : 'bg-gray-700'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${setting.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    </div>
-                  ))}
+                  <div className="text-center py-6 text-gray-500">
+                    <Settings className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <div className="text-xs">Platform configuration managed via environment variables and API routes</div>
+                    <div className="text-[10px] mt-1">Auto-refresh: 60s | Prediction fees: 3% | Context feed: 15s poll</div>
+                  </div>
                 </div>
               </div>
 
