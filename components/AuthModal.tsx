@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, Mail, Chrome, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { connectWallet } from '@/lib/wallet';
+import { useWallet } from '@/lib/hooks/useWallet';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -17,6 +17,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const { connectAuto, connecting: walletConnecting } = useWallet();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,29 +80,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setError('');
 
     try {
-      const walletData = await connectWallet();
-
-      if (supabase) {
-        try {
-          const { data: existingUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('wallet_address', walletData.address)
-            .single();
-
-          if (!existingUser) {
-            await supabase.from('users').insert({
-              wallet_address: walletData.address,
-              username: `${walletData.address.slice(0, 6)}...${walletData.address.slice(-4)}`
-            });
-          }
-        } catch {
-        }
-      }
-
-      localStorage.setItem('wallet_address', walletData.address);
-      localStorage.setItem('wallet_provider', walletData.provider);
-
+      await connectAuto();
       onSuccess();
     } catch (err: any) {
       setError(err.message);

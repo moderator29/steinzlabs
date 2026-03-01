@@ -6,6 +6,7 @@ import Link from 'next/link';
 import PriceTicker from '@/components/PriceTicker';
 import SteinzLogo from '@/components/SteinzLogo';
 import ThemeToggle from '@/components/ThemeToggle';
+import WalletConnectButton from '@/components/WalletConnectButton';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const [display, setDisplay] = useState('0');
@@ -252,6 +253,7 @@ export default function LandingPage() {
             <a href="#faq" className="hover:text-[#00E5FF] transition-colors cyber-line">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
+            <WalletConnectButton />
             <ThemeToggle />
           </div>
         </div>
