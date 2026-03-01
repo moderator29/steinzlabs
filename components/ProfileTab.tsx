@@ -15,15 +15,7 @@ interface Notification {
   read: boolean;
 }
 
-const defaultNotifications: Notification[] = [
-  { id: '1', type: 'whale', title: 'Whale Alert', message: '🐋 500 BTC ($32.4M) transferred from unknown wallet to Coinbase', time: '2m ago', read: false },
-  { id: '2', type: 'price', title: 'Price Break', message: 'ETH broke above $3,800 resistance — up 5.2% in 1h', time: '8m ago', read: false },
-  { id: '3', type: 'prediction', title: 'Prediction Result', message: 'Your SOL bullish prediction was correct! +150 points earned', time: '23m ago', read: false },
-  { id: '4', type: 'trending', title: 'Trending Token', message: '🔥 PEPE volume surged 340% in the last hour across DEXs', time: '45m ago', read: false },
-  { id: '5', type: 'security', title: 'Security Alert', message: '⚠️ Suspicious contract detected on token "SafeYield" — avoid interaction', time: '1h ago', read: false },
-  { id: '6', type: 'whale', title: 'Whale Alert', message: '🐋 10,000 ETH unstaked from Lido by top-100 wallet', time: '2h ago', read: true },
-  { id: '7', type: 'price', title: 'Price Break', message: 'BNB dropped below $580 support — down 3.1% in 30m', time: '3h ago', read: true },
-];
+const defaultNotifications: Notification[] = [];
 
 type SubPage = null | 'privacy' | 'help' | 'preferences';
 
@@ -35,15 +27,55 @@ export default function ProfileTab() {
   const [subPage, setSubPage] = useState<SubPage>(null);
   const [notifList, setNotifList] = useState<Notification[]>(defaultNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNotifications() {
+      try {
+        setNotifLoading(true);
+        const res = await fetch('/api/notifications');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.notifications)) {
+          const readIds = JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]');
+          const mapped = data.notifications.map((n: Notification) => ({
+            ...n,
+            read: readIds.includes(n.id),
+          }));
+          setNotifList(mapped);
+        }
+      } catch {
+        if (!cancelled) {
+          setNotifList([]);
+        }
+      } finally {
+        if (!cancelled) setNotifLoading(false);
+      }
+    }
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 120000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const unreadCount = notifList.filter(n => !n.read).length;
 
   const markAsRead = (id: string) => {
-    setNotifList(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifList(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+      const readIds = updated.filter(n => n.read).map(n => n.id);
+      localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
+      return updated;
+    });
   };
 
   const markAllRead = () => {
-    setNotifList(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifList(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      const readIds = updated.map(n => n.id);
+      localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
+      return updated;
+    });
   };
 
   const getNotifIcon = (type: Notification['type']) => {
@@ -341,23 +373,35 @@ export default function ProfileTab() {
               </div>
             )}
             <div className="max-h-[320px] overflow-y-auto">
-              {notifList.map(n => (
-                <button
-                  key={n.id}
-                  onClick={() => markAsRead(n.id)}
-                  className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
-                >
-                  <div className="mt-0.5 flex-shrink-0">{getNotifIcon(n.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold">{n.title}</span>
-                      {!n.read && <span className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full flex-shrink-0" />}
+              {notifLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-[#00E5FF]/30 border-t-[#00E5FF] rounded-full animate-spin" />
+                  <span className="text-xs text-gray-500 ml-2">Loading notifications...</span>
+                </div>
+              ) : notifList.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bell className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">No notifications yet</p>
+                </div>
+              ) : (
+                notifList.map(n => (
+                  <button
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
+                  >
+                    <div className="mt-0.5 flex-shrink-0">{getNotifIcon(n.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold">{n.title}</span>
+                        {!n.read && <span className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full flex-shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
+                      <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
-                    <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}

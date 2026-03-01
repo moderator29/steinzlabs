@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
-import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X } from 'lucide-react';
+import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, Bell } from 'lucide-react';
 import SidebarMenu from '@/components/SidebarMenu';
 import PriceTicker from '@/components/PriceTicker';
 import AuthModal from '@/components/AuthModal';
@@ -82,6 +82,122 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   );
 });
 
+function NotificationBell({ onProfileNav }: { onProfileNav: () => void }) {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showPanel, setShowPanel] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function fetchCount() {
+      try {
+        const res = await fetch('/api/notifications');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.notifications)) {
+          const readIds = JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]');
+          const unread = data.notifications.filter((n: any) => !readIds.includes(n.id));
+          setUnreadCount(unread.length);
+          setNotifications(data.notifications.map((n: any) => ({
+            ...n,
+            read: readIds.includes(n.id),
+          })));
+        }
+      } catch {}
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 120000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleBellClick = () => {
+    if (showPanel) {
+      setShowPanel(false);
+    } else {
+      setShowPanel(true);
+    }
+  };
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => {
+      const updated = prev.map((n: any) => n.id === id ? { ...n, read: true } : n);
+      const readIds = updated.filter((n: any) => n.read).map((n: any) => n.id);
+      localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
+      setUnreadCount(updated.filter((n: any) => !n.read).length);
+      return updated;
+    });
+  };
+
+  const markAllRead = () => {
+    setNotifications(prev => {
+      const updated = prev.map((n: any) => ({ ...n, read: true }));
+      const readIds = updated.map((n: any) => n.id);
+      localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
+      setUnreadCount(0);
+      return updated;
+    });
+  };
+
+  return (
+    <div className="relative">
+      <button onClick={handleBellClick} className="relative p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-bold flex items-center justify-center text-white animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+      {showPanel && (
+        <>
+          <div className="fixed inset-0 z-50" onClick={() => setShowPanel(false)} />
+          <div className="absolute right-0 top-10 w-80 max-h-[400px] glass rounded-xl border border-white/10 shadow-2xl z-50 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+              <span className="text-sm font-semibold">Notifications</span>
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-[10px] text-[#00E5FF] hover:text-[#00E5FF]/80 font-semibold transition-colors">
+                  Mark all read
+                </button>
+              )}
+            </div>
+            <div className="max-h-[340px] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bell className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">No notifications</p>
+                </div>
+              ) : (
+                notifications.slice(0, 10).map((n: any) => (
+                  <button
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold">{n.title}</span>
+                        {!n.read && <span className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full flex-shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
+                      <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+            <button
+              onClick={() => { setShowPanel(false); onProfileNav(); }}
+              className="w-full px-4 py-2.5 text-center text-[11px] text-[#00E5FF] font-semibold border-t border-white/5 hover:bg-white/5 transition-colors"
+            >
+              View all in Profile
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
@@ -125,6 +241,7 @@ export default function Dashboard() {
             <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell onProfileNav={() => { setActiveNav('profile'); }} />
             <ThemeToggle />
             <button onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
