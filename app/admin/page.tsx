@@ -113,6 +113,7 @@ const ADMIN_SECTIONS = [
   { id: 'security', label: 'Security', icon: ShieldCheck },
   { id: 'api-health', label: 'API Health', icon: Server },
   { id: 'game-stats', label: 'Game Stats', icon: Gamepad2 },
+  { id: 'token-listings', label: 'Token Listings', icon: Briefcase },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -138,6 +139,9 @@ export default function AdminPanel() {
   const [loadingWhales, setLoadingWhales] = useState(false);
   const [gameStats, setGameStats] = useState<GameStats>({ leaderboard: [], totalPlayers: 0, totalGamesPlayed: 0, highestScore: 0, topPlayer: 'N/A' });
   const [loadingGames, setLoadingGames] = useState(false);
+  const [tokenListings, setTokenListings] = useState<any[]>([]);
+  const [loadingListings, setLoadingListings] = useState(false);
+  const [platformStats, setPlatformStats] = useState<any>(null);
 
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
@@ -236,6 +240,39 @@ export default function AdminPanel() {
     setLoadingGames(false);
   }, []);
 
+  const fetchTokenListings = useCallback(async () => {
+    setLoadingListings(true);
+    try {
+      const res = await fetch(`/api/project-listing?password=${ADMIN_PASSWORD}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTokenListings(data.listings || []);
+      }
+    } catch (e) { console.error('Failed to fetch listings:', e); }
+    setLoadingListings(false);
+  }, []);
+
+  const fetchPlatformStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/platform-stats');
+      if (res.ok) {
+        const data = await res.json();
+        setPlatformStats(data);
+      }
+    } catch (e) { console.error('Failed to fetch platform stats:', e); }
+  }, []);
+
+  const handleListingAction = async (id: string, action: 'approved' | 'rejected') => {
+    try {
+      await fetch('/api/project-listing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: action, password: ADMIN_PASSWORD }),
+      });
+      fetchTokenListings();
+    } catch (e) { console.error('Listing action failed:', e); }
+  };
+
   const handleDeleteGameScore = async (id?: string) => {
     try {
       const url = id
@@ -285,10 +322,10 @@ export default function AdminPanel() {
 
   const refreshAll = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchTokens(), fetchPredictions(), fetchBuilders(), fetchWhales(), fetchGames(), checkApiHealth()]);
+    await Promise.all([fetchTokens(), fetchPredictions(), fetchBuilders(), fetchWhales(), fetchGames(), fetchTokenListings(), fetchPlatformStats(), checkApiHealth()]);
     setLastRefresh(new Date());
     setIsRefreshing(false);
-  }, [fetchTokens, fetchPredictions, fetchBuilders, fetchWhales, fetchGames, checkApiHealth]);
+  }, [fetchTokens, fetchPredictions, fetchBuilders, fetchWhales, fetchGames, fetchTokenListings, fetchPlatformStats, checkApiHealth]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -497,9 +534,36 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Briefcase className="w-4 h-4" />} label="Projects" value={projects.length.toString()} sub={`${fundedProjects.length} funded`} color="text-[#F59E0B]" loading={loadingBuilders} />
                 <StatCard icon={<Activity className="w-4 h-4" />} label="Whale Events" value={whaleEvents.length.toString()} sub="Recent activity" color="text-[#00E5FF]" loading={loadingWhales} />
-                <StatCard icon={<BarChart3 className="w-4 h-4" />} label="24h Volume" value={formatNumber(totalVolume)} sub="Across top 25" color="text-[#7C3AED]" loading={loadingTokens} />
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Resolved" value={resolvedPredictions.length.toString()} sub="Predictions settled" color="text-[#10B981]" loading={loadingPredictions} />
+                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="HODL Runner" value={gameStats.totalPlayers.toString()} sub={`${gameStats.totalGamesPlayed} games`} color="text-[#7C3AED]" loading={loadingGames} />
+                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Token Listings" value={tokenListings.length.toString()} sub={`${tokenListings.filter(l => l.status === 'pending').length} pending`} color="text-[#F59E0B]" loading={loadingListings} />
               </div>
+
+              {platformStats && (
+                <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5">
+                  <div className="text-xs font-bold mb-3 flex items-center gap-2">
+                    <Globe className="w-3.5 h-3.5 text-[#00E5FF]" />
+                    Platform Stats (Public)
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-[#00E5FF]">{platformStats.chains}</div>
+                      <div className="text-[9px] text-gray-400">Chains Supported</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-[#10B981]">{platformStats.signalAccuracy}%</div>
+                      <div className="text-[9px] text-gray-400">Signal Accuracy</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-[#7C3AED]">{platformStats.volumeTracked}</div>
+                      <div className="text-[9px] text-gray-400">Volume Tracked</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-[#F59E0B]">{platformStats.activeUsers?.toLocaleString()}</div>
+                      <div className="text-[9px] text-gray-400">Active Users</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3 flex items-center gap-2">
@@ -1091,6 +1155,93 @@ export default function AdminPanel() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'token-listings' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="text-[#00E5FF]" loading={loadingListings} />
+                <StatCard icon={<Clock className="w-4 h-4" />} label="Pending Review" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting action" color="text-[#F59E0B]" loading={loadingListings} />
+                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Approved" value={tokenListings.filter(l => l.status === 'approved').length.toString()} sub="Listed tokens" color="text-[#10B981]" loading={loadingListings} />
+                <StatCard icon={<XCircle className="w-4 h-4" />} label="Rejected" value={tokenListings.filter(l => l.status === 'rejected').length.toString()} sub="Declined" color="text-[#EF4444]" loading={loadingListings} />
+              </div>
+
+              <div className="glass rounded-xl p-4 border border-white/10">
+                <div className="text-xs font-bold flex items-center gap-2 mb-3">
+                  <Briefcase className="w-3.5 h-3.5 text-[#00E5FF]" />
+                  Token Listing Submissions
+                </div>
+
+                {loadingListings ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 bg-white/5 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : tokenListings.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 text-xs">No token listing submissions yet</div>
+                ) : (
+                  <div className="space-y-3">
+                    {tokenListings.map((listing) => (
+                      <div key={listing.id} className="glass rounded-lg p-3 border border-white/5 hover:border-white/10 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            {listing.logoUrl ? (
+                              <img src={listing.logoUrl} alt={listing.tokenName} className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold">
+                                {listing.symbol?.slice(0, 2) || '?'}
+                              </div>
+                            )}
+                            <div>
+                              <div className="text-xs font-bold flex items-center gap-2">
+                                {listing.tokenName} <span className="text-gray-500">({listing.symbol})</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                                  listing.status === 'pending' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
+                                  listing.status === 'approved' ? 'bg-[#10B981]/20 text-[#10B981]' :
+                                  'bg-[#EF4444]/20 text-[#EF4444]'
+                                }`}>
+                                  {listing.status?.toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-gray-500 mt-0.5">
+                                {listing.chain} · {listing.contractAddress?.slice(0, 6)}...{listing.contractAddress?.slice(-4)}
+                              </div>
+                              {listing.description && (
+                                <div className="text-[10px] text-gray-400 mt-1 line-clamp-2">{listing.description}</div>
+                              )}
+                              <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-500">
+                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Website</a>}
+                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Telegram</a>}
+                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Twitter</a>}
+                                {listing.email && <span>Contact: {listing.email}</span>}
+                                <span>Submitted: {new Date(listing.submittedAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          {listing.status === 'pending' && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => handleListingAction(listing.id, 'approved')}
+                                className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1"
+                              >
+                                <CheckCircle className="w-3 h-3" /> Approve
+                              </button>
+                              <button
+                                onClick={() => handleListingAction(listing.id, 'rejected')}
+                                className="px-2.5 py-1 bg-[#EF4444]/20 text-[#EF4444] text-[10px] font-semibold rounded hover:bg-[#EF4444]/30 transition-colors flex items-center gap-1"
+                              >
+                                <XCircle className="w-3 h-3" /> Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

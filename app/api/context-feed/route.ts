@@ -54,7 +54,7 @@ function recentTimestamp(offsetMax: number = 30): string {
   return new Date(Date.now() - offset).toISOString();
 }
 
-const priceCache: { eth: number; sol: number; bnb: number; matic: number; ts: number } = { eth: 3500, sol: 180, bnb: 600, matic: 0.5, ts: 0 };
+const priceCache: { eth: number; sol: number; bnb: number; matic: number; avax: number; ts: number } = { eth: 3500, sol: 180, bnb: 600, matic: 0.5, avax: 35, ts: 0 };
 
 const responseCache: Record<string, { data: WhaleEvent[]; ts: number; sources: string[] }> = {};
 const CACHE_TTL = 5000;
@@ -64,12 +64,13 @@ async function fetchPrices(): Promise<void> {
   try {
     const headers: Record<string, string> = {};
     if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,binancecoin,matic-network&vs_currencies=usd', { headers });
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,binancecoin,matic-network,avalanche-2&vs_currencies=usd', { headers });
     const data = await res.json();
     priceCache.eth = data?.ethereum?.usd || priceCache.eth;
     priceCache.sol = data?.solana?.usd || priceCache.sol;
     priceCache.bnb = data?.binancecoin?.usd || priceCache.bnb;
     priceCache.matic = data?.['matic-network']?.usd || priceCache.matic;
+    priceCache.avax = data?.['avalanche-2']?.usd || priceCache.avax;
     priceCache.ts = Date.now();
   } catch {}
 }
@@ -244,6 +245,8 @@ function getDexPlatformLabel(dexId: string): string {
   if (dexId.includes('fourmeme') || dexId.includes('four.meme') || dexId.includes('four_meme')) return 'FourMeme';
   if (dexId.includes('quickswap')) return 'QuickSwap';
   if (dexId.includes('sushiswap')) return 'SushiSwap';
+  if (dexId.includes('traderjoe') || dexId.includes('joe')) return 'TraderJoe';
+  if (dexId.includes('pangolin')) return 'Pangolin';
   return dexId;
 }
 
@@ -306,6 +309,7 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
     else if (chainId === 'ethereum') chain = 'ethereum';
     else if (chainId === 'solana') chain = 'solana';
     else if (chainId === 'polygon') chain = 'polygon';
+    else if (chainId === 'avalanche') chain = 'avalanche';
 
     return {
       id: `${source}-${chain}-${symbol}-${tokenAddress?.slice(0, 10) || pairAddress?.slice(0, 10)}`,
@@ -467,6 +471,16 @@ async function fetchBSCDexEvents(): Promise<WhaleEvent[]> {
   return [...pancakeEvents, ...fourmemeEvents, ...fourmeme2Events, ...profileEvents];
 }
 
+async function fetchAvalancheDexEvents(): Promise<WhaleEvent[]> {
+  const avaxTokens = ['AVAX', 'JOE', 'WAVAX', 'GMX', 'sAVAX'];
+  const searches = avaxTokens.map(t => fetchDexSearchPairs(t, 'avalanche', 3));
+  const results = await Promise.all([
+    ...searches,
+    fetchDexScreenerProfiles('avalanche', 15),
+  ]);
+  return results.flat();
+}
+
 async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
   const polyTokens = ['MATIC', 'QUICK', 'AAVE', 'SUSHI', 'WETH'];
   const searches = polyTokens.map(t => fetchDexSearchPairs(t, 'polygon', 3));
@@ -519,7 +533,7 @@ export async function GET(request: Request) {
     const sources: string[] = [];
 
     if (chain === 'all') {
-      const [alchemyEvents, heliusEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex] = await Promise.all([
+      const [alchemyEvents, heliusEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex] = await Promise.all([
         fetchAlchemyTransfers(),
         fetchHeliusTransactions(),
         fetchPumpFunTokens(),
@@ -528,9 +542,10 @@ export async function GET(request: Request) {
         fetchSolanaDexEvents(),
         fetchBSCDexEvents(),
         fetchPolygonDexEvents(),
+        fetchAvalancheDexEvents(),
       ]);
 
-      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...pumpEvents, ...alchemyEvents, ...heliusEvents];
+      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...pumpEvents, ...alchemyEvents, ...heliusEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (heliusEvents.length > 0) sources.push('helius');
       if (pumpEvents.length > 0) sources.push('pumpfun');
@@ -539,6 +554,7 @@ export async function GET(request: Request) {
       if (solDex.length > 0) sources.push('dex-solana');
       if (bscDex.length > 0) sources.push('dex-bsc');
       if (polygonDex.length > 0) sources.push('dex-polygon');
+      if (avalancheDex.length > 0) sources.push('dex-avalanche');
 
     } else if (chain === 'solana') {
       const [heliusEvents, pumpEvents, solDex] = await Promise.all([
@@ -571,6 +587,11 @@ export async function GET(request: Request) {
       const polygonEvents = await fetchPolygonDexEvents();
       events = polygonEvents;
       if (polygonEvents.length > 0) sources.push('dexscreener');
+
+    } else if (chain === 'avalanche') {
+      const avalancheEvents = await fetchAvalancheDexEvents();
+      events = avalancheEvents;
+      if (avalancheEvents.length > 0) sources.push('dexscreener');
     }
 
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

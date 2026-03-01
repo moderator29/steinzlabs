@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, memo } from 'react';
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, PieChart, DollarSign, MessageCircle, Copy, Zap, Gamepad2 } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, PieChart, DollarSign, MessageCircle, Copy, Zap, Gamepad2, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
@@ -68,6 +68,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Tools</h3>
             <div className="space-y-1">
+              <SidebarItem icon={Wallet} label="STEINZ Wallet" badge="NEW" onClick={() => handleNavigation('/dashboard/wallet-page')} onHover={() => handleHoverPrefetch('/dashboard/wallet-page')} />
               <SidebarItem icon={ArrowLeftRight} label="Multi-Chain Swap" onClick={() => handleNavigation('/dashboard/swap')} onHover={() => handleHoverPrefetch('/dashboard/swap')} />
               <SidebarItem icon={Bot} label="VTX AI Assistant" onClick={() => handleNavigation('/dashboard/vtx-ai')} onHover={() => handleHoverPrefetch('/dashboard/vtx-ai')} />
               <SidebarItem icon={Bell} label="Smart Alerts" onClick={() => handleNavigation('/dashboard/alerts')} onHover={() => handleHoverPrefetch('/dashboard/alerts')} />
@@ -97,9 +98,6 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             </div>
           </div>
 
-          <div className="border-t border-white/5 pt-4">
-            <SidebarItem icon={Shield} label="Admin Panel" onClick={() => handleNavigation('/admin')} onHover={() => handleHoverPrefetch('/admin')} />
-          </div>
 
         </div>
       </div>

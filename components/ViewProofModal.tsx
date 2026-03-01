@@ -1,6 +1,6 @@
 'use client';
 
-import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, ShoppingCart } from 'lucide-react';
+import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, ShoppingCart, Maximize2, Minimize2 } from 'lucide-react';
 import { useState } from 'react';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from './TradingViewChart';
 
@@ -42,6 +42,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
   const [voted, setVoted] = useState<'yes' | 'no' | null>(null);
   const [yesVotes, setYesVotes] = useState(0);
   const [noVotes, setNoVotes] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const totalVotes = yesVotes + noVotes;
   const yesPct = totalVotes > 0 ? Math.round((yesVotes / totalVotes) * 100) : 50;
 
@@ -91,13 +92,82 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
     return `$${n.toFixed(0)}`;
   };
 
+  const chartHeight = isFullScreen ? 520 : 420;
+
+  if (isFullScreen && hasChart) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center"
+        onClick={() => setIsFullScreen(false)}
+      >
+        <div
+          className="bg-[#0A0E1A] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden m-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold">{event.tokenName || event.tokenSymbol || 'Chart'}</h2>
+                <p className="text-[10px] text-gray-500">
+                  {event.tokenSymbol ? `$${event.tokenSymbol}` : ''} · {useTradingView ? 'TradingView Advanced' : 'DexScreener'} · Full Screen
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsFullScreen(false)}
+                className="hover:bg-white/10 p-2 rounded-lg transition-colors"
+                title="Exit Full Screen"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+              <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="w-full" style={{ height: `${chartHeight}px` }}>
+            {useTradingView && tvSymbol ? (
+              <TradingViewChart symbol={tvSymbol} height={chartHeight} showTools />
+            ) : dexChartUrl ? (
+              <iframe
+                src={dexChartUrl}
+                className="w-full h-full border-0"
+                title="DexScreener Chart"
+                allow="clipboard-write"
+                loading="lazy"
+                sandbox="allow-scripts allow-same-origin allow-popups"
+              />
+            ) : null}
+          </div>
+          {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
+            <div className="flex items-center gap-3 px-5 py-3 border-t border-white/10">
+              {event.tokenPrice && <span className="text-sm font-mono text-white">{event.tokenPrice}</span>}
+              {event.tokenPriceChange24h ? (
+                <span className={`text-sm font-semibold ${(event.tokenPriceChange24h || 0) >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                  {(event.tokenPriceChange24h || 0) >= 0 ? '+' : ''}{event.tokenPriceChange24h?.toFixed(1)}%
+                </span>
+              ) : null}
+              {event.tokenVolume24h ? <span className="text-xs text-gray-400">Vol: {fmtNum(event.tokenVolume24h)}</span> : null}
+              {event.tokenLiquidity ? <span className="text-xs text-gray-400">Liq: {fmtNum(event.tokenLiquidity)}</span> : null}
+              {event.tokenMarketCap ? <span className="text-xs text-gray-400">MCap: {fmtNum(event.tokenMarketCap)}</span> : null}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div
-        className="bg-[#0A0E1A] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-[#0A0E1A] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
@@ -152,13 +222,25 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
           {hasChart && (
             <div className="glass rounded-xl border border-white/10 overflow-hidden">
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <h3 className="font-bold text-sm">Live Chart</h3>
-                <span className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : chainId} · {useTradingView ? 'TradingView' : 'DexScreener'}</span>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm">Live Chart</h3>
+                  <span className="px-1.5 py-0.5 rounded bg-[#10B981]/10 text-[#10B981] text-[9px] font-bold">LIVE</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : chainId} · {useTradingView ? 'TradingView' : 'DexScreener'}</span>
+                  <button
+                    onClick={() => setIsFullScreen(true)}
+                    className="hover:bg-white/10 p-1.5 rounded-lg transition-colors text-gray-400 hover:text-white"
+                    title="Full Screen"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               {useTradingView && tvSymbol ? (
-                <TradingViewChart symbol={tvSymbol} height={350} />
+                <TradingViewChart symbol={tvSymbol} height={420} showTools />
               ) : dexChartUrl ? (
-                <div className="w-full" style={{ height: '320px' }}>
+                <div className="w-full" style={{ height: '380px' }}>
                   <iframe
                     src={dexChartUrl}
                     className="w-full h-full border-0"

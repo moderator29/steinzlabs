@@ -90,6 +90,7 @@ interface TradingViewChartProps {
   symbol: string;
   height?: number;
   interval?: string;
+  showTools?: boolean;
 }
 
 function loadTradingViewScript(): Promise<void> {
@@ -113,7 +114,7 @@ function loadTradingViewScript(): Promise<void> {
   });
 }
 
-function TradingViewChartInner({ symbol, height = 400, interval = '60' }: TradingViewChartProps) {
+function TradingViewChartInner({ symbol, height = 400, interval = '60', showTools = false }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<any>(null);
 
@@ -135,8 +136,8 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60' }: Tradin
         locale: 'en',
         toolbar_bg: '#0A0E1A',
         enable_publishing: false,
-        hide_top_toolbar: true,
-        hide_side_toolbar: true,
+        hide_top_toolbar: !showTools,
+        hide_side_toolbar: !showTools,
         allow_symbol_change: false,
         save_image: false,
         container_id: containerRef.current.id,
@@ -171,7 +172,7 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60' }: Tradin
         widgetRef.current = null;
       }
     };
-  }, [symbol, interval]);
+  }, [symbol, interval, showTools]);
 
   const stableId = useRef(`tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`);
 

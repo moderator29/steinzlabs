@@ -49,6 +49,15 @@ export function PolygonIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+export function AvalancheIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 254 254" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="127" cy="127" r="127" fill="#E84142"/>
+      <path d="M171.8 130.3c4.4-7.6 11.5-7.6 15.9 0l27.4 48.1c4.4 7.6.8 13.8-8 13.8h-55.5c-8.7 0-12.3-6.2-8-13.8l28.2-48.1zM118.8 44.2c4.4-7.6 11.4-7.6 15.8 0l5.4 9.8 12.8 23.3c3.5 7.2 3.5 15.7 0 22.9l-34.4 59.6c-4.4 7.6-11.5 12.4-19.6 13.1H46.5c-8.8 0-12.4-6.1-8-13.8l80.3-114.9z" fill="white"/>
+    </svg>
+  );
+}
+
 export function AllChainsIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
