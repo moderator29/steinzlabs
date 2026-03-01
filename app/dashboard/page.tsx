@@ -14,7 +14,6 @@ import SidebarMenu from '@/components/SidebarMenu';
 import PriceTicker from '@/components/PriceTicker';
 import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
-import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function Dashboard() {
@@ -64,7 +63,6 @@ export default function Dashboard() {
             <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
           </div>
           <div className="flex items-center gap-2">
-            <WalletConnectButton compact />
             <ThemeToggle />
             {user && (
               <button className="relative">
