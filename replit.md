@@ -94,7 +94,8 @@ app/api/
   - **Discover** — Project Discovery with search, category filters, project cards
   - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
   - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
-- `/dashboard/project-discovery` — Project grid with category filters and search
+- `/dashboard/wallet-page` — Non-custodial wallet (create/import mnemonic, send ETH, receive, add custom ERC-20 tokens, encrypted key storage)
+- `/dashboard/project-discovery` — Project grid with real CoinGecko data (>500K mcap), NAKA GO pinned, chain filters, token listing form
 - `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
 - `/dashboard/predictions` — Full predictions market with TradingView candlestick charts, YES/NO voting, pool sizes, payout calculator
 - `/dashboard/messages` — Discord/Telegram hybrid chat with channels, reactions, pinned messages
@@ -160,13 +161,19 @@ Configured in `.env.local`:
 - Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
 - Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656, URL: `/admin` (also accessible via sidebar menu). Features: hamburger sidebar with 12 sections (Overview, Market Data, Trading Suite, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Notifications, Game Stats, Settings). Builder Network + Funding Portal sections fetch real data from /api/builder-submissions. Admin can approve/reject builders and projects, approve milestones. Game Stats section shows HODL Runner leaderboard with delete controls.
+- Admin panel password: 195656, URL: `/admin` (hidden from sidebar). Features: hamburger sidebar with 13 sections (Overview, Market Data, Trading Suite, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Game Stats, Token Listings, Notifications, Settings). Overview shows platform stats from `/api/platform-stats`. Token Listings section shows submissions from `/api/project-listing` with approve/reject actions. Game Stats section shows HODL Runner leaderboard with delete controls.
 - Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
 - NAKA GO branding: Logo at `/public/nakago-logo.jpg` (Shiba Inu mascot), displayed in landing page footer with "Proudly Powered by NAKA GO" + Telegram link (https://t.me/NakaGoCult)
 - Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
 - Trading Suite: `/dashboard/trading-suite` — 7 tabs (Terminal, Trending, Scanner, Sniper, Pulse, Perps, LIVE). Real CoinGecko trending + market data, DexScreener new pairs, Fear & Greed index. TradingView chart view (click token → full Binance-style chart), CA lookup (paste contract → real price/liquidity/holders/security from DexScreener + GoPlus), bottom trader toolbar (Market/Alerts/Scan CA/Portfolio/Tools), enhanced LIVE section with full streamer guide + FAQ. APIs: `/api/trading-suite/route.ts` (30s cache), `/api/ca-lookup/route.ts` (DexScreener + GoPlus)
 - Social Trading: Functional hub with 3 tabs (Leaderboard, My Profile, Following). Trader cards with PnL%, win rate, followers, strategy tags. Copy trading with allocation settings. Profile creation stored in localStorage. Verified badge for top traders.
-- Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools → Discover → Play (HODL Runner with PLAY badge)
+- Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools (STEINZ Wallet NEW, Swap, VTX AI, Alerts, Pricing, Social, Copy, Security, Risk) → Discover → Play (HODL Runner with PLAY badge)
+- Non-custodial wallet: ethers@6.13.4, `/dashboard/wallet-page`, XOR+base64 encrypted key storage in localStorage, dispatches `steinz_wallet_changed` event for portfolio sync
+- VTX AI tiers: Free = 15 msgs/day (IP-tracked in-memory), Pro = unlimited, web search toggle, model: claude-sonnet-4-20250514
+- Context feed: History preserved (200 events), bookmarks in localStorage `steinz_bookmarks`, Avalanche chain tab
+- Project listing API: `/api/project-listing` (GET needs password 195656, POST public, PUT for approve/reject), in-memory storage
+- Platform stats API: `/api/platform-stats` — aggregates chains count, signal accuracy, volume from CoinGecko, active users, 5-min cache
+- Verified badge (new): `/public/verified-badge-new.png` (gold wavy checkmark)
 - Wallet Intelligence: Multi-chain support — ETH (Alchemy), SOL (Solana RPC), Base, Polygon, Avalanche (public RPCs). Chain selector in UI. Token balances only on Alchemy-supported chains.
 - Security Center (token-scanner): Multi-chain via GoPlus — ETH, BSC, Polygon, Solana, Base, Avalanche, Arbitrum. Chain selector in UI.
 - HODL Runner game: `/dashboard/hodl-runner` — canvas-based endless runner, global leaderboard at `/api/game-scores`

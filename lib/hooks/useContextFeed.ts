@@ -32,7 +32,7 @@ interface ContextEvent {
   sells24h?: number;
 }
 
-export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon';
+export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'avalanche' | 'bookmarks';
 
 const POLL_INTERVAL = 15000;
 const POLL_INTERVAL_HIDDEN = 60000;
@@ -62,7 +62,7 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
       if (currentChain.current !== chain) {
         currentChain.current = chain;
         seenIds.current.clear();
-        setEvents(newEvents.slice(0, 60));
+        setEvents(newEvents.slice(0, 200));
       } else {
         setEvents(prev => {
           const mergedMap = new Map<string, ContextEvent>();
@@ -70,7 +70,7 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
           prev.forEach(e => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
           const merged = Array.from(mergedMap.values());
           merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          return merged.slice(0, 80);
+          return merged.slice(0, 200);
         });
       }
 

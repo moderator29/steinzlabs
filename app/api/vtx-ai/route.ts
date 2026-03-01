@@ -1,4 +1,47 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+
+const FREE_TIER_LIMIT = 15;
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+function getRateLimitInfo(ip: string): { remaining: number; total: number; resetAt: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    const resetAt = now + 24 * 60 * 60 * 1000;
+    rateLimitStore.set(ip, { count: 0, resetAt });
+    return { remaining: FREE_TIER_LIMIT, total: FREE_TIER_LIMIT, resetAt };
+  }
+  return { remaining: Math.max(0, FREE_TIER_LIMIT - entry.count), total: FREE_TIER_LIMIT, resetAt: entry.resetAt };
+}
+
+function incrementUsage(ip: string): void {
+  const now = Date.now();
+  const entry = rateLimitStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(ip, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
+  } else {
+    entry.count += 1;
+  }
+}
+
+async function fetchWebSearch(query: string): Promise<string> {
+  try {
+    const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query + ' crypto')}&format=json&no_html=1&skip_disambig=1`);
+    if (!res.ok) return '';
+    const data = await res.json();
+    const results: string[] = [];
+    if (data.AbstractText) results.push(`Summary: ${data.AbstractText}`);
+    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+      for (const topic of data.RelatedTopics.slice(0, 5)) {
+        if (topic.Text) results.push(`- ${topic.Text}`);
+      }
+    }
+    return results.length > 0 ? `Web Search Results for "${query}":\n${results.join('\n')}` : '';
+  } catch {
+    return '';
+  }
+}
 
 async function fetchLiveMarketData(): Promise<string> {
   try {
@@ -294,10 +337,26 @@ When a user pastes what looks like a contract address (CA):
 
 export async function POST(request: Request) {
   try {
-    const { message, history } = await request.json();
+    const { message, history, tier } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    const headersList = await headers();
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || 'unknown';
+    const isPro = tier === 'pro';
+
+    if (!isPro) {
+      const rateInfo = getRateLimitInfo(ip);
+      if (rateInfo.remaining <= 0) {
+        return NextResponse.json({
+          error: 'Daily message limit reached. Upgrade to STEINZ Pro for unlimited messages.',
+          rateLimited: true,
+          tier: 'free',
+          usage: { used: rateInfo.total, limit: rateInfo.total, remaining: 0 },
+        }, { status: 429 });
+      }
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -305,7 +364,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
 
-    const walletDetected = detectWalletAddress(message);
+    const webSearchEnabled = message.includes('[WEB_SEARCH]');
+    const cleanMessage = message.replace('[WEB_SEARCH]', '').trim();
+    const walletDetected = detectWalletAddress(cleanMessage);
 
     const fetchTasks: Promise<string>[] = [
       fetchLiveMarketData(),
@@ -319,9 +380,14 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchWalletData(walletDetected.address, walletDetected.chain));
     }
 
+    if (webSearchEnabled) {
+      fetchTasks.push(fetchWebSearch(cleanMessage));
+    }
+
     const results = await Promise.all(fetchTasks);
     const [marketData, trending, news, fearGreed, gasPrice] = results;
     const walletData = walletDetected ? results[5] : '';
+    const webSearchData = webSearchEnabled ? results[walletDetected ? 6 : 5] : '';
 
     const liveDataSection = [
       marketData ? `LIVE MARKET DATA (updated just now):\n${marketData}` : '',
@@ -330,6 +396,7 @@ export async function POST(request: Request) {
       fearGreed || '',
       gasPrice || '',
       walletData || '',
+      webSearchData || '',
     ].filter(Boolean).join('\n\n');
 
     const systemPrompt = `You are VTX AI, the intelligent assistant built into STEINZ LABS — a crypto and on-chain intelligence platform.
@@ -395,7 +462,7 @@ Rules:
         });
       }
     }
-    messages.push({ role: 'user', content: message });
+    messages.push({ role: 'user', content: cleanMessage });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -421,10 +488,23 @@ Rules:
     const data = await response.json();
     const reply = data.content?.[0]?.text || 'No response generated';
 
+    if (!isPro) {
+      incrementUsage(ip);
+    }
+
+    const currentUsage = isPro ? null : getRateLimitInfo(ip);
+
     return NextResponse.json({
       reply,
       model: data.model,
       usage: data.usage,
+      tier: isPro ? 'pro' : 'free',
+      dailyUsage: isPro ? null : {
+        used: currentUsage ? currentUsage.total - currentUsage.remaining : 0,
+        limit: FREE_TIER_LIMIT,
+        remaining: currentUsage ? currentUsage.remaining : FREE_TIER_LIMIT,
+      },
+      webSearchUsed: webSearchEnabled,
     });
   } catch (error) {
     console.error('VTX AI error:', error);

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Eye, Heart, Share2, ExternalLink, Copy, X, Check } from 'lucide-react';
+import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark } from 'lucide-react';
 import { useContextFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
-import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AllChainsIcon } from './ChainIcons';
+import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import ViewProofModal from './ViewProofModal';
 
 interface EngagementData {
@@ -15,12 +15,18 @@ interface EngagementData {
   shared: boolean;
 }
 
+function BookmarkIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return <Bookmark className={className} />;
+}
+
 const CHAIN_TABS: { id: ChainFilter; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
   { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#00E5FF', gradient: 'from-[#00E5FF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
   { id: 'ethereum', label: 'Ethereum', icon: EthereumIcon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
   { id: 'bsc', label: 'BSC', icon: BscIcon, color: '#F0B90B', gradient: 'from-[#F0B90B] to-[#FCD535]' },
   { id: 'polygon', label: 'Polygon', icon: PolygonIcon, color: '#8247E5', gradient: 'from-[#8247E5] to-[#A76BFF]' },
+  { id: 'avalanche', label: 'Avalanche', icon: AvalancheIcon, color: '#E84142', gradient: 'from-[#E84142] to-[#FF6B6B]' },
+  { id: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, color: '#FBBF24', gradient: 'from-[#FBBF24] to-[#F59E0B]' },
 ];
 
 function getChainBadgeIcon(chain: string) {
@@ -29,6 +35,7 @@ function getChainBadgeIcon(chain: string) {
     case 'ethereum': return { Icon: EthereumIcon, color: '#627EEA', bg: '#627EEA15', label: 'ETH' };
     case 'bsc': return { Icon: BscIcon, color: '#F0B90B', bg: '#F0B90B15', label: 'BSC' };
     case 'polygon': return { Icon: PolygonIcon, color: '#8247E5', bg: '#8247E515', label: 'POLY' };
+    case 'avalanche': return { Icon: AvalancheIcon, color: '#E84142', bg: '#E8414215', label: 'AVAX' };
     default: return { Icon: AllChainsIcon, color: '#00E5FF', bg: '#00E5FF15', label: chain.toUpperCase().slice(0, 4) };
   }
 }
@@ -189,12 +196,38 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
 
 export default function ContextFeed() {
   const [activeChain, setActiveChain] = useState<ChainFilter>('all');
-  const { events, loading, refresh } = useContextFeed(20, activeChain);
+  const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
+  const { events, loading, refresh } = useContextFeed(20, feedChain);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [shareEvent, setShareEvent] = useState<any>(null);
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
+  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('steinz_bookmarks');
+      if (stored) setBookmarks(new Set(JSON.parse(stored)));
+    } catch {}
+  }, []);
+
+  const toggleBookmark = useCallback((eventId: string) => {
+    setBookmarks(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      try { localStorage.setItem('steinz_bookmarks', JSON.stringify(Array.from(next))); } catch {}
+      return next;
+    });
+  }, []);
+
+  const displayEvents = activeChain === 'bookmarks'
+    ? events.filter(e => bookmarks.has(e.id))
+    : events;
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];
@@ -336,7 +369,7 @@ export default function ContextFeed() {
             />
           </div>
           <span className="text-xs text-gray-400">
-            Live — {events.length} events
+            Live — {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}
           </span>
         </div>
         <button
@@ -363,20 +396,30 @@ export default function ContextFeed() {
           <p className="text-sm font-semibold mb-1">Loading {activeTab.label} Feed...</p>
           <p className="text-xs text-gray-400">Fetching real-time on-chain data</p>
         </div>
-      ) : events.length === 0 ? (
+      ) : displayEvents.length === 0 ? (
         <div className="text-center py-16">
-          <Eye className="w-8 h-8 text-gray-500 mx-auto mb-3" />
-          <p className="text-sm font-semibold mb-1">No Events on {activeTab.label}</p>
-          <p className="text-xs text-gray-400 mb-4">Waiting for activity...</p>
-          <button
-            onClick={handleRefresh}
-            className={`px-5 py-2 bg-gradient-to-r ${activeTab.gradient} rounded-lg text-xs font-semibold`}
-          >
-            Refresh
-          </button>
+          {activeChain === 'bookmarks' ? (
+            <>
+              <Bookmark className="w-8 h-8 text-gray-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold mb-1">No Bookmarks Yet</p>
+              <p className="text-xs text-gray-400 mb-4">Bookmark events to save them here</p>
+            </>
+          ) : (
+            <>
+              <Eye className="w-8 h-8 text-gray-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold mb-1">No Events on {activeTab.label}</p>
+              <p className="text-xs text-gray-400 mb-4">Waiting for activity...</p>
+              <button
+                onClick={handleRefresh}
+                className={`px-5 py-2 bg-gradient-to-r ${activeTab.gradient} rounded-lg text-xs font-semibold`}
+              >
+                Refresh
+              </button>
+            </>
+          )}
         </div>
       ) : (
-        events.map((event, i) => {
+        displayEvents.map((event, i) => {
           const isPositive = event.sentiment === 'BULLISH';
           const isNegative = event.sentiment === 'BEARISH';
           const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
@@ -413,9 +456,21 @@ export default function ContextFeed() {
                     </span>
                   )}
                 </div>
-                <span className="text-gray-400 text-xs flex-shrink-0 ml-2">
-                  {new Date(event.timestamp).toLocaleTimeString()}
-                </span>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <button
+                    onClick={() => toggleBookmark(event.id)}
+                    className={`transition-all duration-200 ${
+                      bookmarks.has(event.id)
+                        ? 'text-[#FBBF24]'
+                        : 'text-gray-500 hover:text-[#FBBF24]'
+                    }`}
+                  >
+                    <Bookmark className={`w-4 h-4 ${bookmarks.has(event.id) ? 'fill-current' : ''}`} />
+                  </button>
+                  <span className="text-gray-400 text-xs">
+                    {new Date(event.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
 
               <h3 className="text-base font-bold mb-2 break-words line-clamp-2">{event.title}</h3>

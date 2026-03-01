@@ -182,12 +182,26 @@ export default function LandingPage() {
 
   const chains = ["Solana", "Ethereum", "BNB", "Polygon", "Avalanche", "Base", "Arbitrum", "Optimism", "Fantom", "Bitcoin", "Tron"];
 
-  const stats = [
+  const [stats, setStats] = useState([
     { value: "12+", label: "Chains" },
     { value: "89%", label: "Signal Accuracy" },
     { value: "$2.4B", label: "Volume Tracked" },
     { value: "50K+", label: "Active Users" },
-  ];
+  ]);
+
+  useEffect(() => {
+    fetch('/api/platform-stats')
+      .then(res => res.json())
+      .then(data => {
+        setStats([
+          { value: `${data.chains}+`, label: "Chains" },
+          { value: `${data.signalAccuracy}%`, label: "Signal Accuracy" },
+          { value: data.volumeTracked, label: "Volume Tracked" },
+          { value: data.activeUsers, label: "Active Users" },
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   const howItWorks = [
     { step: "01", icon: Globe, title: "Connect", desc: "Link your wallet or enter any address. We read public data only.", color: "#00E5FF" },
