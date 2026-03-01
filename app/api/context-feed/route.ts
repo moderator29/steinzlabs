@@ -59,6 +59,55 @@ const priceCache: { eth: number; sol: number; bnb: number; matic: number; avax: 
 const responseCache: Record<string, { data: WhaleEvent[]; ts: number; sources: string[] }> = {};
 const CACHE_TTL = 5000;
 
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const eventStore: Map<string, WhaleEvent & { fetchedAt: number }> = new Map();
+
+function storeEvents(events: WhaleEvent[]): void {
+  const now = Date.now();
+  events.forEach(event => {
+    if (!eventStore.has(event.id)) {
+      eventStore.set(event.id, { ...event, fetchedAt: now });
+    }
+  });
+  const keysToDelete: string[] = [];
+  eventStore.forEach((stored, id) => {
+    if (now - stored.fetchedAt > TWENTY_FOUR_HOURS * 3) {
+      keysToDelete.push(id);
+    }
+  });
+  keysToDelete.forEach(id => eventStore.delete(id));
+}
+
+function getLiveEvents(chain: string): WhaleEvent[] {
+  const now = Date.now();
+  const live: WhaleEvent[] = [];
+  eventStore.forEach(stored => {
+    if (now - stored.fetchedAt <= TWENTY_FOUR_HOURS) {
+      if (chain === 'all' || stored.chain === chain) {
+        const { fetchedAt, ...event } = stored;
+        live.push(event);
+      }
+    }
+  });
+  live.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return live;
+}
+
+function getArchivedEvents(chain: string): WhaleEvent[] {
+  const now = Date.now();
+  const archived: WhaleEvent[] = [];
+  eventStore.forEach(stored => {
+    if (now - stored.fetchedAt > TWENTY_FOUR_HOURS && now - stored.fetchedAt <= TWENTY_FOUR_HOURS * 3) {
+      if (chain === 'all' || stored.chain === chain) {
+        const { fetchedAt, ...event } = stored;
+        archived.push(event);
+      }
+    }
+  });
+  archived.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return archived;
+}
+
 async function fetchPrices(): Promise<void> {
   if (Date.now() - priceCache.ts < 30000) return;
   try {
@@ -510,18 +559,36 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const rawLimit = parseInt(searchParams.get('limit') || '50');
-    const limit = Math.min(Math.max(rawLimit, 1), 100);
+    const limit = Math.min(Math.max(rawLimit, 1), 200);
     const chain = searchParams.get('chain') || 'all';
+    const archived = searchParams.get('archived') === 'true';
+
+    if (archived) {
+      const archivedEvents = getArchivedEvents(chain);
+      return NextResponse.json({
+        events: archivedEvents.slice(0, limit),
+        total: archivedEvents.length,
+        timestamp: new Date().toISOString(),
+        source: 'archive',
+        chain,
+        archived: true,
+      }, {
+        headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+      });
+    }
 
     const cached = responseCache[chain];
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      storeEvents(cached.data);
+      const liveEvents = getLiveEvents(chain);
       return NextResponse.json({
-        events: cached.data.slice(0, limit),
-        total: cached.data.length,
+        events: liveEvents.slice(0, limit),
+        total: liveEvents.length,
         timestamp: new Date().toISOString(),
         source: cached.sources.join('+'),
         chain,
         cached: true,
+        hasArchive: getArchivedEvents(chain).length > 0,
       }, {
         headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
       });
@@ -600,12 +667,17 @@ export async function GET(request: Request) {
 
     responseCache[chain] = { data: events, ts: Date.now(), sources };
 
+    storeEvents(events);
+
+    const liveEvents = getLiveEvents(chain);
+
     return NextResponse.json({
-      events: events.slice(0, limit),
-      total: events.length,
+      events: liveEvents.slice(0, limit),
+      total: liveEvents.length,
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,
+      hasArchive: getArchivedEvents(chain).length > 0,
     }, {
       headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
     });
