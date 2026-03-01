@@ -1,7 +1,8 @@
 'use client';
 
-import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, MessageSquare, Link2, Heart, ShoppingCart } from 'lucide-react';
+import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
+import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from './TradingViewChart';
 
 interface ViewProofEvent {
   id: string;
@@ -49,9 +50,12 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
 
   const chainId = event.chain || 'solana';
   const hasPair = !!event.pairAddress;
-  const chartUrl = hasPair
+  const tvSymbol = getTradingViewSymbol(event.tokenSymbol || '', event.chain);
+  const useTradingView = !!tvSymbol && isKnownTradingViewSymbol(event.tokenSymbol || '');
+  const dexChartUrl = hasPair
     ? `https://dexscreener.com/${chainId}/${event.pairAddress}?embed=1&theme=dark&trades=0&info=0`
     : null;
+  const hasChart = useTradingView || !!dexChartUrl;
 
   const dexPageUrl = event.dexUrl || (hasPair ? `https://dexscreener.com/${chainId}/${event.pairAddress}` : null);
 
@@ -145,22 +149,26 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
             )}
           </div>
 
-          {chartUrl && (
+          {hasChart && (
             <div className="glass rounded-xl border border-white/10 overflow-hidden">
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <h3 className="font-bold text-sm">Live Chart</h3>
-                <span className="text-[10px] text-gray-500">{chainId} · DexScreener</span>
+                <span className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : chainId} · {useTradingView ? 'TradingView' : 'DexScreener'}</span>
               </div>
-              <div className="w-full" style={{ height: '320px' }}>
-                <iframe
-                  src={chartUrl}
-                  className="w-full h-full border-0"
-                  title="DexScreener Chart"
-                  allow="clipboard-write"
-                  loading="lazy"
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                />
-              </div>
+              {useTradingView && tvSymbol ? (
+                <TradingViewChart symbol={tvSymbol} height={350} />
+              ) : dexChartUrl ? (
+                <div className="w-full" style={{ height: '320px' }}>
+                  <iframe
+                    src={dexChartUrl}
+                    className="w-full h-full border-0"
+                    title="DexScreener Chart"
+                    allow="clipboard-write"
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -282,7 +290,6 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
 
           <div className="flex items-center justify-center gap-6 text-[10px] text-gray-500 pb-2">
             <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {(event.views ?? 0).toLocaleString()}</span>
-            <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {(event.comments ?? 0).toLocaleString()}</span>
             <span className="flex items-center gap-1"><Link2 className="w-3 h-3" /> {(event.shares ?? 0).toLocaleString()}</span>
             <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {(event.likes ?? 0).toLocaleString()}</span>
           </div>

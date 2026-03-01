@@ -7,6 +7,7 @@ import {
   AlertTriangle, Zap, Trophy, X
 } from 'lucide-react';
 import Link from 'next/link';
+import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 
 interface Prediction {
   id: string;
@@ -241,9 +242,7 @@ function PredictionModal({
     : prediction.noPercent > 70 ? 'Low' : prediction.noPercent > 40 ? 'Medium' : 'High';
   const riskColor = riskLevel === 'Low' ? '#10B981' : riskLevel === 'Medium' ? '#F59E0B' : '#EF4444';
 
-  const chartUrl = prediction.chartPairAddress && prediction.chartChainId
-    ? `https://dexscreener.com/${prediction.chartChainId}/${prediction.chartPairAddress}?embed=1&theme=dark&trades=0&info=0`
-    : null;
+  const tvSymbol = getTradingViewSymbol(prediction.tokenSymbol, prediction.chain);
 
   const handleConfirm = async () => {
     if (numAmount < 10) return;
@@ -301,20 +300,11 @@ function PredictionModal({
             <p className="text-sm font-semibold">{prediction.question}</p>
           </div>
 
-          {chartUrl && (
+          {tvSymbol ? (
             <div className="glass rounded-xl border border-white/10 overflow-hidden">
-              <div className="w-full" style={{ height: '180px' }}>
-                <iframe
-                  src={chartUrl}
-                  className="w-full h-full border-0"
-                  title="Chart"
-                  allow="clipboard-write"
-                  loading="lazy"
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                />
-              </div>
+              <TradingViewChart symbol={tvSymbol} height={250} />
             </div>
-          )}
+          ) : null}
 
           <div>
             <label className="text-xs text-gray-400 mb-2 block">Amount (USD)</label>
@@ -441,15 +431,11 @@ function PredictionCard({
   onPredict: (side: 'yes' | 'no') => void;
 }) {
   const catColor = CATEGORY_COLORS[prediction.category] || { bg: 'bg-gray-500/20', text: 'text-gray-400' };
-  const chartUrl = prediction.chartPairAddress && prediction.chartChainId
-    ? `https://dexscreener.com/${prediction.chartChainId}/${prediction.chartPairAddress}?embed=1&theme=dark&trades=0&info=0`
-    : null;
-
-  const cgChartUrl: string | null = null;
+  const tvSymbol = getTradingViewSymbol(prediction.tokenSymbol, prediction.chain);
 
   return (
-    <div className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="glass rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${catColor.bg} ${catColor.text}`}>
             {CATEGORY_LABELS[prediction.category] || prediction.category}
@@ -459,43 +445,33 @@ function PredictionCard({
         <CountdownBadge closeDate={prediction.closeDate} />
       </div>
 
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2.5 mb-3">
         <TokenIcon src={prediction.tokenIcon} symbol={prediction.tokenSymbol} />
         <h3 className="text-sm font-bold flex-1">{prediction.question}</h3>
       </div>
 
-      {chartUrl ? (
-        <div className="rounded-lg overflow-hidden border border-white/5 mb-3" style={{ height: '160px' }}>
-          <iframe
-            src={chartUrl}
-            className="w-full h-full border-0"
-            title={`${prediction.tokenSymbol} chart`}
-            allow="clipboard-write"
-            loading="lazy"
-            sandbox="allow-scripts allow-same-origin allow-popups"
-          />
+      {tvSymbol ? (
+        <div className="rounded-lg overflow-hidden border border-white/5 mb-3">
+          <TradingViewChart symbol={tvSymbol} height={280} />
         </div>
       ) : (
-        <div className="glass rounded-lg p-3 mb-3 border border-white/5">
-          {cgChartUrl && (
-            <div className="mb-2 opacity-60">
-              <img src={cgChartUrl} alt="sparkline" className="w-full h-10 object-contain" />
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-gray-500">Current Price</div>
-              <div className="text-sm font-bold font-mono">{formatPrice(prediction.currentPrice)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] text-gray-500">24h Change</div>
-              <div className={`text-sm font-bold ${prediction.priceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                {prediction.priceChange24h >= 0 ? '+' : ''}{prediction.priceChange24h.toFixed(1)}%
-              </div>
-            </div>
-          </div>
+        <div className="glass rounded-lg p-4 mb-3 border border-white/5 flex items-center justify-center" style={{ height: '120px' }}>
+          <span className="text-xs text-gray-500">Chart not available for {prediction.tokenSymbol}</span>
         </div>
       )}
+
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-[10px] text-gray-500">Current Price</div>
+          <div className="text-sm font-bold font-mono">{formatPrice(prediction.currentPrice)}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] text-gray-500">24h Change</div>
+          <div className={`text-sm font-bold ${prediction.priceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {prediction.priceChange24h >= 0 ? '+' : ''}{prediction.priceChange24h.toFixed(1)}%
+          </div>
+        </div>
+      </div>
 
       <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2">
         <span>Current: {formatPrice(prediction.currentPrice)}</span>

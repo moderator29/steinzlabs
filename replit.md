@@ -12,7 +12,7 @@ Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain 
 - **Auth/Database**: Supabase (direct client via @supabase/supabase-js)
 - **Blockchain**: Alchemy SDK
 - **AI**: Anthropic AI SDK
-- **Charts**: Recharts, Lightweight Charts
+- **Charts**: TradingView Widget (candlestick charts for all tokens, auto-maps to BINANCE/BYBIT exchanges), Recharts, Lightweight Charts
 - **UI**: Lucide React icons, Framer Motion animations, Sonner toasts
 - **Utilities**: clsx, tailwind-merge, class-variance-authority, date-fns, axios, crypto-js, sharp, image-hash, string-similarity
 
@@ -49,7 +49,8 @@ app/
     └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
 ├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs (All Chains, Solana, Ethereum, BSC, Polygon), gradient tab styling, chain badges, live indicator, 5s auto-refresh
-├── ViewProofModal.tsx       # On-chain proof modal (DexScreener embedded live chart, buy button, trust score, voting)
+├── TradingViewChart.tsx     # TradingView candlestick widget with SYMBOL_MAP (60+ tokens), getTradingViewSymbol(), isKnownTradingViewSymbol()
+├── ViewProofModal.tsx       # On-chain proof modal (TradingView chart + DexScreener fallback, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
 ├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
 ├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
@@ -57,7 +58,7 @@ components/
 ├── DiscoverTab.tsx          # Project Discovery tab (search, filters, project cards)
 ├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect via useWallet hook)
 ├── WalletConnectButton.tsx  # Reusable wallet connect/disconnect button with dropdown (MetaMask + Phantom, mobile deep links)
-├── ProfileTab.tsx           # Profile tab (stats, settings, achievements, uses useWallet hook)
+├── ProfileTab.tsx           # Profile tab (stats, settings, achievements, notification center, uses useWallet hook)
 └── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover)
 lib/
 ├── supabase.ts              # Supabase client + admin (service role) client
@@ -91,16 +92,20 @@ app/api/
   - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
 - `/dashboard/project-discovery` — Project grid with category filters and search
 - `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
-- `/dashboard/predictions` — Full predictions market with YES/NO voting, pool sizes, payout calculator
+- `/dashboard/predictions` — Full predictions market with TradingView candlestick charts, YES/NO voting, pool sizes, payout calculator
 - `/dashboard/messages` — Discord/Telegram hybrid chat with channels, reactions, pinned messages
 - `/dashboard/social-trading` — Top traders, copy trading, leaderboard, following
 - `/dashboard/portfolio` — Wallet holdings, token balances, P&L tracking
 - `/dashboard/profile` — Extended profile with Activity, Settings (notifications/preferences/privacy), Achievements
-- `/admin` — Password-protected admin panel (195656) with:
-  - Overview stats (Pending/Approved/Rejected/Active)
-  - Submission list with AI risk scores and automated checks
-  - Detail review with 6 tabs: Project Info, Team, Technical, Checks, AI Analysis, Actions
-  - Quick Approve / Reject / Request More Info actions
+- `/admin` — Password-protected admin panel (195656, hidden from sidebar) with 7 tabs:
+  - Platform Overview: user stats, system health indicators, activity preview
+  - Context Feed Stats: engagement metrics, trending hashtags
+  - Predictions Market: active predictions, resolved, staked value, leaderboard
+  - Builder Funding: submission review workflow with approve/reject actions
+  - Top Tokens: CoinGecko top 10 with prices/volumes
+  - Recent Activity: typed event feed (prediction, feed, funding, user, alert)
+  - Quick Actions: force refresh, clear cache, review flagged content, send alerts
+- `/s/[id]` — Short share link page (fetches from /api/share?id=shortId)
 
 ## Design System
 - **Background**: #0A0E1A (dark navy)
@@ -108,7 +113,7 @@ app/api/
 - **Accent Colors**: Cyan (#00E5FF), Purple (#7C3AED)
 - **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
 - **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
-- **Theme Modes**: Dark (default), Light, Bingo — toggled via ThemeToggle component, stored in localStorage, applied via `[data-theme]` CSS selectors
+- **Theme Modes**: Dark, Light, Bingo (default) — toggled via ThemeToggle component, stored in localStorage as `steinz_theme`, applied via `[data-theme]` CSS selectors
 - **CSS Utilities**: `.glass`, `.glass-card-enhanced`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.aurora-bg`, `.morph-blob`, `.shimmer-btn`, `.gradient-border`, `.holographic-border`, `.neon-text`, `.neon-text-subtle`, `.cyber-line`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.hero-title`, `.feature-card`, `.security-card`, `.security-icon-glow`, `.section-divider`, `.stat-card`, `.stat-card-glow`, `.step-card`, `.data-stream-line`, `.pulse-dot`, `.depth-shadow`, `.radial-spotlight`, `.gradient-flow-bg`, `.dashboard-card-enter`, `.bottom-nav-item`, `.tab-indicator`, `.animate-ripple`
 - **Animations**: `animate-float`, `animate-float-subtle`, `animate-float-3d`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-glow-pulse`, `animate-spin-slow`, `animate-slide-up`, `animate-slide-in-left`, `animate-slide-in-right`, `animate-reveal-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`, `data-stream`, `ripple`, `gradient-flow`, `border-trace`
 - **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
@@ -139,4 +144,6 @@ Configured in `.env.local`:
 - Frontend only for now — will be connected to real data/engineering later
 - Landing page uses CSS-only entrance animations (no React state transitions)
 - Admin panel password: 195656
+- Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
+- TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
 - Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.
