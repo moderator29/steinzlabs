@@ -160,7 +160,9 @@ Configured in `.env.local`:
 - Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
 - Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656, URL: `/admin` (also linked in sidebar menu under "Admin" section)
+- Admin panel password: 195656, URL: `/admin` (hidden from nav, direct URL only). Features: hamburger sidebar with 10 sections (Overview, Market Data, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Notifications, Settings). Pulls real data from CoinGecko, predictions API, builder-submissions API, whale-tracker API.
+- Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
+- Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
 - Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
 - TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
 - Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.
