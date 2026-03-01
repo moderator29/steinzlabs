@@ -36,11 +36,15 @@ export async function POST(request: Request) {
         engagement.likes += 1;
         userActions.add(actionKey);
       }
-    } else if (action === 'share') {
-      if (!userActions.has(actionKey)) {
-        engagement.shares += 1;
-        userActions.add(actionKey);
+    } else if (action === 'unlike') {
+      const likeKey = `${eventId}:${userId || 'anon'}:like`;
+      if (userActions.has(likeKey)) {
+        engagement.likes = Math.max(0, engagement.likes - 1);
+        userActions.delete(likeKey);
       }
+    } else if (action === 'share') {
+      engagement.shares += 1;
+      userActions.add(actionKey);
     }
 
     return NextResponse.json(engagement);

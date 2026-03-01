@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Eye, MessageSquare, Link2, Heart, RefreshCw, Zap, Globe, Hexagon, Triangle, Circle } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Eye, MessageSquare, Heart, Share2, ExternalLink, Copy, X, Check } from 'lucide-react';
 import { useContextFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
+import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AllChainsIcon } from './ChainIcons';
 import ViewProofModal from './ViewProofModal';
 
 interface EngagementData {
@@ -14,22 +15,176 @@ interface EngagementData {
   shared: boolean;
 }
 
-const CHAIN_TABS: { id: ChainFilter; label: string; icon: typeof Globe; color: string; gradient: string }[] = [
-  { id: 'all', label: 'All Chains', icon: Globe, color: '#00E5FF', gradient: 'from-[#00E5FF] to-[#7C3AED]' },
-  { id: 'solana', label: 'Solana', icon: Zap, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
-  { id: 'ethereum', label: 'Ethereum', icon: Hexagon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
-  { id: 'bsc', label: 'BSC', icon: Triangle, color: '#F0B90B', gradient: 'from-[#F0B90B] to-[#FCD535]' },
-  { id: 'polygon', label: 'Polygon', icon: Circle, color: '#8247E5', gradient: 'from-[#8247E5] to-[#A76BFF]' },
+const CHAIN_TABS: { id: ChainFilter; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
+  { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#00E5FF', gradient: 'from-[#00E5FF] to-[#7C3AED]' },
+  { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
+  { id: 'ethereum', label: 'Ethereum', icon: EthereumIcon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
+  { id: 'bsc', label: 'BSC', icon: BscIcon, color: '#F0B90B', gradient: 'from-[#F0B90B] to-[#FCD535]' },
+  { id: 'polygon', label: 'Polygon', icon: PolygonIcon, color: '#8247E5', gradient: 'from-[#8247E5] to-[#A76BFF]' },
 ];
 
-function getChainBadge(chain: string): { color: string; bg: string; label: string } {
+function getChainBadgeIcon(chain: string) {
   switch (chain) {
-    case 'solana': return { color: '#14F195', bg: '#14F19515', label: 'SOL' };
-    case 'ethereum': return { color: '#627EEA', bg: '#627EEA15', label: 'ETH' };
-    case 'bsc': return { color: '#F0B90B', bg: '#F0B90B15', label: 'BSC' };
-    case 'polygon': return { color: '#8247E5', bg: '#8247E515', label: 'POLY' };
-    default: return { color: '#00E5FF', bg: '#00E5FF15', label: chain.toUpperCase().slice(0, 4) };
+    case 'solana': return { Icon: SolanaIcon, color: '#14F195', bg: '#14F19515', label: 'SOL' };
+    case 'ethereum': return { Icon: EthereumIcon, color: '#627EEA', bg: '#627EEA15', label: 'ETH' };
+    case 'bsc': return { Icon: BscIcon, color: '#F0B90B', bg: '#F0B90B15', label: 'BSC' };
+    case 'polygon': return { Icon: PolygonIcon, color: '#8247E5', bg: '#8247E515', label: 'POLY' };
+    default: return { Icon: AllChainsIcon, color: '#00E5FF', bg: '#00E5FF15', label: chain.toUpperCase().slice(0, 4) };
   }
+}
+
+function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
+  return (
+    <svg
+      className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      <polyline points="21 3 21 9 15 9" />
+    </svg>
+  );
+}
+
+function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => void; onShared: () => void }) {
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareText, setShareText] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [generating, setGenerating] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventId: event.id,
+        title: event.title,
+        summary: event.summary,
+        chain: event.chain,
+        tokenSymbol: event.tokenSymbol || '',
+        platform: event.platform || '',
+      }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setShareUrl(data.shareUrl || '');
+        setShareText(data.shareText || '');
+        setGenerating(false);
+      })
+      .catch(() => setGenerating(false));
+  }, [event]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      onShared();
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const shareTwitter = () => {
+    const text = encodeURIComponent(`${event.title}\n\nPowered by @SteinzLabs\n${shareUrl}`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    onShared();
+  };
+
+  const shareTelegram = () => {
+    const text = encodeURIComponent(shareText);
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${text}`, '_blank');
+    onShared();
+  };
+
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(shareText);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    onShared();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-sm bg-[#111827] rounded-t-2xl sm:rounded-2xl border border-white/10 p-5 animate-slide-up"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white">Share this event</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {generating ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="w-5 h-5 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="glass rounded-xl p-3 mb-4 border border-white/5">
+              <p className="text-xs text-gray-300 line-clamp-2 mb-2">{event.title}</p>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 bg-transparent text-xs text-gray-400 font-mono truncate outline-none"
+                />
+                <button
+                  onClick={copyLink}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    copied
+                      ? 'bg-[#10B981]/20 text-[#10B981]'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={shareTwitter}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 hover:bg-[#1DA1F2]/10 border border-white/5 hover:border-[#1DA1F2]/30 transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                <span className="text-xs text-gray-400">X / Twitter</span>
+              </button>
+
+              <button
+                onClick={shareTelegram}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 hover:bg-[#0088cc]/10 border border-white/5 hover:border-[#0088cc]/30 transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                <span className="text-xs text-gray-400">Telegram</span>
+              </button>
+
+              <button
+                onClick={shareWhatsApp}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 hover:bg-[#25D366]/10 border border-white/5 hover:border-[#25D366]/30 transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+                </svg>
+                <span className="text-xs text-gray-400">WhatsApp</span>
+              </button>
+            </div>
+
+            <p className="text-center text-[10px] text-gray-600 mt-4">
+              Powered by Steinz Labs
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function ContextFeed() {
@@ -37,6 +192,9 @@ export default function ContextFeed() {
   const { events, loading, refresh } = useContextFeed(20, activeChain);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const [shareEvent, setShareEvent] = useState<any>(null);
+  const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];
@@ -79,30 +237,42 @@ export default function ContextFeed() {
     });
   }, [events]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setTimeout(() => setRefreshing(false), 600);
+  };
+
   const handleLike = async (eventId: string) => {
     const eng = engagement[eventId];
     if (!eng) return;
 
     const newLiked = !eng.liked;
+
+    setLikeAnimations(prev => ({ ...prev, [eventId]: true }));
+    setTimeout(() => setLikeAnimations(prev => ({ ...prev, [eventId]: false })), 400);
+
     setEngagement(prev => ({
       ...prev,
       [eventId]: {
         ...eng,
-        likes: newLiked ? eng.likes + 1 : eng.likes - 1,
+        likes: newLiked ? eng.likes + 1 : Math.max(0, eng.likes - 1),
         liked: newLiked,
       }
     }));
 
-    if (newLiked) {
-      fetch('/api/engagement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, action: 'like' })
-      }).catch(() => {});
-    }
+    fetch('/api/engagement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, action: newLiked ? 'like' : 'unlike' })
+    }).catch(() => {});
   };
 
-  const handleShare = async (eventId: string) => {
+  const handleShare = (event: any) => {
+    setShareEvent(event);
+  };
+
+  const onShareComplete = (eventId: string) => {
     const eng = engagement[eventId];
     if (!eng || eng.shared) return;
 
@@ -137,7 +307,7 @@ export default function ContextFeed() {
               }`}
               style={isActive ? { boxShadow: `0 0 12px ${tab.color}40` } : {}}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-4 h-4" />
               {tab.label}
             </button>
           );
@@ -146,20 +316,26 @@ export default function ContextFeed() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className="w-2 h-2 rounded-full animate-pulse"
-            style={{ backgroundColor: activeTab.color }}
-          />
+          <div className="relative">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: activeTab.color }}
+            />
+            <div
+              className="absolute inset-0 w-2 h-2 rounded-full animate-ping opacity-75"
+              style={{ backgroundColor: activeTab.color }}
+            />
+          </div>
           <span className="text-xs text-gray-400">
             Live — {events.length} events
           </span>
         </div>
         <button
-          onClick={refresh}
-          className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+          onClick={handleRefresh}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#00E5FF] hover:bg-white/5 transition-all"
         >
-          <RefreshCw className="w-3 h-3" />
-          Refresh
+          <RefreshIcon spinning={refreshing} />
+          <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
@@ -184,7 +360,7 @@ export default function ContextFeed() {
           <p className="text-sm font-semibold mb-1">No Events on {activeTab.label}</p>
           <p className="text-xs text-gray-400 mb-4">Waiting for activity...</p>
           <button
-            onClick={refresh}
+            onClick={handleRefresh}
             className={`px-5 py-2 bg-gradient-to-r ${activeTab.gradient} rounded-lg text-xs font-semibold`}
           >
             Refresh
@@ -196,7 +372,8 @@ export default function ContextFeed() {
           const isNegative = event.sentiment === 'BEARISH';
           const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
           const eng = engagement[event.id] || { views: 0, comments: 0, shares: 0, likes: 0, liked: false, shared: false };
-          const chainBadge = getChainBadge(event.chain);
+          const chainBadge = getChainBadgeIcon(event.chain);
+          const ChainBadgeIcon = chainBadge.Icon;
 
           return (
             <div
@@ -215,9 +392,10 @@ export default function ContextFeed() {
                     {event.sentiment}
                   </span>
                   <span
-                    className="px-2 py-0.5 rounded text-xs font-bold flex-shrink-0"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0"
                     style={{ backgroundColor: chainBadge.bg, color: chainBadge.color }}
                   >
+                    <ChainBadgeIcon className="w-3 h-3" />
                     {chainBadge.label}
                   </span>
                   {event.platform && (
@@ -261,7 +439,7 @@ export default function ContextFeed() {
                 <div className="flex items-center gap-2">
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                     <div
-                      className="h-1.5 rounded-full"
+                      className="h-1.5 rounded-full transition-all duration-500"
                       style={{
                         width: `${event.trustScore}%`,
                         backgroundColor: event.trustScore > 70 ? '#10B981' : event.trustScore > 40 ? '#F59E0B' : '#EF4444'
@@ -289,7 +467,7 @@ export default function ContextFeed() {
                 </button>
               </div>
 
-              <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
                 </span>
@@ -297,21 +475,45 @@ export default function ContextFeed() {
                   <MessageSquare className="w-3.5 h-3.5" /> {eng.comments.toLocaleString()}
                 </span>
                 <button
-                  onClick={() => handleShare(event.id)}
-                  className={`flex items-center gap-1.5 hover:text-[#00E5FF] transition-colors ${eng.shared ? 'text-[#00E5FF]' : ''}`}
+                  onClick={() => handleShare(event)}
+                  className={`flex items-center gap-1.5 transition-all ${
+                    eng.shared
+                      ? 'text-[#00E5FF]'
+                      : 'hover:text-[#00E5FF]'
+                  }`}
                 >
-                  <Link2 className="w-3.5 h-3.5" /> {eng.shares.toLocaleString()}
+                  <Share2 className="w-3.5 h-3.5" /> {eng.shares.toLocaleString()}
                 </button>
                 <button
                   onClick={() => handleLike(event.id)}
-                  className={`flex items-center gap-1.5 hover:text-[#EF4444] transition-colors ${eng.liked ? 'text-[#EF4444]' : ''}`}
+                  className={`flex items-center gap-1.5 transition-all ${
+                    eng.liked
+                      ? 'text-[#EF4444]'
+                      : 'hover:text-[#EF4444]'
+                  }`}
                 >
-                  <Heart className={`w-3.5 h-3.5 ${eng.liked ? 'fill-current' : ''}`} /> {eng.likes.toLocaleString()}
+                  <Heart
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      eng.liked ? 'fill-current' : ''
+                    } ${likeAnimations[event.id] ? 'scale-125' : 'scale-100'}`}
+                  />
+                  {eng.likes.toLocaleString()}
                 </button>
               </div>
             </div>
           );
         })
+      )}
+
+      {shareEvent && (
+        <SharePopup
+          event={shareEvent}
+          onClose={() => setShareEvent(null)}
+          onShared={() => {
+            onShareComplete(shareEvent.id);
+            setShareEvent(null);
+          }}
+        />
       )}
 
       {selectedEvent && (

@@ -1,0 +1,225 @@
+BUILD REAL PREDICTIONS MARKET - LIKE POLYMARKET BUT FOR ANY COIN
+
+Create app/dashboard/predictions/page.tsx
+
+CORE CONCEPT:
+Users PAY to enter predictions about trending coins. Winners split the pool.
+
+PREDICTION TYPES:
+- Market cap predictions: "Will [COIN] hit 200K mcap by [date]?"
+- Price predictions: "Will [COIN] reach $0.01 by [date]?"
+- Volume predictions: "Will [COIN] hit $1M volume in 24h?"
+- Launch success: "Will [NEW TOKEN] survive 7 days?"
+- Holder growth: "Will [COIN] reach 10K holders by [date]?"
+
+PREDICTION SOURCES (Auto-generate from real data):
+1. Pull trending coins from CoinGecko (top 100 gainers/losers)
+2. Pull new launches from Pump.fun
+3. Pull new listings from Helius/Alchemy
+4. Create predictions based on current metrics + realistic targets
+
+PREDICTION CARD DESIGN:
+
+TOP SECTION:
+- Category badge: "Market Cap" | "Price Target" | "New Launch"
+- Countdown: "Closes in 4d 18h 32m" (yellow if <24h, red if <1h)
+- Token logo (from CoinGecko or Pump.fun)
+
+QUESTION:
+Large, bold: "Will BONK reach $500M market cap by March 15, 2025?"
+
+TRADINGVIEW CHART (CRITICAL):
+- Embedded TradingView widget showing THIS token's price
+- Symbol: Dynamic based on token (BINANCE:BONKUSDT, RAYDIUM:BONK/SOL, etc.)
+- Interval: 1 hour
+- Theme: Dark
+- Height: 400px
+- Shows current price, 24h change, volume
+- This is the MAIN feature - users see the chart BEFORE predicting
+
+CURRENT STATS:
+- Current Market Cap: $342M (live from CoinGecko)
+- Target Market Cap: $500M
+- Progress: 68% (visual bar)
+- Current Price: $0.0000234
+- 24h Change: +12.5%
+
+POOL INFORMATION:
+- Total Pool: $45,230
+- YES Pool: $28,450 (63%)
+- NO Pool: $16,780 (37%)
+- Total Predictors: 847 people
+
+ODDS DISTRIBUTION (Visual bar):
+Left side (Green): "YES 63%" - shows what % think it will happen
+Right side (Red): "NO 37%" - shows what % think it won't
+Bar is thick (40px), shows percentages inside
+
+PREDICTION ENTRY:
+
+Two big buttons:
+- "Predict YES" (green, glowing)
+- "Predict NO" (red, glowing)
+
+When user clicks either:
+
+MODAL OPENS showing:
+
+1. Recap:
+   - "You're predicting: YES"
+   - "Question: Will BONK reach $500M market cap by March 15?"
+   - Shows TradingView chart again (mini version)
+
+2. Amount Input:
+   - "Enter prediction amount: $ ___"
+   - Quick buttons: $10 | $50 | $100 | $500 | Custom
+   - Shows balance if wallet connected
+
+3. Payout Calculation (REAL MATH):
+   Formula: (Your amount × Total Pool) / Your side's pool
+   
+   Example:
+   - You predict YES with $100
+   - Total pool: $45,230
+   - YES pool: $28,450
+   - Your potential win: ($100 × $45,230) / $28,450 = $159
+   - Profit: $59 (59% return)
+   
+   Display:
+   "Your prediction: $100
+   If YES wins: You get $159 (59% profit)
+   If NO wins: You lose $100"
+
+4. Breakdown:
+   - Platform fee: 3% ($3)
+   - Net amount: $97 goes to pool
+   - Estimated gas: $2.50
+   - Total cost: $102.50
+
+5. Risk Indicator:
+   Based on current odds and token volatility:
+   - "Risk Level: MEDIUM"
+   - "Historical success rate for similar predictions: 67%"
+
+6. Confirm Button:
+   "Confirm Prediction - $100"
+   
+   Clicking triggers:
+   - Wallet transaction (smart contract)
+   - Funds go to escrow
+   - User gets prediction receipt
+
+AFTER PREDICTION:
+Card shows:
+- "YOUR PREDICTION" banner (green or red based on side)
+- "You predicted YES with $100"
+- "Potential payout: $159"
+- "Currently: [Live update of where token is vs target]"
+- Can't predict again on same question
+
+WHEN PREDICTION RESOLVES:
+
+If user was CORRECT:
+- Big "✅ YOU WON!" badge
+- "Your prediction: $100"
+- "Your payout: $159"
+- "Profit: +$59 (59%)"
+- Auto-credited to wallet
+
+If user was WRONG:
+- "❌ INCORRECT" badge
+- "Your prediction: $100"
+- "Result: Lost"
+- Shows actual outcome vs prediction
+
+LIVE PREDICTIONS PAGE LAYOUT:
+
+TABS:
+- All | Active | My Predictions | Resolved | High Volume
+
+FILTERS:
+- Category: Market Cap | Price | Volume | New Launches
+- Chain: Solana | Ethereum | BSC | All
+- Pool Size: All | <$10K | $10K-$50K | $50K-$100K | $100K+
+- Closing Soon: <24h | <7d | <30d
+
+SORTING:
+- Highest Pool
+- Most Predictors
+- Closing Soonest
+- Newest
+
+STATS BAR (top of page):
+- Active Predictions: 127
+- Total Pool Volume: $1.2M
+- Your Active Predictions: 5
+- Your Total Wagered: $450
+- Your Potential Winnings: $687
+
+AUTO-GENERATED PREDICTIONS (Backend logic):
+
+Create predictions daily based on:
+
+1. Trending coins from CoinGecko:
+   - Top gainers (>50% in 24h) → "Will [COIN] maintain gains for 7 days?"
+   - High volume new coins → "Will [COIN] hit [Current mcap × 2] by [date]?"
+
+2. Pump.fun launches:
+   - New tokens with >100 holders → "Will [TOKEN] survive 7 days?"
+   - Tokens with rising volume → "Will [TOKEN] hit 100K mcap?"
+
+3. Market events:
+   - New DEX listings → "Will [COIN] 10x after listing?"
+   - Whale accumulation → "Will whale wallet profit by [date]?"
+
+SMART CONTRACT LOGIC:
+
+1. User prediction → Funds to escrow
+2. Multiple users predict on same question
+3. Pools grow (YES pool vs NO pool)
+4. At resolve time:
+   - Oracle checks actual data (CoinGecko API, Helius, Alchemy)
+   - Determines outcome (YES or NO)
+   - Winners split the total pool proportionally
+   - Platform takes 3% fee
+   - Auto-distribute to wallets
+
+5. If oracle fails or data unavailable:
+   - Admin multi-sig can manually resolve
+   - Requires 3/5 signatures
+   - Refund option if outcome unclear
+
+RESOLUTION SOURCES:
+- CoinGecko API for market cap/price data
+- Helius for Solana transaction verification
+- Alchemy for Ethereum data
+- Chainlink oracles for external data
+- Admin override for edge cases
+
+MAKE IT FULLY FUNCTIONAL:
+- Real wallet connections
+- Real payments (SOL, ETH, USDC)
+- Real escrow smart contracts
+- Real TradingView charts
+- Real payout calculations
+- Real resolution mechanism
+- Real auto-distribution
+
+COLORS:
+- Predict YES: Bright green (#10B981)
+- Predict NO: Bright red (#EF4444)
+- Your prediction: Orange (#FF6B35)
+- Winning side: Gold (#FFD700)
+- Pool bars: Gradient green/red
+
+CRITICAL FEATURES:
+✅ TradingView chart for EACH prediction (shows that token)
+✅ Real payout calculation shown upfront
+✅ Live odds update as more people predict
+✅ Can predict on ANY coin (not just major ones)
+✅ Smart contract escrow (non-custodial)
+✅ Auto-resolution via oracles
+✅ Winners get paid automatically
+
+This is the REAL Polymarket experience but for ANY crypto token.
+Make it LEGENDARY.
