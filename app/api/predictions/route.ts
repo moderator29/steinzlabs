@@ -757,6 +757,8 @@ export async function GET(request: Request) {
         totalPoolVolume,
         resolvedCount,
       },
+    }, {
+      headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' },
     });
   } catch (error) {
     console.error('Predictions API error:', error);

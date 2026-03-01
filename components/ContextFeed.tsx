@@ -219,22 +219,31 @@ export default function ContextFeed() {
     }
   }, [engagement]);
 
+  const fetchedRef = useRef<Set<string>>(new Set());
+  const viewedRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    events.forEach(event => {
-      if (!engagement[event.id]) {
-        fetchEngagement(event.id);
-      }
+    const unfetched = events.filter(e => !fetchedRef.current.has(e.id)).slice(0, 5);
+    unfetched.forEach(event => {
+      fetchedRef.current.add(event.id);
+      fetchEngagement(event.id);
     });
   }, [events]);
 
   useEffect(() => {
-    events.forEach(event => {
-      fetch('/api/engagement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: event.id, action: 'view' })
-      }).catch(() => {});
-    });
+    const unviewed = events.filter(e => !viewedRef.current.has(e.id)).slice(0, 5);
+    if (unviewed.length === 0) return;
+    unviewed.forEach(e => viewedRef.current.add(e.id));
+    const timer = setTimeout(() => {
+      unviewed.forEach(event => {
+        fetch('/api/engagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: event.id, action: 'view' })
+        }).catch(() => {});
+      });
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [events]);
 
   const handleRefresh = async () => {

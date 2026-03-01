@@ -34,15 +34,25 @@ interface ContextEvent {
 
 export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon';
 
+const POLL_INTERVAL = 15000;
+const POLL_INTERVAL_HIDDEN = 60000;
+
 export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const seenIds = useRef<Set<string>>(new Set());
   const currentChain = useRef<ChainFilter>(chain);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchEvents = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const response = await fetch(`/api/context-feed?limit=${limit}&chain=${chain}&t=${Date.now()}`);
+      const response = await fetch(`/api/context-feed?limit=${limit}&chain=${chain}`, {
+        signal: controller.signal,
+      });
       const data = await response.json();
       const newEvents: ContextEvent[] = data.events || [];
 
@@ -64,8 +74,10 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
       }
 
       newEvents.forEach(e => seenIds.current.add(e.id));
-    } catch (error) {
-      console.error('Failed to fetch context feed:', error);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Failed to fetch context feed:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,8 +92,27 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
   }, [chain]);
 
   useEffect(() => {
-    const interval = setInterval(fetchEvents, 5000);
-    return () => clearInterval(interval);
+    let intervalId: NodeJS.Timeout;
+
+    const startPolling = () => {
+      const interval = document.hidden ? POLL_INTERVAL_HIDDEN : POLL_INTERVAL;
+      clearInterval(intervalId);
+      intervalId = setInterval(fetchEvents, interval);
+    };
+
+    startPolling();
+
+    const handleVisibility = () => {
+      startPolling();
+      if (!document.hidden) fetchEvents();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      abortRef.current?.abort();
+    };
   }, [fetchEvents]);
 
   return { events, loading, refresh: fetchEvents };

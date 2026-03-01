@@ -137,13 +137,25 @@ Configured in `.env.local`:
 - `LUNARCRUSH_KEY_1` through `LUNARCRUSH_KEY_4` — LunarCrush social metrics
 - `HELIUS_KEY_1`, `HELIUS_KEY_2` — Helius Solana RPC
 
+## Performance Optimizations
+- **Lazy Loading**: All dashboard tab components (ContextFeed, Markets, Predictions, SocialTab, VtxAiTab, DiscoverTab, WalletTab, ProfileTab) use `React.lazy()` with Suspense fallback spinners
+- **Loading Skeletons**: `app/dashboard/loading.tsx` and `app/dashboard/predictions/loading.tsx` show animated skeleton UI during page transitions
+- **Route Prefetching**: SidebarMenu prefetches all 23 dashboard routes on mount via `router.prefetch()`
+- **API Caching**: All API routes return `Cache-Control` headers (s-maxage + stale-while-revalidate). Context feed: 5s/15s, Prices: 30s/60s, Predictions: 10s/30s
+- **Polling Optimization**: Context feed polls every 15s (was 5s), slows to 60s when tab hidden. Removed cache-busting `t=Date.now()` param. Engagement views batched and delayed 2s
+- **React.memo**: BottomNav, SidebarItem components wrapped in memo to prevent unnecessary re-renders
+- **Bundle Splitting**: `optimizePackageImports` for lucide-react, date-fns, recharts in next.config.js
+- **Compression**: gzip enabled (`compress: true`), WebP/AVIF image formats, 1hr image cache TTL
+- **Debounce Hook**: `lib/hooks/useDebounce.ts` available for search inputs (300ms default)
+- **Engagement Optimization**: View tracking limited to 5 events at a time with 2s debounce, prevents hundreds of POST requests
+
 ## Notes
 - `image-hash` version updated from ^5.5.0 to ^7.0.1 (v5.x does not exist on npm)
 - Project uses root-level `app/` and `lib/` directories (no `src/` prefix)
 - `@/*` path alias maps to project root (`./`)
 - Frontend only for now — will be connected to real data/engineering later
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656
+- Admin panel password: 195656, URL: `/admin` (hidden from sidebar, access via direct link)
 - Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
 - TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
 - Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.

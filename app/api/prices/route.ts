@@ -34,7 +34,9 @@ export async function GET() {
       return acc;
     }, {});
 
-    return NextResponse.json(prices);
+    return NextResponse.json(prices, {
+      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+    });
 
   } catch (error) {
     console.error('Price fetch error:', error);
