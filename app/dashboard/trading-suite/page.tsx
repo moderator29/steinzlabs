@@ -158,7 +158,7 @@ export default function TradingSuitePage() {
       const script = document.createElement('script');
       script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
       script.async = true;
-      script.innerHTML = JSON.stringify({
+      script.textContent = JSON.stringify({
         autosize: true, symbol: tvSymbol, interval: '15', timezone: 'Etc/UTC',
         theme: 'dark', style: '1', locale: 'en', backgroundColor: '#0a0e1a',
         gridColor: 'rgba(255,255,255,0.03)', hide_top_toolbar: false,
