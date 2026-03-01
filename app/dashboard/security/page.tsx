@@ -1,36 +1,101 @@
 'use client';
 
-import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+interface ScanResult {
+  contract: string;
+  chainId: string;
+  name: string;
+  symbol: string;
+  totalSupply: string;
+  holderCount: number;
+  creatorAddress: string;
+  ownerAddress: string;
+  trustScore: number;
+  safetyLevel: string;
+  safetyColor: string;
+  buyTax: string;
+  sellTax: string;
+  isHoneypot: boolean;
+  isOpenSource: boolean;
+  isMintable: boolean;
+  isProxy: boolean;
+  hasHiddenOwner: boolean;
+  canTakeBackOwnership: boolean;
+  ownerCanChangeBalance: boolean;
+  lpHolders: any[];
+  lpTotalSupply: string;
+  checks: { label: string; status: string }[];
+  timestamp: string;
+}
+
+const CHAINS = [
+  { id: '1', label: 'Ethereum', key: 'ethereum' },
+  { id: '56', label: 'BSC', key: 'bsc' },
+  { id: '137', label: 'Polygon', key: 'polygon' },
+];
 
 export default function SecurityPage() {
   const router = useRouter();
   const [scanInput, setScanInput] = useState('');
-  const [activeScanner, setActiveScanner] = useState('token');
-  const [scanned, setScanned] = useState(false);
+  const [selectedChain, setSelectedChain] = useState('ethereum');
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const scanners = [
-    { id: 'token', icon: Shield, label: 'Token Safety Scanner' },
-    { id: 'contract', icon: Scan, label: 'Contract Analyzer' },
-    { id: 'rug', icon: AlertTriangle, label: 'Rug Detector' },
-    { id: 'phishing', icon: Globe, label: 'Phishing Detector' },
-  ];
+  const handleScan = async () => {
+    const address = scanInput.trim();
+    if (!address) return;
 
-  const handleScan = () => {
-    if (scanInput.trim()) setScanned(true);
+    setScanning(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const res = await fetch('/api/token-scanner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contract: address, chain: selectedChain }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to scan token');
+        return;
+      }
+
+      setResult(data);
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setScanning(false);
+    }
   };
 
-  const checks = [
-    { label: 'Ownership Renounced', status: 'pass', icon: CheckCircle },
-    { label: 'Liquidity Locked', status: 'pass', icon: CheckCircle },
-    { label: 'No Mint Function', status: 'pass', icon: CheckCircle },
-    { label: 'No Honeypot', status: 'pass', icon: CheckCircle },
-    { label: 'Top 10 Holders < 30%', status: 'fail', icon: XCircle },
-    { label: 'Contract Verified', status: 'pass', icon: CheckCircle },
-    { label: 'No Proxy Contract', status: 'warn', icon: Clock },
-    { label: 'Adequate Liquidity', status: 'fail', icon: XCircle },
-  ];
+  const getScoreStroke = (score: number) => {
+    const circumference = 2 * Math.PI * 40;
+    const filled = (score / 100) * circumference;
+    return `${filled} ${circumference}`;
+  };
+
+  const shortenAddress = (addr: string) => {
+    if (!addr || addr === 'N/A') return 'N/A';
+    return addr.slice(0, 6) + '...' + addr.slice(-4);
+  };
+
+  const explorerUrl = (addr: string) => {
+    const chain = CHAINS.find(c => c.key === selectedChain);
+    if (chain?.id === '56') return `https://bscscan.com/address/${addr}`;
+    if (chain?.id === '137') return `https://polygonscan.com/address/${addr}`;
+    return `https://etherscan.io/address/${addr}`;
+  };
+
+  const copyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
@@ -41,25 +106,21 @@ export default function SecurityPage() {
           </button>
           <Shield className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-sm font-heading font-bold">Security Center</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">NEW</span>
+          <span className="ml-auto px-2 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">GOPLUS</span>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          {scanners.map((scanner) => {
-            const Icon = scanner.icon;
-            return (
-              <button
-                key={scanner.id}
-                onClick={() => setActiveScanner(scanner.id)}
-                className={`rounded-xl p-3 border transition-all text-left ${activeScanner === scanner.id ? 'bg-[#00E5FF]/10 border-[#00E5FF]/30' : 'glass border-white/10 hover:border-white/20'}`}
-              >
-                <Icon className={`w-5 h-5 mb-1.5 ${activeScanner === scanner.id ? 'text-[#00E5FF]' : 'text-gray-400'}`} />
-                <div className="text-xs font-semibold">{scanner.label}</div>
-              </button>
-            );
-          })}
+        <div className="flex gap-2">
+          {CHAINS.map((chain) => (
+            <button
+              key={chain.id}
+              onClick={() => setSelectedChain(chain.key)}
+              className={`flex-1 rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#00E5FF]/10 border-[#00E5FF]/30 text-[#00E5FF]' : 'glass border-white/10 hover:border-white/20 text-gray-400'}`}
+            >
+              {chain.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex items-center gap-2">
@@ -67,35 +128,116 @@ export default function SecurityPage() {
             type="text"
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
-            placeholder="Enter token contract address"
+            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+            placeholder="Enter token contract address (0x...)"
             className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#00E5FF]/30"
           />
-          <button onClick={handleScan} className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold">
+          <button
+            onClick={handleScan}
+            disabled={scanning || !scanInput.trim()}
+            className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
           </button>
         </div>
 
-        {scanned && (
+        {scanning && (
+          <div className="text-center py-12">
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-[#00E5FF]/20"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#00E5FF] animate-spin"></div>
+              <Shield className="w-6 h-6 text-[#00E5FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            <p className="text-sm text-gray-400">Scanning contract with GoPlus Security...</p>
+            <p className="text-[10px] text-gray-600 mt-1">Analyzing honeypot risk, ownership, taxes, and more</p>
+          </div>
+        )}
+
+        {error && !scanning && (
+          <div className="glass rounded-xl p-4 border border-red-500/20 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+            <p className="text-sm text-red-400 font-semibold">{error}</p>
+            <p className="text-[10px] text-gray-500 mt-1">Check the contract address and selected chain</p>
+          </div>
+        )}
+
+        {result && !scanning && (
           <>
+            <div className="glass rounded-xl p-4 border border-white/10">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h2 className="text-base font-bold">{result.name}</h2>
+                  <p className="text-xs text-gray-400 font-mono">{result.symbol}</p>
+                </div>
+                <a
+                  href={explorerUrl(result.contract)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[10px] text-[#00E5FF] hover:underline"
+                >
+                  View on Explorer <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+                <span>{shortenAddress(result.contract)}</span>
+                <button onClick={() => copyAddress(result.contract)} className="hover:text-white transition-colors">
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
             <div className="glass rounded-xl p-4 border border-white/10 text-center">
-              <div className="relative w-20 h-20 mx-auto mb-2">
-                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 100 100">
+              <div className="relative w-24 h-24 mx-auto mb-3">
+                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="40" fill="none" stroke="#1A2235" strokeWidth="8" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#F59E0B" strokeWidth="8" strokeDasharray="150 251" strokeLinecap="round" />
+                  <circle
+                    cx="50" cy="50" r="40" fill="none"
+                    stroke={result.safetyColor}
+                    strokeWidth="8"
+                    strokeDasharray={getScoreStroke(result.trustScore)}
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-bold text-[#F59E0B]">62</span>
+                  <span className="text-2xl font-bold" style={{ color: result.safetyColor }}>{result.trustScore}</span>
                 </div>
               </div>
-              <div className="text-sm font-bold text-[#F59E0B]">CAUTION</div>
-              <p className="text-[10px] text-gray-500 mt-1">Some risks detected — proceed with care</p>
+              <div className="text-sm font-bold" style={{ color: result.safetyColor }}>{result.safetyLevel}</div>
+              <p className="text-[10px] text-gray-500 mt-1">
+                {result.safetyLevel === 'SAFE' && 'Token passed most security checks'}
+                {result.safetyLevel === 'CAUTION' && 'Some risks detected — proceed with care'}
+                {result.safetyLevel === 'WARNING' && 'Significant risks found — high caution advised'}
+                {result.safetyLevel === 'DANGER' && 'Critical risks detected — avoid this token'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="glass rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-gray-500 mb-1">Holders</p>
+                <p className="text-sm font-bold">{result.holderCount.toLocaleString()}</p>
+              </div>
+              <div className="glass rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-gray-500 mb-1">Honeypot</p>
+                <p className={`text-sm font-bold ${result.isHoneypot ? 'text-red-400' : 'text-green-400'}`}>
+                  {result.isHoneypot ? 'YES ⚠️' : 'NO ✓'}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-gray-500 mb-1">Buy Tax</p>
+                <p className="text-sm font-bold">{result.buyTax}</p>
+              </div>
+              <div className="glass rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-gray-500 mb-1">Sell Tax</p>
+                <p className="text-sm font-bold">{result.sellTax}</p>
+              </div>
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <h3 className="font-bold text-sm mb-3">Security Checks</h3>
               <div className="space-y-2">
-                {checks.map((check) => {
-                  const Icon = check.icon;
+                {result.checks.map((check) => {
+                  const Icon = check.status === 'pass' ? CheckCircle : check.status === 'fail' ? XCircle : Clock;
                   const color = check.status === 'pass' ? '#10B981' : check.status === 'fail' ? '#EF4444' : '#F59E0B';
                   return (
                     <div key={check.label} className="flex items-center gap-3 py-1.5">
@@ -109,14 +251,71 @@ export default function SecurityPage() {
                 })}
               </div>
             </div>
+
+            <div className="glass rounded-xl p-4 border border-white/10">
+              <h3 className="font-bold text-sm mb-3">Contract Details</h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Open Source</span>
+                  <span className={result.isOpenSource ? 'text-green-400' : 'text-red-400'}>{result.isOpenSource ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Mintable</span>
+                  <span className={result.isMintable ? 'text-red-400' : 'text-green-400'}>{result.isMintable ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Proxy Contract</span>
+                  <span className={result.isProxy ? 'text-yellow-400' : 'text-green-400'}>{result.isProxy ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Hidden Owner</span>
+                  <span className={result.hasHiddenOwner ? 'text-red-400' : 'text-green-400'}>{result.hasHiddenOwner ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Can Reclaim Ownership</span>
+                  <span className={result.canTakeBackOwnership ? 'text-red-400' : 'text-green-400'}>{result.canTakeBackOwnership ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Owner Changes Balance</span>
+                  <span className={result.ownerCanChangeBalance ? 'text-red-400' : 'text-green-400'}>{result.ownerCanChangeBalance ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Creator</span>
+                  <span className="font-mono text-gray-400">{shortenAddress(result.creatorAddress)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Owner</span>
+                  <span className="font-mono text-gray-400">{shortenAddress(result.ownerAddress)}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-gray-600 text-center">
+              Powered by GoPlus Security API • Scanned at {new Date(result.timestamp).toLocaleTimeString()}
+            </p>
           </>
         )}
 
-        {!scanned && (
+        {!result && !scanning && !error && (
           <div className="text-center py-8">
             <Shield className="w-12 h-12 text-gray-700 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-gray-500">Enter a contract address to scan</h3>
-            <p className="text-xs text-gray-600 mt-1">AI-powered security analysis across all chains</p>
+            <p className="text-xs text-gray-600 mt-1">Real-time security analysis powered by GoPlus</p>
+            <div className="mt-4 space-y-1">
+              <p className="text-[10px] text-gray-600">Try these examples:</p>
+              <button
+                onClick={() => { setScanInput('0xdac17f958d2ee523a2206206994597c13d831ec7'); setSelectedChain('ethereum'); }}
+                className="text-[10px] text-[#00E5FF]/60 hover:text-[#00E5FF] font-mono block mx-auto"
+              >
+                USDT (Ethereum)
+              </button>
+              <button
+                onClick={() => { setScanInput('0x55d398326f99059ff775485246999027b3197955'); setSelectedChain('bsc'); }}
+                className="text-[10px] text-[#00E5FF]/60 hover:text-[#00E5FF] font-mono block mx-auto"
+              >
+                USDT (BSC)
+              </button>
+            </div>
           </div>
         )}
       </div>

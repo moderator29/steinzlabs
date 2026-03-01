@@ -77,8 +77,12 @@ app/api/
 ├── predictions/route.ts      # Predictions market API. Auto-generates from CoinGecko ($2+ min), Pump.fun, DexScreener DEXes (Raydium/PancakeSwap/Uniswap with chartPairAddress). 2-min cache refresh, in-memory pools, 3% fee, payout math. 4 resolved predictions.
 ├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
 ├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
-├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)
-└── portfolio/route.ts        # Portfolio API (Alchemy token balances + CoinGecko prices)
+├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude, enhanced with Fear&Greed, gas prices, wallet analysis, platform context)
+├── portfolio/route.ts        # Portfolio API (Alchemy token balances + CoinGecko prices)
+├── wallet-intelligence/route.ts  # Real wallet analysis (Alchemy ETH balances, Solana RPC, auto-chain detection)
+├── whale-tracker/route.ts    # Real whale tracking (Alchemy large transfers, CoinGecko market activity, 60s cache)
+├── notifications/route.ts    # Real notifications (CoinGecko price alerts, trending, security alerts)
+└── builder-submissions/route.ts  # Builder Network & Funding Portal API (applications, projects, milestones, endorsements, admin actions)
 ```
 
 ## Pages & Navigation
@@ -153,9 +157,10 @@ Configured in `.env.local`:
 - `image-hash` version updated from ^5.5.0 to ^7.0.1 (v5.x does not exist on npm)
 - Project uses root-level `app/` and `lib/` directories (no `src/` prefix)
 - `@/*` path alias maps to project root (`./`)
-- Frontend only for now — will be connected to real data/engineering later
+- Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
+- Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
 - Landing page uses CSS-only entrance animations (no React state transitions)
-- Admin panel password: 195656, URL: `/admin` (hidden from sidebar, access via direct link)
+- Admin panel password: 195656, URL: `/admin` (also linked in sidebar menu under "Admin" section)
 - Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
 - TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
 - Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.
