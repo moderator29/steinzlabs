@@ -54,7 +54,10 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
         signal: controller.signal,
       });
       const data = await response.json();
-      const newEvents: ContextEvent[] = data.events || [];
+      const rawEvents: ContextEvent[] = data.events || [];
+      const dedupMap = new Map<string, ContextEvent>();
+      rawEvents.forEach(e => { if (!dedupMap.has(e.id)) dedupMap.set(e.id, e); });
+      const newEvents = Array.from(dedupMap.values());
 
       if (currentChain.current !== chain) {
         currentChain.current = chain;
@@ -62,12 +65,10 @@ export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
         setEvents(newEvents.slice(0, 60));
       } else {
         setEvents(prev => {
-          const merged = [...newEvents];
-          for (const old of prev) {
-            if (!merged.find(e => e.id === old.id)) {
-              merged.push(old);
-            }
-          }
+          const mergedMap = new Map<string, ContextEvent>();
+          newEvents.forEach(e => mergedMap.set(e.id, e));
+          prev.forEach(e => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
+          const merged = Array.from(mergedMap.values());
           merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           return merged.slice(0, 80);
         });
