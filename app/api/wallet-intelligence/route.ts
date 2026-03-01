@@ -1,20 +1,69 @@
 import { NextResponse } from 'next/server';
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
-const ALCHEMY_BASE_URL = ALCHEMY_API_KEY
-  ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
-  : 'https://eth-mainnet.g.alchemy.com/v2/demo';
+
+interface EvmChainConfig {
+  rpcUrl: string;
+  nativeSymbol: string;
+  chainName: string;
+  explorerUrl: string;
+  priceId: string;
+  fallbackPrice: number;
+}
+
+const EVM_CHAINS: Record<string, EvmChainConfig> = {
+  ethereum: {
+    rpcUrl: ALCHEMY_API_KEY
+      ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+      : 'https://eth-mainnet.g.alchemy.com/v2/demo',
+    nativeSymbol: 'ETH',
+    chainName: 'Ethereum',
+    explorerUrl: 'https://etherscan.io',
+    priceId: 'ethereum',
+    fallbackPrice: 3500,
+  },
+  base: {
+    rpcUrl: ALCHEMY_API_KEY
+      ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+      : 'https://mainnet.base.org',
+    nativeSymbol: 'ETH',
+    chainName: 'Base',
+    explorerUrl: 'https://basescan.org',
+    priceId: 'ethereum',
+    fallbackPrice: 3500,
+  },
+  polygon: {
+    rpcUrl: ALCHEMY_API_KEY
+      ? `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+      : 'https://polygon-rpc.com',
+    nativeSymbol: 'MATIC',
+    chainName: 'Polygon',
+    explorerUrl: 'https://polygonscan.com',
+    priceId: 'matic-network',
+    fallbackPrice: 0.7,
+  },
+  avalanche: {
+    rpcUrl: ALCHEMY_API_KEY
+      ? `https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+      : 'https://api.avax.network/ext/bc/C/rpc',
+    nativeSymbol: 'AVAX',
+    chainName: 'Avalanche',
+    explorerUrl: 'https://snowtrace.io',
+    priceId: 'avalanche-2',
+    fallbackPrice: 35,
+  },
+};
 
 const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
 
-function detectChain(address: string): 'ETH' | 'SOL' | 'UNKNOWN' {
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'ETH';
+function detectChain(address: string): 'EVM' | 'SOL' | 'UNKNOWN' {
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'EVM';
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return 'SOL';
   return 'UNKNOWN';
 }
 
-async function getEthData(address: string) {
-  const balanceRes = await fetch(ALCHEMY_BASE_URL, {
+async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string, chainName: string, explorerUrl: string, priceId: string, fallbackPrice: number) {
+  const balanceRes = await fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -25,10 +74,10 @@ async function getEthData(address: string) {
     }),
   });
   const balanceData = await balanceRes.json();
-  const ethBalanceWei = parseInt(balanceData.result || '0', 16);
-  const ethBalance = ethBalanceWei / 1e18;
+  const nativeBalanceWei = parseInt(balanceData.result || '0', 16);
+  const nativeBalance = nativeBalanceWei / 1e18;
 
-  const txCountRes = await fetch(ALCHEMY_BASE_URL, {
+  const txCountRes = await fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -42,32 +91,35 @@ async function getEthData(address: string) {
   const txCount = parseInt(txCountData.result || '0', 16);
 
   let tokenBalances: any[] = [];
-  try {
-    const tokenRes = await fetch(ALCHEMY_BASE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 3,
-        method: 'alchemy_getTokenBalances',
-        params: [address],
-      }),
-    });
-    const tokenData = await tokenRes.json();
-    if (tokenData.result?.tokenBalances) {
-      tokenBalances = tokenData.result.tokenBalances
-        .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
-        .slice(0, 20);
+  const isAlchemy = rpcUrl.includes('alchemy.com');
+  if (isAlchemy) {
+    try {
+      const tokenRes = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 3,
+          method: 'alchemy_getTokenBalances',
+          params: [address],
+        }),
+      });
+      const tokenData = await tokenRes.json();
+      if (tokenData.result?.tokenBalances) {
+        tokenBalances = tokenData.result.tokenBalances
+          .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
+          .slice(0, 20);
+      }
+    } catch (e) {
+      console.error('Token balance fetch error:', e);
     }
-  } catch (e) {
-    console.error('Token balance fetch error:', e);
   }
 
   let tokenDetails: any[] = [];
-  if (tokenBalances.length > 0) {
+  if (tokenBalances.length > 0 && isAlchemy) {
     const metadataPromises = tokenBalances.slice(0, 10).map(async (token: any) => {
       try {
-        const metaRes = await fetch(ALCHEMY_BASE_URL, {
+        const metaRes = await fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -97,25 +149,25 @@ async function getEthData(address: string) {
     tokenDetails = results.filter((t) => t !== null && t.balance > 0);
   }
 
-  let ethPrice = 0;
+  let nativePrice = 0;
   try {
-    const priceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
+    const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${priceId}&vs_currencies=usd`, {
       headers: { 'Accept': 'application/json' },
     });
     const priceData = await priceRes.json();
-    ethPrice = priceData.ethereum?.usd || 0;
+    nativePrice = priceData[priceId]?.usd || 0;
   } catch {
-    ethPrice = 3500;
+    nativePrice = fallbackPrice;
   }
 
-  const ethValueUsd = ethBalance * ethPrice;
+  const nativeValueUsd = nativeBalance * nativePrice;
 
   const holdings = [
     {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      balance: ethBalance.toFixed(4),
-      valueUsd: ethValueUsd.toFixed(2),
+      symbol: nativeSymbol,
+      name: chainName,
+      balance: nativeBalance.toFixed(4),
+      valueUsd: nativeValueUsd.toFixed(2),
       contractAddress: null,
     },
     ...tokenDetails.map((t) => ({
@@ -128,14 +180,17 @@ async function getEthData(address: string) {
   ];
 
   return {
-    chain: 'Ethereum',
+    chain: chainName,
     address,
-    ethBalance: ethBalance.toFixed(4),
-    ethValueUsd: ethValueUsd.toFixed(2),
-    totalBalanceUsd: ethValueUsd.toFixed(2),
+    nativeBalance: nativeBalance.toFixed(4),
+    nativeValueUsd: nativeValueUsd.toFixed(2),
+    totalBalanceUsd: nativeValueUsd.toFixed(2),
     txCount,
     holdings,
     tokenCount: tokenDetails.length,
+    explorerUrl,
+    ethBalance: nativeSymbol === 'ETH' ? nativeBalance.toFixed(4) : undefined,
+    ethValueUsd: nativeSymbol === 'ETH' ? nativeValueUsd.toFixed(2) : undefined,
   };
 }
 
@@ -201,6 +256,7 @@ async function getSolData(address: string) {
       },
     ],
     tokenCount: 0,
+    explorerUrl: 'https://solscan.io',
   };
 }
 
@@ -208,22 +264,33 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
+    const chainParam = searchParams.get('chain') || 'auto';
 
     if (!address) {
       return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
 
-    const chain = detectChain(address);
+    const detectedType = detectChain(address);
 
-    if (chain === 'UNKNOWN') {
-      return NextResponse.json({ error: 'Invalid wallet address. Supports ETH (0x...) and SOL (base58) addresses.' }, { status: 400 });
+    if (detectedType === 'UNKNOWN') {
+      return NextResponse.json({ error: 'Invalid wallet address. Supports EVM (0x...) and SOL (base58) addresses.' }, { status: 400 });
     }
 
     let walletData;
-    if (chain === 'ETH') {
-      walletData = await getEthData(address);
-    } else {
+    if (detectedType === 'SOL') {
       walletData = await getSolData(address);
+    } else {
+      const evmChainKey = chainParam !== 'auto' && EVM_CHAINS[chainParam] ? chainParam : 'ethereum';
+      const config = EVM_CHAINS[evmChainKey];
+      walletData = await getEvmData(
+        address,
+        config.rpcUrl,
+        config.nativeSymbol,
+        config.chainName,
+        config.explorerUrl,
+        config.priceId,
+        config.fallbackPrice
+      );
     }
 
     return NextResponse.json(walletData, {

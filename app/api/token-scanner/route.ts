@@ -5,9 +5,19 @@ const CHAIN_MAP: Record<string, string> = {
   eth: '1',
   bsc: '56',
   polygon: '137',
+  solana: 'solana',
+  sol: 'solana',
+  base: '8453',
+  avalanche: '43114',
+  avax: '43114',
+  arbitrum: '42161',
+  arb: '42161',
   '1': '1',
   '56': '56',
   '137': '137',
+  '8453': '8453',
+  '43114': '43114',
+  '42161': '42161',
 };
 
 async function fetchGoPlusSecurity(chainId: string, contractAddress: string) {
