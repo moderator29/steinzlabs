@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, memo } from 'react';
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, PieChart, DollarSign, MessageCircle, Copy } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, PieChart, DollarSign, MessageCircle, Copy, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
@@ -10,7 +10,7 @@ interface SidebarMenuProps {
 
 const KEY_ROUTES = [
   '/dashboard', '/dashboard/predictions', '/dashboard/portfolio',
-  '/dashboard/whale-tracker', '/dashboard/vtx-ai', '/dashboard/security',
+  '/dashboard/trading-suite', '/dashboard/whale-tracker', '/dashboard/vtx-ai', '/dashboard/security',
 ];
 
 export default function SidebarMenu({ onClose }: SidebarMenuProps) {
@@ -48,8 +48,8 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             <div className="space-y-1">
               <SidebarItem icon={BarChart3} label="Dashboard" onClick={() => handleNavigation('/dashboard')} onHover={() => handleHoverPrefetch('/dashboard')} />
               <SidebarItem icon={PieChart} label="Portfolio" badge="NEW" onClick={() => handleNavigation('/dashboard/portfolio')} onHover={() => handleHoverPrefetch('/dashboard/portfolio')} />
+              <SidebarItem icon={Zap} label="Full Trading Suite" badge="HOT" onClick={() => handleNavigation('/dashboard/trading-suite')} onHover={() => handleHoverPrefetch('/dashboard/trading-suite')} />
               <SidebarItem icon={Dna} label="Trading DNA Analyzer" badge="AI" onClick={() => handleNavigation('/dashboard/dna-analyzer')} onHover={() => handleHoverPrefetch('/dashboard/dna-analyzer')} />
-              <SidebarItem icon={DollarSign} label="Pricing" onClick={() => handleNavigation('/dashboard/pricing')} onHover={() => handleHoverPrefetch('/dashboard/pricing')} />
             </div>
           </div>
 
@@ -71,6 +71,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
               <SidebarItem icon={ArrowLeftRight} label="Multi-Chain Swap" onClick={() => handleNavigation('/dashboard/swap')} onHover={() => handleHoverPrefetch('/dashboard/swap')} />
               <SidebarItem icon={Bot} label="VTX AI Assistant" onClick={() => handleNavigation('/dashboard/vtx-ai')} onHover={() => handleHoverPrefetch('/dashboard/vtx-ai')} />
               <SidebarItem icon={Bell} label="Smart Alerts" onClick={() => handleNavigation('/dashboard/alerts')} onHover={() => handleHoverPrefetch('/dashboard/alerts')} />
+              <SidebarItem icon={DollarSign} label="Pricing" onClick={() => handleNavigation('/dashboard/pricing')} onHover={() => handleHoverPrefetch('/dashboard/pricing')} />
               <SidebarItem icon={Users} label="Social Trading" onClick={() => handleNavigation('/dashboard/social-trading')} onHover={() => handleHoverPrefetch('/dashboard/social-trading')} />
               <SidebarItem icon={Copy} label="Copy Trading" onClick={() => handleNavigation('/dashboard/copy-trading')} onHover={() => handleHoverPrefetch('/dashboard/copy-trading')} />
               <SidebarItem icon={Shield} label="Security Center" onClick={() => handleNavigation('/dashboard/security')} onHover={() => handleHoverPrefetch('/dashboard/security')} />
@@ -88,7 +89,6 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
               <SidebarItem icon={MessageCircle} label="Community" onClick={() => handleNavigation('/dashboard/community')} onHover={() => handleHoverPrefetch('/dashboard/community')} />
             </div>
           </div>
-
 
         </div>
       </div>
@@ -108,6 +108,7 @@ const SidebarItem = memo(function SidebarItem({ icon: Icon, label, badge, onClic
       {badge && (
         <span className={`ml-auto px-1.5 py-0.5 rounded text-xs font-semibold ${
           badge === 'AI' ? 'bg-[#7C3AED]/20 text-[#7C3AED]' :
+          badge === 'HOT' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
           badge === 'NEW' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' :
           'bg-[#00E5FF]/20 text-[#00E5FF]'
         }`}>{badge}</span>

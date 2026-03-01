@@ -163,6 +163,9 @@ Configured in `.env.local`:
 - Admin panel password: 195656, URL: `/admin` (hidden from nav, direct URL only). Features: hamburger sidebar with 10 sections (Overview, Market Data, Predictions, Builder Network, Funding Portal, Whale Activity, Security, API Health, Notifications, Settings). Pulls real data from CoinGecko, predictions API, builder-submissions API, whale-tracker API.
 - Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
 - Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
+- Trading Suite: `/dashboard/trading-suite` — 7 tabs (Trending, Top, New Pairs, Pulse, Perpetuals, Positions, LIVE). Real CoinGecko trending + market data, DexScreener new pairs, Fear & Greed index. Paste CA feature, watchlist (localStorage). Perpetuals & LIVE streams = coming soon. API: `/api/trading-suite/route.ts` (30s cache)
+- Social Trading: Shows "Coming Soon" page with feature preview and link to Trading Suite
+- Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools (Pricing moved here) → Discover
 - Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
 - TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
 - Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.

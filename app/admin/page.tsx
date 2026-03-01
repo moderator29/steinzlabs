@@ -7,7 +7,7 @@ import {
   ChevronDown, BarChart3, TrendingUp, TrendingDown, Zap, RefreshCw,
   DollarSign, Layers, Target, Bell, Settings, Database, Wifi,
   ArrowUpRight, ArrowDownRight, Coins, PieChart, Send, Trash2, Ban,
-  UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search,
+  UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search, Zap,
   ExternalLink, Copy, ChevronLeft, Server, Cpu, HardDrive, ToggleLeft,
   ToggleRight, Hash, Filter, Download, Upload, Star, Flag, Bookmark
 } from 'lucide-react';
@@ -85,6 +85,7 @@ interface ApiHealth {
 const ADMIN_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: Home },
   { id: 'market', label: 'Market Data', icon: TrendingUp },
+  { id: 'trading', label: 'Trading Suite', icon: Zap },
   { id: 'predictions', label: 'Predictions', icon: Target },
   { id: 'builders', label: 'Builder Network', icon: Users },
   { id: 'funding', label: 'Funding Portal', icon: Briefcase },
@@ -542,6 +543,44 @@ export default function AdminPanel() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeSection === 'trading' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard icon={<Zap className="w-4 h-4" />} label="Status" value="Demo" sub="Preview mode" color="text-[#F59E0B]" loading={false} />
+                <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Trending" value={tokens.length > 0 ? 'Live' : 'Loading'} sub="CoinGecko data" color="text-[#10B981]" loading={loadingTokens} />
+                <StatCard icon={<Layers className="w-4 h-4" />} label="Perpetuals" value="Q2 2026" sub="Coming soon" color="text-[#7C3AED]" loading={false} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="Live Streams" value="Q3 2026" sub="Coming soon" color="text-[#EF4444]" loading={false} />
+              </div>
+              <div className="glass rounded-xl p-4 border border-white/10">
+                <div className="text-xs font-bold mb-3">Trading Suite Features</div>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Trending Tokens', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Top by Market Cap', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'New Pairs (DexScreener)', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Market Pulse & Fear/Greed', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Paste CA / Token Scanner', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Watchlist', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'Perpetual Futures', status: 'Planned Q2', color: 'text-[#F59E0B]' },
+                    { label: 'LIVE Trading Streams', status: 'Planned Q3', color: 'text-[#F59E0B]' },
+                    { label: 'Spot Trading (Buy/Sell)', status: 'Planned', color: 'text-[#F59E0B]' },
+                    { label: 'Position Tracking', status: 'UI Ready', color: 'text-[#00E5FF]' },
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0">
+                      <span className="text-gray-300">{f.label}</span>
+                      <span className={`font-semibold text-[10px] ${f.color}`}>{f.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <a href="/dashboard/trading-suite" target="_blank" className="block">
+                <button className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-xs font-semibold hover:opacity-90 transition-opacity">
+                  Open Trading Suite
+                </button>
+              </a>
             </div>
           )}
 
