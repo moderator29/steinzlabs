@@ -7,7 +7,7 @@ import {
   ChevronDown, BarChart3, TrendingUp, TrendingDown, Zap, RefreshCw,
   DollarSign, Layers, Target, Bell, Settings, Database, Wifi,
   ArrowUpRight, ArrowDownRight, Coins, PieChart, Send, Trash2, Ban,
-  UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search, Zap,
+  UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search,
   ExternalLink, Copy, ChevronLeft, Server, Cpu, HardDrive, ToggleLeft,
   ToggleRight, Hash, Filter, Download, Upload, Star, Flag, Bookmark
 } from 'lucide-react';
