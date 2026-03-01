@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, memo } from 'react';
-import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, PieChart, ShieldCheck, DollarSign, MessageCircle, Copy } from 'lucide-react';
+import { X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish, ArrowLeftRight, Bot, Bell, Users, Shield, Target, Compass, Rocket, Building2, Briefcase, Crown, PieChart, DollarSign, MessageCircle, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {
@@ -89,12 +89,6 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Admin</h3>
-            <div className="space-y-1">
-              <SidebarItem icon={ShieldCheck} label="Admin Panel" onClick={() => handleNavigation('/admin')} onHover={() => handleHoverPrefetch('/admin')} />
-            </div>
-          </div>
 
         </div>
       </div>
