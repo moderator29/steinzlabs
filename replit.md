@@ -48,7 +48,7 @@ app/
     ├── wallet-intelligence/ # Wallet Intelligence (scan any address, AI assessment)
     └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
-├── ContextFeed.tsx          # Context Feed tab (whale alerts with View Proof modal, overflow-safe cards, rich token data)
+├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs (All Chains, Solana, Ethereum, BSC, Polygon), gradient tab styling, chain badges, live indicator, 5s auto-refresh
 ├── ViewProofModal.tsx       # On-chain proof modal (DexScreener embedded live chart, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
 ├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
@@ -63,6 +63,7 @@ lib/
 ├── supabase.ts              # Supabase client + admin (service role) client
 ├── wallet.ts                # MetaMask + Phantom wallet connect/disconnect utilities
 └── hooks/
+    ├── useContextFeed.ts      # Context feed hook with chain filter param (ChainFilter type), 5s auto-refresh, deduplication
     ├── useAuth.ts            # Auth hook (sign in/up, wallet connect, localStorage session)
     ├── useWallet.ts          # Centralized wallet state hook (connect/disconnect MetaMask & Phantom, Supabase upsert, cross-component sync via custom events, mobile deep links)
     ├── usePrices.ts          # Live price feed hook (BTC, ETH, SOL from /api/prices)
@@ -71,7 +72,7 @@ app/api/
 ├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
 ├── token-scanner/route.ts    # Token contract security scanner
-├── context-feed/route.ts     # On-chain whale events feed (Alchemy ETH + Helius Solana + Pump.fun + DexScreener with full pair data)
+├── context-feed/route.ts     # Multi-chain context feed with ?chain= param (all/solana/ethereum/bsc/polygon). Sources: Alchemy ETH whales, Helius Solana network, Pump.fun launches, DexScreener trending/chain-specific (Raydium, Meteora, Jupiter, Orca, PancakeSwap, FourMeme, Uniswap, QuickSwap). 5-second refresh interval.
 ├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
 ├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
 ├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)
