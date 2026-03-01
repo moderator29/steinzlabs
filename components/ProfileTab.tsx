@@ -406,7 +406,7 @@ export default function ProfileTab() {
         </div>
 
         <div className="mt-3 text-center">
-          <p className="text-[10px] text-gray-600">Powered by AI. For complex issues, we'll connect you with our team.</p>
+          <p className="text-[10px] text-gray-600">Powered by AI. For complex issues, we&apos;ll connect you with our team.</p>
         </div>
       </div>
     );
