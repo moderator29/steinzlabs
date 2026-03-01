@@ -445,9 +445,7 @@ function PredictionCard({
     ? `https://dexscreener.com/${prediction.chartChainId}/${prediction.chartPairAddress}?embed=1&theme=dark&trades=0&info=0`
     : null;
 
-  const cgChartUrl = !chartUrl && prediction.chartSymbol
-    ? `https://www.coingecko.com/coins/${prediction.chartSymbol}/sparkline.svg`
-    : null;
+  const cgChartUrl: string | null = null;
 
   return (
     <div className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">

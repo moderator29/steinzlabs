@@ -72,8 +72,8 @@ app/api/
 ├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
 ├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
 ├── token-scanner/route.ts    # Token contract security scanner
-├── context-feed/route.ts     # Multi-chain context feed with ?chain= param (all/solana/ethereum/bsc/polygon). Sources: Alchemy ETH whales, Helius Solana network, Pump.fun launches, DexScreener trending/chain-specific (Raydium, Meteora, Jupiter, Orca, PancakeSwap, FourMeme, Uniswap, QuickSwap). 5-second refresh interval.
-├── predictions/route.ts      # Predictions market API (auto-generates from CoinGecko/Pump.fun, in-memory pools, POST to place predictions with 3% fee, payout math)
+├── context-feed/route.ts     # Multi-chain context feed with ?chain= param (all/solana/ethereum/bsc/polygon). 5s cache, 50+ events. Sources: Alchemy ETH whales+ERC20, Helius Solana, Pump.fun 10 tokens, DexScreener trending+profiles+DEX searches (Raydium, Meteora, Jupiter, Orca, PancakeSwap, FourMeme, Uniswap, SushiSwap, QuickSwap). ETH: PEPE/SHIB/LINK/UNI/ARB searches. BSC: fourmeme+four.meme searches. 5s auto-refresh.
+├── predictions/route.ts      # Predictions market API. Auto-generates from CoinGecko ($2+ min), Pump.fun, DexScreener DEXes (Raydium/PancakeSwap/Uniswap with chartPairAddress). 2-min cache refresh, in-memory pools, 3% fee, payout math. 4 resolved predictions.
 ├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
 ├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
 ├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude)

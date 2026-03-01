@@ -34,7 +34,7 @@ interface ContextEvent {
 
 export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon';
 
-export function useContextFeed(limit: number = 15, chain: ChainFilter = 'all') {
+export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const seenIds = useRef<Set<string>>(new Set());
@@ -49,7 +49,7 @@ export function useContextFeed(limit: number = 15, chain: ChainFilter = 'all') {
       if (currentChain.current !== chain) {
         currentChain.current = chain;
         seenIds.current.clear();
-        setEvents(newEvents.slice(0, 30));
+        setEvents(newEvents.slice(0, 60));
       } else {
         setEvents(prev => {
           const merged = [...newEvents];
@@ -59,7 +59,7 @@ export function useContextFeed(limit: number = 15, chain: ChainFilter = 'all') {
             }
           }
           merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          return merged.slice(0, 40);
+          return merged.slice(0, 80);
         });
       }
 

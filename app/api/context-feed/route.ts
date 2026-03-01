@@ -49,10 +49,15 @@ function fmtPrice(price: string | number): string {
   return `$${p.toFixed(2)}`;
 }
 
+function recentTimestamp(offsetMax: number = 30): string {
+  const offset = Math.floor(Math.random() * offsetMax) * 1000;
+  return new Date(Date.now() - offset).toISOString();
+}
+
 const priceCache: { eth: number; sol: number; bnb: number; matic: number; ts: number } = { eth: 3500, sol: 180, bnb: 600, matic: 0.5, ts: 0 };
 
 const responseCache: Record<string, { data: WhaleEvent[]; ts: number; sources: string[] }> = {};
-const CACHE_TTL = 15000;
+const CACHE_TTL = 5000;
 
 async function fetchPrices(): Promise<void> {
   if (Date.now() - priceCache.ts < 30000) return;
@@ -86,27 +91,39 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0', id: 2, method: 'alchemy_getAssetTransfers',
-        params: [{ fromBlock: `0x${(latestBlock - 20).toString(16)}`, toBlock: 'latest', category: ['external'], order: 'desc', maxCount: '0x14', withMetadata: true }]
+        params: [{ fromBlock: `0x${(latestBlock - 50).toString(16)}`, toBlock: 'latest', category: ['external', 'erc20'], order: 'desc', maxCount: '0x32', withMetadata: true }]
       }),
     });
     const txData = await txRes.json();
     const transfers = txData.result?.transfers || [];
-    const whaleTransfers = transfers.filter((tx: any) => (tx.value || 0) >= 10).slice(0, 6);
+    const whaleTransfers = transfers.filter((tx: any) => {
+      if (tx.category === 'erc20') return true;
+      return (tx.value || 0) >= 1;
+    }).slice(0, 20);
 
     return whaleTransfers.map((tx: any, i: number) => {
+      const isErc20 = tx.category === 'erc20';
       const valueEth = tx.value || 0;
-      const valueUsd = valueEth * priceCache.eth;
+      const valueUsd = isErc20 ? (tx.rawContract?.value ? parseInt(tx.rawContract.value, 16) / 1e18 * priceCache.eth : 0) : valueEth * priceCache.eth;
       let sentiment = 'BULLISH';
       let trustScore = 65 + Math.floor(Math.random() * 25);
       if (i % 4 === 2) sentiment = 'BEARISH';
       if (i % 4 === 3) sentiment = 'HYPE';
 
+      const tokenSymbol = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
+      const tokenName = isErc20 ? (tx.asset || 'ERC-20 Token') : 'Ethereum';
+      const titleVal = isErc20
+        ? `${tokenSymbol} token transfer detected (${fmtUsd(valueUsd > 0 ? valueUsd : valueEth)})`
+        : `ETH whale moved ${valueEth.toFixed(1)} ETH (${fmtUsd(valueUsd)})`;
+
       return {
-        id: tx.hash || `eth-${i}`,
-        type: 'whale_transfer',
+        id: tx.hash ? `${tx.hash}-${i}` : `eth-${i}-${Date.now()}`,
+        type: isErc20 ? 'token_transfer' : 'whale_transfer',
         sentiment,
-        title: `ETH whale moved ${valueEth.toFixed(1)} ETH (${fmtUsd(valueUsd)})`,
-        summary: `${valueEth.toFixed(2)} ETH transferred on Ethereum. Volume: ${fmtUsd(valueUsd)}. Whale wallet activity detected.`,
+        title: titleVal,
+        summary: isErc20
+          ? `${tokenSymbol} transferred on Ethereum. Whale wallet activity detected.`
+          : `${valueEth.toFixed(2)} ETH transferred on Ethereum. Volume: ${fmtUsd(valueUsd)}. Whale wallet activity detected.`,
         from: tx.from || '0x0000',
         to: tx.to || '0x0000',
         value: valueEth,
@@ -116,8 +133,8 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
         txHash: tx.hash || '',
         blockNumber: parseInt(tx.blockNum, 16) || 0,
         timestamp: tx.metadata?.blockTimestamp || new Date().toISOString(),
-        tokenName: 'Ethereum',
-        tokenSymbol: 'ETH',
+        tokenName,
+        tokenSymbol,
         tokenPrice: fmtPrice(priceCache.eth),
         platform: 'Ethereum Mainnet',
       };
@@ -180,7 +197,7 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
     const data = await res.json();
     if (!Array.isArray(data)) return [];
 
-    return data.slice(0, 5).map((token: any) => {
+    return data.slice(0, 10).map((token: any) => {
       const mcap = token.usd_market_cap || 0;
       const replyCount = token.reply_count || 0;
       const trustScore = Math.min(90, Math.max(20, replyCount * 3 + 25));
@@ -216,6 +233,36 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
   }
 }
 
+function getDexPlatformLabel(dexId: string): string {
+  if (dexId.includes('pump') || dexId.includes('pumpswap')) return 'Pump.fun';
+  if (dexId.includes('raydium')) return 'Raydium';
+  if (dexId.includes('meteora')) return 'Meteora';
+  if (dexId.includes('jupiter')) return 'Jupiter';
+  if (dexId.includes('orca')) return 'Orca';
+  if (dexId.includes('uniswap')) return 'Uniswap';
+  if (dexId.includes('pancakeswap')) return 'PancakeSwap';
+  if (dexId.includes('fourmeme') || dexId.includes('four.meme') || dexId.includes('four_meme')) return 'FourMeme';
+  if (dexId.includes('quickswap')) return 'QuickSwap';
+  if (dexId.includes('sushiswap')) return 'SushiSwap';
+  return dexId;
+}
+
+function generateEventTitle(name: string, symbol: string, priceChange: number, vol24h: number, platformLabel: string, pairCreatedAt?: number): string {
+  if (pairCreatedAt && Date.now() - pairCreatedAt < 3600000) {
+    return `🆕 New pair: ${name} ($${symbol}) just launched on ${platformLabel}`;
+  }
+  if (priceChange > 20) {
+    return `🚀 ${name} surging +${priceChange.toFixed(1)}% on ${platformLabel}`;
+  }
+  if (priceChange < -20) {
+    return `📉 ${name} dropping ${priceChange.toFixed(1)}% on ${platformLabel}`;
+  }
+  if (vol24h > 1000000) {
+    return `💰 ${name} high volume (${fmtUsd(vol24h)}) on ${platformLabel}`;
+  }
+  return `${name} ($${symbol}) trending on ${platformLabel}`;
+}
+
 function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
   try {
     const chainId = pair.chainId || 'unknown';
@@ -232,26 +279,19 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
     const dexId = pair.dexId || '';
     const dexUrl = pair.url || '';
     const tokenAddress = pair.baseToken?.address || '';
+    const pairCreatedAt = pair.pairCreatedAt || undefined;
 
     if (vol24h < 100 && liq < 100) return null;
 
-    let platformLabel = dexId;
-    if (dexId.includes('pump') || dexId.includes('pumpswap')) platformLabel = 'Pump.fun';
-    else if (dexId.includes('raydium')) platformLabel = 'Raydium';
-    else if (dexId.includes('meteora')) platformLabel = 'Meteora';
-    else if (dexId.includes('jupiter')) platformLabel = 'Jupiter';
-    else if (dexId.includes('orca')) platformLabel = 'Orca';
-    else if (dexId.includes('uniswap')) platformLabel = 'Uniswap';
-    else if (dexId.includes('pancakeswap')) platformLabel = 'PancakeSwap';
-    else if (dexId.includes('fourmeme') || dexId.includes('four.meme')) platformLabel = 'FourMeme';
-    else if (dexId.includes('quickswap')) platformLabel = 'QuickSwap';
-    else if (dexId.includes('sushiswap')) platformLabel = 'SushiSwap';
+    const platformLabel = getDexPlatformLabel(dexId);
 
     let sentiment = 'HYPE';
     if (priceChange > 10) sentiment = 'BULLISH';
     if (priceChange < -15) sentiment = 'BEARISH';
     if (vol24h > 500000) sentiment = 'BULLISH';
     const trustScore = Math.min(90, Math.max(25, 40 + (liq > 50000 ? 15 : liq > 10000 ? 10 : 0) + (vol24h > 100000 ? 15 : vol24h > 10000 ? 10 : 0)));
+
+    const title = generateEventTitle(name, symbol, priceChange, vol24h, platformLabel, pairCreatedAt);
 
     const summaryParts: string[] = [];
     summaryParts.push(`$${symbol} on ${platformLabel}`);
@@ -268,10 +308,10 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
     else if (chainId === 'polygon') chain = 'polygon';
 
     return {
-      id: `${source}-${chain}-${tokenAddress?.slice(0, 16) || pairAddress?.slice(0, 16)}`,
+      id: `${source}-${chain}-${symbol}-${tokenAddress?.slice(0, 10) || pairAddress?.slice(0, 10)}`,
       type: 'trending',
       sentiment,
-      title: `${name} ($${symbol}) trending on ${platformLabel}`,
+      title,
       summary: summaryParts.join(' · '),
       from: source,
       to: tokenAddress?.slice(0, 12) || 'Unknown',
@@ -281,7 +321,7 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
       trustScore,
       txHash: tokenAddress || pairAddress || '',
       blockNumber: 0,
-      timestamp: pair.pairCreatedAt ? new Date(pair.pairCreatedAt).toISOString() : new Date().toISOString(),
+      timestamp: recentTimestamp(30),
       tokenName: name,
       tokenSymbol: symbol,
       tokenPrice: fmtPrice(priceUsd),
@@ -308,7 +348,7 @@ async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
     const boostsData = await boostsRes.json();
     if (!Array.isArray(boostsData)) return [];
 
-    const topTokens = boostsData.slice(0, 12);
+    const topTokens = boostsData.slice(0, 20);
 
     const pairResults = await Promise.allSettled(
       topTokens.map((t: any) =>
@@ -336,7 +376,7 @@ async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
   }
 }
 
-async function fetchDexScreenerByChain(chainId: string, count: number = 8): Promise<WhaleEvent[]> {
+async function fetchDexScreenerProfiles(chainId: string, count: number = 15): Promise<WhaleEvent[]> {
   try {
     const profilesRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
     if (!profilesRes.ok) return [];
@@ -362,134 +402,97 @@ async function fetchDexScreenerByChain(chainId: string, count: number = 8): Prom
       if (!pairs || pairs.length === 0) continue;
 
       const bestPair = pairs.sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0];
-      const event = mapDexPairToEvent(bestPair, 'DexScreener');
+      const event = mapDexPairToEvent(bestPair, 'DexScreener-Profiles');
       if (event) events.push(event);
     }
 
     return events;
   } catch (error) {
-    console.error(`DexScreener ${chainId} error:`, error);
+    console.error(`DexScreener profiles ${chainId} error:`, error);
     return [];
   }
 }
 
-async function fetchSolanaLaunchpads(): Promise<WhaleEvent[]> {
+async function fetchDexSearchPairs(query: string, chainFilter: string, count: number = 5): Promise<WhaleEvent[]> {
   try {
-    const searchQueries = ['raydium', 'meteora', 'jupiter', 'orca'];
-    const results = await Promise.allSettled(
-      searchQueries.map(q =>
-        fetch(`https://api.dexscreener.com/latest/dex/search?q=${q}`)
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null)
-      )
-    );
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const pairs = data?.pairs || [];
+
+    const filtered = pairs
+      .filter((p: any) => chainFilter === 'all' || p.chainId === chainFilter)
+      .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
+      .slice(0, count);
 
     const events: WhaleEvent[] = [];
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const data = result.status === 'fulfilled' ? result.value : null;
-      const pairs = data?.pairs || [];
-
-      const solanaPairs = pairs
-        .filter((p: any) => p.chainId === 'solana')
-        .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
-        .slice(0, 3);
-
-      for (const pair of solanaPairs) {
-        const event = mapDexPairToEvent(pair, 'DexScreener');
-        if (event) events.push(event);
-      }
+    for (const pair of filtered) {
+      const event = mapDexPairToEvent(pair, `DexSearch-${query}`);
+      if (event) events.push(event);
     }
-
-    const seen = new Set<string>();
-    return events.filter(e => {
-      const key = e.tokenSymbol || e.txHash;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 10);
-  } catch (error) {
-    console.error('Solana launchpads error:', error);
+    return events;
+  } catch {
     return [];
   }
 }
 
-async function fetchBSCFeed(): Promise<WhaleEvent[]> {
-  try {
-    const [chainData, trendingData] = await Promise.all([
-      fetchDexScreenerByChain('bsc', 8),
-      fetch('https://api.dexscreener.com/latest/dex/search?q=bsc')
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null),
-    ]);
-
-    const trendingEvents: WhaleEvent[] = [];
-    if (trendingData?.pairs) {
-      const bscPairs = trendingData.pairs
-        .filter((p: any) => p.chainId === 'bsc')
-        .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
-        .slice(0, 6);
-
-      for (const pair of bscPairs) {
-        const event = mapDexPairToEvent(pair, 'DexScreener');
-        if (event) trendingEvents.push(event);
-      }
-    }
-
-    const all = [...chainData, ...trendingEvents];
-    const seen = new Set<string>();
-    return all.filter(e => {
-      const key = e.tokenSymbol || e.txHash;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 10);
-  } catch (error) {
-    console.error('BSC feed error:', error);
-    return [];
-  }
+async function fetchEthereumDexEvents(): Promise<WhaleEvent[]> {
+  const ethTokens = ['PEPE', 'SHIB', 'LINK', 'UNI', 'AAVE', 'DOGE', 'MATIC', 'ARB', 'OP', 'MKR', 'LDO', 'CRV', 'COMP', 'SNX', 'ENS'];
+  const searches = ethTokens.slice(0, 8).map(t => fetchDexSearchPairs(t, 'ethereum', 2));
+  const results = await Promise.all([
+    ...searches,
+    fetchDexScreenerProfiles('ethereum', 15),
+  ]);
+  return results.flat();
 }
 
-async function fetchPolygonFeed(): Promise<WhaleEvent[]> {
-  try {
-    const [chainData, trendingData] = await Promise.all([
-      fetchDexScreenerByChain('polygon', 8),
-      fetch('https://api.dexscreener.com/latest/dex/search?q=polygon')
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null),
-    ]);
+async function fetchSolanaDexEvents(): Promise<WhaleEvent[]> {
+  const [raydiumEvents, meteoraEvents, jupiterEvents, orcaEvents, profileEvents] = await Promise.all([
+    fetchDexSearchPairs('raydium', 'solana', 5),
+    fetchDexSearchPairs('meteora', 'solana', 5),
+    fetchDexSearchPairs('jupiter', 'solana', 5),
+    fetchDexSearchPairs('orca', 'solana', 5),
+    fetchDexScreenerProfiles('solana', 15),
+  ]);
+  return [...raydiumEvents, ...meteoraEvents, ...jupiterEvents, ...orcaEvents, ...profileEvents];
+}
 
-    const trendingEvents: WhaleEvent[] = [];
-    if (trendingData?.pairs) {
-      const polygonPairs = trendingData.pairs
-        .filter((p: any) => p.chainId === 'polygon')
-        .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
-        .slice(0, 6);
+async function fetchBSCDexEvents(): Promise<WhaleEvent[]> {
+  const [pancakeEvents, fourmemeEvents, fourmeme2Events, profileEvents] = await Promise.all([
+    fetchDexSearchPairs('pancakeswap', 'bsc', 8),
+    fetchDexSearchPairs('fourmeme', 'bsc', 8),
+    fetchDexSearchPairs('four.meme', 'bsc', 8),
+    fetchDexScreenerProfiles('bsc', 15),
+  ]);
+  return [...pancakeEvents, ...fourmemeEvents, ...fourmeme2Events, ...profileEvents];
+}
 
-      for (const pair of polygonPairs) {
-        const event = mapDexPairToEvent(pair, 'DexScreener');
-        if (event) trendingEvents.push(event);
-      }
-    }
+async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
+  const polyTokens = ['MATIC', 'QUICK', 'AAVE', 'SUSHI', 'WETH'];
+  const searches = polyTokens.map(t => fetchDexSearchPairs(t, 'polygon', 3));
+  const results = await Promise.all([
+    ...searches,
+    fetchDexScreenerProfiles('polygon', 15),
+  ]);
+  return results.flat();
+}
 
-    const all = [...chainData, ...trendingEvents];
-    const seen = new Set<string>();
-    return all.filter(e => {
-      const key = e.tokenSymbol || e.txHash;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 10);
-  } catch (error) {
-    console.error('Polygon feed error:', error);
-    return [];
-  }
+function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
+  const seen = new Set<string>();
+  return events.filter(e => {
+    const addr = e.pairAddress || e.txHash || '';
+    const key = `${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.slice(0, 10)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const rawLimit = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(Math.max(rawLimit, 1), 100);
     const chain = searchParams.get('chain') || 'all';
 
     const cached = responseCache[chain];
@@ -510,62 +513,63 @@ export async function GET(request: Request) {
     const sources: string[] = [];
 
     if (chain === 'all') {
-      const [alchemyEvents, heliusEvents, pumpEvents, dexEvents] = await Promise.all([
+      const [alchemyEvents, heliusEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex] = await Promise.all([
         fetchAlchemyTransfers(),
         fetchHeliusTransactions(),
         fetchPumpFunTokens(),
         fetchDexScreenerTrending(),
+        fetchEthereumDexEvents(),
+        fetchSolanaDexEvents(),
+        fetchBSCDexEvents(),
+        fetchPolygonDexEvents(),
       ]);
 
-      events = [...dexEvents, ...pumpEvents, ...alchemyEvents, ...heliusEvents];
+      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...pumpEvents, ...alchemyEvents, ...heliusEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (heliusEvents.length > 0) sources.push('helius');
       if (pumpEvents.length > 0) sources.push('pumpfun');
-      if (dexEvents.length > 0) sources.push('dexscreener');
+      if (dexTrending.length > 0) sources.push('dexscreener');
+      if (ethDex.length > 0) sources.push('dex-ethereum');
+      if (solDex.length > 0) sources.push('dex-solana');
+      if (bscDex.length > 0) sources.push('dex-bsc');
+      if (polygonDex.length > 0) sources.push('dex-polygon');
 
     } else if (chain === 'solana') {
-      const [heliusEvents, pumpEvents, launchpadEvents, chainEvents] = await Promise.all([
+      const [heliusEvents, pumpEvents, solDex] = await Promise.all([
         fetchHeliusTransactions(),
         fetchPumpFunTokens(),
-        fetchSolanaLaunchpads(),
-        fetchDexScreenerByChain('solana', 6),
+        fetchSolanaDexEvents(),
       ]);
 
-      events = [...pumpEvents, ...launchpadEvents, ...chainEvents, ...heliusEvents];
+      events = [...solDex, ...pumpEvents, ...heliusEvents];
       if (heliusEvents.length > 0) sources.push('helius');
       if (pumpEvents.length > 0) sources.push('pumpfun');
-      if (launchpadEvents.length > 0) sources.push('launchpads');
-      if (chainEvents.length > 0) sources.push('dexscreener');
+      if (solDex.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'ethereum') {
-      const [alchemyEvents, chainEvents] = await Promise.all([
+      const [alchemyEvents, ethDex] = await Promise.all([
         fetchAlchemyTransfers(),
-        fetchDexScreenerByChain('ethereum', 10),
+        fetchEthereumDexEvents(),
       ]);
 
-      events = [...chainEvents, ...alchemyEvents];
+      events = [...ethDex, ...alchemyEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
-      if (chainEvents.length > 0) sources.push('dexscreener');
+      if (ethDex.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'bsc') {
-      const bscEvents = await fetchBSCFeed();
+      const bscEvents = await fetchBSCDexEvents();
       events = bscEvents;
       if (bscEvents.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'polygon') {
-      const polygonEvents = await fetchPolygonFeed();
+      const polygonEvents = await fetchPolygonDexEvents();
       events = polygonEvents;
       if (polygonEvents.length > 0) sources.push('dexscreener');
     }
 
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    const seen = new Set<string>();
-    events = events.filter(e => {
-      if (seen.has(e.id)) return false;
-      seen.add(e.id);
-      return true;
-    });
+    events = deduplicateEvents(events);
 
     responseCache[chain] = { data: events, ts: Date.now(), sources };
 

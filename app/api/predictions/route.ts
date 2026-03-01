@@ -42,7 +42,7 @@ interface UserPrediction {
 
 let predictionsCache: Prediction[] = [];
 let cacheTimestamp = 0;
-const CACHE_TTL = 60000;
+const CACHE_TTL = 120000;
 
 const userPredictions: Record<string, UserPrediction[]> = {};
 
@@ -101,6 +101,7 @@ function generateCoinGeckoPredictions(coins: any[]): Prediction[] {
 
   for (const coin of coins) {
     const price = coin.current_price || 0;
+    if (price < 2) continue;
     const mcap = coin.market_cap || 0;
     const change24h = coin.price_change_percentage_24h || 0;
     const vol = coin.total_volume || 0;
@@ -241,7 +242,7 @@ function generatePumpFunPredictions(tokens: any[]): Prediction[] {
       tokenSymbol: symbol,
       tokenIcon: icon,
       chain: 'solana',
-      currentPrice: 0,
+      currentPrice: mcap,
       currentMcap: mcap,
       targetValue: 1000,
       targetLabel: 'Still trading after 7 days',
@@ -266,7 +267,7 @@ function generatePumpFunPredictions(tokens: any[]): Prediction[] {
       tokenSymbol: symbol,
       tokenIcon: icon,
       chain: 'solana',
-      currentPrice: 0,
+      currentPrice: mcap,
       currentMcap: mcap,
       targetValue: 100000,
       targetLabel: '$100K Market Cap',
@@ -281,6 +282,215 @@ function generatePumpFunPredictions(tokens: any[]): Prediction[] {
       resolver: 'Pump.fun Market Cap Oracle',
       createdAt: now,
     });
+  }
+
+  return predictions;
+}
+
+async function fetchDexScreenerTopTokens(): Promise<any[]> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchDexScreenerSearch(query: string): Promise<any[]> {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.pairs) ? data.pairs : [];
+  } catch {
+    return [];
+  }
+}
+
+function mapDexChainId(chainId: string): string {
+  const mapping: Record<string, string> = {
+    'ethereum': 'ethereum',
+    'solana': 'solana',
+    'bsc': 'bsc',
+    'polygon': 'polygon',
+    'arbitrum': 'ethereum',
+    'base': 'ethereum',
+    'avalanche': 'ethereum',
+    'optimism': 'ethereum',
+  };
+  return mapping[chainId] || 'ethereum';
+}
+
+async function generateDexPredictions(): Promise<Prediction[]> {
+  const predictions: Prediction[] = [];
+  const now = new Date().toISOString();
+
+  const [topTokens, raydiumPairs, pancakePairs, uniswapPairs] = await Promise.all([
+    fetchDexScreenerTopTokens(),
+    fetchDexScreenerSearch('raydium'),
+    fetchDexScreenerSearch('pancakeswap'),
+    fetchDexScreenerSearch('uniswap'),
+  ]);
+
+  const dexSearchResults: Array<{ pairs: any[]; dexName: string; take: number }> = [
+    { pairs: raydiumPairs, dexName: 'Raydium', take: 3 },
+    { pairs: pancakePairs, dexName: 'PancakeSwap', take: 3 },
+    { pairs: uniswapPairs, dexName: 'Uniswap', take: 3 },
+  ];
+
+  for (const token of topTokens.slice(0, 20)) {
+    if (!token.tokenAddress || !token.chainId) continue;
+    try {
+      const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.tokenAddress}`);
+      if (!searchRes.ok) continue;
+      const searchData = await searchRes.json();
+      const pairs = Array.isArray(searchData?.pairs) ? searchData.pairs : [];
+      if (pairs.length === 0) continue;
+
+      const pair = pairs[0];
+      const price = parseFloat(pair.priceUsd || '0');
+      if (price < 2) continue;
+
+      const symbol = (pair.baseToken?.symbol || '').toUpperCase();
+      const name = pair.baseToken?.name || 'Unknown';
+      const change24h = pair.priceChange?.h24 || 0;
+      const vol = parseFloat(pair.volume?.h24 || '0');
+      const dexId = pair.dexId || 'unknown';
+      const chainId = pair.chainId || token.chainId;
+      const pairAddress = pair.pairAddress || '';
+
+      if (change24h > 10) {
+        const pool = randomPool();
+        predictions.push({
+          id: `dex-gains-${pairAddress.slice(0, 16)}`,
+          category: 'price',
+          question: `Will ${name} on ${dexId} maintain ${change24h.toFixed(1)}% gains?`,
+          tokenName: name,
+          tokenSymbol: symbol,
+          tokenIcon: token.icon || '',
+          chain: mapDexChainId(chainId),
+          currentPrice: price,
+          currentMcap: Number(pair.marketCap) || 0,
+          targetValue: price,
+          targetLabel: `Stay above $${price.toFixed(2)}`,
+          progress: 50,
+          priceChange24h: change24h,
+          volume24h: vol,
+          closeDate: futureDate(7),
+          ...pool,
+          status: 'active',
+          chartSymbol: symbol.toLowerCase(),
+          chartPairAddress: pairAddress,
+          chartChainId: chainId,
+          resolver: `DexScreener ${dexId} Oracle`,
+          createdAt: now,
+        });
+      }
+
+      const targetPrice = Math.round(price * 1.3 * 100) / 100;
+      const pool = randomPool();
+      predictions.push({
+        id: `dex-target-${pairAddress.slice(0, 16)}`,
+        category: 'price',
+        question: `Will ${name} hit $${targetPrice.toFixed(2)} this week?`,
+        tokenName: name,
+        tokenSymbol: symbol,
+        tokenIcon: token.icon || '',
+        chain: mapDexChainId(chainId),
+        currentPrice: price,
+        currentMcap: Number(pair.marketCap) || 0,
+        targetValue: targetPrice,
+        targetLabel: `$${targetPrice.toFixed(2)}`,
+        progress: clampProgress(price, targetPrice),
+        priceChange24h: change24h,
+        volume24h: vol,
+        closeDate: futureDate(7),
+        ...pool,
+        status: 'active',
+        chartSymbol: symbol.toLowerCase(),
+        chartPairAddress: pairAddress,
+        chartChainId: chainId,
+        resolver: `DexScreener ${dexId} Oracle`,
+        createdAt: now,
+      });
+
+      if (vol > 1000000) {
+        const targetVol = Math.round(vol * 2);
+        const volPool = randomPool();
+        predictions.push({
+          id: `dex-vol-${pairAddress.slice(0, 16)}`,
+          category: 'volume',
+          question: `Will ${name} volume exceed $${(targetVol / 1e6).toFixed(1)}M this week?`,
+          tokenName: name,
+          tokenSymbol: symbol,
+          tokenIcon: token.icon || '',
+          chain: mapDexChainId(chainId),
+          currentPrice: price,
+          currentMcap: Number(pair.marketCap) || 0,
+          targetValue: targetVol,
+          targetLabel: `$${(targetVol / 1e6).toFixed(1)}M Volume`,
+          progress: clampProgress(vol, targetVol),
+          priceChange24h: change24h,
+          volume24h: vol,
+          closeDate: futureDate(7),
+          ...volPool,
+          status: 'active',
+          chartSymbol: symbol.toLowerCase(),
+          chartPairAddress: pairAddress,
+          chartChainId: chainId,
+          resolver: `DexScreener ${dexId} Oracle`,
+          createdAt: now,
+        });
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  for (const { pairs, dexName, take } of dexSearchResults) {
+    let count = 0;
+    for (const pair of pairs) {
+      if (count >= take) break;
+      const price = parseFloat(pair.priceUsd || '0');
+      if (price < 2) continue;
+
+      const symbol = (pair.baseToken?.symbol || '').toUpperCase();
+      const name = pair.baseToken?.name || 'Unknown';
+      const change24h = pair.priceChange?.h24 || 0;
+      const vol = parseFloat(pair.volume?.h24 || '0');
+      const chainId = pair.chainId || 'ethereum';
+      const pairAddress = pair.pairAddress || '';
+
+      const targetPrice = Math.round(price * 1.3 * 100) / 100;
+      const pool = randomPool();
+      predictions.push({
+        id: `dex-${dexName.toLowerCase()}-${pairAddress.slice(0, 16)}`,
+        category: 'price',
+        question: `Will ${name} hit $${targetPrice.toFixed(2)} on ${dexName} this week?`,
+        tokenName: name,
+        tokenSymbol: symbol,
+        tokenIcon: '',
+        chain: mapDexChainId(chainId),
+        currentPrice: price,
+        currentMcap: Number(pair.marketCap) || 0,
+        targetValue: targetPrice,
+        targetLabel: `$${targetPrice.toFixed(2)}`,
+        progress: clampProgress(price, targetPrice),
+        priceChange24h: change24h,
+        volume24h: vol,
+        closeDate: futureDate(7),
+        ...pool,
+        status: 'active',
+        chartSymbol: symbol.toLowerCase(),
+        chartPairAddress: pairAddress,
+        chartChainId: chainId,
+        resolver: `DexScreener ${dexName} Oracle`,
+        createdAt: now,
+      });
+      count++;
+    }
   }
 
   return predictions;
@@ -445,9 +655,10 @@ function generateResolvedPredictions(): Prediction[] {
 }
 
 async function generatePredictions(): Promise<Prediction[]> {
-  const [cgCoins, pumpTokens] = await Promise.all([
+  const [cgCoins, pumpTokens, dexPredictions] = await Promise.all([
     fetchCoinGeckoCoins(),
     fetchPumpFunTokens(),
+    generateDexPredictions(),
   ]);
 
   const cgPredictions = generateCoinGeckoPredictions(cgCoins);
@@ -455,7 +666,7 @@ async function generatePredictions(): Promise<Prediction[]> {
   const wellKnownPredictions = generateWellKnownPredictions();
 
   const resolvedPredictions = generateResolvedPredictions();
-  const all = [...wellKnownPredictions, ...cgPredictions, ...pumpPredictions, ...resolvedPredictions];
+  const all = [...wellKnownPredictions, ...cgPredictions, ...dexPredictions, ...pumpPredictions, ...resolvedPredictions];
 
   const seen = new Set<string>();
   return all.filter(p => {
