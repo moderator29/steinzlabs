@@ -32,27 +32,36 @@ interface ContextEvent {
   sells24h?: number;
 }
 
-export function useContextFeed(limit: number = 15) {
+export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon';
+
+export function useContextFeed(limit: number = 15, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const seenIds = useRef<Set<string>>(new Set());
+  const currentChain = useRef<ChainFilter>(chain);
 
   const fetchEvents = useCallback(async () => {
     try {
-      const response = await fetch(`/api/context-feed?limit=${limit}&t=${Date.now()}`);
+      const response = await fetch(`/api/context-feed?limit=${limit}&chain=${chain}&t=${Date.now()}`);
       const data = await response.json();
       const newEvents: ContextEvent[] = data.events || [];
 
-      setEvents(prev => {
-        const merged = [...newEvents];
-        for (const old of prev) {
-          if (!merged.find(e => e.id === old.id)) {
-            merged.push(old);
+      if (currentChain.current !== chain) {
+        currentChain.current = chain;
+        seenIds.current.clear();
+        setEvents(newEvents.slice(0, 30));
+      } else {
+        setEvents(prev => {
+          const merged = [...newEvents];
+          for (const old of prev) {
+            if (!merged.find(e => e.id === old.id)) {
+              merged.push(old);
+            }
           }
-        }
-        merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        return merged.slice(0, 30);
-      });
+          merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          return merged.slice(0, 40);
+        });
+      }
 
       newEvents.forEach(e => seenIds.current.add(e.id));
     } catch (error) {
@@ -60,11 +69,18 @@ export function useContextFeed(limit: number = 15) {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, chain]);
 
   useEffect(() => {
+    setLoading(true);
+    seenIds.current.clear();
+    setEvents([]);
+    currentChain.current = chain;
     fetchEvents();
-    const interval = setInterval(fetchEvents, 10000);
+  }, [chain]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchEvents, 5000);
     return () => clearInterval(interval);
   }, [fetchEvents]);
 
