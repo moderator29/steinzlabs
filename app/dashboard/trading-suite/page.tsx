@@ -7,7 +7,7 @@ import {
   Wifi, Clock, BarChart3, Layers, Video, Users, Crown, Globe, Hash,
   Flame, Sparkles, AlertTriangle, Play, Volume2,
   MessageCircle, Heart, Share2, Award, Cpu, ChevronRight, ChevronDown,
-  ArrowLeftRight, DollarSign, Settings, Wallet, RefreshCw, X,
+  ArrowLeftRight, DollarSign, Settings, Wallet, RotateCcw, X,
   Crosshair, Gauge, Lock, Droplets, ScanLine, Radar, Bolt,
   BookOpen, Mic, Camera, Gift, Trophy, LineChart, CandlestickChart,
   ArrowLeft, LayoutGrid, Bell, Percent, ChevronUp, Info, CheckCircle2, XCircle
@@ -234,7 +234,7 @@ export default function TradingSuitePage() {
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Token or CA..." className="w-28 bg-[#0f1320] border border-[#1a1f2e] rounded-xl pl-7 pr-3 py-2 text-[10px] text-white focus:outline-none focus:border-[#00E5FF]/40 focus:w-44 transition-all placeholder:text-gray-600" />
               </div>
               <button onClick={fetchData} className="p-2 rounded-xl hover:bg-white/5 transition-colors">
-                <RefreshCw className={`w-3.5 h-3.5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                <RotateCcw className={`w-3.5 h-3.5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function TradingSuitePage() {
             <button onClick={() => { if (pasteCA) lookupCA(pasteCA, selectedChain); }}
               disabled={caLoading || !pasteCA}
               className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
-              {caLoading ? <><RefreshCw className="w-4 h-4 animate-spin"/>Scanning...</> : <><ScanLine className="w-4 h-4"/>Analyze Token</>}
+              {caLoading ? <><RotateCcw className="w-4 h-4 animate-spin"/>Scanning...</> : <><ScanLine className="w-4 h-4"/>Analyze Token</>}
             </button>
           </div>
         </div>
@@ -338,7 +338,7 @@ export default function TradingSuitePage() {
           </div>
           <div ref={chartRef} className="flex-1 min-h-0">
             <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
-              <RefreshCw className="w-5 h-5 animate-spin mr-2"/>Loading chart...
+              <RotateCcw className="w-5 h-5 animate-spin mr-2"/>Loading chart...
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 p-4 border-t border-[#1a1f2e]">
@@ -548,7 +548,7 @@ export default function TradingSuitePage() {
                 <input type="text" value={pasteCA} onChange={e=>setPasteCA(e.target.value)} placeholder="Paste contract address (0x... or So1...)" className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-2.5 text-[11px] font-mono text-white focus:outline-none focus:border-[#00E5FF]/40"/>
                 <button onClick={() => { if (pasteCA) lookupCA(pasteCA, selectedChain); }} disabled={caLoading}
                   className="px-4 py-2.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl text-[10px] font-bold disabled:opacity-50 flex items-center gap-1.5">
-                  {caLoading ? <RefreshCw className="w-3 h-3 animate-spin"/> : <ScanLine className="w-3 h-3"/>}
+                  {caLoading ? <RotateCcw className="w-3 h-3 animate-spin"/> : <ScanLine className="w-3 h-3"/>}
                   Scan
                 </button>
               </div>
@@ -562,7 +562,7 @@ export default function TradingSuitePage() {
 
             {caLoading && !caResult && (
               <div className="bg-[#0f1320] rounded-2xl border border-[#00E5FF]/20 p-8 text-center">
-                <RefreshCw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin"/>
+                <RotateCcw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin"/>
                 <div className="text-sm font-bold mb-1">Scanning Contract...</div>
                 <div className="text-[10px] text-gray-500">Fetching token data, liquidity, and security audit</div>
               </div>

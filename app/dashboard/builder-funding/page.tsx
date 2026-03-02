@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Rocket, CheckCircle, Lock, Loader, Loader2, Shield, ArrowLeft, RefreshCw, Info, X, DollarSign, Users, Clock, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Rocket, CheckCircle, Lock, Loader, Loader2, Shield, ArrowLeft, RotateCcw, Info, X, DollarSign, Users, Clock, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useWallet } from '@/lib/hooks/useWallet';
 

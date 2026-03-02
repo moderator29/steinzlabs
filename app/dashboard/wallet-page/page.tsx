@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RefreshCw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X } from 'lucide-react';
+import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface TokenBalance {
@@ -361,7 +361,7 @@ export default function WalletPage() {
                   {hideBalance ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                 </button>
                 <button onClick={() => { if (activeWallet) fetchBalances(activeWallet.address, activeChain); fetchPrices(); }} disabled={loading} className="p-1.5 hover:bg-white/10 rounded-lg">
-                  <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                  <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
@@ -464,7 +464,7 @@ export default function WalletPage() {
                     <>
                       {loading ? (
                         <div className="py-8 text-center">
-                          <RefreshCw className="w-6 h-6 text-gray-500 animate-spin mx-auto mb-2" />
+                          <RotateCcw className="w-6 h-6 text-gray-500 animate-spin mx-auto mb-2" />
                           <p className="text-xs text-gray-500">Loading balances...</p>
                         </div>
                       ) : walletData?.holdings && walletData.holdings.length > 0 ? (
@@ -529,7 +529,7 @@ export default function WalletPage() {
                       {Object.keys(multiChainBalances).length > 0 && !hideBalance && (
                         <span className="text-xs font-mono text-[#00E5FF]">${totalMultiChainUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       )}
-                      {multiChainLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                      {multiChainLoading ? <RotateCcw className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                     </div>
                   </button>
                   {Object.keys(multiChainBalances).length > 0 && (

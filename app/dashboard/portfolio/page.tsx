@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RefreshCw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RotateCcw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 
@@ -64,7 +64,7 @@ export default function PortfolioPage() {
               onClick={() => fetchPortfolio(walletAddress)}
               className="ml-auto hover:bg-white/10 p-2 rounded-lg"
             >
-              <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Fish, ArrowLeft, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
+import { Fish, ArrowLeft, ArrowUpRight, ArrowDownRight, ExternalLink, RotateCcw, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -77,7 +77,7 @@ export default function WhaleTrackerPage() {
               <span className="text-[10px] text-[#10B981]">Live</span>
             </div>
             <button onClick={() => fetchWhaleData()} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors" title="Refresh">
-              <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

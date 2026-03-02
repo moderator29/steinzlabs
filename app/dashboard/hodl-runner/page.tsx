@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Trophy, Medal, Star, Play, ArrowLeft, Users, Gamepad2,
-  Crown, Zap, Heart, Flame, Target, RefreshCw, Volume2, VolumeX,
-  Home, RotateCcw
+  Crown, Zap, Heart, Flame, Target, RotateCcw, Volume2, VolumeX,
+  Home
 } from 'lucide-react';
 
 interface LeaderboardEntry {
@@ -1000,7 +1000,7 @@ export default function HodlRunnerPage() {
                   onClick={startGame}
                   className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
-                  <RefreshCw className="w-4 h-4" /> Play Again
+                  <RotateCcw className="w-4 h-4" /> Play Again
                 </button>
                 <button
                   onClick={() => { fetchLeaderboard(); setGameState('leaderboard'); }}
@@ -1038,7 +1038,7 @@ export default function HodlRunnerPage() {
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1a1f2e] flex items-center justify-between">
                 <span className="text-[10px] font-bold">Top 50 Players</span>
-                <button onClick={fetchLeaderboard} className="text-[9px] text-gray-600 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5"/>Refresh</button>
+                <button onClick={fetchLeaderboard} className="text-[9px] text-gray-600 flex items-center gap-1"><RotateCcw className="w-2.5 h-2.5"/>Refresh</button>
               </div>
               {leaderboard.length === 0 ? (
                 <div className="p-8 text-center">
