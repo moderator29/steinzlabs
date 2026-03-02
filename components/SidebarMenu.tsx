@@ -95,7 +95,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 tracking-wider">Play</h3>
             <div className="space-y-1">
               <SidebarItem icon={Gamepad2} label="HODL Runner" badge="PLAY" onClick={() => handleNavigation('/dashboard/hodl-runner')} onHover={() => handleHoverPrefetch('/dashboard/hodl-runner')} />
-              <SidebarItem icon={Rocket} label="WGM Runner" badge="NEW" onClick={() => handleNavigation('/dashboard/wgm-runner')} onHover={() => handleHoverPrefetch('/dashboard/wgm-runner')} />
+              <SidebarItem icon={Rocket} label="STZ Runner" badge="NEW" onClick={() => handleNavigation('/dashboard/wgm-runner')} onHover={() => handleHoverPrefetch('/dashboard/wgm-runner')} />
             </div>
           </div>
 

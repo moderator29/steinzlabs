@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RefreshCw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers } from 'lucide-react';
+import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RefreshCw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface TokenBalance {
@@ -36,26 +36,52 @@ interface ChainInfo {
   id: string;
   name: string;
   symbol: string;
-  icon: string;
   color: string;
   explorerUrl: string;
   explorerName: string;
   apiChain: string;
+  logoUrl: string;
+  coinGeckoId: string;
 }
 
+const COIN_LOGOS: Record<string, string> = {
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  FTM: 'https://assets.coingecko.com/coins/images/4001/small/Fantom_round.png',
+  CRO: 'https://assets.coingecko.com/coins/images/7310/small/cro_token_logo.png',
+  SUI: 'https://assets.coingecko.com/coins/images/26375/small/sui-ocean-square.png',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg',
+  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
+  WETH: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
+  AAVE: 'https://assets.coingecko.com/coins/images/12645/small/aave-token-round.png',
+  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
+  BASE: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+};
+
 const SUPPORTED_CHAINS: ChainInfo[] = [
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: '⟠', color: '#627EEA', explorerUrl: 'https://etherscan.io', explorerName: 'Etherscan', apiChain: 'ethereum' },
-  { id: 'base', name: 'Base', symbol: 'ETH', icon: '🔵', color: '#0052FF', explorerUrl: 'https://basescan.org', explorerName: 'BaseScan', apiChain: 'base' },
-  { id: 'polygon', name: 'Polygon', symbol: 'MATIC', icon: '⬡', color: '#8247E5', explorerUrl: 'https://polygonscan.com', explorerName: 'PolygonScan', apiChain: 'polygon' },
-  { id: 'avalanche', name: 'Avalanche', symbol: 'AVAX', icon: '🔺', color: '#E84142', explorerUrl: 'https://snowtrace.io', explorerName: 'SnowTrace', apiChain: 'avalanche' },
-  { id: 'solana', name: 'Solana', symbol: 'SOL', icon: '◎', color: '#9945FF', explorerUrl: 'https://solscan.io', explorerName: 'SolScan', apiChain: 'solana' },
-  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', icon: '₿', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin' },
-  { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', icon: '🔷', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum' },
-  { id: 'optimism', name: 'Optimism', symbol: 'ETH', icon: '🔴', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism' },
-  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', icon: '◆', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bnb' },
-  { id: 'fantom', name: 'Fantom', symbol: 'FTM', icon: '👻', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom' },
-  { id: 'cronos', name: 'Cronos', symbol: 'CRO', icon: '💎', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos' },
-  { id: 'sui', name: 'Sui', symbol: 'SUI', icon: '💧', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui' },
+  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', color: '#627EEA', explorerUrl: 'https://etherscan.io', explorerName: 'Etherscan', apiChain: 'ethereum', logoUrl: COIN_LOGOS.ETH, coinGeckoId: 'ethereum' },
+  { id: 'base', name: 'Base', symbol: 'ETH', color: '#0052FF', explorerUrl: 'https://basescan.org', explorerName: 'BaseScan', apiChain: 'base', logoUrl: 'https://assets.coingecko.com/coins/images/31164/small/base.png', coinGeckoId: 'ethereum' },
+  { id: 'polygon', name: 'Polygon', symbol: 'MATIC', color: '#8247E5', explorerUrl: 'https://polygonscan.com', explorerName: 'PolygonScan', apiChain: 'polygon', logoUrl: COIN_LOGOS.MATIC, coinGeckoId: 'matic-network' },
+  { id: 'avalanche', name: 'Avalanche', symbol: 'AVAX', color: '#E84142', explorerUrl: 'https://snowtrace.io', explorerName: 'SnowTrace', apiChain: 'avalanche', logoUrl: COIN_LOGOS.AVAX, coinGeckoId: 'avalanche-2' },
+  { id: 'solana', name: 'Solana', symbol: 'SOL', color: '#9945FF', explorerUrl: 'https://solscan.io', explorerName: 'SolScan', apiChain: 'solana', logoUrl: COIN_LOGOS.SOL, coinGeckoId: 'solana' },
+  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin', logoUrl: COIN_LOGOS.BTC, coinGeckoId: 'bitcoin' },
+  { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum', logoUrl: 'https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg', coinGeckoId: 'ethereum' },
+  { id: 'optimism', name: 'Optimism', symbol: 'ETH', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism', logoUrl: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png', coinGeckoId: 'ethereum' },
+  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bnb', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
+  { id: 'fantom', name: 'Fantom', symbol: 'FTM', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom', logoUrl: COIN_LOGOS.FTM, coinGeckoId: 'fantom' },
+  { id: 'cronos', name: 'Cronos', symbol: 'CRO', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos', logoUrl: COIN_LOGOS.CRO, coinGeckoId: 'crypto-com-chain' },
+  { id: 'sui', name: 'Sui', symbol: 'SUI', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui', logoUrl: COIN_LOGOS.SUI, coinGeckoId: 'sui' },
 ];
 
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana'];
@@ -78,6 +104,63 @@ function simpleDecrypt(encoded: string, password: string): string {
   return result;
 }
 
+function CoinLogo({ symbol, size = 40, className = '' }: { symbol: string; size?: number; className?: string }) {
+  const [imgError, setImgError] = useState(false);
+  const logoUrl = COIN_LOGOS[symbol.toUpperCase()];
+
+  if (!logoUrl || imgError) {
+    const colors: Record<string, string> = {
+      ETH: '#627EEA', BTC: '#F7931A', SOL: '#9945FF', MATIC: '#8247E5', AVAX: '#E84142',
+      BNB: '#F0B90B', FTM: '#1969FF', CRO: '#002D74', SUI: '#4DA2FF', USDT: '#26A17B',
+      USDC: '#2775CA', DAI: '#F5AC37',
+    };
+    const bg = colors[symbol.toUpperCase()] || '#374151';
+    return (
+      <div className={`rounded-full flex items-center justify-center font-bold ${className}`}
+        style={{ width: size, height: size, minWidth: size, background: bg, fontSize: size * 0.35 }}>
+        {symbol.slice(0, 2)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={symbol}
+      width={size}
+      height={size}
+      className={`rounded-full ${className}`}
+      style={{ width: size, height: size, minWidth: size }}
+      onError={() => setImgError(true)}
+    />
+  );
+}
+
+function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (imgError) {
+    return (
+      <div className="rounded-full flex items-center justify-center font-bold text-white"
+        style={{ width: size, height: size, minWidth: size, background: chain.color, fontSize: size * 0.4 }}>
+        {chain.symbol.slice(0, 1)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={chain.logoUrl}
+      alt={chain.name}
+      width={size}
+      height={size}
+      className="rounded-full"
+      style={{ width: size, height: size, minWidth: size }}
+      onError={() => setImgError(true)}
+    />
+  );
+}
+
 export default function WalletPage() {
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
@@ -88,7 +171,10 @@ export default function WalletPage() {
   const [activeChain, setActiveChain] = useState<ChainInfo>(SUPPORTED_CHAINS[0]);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
-  const [showAllChains, setShowAllChains] = useState(false);
+  const [activeTab, setActiveTab] = useState<'crypto' | 'nfts' | 'activity'>('crypto');
+  const [hideBalance, setHideBalance] = useState(false);
+  const [prices, setPrices] = useState<Record<string, { usd: number; usd_24h_change: number }>>({});
+  const [pricesLoading, setPricesLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('steinz_wallets');
@@ -99,7 +185,29 @@ export default function WalletPage() {
     }
     const tokens = localStorage.getItem('steinz_custom_tokens');
     if (tokens) setCustomTokens(JSON.parse(tokens));
+    fetchPrices();
   }, []);
+
+  const fetchPrices = async () => {
+    setPricesLoading(true);
+    try {
+      const ids = SUPPORTED_CHAINS.map(c => c.coinGeckoId).filter((v, i, a) => a.indexOf(v) === i).join(',');
+      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+      if (res.ok) {
+        const data = await res.json();
+        const priceMap: Record<string, { usd: number; usd_24h_change: number }> = {};
+        for (const chain of SUPPORTED_CHAINS) {
+          if (data[chain.coinGeckoId]) {
+            priceMap[chain.id] = {
+              usd: data[chain.coinGeckoId].usd || 0,
+              usd_24h_change: data[chain.coinGeckoId].usd_24h_change || 0,
+            };
+          }
+        }
+        setPrices(priceMap);
+      }
+    } catch {} finally { setPricesLoading(false); }
+  };
 
   const saveWallets = (w: StoredWallet[]) => {
     setWallets(w);
@@ -113,7 +221,6 @@ export default function WalletPage() {
       if (res.ok) {
         const data = await res.json();
         setWalletData(data);
-
         try {
           const existing = JSON.parse(localStorage.getItem('steinz_portfolio_wallet') || '""');
           if (existing !== address) {
@@ -124,10 +231,7 @@ export default function WalletPage() {
           }
         } catch {}
       }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   }, []);
 
   const fetchMultiChainBalances = useCallback(async (address: string) => {
@@ -136,15 +240,9 @@ export default function WalletPage() {
     const promises = LIVE_CHAINS.map(async (chainId) => {
       try {
         const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chainId}`);
-        if (res.ok) {
-          const data = await res.json();
-          results[chainId] = data;
-        } else {
-          results[chainId] = null;
-        }
-      } catch {
-        results[chainId] = null;
-      }
+        if (res.ok) { results[chainId] = await res.json(); }
+        else { results[chainId] = null; }
+      } catch { results[chainId] = null; }
     });
     await Promise.all(promises);
     setMultiChainBalances(results);
@@ -177,6 +275,10 @@ export default function WalletPage() {
     return sum;
   }, 0);
 
+  const currentBalance = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
+  const currentPrice = prices[activeChain.id];
+  const priceChange = currentPrice?.usd_24h_change || 0;
+
   if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletCreated} />;
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
@@ -185,297 +287,351 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
-      <div className="px-4 pt-6 max-w-lg mx-auto">
-        <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-4 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
-
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-heading font-bold">STEINZ Wallet</h1>
-              <p className="text-gray-400 text-[10px] flex items-center gap-1">
-                <Globe className="w-3 h-3" /> Multi-chain non-custodial wallet
-              </p>
-            </div>
-          </div>
-          <button onClick={() => activeWallet && fetchBalances(activeWallet.address, activeChain)} disabled={loading} className="p-2 hover:bg-white/10 rounded-lg">
-            <RefreshCw className={`w-4 h-4 text-[#00E5FF] ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-
+      <div className="max-w-lg mx-auto">
         {wallets.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Wallet className="w-10 h-10 text-[#00E5FF]" />
-            </div>
-            <h2 className="text-lg font-bold mb-2">Get Started</h2>
-            <p className="text-gray-400 text-sm mb-6">Create a new wallet or import an existing one using your recovery phrase or private key.</p>
+          <div className="px-4 pt-8">
+            <div className="text-center py-12">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-3xl flex items-center justify-center shadow-2xl shadow-[#00E5FF]/20">
+                <Wallet className="w-12 h-12 text-white" />
+              </div>
+              <h1 className="text-2xl font-heading font-bold mb-2">STEINZ Wallet</h1>
+              <p className="text-gray-400 text-sm mb-8">Your gateway to multi-chain crypto</p>
 
-            <div className="glass rounded-xl border border-white/10 p-4 mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Layers className="w-4 h-4 text-[#00E5FF]" />
-                <span className="text-xs font-bold">12 Chains Supported</span>
+              <div className="bg-[#111827] rounded-2xl border border-white/5 p-5 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Globe className="w-4 h-4 text-[#00E5FF]" />
+                  <span className="text-sm font-bold">12 Chains Supported</span>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {SUPPORTED_CHAINS.map(chain => (
+                    <div key={chain.id} className="flex flex-col items-center gap-1.5 p-2">
+                      <ChainLogo chain={chain} size={32} />
+                      <span className="text-[10px] text-gray-400 text-center leading-tight">{chain.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-4 gap-2">
-                {SUPPORTED_CHAINS.map(chain => (
-                  <div key={chain.id} className="flex flex-col items-center gap-1 p-2 bg-[#111827] rounded-lg">
-                    <span className="text-base">{chain.icon}</span>
-                    <span className="text-[9px] text-gray-400 text-center leading-tight">{chain.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              <button onClick={() => setView('create')} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" /> Create New Wallet
-              </button>
-              <button onClick={() => setView('import')} className="w-full py-3 border border-white/10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/5">
-                <Download className="w-4 h-4" /> Import Wallet
-              </button>
-            </div>
-            <div className="mt-6 p-3 bg-[#111827] rounded-xl border border-white/5">
-              <div className="flex items-center gap-2 mb-1">
-                <Shield className="w-3.5 h-3.5 text-[#10B981]" />
-                <span className="text-[10px] font-semibold text-[#10B981]">Non-Custodial</span>
+              <div className="space-y-3">
+                <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#00E5FF]/20">
+                  <Plus className="w-5 h-5" /> Create New Wallet
+                </button>
+                <button onClick={() => setView('import')} className="w-full py-4 bg-[#111827] border border-white/10 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-white/5">
+                  <Download className="w-5 h-5" /> Import Wallet
+                </button>
               </div>
-              <p className="text-[10px] text-gray-500">Your keys stay on your device. STEINZ never has access to your private keys or funds.</p>
+
+              <div className="mt-6 p-4 bg-[#10B981]/5 rounded-2xl border border-[#10B981]/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="w-4 h-4 text-[#10B981]" />
+                  <span className="text-xs font-semibold text-[#10B981]">Non-Custodial & Secure</span>
+                </div>
+                <p className="text-[11px] text-gray-500">Your keys stay on your device. STEINZ never has access to your private keys or funds.</p>
+              </div>
             </div>
           </div>
         ) : (
           <>
-            {wallets.length > 1 && (
-              <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                {wallets.map(w => (
-                  <button
-                    key={w.address}
-                    onClick={() => setActiveWallet(w)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${
-                      activeWallet?.address === w.address ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'
-                    }`}
+            <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard" className="p-1.5 hover:bg-white/10 rounded-lg">
+                  <ArrowLeft className="w-4 h-4 text-gray-400" />
+                </Link>
+                <Settings className="w-4 h-4 text-gray-400 cursor-pointer hover:text-white" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold">{activeWallet?.name || 'Wallet'}</span>
+                {wallets.length > 1 && (
+                  <select
+                    className="bg-transparent text-sm font-bold appearance-none cursor-pointer pr-1"
+                    value={activeWallet?.address}
+                    onChange={(e) => {
+                      const w = wallets.find(w => w.address === e.target.value);
+                      if (w) setActiveWallet(w);
+                    }}
                   >
-                    {w.name}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
-              {SUPPORTED_CHAINS.slice(0, showAllChains ? SUPPORTED_CHAINS.length : 5).map(chain => (
-                <button
-                  key={chain.id}
-                  onClick={() => setActiveChain(chain)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
-                    activeChain.id === chain.id
-                      ? 'text-white border-2'
-                      : 'bg-[#111827] text-gray-400 border border-white/5 hover:border-white/20'
-                  }`}
-                  style={activeChain.id === chain.id ? { borderColor: chain.color, backgroundColor: `${chain.color}15` } : {}}
-                >
-                  <span className="text-sm">{chain.icon}</span>
-                  {chain.name}
-                  {!LIVE_CHAINS.includes(chain.id) && <span className="text-[8px] text-gray-500 ml-0.5">soon</span>}
-                </button>
-              ))}
-              <button
-                onClick={() => setShowAllChains(!showAllChains)}
-                className="px-2 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#111827] text-gray-400 border border-white/5 hover:border-white/20"
-              >
-                {showAllChains ? '−' : `+${SUPPORTED_CHAINS.length - 5}`}
-              </button>
-            </div>
-
-            <div className="glass rounded-2xl p-5 border border-white/10 mb-4">
-              <div className="text-center mb-4">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <span className="text-lg">{activeChain.icon}</span>
-                  <p className="text-gray-400 text-xs">{activeChain.name} Balance</p>
-                </div>
-                <p className="text-3xl font-bold font-mono">
-                  {!LIVE_CHAINS.includes(activeChain.id) ? (
-                    <span className="text-lg text-gray-500">Coming Soon</span>
-                  ) : loading ? '...' : walletData ? `$${parseFloat(walletData.totalBalanceUsd).toLocaleString()}` : '$0.00'}
-                </p>
-                {LIVE_CHAINS.includes(activeChain.id) && walletData && (
-                  <p className="text-[10px] text-gray-500 mt-0.5 font-mono">
-                    {walletData.nativeBalance || walletData.ethBalance || '0'} {activeChain.symbol}
-                  </p>
-                )}
-                <p className="text-gray-500 text-[10px] font-mono mt-1">
-                  {activeWallet?.address.slice(0, 6)}...{activeWallet?.address.slice(-4)}
-                  <button onClick={() => { navigator.clipboard.writeText(activeWallet?.address || ''); }} className="ml-1 inline-flex"><Copy className="w-3 h-3 text-gray-500 hover:text-white" /></button>
-                </p>
-              </div>
-
-              {EVM_LIVE_CHAINS.includes(activeChain.id) && (
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setView('send')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                    <Send className="w-4 h-4 text-[#00E5FF]" /> Send
-                  </button>
-                  <button onClick={() => setView('receive')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                    <Download className="w-4 h-4 text-[#10B981]" /> Receive
-                  </button>
-                  <button onClick={() => setView('add-token')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                    <Plus className="w-4 h-4 text-[#7C3AED]" /> Add Token
-                  </button>
-                </div>
-              )}
-
-              {activeChain.id === 'solana' && (
-                <div className="text-center py-2">
-                  <p className="text-[10px] text-gray-500">Solana send/receive requires a Solana keypair — coming soon</p>
-                </div>
-              )}
-
-              {!LIVE_CHAINS.includes(activeChain.id) && (
-                <div className="text-center py-2">
-                  <p className="text-[10px] text-gray-500">{activeChain.name} integration coming soon</p>
-                </div>
-              )}
-            </div>
-
-            {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-              <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
-                <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => activeWallet && fetchMultiChainBalances(activeWallet.address)}
-                      disabled={multiChainLoading}
-                      className="text-[10px] px-2 py-1 bg-[#111827] rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1"
-                    >
-                      <Layers className="w-3 h-3" />
-                      {multiChainLoading ? 'Scanning...' : 'Scan All Chains'}
-                    </button>
-                  </div>
-                  {Object.keys(multiChainBalances).length > 0 && (
-                    <span className="text-[10px] font-mono text-[#00E5FF]">
-                      Total: ${totalMultiChainUsd.toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                {Object.keys(multiChainBalances).length > 0 && (
-                  <div className="divide-y divide-white/5">
-                    {LIVE_CHAINS.map(chainId => {
-                      const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
-                      const data = multiChainBalances[chainId];
-                      if (!chain) return null;
-                      const balance = data ? parseFloat(data.totalBalanceUsd || '0') : 0;
-                      return (
-                        <button
-                          key={chainId}
-                          onClick={() => setActiveChain(chain)}
-                          className={`w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors ${activeChain.id === chainId ? 'bg-white/5' : ''}`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-base">{chain.icon}</span>
-                            <div className="text-left">
-                              <p className="text-xs font-semibold">{chain.name}</p>
-                              <p className="text-[10px] text-gray-500">{chain.symbol}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-mono">${balance.toLocaleString()}</p>
-                            {data && data.holdings?.[0] && (
-                              <p className="text-[10px] text-gray-500">{data.holdings[0].balance} {chain.symbol}</p>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
-              <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                <h3 className="text-sm font-bold flex items-center gap-2">
-                  <span>{activeChain.icon}</span> {activeChain.name} Holdings
-                </h3>
-                <span className="text-[10px] text-gray-500">{walletData?.tokenCount || 0} tokens</span>
-              </div>
-              {LIVE_CHAINS.includes(activeChain.id) ? (
-                walletData?.holdings && walletData.holdings.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {walletData.holdings.map((token, i) => (
-                      <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${activeChain.color}20` }}>
-                            <span className="text-[10px] font-bold">{token.symbol.slice(0, 2)}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold">{token.symbol}</p>
-                            <p className="text-[10px] text-gray-500">{token.name}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs font-mono">{token.balance}</p>
-                          {token.valueUsd && <p className="text-[10px] text-gray-500">${parseFloat(token.valueUsd).toLocaleString()}</p>}
-                        </div>
-                      </div>
+                    {wallets.map(w => (
+                      <option key={w.address} value={w.address} className="bg-[#111827] text-white">{w.name}</option>
                     ))}
-                  </div>
-                ) : (
-                  <div className="px-4 py-6 text-center text-gray-500 text-xs">
-                    {loading ? 'Loading...' : 'No tokens found'}
-                  </div>
-                )
-              ) : (
-                <div className="px-4 py-6 text-center text-gray-500 text-xs">
-                  {activeChain.name} support coming soon
-                </div>
-              )}
+                  </select>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setHideBalance(!hideBalance)} className="p-1.5 hover:bg-white/10 rounded-lg">
+                  {hideBalance ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
+                </button>
+                <button onClick={() => { if (activeWallet) fetchBalances(activeWallet.address, activeChain); fetchPrices(); }} disabled={loading} className="p-1.5 hover:bg-white/10 rounded-lg">
+                  <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            <div className="glass rounded-xl border border-white/10 p-4 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Layers className="w-4 h-4 text-[#00E5FF]" />
-                <span className="text-xs font-bold">Supported Chains</span>
+            <div className="px-4 pt-2 pb-4">
+              <div className="text-center mb-5">
+                <p className="text-4xl font-bold font-mono mb-1">
+                  {hideBalance ? '••••••' : (
+                    !LIVE_CHAINS.includes(activeChain.id) ? '--' :
+                    loading ? '...' :
+                    `$${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  )}
+                </p>
+                {LIVE_CHAINS.includes(activeChain.id) && !hideBalance && (
+                  <div className="flex items-center justify-center gap-1.5">
+                    {priceChange !== 0 && (
+                      <>
+                        {priceChange > 0 ? (
+                          <TrendingUp className="w-3.5 h-3.5 text-[#10B981]" />
+                        ) : (
+                          <TrendingDown className="w-3.5 h-3.5 text-[#EF4444]" />
+                        )}
+                        <span className={`text-sm font-medium ${priceChange > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                          {priceChange > 0 ? '+' : ''}{priceChange.toFixed(2)}%
+                        </span>
+                      </>
+                    )}
+                    <span className="text-xs text-gray-500">24h</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => { navigator.clipboard.writeText(activeWallet?.address || ''); }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full hover:bg-white/10 transition-all"
+                >
+                  <span className="text-[11px] font-mono text-gray-400">
+                    {activeWallet?.address.slice(0, 6)}...{activeWallet?.address.slice(-4)}
+                  </span>
+                  <Copy className="w-3 h-3 text-gray-500" />
+                </button>
               </div>
-              <div className="grid grid-cols-6 gap-2">
+
+              <div className="flex justify-center gap-4 mb-6">
+                {EVM_LIVE_CHAINS.includes(activeChain.id) ? (
+                  <>
+                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#00E5FF" onClick={() => setView('send')} />
+                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => setView('receive')} />
+                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
+                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
+                  </>
+                ) : activeChain.id === 'solana' ? (
+                  <>
+                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#9945FF" onClick={() => {}} disabled soon />
+                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => setView('receive')} />
+                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
+                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
+                  </>
+                ) : (
+                  <>
+                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#627EEA" onClick={() => {}} disabled soon />
+                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => {}} disabled soon />
+                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
+                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
+                  </>
+                )}
+              </div>
+
+              <div className="flex overflow-x-auto gap-2 mb-4 pb-1 scrollbar-hide">
                 {SUPPORTED_CHAINS.map(chain => (
                   <button
                     key={chain.id}
                     onClick={() => setActiveChain(chain)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                      activeChain.id === chain.id ? 'bg-white/10 border border-white/20' : 'bg-[#111827] border border-transparent hover:border-white/10'
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                      activeChain.id === chain.id
+                        ? 'text-white border-2 bg-white/5'
+                        : 'bg-[#111827] text-gray-400 border border-white/5 hover:border-white/15'
                     }`}
+                    style={activeChain.id === chain.id ? { borderColor: chain.color } : {}}
                   >
-                    <span className="text-sm">{chain.icon}</span>
-                    <span className="text-[8px] text-gray-400 text-center leading-tight">{chain.symbol}</span>
+                    <ChainLogo chain={chain} size={18} />
+                    {chain.name}
+                    {!LIVE_CHAINS.includes(chain.id) && <span className="text-[8px] text-gray-500 ml-0.5">soon</span>}
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="flex gap-2">
-              <button onClick={() => setView('create')} className="flex-1 py-2 border border-white/10 rounded-lg text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1">
-                <Plus className="w-3 h-3" /> New Wallet
-              </button>
-              <button onClick={() => setView('import')} className="flex-1 py-2 border border-white/10 rounded-lg text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1">
-                <Download className="w-3 h-3" /> Import
-              </button>
-              <button onClick={() => activeWallet && removeWallet(activeWallet.address)} className="py-2 px-3 border border-[#EF4444]/20 text-[#EF4444] rounded-lg text-xs font-semibold hover:bg-[#EF4444]/10">
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
+              <div className="flex gap-1 mb-4 bg-[#111827] rounded-xl p-1">
+                {(['crypto', 'nfts', 'activity'] as const).map(tab => (
+                  <button key={tab} onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold capitalize transition-all ${
+                      activeTab === tab ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                    }`}>
+                    {tab === 'crypto' ? 'Crypto' : tab === 'nfts' ? 'NFTs' : 'Activity'}
+                  </button>
+                ))}
+              </div>
 
-            {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-              <a
-                href={`${activeChain.explorerUrl}/address/${activeWallet.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 w-full py-2 border border-white/10 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
-              >
-                View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+              {activeTab === 'crypto' && (
+                <div className="space-y-1">
+                  {LIVE_CHAINS.includes(activeChain.id) ? (
+                    <>
+                      {loading ? (
+                        <div className="py-8 text-center">
+                          <RefreshCw className="w-6 h-6 text-gray-500 animate-spin mx-auto mb-2" />
+                          <p className="text-xs text-gray-500">Loading balances...</p>
+                        </div>
+                      ) : walletData?.holdings && walletData.holdings.length > 0 ? (
+                        walletData.holdings.map((token, i) => (
+                          <TokenRow key={i} token={token} chainSymbol={activeChain.symbol} chainColor={activeChain.color} hideBalance={hideBalance} />
+                        ))
+                      ) : (
+                        <div className="py-8 text-center">
+                          <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
+                            <ChainLogo chain={activeChain} size={28} />
+                          </div>
+                          <p className="text-sm text-gray-400 mb-1">No tokens found</p>
+                          <p className="text-xs text-gray-600">Fund your wallet to get started</p>
+                        </div>
+                      )}
+
+                      <button onClick={() => setView('add-token')} className="w-full mt-3 py-3 border border-dashed border-white/10 rounded-xl text-xs text-gray-500 hover:text-white hover:border-white/20 flex items-center justify-center gap-2 transition-all">
+                        <Plus className="w-3.5 h-3.5" /> Add Custom Token
+                      </button>
+                    </>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
+                        <ChainLogo chain={activeChain} size={28} />
+                      </div>
+                      <p className="text-sm text-gray-400">{activeChain.name} support coming soon</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'nfts' && (
+                <div className="py-8 text-center">
+                  <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
+                    <Layers className="w-6 h-6 text-gray-500" />
+                  </div>
+                  <p className="text-sm text-gray-400">NFT support coming soon</p>
+                </div>
+              )}
+
+              {activeTab === 'activity' && (
+                <div className="py-8 text-center">
+                  <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-gray-500" />
+                  </div>
+                  <p className="text-sm text-gray-400">Transaction history coming soon</p>
+                </div>
+              )}
+
+              {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
+                <div className="mt-4 bg-[#111827] rounded-2xl border border-white/5 overflow-hidden">
+                  <button
+                    onClick={() => activeWallet && fetchMultiChainBalances(activeWallet.address)}
+                    disabled={multiChainLoading}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#00E5FF]" />
+                      <span className="text-sm font-semibold">Multi-Chain Portfolio</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {Object.keys(multiChainBalances).length > 0 && !hideBalance && (
+                        <span className="text-xs font-mono text-[#00E5FF]">${totalMultiChainUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      )}
+                      {multiChainLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                    </div>
+                  </button>
+                  {Object.keys(multiChainBalances).length > 0 && (
+                    <div className="border-t border-white/5">
+                      {LIVE_CHAINS.map(chainId => {
+                        const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
+                        const data = multiChainBalances[chainId];
+                        if (!chain) return null;
+                        const balance = data ? parseFloat(data.totalBalanceUsd || '0') : 0;
+                        return (
+                          <button key={chainId} onClick={() => setActiveChain(chain)}
+                            className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${activeChain.id === chainId ? 'bg-white/5' : ''}`}>
+                            <div className="flex items-center gap-3">
+                              <ChainLogo chain={chain} size={28} />
+                              <div className="text-left">
+                                <p className="text-xs font-semibold">{chain.name}</p>
+                                <p className="text-[10px] text-gray-500">{chain.symbol}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-mono">{hideBalance ? '••••' : `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</p>
+                              {data?.holdings?.[0] && !hideBalance && (
+                                <p className="text-[10px] text-gray-500">{data.holdings[0].balance} {chain.symbol}</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentPrice && !hideBalance && (
+                <div className="mt-4 bg-[#111827] rounded-2xl border border-white/5 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400">Market Price</span>
+                    <span className={`text-xs font-medium ${priceChange > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                      {priceChange > 0 ? '+' : ''}{priceChange.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ChainLogo chain={activeChain} size={20} />
+                    <span className="text-lg font-bold font-mono">${currentPrice.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-xs text-gray-500">{activeChain.symbol}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                <button onClick={() => setView('create')} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> New Wallet
+                </button>
+                <button onClick={() => setView('import')} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all">
+                  <Download className="w-3.5 h-3.5" /> Import
+                </button>
+                <button onClick={() => activeWallet && removeWallet(activeWallet.address)} className="py-3 px-4 bg-[#111827] border border-[#EF4444]/10 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/10 transition-all">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
+                <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
+                  className="mt-3 w-full py-2.5 bg-[#111827] border border-white/5 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5 block">
+                  View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({ icon, label, color, onClick, disabled = false, soon = false }: { icon: React.ReactNode; label: string; color: string; onClick: () => void; disabled?: boolean; soon?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`flex flex-col items-center gap-1.5 ${disabled ? 'opacity-40' : 'hover:scale-105 active:scale-95'} transition-transform`}>
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${color}15`, border: `1px solid ${color}25` }}>
+        <div style={{ color }}>{icon}</div>
+      </div>
+      <span className="text-[11px] font-medium text-gray-300">{label}</span>
+      {soon && <span className="text-[8px] text-gray-500 -mt-1">Soon</span>}
+    </button>
+  );
+}
+
+function TokenRow({ token, chainSymbol, chainColor, hideBalance }: { token: TokenBalance; chainSymbol: string; chainColor: string; hideBalance: boolean }) {
+  const value = token.valueUsd ? parseFloat(token.valueUsd) : 0;
+  const bal = parseFloat(token.balance) || 0;
+
+  return (
+    <div className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/3 transition-colors">
+      <CoinLogo symbol={token.symbol} size={40} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold">{token.name || token.symbol}</p>
+        <p className="text-[11px] text-gray-500">{token.symbol}</p>
+      </div>
+      <div className="text-right">
+        <p className="text-sm font-mono font-medium">{hideBalance ? '••••' : bal.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+        {value > 0 && <p className="text-[11px] text-gray-500 font-mono">{hideBalance ? '••••' : `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>}
       </div>
     </div>
   );
@@ -504,19 +660,12 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
       setStep('phrase');
     } catch (e) {
       console.error('Wallet creation error:', e);
-    } finally {
-      setCreating(false);
-    }
+    } finally { setCreating(false); }
   };
 
   const confirmAndSave = () => {
     const encrypted = simpleEncrypt(privateKey, password);
-    onCreated({
-      address,
-      encryptedKey: encrypted,
-      name: walletName,
-      createdAt: new Date().toISOString(),
-    });
+    onCreated({ address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
   };
 
   return (
@@ -526,27 +675,34 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-1">Create New Wallet</h1>
-        <p className="text-gray-400 text-xs mb-6">Your keys, your crypto. Works across 12 chains.</p>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+            <Plus className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Create New Wallet</h1>
+            <p className="text-gray-400 text-xs">Your keys, your crypto</p>
+          </div>
+        </div>
 
         {step === 'password' && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Wallet Name</label>
-              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
+              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Set Password (min 6 chars)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Secure password to encrypt your keys" />
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Secure password to encrypt your keys" />
             </div>
-            <div className="p-3 bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl">
+            <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />
-                <span className="text-[10px] font-semibold text-[#F59E0B]">Important</span>
+                <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+                <span className="text-xs font-semibold text-[#F59E0B]">Important</span>
               </div>
-              <p className="text-[10px] text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
+              <p className="text-[11px] text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
             </div>
-            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
               {creating ? 'Generating...' : 'Generate Wallet'}
             </button>
           </div>
@@ -554,48 +710,48 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
 
         {step === 'phrase' && (
           <div className="space-y-4">
-            <div className="p-4 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl">
+            <div className="p-4 bg-[#EF4444]/5 border border-[#EF4444]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-4 h-4 text-[#EF4444]" />
                 <span className="text-xs font-bold text-[#EF4444]">Write Down Your Recovery Phrase</span>
               </div>
-              <p className="text-[10px] text-gray-400">This is the ONLY way to recover your wallet. Write it down and store it safely. Never share it with anyone.</p>
+              <p className="text-[11px] text-gray-400">This is the ONLY way to recover your wallet. Write it down and store it safely.</p>
             </div>
 
             <div className="relative">
               <div className={`grid grid-cols-3 gap-2 p-4 bg-[#111827] rounded-xl border border-white/10 ${!showPhrase ? 'blur-md select-none' : ''}`}>
                 {mnemonic.split(' ').map((word, i) => (
-                  <div key={i} className="flex items-center gap-1.5 py-1">
+                  <div key={i} className="flex items-center gap-1.5 py-1.5 px-2 bg-white/5 rounded-lg">
                     <span className="text-[10px] text-gray-500 w-4">{i + 1}.</span>
                     <span className="text-xs font-mono">{word}</span>
                   </div>
                 ))}
               </div>
               {!showPhrase && (
-                <button onClick={() => setShowPhrase(true)} className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-[#111827] rounded-lg border border-white/10">
+                <button onClick={() => setShowPhrase(true)} className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl backdrop-blur-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-[#111827] rounded-xl border border-white/10 shadow-xl">
                     <Eye className="w-4 h-4" /> <span className="text-xs font-semibold">Tap to Reveal</span>
                   </div>
                 </button>
               )}
             </div>
 
-            <button onClick={() => navigator.clipboard.writeText(mnemonic)} className="w-full py-2 border border-white/10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-white/5">
-              <Copy className="w-3 h-3" /> Copy Phrase
+            <button onClick={() => navigator.clipboard.writeText(mnemonic)} className="w-full py-2.5 border border-white/10 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-white/5">
+              <Copy className="w-3.5 h-3.5" /> Copy Phrase
             </button>
 
-            <div className="p-3 bg-[#111827] rounded-xl border border-white/5">
-              <p className="text-[10px] text-gray-400 mb-1"><strong>Address:</strong></p>
+            <div className="p-3.5 bg-[#111827] rounded-xl border border-white/5">
+              <p className="text-[10px] text-gray-400 mb-1 font-medium">Address:</p>
               <p className="text-xs font-mono text-[#00E5FF] break-all">{address}</p>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded" />
+              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded accent-[#00E5FF]" />
               <span className="text-xs text-gray-400">I have saved my recovery phrase securely</span>
             </label>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
-              <Check className="w-4 h-4 inline mr-1" /> Continue to Wallet
+            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+              <Check className="w-4 h-4" /> Continue to Wallet
             </button>
           </div>
         )}
@@ -614,28 +770,16 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
 
   const handleImport = async () => {
     if (!input.trim() || !password || password.length < 6) return;
-    setImporting(true);
-    setError('');
+    setImporting(true); setError('');
     try {
       const ethers = await import('ethers');
       let wallet: any;
-      if (method === 'phrase') {
-        wallet = ethers.Wallet.fromPhrase(input.trim());
-      } else {
-        wallet = new ethers.Wallet(input.trim());
-      }
+      if (method === 'phrase') { wallet = ethers.Wallet.fromPhrase(input.trim()); }
+      else { wallet = new ethers.Wallet(input.trim()); }
       const encrypted = simpleEncrypt(wallet.privateKey, password);
-      onImported({
-        address: wallet.address,
-        encryptedKey: encrypted,
-        name: walletName,
-        createdAt: new Date().toISOString(),
-      });
-    } catch (e: any) {
-      setError(e.message || 'Invalid input. Check your recovery phrase or private key.');
-    } finally {
-      setImporting(false);
-    }
+      onImported({ address: wallet.address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
+    } catch (e: any) { setError(e.message || 'Invalid input. Check your recovery phrase or private key.'); }
+    finally { setImporting(false); }
   };
 
   return (
@@ -645,41 +789,43 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-1">Import Wallet</h1>
-        <p className="text-gray-400 text-xs mb-6">Import using recovery phrase or private key</p>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+            <Download className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Import Wallet</h1>
+            <p className="text-gray-400 text-xs">Recovery phrase or private key</p>
+          </div>
+        </div>
 
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2 rounded-lg text-xs font-semibold ${method === 'phrase' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+        <div className="flex gap-2 mb-5 bg-[#111827] rounded-xl p-1">
+          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'phrase' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Recovery Phrase
           </button>
-          <button onClick={() => setMethod('key')} className={`flex-1 py-2 rounded-lg text-xs font-semibold ${method === 'key' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+          <button onClick={() => setMethod('key')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'key' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Private Key
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Wallet Name</label>
-            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
+            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{method === 'phrase' ? 'Recovery Phrase (12 or 24 words)' : 'Private Key'}</label>
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">{method === 'phrase' ? 'Recovery Phrase (12 or 24 words)' : 'Private Key'}</label>
+            <textarea value={input} onChange={e => setInput(e.target.value)}
               rows={method === 'phrase' ? 4 : 2}
-              className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50 resize-none"
-              placeholder={method === 'phrase' ? 'word1 word2 word3 ...' : '0x...'}
-            />
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50 resize-none"
+              placeholder={method === 'phrase' ? 'word1 word2 word3 ...' : '0x...'} />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Set Password (min 6 chars)</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Encrypt your keys" />
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Encrypt your keys" />
           </div>
-
-          {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/10 p-2 rounded-lg">{error}</p>}
-
-          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 6} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
+          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 6} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             {importing ? 'Importing...' : 'Import Wallet'}
           </button>
         </div>
@@ -698,25 +844,15 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
 
   const handleSend = async () => {
     if (!to || !amount || !password) return;
-    setStatus('sending');
-    setError('');
+    setStatus('sending'); setError('');
     try {
       const ethers = await import('ethers');
       const decryptedKey = simpleDecrypt(wallet.encryptedKey, password);
-      const provider = new ethers.JsonRpcProvider(
-        process.env.NEXT_PUBLIC_ALCHEMY_RPC || 'https://eth.llamarpc.com'
-      );
+      const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC || 'https://eth.llamarpc.com');
       const signer = new ethers.Wallet(decryptedKey, provider);
-      const tx = await signer.sendTransaction({
-        to,
-        value: ethers.parseEther(amount),
-      });
-      setTxHash(tx.hash);
-      setStatus('success');
-    } catch (e: any) {
-      setError(e.message || 'Transaction failed');
-      setStatus('error');
-    }
+      const tx = await signer.sendTransaction({ to, value: ethers.parseEther(amount) });
+      setTxHash(tx.hash); setStatus('success');
+    } catch (e: any) { setError(e.message || 'Transaction failed'); setStatus('error'); }
   };
 
   return (
@@ -726,34 +862,44 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-6">Send {chain.symbol}</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${chain.color}15`, border: `1px solid ${chain.color}25` }}>
+            <ArrowUpRight className="w-5 h-5" style={{ color: chain.color }} />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Send {chain.symbol}</h1>
+            <p className="text-gray-400 text-xs">on {chain.name}</p>
+          </div>
+        </div>
 
         {status === 'success' ? (
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-[#10B981]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-[#10B981]" />
+            <div className="w-20 h-20 bg-[#10B981]/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-[#10B981]/20">
+              <Check className="w-10 h-10 text-[#10B981]" />
             </div>
-            <h2 className="text-lg font-bold mb-2">Transaction Sent!</h2>
+            <h2 className="text-xl font-bold mb-2">Transaction Sent!</h2>
             <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
-            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-xs underline">View on {chain.explorerName}</a>
-            <button onClick={onBack} className="w-full mt-4 py-2.5 border border-white/10 rounded-lg text-sm font-semibold">Done</button>
+            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-xs underline flex items-center justify-center gap-1">
+              View on {chain.explorerName} <ExternalLink className="w-3 h-3" />
+            </a>
+            <button onClick={onBack} className="w-full mt-6 py-3 bg-[#111827] border border-white/10 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Recipient Address</label>
-              <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Recipient Address</label>
+              <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Amount ({chain.symbol})</label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0.01" />
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Amount ({chain.symbol})</label>
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0.01" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Wallet Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Enter your wallet password" />
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Enter your wallet password" />
             </div>
-            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/10 p-2 rounded-lg">{error}</p>}
-            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
+            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
               {status === 'sending' ? 'Sending...' : 'Send Transaction'}
             </button>
           </div>
@@ -773,25 +919,42 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-6">Receive on {chain.name}</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${chain.color}15`, border: `1px solid ${chain.color}25` }}>
+            <ArrowDownLeft className="w-5 h-5" style={{ color: chain.color }} />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Receive on {chain.name}</h1>
+            <p className="text-gray-400 text-xs">Share your address to receive {chain.symbol}</p>
+          </div>
+        </div>
 
         <div className="text-center">
-          <div className="w-48 h-48 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center p-4">
-            <div className="w-full h-full rounded-lg flex items-center justify-center" style={{ backgroundColor: `${chain.color}15` }}>
-              <span className="text-6xl">{chain.icon}</span>
+          <div className="w-48 h-48 bg-white rounded-2xl mx-auto mb-5 flex items-center justify-center p-6 shadow-lg">
+            <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-2" style={{ backgroundColor: `${chain.color}08` }}>
+              <ChainLogo chain={chain} size={48} />
+              <QrCode className="w-10 h-10 text-gray-400" />
             </div>
           </div>
-          <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address on {chain.name}:</p>
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-3 mb-4">
+
+          <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
+
+          <div className="bg-[#111827] border border-white/10 rounded-xl p-4 mb-4">
             <p className="text-xs font-mono break-all text-[#00E5FF]">{address}</p>
           </div>
+
           <button
             onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            className="w-full py-2.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-          >
+            className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
             {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
           </button>
-          <p className="text-[10px] text-gray-500 mt-3">Only send {chain.name} network tokens to this address. Sending tokens from other networks may result in loss.</p>
+
+          <div className="mt-4 p-3 bg-[#F59E0B]/5 rounded-xl border border-[#F59E0B]/10">
+            <p className="text-[11px] text-gray-400">
+              <AlertTriangle className="w-3 h-3 text-[#F59E0B] inline mr-1" />
+              Only send {chain.name} network tokens to this address. Sending from other networks may result in loss.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -803,14 +966,8 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   const [error, setError] = useState('');
 
   const handleAdd = () => {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      setError('Invalid ERC-20 contract address');
-      return;
-    }
-    if (tokens.includes(address.toLowerCase())) {
-      setError('Token already added');
-      return;
-    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { setError('Invalid ERC-20 contract address'); return; }
+    if (tokens.includes(address.toLowerCase())) { setError('Token already added'); return; }
     onAdd(address.toLowerCase());
   };
 
@@ -821,25 +978,32 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-1">Add Custom Token</h1>
-        <p className="text-gray-400 text-xs mb-6">Import any ERC-20 token by contract address</p>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+            <Search className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Add Custom Token</h1>
+            <p className="text-gray-400 text-xs">Import any ERC-20 token by contract</p>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Token Contract Address</label>
-            <input value={address} onChange={e => { setAddress(e.target.value); setError(''); }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Token Contract Address</label>
+            <input value={address} onChange={e => { setAddress(e.target.value); setError(''); }} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
           </div>
           {error && <p className="text-xs text-[#EF4444]">{error}</p>}
-          <button onClick={handleAdd} disabled={!address} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          <button onClick={handleAdd} disabled={!address} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             Add Token
           </button>
 
           {tokens.length > 0 && (
             <div className="mt-4">
               <h3 className="text-xs font-semibold text-gray-400 mb-2">Custom Tokens ({tokens.length})</h3>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {tokens.map(t => (
-                  <div key={t} className="flex items-center justify-between bg-[#111827] rounded-lg px-3 py-2 text-[10px] font-mono text-gray-400">
+                  <div key={t} className="flex items-center justify-between bg-[#111827] rounded-xl px-4 py-3 text-xs font-mono text-gray-400 border border-white/5">
                     <span>{t.slice(0, 10)}...{t.slice(-8)}</span>
                     <ExternalLink className="w-3 h-3" />
                   </div>

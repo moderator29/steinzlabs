@@ -41,7 +41,7 @@ app/
     ├── security/            # Security Center (token scanner, contract analyzer, rug/phishing)
     ├── smart-money/         # Smart Money Watchlist (top wallets, follow/unfollow)
     ├── social-trading/      # Social Trading (Coming Soon page with feature preview)
-    ├── wgm-runner/          # WGM Runner (3-lane cyberpunk endless runner with 6 character skins, leaderboard)
+    ├── wgm-runner/          # STZ Runner (3-lane cyberpunk endless runner with correct perspective, 6 mech warrior skins, leaderboard, $STZ coins)
     ├── swap/                # Multi-Chain Swap (token swap with slippage, routing)
     ├── trends/              # On-Chain Trends (metrics per chain, hot indicators)
     ├── vtx-ai/              # VTX AI full-page assistant (chat, quick actions)
@@ -114,7 +114,7 @@ app/api/
   - **Discover** — Project Discovery with search, category filters, project cards
   - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
   - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
-- `/dashboard/wallet-page` — Non-custodial wallet (create/import mnemonic, send ETH, receive, add custom ERC-20 tokens, encrypted key storage)
+- `/dashboard/wallet-page` — Trust Wallet-style non-custodial wallet (create/import mnemonic, send ETH, receive, add custom ERC-20 tokens, 12-chain support with real CoinGecko logos, multi-chain portfolio scan, market prices with 24h change, hide/show balance toggle)
 - `/dashboard/project-discovery` — Project grid with real CoinGecko data (>500K mcap), NAKA GO pinned, chain filters, token listing form
 - `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
 - `/dashboard/predictions` — Full predictions market with TradingView candlestick charts, YES/NO voting, pool sizes, payout calculator
