@@ -43,11 +43,13 @@ export default function DNAAnalyzerPage() {
       let totalBalance = 0;
 
       try {
-        const balRes = await fetch(`/api/token-scanner?address=${address}`);
-        const balData = await balRes.json();
-        if (balData.tokens) {
-          holdings = balData.tokens;
-          totalBalance = holdings.reduce((sum: number, t: any) => sum + (t.valueUsd || 0), 0);
+        const balRes = await fetch(`/api/wallet-intelligence?address=${encodeURIComponent(address)}`);
+        if (balRes.ok) {
+          const balData = await balRes.json();
+          if (balData.holdings) {
+            holdings = balData.holdings;
+            totalBalance = parseFloat(balData.totalBalanceUsd || '0');
+          }
         }
       } catch {}
 

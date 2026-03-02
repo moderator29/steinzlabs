@@ -103,7 +103,6 @@ export default function WhitepaperPage() {
     { id: 'predictions', label: 'Prediction Markets' },
     { id: 'project-discovery', label: 'Project Discovery' },
     { id: 'wallet-system', label: 'Non-Custodial Wallet' },
-    { id: 'tokenomics', label: 'Tokenomics' },
     { id: 'governance', label: 'Governance' },
     { id: 'unique', label: 'Why STEINZ Is Unique' },
     { id: 'business', label: 'Business Model' },
@@ -318,17 +317,6 @@ export default function WhitepaperPage() {
             <p>STEINZ is built as a modular intelligence suite where every component is a standalone product, and together they form an ecosystem that no single competitor matches. The architecture is designed for horizontal scalability, real-time data processing, and fault tolerance.</p>
 
             <ArchDiagram
-              title="System Architecture Overview"
-              layers={[
-                { name: 'Frontend', items: ['Next.js 14', 'React', 'TailwindCSS', 'WebSocket', 'TradingView'], color: '#00E5FF' },
-                { name: 'API Layer', items: ['REST APIs', 'Rate Limiting', 'Auth', 'Caching', 'WebSocket Server'], color: '#7C3AED' },
-                { name: 'AI Engine', items: ['Anthropic Claude', 'VTX AI', 'Sentiment Analysis', 'Pattern Recognition', 'Web Search'], color: '#F59E0B' },
-                { name: 'Data Layer', items: ['Supabase', 'PostgreSQL', 'Redis Cache', 'In-Memory Store', 'localStorage'], color: '#10B981' },
-                { name: 'Blockchain', items: ['Helius (SOL)', 'Alchemy (ETH)', 'DexScreener', 'CoinGecko', 'Jupiter', 'Uniswap'], color: '#EF4444' },
-              ]}
-            />
-
-            <ArchDiagram
               title="Data Flow Architecture"
               layers={[
                 { name: 'Ingest', items: ['Chain RPCs', 'DEX APIs', 'Price Feeds', 'Whale Alerts', 'Social Signals'], color: '#00E5FF' },
@@ -338,24 +326,6 @@ export default function WhitepaperPage() {
               ]}
             />
 
-            <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
-              <p className="text-xs font-heading font-bold text-white mb-3">Technology Stack</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  { cat: 'Frontend', items: 'Next.js 14, React 18, TailwindCSS, Framer Motion' },
-                  { cat: 'Backend', items: 'Node.js, Next.js API Routes, WebSocket' },
-                  { cat: 'Database', items: 'Supabase (PostgreSQL), Redis, In-Memory Cache' },
-                  { cat: 'AI/ML', items: 'Anthropic Claude, Custom NLP, Pattern Recognition' },
-                  { cat: 'Blockchain', items: 'ethers.js, @solana/web3.js, Helius, Alchemy' },
-                  { cat: 'Security', items: 'bcrypt, JWT, AES-256, Rate Limiting, CORS' },
-                ].map(t => (
-                  <div key={t.cat} className="glass rounded-lg p-3 border border-white/[0.04]">
-                    <p className="text-[10px] font-bold text-[#00E5FF] uppercase tracking-wider mb-1">{t.cat}</p>
-                    <p className="text-[10px] text-gray-500">{t.items}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </Section>
 
           <Section id="context-feed" number="06" title="Context Feed Deep Dive">
@@ -373,12 +343,6 @@ export default function WhitepaperPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-              <div className="glass rounded-xl p-4 border border-[#10B981]/20 bg-[#10B981]/[0.03]">
-                <p className="text-[10px] text-[#10B981] font-semibold uppercase tracking-wider mb-2">Bullish Event Example</p>
-                <p className="text-xs text-white font-semibold">BULLISH &middot; 5m ago</p>
-                <p className="text-[11px] text-gray-400 mt-1">Large SOL to USDC swap detected. Whale wallet 0x742d...3a7f swapped 25,000 SOL ($4.46M) for USDC on Jupiter. Wallet has 87% historical accuracy on market timing.</p>
-                <p className="text-[10px] text-gray-500 mt-2">Trust Score: 82/100 (TRUSTED) | Volume: $4.46M | Chain: Solana</p>
-              </div>
               <div className="glass rounded-xl p-4 border border-[#EF4444]/20 bg-[#EF4444]/[0.03]">
                 <p className="text-[10px] text-[#EF4444] font-semibold uppercase tracking-wider mb-2">Bear Event Example</p>
                 <p className="text-xs text-white font-semibold">BEAR &middot; 12m ago</p>
@@ -716,71 +680,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="tokenomics" number="17" title="Tokenomics">
-            <p>The STEINZ ecosystem is powered by a utility token designed to align incentives across all platform participants &mdash; traders, builders, validators, and governance participants.</p>
-
-            <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
-              <p className="text-xs font-heading font-bold text-white mb-4">Token Allocation</p>
-              <div className="space-y-3">
-                {[
-                  { label: 'Community & Ecosystem', pct: '40%', color: '#00E5FF', desc: 'Rewards, staking, liquidity mining, airdrops' },
-                  { label: 'Team & Advisors', pct: '15%', color: '#7C3AED', desc: '4-year vesting with 1-year cliff' },
-                  { label: 'Development Fund', pct: '20%', color: '#10B981', desc: 'Platform development, infrastructure, audits' },
-                  { label: 'Treasury', pct: '10%', color: '#F59E0B', desc: 'Strategic partnerships, market making, reserves' },
-                  { label: 'Public Sale', pct: '10%', color: '#EF4444', desc: 'Initial distribution via launchpad' },
-                  { label: 'Marketing', pct: '5%', color: '#EC4899', desc: 'Growth, partnerships, community building' },
-                ].map(t => (
-                  <div key={t.label} className="flex items-center gap-3">
-                    <div className="w-16 text-right">
-                      <span className="text-xs font-heading font-bold" style={{ color: t.color }}>{t.pct}</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: t.pct, background: t.color }}></div>
-                      </div>
-                    </div>
-                    <div className="w-48">
-                      <p className="text-[11px] text-white font-semibold">{t.label}</p>
-                      <p className="text-[9px] text-gray-500">{t.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-              <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <h4 className="text-xs font-heading font-bold text-[#00E5FF] mb-2">Utility</h4>
-                <ul className="space-y-1 text-[10px] text-gray-500">
-                  <li>&bull; Premium feature access</li>
-                  <li>&bull; Governance voting</li>
-                  <li>&bull; Staking rewards</li>
-                  <li>&bull; Fee discounts (swap, listing)</li>
-                  <li>&bull; Priority VTX AI access</li>
-                </ul>
-              </div>
-              <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <h4 className="text-xs font-heading font-bold text-[#7C3AED] mb-2">Deflationary Mechanics</h4>
-                <ul className="space-y-1 text-[10px] text-gray-500">
-                  <li>&bull; Quarterly token burns</li>
-                  <li>&bull; Fee buyback & burn</li>
-                  <li>&bull; Staking lock-up periods</li>
-                  <li>&bull; Reducing supply schedule</li>
-                </ul>
-              </div>
-              <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <h4 className="text-xs font-heading font-bold text-[#10B981] mb-2">Earning Mechanisms</h4>
-                <ul className="space-y-1 text-[10px] text-gray-500">
-                  <li>&bull; Prediction market rewards</li>
-                  <li>&bull; Staking APY</li>
-                  <li>&bull; Referral program</li>
-                  <li>&bull; Builder funding participation</li>
-                </ul>
-              </div>
-            </div>
-          </Section>
-
-          <Section id="governance" number="18" title="Governance">
+          <Section id="governance" number="17" title="Governance">
             <p>STEINZ is designed for progressive decentralization. Token holders govern platform decisions through a transparent on-chain voting mechanism.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
@@ -818,7 +718,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="unique" number="19" title="Why STEINZ Is Unique">
+          <Section id="unique" number="18" title="Why STEINZ Is Unique">
             <p>No existing platform combines all of these elements into one unified intelligence layer.</p>
             <div className="overflow-x-auto mt-4">
               <table className="w-full text-left border-collapse">
@@ -862,7 +762,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="business" number="20" title="Business Model & Revenue">
+          <Section id="business" number="19" title="Business Model & Revenue">
             <p>STEINZ generates revenue through multiple compounding streams, designed to scale with platform adoption:</p>
             <div className="space-y-3 mt-4">
               {[
@@ -883,7 +783,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="team" number="21" title="Team & Partners">
+          <Section id="team" number="20" title="Team & Partners">
             <p>STEINZ Labs is built by a team of experienced blockchain developers, AI engineers, and security researchers with deep roots in the Web3 ecosystem.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
@@ -917,7 +817,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="roadmap" number="22" title="Roadmap">
+          <Section id="roadmap" number="21" title="Roadmap">
             <div className="space-y-4 mt-4">
               {[
                 {
@@ -959,7 +859,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="legal" number="23" title="Legal & Compliance">
+          <Section id="legal" number="22" title="Legal & Compliance">
             <p>STEINZ Labs operates with full transparency regarding regulatory obligations and user protections.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">

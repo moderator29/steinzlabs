@@ -20,10 +20,23 @@ const CHAIN_MAP: Record<string, string> = {
   '42161': '42161',
 };
 
+function isSolanaAddress(address: string): boolean {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+}
+
 async function fetchGoPlusSecurity(chainId: string, contractAddress: string) {
   const url = `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${contractAddress}`;
   const res = await fetch(url, { next: { revalidate: 60 } });
   if (!res.ok) throw new Error(`GoPlus API error: ${res.status}`);
+  const data = await res.json();
+  return data;
+}
+
+async function fetchDexScreenerData(contractAddress: string) {
+  const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`DexScreener API error: ${res.status}`);
   const data = await res.json();
   return data;
 }
@@ -144,6 +157,98 @@ function buildResponse(contractAddress: string, chainId: string, tokenData: any)
   };
 }
 
+function buildSolanaResponse(contractAddress: string, dexData: any) {
+  const pairs = dexData.pairs || [];
+  const top = pairs[0];
+
+  if (!top) {
+    return null;
+  }
+
+  const volume24h = top.volume?.h24 || 0;
+  const liquidity = top.liquidity?.usd || 0;
+  const txns24h = top.txns?.h24 || { buys: 0, sells: 0 };
+  const totalTxns = (txns24h.buys || 0) + (txns24h.sells || 0);
+
+  let score = 70;
+  if (liquidity > 100000) score += 10;
+  else if (liquidity < 10000) score -= 15;
+  if (volume24h > 50000) score += 5;
+  if (totalTxns > 100) score += 5;
+  else if (totalTxns < 10) score -= 10;
+  if (top.info?.websites?.length > 0) score += 5;
+  if (top.info?.socials?.length > 0) score += 5;
+  score = Math.max(0, Math.min(100, score));
+
+  let level = 'SAFE';
+  let color = '#10B981';
+  if (score < 30) { level = 'DANGER'; color = '#EF4444'; }
+  else if (score < 50) { level = 'WARNING'; color = '#F59E0B'; }
+  else if (score < 70) { level = 'CAUTION'; color = '#F59E0B'; }
+
+  const checks = [
+    { label: 'Token Listed on DEX', status: 'pass' as const },
+    { label: 'Has Liquidity Pool', status: liquidity > 1000 ? 'pass' as const : 'fail' as const },
+    { label: 'Active Trading Volume', status: volume24h > 1000 ? 'pass' as const : volume24h > 0 ? 'warn' as const : 'fail' as const },
+    { label: 'Multiple Transactions', status: totalTxns > 50 ? 'pass' as const : totalTxns > 5 ? 'warn' as const : 'fail' as const },
+    { label: 'Has Website', status: top.info?.websites?.length > 0 ? 'pass' as const : 'warn' as const },
+    { label: 'Has Social Links', status: top.info?.socials?.length > 0 ? 'pass' as const : 'warn' as const },
+    { label: 'Healthy Buy/Sell Ratio', status: txns24h.buys > 0 && txns24h.sells > 0 ? 'pass' as const : 'warn' as const },
+    { label: 'Sufficient Liquidity (>$10k)', status: liquidity > 10000 ? 'pass' as const : liquidity > 1000 ? 'warn' as const : 'fail' as const },
+  ];
+
+  return {
+    contract: contractAddress,
+    chainId: 'solana',
+    name: top.baseToken?.name || 'Unknown Token',
+    symbol: top.baseToken?.symbol || '???',
+    totalSupply: 'N/A',
+    holderCount: 0,
+    creatorAddress: 'N/A',
+    ownerAddress: 'N/A',
+    trustScore: score,
+    safetyLevel: level,
+    safetyColor: color,
+    buyTax: '0.0%',
+    sellTax: '0.0%',
+    isHoneypot: false,
+    isOpenSource: true,
+    isMintable: false,
+    isProxy: false,
+    hasHiddenOwner: false,
+    canTakeBackOwnership: false,
+    ownerCanChangeBalance: false,
+    lpHolders: [],
+    lpTotalSupply: 'N/A',
+    checks,
+    timestamp: new Date().toISOString(),
+    dexData: {
+      price: parseFloat(top.priceUsd || '0'),
+      priceChange24h: top.priceChange?.h24 || 0,
+      volume24h,
+      liquidity,
+      fdv: top.fdv || 0,
+      marketCap: top.marketCap || top.fdv || 0,
+      dexId: top.dexId,
+      pairAddress: top.pairAddress,
+      url: top.url,
+      image: top.info?.imageUrl || null,
+      socials: top.info?.socials || [],
+      websites: top.info?.websites || [],
+    },
+    solanaNote: 'Security data sourced from DexScreener market analysis. GoPlus contract audit not available for Solana. Always DYOR.',
+  };
+}
+
+async function handleSolanaToken(contractAddress: string) {
+  const dexData = await fetchDexScreenerData(contractAddress);
+  const response = buildSolanaResponse(contractAddress, dexData);
+  if (!response) {
+    throw new Error('Token not found on DexScreener. Verify the Solana token address.');
+  }
+  return response;
+}
+
 export async function POST(request: Request) {
   try {
     const { contract, chain = 'ethereum' } = await request.json();
@@ -153,8 +258,16 @@ export async function POST(request: Request) {
     }
 
     const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
-    const contractAddress = contract.toLowerCase().trim();
+    const isSolana = chainId === 'solana' || isSolanaAddress(contract.trim());
 
+    if (isSolana) {
+      const response = await handleSolanaToken(contract.trim());
+      return NextResponse.json(response, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
+      });
+    }
+
+    const contractAddress = contract.toLowerCase().trim();
     const data = await fetchGoPlusSecurity(chainId, contractAddress);
 
     if (!data.result || !data.result[contractAddress]) {
@@ -167,9 +280,9 @@ export async function POST(request: Request) {
     return NextResponse.json(response, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Token scanner error:', error);
-    return NextResponse.json({ error: 'Failed to scan token' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to scan token' }, { status: 500 });
   }
 }
 
@@ -184,8 +297,16 @@ export async function GET(request: Request) {
     }
 
     const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
-    const contractAddress = contract.toLowerCase().trim();
+    const isSolana = chainId === 'solana' || isSolanaAddress(contract.trim());
 
+    if (isSolana) {
+      const response = await handleSolanaToken(contract.trim());
+      return NextResponse.json(response, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
+      });
+    }
+
+    const contractAddress = contract.toLowerCase().trim();
     const data = await fetchGoPlusSecurity(chainId, contractAddress);
 
     if (!data.result || !data.result[contractAddress]) {
@@ -198,8 +319,8 @@ export async function GET(request: Request) {
     return NextResponse.json(response, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Token scanner error:', error);
-    return NextResponse.json({ error: 'Failed to scan token' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to scan token' }, { status: 500 });
   }
 }

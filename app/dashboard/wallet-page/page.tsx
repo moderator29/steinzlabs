@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RefreshCw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RefreshCw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers } from 'lucide-react';
 import Link from 'next/link';
 
 interface TokenBalance {
@@ -15,10 +15,14 @@ interface TokenBalance {
 
 interface WalletData {
   address: string;
-  ethBalance: string;
+  ethBalance?: string;
   totalBalanceUsd: string;
   holdings: TokenBalance[];
   tokenCount: number;
+  chain?: string;
+  explorerUrl?: string;
+  nativeBalance?: string;
+  nativeValueUsd?: string;
 }
 
 interface StoredWallet {
@@ -27,6 +31,35 @@ interface StoredWallet {
   name: string;
   createdAt: string;
 }
+
+interface ChainInfo {
+  id: string;
+  name: string;
+  symbol: string;
+  icon: string;
+  color: string;
+  explorerUrl: string;
+  explorerName: string;
+  apiChain: string;
+}
+
+const SUPPORTED_CHAINS: ChainInfo[] = [
+  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: '⟠', color: '#627EEA', explorerUrl: 'https://etherscan.io', explorerName: 'Etherscan', apiChain: 'ethereum' },
+  { id: 'base', name: 'Base', symbol: 'ETH', icon: '🔵', color: '#0052FF', explorerUrl: 'https://basescan.org', explorerName: 'BaseScan', apiChain: 'base' },
+  { id: 'polygon', name: 'Polygon', symbol: 'MATIC', icon: '⬡', color: '#8247E5', explorerUrl: 'https://polygonscan.com', explorerName: 'PolygonScan', apiChain: 'polygon' },
+  { id: 'avalanche', name: 'Avalanche', symbol: 'AVAX', icon: '🔺', color: '#E84142', explorerUrl: 'https://snowtrace.io', explorerName: 'SnowTrace', apiChain: 'avalanche' },
+  { id: 'solana', name: 'Solana', symbol: 'SOL', icon: '◎', color: '#9945FF', explorerUrl: 'https://solscan.io', explorerName: 'SolScan', apiChain: 'solana' },
+  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', icon: '₿', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin' },
+  { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', icon: '🔷', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum' },
+  { id: 'optimism', name: 'Optimism', symbol: 'ETH', icon: '🔴', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism' },
+  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', icon: '◆', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bnb' },
+  { id: 'fantom', name: 'Fantom', symbol: 'FTM', icon: '👻', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom' },
+  { id: 'cronos', name: 'Cronos', symbol: 'CRO', icon: '💎', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos' },
+  { id: 'sui', name: 'Sui', symbol: 'SUI', icon: '💧', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui' },
+];
+
+const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana'];
+const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche'];
 
 function simpleEncrypt(text: string, password: string): string {
   let result = '';
@@ -52,6 +85,10 @@ export default function WalletPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
+  const [activeChain, setActiveChain] = useState<ChainInfo>(SUPPORTED_CHAINS[0]);
+  const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
+  const [multiChainLoading, setMultiChainLoading] = useState(false);
+  const [showAllChains, setShowAllChains] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('steinz_wallets');
@@ -69,10 +106,10 @@ export default function WalletPage() {
     localStorage.setItem('steinz_wallets', JSON.stringify(w));
   };
 
-  const fetchBalances = useCallback(async (address: string) => {
+  const fetchBalances = useCallback(async (address: string, chain: ChainInfo) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=ethereum`);
+      const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chain.apiChain}`);
       if (res.ok) {
         const data = await res.json();
         setWalletData(data);
@@ -93,9 +130,30 @@ export default function WalletPage() {
     }
   }, []);
 
+  const fetchMultiChainBalances = useCallback(async (address: string) => {
+    setMultiChainLoading(true);
+    const results: Record<string, WalletData | null> = {};
+    const promises = LIVE_CHAINS.map(async (chainId) => {
+      try {
+        const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chainId}`);
+        if (res.ok) {
+          const data = await res.json();
+          results[chainId] = data;
+        } else {
+          results[chainId] = null;
+        }
+      } catch {
+        results[chainId] = null;
+      }
+    });
+    await Promise.all(promises);
+    setMultiChainBalances(results);
+    setMultiChainLoading(false);
+  }, []);
+
   useEffect(() => {
-    if (activeWallet) fetchBalances(activeWallet.address);
-  }, [activeWallet, fetchBalances]);
+    if (activeWallet) fetchBalances(activeWallet.address, activeChain);
+  }, [activeWallet, activeChain, fetchBalances]);
 
   const handleWalletCreated = (wallet: StoredWallet) => {
     const updated = [...wallets, wallet];
@@ -110,13 +168,19 @@ export default function WalletPage() {
     if (activeWallet?.address === addr) {
       setActiveWallet(updated[0] || null);
       setWalletData(null);
+      setMultiChainBalances({});
     }
   };
 
+  const totalMultiChainUsd = Object.values(multiChainBalances).reduce((sum, data) => {
+    if (data) return sum + parseFloat(data.totalBalanceUsd || '0');
+    return sum;
+  }, 0);
+
   if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletCreated} />;
-  if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} />;
-  if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} />;
+  if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
+  if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
 
   return (
@@ -133,10 +197,12 @@ export default function WalletPage() {
             </div>
             <div>
               <h1 className="text-lg font-heading font-bold">STEINZ Wallet</h1>
-              <p className="text-gray-400 text-[10px]">Non-custodial Ethereum wallet</p>
+              <p className="text-gray-400 text-[10px] flex items-center gap-1">
+                <Globe className="w-3 h-3" /> Multi-chain non-custodial wallet
+              </p>
             </div>
           </div>
-          <button onClick={() => activeWallet && fetchBalances(activeWallet.address)} disabled={loading} className="p-2 hover:bg-white/10 rounded-lg">
+          <button onClick={() => activeWallet && fetchBalances(activeWallet.address, activeChain)} disabled={loading} className="p-2 hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-4 h-4 text-[#00E5FF] ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -148,6 +214,22 @@ export default function WalletPage() {
             </div>
             <h2 className="text-lg font-bold mb-2">Get Started</h2>
             <p className="text-gray-400 text-sm mb-6">Create a new wallet or import an existing one using your recovery phrase or private key.</p>
+
+            <div className="glass rounded-xl border border-white/10 p-4 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers className="w-4 h-4 text-[#00E5FF]" />
+                <span className="text-xs font-bold">12 Chains Supported</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {SUPPORTED_CHAINS.map(chain => (
+                  <div key={chain.id} className="flex flex-col items-center gap-1 p-2 bg-[#111827] rounded-lg">
+                    <span className="text-base">{chain.icon}</span>
+                    <span className="text-[9px] text-gray-400 text-center leading-tight">{chain.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3">
               <button onClick={() => setView('create')} className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
                 <Plus className="w-4 h-4" /> Create New Wallet
@@ -182,61 +264,192 @@ export default function WalletPage() {
               </div>
             )}
 
+            <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
+              {SUPPORTED_CHAINS.slice(0, showAllChains ? SUPPORTED_CHAINS.length : 5).map(chain => (
+                <button
+                  key={chain.id}
+                  onClick={() => setActiveChain(chain)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+                    activeChain.id === chain.id
+                      ? 'text-white border-2'
+                      : 'bg-[#111827] text-gray-400 border border-white/5 hover:border-white/20'
+                  }`}
+                  style={activeChain.id === chain.id ? { borderColor: chain.color, backgroundColor: `${chain.color}15` } : {}}
+                >
+                  <span className="text-sm">{chain.icon}</span>
+                  {chain.name}
+                  {!LIVE_CHAINS.includes(chain.id) && <span className="text-[8px] text-gray-500 ml-0.5">soon</span>}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowAllChains(!showAllChains)}
+                className="px-2 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#111827] text-gray-400 border border-white/5 hover:border-white/20"
+              >
+                {showAllChains ? '−' : `+${SUPPORTED_CHAINS.length - 5}`}
+              </button>
+            </div>
+
             <div className="glass rounded-2xl p-5 border border-white/10 mb-4">
               <div className="text-center mb-4">
-                <p className="text-gray-400 text-xs mb-1">Total Balance</p>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <span className="text-lg">{activeChain.icon}</span>
+                  <p className="text-gray-400 text-xs">{activeChain.name} Balance</p>
+                </div>
                 <p className="text-3xl font-bold font-mono">
-                  {loading ? '...' : walletData ? `$${parseFloat(walletData.totalBalanceUsd).toLocaleString()}` : '$0.00'}
+                  {!LIVE_CHAINS.includes(activeChain.id) ? (
+                    <span className="text-lg text-gray-500">Coming Soon</span>
+                  ) : loading ? '...' : walletData ? `$${parseFloat(walletData.totalBalanceUsd).toLocaleString()}` : '$0.00'}
                 </p>
+                {LIVE_CHAINS.includes(activeChain.id) && walletData && (
+                  <p className="text-[10px] text-gray-500 mt-0.5 font-mono">
+                    {walletData.nativeBalance || walletData.ethBalance || '0'} {activeChain.symbol}
+                  </p>
+                )}
                 <p className="text-gray-500 text-[10px] font-mono mt-1">
                   {activeWallet?.address.slice(0, 6)}...{activeWallet?.address.slice(-4)}
                   <button onClick={() => { navigator.clipboard.writeText(activeWallet?.address || ''); }} className="ml-1 inline-flex"><Copy className="w-3 h-3 text-gray-500 hover:text-white" /></button>
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => setView('send')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                  <Send className="w-4 h-4 text-[#00E5FF]" /> Send
-                </button>
-                <button onClick={() => setView('receive')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                  <Download className="w-4 h-4 text-[#10B981]" /> Receive
-                </button>
-                <button onClick={() => setView('add-token')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
-                  <Plus className="w-4 h-4 text-[#7C3AED]" /> Add Token
-                </button>
-              </div>
+              {EVM_LIVE_CHAINS.includes(activeChain.id) && (
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setView('send')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
+                    <Send className="w-4 h-4 text-[#00E5FF]" /> Send
+                  </button>
+                  <button onClick={() => setView('receive')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
+                    <Download className="w-4 h-4 text-[#10B981]" /> Receive
+                  </button>
+                  <button onClick={() => setView('add-token')} className="py-2.5 bg-[#111827] rounded-xl text-xs font-semibold flex flex-col items-center gap-1 hover:bg-white/10 transition-colors">
+                    <Plus className="w-4 h-4 text-[#7C3AED]" /> Add Token
+                  </button>
+                </div>
+              )}
+
+              {activeChain.id === 'solana' && (
+                <div className="text-center py-2">
+                  <p className="text-[10px] text-gray-500">Solana send/receive requires a Solana keypair — coming soon</p>
+                </div>
+              )}
+
+              {!LIVE_CHAINS.includes(activeChain.id) && (
+                <div className="text-center py-2">
+                  <p className="text-[10px] text-gray-500">{activeChain.name} integration coming soon</p>
+                </div>
+              )}
             </div>
+
+            {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
+              <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
+                <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => activeWallet && fetchMultiChainBalances(activeWallet.address)}
+                      disabled={multiChainLoading}
+                      className="text-[10px] px-2 py-1 bg-[#111827] rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1"
+                    >
+                      <Layers className="w-3 h-3" />
+                      {multiChainLoading ? 'Scanning...' : 'Scan All Chains'}
+                    </button>
+                  </div>
+                  {Object.keys(multiChainBalances).length > 0 && (
+                    <span className="text-[10px] font-mono text-[#00E5FF]">
+                      Total: ${totalMultiChainUsd.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                {Object.keys(multiChainBalances).length > 0 && (
+                  <div className="divide-y divide-white/5">
+                    {LIVE_CHAINS.map(chainId => {
+                      const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
+                      const data = multiChainBalances[chainId];
+                      if (!chain) return null;
+                      const balance = data ? parseFloat(data.totalBalanceUsd || '0') : 0;
+                      return (
+                        <button
+                          key={chainId}
+                          onClick={() => setActiveChain(chain)}
+                          className={`w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors ${activeChain.id === chainId ? 'bg-white/5' : ''}`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">{chain.icon}</span>
+                            <div className="text-left">
+                              <p className="text-xs font-semibold">{chain.name}</p>
+                              <p className="text-[10px] text-gray-500">{chain.symbol}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-mono">${balance.toLocaleString()}</p>
+                            {data && data.holdings?.[0] && (
+                              <p className="text-[10px] text-gray-500">{data.holdings[0].balance} {chain.symbol}</p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
               <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                <h3 className="text-sm font-bold">Holdings</h3>
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <span>{activeChain.icon}</span> {activeChain.name} Holdings
+                </h3>
                 <span className="text-[10px] text-gray-500">{walletData?.tokenCount || 0} tokens</span>
               </div>
-              {walletData?.holdings && walletData.holdings.length > 0 ? (
-                <div className="divide-y divide-white/5">
-                  {walletData.holdings.map((token, i) => (
-                    <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                          <span className="text-[10px] font-bold">{token.symbol.slice(0, 2)}</span>
+              {LIVE_CHAINS.includes(activeChain.id) ? (
+                walletData?.holdings && walletData.holdings.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {walletData.holdings.map((token, i) => (
+                      <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${activeChain.color}20` }}>
+                            <span className="text-[10px] font-bold">{token.symbol.slice(0, 2)}</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold">{token.symbol}</p>
+                            <p className="text-[10px] text-gray-500">{token.name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold">{token.symbol}</p>
-                          <p className="text-[10px] text-gray-500">{token.name}</p>
+                        <div className="text-right">
+                          <p className="text-xs font-mono">{token.balance}</p>
+                          {token.valueUsd && <p className="text-[10px] text-gray-500">${parseFloat(token.valueUsd).toLocaleString()}</p>}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs font-mono">{token.balance}</p>
-                        {token.valueUsd && <p className="text-[10px] text-gray-500">${parseFloat(token.valueUsd).toLocaleString()}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-6 text-center text-gray-500 text-xs">
+                    {loading ? 'Loading...' : 'No tokens found'}
+                  </div>
+                )
               ) : (
                 <div className="px-4 py-6 text-center text-gray-500 text-xs">
-                  {loading ? 'Loading...' : 'No tokens found'}
+                  {activeChain.name} support coming soon
                 </div>
               )}
+            </div>
+
+            <div className="glass rounded-xl border border-white/10 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers className="w-4 h-4 text-[#00E5FF]" />
+                <span className="text-xs font-bold">Supported Chains</span>
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {SUPPORTED_CHAINS.map(chain => (
+                  <button
+                    key={chain.id}
+                    onClick={() => setActiveChain(chain)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                      activeChain.id === chain.id ? 'bg-white/10 border border-white/20' : 'bg-[#111827] border border-transparent hover:border-white/10'
+                    }`}
+                  >
+                    <span className="text-sm">{chain.icon}</span>
+                    <span className="text-[8px] text-gray-400 text-center leading-tight">{chain.symbol}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -251,14 +464,14 @@ export default function WalletPage() {
               </button>
             </div>
 
-            {activeWallet && (
+            {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
               <a
-                href={`https://etherscan.io/address/${activeWallet.address}`}
+                href={`${activeChain.explorerUrl}/address/${activeWallet.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 w-full py-2 border border-white/10 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
               >
-                View on Etherscan <ExternalLink className="w-3 h-3" />
+                View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
               </a>
             )}
           </>
@@ -314,7 +527,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
         </button>
 
         <h1 className="text-xl font-heading font-bold mb-1">Create New Wallet</h1>
-        <p className="text-gray-400 text-xs mb-6">Your keys, your crypto. Fully non-custodial.</p>
+        <p className="text-gray-400 text-xs mb-6">Your keys, your crypto. Works across 12 chains.</p>
 
         {step === 'password' && (
           <div className="space-y-4">
@@ -475,7 +688,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
   );
 }
 
-function SendView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet }) {
+function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [password, setPassword] = useState('');
@@ -513,7 +726,7 @@ function SendView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-6">Send ETH</h1>
+        <h1 className="text-xl font-heading font-bold mb-6">Send {chain.symbol}</h1>
 
         {status === 'success' ? (
           <div className="text-center py-8">
@@ -521,8 +734,8 @@ function SendView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet
               <Check className="w-8 h-8 text-[#10B981]" />
             </div>
             <h2 className="text-lg font-bold mb-2">Transaction Sent!</h2>
-            <p className="text-gray-400 text-sm mb-4">{amount} ETH sent successfully</p>
-            <a href={`https://etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-xs underline">View on Etherscan</a>
+            <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
+            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-xs underline">View on {chain.explorerName}</a>
             <button onClick={onBack} className="w-full mt-4 py-2.5 border border-white/10 rounded-lg text-sm font-semibold">Done</button>
           </div>
         ) : (
@@ -532,7 +745,7 @@ function SendView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet
               <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Amount (ETH)</label>
+              <label className="text-xs text-gray-400 mb-1 block">Amount ({chain.symbol})</label>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0.01" />
             </div>
             <div>
@@ -550,7 +763,7 @@ function SendView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet
   );
 }
 
-function ReceiveView({ onBack, address }: { onBack: () => void; address: string }) {
+function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: string; chain: ChainInfo }) {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -560,15 +773,15 @@ function ReceiveView({ onBack, address }: { onBack: () => void; address: string 
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <h1 className="text-xl font-heading font-bold mb-6">Receive ETH</h1>
+        <h1 className="text-xl font-heading font-bold mb-6">Receive on {chain.name}</h1>
 
         <div className="text-center">
           <div className="w-48 h-48 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center p-4">
-            <div className="w-full h-full bg-[#111827] rounded-lg flex items-center justify-center">
-              <Wallet className="w-16 h-16 text-[#00E5FF]" />
+            <div className="w-full h-full rounded-lg flex items-center justify-center" style={{ backgroundColor: `${chain.color}15` }}>
+              <span className="text-6xl">{chain.icon}</span>
             </div>
           </div>
-          <p className="text-gray-400 text-xs mb-3">Send ETH or ERC-20 tokens to this address:</p>
+          <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address on {chain.name}:</p>
           <div className="bg-[#111827] border border-white/10 rounded-xl p-3 mb-4">
             <p className="text-xs font-mono break-all text-[#00E5FF]">{address}</p>
           </div>
@@ -578,7 +791,7 @@ function ReceiveView({ onBack, address }: { onBack: () => void; address: string 
           >
             {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
           </button>
-          <p className="text-[10px] text-gray-500 mt-3">Only send Ethereum network tokens to this address. Sending tokens from other networks may result in loss.</p>
+          <p className="text-[10px] text-gray-500 mt-3">Only send {chain.name} network tokens to this address. Sending tokens from other networks may result in loss.</p>
         </div>
       </div>
     </div>
