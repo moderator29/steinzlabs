@@ -40,7 +40,8 @@ app/
     ├── risk-scanner/        # AI Portfolio Risk Scanner (full scan, risk breakdown)
     ├── security/            # Security Center (token scanner, contract analyzer, rug/phishing)
     ├── smart-money/         # Smart Money Watchlist (top wallets, follow/unfollow)
-    ├── social-trading/      # Social/copy trading with leaderboard
+    ├── social-trading/      # Social Trading (Coming Soon page with feature preview)
+    ├── wgm-runner/          # WGM Runner (3-lane cyberpunk endless runner with 6 character skins, leaderboard)
     ├── swap/                # Multi-Chain Swap (token swap with slippage, routing)
     ├── trends/              # On-Chain Trends (metrics per chain, hot indicators)
     ├── vtx-ai/              # VTX AI full-page assistant (chat, quick actions)
@@ -53,13 +54,32 @@ components/
 ├── ViewProofModal.tsx       # On-chain proof modal (TradingView chart + DexScreener fallback, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
 ├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
-├── SocialTab.tsx            # Social Trading tab (connect wallet + messages)
+├── SocialTab.tsx            # Social Trading tab (Coming Soon view with planned features)
 ├── VtxAiTab.tsx             # VTX AI assistant tab (chat + quick actions)
 ├── DiscoverTab.tsx          # Project Discovery tab (search, filters, project cards)
 ├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect via useWallet hook)
 ├── WalletConnectButton.tsx  # Reusable wallet connect/disconnect button with dropdown (MetaMask + Phantom, mobile deep links)
 ├── ProfileTab.tsx           # Profile tab (stats, settings, achievements, notification center, uses useWallet hook)
-└── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover)
+└── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover, Play)
+
+## API Routes
+```
+app/api/
+├── ca-lookup/               # CA lookup (DexScreener + GoPlus, Solana uses DexScreener only)
+├── dna-analyzer/            # AI DNA analysis via Anthropic Claude
+├── game-scores/             # HODL Runner leaderboard (in-memory)
+├── wgm-scores/              # WGM Runner leaderboard (in-memory)
+├── token-scanner/           # Token security scanner (GoPlus for EVM, DexScreener for Solana)
+├── wallet-intelligence/     # Wallet analysis (Alchemy for EVM, Solana RPC for SOL)
+└── portfolio/               # Portfolio data
+```
+
+## Key Implementation Notes
+- **Solana Support**: Token scanner uses DexScreener fallback (GoPlus doesn't support Solana well). CA lookup skips GoPlus for Solana. Wallet intelligence has native Solana RPC support. DNA analyzer fetches wallet data from wallet-intelligence API.
+- **Non-custodial Wallet**: Uses ethers.js for EVM chains. Send/receive only available on EVM chains (ETH, Base, Polygon, Avalanche). Solana balance viewing works but send/receive requires Solana keypair (coming soon). 12 chains displayed, 5 live for balance queries.
+- **Game Scores**: Both HODL Runner and WGM Runner use in-memory Map storage (resets on restart). Shared game-scores pattern with username-based dedup.
+- **Social Trading**: Replaced with Coming Soon page showing planned features (copy trading, signals, profiles, leaderboards).
+- **Whitepaper**: System Architecture, Technology Stack, Bullish Event Example, and Tokenomics sections removed.
 lib/
 ├── supabase.ts              # Supabase client + admin (service role) client
 ├── wallet.ts                # MetaMask + Phantom wallet connect/disconnect utilities

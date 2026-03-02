@@ -474,6 +474,23 @@ export default function LandingPage() {
 
       <div className="section-divider"></div>
 
+      <section className="py-10 px-4 relative overflow-hidden">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col items-center justify-center gap-3 glass rounded-2xl p-6 border border-[#00E5FF]/10 bg-gradient-to-r from-[#00E5FF]/[0.03] via-[#7C3AED]/[0.03] to-[#00E5FF]/[0.03] relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00E5FF]/30 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#7C3AED]/20 to-transparent"></div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">Powered By</p>
+            <div className="flex items-center gap-3">
+              <img src="/nakago-logo.jpg" alt="NAKA GO" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#00E5FF]/20" />
+              <span className="text-xl font-heading font-bold bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">NAKA GO</span>
+            </div>
+            <p className="text-gray-500 text-xs text-center max-w-sm">Infrastructure partner powering STEINZ&apos;s multi-chain intelligence layer</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="section-divider"></div>
+
       <section id="security" ref={(el) => { sectionRefs.current['security'] = el; }} className="py-16 px-4">
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent relative overflow-hidden">
