@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Trophy, Medal, Play, ArrowLeft,
-  Crown, Zap, Target, RefreshCw,
-  Home, RotateCcw, ChevronLeft, ChevronRight, ChevronUp
+  Crown, Zap, Target, RotateCcw,
+  Home, ChevronLeft, ChevronRight, ChevronUp,
+  Lock, Gift, Settings as SettingsIcon, Palette, Star, Award, Volume2, VolumeX, Info, X, Sparkles
 } from 'lucide-react';
 
 interface LeaderboardEntry {
@@ -13,32 +14,36 @@ interface LeaderboardEntry {
   character: string;
 }
 
-interface CharacterSkin {
+interface SkinData {
   id: string;
   name: string;
   rarity: string;
   rarityColor: string;
-  bodyColor: string;
-  accentColor: string;
+  image: string;
+  unlockScore: number;
   glowColor: string;
-  helmetColor: string;
-  visorColor: string;
-  locked: boolean;
+  accentColor: string;
 }
 
-const CHARACTERS: CharacterSkin[] = [
-  { id: 'cyber-warrior', name: 'Cyber Warrior', rarity: 'Common', rarityColor: '#9CA3AF', bodyColor: '#1a2744', accentColor: '#00E5FF', glowColor: '#00E5FF', helmetColor: '#0f1a2e', visorColor: '#00E5FF', locked: false },
-  { id: 'shadow-runner', name: 'Shadow Runner', rarity: 'Rare', rarityColor: '#3B82F6', bodyColor: '#111827', accentColor: '#3B82F6', glowColor: '#60A5FA', helmetColor: '#0a0f1a', visorColor: '#60A5FA', locked: false },
-  { id: 'gollden', name: 'Gollden', rarity: 'Epic', rarityColor: '#A855F7', bodyColor: '#5c3d0e', accentColor: '#F59E0B', glowColor: '#FCD34D', helmetColor: '#3d2706', visorColor: '#FCD34D', locked: false },
-  { id: 'golden-node', name: 'Golden Node', rarity: 'Epic', rarityColor: '#A855F7', bodyColor: '#4a2a08', accentColor: '#FB923C', glowColor: '#FDBA74', helmetColor: '#3a1f05', visorColor: '#FDBA74', locked: false },
-  { id: 'inferno-guard', name: 'Inferno Guard', rarity: 'Rare+', rarityColor: '#EF4444', bodyColor: '#450a0a', accentColor: '#EF4444', glowColor: '#FCA5A5', helmetColor: '#2d0606', visorColor: '#EF4444', locked: false },
-  { id: 'vertex-specter', name: 'Vertex Specter', rarity: 'Legendary', rarityColor: '#F59E0B', bodyColor: '#1e1645', accentColor: '#8B5CF6', glowColor: '#C4B5FD', helmetColor: '#130e30', visorColor: '#A78BFA', locked: false },
+const SKINS: SkinData[] = [
+  { id: 'cyber-warrior', name: 'Cyber Warrior', rarity: 'Common', rarityColor: '#60A5FA', image: '/game/skins/cyber-warrior.jpg', unlockScore: 0, glowColor: '#00E5FF', accentColor: '#3B82F6' },
+  { id: 'vertex-specter', name: 'Vertex Specter', rarity: 'Rare', rarityColor: '#A78BFA', image: '/game/skins/vertex-specter.jpg', unlockScore: 0, glowColor: '#8B5CF6', accentColor: '#7C3AED' },
+  { id: 'shadow-runner', name: 'Shadow Runner', rarity: 'Epic', rarityColor: '#F87171', image: '/game/skins/shadow-runner.jpg', unlockScore: 1500, glowColor: '#EF4444', accentColor: '#DC2626' },
+  { id: 'gollden', name: 'Gollden', rarity: 'Epic', rarityColor: '#FBBF24', image: '/game/skins/gollden.jpg', unlockScore: 3000, glowColor: '#F59E0B', accentColor: '#D97706' },
+  { id: 'inferno-guard', name: 'Inferno Guard', rarity: 'Legendary', rarityColor: '#FB923C', image: '/game/skins/inferno-guard.jpg', unlockScore: 5000, glowColor: '#EF4444', accentColor: '#B91C1C' },
 ];
 
 const LANE_COUNT = 3;
+const MILESTONE_REWARDS = [
+  { score: 500, label: '500 Points', reward: '5 $STZ Bonus', icon: '🪙' },
+  { score: 1500, label: '1,500 Points', reward: 'Shadow Runner Skin', icon: '🔓' },
+  { score: 3000, label: '3,000 Points', reward: 'Gollden Skin', icon: '🔓' },
+  { score: 5000, label: '5,000 Points', reward: 'Inferno Guard Skin', icon: '🔓' },
+  { score: 10000, label: '10,000 Points', reward: 'Legend Badge', icon: '👑' },
+];
 
 interface Obstacle {
-  lane: number; z: number; type: 'laser' | 'drone' | 'floor';
+  lane: number; z: number; type: 'laser' | 'drone' | 'barrier';
   passed: boolean;
 }
 
@@ -53,9 +58,14 @@ interface RunParticle {
 
 export default function STZRunnerPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [gameState, setGameState] = useState<'login' | 'charselect' | 'playing' | 'gameover' | 'leaderboard'>('login');
+  const skinImagesRef = useRef<Record<string, HTMLImageElement>>({});
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [gameState, setGameState] = useState<'login' | 'prerun' | 'tutorial' | 'playing' | 'gameover' | 'leaderboard'>('login');
+  const [prerunTab, setPrerunTab] = useState<'skins' | 'rewards' | 'settings'>('skins');
   const [username, setUsername] = useState('');
-  const [selectedChar, setSelectedChar] = useState(0);
+  const [selectedSkin, setSelectedSkin] = useState(0);
+  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['cyber-warrior', 'vertex-specter']);
+  const [personalBestScore, setPersonalBestScore] = useState(0);
   const [finalScore, setFinalScore] = useState(0);
   const [finalCoins, setFinalCoins] = useState(0);
   const [finalDistance, setFinalDistance] = useState(0);
@@ -68,17 +78,69 @@ export default function STZRunnerPage() {
   const [liveCoins, setLiveCoins] = useState(0);
   const [liveDistance, setLiveDistance] = useState(0);
   const [sessionId, setSessionId] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialTimer, setTutorialTimer] = useState(10);
+  const [isFirstTime, setIsFirstTime] = useState(false);
   const gameRef = useRef<any>(null);
   const animRef = useRef<number>(0);
   const stoppedRef = useRef(false);
   const scoreSubmittedRef = useRef(false);
 
   useEffect(() => {
+    const loaded: Record<string, HTMLImageElement> = {};
+    let count = 0;
+    SKINS.forEach(skin => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        loaded[skin.id] = img;
+        count++;
+        if (count === SKINS.length) {
+          skinImagesRef.current = loaded;
+          setImagesLoaded(true);
+        }
+      };
+      img.onerror = () => {
+        count++;
+        if (count === SKINS.length) {
+          skinImagesRef.current = loaded;
+          setImagesLoaded(true);
+        }
+      };
+      img.src = skin.image;
+    });
+  }, []);
+
+  useEffect(() => {
     const saved = localStorage.getItem('stz_runner_username');
     if (saved) setUsername(saved);
-    const savedChar = localStorage.getItem('stz_runner_char');
-    if (savedChar) setSelectedChar(parseInt(savedChar) || 0);
+    const savedSkin = localStorage.getItem('stz_runner_skin');
+    if (savedSkin) setSelectedSkin(parseInt(savedSkin) || 0);
+    const savedBest = localStorage.getItem('stz_runner_best');
+    if (savedBest) setPersonalBestScore(parseInt(savedBest) || 0);
+    const savedUnlocked = localStorage.getItem('stz_runner_unlocked');
+    if (savedUnlocked) {
+      try { setUnlockedSkins(JSON.parse(savedUnlocked)); } catch {}
+    }
+    const firstTime = !localStorage.getItem('stz_runner_played');
+    setIsFirstTime(firstTime);
   }, []);
+
+  useEffect(() => {
+    const newUnlocked = [...unlockedSkins];
+    let changed = false;
+    SKINS.forEach(skin => {
+      if (skin.unlockScore > 0 && personalBestScore >= skin.unlockScore && !newUnlocked.includes(skin.id)) {
+        newUnlocked.push(skin.id);
+        changed = true;
+      }
+    });
+    if (changed) {
+      setUnlockedSkins(newUnlocked);
+      localStorage.setItem('stz_runner_unlocked', JSON.stringify(newUnlocked));
+    }
+  }, [personalBestScore]);
 
   const fetchLeaderboard = async () => {
     try {
@@ -92,11 +154,15 @@ export default function STZRunnerPage() {
   const submitScore = async (score: number, coins: number, distance: number) => {
     if (scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    if (score > personalBestScore) {
+      setPersonalBestScore(score);
+      localStorage.setItem('stz_runner_best', score.toString());
+    }
     try {
       const res = await fetch('/api/wgm-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, score, coins, distance, character: CHARACTERS[selectedChar].id }),
+        body: JSON.stringify({ username, score, coins, distance, character: SKINS[selectedSkin].id }),
       });
       const data = await res.json();
       setRank(data.rank);
@@ -105,16 +171,18 @@ export default function STZRunnerPage() {
   };
 
   const startGame = useCallback(() => {
+    if (!imagesLoaded) return;
     stoppedRef.current = false;
     scoreSubmittedRef.current = false;
     setShowDeathOverlay(false);
     setSessionId(prev => prev + 1);
+    localStorage.setItem('stz_runner_played', '1');
+    setIsFirstTime(false);
     setGameState('playing');
-  }, []);
+  }, [imagesLoaded]);
 
   useEffect(() => {
     if (gameState !== 'playing') return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -130,11 +198,12 @@ export default function STZRunnerPage() {
     resize();
     window.addEventListener('resize', resize);
 
-    const character = CHARACTERS[selectedChar];
-    const VP_Y = 0.22;
-    const GROUND_Y = 0.82;
-    const MAX_Z = 1500;
-    const PLAYER_Z = 80;
+    const skin = SKINS[selectedSkin];
+    const skinImg = skinImagesRef.current[skin.id];
+    const VP_Y = 0.18;
+    const GROUND_Y = 0.80;
+    const MAX_Z = 1800;
+    const PLAYER_Z = 90;
 
     const game = {
       playerLane: 1,
@@ -158,9 +227,7 @@ export default function STZRunnerPage() {
     };
     gameRef.current = game;
 
-    const getScale = (z: number) => {
-      return Math.max(0.02, 1 - z / MAX_Z);
-    };
+    const getScale = (z: number) => Math.max(0.02, 1 - z / MAX_Z);
 
     const getScreenY = (z: number, h: number) => {
       const vpY = h * VP_Y;
@@ -171,7 +238,7 @@ export default function STZRunnerPage() {
 
     const getLaneX = (lane: number, z: number, w: number) => {
       const s = getScale(z);
-      const laneW = w * 0.20 * s;
+      const laneW = w * 0.22 * s;
       const totalW = laneW * LANE_COUNT;
       const cx = w / 2;
       return cx - totalW / 2 + laneW * lane + laneW / 2;
@@ -179,7 +246,7 @@ export default function STZRunnerPage() {
 
     const spawnObstacle = () => {
       const lane = Math.floor(Math.random() * LANE_COUNT);
-      const types: ('laser' | 'drone' | 'floor')[] = ['laser', 'drone', 'floor'];
+      const types: ('laser' | 'drone' | 'barrier')[] = ['laser', 'drone', 'barrier'];
       game.obstacles.push({ lane, z: MAX_Z, type: types[Math.floor(Math.random() * types.length)], passed: false });
     };
 
@@ -191,43 +258,134 @@ export default function STZRunnerPage() {
     let obstacleTimer = 0;
     let coinTimer = 0;
 
-    const drawTunnel = (w: number, h: number) => {
+    const drawEnvironment = (w: number, h: number) => {
       const vpY = h * VP_Y;
       const gndY = h * GROUND_Y;
       const cx = w / 2;
 
-      const bg = ctx.createLinearGradient(0, 0, 0, h);
-      bg.addColorStop(0, '#050008');
-      bg.addColorStop(0.3, '#0a0015');
-      bg.addColorStop(0.7, '#080012');
-      bg.addColorStop(1, '#020005');
+      const bg = ctx.createRadialGradient(cx, vpY, 0, cx, vpY, h);
+      bg.addColorStop(0, '#0a0020');
+      bg.addColorStop(0.3, '#060015');
+      bg.addColorStop(0.7, '#03000a');
+      bg.addColorStop(1, '#000003');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, w, h);
 
-      for (let i = 0; i < 25; i++) {
-        const depth = ((i * 60 + game.tunnelOffset) % MAX_Z);
+      const vpGlow = ctx.createRadialGradient(cx, vpY, 0, cx, vpY, w * 0.35);
+      vpGlow.addColorStop(0, 'rgba(239, 68, 68, 0.08)');
+      vpGlow.addColorStop(0.5, 'rgba(124, 58, 237, 0.03)');
+      vpGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = vpGlow;
+      ctx.fillRect(0, 0, w, h * 0.5);
+
+      for (let i = 0; i < 12; i++) {
+        const depth = ((i * 150 + game.tunnelOffset * 0.8) % MAX_Z);
         const s = getScale(depth);
         const y = getScreenY(depth, h);
-        const halfW = w * 0.48 * s;
-        const alpha = s * 0.12;
+        const halfW = w * 0.52 * s;
+        const archH = 60 * s;
+        const alpha = s * 0.35;
 
-        ctx.strokeStyle = `rgba(0, 229, 255, ${alpha})`;
-        ctx.lineWidth = 1;
+        ctx.save();
+        ctx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+        ctx.lineWidth = Math.max(1, 3 * s);
+        ctx.shadowColor = '#EF4444';
+        ctx.shadowBlur = 12 * s;
+
         ctx.beginPath();
         ctx.moveTo(cx - halfW, y);
+        ctx.lineTo(cx - halfW * 0.7, y - archH);
+        ctx.lineTo(cx + halfW * 0.7, y - archH);
         ctx.lineTo(cx + halfW, y);
         ctx.stroke();
+
+        ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - halfW * 0.85, y - archH * 0.5);
+        ctx.lineTo(cx + halfW * 0.85, y - archH * 0.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.save();
+        ctx.beginPath();
+        let first = true;
+        for (let z = 0; z < MAX_Z; z += 20) {
+          const s = getScale(z);
+          const y = getScreenY(z, h);
+          const halfW = w * 0.50 * s;
+          const x = cx + side * halfW;
+          if (first) { ctx.moveTo(x, y + 30 * s); first = false; }
+          else ctx.lineTo(x, y + 30 * s);
+        }
+        for (let z = MAX_Z - 20; z >= 0; z -= 20) {
+          const s = getScale(z);
+          const y = getScreenY(z, h);
+          const halfW = w * 0.50 * s;
+          const x = cx + side * halfW;
+          ctx.lineTo(x, y - 80 * s);
+        }
+        ctx.closePath();
+        const wallGrad = ctx.createLinearGradient(
+          side === -1 ? 0 : w, 0, cx, 0
+        );
+        wallGrad.addColorStop(0, 'rgba(10, 0, 30, 0.9)');
+        wallGrad.addColorStop(1, 'rgba(5, 0, 15, 0.3)');
+        ctx.fillStyle = wallGrad;
+        ctx.fill();
+        ctx.restore();
+
+        for (let i = 0; i < 20; i++) {
+          const depth = ((i * 90 + game.tunnelOffset) % MAX_Z);
+          const s = getScale(depth);
+          const y = getScreenY(depth, h);
+          const halfW = w * 0.50 * s;
+          const x = cx + side * halfW;
+          const panelH = 50 * s;
+          const panelW = 6 * s;
+          const alpha = s * 0.3;
+
+          ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.5})`;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x - panelW / 2, y - panelH / 2, panelW, panelH);
+        }
+      }
+
+      for (let side = -1; side <= 1; side += 2) {
+        for (let i = 0; i < 6; i++) {
+          const depth = ((i * 280 + game.tunnelOffset * 1.5 + (side === 1 ? 140 : 0)) % MAX_Z);
+          const s = getScale(depth);
+          if (s < 0.1) continue;
+          const y = getScreenY(depth, h);
+          const halfW = w * 0.48 * s;
+          const x1 = cx + side * halfW;
+          const targetX = cx + (Math.sin(game.frame * 0.02 + i) * w * 0.15);
+          const alpha = s * 0.7;
+
+          ctx.save();
+          ctx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+          ctx.lineWidth = Math.max(1, 2.5 * s);
+          ctx.shadowColor = '#EF4444';
+          ctx.shadowBlur = 15 * s;
+          ctx.beginPath();
+          ctx.moveTo(x1, y - 20 * s);
+          ctx.lineTo(targetX, y - 20 * s + Math.sin(game.frame * 0.05) * 8 * s);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
 
       for (let lane = 0; lane <= LANE_COUNT; lane++) {
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(0, 229, 255, 0.06)';
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
         ctx.lineWidth = 1;
         let first = true;
-        for (let z = 0; z < MAX_Z; z += 30) {
+        for (let z = 0; z < MAX_Z; z += 25) {
           const s = getScale(z);
           const y = getScreenY(z, h);
-          const laneW = w * 0.20 * s;
+          const laneW = w * 0.22 * s;
           const totalW = laneW * LANE_COUNT;
           const x = cx - totalW / 2 + laneW * lane;
           if (first) { ctx.moveTo(x, y); first = false; }
@@ -236,187 +394,138 @@ export default function STZRunnerPage() {
         ctx.stroke();
       }
 
-      for (let side = -1; side <= 1; side += 2) {
-        for (let i = 0; i < 8; i++) {
-          const depth = ((i * 180 + game.tunnelOffset * 1.3) % MAX_Z);
-          const s = getScale(depth);
-          const y = getScreenY(depth, h);
-          const halfW = w * 0.50 * s;
-          const x = cx + side * (halfW + 8 * s);
-          const barH = 18 * s;
-          const alpha = s * 0.5;
+      for (let i = 0; i < 30; i++) {
+        const depth = ((i * 60 + game.tunnelOffset) % MAX_Z);
+        const s = getScale(depth);
+        const y = getScreenY(depth, h);
+        const laneW = w * 0.22 * s;
+        const totalW = laneW * LANE_COUNT;
+        const alpha = s * 0.06;
 
-          ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
-          ctx.shadowColor = '#EF4444';
-          ctx.shadowBlur = 10 * s;
-          ctx.fillRect(x - 2 * s, y - barH / 2, 4 * s, barH);
-          ctx.shadowBlur = 0;
-        }
+        ctx.strokeStyle = `rgba(0, 229, 255, ${alpha})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - totalW / 2, y);
+        ctx.lineTo(cx + totalW / 2, y);
+        ctx.stroke();
       }
 
-      const floorG = ctx.createLinearGradient(0, gndY, 0, h);
-      floorG.addColorStop(0, 'rgba(0, 229, 255, 0.02)');
-      floorG.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
-      ctx.fillStyle = floorG;
+      const floorGlow = ctx.createLinearGradient(0, gndY - 10, 0, h);
+      floorGlow.addColorStop(0, 'rgba(0, 229, 255, 0.03)');
+      floorGlow.addColorStop(0.3, 'rgba(124, 58, 237, 0.02)');
+      floorGlow.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+      ctx.fillStyle = floorGlow;
       ctx.fillRect(0, gndY, w, h - gndY);
     };
 
-    const drawMechWarrior = (x: number, baseY: number, s: number, char: CharacterSkin) => {
-      const sz = 55 * s;
-      const jy = game.jumpY * s;
-      const y = baseY - jy;
-      const legSwing = Math.sin(game.frame * 0.18) * sz * 0.08;
-
-      ctx.save();
-      ctx.shadowColor = char.glowColor;
-      ctx.shadowBlur = 20 * s;
-
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(x, baseY + 2, sz * 0.35, sz * 0.08, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = char.bodyColor;
-      ctx.fillRect(x - sz * 0.15, y - sz * 0.15 + legSwing, sz * 0.13, sz * 0.35);
-      ctx.fillRect(x + sz * 0.02, y - sz * 0.15 - legSwing, sz * 0.13, sz * 0.35);
-      ctx.fillStyle = char.accentColor;
-      ctx.fillRect(x - sz * 0.16, y + sz * 0.15 + legSwing, sz * 0.15, sz * 0.04);
-      ctx.fillRect(x + sz * 0.01, y + sz * 0.15 - legSwing, sz * 0.15, sz * 0.04);
-
-      ctx.fillStyle = char.bodyColor;
-      ctx.beginPath();
-      ctx.moveTo(x - sz * 0.30, y - sz * 0.50);
-      ctx.lineTo(x + sz * 0.30, y - sz * 0.50);
-      ctx.lineTo(x + sz * 0.22, y - sz * 0.10);
-      ctx.lineTo(x - sz * 0.22, y - sz * 0.10);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = char.accentColor;
-      ctx.globalAlpha = 0.6;
-      ctx.fillRect(x - sz * 0.30, y - sz * 0.50, sz * 0.60, sz * 0.04);
-      ctx.globalAlpha = 1;
-
-      ctx.fillStyle = char.accentColor;
-      ctx.globalAlpha = 0.4;
-      ctx.fillRect(x - sz * 0.04, y - sz * 0.48, sz * 0.08, sz * 0.30);
-      ctx.globalAlpha = 1;
-
-      ctx.shadowColor = char.glowColor;
-      ctx.shadowBlur = 8 * s;
-      ctx.fillStyle = char.accentColor;
-      ctx.beginPath();
-      ctx.arc(x, y - sz * 0.32, sz * 0.06, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = char.bodyColor;
-      ctx.fillRect(x - sz * 0.38, y - sz * 0.50, sz * 0.10, sz * 0.05);
-      ctx.fillRect(x + sz * 0.28, y - sz * 0.50, sz * 0.10, sz * 0.05);
-      ctx.fillStyle = char.accentColor;
-      ctx.globalAlpha = 0.5;
-      ctx.fillRect(x - sz * 0.38, y - sz * 0.46, sz * 0.10, sz * 0.02);
-      ctx.fillRect(x + sz * 0.28, y - sz * 0.46, sz * 0.10, sz * 0.02);
-      ctx.globalAlpha = 1;
-
-      const armSwing = Math.sin(game.frame * 0.18) * sz * 0.06;
-      ctx.fillStyle = char.bodyColor;
-      ctx.fillRect(x - sz * 0.40, y - sz * 0.46 + armSwing, sz * 0.08, sz * 0.28);
-      ctx.fillRect(x + sz * 0.32, y - sz * 0.46 - armSwing, sz * 0.08, sz * 0.28);
-      ctx.fillStyle = char.accentColor;
-      ctx.globalAlpha = 0.4;
-      ctx.fillRect(x - sz * 0.41, y - sz * 0.30 + armSwing, sz * 0.10, sz * 0.03);
-      ctx.fillRect(x + sz * 0.31, y - sz * 0.30 - armSwing, sz * 0.10, sz * 0.03);
-      ctx.globalAlpha = 1;
-
-      ctx.fillStyle = char.helmetColor;
-      ctx.beginPath();
-      ctx.ellipse(x, y - sz * 0.62, sz * 0.20, sz * 0.22, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = char.bodyColor;
-      ctx.beginPath();
-      ctx.moveTo(x - sz * 0.18, y - sz * 0.72);
-      ctx.lineTo(x + sz * 0.18, y - sz * 0.72);
-      ctx.lineTo(x + sz * 0.15, y - sz * 0.80);
-      ctx.lineTo(x - sz * 0.15, y - sz * 0.80);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.shadowColor = char.visorColor;
-      ctx.shadowBlur = 12 * s;
-      const visorPulse = 0.7 + Math.sin(game.frame * 0.08) * 0.3;
-      ctx.fillStyle = char.visorColor;
-      ctx.globalAlpha = visorPulse;
-      ctx.fillRect(x - sz * 0.14, y - sz * 0.66, sz * 0.28, sz * 0.05);
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = char.accentColor;
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(x - sz * 0.02, y - sz * 0.78, sz * 0.04, sz * 0.10);
-      ctx.globalAlpha = 1;
-
-      ctx.restore();
-    };
-
-    const drawPlayer = (w: number, h: number) => {
+    const drawPlayerSprite = (w: number, h: number) => {
       const s = getScale(PLAYER_Z);
       const x = getLaneX(game.playerLane, PLAYER_Z, w);
       const y = getScreenY(PLAYER_Z, h);
+      const jy = game.jumpY * s;
+      const drawY = y - jy;
       game.playerScreenX = x;
-      game.playerScreenY = y;
-      drawMechWarrior(x, y, s, character);
+      game.playerScreenY = drawY;
+
+      const spriteH = 120 * s;
+      const spriteW = spriteH * 0.75;
+      const bob = Math.sin(game.frame * 0.2) * 2 * s;
+
+      ctx.save();
+
+      ctx.shadowColor = skin.glowColor;
+      ctx.shadowBlur = 25 * s;
+      ctx.fillStyle = `${skin.glowColor}15`;
+      ctx.beginPath();
+      ctx.ellipse(x, y + 2, spriteW * 0.5, spriteH * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (skinImg) {
+        const drawX = x - spriteW / 2;
+        const drawTop = drawY - spriteH + bob;
+        ctx.shadowColor = skin.glowColor;
+        ctx.shadowBlur = 20 * s;
+        ctx.drawImage(skinImg, drawX, drawTop, spriteW, spriteH);
+        ctx.shadowBlur = 0;
+
+        ctx.globalAlpha = 0.15 + Math.sin(game.frame * 0.08) * 0.08;
+        ctx.fillStyle = skin.glowColor;
+        ctx.fillRect(drawX, drawTop, spriteW, spriteH);
+        ctx.globalAlpha = 1;
+      } else {
+        const sz = 55 * s;
+        ctx.fillStyle = skin.accentColor;
+        ctx.beginPath();
+        ctx.ellipse(x, drawY - sz * 0.62, sz * 0.20, sz * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = skin.glowColor;
+        ctx.fillRect(x - sz * 0.14, drawY - sz * 0.66, sz * 0.28, sz * 0.05);
+        ctx.fillRect(x - sz * 0.22, drawY - sz * 0.50, sz * 0.44, sz * 0.40);
+        ctx.fillRect(x - sz * 0.15, drawY - sz * 0.15, sz * 0.12, sz * 0.30);
+        ctx.fillRect(x + sz * 0.03, drawY - sz * 0.15, sz * 0.12, sz * 0.30);
+      }
+
+      ctx.restore();
     };
 
     const drawObstacle = (obs: Obstacle, w: number, h: number) => {
       const s = getScale(obs.z);
       const x = getLaneX(obs.lane, obs.z, w);
       const y = getScreenY(obs.z, h);
-      const obsW = 50 * s;
-      const obsH = 35 * s;
+      const obsW = 55 * s;
+      const obsH = 40 * s;
 
       ctx.save();
       if (obs.type === 'laser') {
         ctx.shadowColor = '#EF4444';
-        ctx.shadowBlur = 15 * s;
-        ctx.fillStyle = '#4a0e0e';
-        ctx.fillRect(x - obsW / 2, y - obsH * 1.2, obsW * 0.12, obsH * 1.2);
-        ctx.fillRect(x + obsW / 2 - obsW * 0.12, y - obsH * 1.2, obsW * 0.12, obsH * 1.2);
-        const pulse = 0.5 + Math.sin(game.frame * 0.3) * 0.5;
+        ctx.shadowBlur = 18 * s;
+        ctx.fillStyle = '#2d0a0a';
+        ctx.fillRect(x - obsW / 2, y - obsH * 1.5, obsW * 0.1, obsH * 1.5);
+        ctx.fillRect(x + obsW / 2 - obsW * 0.1, y - obsH * 1.5, obsW * 0.1, obsH * 1.5);
+        const pulse = 0.4 + Math.sin(game.frame * 0.35) * 0.6;
         ctx.fillStyle = `rgba(239, 68, 68, ${pulse})`;
-        ctx.fillRect(x - obsW / 2, y - obsH * 0.5, obsW, obsH * 0.08);
-        ctx.fillStyle = `rgba(252, 165, 165, ${pulse * 0.4})`;
-        ctx.fillRect(x - obsW / 2 - 3, y - obsH * 0.5 - 3, obsW + 6, obsH * 0.14);
+        ctx.fillRect(x - obsW / 2, y - obsH * 0.6, obsW, obsH * 0.08);
+        ctx.shadowBlur = 25 * s;
+        ctx.fillStyle = `rgba(252, 165, 165, ${pulse * 0.3})`;
+        ctx.fillRect(x - obsW / 2 - 4 * s, y - obsH * 0.65, obsW + 8 * s, obsH * 0.18);
       } else if (obs.type === 'drone') {
         ctx.shadowColor = '#F59E0B';
-        ctx.shadowBlur = 12 * s;
-        const dy = y - obsH * 1.5;
-        ctx.fillStyle = '#1f2937';
+        ctx.shadowBlur = 14 * s;
+        const dy = y - obsH * 1.8;
+        ctx.fillStyle = '#1a1a2e';
         ctx.beginPath();
-        ctx.ellipse(x, dy, obsW * 0.3, obsH * 0.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, dy, obsW * 0.3, obsH * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#3d0a0a';
+        ctx.beginPath();
+        ctx.ellipse(x, dy, obsW * 0.18, obsH * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#EF4444';
+        ctx.shadowBlur = 8 * s;
         ctx.beginPath();
-        ctx.arc(x, dy - obsH * 0.08, obsW * 0.06, 0, Math.PI * 2);
+        ctx.arc(x, dy - obsH * 0.06, obsW * 0.05, 0, Math.PI * 2);
         ctx.fill();
-        const prop = game.frame * 0.6;
-        ctx.strokeStyle = '#6B7280';
+        const prop = game.frame * 0.5;
+        ctx.strokeStyle = 'rgba(107, 114, 128, 0.6)';
         ctx.lineWidth = 2 * s;
         ctx.beginPath();
-        ctx.moveTo(x - obsW * 0.4 * Math.cos(prop), dy - obsH * 0.25);
-        ctx.lineTo(x + obsW * 0.4 * Math.cos(prop), dy - obsH * 0.25);
+        ctx.moveTo(x - obsW * 0.38 * Math.cos(prop), dy - obsH * 0.22);
+        ctx.lineTo(x + obsW * 0.38 * Math.cos(prop), dy - obsH * 0.22);
         ctx.stroke();
       } else {
         ctx.shadowColor = '#7C3AED';
-        ctx.shadowBlur = 8 * s;
-        const pulse = 0.25 + Math.sin(game.frame * 0.2) * 0.15;
+        ctx.shadowBlur = 12 * s;
+        const pulse = 0.2 + Math.sin(game.frame * 0.15) * 0.15;
         ctx.fillStyle = `rgba(124, 58, 237, ${pulse})`;
-        ctx.fillRect(x - obsW / 2, y - obsH * 0.10, obsW, obsH * 0.10);
-        for (let i = 0; i < 4; i++) {
-          ctx.fillRect(x - obsW / 2 + i * obsW * 0.28, y - obsH * 0.10, obsW * 0.18, obsH * 0.04);
+        ctx.fillRect(x - obsW / 2, y - obsH * 0.08, obsW, obsH * 0.08);
+        ctx.fillStyle = `rgba(139, 92, 246, ${pulse * 0.5})`;
+        for (let seg = 0; seg < 5; seg++) {
+          const segX = x - obsW / 2 + seg * obsW * 0.22;
+          ctx.fillRect(segX, y - obsH * 0.16, obsW * 0.18, obsH * 0.16);
         }
+        ctx.fillStyle = `rgba(167, 139, 250, ${pulse * 0.2})`;
+        ctx.fillRect(x - obsW * 0.6, y - obsH * 0.2, obsW * 1.2, obsH * 0.2);
       }
       ctx.restore();
     };
@@ -426,23 +535,27 @@ export default function STZRunnerPage() {
       const s = getScale(coin.z);
       const x = getLaneX(coin.lane, coin.z, w);
       const y = getScreenY(coin.z, h);
-      const bob = Math.sin(coin.bobPhase + game.frame * 0.08) * 6 * s;
-      const cy = y - 28 * s + bob;
-      const r = 12 * s;
+      const bob = Math.sin(coin.bobPhase + game.frame * 0.08) * 7 * s;
+      const cy = y - 30 * s + bob;
+      const r = 13 * s;
 
       ctx.save();
       ctx.shadowColor = '#F59E0B';
-      ctx.shadowBlur = 14 * s;
-      ctx.fillStyle = '#F59E0B';
+      ctx.shadowBlur = 18 * s;
+      const coinGrad = ctx.createRadialGradient(x - r * 0.3, cy - r * 0.3, 0, x, cy, r);
+      coinGrad.addColorStop(0, '#FCD34D');
+      coinGrad.addColorStop(0.5, '#F59E0B');
+      coinGrad.addColorStop(1, '#B45309');
+      ctx.fillStyle = coinGrad;
       ctx.beginPath();
       ctx.arc(x, cy, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#FCD34D';
+      ctx.fillStyle = '#FEF3C7';
       ctx.beginPath();
-      ctx.arc(x, cy, r * 0.65, 0, Math.PI * 2);
+      ctx.arc(x, cy, r * 0.55, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#78350F';
-      ctx.font = `bold ${r * 1.2}px monospace`;
+      ctx.font = `bold ${r * 1.1}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('S', x, cy + 1);
@@ -454,16 +567,18 @@ export default function STZRunnerPage() {
         const alpha = p.life / p.maxLife;
         ctx.globalAlpha = alpha;
         ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.globalAlpha = 1;
     };
 
     const checkCollision = (obs: Obstacle): boolean => {
       if (obs.lane !== game.playerLane) return false;
-      if (obs.z > PLAYER_Z - 20 && obs.z < PLAYER_Z + 40) {
+      if (obs.z > PLAYER_Z - 25 && obs.z < PLAYER_Z + 45) {
         if (obs.type === 'drone' && game.jumpY > 35) return false;
-        if (obs.type === 'floor' && game.jumpY > 18) return false;
+        if (obs.type === 'barrier' && game.jumpY > 18) return false;
         return true;
       }
       return false;
@@ -472,16 +587,16 @@ export default function STZRunnerPage() {
     const checkCoinCollect = (coin: StzCoin): boolean => {
       if (coin.collected) return false;
       if (coin.lane !== game.playerLane) return false;
-      return coin.z > PLAYER_Z - 25 && coin.z < PLAYER_Z + 50;
+      return coin.z > PLAYER_Z - 30 && coin.z < PLAYER_Z + 55;
     };
 
     const spawnDeathParticles = () => {
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 50; i++) {
         game.particles.push({
-          x: game.playerScreenX, y: game.playerScreenY - 30,
-          vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
-          life: 35 + Math.random() * 25, maxLife: 60,
-          color: Math.random() > 0.5 ? '#EF4444' : '#FCA5A5',
+          x: game.playerScreenX, y: game.playerScreenY - 40,
+          vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12,
+          life: 30 + Math.random() * 30, maxLife: 60,
+          color: Math.random() > 0.5 ? '#EF4444' : skin.glowColor,
           size: 2 + Math.random() * 5,
         });
       }
@@ -492,36 +607,21 @@ export default function STZRunnerPage() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!game.alive) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a') {
-        if (game.playerLane > 0) game.playerLane--;
-      } else if (e.key === 'ArrowRight' || e.key === 'd') {
-        if (game.playerLane < LANE_COUNT - 1) game.playerLane++;
-      } else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !game.jumping) {
-        game.jumping = true;
-        game.jumpVel = 14;
-      }
+      if (e.key === 'ArrowLeft' || e.key === 'a') { if (game.playerLane > 0) game.playerLane--; }
+      else if (e.key === 'ArrowRight' || e.key === 'd') { if (game.playerLane < LANE_COUNT - 1) game.playerLane++; }
+      else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !game.jumping) { game.jumping = true; game.jumpVel = 14; }
     };
 
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    };
-
+    const handleTouchStart = (e: TouchEvent) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
     const handleTouchEnd = (e: TouchEvent) => {
       if (!game.alive) return;
       const dx = e.changedTouches[0].clientX - touchStartX;
       const dy = e.changedTouches[0].clientY - touchStartY;
-
-      if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
-        if (!game.jumping) { game.jumping = true; game.jumpVel = 14; }
-        return;
-      }
+      if (Math.abs(dx) < 15 && Math.abs(dy) < 15) { if (!game.jumping) { game.jumping = true; game.jumpVel = 14; } return; }
       if (Math.abs(dx) > Math.abs(dy)) {
         if (dx < -25 && game.playerLane > 0) game.playerLane--;
         else if (dx > 25 && game.playerLane < LANE_COUNT - 1) game.playerLane++;
-      } else if (dy < -25 && !game.jumping) {
-        game.jumping = true; game.jumpVel = 14;
-      }
+      } else if (dy < -25 && !game.jumping) { game.jumping = true; game.jumpVel = 14; }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -536,7 +636,7 @@ export default function STZRunnerPage() {
       if (game.alive) {
         game.frame++;
         game.speed = 5 + game.distance * 0.004;
-        game.tunnelOffset = (game.tunnelOffset + game.speed * 2.5) % MAX_Z;
+        game.tunnelOffset = (game.tunnelOffset + game.speed * 3) % MAX_Z;
         game.distance += game.speed * 0.025;
         game.score += Math.floor(game.speed * 0.6);
 
@@ -546,21 +646,17 @@ export default function STZRunnerPage() {
           if (game.jumpY <= 0) { game.jumpY = 0; game.jumping = false; game.jumpVel = 0; }
         }
 
-        if (game.graceFrames > 0) { game.graceFrames--; }
+        if (game.graceFrames > 0) game.graceFrames--;
         else {
           obstacleTimer++;
-          if (obstacleTimer > Math.max(30, 75 - game.distance * 0.12)) {
-            spawnObstacle();
-            obstacleTimer = 0;
-          }
+          if (obstacleTimer > Math.max(28, 70 - game.distance * 0.12)) { spawnObstacle(); obstacleTimer = 0; }
         }
 
         coinTimer++;
-        if (coinTimer > 40) { spawnCoin(); coinTimer = 0; }
+        if (coinTimer > 38) { spawnCoin(); coinTimer = 0; }
 
-        for (const obs of game.obstacles) obs.z -= game.speed * 4;
-        for (const coin of game.stzCoins) coin.z -= game.speed * 4;
-
+        for (const obs of game.obstacles) obs.z -= game.speed * 4.5;
+        for (const coin of game.stzCoins) coin.z -= game.speed * 4.5;
         game.obstacles = game.obstacles.filter(o => o.z > -200);
         game.stzCoins = game.stzCoins.filter(c => c.z > -200);
 
@@ -568,12 +664,12 @@ export default function STZRunnerPage() {
           for (const obs of game.obstacles) {
             if (!obs.passed && checkCollision(obs)) {
               game.alive = false;
-              game.flashTimer = 12;
+              game.flashTimer = 14;
               spawnDeathParticles();
               const fs = game.score, fc = game.coins, fd = Math.floor(game.distance);
               setFinalScore(fs); setFinalCoins(fc); setFinalDistance(fd);
               submitScore(fs, fc, fd);
-              setTimeout(() => setShowDeathOverlay(true), 500);
+              setTimeout(() => setShowDeathOverlay(true), 600);
               break;
             }
           }
@@ -584,11 +680,11 @@ export default function STZRunnerPage() {
             coin.collected = true;
             game.coins++;
             game.score += 50;
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 12; i++) {
               game.particles.push({
-                x: game.playerScreenX, y: game.playerScreenY - 35,
-                vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 5,
-                life: 22, maxLife: 22, color: '#F59E0B', size: 3,
+                x: game.playerScreenX, y: game.playerScreenY - 40,
+                vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 6,
+                life: 25, maxLife: 25, color: '#F59E0B', size: 3,
               });
             }
           }
@@ -596,13 +692,12 @@ export default function STZRunnerPage() {
 
         for (const p of game.particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life--; }
         game.particles = game.particles.filter(p => p.life > 0);
-
         setLiveScore(game.score); setLiveCoins(game.coins); setLiveDistance(Math.floor(game.distance));
       }
 
       if (game.flashTimer > 0) game.flashTimer--;
 
-      drawTunnel(w, h);
+      drawEnvironment(w, h);
 
       const sortedObs = [...game.obstacles].sort((a, b) => b.z - a.z);
       const sortedCoins = [...game.stzCoins].sort((a, b) => b.z - a.z);
@@ -610,15 +705,14 @@ export default function STZRunnerPage() {
       for (const obs of sortedObs) if (obs.z > PLAYER_Z) drawObstacle(obs, w, h);
       for (const coin of sortedCoins) if (coin.z > PLAYER_Z) drawCoin(coin, w, h);
 
-      if (game.alive || game.flashTimer > 0) drawPlayer(w, h);
+      if (game.alive || game.flashTimer > 0) drawPlayerSprite(w, h);
 
       for (const obs of sortedObs) if (obs.z <= PLAYER_Z) drawObstacle(obs, w, h);
       for (const coin of sortedCoins) if (coin.z <= PLAYER_Z) drawCoin(coin, w, h);
-
       drawParticles();
 
       if (game.flashTimer > 0 && game.flashTimer % 2 === 0) {
-        ctx.fillStyle = `rgba(239, 68, 68, ${game.flashTimer / 12})`;
+        ctx.fillStyle = `rgba(239, 68, 68, ${game.flashTimer / 14})`;
         ctx.fillRect(0, 0, w, h);
       }
 
@@ -635,21 +729,39 @@ export default function STZRunnerPage() {
       canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(animRef.current);
     };
-  }, [gameState, sessionId, selectedChar]);
+  }, [gameState, sessionId, selectedSkin, imagesLoaded]);
 
   const handleLogin = () => {
     if (!username.trim()) return;
     localStorage.setItem('stz_runner_username', username.trim());
     fetchLeaderboard();
-    setGameState('charselect');
+    if (isFirstTime) {
+      setTutorialTimer(10);
+      setTutorialStep(0);
+      setGameState('tutorial');
+    } else {
+      setGameState('prerun');
+    }
   };
 
   const handleBack = () => {
     stoppedRef.current = true;
     cancelAnimationFrame(animRef.current);
     setShowDeathOverlay(false);
-    setGameState('charselect');
+    setGameState('prerun');
   };
+
+  useEffect(() => {
+    if (gameState !== 'tutorial') return;
+    if (tutorialTimer <= 0) { setGameState('prerun'); return; }
+    const timer = setInterval(() => {
+      setTutorialTimer(prev => {
+        if (prev <= 1) { clearInterval(timer); setGameState('prerun'); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [gameState, tutorialTimer]);
 
   if (gameState === 'login') {
     return (
@@ -660,18 +772,16 @@ export default function STZRunnerPage() {
               <Zap className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-heading font-bold tracking-wider">
-              <span className="text-[#00E5FF]">STZ</span> <span className="text-white">RUNNER</span>
+              <span className="text-[#00E5FF]">$STZ</span> <span className="text-white">RUNNER</span>
             </h1>
             <p className="text-gray-500 text-sm">3-Lane Cyberpunk Endless Runner</p>
           </div>
           <div className="space-y-3">
-            <input
-              type="text" placeholder="Enter your username..."
+            <input type="text" placeholder="Enter your username..."
               value={username} onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-center text-lg focus:border-[#00E5FF] focus:outline-none"
-              maxLength={20}
-            />
+              maxLength={20} />
             <button onClick={handleLogin} disabled={!username.trim()}
               className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold text-lg disabled:opacity-30">
               ENTER
@@ -682,63 +792,209 @@ export default function STZRunnerPage() {
     );
   }
 
-  if (gameState === 'charselect') {
+  if (gameState === 'tutorial') {
+    const tips = [
+      { icon: <ChevronLeft className="w-8 h-8" />, text: 'Swipe LEFT to dodge obstacles' },
+      { icon: <ChevronRight className="w-8 h-8" />, text: 'Swipe RIGHT to change lanes' },
+      { icon: <ChevronUp className="w-8 h-8" />, text: 'Swipe UP or TAP to jump' },
+      { icon: <Sparkles className="w-8 h-8 text-[#F59E0B]" />, text: 'Collect $STZ coins for points' },
+    ];
+
+    return (
+      <div className="min-h-screen bg-[#050010] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <div className="flex items-center justify-between px-2">
+            <div className="text-xs text-gray-500">HOW TO PLAY</div>
+            <div className="text-sm font-mono text-[#00E5FF]">{tutorialTimer}s</div>
+          </div>
+
+          <h2 className="text-2xl font-heading font-bold">
+            <span className="text-[#00E5FF]">$STZ</span> RUNNER
+          </h2>
+
+          <div className="space-y-3">
+            {tips.map((tip, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-[#00E5FF]">
+                  {tip.icon}
+                </div>
+                <p className="text-sm text-left text-gray-300">{tip.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <button onClick={() => { setGameState('prerun'); }}
+              className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold text-base">
+              SKIP & PLAY
+            </button>
+            <div className="flex gap-1 justify-center">
+              {tips.map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-white/20" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState === 'prerun') {
+    const skinLocked = (skin: SkinData) => !unlockedSkins.includes(skin.id);
+
     return (
       <div className="min-h-screen bg-[#050010] p-4">
-        <div className="max-w-sm mx-auto space-y-4">
-          <div className="flex items-center justify-between">
-            <button onClick={() => setGameState('login')} className="p-2 hover:bg-white/10 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
-            <h1 className="text-xl font-heading font-bold tracking-wider">
-              <span className="text-[#00E5FF]">STZ</span> RUNNER
+        <div className="max-w-sm mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setGameState('login')} className="p-2 hover:bg-white/10 rounded-lg">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-lg font-heading font-bold tracking-wider">
+              <span className="text-[#00E5FF]">$STZ</span> RUNNER
             </h1>
             <button onClick={() => { fetchLeaderboard(); setGameState('leaderboard'); }} className="p-2 hover:bg-white/10 rounded-lg">
               <Trophy className="w-5 h-5 text-[#F59E0B]" />
             </button>
           </div>
 
-          <p className="text-center text-gray-500 text-xs uppercase tracking-widest">Select Character</p>
-
-          <div className="grid grid-cols-3 gap-2">
-            {CHARACTERS.map((char, idx) => (
-              <button key={char.id} onClick={() => { if (!char.locked) { setSelectedChar(idx); localStorage.setItem('stz_runner_char', idx.toString()); } }}
-                className={`relative p-3 rounded-xl border transition-all ${
-                  selectedChar === idx ? 'border-[#00E5FF] bg-[#00E5FF]/5 ring-1 ring-[#00E5FF]/30' : 'border-white/10 bg-white/5 hover:border-white/20'
-                }`}>
-                <div className="w-12 h-16 mx-auto mb-2 relative flex items-end justify-center">
-                  <div className="w-10 h-14 rounded-md relative overflow-hidden"
-                    style={{ background: `linear-gradient(180deg, ${char.helmetColor}, ${char.bodyColor})`, boxShadow: `0 0 12px ${char.glowColor}30` }}>
-                    <div className="absolute top-1 left-1/2 -translate-x-1/2 w-6 h-4 rounded-full" style={{ background: char.helmetColor, border: `1px solid ${char.accentColor}40` }} />
-                    <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full" style={{ background: char.visorColor, boxShadow: `0 0 6px ${char.visorColor}` }} />
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full" style={{ background: char.accentColor, boxShadow: `0 0 4px ${char.accentColor}` }} />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-6 rounded-t-sm" style={{ background: char.bodyColor, borderTop: `1px solid ${char.accentColor}30` }} />
-                  </div>
-                  <div className="absolute -bottom-0.5 w-8 h-1 rounded-full" style={{ background: `radial-gradient(ellipse, ${char.glowColor}40, transparent)` }} />
+          <div className="relative mb-4 rounded-2xl overflow-hidden bg-gradient-to-b from-[#0a0020] to-[#050010] border border-white/5">
+            <div className="flex justify-center py-6">
+              {SKINS[selectedSkin] && (
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full blur-3xl opacity-20" style={{ background: SKINS[selectedSkin].glowColor }} />
+                  <img
+                    src={SKINS[selectedSkin].image}
+                    alt={SKINS[selectedSkin].name}
+                    className="w-36 h-44 object-contain relative z-10 drop-shadow-2xl"
+                  />
                 </div>
-                <p className="text-[10px] font-bold text-center truncate">{char.name}</p>
-                <p className="text-[9px] text-center font-semibold" style={{ color: char.rarityColor }}>{char.rarity}</p>
+              )}
+            </div>
+            <div className="text-center pb-4">
+              <p className="font-bold text-sm">{SKINS[selectedSkin].name}</p>
+              <p className="text-xs font-semibold" style={{ color: SKINS[selectedSkin].rarityColor }}>
+                {SKINS[selectedSkin].rarity}
+              </p>
+            </div>
+          </div>
+
+          <button onClick={startGame} disabled={!imagesLoaded}
+            className="w-full py-4 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-2xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg shadow-[#EF4444]/20 mb-4 active:scale-95 transition-transform disabled:opacity-50">
+            {imagesLoaded ? <><Play className="w-6 h-6" fill="white" /> RUN</> : <><RotateCcw className="w-5 h-5 animate-spin" /> Loading...</>}
+          </button>
+
+          <div className="flex gap-1 mb-3 bg-[#111827] rounded-xl p-1">
+            {(['skins', 'rewards', 'settings'] as const).map(tab => (
+              <button key={tab} onClick={() => setPrerunTab(tab)}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold capitalize flex items-center justify-center gap-1.5 transition-all ${
+                  prerunTab === tab ? 'bg-white/10 text-white' : 'text-gray-500'
+                }`}>
+                {tab === 'skins' && <Palette className="w-3.5 h-3.5" />}
+                {tab === 'rewards' && <Gift className="w-3.5 h-3.5" />}
+                {tab === 'settings' && <SettingsIcon className="w-3.5 h-3.5" />}
+                {tab}
               </button>
             ))}
           </div>
 
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-14 rounded-lg" style={{ background: `linear-gradient(180deg, ${CHARACTERS[selectedChar].helmetColor}, ${CHARACTERS[selectedChar].bodyColor})`, boxShadow: `0 0 15px ${CHARACTERS[selectedChar].glowColor}30` }} />
-              <div>
-                <p className="font-bold text-sm">{CHARACTERS[selectedChar].name}</p>
-                <p className="text-xs" style={{ color: CHARACTERS[selectedChar].rarityColor }}>{CHARACTERS[selectedChar].rarity}</p>
-              </div>
-              <span className="ml-auto text-[10px] text-[#00E5FF] border border-[#00E5FF]/30 px-2 py-0.5 rounded">SELECTED</span>
+          {prerunTab === 'skins' && (
+            <div className="space-y-2">
+              {SKINS.map((s, idx) => {
+                const locked = skinLocked(s);
+                return (
+                  <button key={s.id}
+                    onClick={() => {
+                      if (!locked) { setSelectedSkin(idx); localStorage.setItem('stz_runner_skin', idx.toString()); }
+                    }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      selectedSkin === idx ? 'border-[#00E5FF]/50 bg-[#00E5FF]/5' :
+                      locked ? 'border-white/5 bg-white/3 opacity-60' : 'border-white/5 bg-white/5 hover:border-white/15'
+                    }`}>
+                    <div className="relative w-12 h-14 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src={s.image} alt={s.name} className={`w-full h-full object-cover ${locked ? 'blur-sm brightness-50' : ''}`} />
+                      {locked && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <Lock className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-bold">{s.name}</p>
+                      <p className="text-[10px] font-semibold" style={{ color: s.rarityColor }}>{s.rarity}</p>
+                      {locked && <p className="text-[10px] text-gray-500">Unlock at {s.unlockScore.toLocaleString()} pts</p>}
+                    </div>
+                    {selectedSkin === idx && !locked && (
+                      <span className="text-[9px] text-[#00E5FF] border border-[#00E5FF]/30 px-2 py-0.5 rounded font-semibold">ACTIVE</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <button onClick={startGame}
-              className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-[#EF4444]/20">
-              <Play className="w-5 h-5" fill="white" /> RUN
-            </button>
-          </div>
+          )}
 
-          <div className="text-center text-gray-600 text-[10px] space-y-0.5">
+          {prerunTab === 'rewards' && (
+            <div className="space-y-2">
+              <div className="p-3 bg-white/5 rounded-xl border border-white/5 mb-3">
+                <p className="text-xs text-gray-400 mb-1">Your Best Score</p>
+                <p className="text-xl font-bold text-[#00E5FF] font-mono">{personalBestScore.toLocaleString()}</p>
+              </div>
+              {MILESTONE_REWARDS.map((m, i) => {
+                const achieved = personalBestScore >= m.score;
+                return (
+                  <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border ${
+                    achieved ? 'border-[#10B981]/30 bg-[#10B981]/5' : 'border-white/5 bg-white/5'
+                  }`}>
+                    <span className="text-xl">{m.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold">{m.label}</p>
+                      <p className="text-[10px] text-gray-500">{m.reward}</p>
+                    </div>
+                    {achieved ? (
+                      <span className="text-[10px] text-[#10B981] font-semibold flex items-center gap-1">
+                        <Star className="w-3 h-3" /> Done
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-500 font-mono">{((personalBestScore / m.score) * 100).toFixed(0)}%</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {prerunTab === 'settings' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                <div className="flex items-center gap-2">
+                  {soundEnabled ? <Volume2 className="w-4 h-4 text-[#00E5FF]" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
+                  <span className="text-sm">Sound Effects</span>
+                </div>
+                <button onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`w-10 h-5 rounded-full transition-all ${soundEnabled ? 'bg-[#00E5FF]' : 'bg-gray-600'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm">Controls</span>
+                </div>
+                <span className="text-[10px] text-gray-500">Swipe / Tap</span>
+              </div>
+              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Player</p>
+                <p className="text-sm font-semibold">{username}</p>
+              </div>
+              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Games Played</p>
+                <p className="text-sm font-semibold">{stats.totalGamesPlayed || '—'}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="text-center text-gray-600 text-[10px] mt-4 space-y-0.5">
             <p>← → Swipe or arrows to switch lanes</p>
             <p>↑ Swipe up / tap / space to jump</p>
-            <p>Collect $STZ coins for bonus points</p>
           </div>
         </div>
       </div>
@@ -750,16 +1006,20 @@ export default function STZRunnerPage() {
       <div className="min-h-screen bg-[#050010] p-4">
         <div className="max-w-sm mx-auto space-y-4">
           <div className="flex items-center justify-between">
-            <button onClick={() => setGameState('charselect')} className="p-2 hover:bg-white/10 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
+            <button onClick={() => setGameState('prerun')} className="p-2 hover:bg-white/10 rounded-lg">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <h1 className="text-xl font-heading font-bold">LEADERBOARD</h1>
-            <button onClick={fetchLeaderboard} className="p-2 hover:bg-white/10 rounded-lg"><RefreshCw className="w-4 h-4" /></button>
+            <button onClick={fetchLeaderboard} className="p-2 hover:bg-white/10 rounded-lg">
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+            <div className="bg-white/5 rounded-xl p-3 text-center border border-white/5">
               <p className="text-lg font-bold text-[#00E5FF]">{stats.totalPlayers}</p>
               <p className="text-[10px] text-gray-500">Players</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+            <div className="bg-white/5 rounded-xl p-3 text-center border border-white/5">
               <p className="text-lg font-bold text-[#F59E0B]">{stats.highestScore.toLocaleString()}</p>
               <p className="text-[10px] text-gray-500">Top Score</p>
             </div>
@@ -768,11 +1028,11 @@ export default function STZRunnerPage() {
             {leaderboard.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                <p>No scores yet. Be the first!</p>
+                <p className="text-sm">No scores yet. Be the first!</p>
               </div>
             )}
             {leaderboard.map((entry, idx) => (
-              <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-lg border ${entry.username === username ? 'border-[#00E5FF]/50 bg-[#00E5FF]/5' : 'border-white/5 bg-white/5'}`}>
+              <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl border ${entry.username === username ? 'border-[#00E5FF]/50 bg-[#00E5FF]/5' : 'border-white/5 bg-white/5'}`}>
                 <div className="w-8 text-center font-bold">
                   {idx === 0 ? <Crown className="w-5 h-5 text-[#F59E0B] mx-auto" /> :
                    idx === 1 ? <Medal className="w-5 h-5 text-gray-300 mx-auto" /> :
@@ -785,12 +1045,14 @@ export default function STZRunnerPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-sm text-[#00E5FF]">{entry.score.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-500">{entry.coins} STZ</p>
+                  <p className="text-[10px] text-gray-500">{entry.coins} $STZ</p>
                 </div>
               </div>
             ))}
           </div>
-          <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold">PLAY NOW</button>
+          <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold">
+            PLAY NOW
+          </button>
         </div>
       </div>
     );
@@ -801,20 +1063,20 @@ export default function STZRunnerPage() {
       <canvas ref={canvasRef} className="w-full h-full" style={{ touchAction: 'none' }} />
 
       <div className="absolute top-0 left-0 right-0 z-10 p-3 flex items-start justify-between pointer-events-none">
-        <button onClick={handleBack} className="pointer-events-auto p-2 bg-black/60 backdrop-blur-sm rounded-lg border border-white/10">
+        <button onClick={handleBack} className="pointer-events-auto p-2 bg-black/60 backdrop-blur-sm rounded-xl border border-white/10">
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex gap-1.5">
-          <div className="bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 px-2.5 py-1 text-center">
-            <p className="text-[8px] text-gray-400 uppercase tracking-wider">Score</p>
+          <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
+            <p className="text-[7px] text-gray-400 uppercase tracking-wider">Score</p>
             <p className="text-sm font-bold text-[#00E5FF] font-mono">{liveScore.toLocaleString()}</p>
           </div>
-          <div className="bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 px-2.5 py-1 text-center">
-            <p className="text-[8px] text-gray-400 uppercase tracking-wider">$STZ</p>
+          <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
+            <p className="text-[7px] text-gray-400 uppercase tracking-wider">$STZ</p>
             <p className="text-sm font-bold text-[#F59E0B] font-mono">{liveCoins}</p>
           </div>
-          <div className="bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 px-2.5 py-1 text-center">
-            <p className="text-[8px] text-gray-400 uppercase tracking-wider">Dist</p>
+          <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
+            <p className="text-[7px] text-gray-400 uppercase tracking-wider">Dist</p>
             <p className="text-sm font-bold font-mono">{liveDistance}m</p>
           </div>
         </div>
@@ -822,15 +1084,15 @@ export default function STZRunnerPage() {
 
       <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center gap-3 pointer-events-none">
         <button onClick={() => { if (gameRef.current?.alive && gameRef.current.playerLane > 0) gameRef.current.playerLane--; }}
-          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-95 transition-all">
+          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-90 transition-all">
           <ChevronLeft className="w-8 h-8 text-white/70" />
         </button>
         <button onClick={() => { if (gameRef.current?.alive && !gameRef.current.jumping) { gameRef.current.jumping = true; gameRef.current.jumpVel = 14; } }}
-          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-95 transition-all">
+          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-90 transition-all">
           <ChevronUp className="w-8 h-8 text-white/70" />
         </button>
         <button onClick={() => { if (gameRef.current?.alive && gameRef.current.playerLane < LANE_COUNT - 1) gameRef.current.playerLane++; }}
-          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-95 transition-all">
+          className="pointer-events-auto w-16 h-16 bg-white/8 backdrop-blur-sm rounded-2xl border border-white/15 flex items-center justify-center active:bg-white/20 active:scale-90 transition-all">
           <ChevronRight className="w-8 h-8 text-white/70" />
         </button>
       </div>
@@ -843,15 +1105,15 @@ export default function STZRunnerPage() {
             </div>
             <h2 className="text-2xl font-heading font-bold">CRASHED!</h2>
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/5 rounded-lg p-2">
+              <div className="bg-white/5 rounded-xl p-2">
                 <p className="text-[10px] text-gray-400">Score</p>
                 <p className="font-bold text-[#00E5FF]">{finalScore.toLocaleString()}</p>
               </div>
-              <div className="bg-white/5 rounded-lg p-2">
+              <div className="bg-white/5 rounded-xl p-2">
                 <p className="text-[10px] text-gray-400">$STZ</p>
                 <p className="font-bold text-[#F59E0B]">{finalCoins}</p>
               </div>
-              <div className="bg-white/5 rounded-lg p-2">
+              <div className="bg-white/5 rounded-xl p-2">
                 <p className="text-[10px] text-gray-400">Distance</p>
                 <p className="font-bold">{finalDistance}m</p>
               </div>
@@ -862,6 +1124,14 @@ export default function STZRunnerPage() {
                 <span>Rank #{rank}</span>
                 <span className="text-gray-600">|</span>
                 <span className="text-gray-400">Best: {personalBest.toLocaleString()}</span>
+              </div>
+            )}
+            {SKINS.some(s => s.unlockScore > 0 && finalScore >= s.unlockScore && !unlockedSkins.includes(s.id)) && (
+              <div className="p-3 bg-[#F59E0B]/10 rounded-xl border border-[#F59E0B]/20">
+                <div className="flex items-center justify-center gap-2 text-[#F59E0B] mb-1">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">NEW SKIN UNLOCKED!</span>
+                </div>
               </div>
             )}
             <div className="space-y-2">

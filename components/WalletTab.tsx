@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, ArrowDown, ArrowUp, Camera, RefreshCw, ExternalLink, Plus, Key } from 'lucide-react';
+import { Wallet, ArrowDown, ArrowUp, Camera, RotateCcw, ExternalLink, Plus, Key } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 
@@ -71,7 +71,7 @@ export default function WalletTab() {
         </div>
         {walletAddress && (
           <button onClick={() => fetchBalances(walletAddress)} className="ml-auto hover:bg-white/10 p-2 rounded-lg">
-            <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
         )}
       </div>

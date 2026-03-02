@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 
@@ -193,7 +193,7 @@ export default function DNAAnalyzerPage() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-heading font-bold">Your Trading DNA</h2>
               <button onClick={() => setAnalysis(null)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-                <RefreshCw className="w-3 h-3" /> New Analysis
+                <RotateCcw className="w-3 h-3" /> New Analysis
               </button>
             </div>
 

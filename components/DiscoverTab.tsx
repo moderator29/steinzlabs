@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, TrendingUp, ExternalLink, RefreshCw, Zap, Star, Plus } from 'lucide-react';
+import { Search, TrendingUp, ExternalLink, RotateCcw, Zap, Star, Plus } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -87,7 +87,7 @@ export default function DiscoverTab() {
           </div>
         </div>
         <button onClick={fetchProjects} disabled={loading} className="p-1.5 hover:bg-white/10 rounded-lg transition-all group">
-          <RefreshCw className={`w-3.5 h-3.5 text-[#00E5FF] ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+          <RotateCcw className={`w-3.5 h-3.5 text-[#00E5FF] ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
         </button>
       </div>
 
@@ -106,7 +106,7 @@ export default function DiscoverTab() {
 
       {loading && projects.length === 0 ? (
         <div className="text-center py-10">
-          <RefreshCw className="w-6 h-6 text-[#00E5FF] mx-auto mb-2 animate-spin" />
+          <RotateCcw className="w-6 h-6 text-[#00E5FF] mx-auto mb-2 animate-spin" />
           <p className="text-xs text-gray-400">Loading live projects...</p>
         </div>
       ) : (

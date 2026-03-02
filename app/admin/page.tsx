@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Shield, LogOut, Eye, CheckCircle, XCircle, MessageSquare, AlertTriangle,
   ChevronRight, Clock, Users, FileText, Code, Globe, Activity, Lock,
-  ChevronDown, BarChart3, TrendingUp, TrendingDown, Zap, RefreshCw,
+  ChevronDown, BarChart3, TrendingUp, TrendingDown, Zap, RotateCcw,
   DollarSign, Layers, Target, Bell, Settings, Database, Wifi,
   ArrowUpRight, ArrowDownRight, Coins, PieChart, Send, Trash2, Ban,
   UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search,
@@ -512,7 +512,7 @@ export default function AdminPanel() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={refreshAll} className={`hover:bg-white/10 p-2 rounded-lg transition-colors ${isRefreshing ? 'animate-spin' : ''}`}>
-              <RefreshCw className="w-4 h-4 text-gray-400" />
+              <RotateCcw className="w-4 h-4 text-gray-400" />
             </button>
             <a href="/dashboard" className="hover:bg-white/10 p-2 rounded-lg transition-colors">
               <ExternalLink className="w-4 h-4 text-gray-400" />
@@ -921,7 +921,7 @@ export default function AdminPanel() {
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-400">Real-time whale activity from blockchain data</div>
                 <button onClick={fetchWhales} className="text-[10px] text-[#00E5FF] hover:underline flex items-center gap-1">
-                  <RefreshCw className={`w-3 h-3 ${loadingWhales ? 'animate-spin' : ''}`} /> Refresh
+                  <RotateCcw className={`w-3 h-3 ${loadingWhales ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
 
@@ -1007,7 +1007,7 @@ export default function AdminPanel() {
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-400">Real-time status of all platform APIs</div>
                 <button onClick={checkApiHealth} className="text-[10px] text-[#00E5FF] hover:underline flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" /> Recheck All
+                  <RotateCcw className="w-3 h-3" /> Recheck All
                 </button>
               </div>
 

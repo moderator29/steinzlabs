@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, TrendingUp, ExternalLink, ArrowLeft, RefreshCw, Zap, Plus, X, Send, Globe, MessageCircle, Star } from 'lucide-react';
+import { Search, TrendingUp, ExternalLink, ArrowLeft, RotateCcw, Zap, Plus, X, Send, Globe, MessageCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 
 interface Project {
@@ -125,7 +125,7 @@ export default function ProjectDiscoveryPage() {
               disabled={loading}
               className="p-2 hover:bg-white/10 rounded-lg transition-all group"
             >
-              <RefreshCw className={`w-4 h-4 text-[#00E5FF] transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180 duration-500'}`} />
+              <RotateCcw className={`w-4 h-4 text-[#00E5FF] transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180 duration-500'}`} />
             </button>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default function ProjectDiscoveryPage() {
 
         {loading && projects.length === 0 ? (
           <div className="text-center py-20">
-            <RefreshCw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin" />
+            <RotateCcw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin" />
             <p className="text-sm text-gray-400">Loading live projects...</p>
           </div>
         ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, ArrowLeft, ChevronDown, Settings, Zap, RefreshCw } from 'lucide-react';
+import { ArrowLeftRight, ArrowLeft, ChevronDown, Settings, Zap, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 

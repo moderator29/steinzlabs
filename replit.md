@@ -41,7 +41,7 @@ app/
     ├── security/            # Security Center (token scanner, contract analyzer, rug/phishing)
     ├── smart-money/         # Smart Money Watchlist (top wallets, follow/unfollow)
     ├── social-trading/      # Social Trading (Coming Soon page with feature preview)
-    ├── wgm-runner/          # STZ Runner (3-lane cyberpunk endless runner with correct perspective, 6 mech warrior skins, leaderboard, $STZ coins)
+    ├── wgm-runner/          # STZ Runner (3-lane cyberpunk endless runner, sprite-based character skins from images, 5 skins with milestone unlocks, pre-run tutorial, skins/rewards/settings tabs, immersive 3D tunnel with red lasers/archways, leaderboard, $STZ coins)
     ├── swap/                # Multi-Chain Swap (token swap with slippage, routing)
     ├── trends/              # On-Chain Trends (metrics per chain, hot indicators)
     ├── vtx-ai/              # VTX AI full-page assistant (chat, quick actions)
