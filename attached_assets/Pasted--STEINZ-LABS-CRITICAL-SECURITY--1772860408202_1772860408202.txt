@@ -1,0 +1,742 @@
+═══════════════════════════════════════════════════════════════════
+STEINZ LABS - CRITICAL SECURITY FIXES
+FIX EXISTING PLATFORM SECURITY - PRIORITY PATCHES
+═══════════════════════════════════════════════════════════════════
+
+CONTEXT: This is an existing crypto intelligence platform at steinzlabs.com
+that needs security hardening. These fixes address authentication, wallet
+security, API protection, and data security vulnerabilities.
+
+DO NOT rebuild the platform. ONLY apply these security patches to existing code.
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #1: AUTHENTICATION & SESSION MANAGEMENT
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Weak authentication, exposed tokens, session hijacking risk
+
+FIX:
+
+1. SECURE JWT TOKEN HANDLING:
+
+// lib/auth.ts - UPDATE THIS FILE
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET!; // Add to .env
+const JWT_EXPIRY = '7d';
+
+export async function createSession(userId: string) {
+  const token = jwt.sign(
+    { 
+      userId, 
+      iat: Date.now(),
+      exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
+    },
+    JWT_SECRET,
+    { algorithm: 'HS256' }
+  );
+  
+  // Set httpOnly cookie (NOT accessible via JavaScript)
+  cookies().set('auth_token', token, {
+    httpOnly: true,      // Prevents XSS attacks
+    secure: true,        // HTTPS only
+    sameSite: 'strict',  // Prevents CSRF
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+    path: '/',
+  });
+  
+  return token;
+}
+
+export async function verifySession(): Promise<string | null> {
+  try {
+    const token = cookies().get('auth_token')?.value;
+    
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    return decoded.userId;
+  } catch (error) {
+    // Token invalid or expired
+    cookies().delete('auth_token');
+    return null;
+  }
+}
+
+export async function destroySession() {
+  cookies().delete('auth_token');
+}
+
+2. SECURE PASSWORD HASHING:
+
+// NEVER store plain text passwords!
+import bcrypt from 'bcrypt';
+
+// On signup:
+const hashedPassword = await bcrypt.hash(password, 12); // 12 rounds
+
+// On login:
+const isValid = await bcrypt.compare(password, user.hashed_password);
+
+3. ADD RATE LIMITING TO AUTH ENDPOINTS:
+
+// lib/rateLimit.ts - NEW FILE
+import { LRUCache } from 'lru-cache';
+
+const rateLimitCache = new LRUCache({
+  max: 500,
+  ttl: 60000, // 1 minute
+});
+
+export function rateLimit(identifier: string, limit: number = 5): boolean {
+  const attempts = (rateLimitCache.get(identifier) as number) || 0;
+  
+  if (attempts >= limit) {
+    return false; // Rate limited
+  }
+  
+  rateLimitCache.set(identifier, attempts + 1);
+  return true; // Allowed
+}
+
+// In login route:
+export async function POST(request: Request) {
+  const { email, password } = await request.json();
+  
+  // Rate limit by IP address
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  
+  if (!rateLimit(`login:${ip}`, 5)) {
+    return Response.json(
+      { error: 'Too many login attempts. Try again in 1 minute.' },
+      { status: 429 }
+    );
+  }
+  
+  // Continue with login...
+}
+
+4. REQUIRE ENVIRONMENT VARIABLES:
+
+Add to .env.local:
+JWT_SECRET=generate_random_64_character_string_here_use_openssl_rand_hex_32
+
+Generate secure secret:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #2: WALLET CONNECTION SECURITY
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Risk of private key exposure, man-in-the-middle attacks
+
+FIX:
+
+1. NEVER ASK FOR OR STORE PRIVATE KEYS:
+
+// services/blockchain/wallet.ts - UPDATE
+export async function connectWallet() {
+  // GOOD ✅
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress(); // Get address only
+  
+  // NEVER DO THIS ❌
+  // const privateKey = prompt("Enter private key"); // NEVER!
+  // const seedPhrase = prompt("Enter seed phrase"); // NEVER!
+  
+  return { address }; // Return ONLY the address
+}
+
+2. VERIFY WALLET OWNERSHIP (SIGNATURE CHALLENGE):
+
+// Prevent wallet address spoofing
+export async function verifyWalletOwnership(address: string) {
+  // Generate random challenge
+  const challenge = `Sign this to verify you own ${address}\n\nNonce: ${Date.now()}`;
+  
+  // Request signature from wallet
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const signature = await signer.signMessage(challenge);
+  
+  // Verify signature on backend
+  const recoveredAddress = ethers.verifyMessage(challenge, signature);
+  
+  if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+    throw new Error('Wallet ownership verification failed');
+  }
+  
+  return true;
+}
+
+3. VALIDATE WALLET ADDRESSES:
+
+// lib/validation.ts - NEW FILE
+export function isValidEthereumAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+export function isValidSolanaAddress(address: string): boolean {
+  try {
+    new PublicKey(address);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Use before any wallet operations:
+if (!isValidEthereumAddress(walletAddress)) {
+  throw new Error('Invalid wallet address');
+}
+
+4. SECURE NAKA BALANCE READING (READ-ONLY):
+
+// services/blockchain/naka.ts - VERIFY THIS
+export async function getNakaBalance(address: string) {
+  // CRITICAL: This must be READ-ONLY
+  // NEVER use wallet.sendTransaction()
+  // NEVER ask user to sign anything for balance check
+  
+  const contract = new ethers.Contract(
+    NAKA_CONTRACT_ADDRESS,
+    ['function balanceOf(address) view returns (uint256)'], // view = read-only
+    provider // NO SIGNER - just provider
+  );
+  
+  // READ-ONLY call - no transaction, no gas, no signature needed
+  const balance = await contract.balanceOf(address);
+  
+  return balance;
+}
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #3: API SECURITY & INPUT VALIDATION
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: SQL injection, XSS attacks, API abuse
+
+FIX:
+
+1. INPUT VALIDATION MIDDLEWARE:
+
+// lib/validation.ts - ADD THESE
+import { z } from 'zod';
+
+// Install: npm install zod
+
+export const signupSchema = z.object({
+  email: z.string().email('Invalid email'),
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, 'Invalid username'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export const walletSchema = z.object({
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid Ethereum address'),
+});
+
+export const tradeSchema = z.object({
+  tokenAddress: z.string(),
+  amount: z.number().positive().max(1000000),
+  chain: z.enum(['ethereum', 'bsc', 'polygon', 'arbitrum', 'base', 'solana']),
+});
+
+// Use in API routes:
+export async function POST(request: Request) {
+  const body = await request.json();
+  
+  // Validate input
+  const result = signupSchema.safeParse(body);
+  
+  if (!result.success) {
+    return Response.json(
+      { error: 'Invalid input', details: result.error.issues },
+      { status: 400 }
+    );
+  }
+  
+  const { email, username, password } = result.data; // Safe to use
+  // Continue...
+}
+
+2. PREVENT SQL INJECTION (USE PARAMETERIZED QUERIES):
+
+// NEVER DO THIS ❌
+const query = `SELECT * FROM users WHERE email = '${email}'`; // VULNERABLE!
+
+// ALWAYS DO THIS ✅
+const { data, error } = await supabase
+  .from('users')
+  .select('*')
+  .eq('email', email); // Parameterized - safe
+
+3. SANITIZE OUTPUT (PREVENT XSS):
+
+// lib/sanitize.ts - NEW FILE
+import DOMPurify from 'isomorphic-dompurify';
+
+export function sanitizeHTML(dirty: string): string {
+  return DOMPurify.sanitize(dirty, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
+    ALLOWED_ATTR: ['href', 'target'],
+  });
+}
+
+// Use when displaying user-generated content:
+const cleanBio = sanitizeHTML(user.bio);
+
+4. SECURE API ROUTES:
+
+// middleware.ts - NEW FILE AT ROOT
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  // Security headers
+  const response = NextResponse.next();
+  
+  // Prevent clickjacking
+  response.headers.set('X-Frame-Options', 'DENY');
+  
+  // XSS protection
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  
+  // CSRF protection
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  
+  // Referrer policy
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Content Security Policy
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+  );
+  
+  return response;
+}
+
+export const config = {
+  matcher: '/:path*',
+};
+
+5. PROTECT ADMIN ROUTES:
+
+// app/api/admin/[...]/route.ts - ADD THIS CHECK
+export async function GET(request: Request) {
+  const userId = await verifySession();
+  
+  if (!userId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Check if admin
+  const { data: user } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', userId)
+    .single();
+  
+  if (!user?.is_admin) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  
+  // Continue with admin logic...
+}
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #4: ENVIRONMENT VARIABLES & SECRETS
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: API keys exposed in client-side code, committed to git
+
+FIX:
+
+1. NEVER EXPOSE SERVER SECRETS TO CLIENT:
+
+// ❌ WRONG - These are exposed to browser:
+NEXT_PUBLIC_SUPABASE_SERVICE_KEY=xxx // NEVER!
+NEXT_PUBLIC_TREASURY_WALLET_PRIVATE_KEY=xxx // NEVER!
+NEXT_PUBLIC_ANTHROPIC_API_KEY=xxx // NEVER!
+
+// ✅ CORRECT - Server-only (no NEXT_PUBLIC prefix):
+SUPABASE_SERVICE_KEY=xxx
+TREASURY_WALLET_EVM=xxx (public address only)
+ANTHROPIC_API_KEY=xxx
+
+// ✅ CORRECT - Safe for client:
+NEXT_PUBLIC_SUPABASE_URL=xxx
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx (this is meant to be public)
+
+2. VALIDATE ENVIRONMENT VARIABLES ON STARTUP:
+
+// lib/env.ts - NEW FILE
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_KEY',
+  'JWT_SECRET',
+  'ALCHEMY_API_KEY_ETH',
+  'ANTHROPIC_API_KEY',
+  'TREASURY_WALLET_EVM',
+  'TREASURY_WALLET_SOLANA',
+];
+
+export function validateEnv() {
+  const missing = requiredEnvVars.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}\n` +
+      'Add these to .env.local file'
+    );
+  }
+}
+
+// Call in app/layout.tsx:
+import { validateEnv } from '@/lib/env';
+validateEnv(); // Fails fast if env vars missing
+
+3. GITIGNORE SECURITY:
+
+# .gitignore - VERIFY THIS EXISTS
+.env
+.env.local
+.env*.local
+*.pem
+*.key
+
+4. ROTATE COMPROMISED KEYS IMMEDIATELY:
+
+If any API key is exposed:
+1. Revoke it immediately in the provider's dashboard
+2. Generate new key
+3. Update .env.local
+4. Redeploy
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #5: TRADING SECURITY
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Trades execute without verification, loss of funds risk
+
+FIX:
+
+1. ALWAYS SIMULATE BEFORE EXECUTING:
+
+// services/trading/execute.ts - UPDATE
+export async function executeTrade(params: TradeParams) {
+  // Step 1: Simulate transaction FIRST
+  const simulation = await simulateTransaction(params);
+  
+  if (!simulation.success) {
+    throw new Error(`Transaction would fail: ${simulation.error}`);
+  }
+  
+  if (simulation.warnings.length > 0) {
+    // Return warnings to user for confirmation
+    return {
+      needsConfirmation: true,
+      warnings: simulation.warnings,
+      simulation,
+    };
+  }
+  
+  // Step 2: Get user confirmation
+  // (Frontend handles this)
+  
+  // Step 3: Build transaction with safety checks
+  const tx = await buildTransaction(params);
+  
+  // Verify slippage protection
+  if (tx.slippage > params.maxSlippage) {
+    throw new Error('Slippage too high');
+  }
+  
+  // Verify amounts
+  if (tx.amountIn !== params.amountIn) {
+    throw new Error('Amount mismatch');
+  }
+  
+  return tx; // User signs in wallet
+}
+
+2. VALIDATE TRANSACTION AMOUNTS:
+
+export function validateTradeAmount(amount: number, userBalance: number) {
+  // Prevent negative amounts
+  if (amount <= 0) {
+    throw new Error('Amount must be positive');
+  }
+  
+  // Prevent trading more than balance
+  if (amount > userBalance) {
+    throw new Error('Insufficient balance');
+  }
+  
+  // Prevent unreasonably large amounts (possible typo)
+  if (amount > 1000000) {
+    throw new Error('Amount exceeds maximum. Please contact support for large trades.');
+  }
+  
+  return true;
+}
+
+3. VERIFY TREASURY WALLET ADDRESSES:
+
+// CRITICAL: These must be YOUR wallets!
+const TREASURY_WALLETS = {
+  evm: '0xe06f884A4C545BE4FAb920239f2321b71bC7cE1b',
+  solana: '9VjPx71cXSp91nYTtpxbL4YnKT8m1GGG5pxMvK2Ya9tR',
+};
+
+// Verify on every trade:
+if (tx.feeRecipient !== TREASURY_WALLETS.evm) {
+  throw new Error('Invalid fee recipient - possible attack');
+}
+
+4. LOG ALL TRADES:
+
+export async function logTrade(trade: Trade) {
+  await supabase.from('trades').insert({
+    user_id: trade.userId,
+    tx_hash: trade.txHash,
+    amount_usd: trade.amountUsd,
+    platform_fee_usd: trade.platformFee,
+    status: 'pending',
+    timestamp: new Date().toISOString(),
+  });
+  
+  // Also log to external service for audit trail
+  console.log('[TRADE]', JSON.stringify(trade));
+}
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #6: DATABASE SECURITY
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Unauthorized data access, data leaks
+
+FIX:
+
+1. ENABLE ROW LEVEL SECURITY (RLS) IN SUPABASE:
+
+-- Run in Supabase SQL Editor:
+
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dm_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can only read their own data
+CREATE POLICY "Users can view own data"
+  ON users FOR SELECT
+  USING (auth.uid() = firebase_uid);
+
+CREATE POLICY "Users can update own data"
+  ON users FOR UPDATE
+  USING (auth.uid() = firebase_uid);
+
+-- Policy: Users can only see their own portfolio
+CREATE POLICY "Users can view own portfolio"
+  ON portfolios FOR ALL
+  USING (user_id = (SELECT id FROM users WHERE firebase_uid = auth.uid()));
+
+-- Policy: Users can only read their own messages
+CREATE POLICY "Users can view own messages"
+  ON dm_messages FOR SELECT
+  USING (
+    sender_id = (SELECT id FROM users WHERE firebase_uid = auth.uid())
+    OR
+    conversation_id IN (
+      SELECT id FROM dm_conversations 
+      WHERE participant_1 = (SELECT id FROM users WHERE firebase_uid = auth.uid())
+      OR participant_2 = (SELECT id FROM users WHERE firebase_uid = auth.uid())
+    )
+  );
+
+-- Signals are public but with tier-based filtering (handled in app logic)
+CREATE POLICY "Signals are publicly readable"
+  ON signals FOR SELECT
+  USING (true);
+
+-- Only admins can insert/update signals
+CREATE POLICY "Only admins can manage signals"
+  ON signals FOR ALL
+  USING ((SELECT is_admin FROM users WHERE firebase_uid = auth.uid()));
+
+2. SANITIZE DATABASE QUERIES:
+
+// NEVER concatenate user input into queries
+// ALWAYS use Supabase's query builder (auto-escapes)
+
+// ❌ WRONG:
+const query = `SELECT * FROM users WHERE username = '${username}'`;
+
+// ✅ CORRECT:
+const { data } = await supabase
+  .from('users')
+  .select('*')
+  .eq('username', username);
+
+3. LIMIT DATA EXPOSURE:
+
+// Don't return sensitive fields to client
+const { data: user } = await supabase
+  .from('users')
+  .select('id, username, email, avatar_url, tier') // No password_hash!
+  .eq('id', userId)
+  .single();
+
+4. BACKUP DATABASE REGULARLY:
+
+In Supabase dashboard:
+- Settings → Database → Enable Point-in-Time Recovery
+- Configure daily backups
+- Test restore process
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #7: ERROR HANDLING & LOGGING
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Errors expose sensitive information, no audit trail
+
+FIX:
+
+1. NEVER EXPOSE STACK TRACES TO USERS:
+
+// lib/errorHandler.ts - NEW FILE
+export function handleError(error: Error, context: string) {
+  // Log detailed error server-side
+  console.error(`[${context}]`, {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString(),
+  });
+  
+  // Return generic error to client
+  return {
+    error: 'An error occurred. Please try again.',
+    // NEVER include: error.stack, error.message (might contain sensitive info)
+  };
+}
+
+// Use in API routes:
+try {
+  // ... operation
+} catch (error) {
+  const safeError = handleError(error as Error, 'api/trading');
+  return Response.json(safeError, { status: 500 });
+}
+
+2. LOG SECURITY EVENTS:
+
+export async function logSecurityEvent(event: {
+  type: 'login' | 'failed_login' | 'wallet_connect' | 'trade' | 'admin_action';
+  userId?: string;
+  details: any;
+}) {
+  await supabase.from('security_logs').insert({
+    event_type: event.type,
+    user_id: event.userId,
+    details: event.details,
+    ip_address: request.headers.get('x-forwarded-for'),
+    timestamp: new Date().toISOString(),
+  });
+}
+
+// Log important events:
+await logSecurityEvent({
+  type: 'failed_login',
+  details: { email, reason: 'invalid_password' },
+});
+
+═══════════════════════════════════════════════════════════════════
+SECURITY FIX #8: DEPENDENCY SECURITY
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Vulnerable packages, supply chain attacks
+
+FIX:
+
+1. AUDIT DEPENDENCIES:
+
+# Run this NOW:
+npm audit
+
+# Fix vulnerabilities:
+npm audit fix
+
+# For breaking changes:
+npm audit fix --force
+
+2. UPDATE CRITICAL PACKAGES:
+
+npm update @supabase/supabase-js
+npm update ethers
+npm update next
+
+3. ADD PACKAGE LOCK:
+
+# Commit package-lock.json to git
+# This prevents unexpected version changes
+
+4. USE EXACT VERSIONS FOR SECURITY-CRITICAL PACKAGES:
+
+// package.json - Update:
+{
+  "dependencies": {
+    "ethers": "6.9.2",  // No ^ or ~ - exact version only
+    "@supabase/supabase-js": "2.39.0",
+    "next": "14.0.4"
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+IMPLEMENTATION PRIORITY ORDER
+═══════════════════════════════════════════════════════════════════
+
+DAY 1 (CRITICAL - DO TODAY):
+✅ Fix #1: Secure authentication (JWT, httpOnly cookies, rate limiting)
+✅ Fix #2: Wallet connection security (never store private keys)
+✅ Fix #4: Environment variables (remove exposed secrets)
+✅ Fix #6: Database RLS (enable row-level security)
+
+DAY 2 (HIGH PRIORITY):
+✅ Fix #3: Input validation (add Zod schemas)
+✅ Fix #7: Error handling (remove stack traces from responses)
+✅ Fix #5: Trading security (add simulation step)
+
+DAY 3 (MEDIUM PRIORITY):
+✅ Fix #8: Dependency audit (npm audit fix)
+✅ Add security headers (middleware.ts)
+✅ Test all security fixes
+
+═══════════════════════════════════════════════════════════════════
+TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+After applying fixes, test:
+☐ Signup with weak password → Should reject
+☐ Login with wrong password 6 times → Should rate limit
+☐ Try to access other user's data → Should deny (RLS)
+☐ Try to execute trade without wallet → Should reject
+☐ Try SQL injection in username → Should escape
+☐ Check browser console → No API keys visible
+☐ Check .env.local → Not in git
+☐ Verify httpOnly cookie set → Check browser DevTools
+☐ Test wallet signature verification → Should prevent spoofing
+☐ npm audit → No high/critical vulnerabilities
+
+═══════════════════════════════════════════════════════════════════
+END OF SECURITY FIXES
+═══════════════════════════════════════════════════════════════════
+
+These fixes address the most critical security vulnerabilities.
+Apply them in order of priority.
+
+After these fixes, the platform will be significantly more secure.
