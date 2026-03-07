@@ -1,0 +1,732 @@
+═══════════════════════════════════════════════════════════════════
+CRITICAL ADD-ON: CLONE CHECKPRICE.COM INFRASTRUCTURE
+DUPLICATE THEIR EXECUTION SYSTEM, NOT DESIGN
+═══════════════════════════════════════════════════════════════════
+
+IMPORTANT CONTEXT:
+This is an ADD-ON to the previous functional fixes prompt. This specifically
+addresses cloning checkprice.com's INFRASTRUCTURE (how things work), NOT
+their design or copy. We adapt their professional trading execution system
+to our platform.
+
+═══════════════════════════════════════════════════════════════════
+PART 1: CHECKPRICE.COM ANALYSIS & WHAT TO CLONE
+═══════════════════════════════════════════════════════════════════
+
+WHAT CHECKPRICE.COM IS:
+- Solana-based trading platform for crypto, stocks, commodities, forex
+- Single-page interface with integrated chart + trading
+- Built with Helius API, Privy auth, dflow for execution
+- Features: perps, spots, prediction markets
+- Ultra-fast execution, MEV protection, full PnL tracking
+
+KEY INFRASTRUCTURE TO CLONE (NOT DESIGN):
+
+1. CHART-INTEGRATED TRADING EXECUTION
+   What they do:
+   - Trading panel is INSIDE the chart view (not separate modal)
+   - Buy/Sell buttons directly on chart
+   - Price lines you can drag to set entry/exit
+   - One-click execution from chart
+   - Orders appear as lines on chart
+   
+   What we clone:
+   ✅ Integrated trading panel on chart page
+   ✅ Drag-and-drop price line positioning
+   ✅ Visual order representation on chart
+   ✅ One-click buy/sell execution
+   ✅ Instant order confirmation without modal
+
+2. REAL-TIME EXECUTION ENGINE
+   What they do:
+   - Sub-second order execution
+   - MEV protection (private RPC)
+   - Auto-signing for fast trades
+   - Transaction simulation before send
+   - Immediate portfolio updates
+   
+   What we clone:
+   ✅ Fast execution pipeline
+   ✅ MEV protection via Flashbots/private RPC
+   ✅ Pre-trade simulation
+   ✅ Optimistic UI updates
+   ✅ Real-time portfolio sync
+
+3. FULL P&L TRACKING SYSTEM
+   What they do:
+   - Real-time unrealized P&L
+   - Realized P&L per trade
+   - Position average entry price
+   - Total portfolio value updates
+   - Win/loss statistics
+   
+   What we clone:
+   ✅ Real-time P&L calculation
+   ✅ Per-position tracking
+   ✅ Average entry price calculation
+   ✅ Live portfolio value
+   ✅ Performance metrics
+
+4. TRADING HISTORY & LOGS
+   What they do:
+   - Every trade logged with timestamp
+   - Entry/exit prices tracked
+   - Profit/loss per trade
+   - Transaction hash links
+   - Filterable history
+   
+   What we clone:
+   ✅ Complete trade logging
+   ✅ Detailed trade cards
+   ✅ Filter by date/token/profit
+   ✅ Export functionality
+   ✅ Blockchain explorer links
+
+5. CLEAN TRADING INTERFACE
+   What they do:
+   - Minimal UI with maximum info
+   - Chart takes 70% of screen
+   - Trading panel 30%
+   - No unnecessary popups
+   - Fast navigation
+   
+   What we clone:
+   ✅ Chart-first layout
+   ✅ Compact trading controls
+   ✅ No blocking modals
+   ✅ Keyboard shortcuts
+   ✅ Responsive design
+
+═══════════════════════════════════════════════════════════════════
+PART 2: TERMINOLOGY MAPPING
+═══════════════════════════════════════════════════════════════════
+
+CHECKPRICE.COM → STEINZ LABS (OUR PLATFORM):
+
+"Traders" page → "Market" page
+"Trade" → "Market" (in navigation)
+"Trader Interface" → "Market Interface"
+
+Everything else keeps same naming:
+- Charts = Charts
+- Portfolio = Portfolio  
+- Orders = Orders
+- History = History
+- P&L = P&L
+
+═══════════════════════════════════════════════════════════════════
+PART 3: MARKET PAGE INFRASTRUCTURE (CLONE CHECKPRICE EXECUTION)
+═══════════════════════════════════════════════════════════════════
+
+IMPLEMENTATION:
+
+1. MARKET PAGE LAYOUT (Chart-First Design):
+
+app/(platform)/market/page.tsx:
+
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { TradingChart } from '@/components/market/TradingChart';
+import { TradingPanel } from '@/components/market/TradingPanel';
+import { OrderBook } from '@/components/market/OrderBook';
+import { ActiveOrders } from '@/components/market/ActiveOrders';
+import { useMarketData } from '@/hooks/useMarketData';
+
+export default function MarketPage() {
+  const [selectedToken, setSelectedToken] = useState('SOL');
+  const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
+  const [dragPrice, setDragPrice] = useState<number | null>(null);
+  
+  const { price, volume, change24h } = useMarketData(selectedToken);
+  
+  return (
+    <div className="h-screen flex flex-col">
+      {/* Top Bar - Token Selector & Stats */}
+      <div className="h-14 border-b border-border flex items-center px-4 gap-4">
+        <TokenSelector
+          selected={selectedToken}
+          onChange={setSelectedToken}
+        />
+        <div className="flex gap-6 text-sm">
+          <div>
+            <span className="text-text-tertiary">Price:</span>
+            <span className="ml-2 font-medium">${price}</span>
+          </div>
+          <div>
+            <span className="text-text-tertiary">24h:</span>
+            <span className={`ml-2 font-medium ${
+              change24h >= 0 ? 'text-success' : 'text-error'
+            }`}>
+              {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}%
+            </span>
+          </div>
+          <div>
+            <span className="text-text-tertiary">Volume:</span>
+            <span className="ml-2 font-medium">${formatNumber(volume)}</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Main Content - Chart + Trading */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chart Area - 70% */}
+        <div className="flex-1 relative">
+          <TradingChart
+            token={selectedToken}
+            onPriceClick={setDragPrice}
+            dragPrice={dragPrice}
+          />
+          
+          {/* Chart Tools - Like TradingView */}
+          <ChartTools />
+        </div>
+        
+        {/* Trading Panel - 30% */}
+        <div className="w-[30%] border-l border-border flex flex-col">
+          <TradingPanel
+            token={selectedToken}
+            currentPrice={price}
+            dragPrice={dragPrice}
+            onClearDragPrice={() => setDragPrice(null)}
+          />
+          
+          <ActiveOrders token={selectedToken} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+2. INTEGRATED TRADING PANEL (No Modal - Direct Execution):
+
+components/market/TradingPanel.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+
+export function TradingPanel({ token, currentPrice, dragPrice, onClearDragPrice }) {
+  const [side, setSide] = useState<'buy' | 'sell'>('buy');
+  const [amount, setAmount] = useState('');
+  const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
+  const [limitPrice, setLimitPrice] = useState('');
+  
+  // Use drag price if set
+  const effectivePrice = dragPrice || 
+    (orderType === 'limit' ? parseFloat(limitPrice) : currentPrice);
+  
+  const executeTrade = useMutation({
+    mutationFn: async () => {
+      // FAST EXECUTION - Like checkprice.com
+      const order = {
+        token,
+        side,
+        amount: parseFloat(amount),
+        type: orderType,
+        price: effectivePrice,
+      };
+      
+      // 1. Simulate transaction (MEV protection)
+      const simulation = await simulateOrder(order);
+      
+      if (!simulation.success) {
+        throw new Error(simulation.error);
+      }
+      
+      // 2. Execute immediately (no confirmation modal)
+      const result = await executeOrder(order);
+      
+      // 3. Optimistic UI update (don't wait for blockchain)
+      updatePortfolioOptimistically(result);
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      // Clear form
+      setAmount('');
+      onClearDragPrice();
+      
+      // Show success toast
+      toast.success('Order executed!');
+    },
+  });
+  
+  return (
+    <div className="p-4 space-y-4">
+      {/* Buy/Sell Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setSide('buy')}
+          className={`flex-1 py-2 rounded ${
+            side === 'buy'
+              ? 'bg-success text-white'
+              : 'bg-background-elevated text-text-secondary'
+          }`}
+        >
+          Buy
+        </button>
+        <button
+          onClick={() => setSide('sell')}
+          className={`flex-1 py-2 rounded ${
+            side === 'sell'
+              ? 'bg-error text-white'
+              : 'bg-background-elevated text-text-secondary'
+          }`}
+        >
+          Sell
+        </button>
+      </div>
+      
+      {/* Order Type */}
+      <div className="flex gap-2 text-sm">
+        <button
+          onClick={() => setOrderType('market')}
+          className={orderType === 'market' ? 'font-bold' : 'text-text-tertiary'}
+        >
+          Market
+        </button>
+        <button
+          onClick={() => setOrderType('limit')}
+          className={orderType === 'limit' ? 'font-bold' : 'text-text-tertiary'}
+        >
+          Limit
+        </button>
+      </div>
+      
+      {/* Price (for limit orders or dragged) */}
+      {(orderType === 'limit' || dragPrice) && (
+        <div>
+          <label className="text-sm text-text-tertiary">Price</label>
+          <Input
+            type="number"
+            value={dragPrice || limitPrice}
+            onChange={(e) => !dragPrice && setLimitPrice(e.target.value)}
+            disabled={!!dragPrice}
+            placeholder="0.00"
+          />
+          {dragPrice && (
+            <p className="text-xs text-accent-primary mt-1">
+              Price set from chart (click to change)
+            </p>
+          )}
+        </div>
+      )}
+      
+      {/* Amount */}
+      <div>
+        <label className="text-sm text-text-tertiary">Amount (USD)</label>
+        <Input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+        />
+      </div>
+      
+      {/* Quick Amount Buttons */}
+      <div className="grid grid-cols-4 gap-2">
+        {[25, 50, 100, 500].map((amt) => (
+          <button
+            key={amt}
+            onClick={() => setAmount(amt.toString())}
+            className="py-1 text-sm bg-background-elevated hover:bg-background-hover rounded"
+          >
+            ${amt}
+          </button>
+        ))}
+      </div>
+      
+      {/* Summary */}
+      {amount && (
+        <div className="text-sm space-y-1 p-3 bg-background-elevated rounded">
+          <div className="flex justify-between">
+            <span className="text-text-tertiary">You get:</span>
+            <span className="font-medium">
+              {(parseFloat(amount) / effectivePrice).toFixed(4)} {token}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-tertiary">Platform fee (0.5%):</span>
+            <span className="font-medium">
+              ${(parseFloat(amount) * 0.005).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-tertiary">Estimated gas:</span>
+            <span className="font-medium">~$0.50</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Execute Button - ONE CLICK */}
+      <button
+        onClick={() => executeTrade.mutate()}
+        disabled={!amount || executeTrade.isPending}
+        className={`w-full py-3 rounded font-medium ${
+          side === 'buy'
+            ? 'bg-success hover:bg-success/90 text-white'
+            : 'bg-error hover:bg-error/90 text-white'
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        {executeTrade.isPending
+          ? 'Executing...'
+          : `${side === 'buy' ? 'Buy' : 'Sell'} ${token}`
+        }
+      </button>
+    </div>
+  );
+}
+
+3. CHART WITH DRAGGABLE PRICE LINES (Like ChartTrader):
+
+components/market/TradingChart.tsx:
+
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { createChart } from 'lightweight-charts';
+
+export function TradingChart({ token, onPriceClick, dragPrice }) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { color: '#0A0E1A' },
+        textColor: '#A0AEC0',
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+      rightPriceScale: {
+        borderVisible: false,
+      },
+      timeScale: {
+        borderVisible: false,
+      },
+      crosshair: {
+        mode: 1, // Normal crosshair
+      },
+    });
+    
+    const candlestickSeries = chart.addCandlestickSeries({
+      upColor: '#00E676',
+      downColor: '#FF4B4B',
+      borderVisible: false,
+      wickUpColor: '#00E676',
+      wickDownColor: '#FF4B4B',
+    });
+    
+    // Load chart data
+    fetchChartData(token).then(data => {
+      candlestickSeries.setData(data.candlesticks);
+    });
+    
+    // CLICK TO SET PRICE LINE
+    chart.subscribeClick((param) => {
+      if (param.point && param.seriesPrices) {
+        const price = param.seriesPrices.get(candlestickSeries);
+        if (price) {
+          onPriceClick(price);
+        }
+      }
+    });
+    
+    chartRef.current = chart;
+    
+    return () => chart.remove();
+  }, [token]);
+  
+  // Draw price line if dragged
+  useEffect(() => {
+    if (!chartRef.current || !dragPrice) return;
+    
+    const priceLine = chartRef.current.addLineSeries({
+      color: '#00E5FF',
+      lineWidth: 2,
+      lineStyle: 2, // Dashed
+      priceLineVisible: false,
+    });
+    
+    priceLine.setData([
+      { time: Date.now() / 1000, value: dragPrice },
+    ]);
+    
+    return () => priceLine.remove();
+  }, [dragPrice]);
+  
+  return (
+    <div ref={chartContainerRef} className="w-full h-full" />
+  );
+}
+
+4. FAST EXECUTION ENGINE (MEV Protection):
+
+services/trading/fastExecute.ts:
+
+export async function executeOrder(order: Order) {
+  const startTime = Date.now();
+  
+  try {
+    // 1. Build transaction
+    const tx = await buildSwapTransaction(order);
+    
+    // 2. MEV PROTECTION - Use Flashbots/private RPC
+    const protectedRPC = process.env.FLASHBOTS_RPC || HELIUS_RPC;
+    
+    // 3. Simulate first
+    const simulation = await simulateTransaction(tx, protectedRPC);
+    
+    if (!simulation.success) {
+      throw new Error(`Simulation failed: ${simulation.error}`);
+    }
+    
+    // 4. Sign and send (user wallet signs)
+    const signature = await userWallet.signTransaction(tx);
+    
+    // 5. Send via protected RPC
+    const txHash = await sendTransaction(signature, protectedRPC);
+    
+    // 6. Log execution time
+    const executionTime = Date.now() - startTime;
+    console.log(`Order executed in ${executionTime}ms`);
+    
+    // 7. Update database immediately (don't wait for confirmation)
+    await logTrade({
+      ...order,
+      txHash,
+      status: 'pending',
+      executionTimeMs: executionTime,
+    });
+    
+    // 8. Return optimistic result
+    return {
+      success: true,
+      txHash,
+      executionTime,
+      expectedOutput: simulation.expectedOutput,
+    };
+    
+  } catch (error) {
+    console.error('Execution failed:', error);
+    throw error;
+  }
+}
+
+// Optimistic UI update - don't wait for blockchain
+export function updatePortfolioOptimistically(result: ExecutionResult) {
+  // Update frontend state immediately
+  queryClient.setQueryData(['portfolio'], (old) => ({
+    ...old,
+    tokens: updateTokenBalance(old.tokens, result),
+    pendingTransactions: [...old.pendingTransactions, result.txHash],
+  }));
+  
+  // Actual balance will sync when blockchain confirms
+}
+
+5. REAL-TIME P&L TRACKING:
+
+services/analytics/pnlTracker.ts:
+
+export function calculateRealTimePnL(portfolio: Portfolio) {
+  let unrealizedPnL = 0;
+  let realizedPnL = 0;
+  
+  // For each position
+  portfolio.positions.forEach(position => {
+    const currentValue = position.amount * position.currentPrice;
+    const costBasis = position.amount * position.averageEntryPrice;
+    
+    // Unrealized P&L
+    unrealizedPnL += (currentValue - costBasis);
+  });
+  
+  // For closed trades
+  portfolio.closedTrades.forEach(trade => {
+    realizedPnL += trade.profitLoss;
+  });
+  
+  return {
+    unrealizedPnL,
+    realizedPnL,
+    totalPnL: unrealizedPnL + realizedPnL,
+    roi: ((unrealizedPnL + realizedPnL) / portfolio.totalInvested) * 100,
+  };
+}
+
+// Update P&L every second
+setInterval(() => {
+  const pnl = calculateRealTimePnL(getCurrentPortfolio());
+  updatePnLDisplay(pnl);
+}, 1000);
+
+6. CHART ANALYSIS TOOLS (Like TradingView):
+
+components/market/ChartTools.tsx:
+
+export function ChartTools() {
+  return (
+    <div className="absolute top-4 left-4 flex gap-2">
+      <button className="px-3 py-1 bg-background-elevated hover:bg-background-hover rounded text-sm">
+        📈 Indicators
+      </button>
+      <button className="px-3 py-1 bg-background-elevated hover:bg-background-hover rounded text-sm">
+        🖊️ Draw
+      </button>
+      <button className="px-3 py-1 bg-background-elevated hover:bg-background-hover rounded text-sm">
+        ⚙️ Settings
+      </button>
+      
+      {/* Time Intervals */}
+      <div className="flex gap-1 ml-4">
+        {['1m', '5m', '15m', '1h', '4h', '1D'].map((interval) => (
+          <button
+            key={interval}
+            className="px-2 py-1 text-sm hover:bg-background-hover rounded"
+          >
+            {interval}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+═══════════════════════════════════════════════════════════════════
+PART 4: PRIVACY & SECURITY (FROM CHECKPRICE.COM)
+═══════════════════════════════════════════════════════════════════
+
+WHAT CHECKPRICE.COM DOES:
+
+1. NON-CUSTODIAL
+   - Never stores private keys
+   - User signs all transactions
+   - Wallet connect via Privy
+
+2. MEV PROTECTION
+   - Private RPC endpoints
+   - Transaction protection
+   - No frontrunning
+
+3. AUTO-SIGNING (OPTIONAL)
+   - User can enable for fast trades
+   - Still uses session keys (not private key)
+   - Can be revoked anytime
+
+WE IMPLEMENT:
+
+✅ NON-CUSTODIAL (already have this)
+✅ MEV protection via Flashbots
+✅ Private RPC for order execution
+✅ Session keys for auto-signing (OPTIONAL)
+✅ All transactions user-signed
+✅ Zero access to private keys
+
+═══════════════════════════════════════════════════════════════════
+PART 5: IMAGES PROVIDED BY USER - MATCH THIS STYLE
+═══════════════════════════════════════════════════════════════════
+
+BASED ON USER'S IMAGES:
+
+The user has provided images showing:
+1. Professional TradingView-style charts
+2. Integrated buy/sell panel alongside chart
+3. Clean, minimal interface
+4. Real-time price updates
+5. Order book / depth chart
+6. One-click trading execution
+
+IMPLEMENTATION REQUIREMENTS FROM IMAGES:
+
+✅ Chart takes majority of screen (70%)
+✅ Trading panel on right side (30%)
+✅ Buy/Sell buttons clearly visible
+✅ Price and stats at top
+✅ Chart tools accessible
+✅ Clean dark theme
+✅ No popups blocking view
+✅ Fast, responsive interface
+✅ Professional trader-grade UI
+
+COLOR SCHEME (Adapt to our platform):
+- Background: #0A0E1A (our color)
+- Accent: #00E5FF (our cyan)
+- Success (Buy): #00E676 (our green)
+- Error (Sell): #FF4B4B (our red)
+- Text: #A0AEC0 (our gray)
+
+═══════════════════════════════════════════════════════════════════
+PART 6: KEY DIFFERENCES FROM CHECKPRICE.COM
+═══════════════════════════════════════════════════════════════════
+
+WHAT WE DON'T CLONE:
+
+❌ Their branding/logo
+❌ Their exact copy/text
+❌ Their color scheme (we use ours)
+❌ Prediction markets (we show "Coming Soon")
+❌ Forex/stocks (we focus on crypto)
+
+WHAT WE DO CLONE:
+
+✅ Execution speed and architecture
+✅ Chart-integrated trading
+✅ One-click order placement
+✅ MEV protection system
+✅ Real-time P&L tracking
+✅ Clean trading interface
+✅ Fast navigation
+✅ Professional trader UX
+
+═══════════════════════════════════════════════════════════════════
+PART 7: TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+☐ Market page loads with chart
+☐ Can search and select any token
+☐ Chart updates in real-time
+☐ Click chart to set price line
+☐ Price line appears on chart
+☐ Trading panel shows correct price
+☐ One-click buy executes fast (<2 seconds)
+☐ No confirmation modal (just execute)
+☐ Order appears in Active Orders
+☐ Portfolio updates immediately
+☐ P&L calculates in real-time
+☐ Trade logged to history
+☐ Transaction hash links to explorer
+☐ MEV protection active
+☐ Platform fee (0.5%) goes to treasury
+☐ Chart tools work (indicators, drawing)
+☐ Keyboard shortcuts functional
+☐ Mobile responsive
+☐ No lag or stuttering
+
+═══════════════════════════════════════════════════════════════════
+FINAL NOTES
+═══════════════════════════════════════════════════════════════════
+
+This infrastructure clones checkprice.com's EXECUTION SYSTEM while
+keeping our own design, branding, and color scheme.
+
+Key principles:
+- Fast execution (sub-2 second)
+- No blocking modals
+- Chart-first interface
+- Professional trader UX
+- Real-time updates
+- MEV protection
+- Non-custodial always
+
+The "Market" page becomes our professional trading interface,
+matching the quality and speed of checkprice.com.
+
+═══════════════════════════════════════════════════════════════════
+END OF CHECKPRICE.COM INFRASTRUCTURE CLONE
+═══════════════════════════════════════════════════════════════════
