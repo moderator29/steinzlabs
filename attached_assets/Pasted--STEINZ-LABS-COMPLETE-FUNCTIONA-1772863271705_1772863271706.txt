@@ -1,0 +1,1398 @@
+═══════════════════════════════════════════════════════════════════
+STEINZ LABS - COMPLETE FUNCTIONAL IMPROVEMENTS & FIXES
+MAKE THE PLATFORM FULLY PROFESSIONAL & FUNCTIONAL
+═══════════════════════════════════════════════════════════════════
+
+CONTEXT: This updates the EXISTING steinzlabs.com platform with critical
+functional improvements, proper wallet/contract detection, professional
+charts, real data, and complete feature integration.
+
+Apply these fixes to EXISTING codebase. Do NOT rebuild from scratch.
+
+═══════════════════════════════════════════════════════════════════
+FIX #1: PORTFOLIO - MAKE IT LIKE EXODUS/TRUST WALLET/METAMASK
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENTS:
+- Professional multi-tab portfolio interface
+- Balance history charts
+- Transaction history with filters
+- P&L tracking (realized and unrealized)
+- Multi-wallet support (users can create multiple wallets)
+- All wallets are NON-CUSTODIAL
+
+IMPLEMENTATION:
+
+1. UPDATE Portfolio Page Structure:
+
+app/(platform)/portfolio/page.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import { PortfolioOverview } from '@/components/portfolio/PortfolioOverview';
+import { PortfolioChart } from '@/components/portfolio/PortfolioChart';
+import { TokensTab } from '@/components/portfolio/TokensTab';
+import { HistoryTab } from '@/components/portfolio/HistoryTab';
+import { PnLTab } from '@/components/portfolio/PnLTab';
+import { WalletsTab } from '@/components/portfolio/WalletsTab';
+
+export default function PortfolioPage() {
+  const [activeTab, setActiveTab] = useState('tokens');
+  const [timeRange, setTimeRange] = useState('7d');
+  
+  const { data: portfolio, isLoading } = useQuery({
+    queryKey: ['portfolio'],
+    queryFn: fetchPortfolio,
+    refetchInterval: 30000, // Update every 30s
+  });
+  
+  const { data: history } = useQuery({
+    queryKey: ['portfolio-history', timeRange],
+    queryFn: () => fetchPortfolioHistory(timeRange),
+  });
+  
+  if (isLoading) return <PortfolioSkeleton />;
+  
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Portfolio Overview - Like Trust Wallet */}
+      <PortfolioOverview
+        totalValue={portfolio.totalValue}
+        change24h={portfolio.change24h}
+        realizedPnL={portfolio.realizedPnL}
+        unrealizedPnL={portfolio.unrealizedPnL}
+      />
+      
+      {/* Portfolio Value Chart - Like Exodus */}
+      <PortfolioChart
+        data={history}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+      />
+      
+      {/* Tabs - Like MetaMask */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="tokens">Tokens</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="pnl">P&L</TabsTrigger>
+          <TabsTrigger value="wallets">Wallets</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="tokens">
+          <TokensTab tokens={portfolio.tokens} />
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <HistoryTab />
+        </TabsContent>
+        
+        <TabsContent value="pnl">
+          <PnLTab portfolio={portfolio} />
+        </TabsContent>
+        
+        <TabsContent value="wallets">
+          <WalletsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+2. CREATE HistoryTab Component (NEW):
+
+components/portfolio/HistoryTab.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card } from '@/components/ui/Card';
+import { Select } from '@/components/ui/Select';
+import { Input } from '@/components/ui/Input';
+
+export function HistoryTab() {
+  const [filter, setFilter] = useState('all'); // all, sent, received, swap
+  const [search, setSearch] = useState('');
+  
+  const { data: transactions } = useQuery({
+    queryKey: ['transactions', filter],
+    queryFn: () => fetchTransactions(filter),
+  });
+  
+  const filteredTxs = transactions?.filter(tx =>
+    tx.tokenSymbol.toLowerCase().includes(search.toLowerCase()) ||
+    tx.hash.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex gap-3">
+        <Select
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'All Transactions' },
+            { value: 'sent', label: 'Sent' },
+            { value: 'received', label: 'Received' },
+            { value: 'swap', label: 'Swaps' },
+          ]}
+        />
+        <Input
+          placeholder="Search by token or hash..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      
+      {/* Transaction List */}
+      <div className="space-y-2">
+        {filteredTxs?.map((tx) => (
+          <TransactionCard key={tx.hash} transaction={tx} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TransactionCard({ transaction }) {
+  const getIcon = (type) => {
+    switch (type) {
+      case 'sent': return '↗️';
+      case 'received': return '↙️';
+      case 'swap': return '🔄';
+      default: return '📝';
+    }
+  };
+  
+  return (
+    <Card className="p-4 hover:border-accent-primary/50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">{getIcon(transaction.type)}</div>
+          <div>
+            <p className="font-medium text-text-primary">
+              {transaction.type === 'swap' 
+                ? `Swap ${transaction.tokenIn} → ${transaction.tokenOut}`
+                : `${transaction.type} ${transaction.tokenSymbol}`
+              }
+            </p>
+            <p className="text-sm text-text-tertiary">
+              {new Date(transaction.timestamp).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-right">
+          <p className={`font-medium ${
+            transaction.type === 'received' ? 'text-success' : 'text-text-primary'
+          }`}>
+            {transaction.type === 'received' ? '+' : '-'}
+            {transaction.amount} {transaction.tokenSymbol}
+          </p>
+          <p className="text-sm text-text-tertiary">
+            ${transaction.valueUSD.toFixed(2)}
+          </p>
+        </div>
+      </div>
+      
+      <a
+        href={`https://etherscan.io/tx/${transaction.hash}`}
+        target="_blank"
+        className="text-xs text-accent-primary hover:underline mt-2 block"
+      >
+        View on Explorer →
+      </a>
+    </Card>
+  );
+}
+
+3. CREATE P&L Tab (NEW):
+
+components/portfolio/PnLTab.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { Card } from '@/components/ui/Card';
+
+export function PnLTab({ portfolio }) {
+  const [period, setPeriod] = useState('1w'); // 1w, 2w, 1m, 3m, all
+  
+  return (
+    <div className="space-y-6">
+      {/* Period Selector */}
+      <div className="flex gap-2">
+        {['1w', '2w', '1m', '3m', 'all'].map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-4 py-2 rounded ${
+              period === p
+                ? 'bg-accent-primary text-background-DEFAULT'
+                : 'bg-background-elevated text-text-secondary hover:bg-background-hover'
+            }`}
+          >
+            {p.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="p-4">
+          <h3 className="text-sm text-text-tertiary mb-2">Realized P&L</h3>
+          <p className={`text-2xl font-bold ${
+            portfolio.realizedPnL >= 0 ? 'text-success' : 'text-error'
+          }`}>
+            {portfolio.realizedPnL >= 0 ? '+' : ''}
+            ${portfolio.realizedPnL.toFixed(2)}
+          </p>
+          <p className="text-xs text-text-tertiary mt-1">
+            From closed positions
+          </p>
+        </Card>
+        
+        <Card className="p-4">
+          <h3 className="text-sm text-text-tertiary mb-2">Unrealized P&L</h3>
+          <p className={`text-2xl font-bold ${
+            portfolio.unrealizedPnL >= 0 ? 'text-success' : 'text-error'
+          }`}>
+            {portfolio.unrealizedPnL >= 0 ? '+' : ''}
+            ${portfolio.unrealizedPnL.toFixed(2)}
+          </p>
+          <p className="text-xs text-text-tertiary mt-1">
+            From open positions
+          </p>
+        </Card>
+      </div>
+      
+      {/* Top Performers */}
+      <Card className="p-4">
+        <h3 className="font-semibold mb-4">Top Performers</h3>
+        <div className="space-y-3">
+          {portfolio.topPerformers?.map((token, i) => (
+            <div key={token.symbol} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-text-tertiary">#{i + 1}</span>
+                <span className="font-medium">{token.symbol}</span>
+              </div>
+              <span className={`font-medium ${
+                token.pnl >= 0 ? 'text-success' : 'text-error'
+              }`}>
+                {token.pnl >= 0 ? '+' : ''}{token.pnl.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+4. CREATE Multi-Wallet Support (NEW):
+
+components/portfolio/WalletsTab.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { PlusIcon } from 'lucide-react';
+
+export function WalletsTab() {
+  const { data: wallets, refetch } = useQuery({
+    queryKey: ['user-wallets'],
+    queryFn: fetchUserWallets,
+  });
+  
+  const createWalletMutation = useMutation({
+    mutationFn: createNonCustodialWallet,
+    onSuccess: () => refetch(),
+  });
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold">Your Wallets</h3>
+        <Button onClick={() => createWalletMutation.mutate()}>
+          <PlusIcon className="w-4 h-4 mr-2" />
+          Create New Wallet
+        </Button>
+      </div>
+      
+      {wallets?.map((wallet, i) => (
+        <WalletCard key={wallet.address} wallet={wallet} index={i} />
+      ))}
+      
+      <p className="text-xs text-text-tertiary">
+        ⚠️ All wallets are NON-CUSTODIAL. You control your private keys.
+        Back up your recovery phrase safely.
+      </p>
+    </div>
+  );
+}
+
+function WalletCard({ wallet, index }) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-medium">Wallet #{index + 1}</h4>
+        {wallet.isPrimary && (
+          <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-1 rounded">
+            Primary
+          </span>
+        )}
+      </div>
+      
+      <p className="text-sm font-mono text-text-tertiary mb-2">
+        {wallet.address}
+      </p>
+      
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm">Copy Address</Button>
+        <Button variant="outline" size="sm">View Private Key</Button>
+        <Button variant="outline" size="sm">Export</Button>
+      </div>
+    </Card>
+  );
+}
+
+async function createNonCustodialWallet() {
+  // CRITICAL: Generate wallet CLIENT-SIDE ONLY
+  // NEVER send private key to server
+  
+  const wallet = ethers.Wallet.createRandom();
+  
+  // Show recovery phrase to user (they MUST save it)
+  const mnemonic = wallet.mnemonic.phrase;
+  
+  // Encrypt private key with user password before storing locally
+  const encrypted = await encryptPrivateKey(wallet.privateKey, userPassword);
+  
+  // Store ONLY encrypted version in browser localStorage
+  localStorage.setItem(`wallet_${wallet.address}`, encrypted);
+  
+  // Send ONLY public address to backend
+  await fetch('/api/wallets', {
+    method: 'POST',
+    body: JSON.stringify({ address: wallet.address }),
+  });
+  
+  return { address: wallet.address, mnemonic };
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #2: USER VERIFICATION SYSTEM
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENTS:
+- Users can apply for verification
+- Form submission goes to admin panel
+- Admin can approve/reject
+- Verified users get blue checkmark badge
+
+IMPLEMENTATION:
+
+1. CREATE Verification Request Form:
+
+app/(platform)/settings/verification/page.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Button } from '@/components/ui/Button';
+
+export default function VerificationPage() {
+  const [formData, setFormData] = useState({
+    fullName: '',
+    reason: '',
+    twitterUrl: '',
+    linkedinUrl: '',
+    websiteUrl: '',
+  });
+  
+  const submitMutation = useMutation({
+    mutationFn: submitVerificationRequest,
+    onSuccess: () => {
+      alert('Verification request submitted! We will review it shortly.');
+    },
+  });
+  
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6">
+      <Card className="p-6">
+        <h1 className="text-2xl font-bold mb-2">Apply for Verification</h1>
+        <p className="text-text-secondary mb-6">
+          Get a verified badge on your profile to build trust with the community.
+        </p>
+        
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          submitMutation.mutate(formData);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Full Name</label>
+            <Input
+              required
+              value={formData.fullName}
+              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+              placeholder="John Smith"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Why should you be verified?
+            </label>
+            <Textarea
+              required
+              value={formData.reason}
+              onChange={(e) => setFormData({...formData, reason: e.target.value})}
+              placeholder="I'm a professional trader with 5 years experience..."
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Social Links (optional but recommended)
+            </label>
+            <Input
+              type="url"
+              value={formData.twitterUrl}
+              onChange={(e) => setFormData({...formData, twitterUrl: e.target.value})}
+              placeholder="Twitter URL"
+              className="mb-2"
+            />
+            <Input
+              type="url"
+              value={formData.linkedinUrl}
+              onChange={(e) => setFormData({...formData, linkedinUrl: e.target.value})}
+              placeholder="LinkedIn URL"
+              className="mb-2"
+            />
+            <Input
+              type="url"
+              value={formData.websiteUrl}
+              onChange={(e) => setFormData({...formData, websiteUrl: e.target.value})}
+              placeholder="Website URL"
+            />
+          </div>
+          
+          <Button
+            type="submit"
+            disabled={submitMutation.isPending}
+            className="w-full"
+          >
+            {submitMutation.isPending ? 'Submitting...' : 'Submit Request'}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+async function submitVerificationRequest(data) {
+  const response = await fetch('/api/verification/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) throw new Error('Failed to submit request');
+  return response.json();
+}
+
+2. ADD Admin Verification Panel (Already in previous prompt - just ensure it's working)
+
+═══════════════════════════════════════════════════════════════════
+FIX #3: DNA ANALYZER - WALLET ADDRESSES ONLY
+═══════════════════════════════════════════════════════════════════
+
+CRITICAL REQUIREMENT:
+- DNA Analyzer ONLY accepts WALLET ADDRESSES
+- MUST REJECT contract addresses with clear message
+- Give detailed wallet analysis
+
+IMPLEMENTATION:
+
+1. UPDATE DNA Analyzer with Address Type Detection:
+
+app/(platform)/dna-analyzer/page.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+
+export default function DNAAnalyzerPage() {
+  const [address, setAddress] = useState('');
+  const [addressType, setAddressType] = useState<'wallet' | 'contract' | null>(null);
+  
+  const analyzeMutation = useMutation({
+    mutationFn: analyzeAddress,
+    onError: (error: any) => {
+      if (error.message.includes('contract')) {
+        setAddressType('contract');
+      }
+    },
+    onSuccess: (data) => {
+      setAddressType('wallet');
+    },
+  });
+  
+  const handleAnalyze = async () => {
+    setAddressType(null);
+    
+    // First detect if it's a contract
+    const isContract = await checkIfContract(address);
+    
+    if (isContract) {
+      setAddressType('contract');
+      return;
+    }
+    
+    // If it's a wallet, proceed with analysis
+    analyzeMutation.mutate(address);
+  };
+  
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <h1 className="text-3xl font-bold mb-2">DNA Analyzer</h1>
+      <p className="text-text-secondary mb-6">
+        Analyze wallet trading behavior and patterns
+      </p>
+      
+      {/* Input */}
+      <Card className="p-6 mb-6">
+        <Input
+          placeholder="Enter WALLET address (not contract address)"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="mb-4"
+        />
+        <Button onClick={handleAnalyze} disabled={!address}>
+          Analyze Wallet
+        </Button>
+      </Card>
+      
+      {/* Contract Address Error */}
+      {addressType === 'contract' && (
+        <Card className="p-6 border-error/50 bg-error/5">
+          <div className="flex items-start gap-3">
+            <AlertCircleIcon className="w-6 h-6 text-error flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-error mb-2">
+                ❌ This is a Smart Contract Address
+              </h3>
+              <p className="text-text-secondary mb-4">
+                DNA Analyzer only works with WALLET addresses, not smart contracts.
+              </p>
+              <p className="text-sm text-text-secondary mb-2">
+                <strong>What's the difference?</strong>
+              </p>
+              <ul className="text-sm text-text-secondary space-y-1 list-disc list-inside">
+                <li><strong>Wallet Address:</strong> Controlled by a person with private keys (can trade, hold tokens)</li>
+                <li><strong>Contract Address:</strong> Smart contract code deployed on blockchain (tokens, protocols, etc.)</li>
+              </ul>
+              <p className="text-sm text-accent-primary mt-4">
+                💡 Try using our <a href="/scanner" className="underline">Token Scanner</a> to analyze this contract instead.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+      
+      {/* Wallet Analysis Results */}
+      {addressType === 'wallet' && analyzeMutation.data && (
+        <DNAReport data={analyzeMutation.data} />
+      )}
+    </div>
+  );
+}
+
+// Check if address is a contract
+async function checkIfContract(address: string): Promise<boolean> {
+  const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+  const code = await provider.getCode(address);
+  
+  // If code exists, it's a contract
+  // Wallets have code = "0x"
+  return code !== '0x';
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #4: SCANNER - DETECT WALLET VS CONTRACT
+═══════════════════════════════════════════════════════════════════
+
+CRITICAL REQUIREMENT:
+- Scanner ONLY accepts CONTRACT addresses
+- MUST REJECT wallet addresses with clear message
+- Give deep security analysis for contracts
+
+IMPLEMENTATION:
+
+app/(platform)/scanner/page.tsx:
+
+'use client';
+
+export default function ScannerPage() {
+  const [address, setAddress] = useState('');
+  const [addressType, setAddressType] = useState<'wallet' | 'contract' | null>(null);
+  
+  const handleScan = async () => {
+    setAddressType(null);
+    
+    const isContract = await checkIfContract(address);
+    
+    if (!isContract) {
+      setAddressType('wallet');
+      return;
+    }
+    
+    // Proceed with contract scan
+    setAddressType('contract');
+    scanMutation.mutate(address);
+  };
+  
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <h1 className="text-3xl font-bold mb-2">Token Scanner</h1>
+      <p className="text-text-secondary mb-6">
+        Deep security analysis for token contracts
+      </p>
+      
+      {/* Input */}
+      <Card className="p-6 mb-6">
+        <Input
+          placeholder="Enter TOKEN CONTRACT address (not wallet)"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+        <Button onClick={handleScan}>Scan Contract</Button>
+      </Card>
+      
+      {/* Wallet Address Error */}
+      {addressType === 'wallet' && (
+        <Card className="p-6 border-warning/50 bg-warning/5">
+          <div className="flex items-start gap-3">
+            <AlertCircleIcon className="w-6 h-6 text-warning" />
+            <div>
+              <h3 className="font-semibold text-warning mb-2">
+                ⚠️ This is a Wallet Address, Not a Contract
+              </h3>
+              <p className="text-text-secondary mb-4">
+                The Token Scanner analyzes SMART CONTRACTS (tokens), not wallet addresses.
+              </p>
+              <p className="text-sm text-text-secondary mb-2">
+                <strong>You entered a wallet address:</strong>
+              </p>
+              <p className="text-sm font-mono bg-background-DEFAULT p-2 rounded mb-4">
+                {address}
+              </p>
+              <p className="text-sm text-accent-primary">
+                💡 Try using our <a href="/dna-analyzer" className="underline">DNA Analyzer</a> to analyze this wallet instead.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+      
+      {/* Contract Scan Results */}
+      {addressType === 'contract' && scanMutation.data && (
+        <SecurityReport data={scanMutation.data} />
+      )}
+    </div>
+  );
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #5: CONTEXT FEED - VIEW PROOF OPENS NEW TAB + BUBBLEMAPS
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENTS:
+- "View Proof" opens in NEW TAB (not modal)
+- Full detailed context page
+- Real Bubblemaps visualization
+- Honest scoring based on real data
+- Full explanations
+
+IMPLEMENTATION:
+
+1. UPDATE SignalCard to open new tab:
+
+components/feed/SignalCard.tsx:
+
+export function SignalCard({ signal }) {
+  const handleViewProof = () => {
+    // Open in NEW TAB
+    window.open(`/context/${signal.id}`, '_blank');
+  };
+  
+  return (
+    <Card>
+      {/* ... existing card content ... */}
+      
+      <Button onClick={handleViewProof}>
+        View Proof →
+      </Button>
+    </Card>
+  );
+}
+
+2. CREATE Full Context Detail Page:
+
+app/context/[id]/page.tsx:
+
+export default async function ContextDetailPage({ params }) {
+  const signal = await getSignalById(params.id);
+  
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Back Button */}
+      <Button variant="ghost" onClick={() => window.close()}>
+        ← Close
+      </Button>
+      
+      {/* Signal Header */}
+      <SignalHeader signal={signal} />
+      
+      {/* Detailed Context */}
+      <DetailedContext signal={signal} />
+      
+      {/* Bubblemaps Visualization */}
+      <BubblemapsSection tokenAddress={signal.tokenAddress} chain={signal.chain} />
+      
+      {/* Proof & Evidence */}
+      <ProofSection signal={signal} />
+      
+      {/* Price Chart */}
+      <PriceChartSection tokenAddress={signal.tokenAddress} />
+      
+      {/* Related Signals */}
+      <RelatedSignals tokenAddress={signal.tokenAddress} />
+    </div>
+  );
+}
+
+3. ADD Bubblemaps Visualization:
+
+components/context/BubblemapsSection.tsx:
+
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+export function BubblemapsSection({ tokenAddress, chain }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Fetch holder distribution data
+    fetchHolderDistribution(tokenAddress, chain).then(data => {
+      renderBubblemap(containerRef.current, data);
+    });
+  }, [tokenAddress, chain]);
+  
+  return (
+    <Card className="p-6">
+      <h3 className="text-xl font-bold mb-4">🫧 Holder Distribution (Bubblemaps)</h3>
+      
+      <div ref={containerRef} className="w-full h-96 bg-background-DEFAULT rounded" />
+      
+      <div className="mt-4 space-y-2 text-sm text-text-secondary">
+        <h4 className="font-semibold text-text-primary">How to Read This:</h4>
+        <ul className="space-y-1 list-disc list-inside">
+          <li><strong>Bubble Size:</strong> Larger bubbles = larger holdings</li>
+          <li><strong>Connected Bubbles:</strong> Same owner/related wallets</li>
+          <li><strong>Colors:</strong> 🟢 Exchanges, 🔵 Individual holders, 🔴 Suspicious, 🟡 Connected wallets</li>
+        </ul>
+        
+        <div className="pt-2 border-t border-border">
+          <p><strong>Analysis:</strong></p>
+          <p>Top 10 holders control {data.top10Percent}% of supply</p>
+          {data.top10Percent > 50 ? (
+            <p className="text-warning">⚠️ High concentration risk</p>
+          ) : (
+            <p className="text-success">✅ Healthy distribution</p>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+async function renderBubblemap(container: HTMLElement, data: HolderData) {
+  // Use D3.js for bubble visualization
+  // Implementation using real holder data from blockchain
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #6: REAL TRADINGVIEW-STYLE CHARTS
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENTS:
+- Professional TradingView-style charts (like Mert's chart)
+- Real-time data
+- Full chart tools
+- Candlesticks + volume
+
+IMPLEMENTATION:
+
+components/charts/TradingChart.tsx:
+
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { createChart } from 'lightweight-charts';
+
+export function TradingChart({ tokenAddress, chain }) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    // Create chart
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { color: '#0A0E1A' },
+        textColor: '#A0AEC0',
+      },
+      grid: {
+        vertLines: { color: '#1E2433' },
+        horzLines: { color: '#1E2433' },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 500,
+    });
+    
+    // Add candlestick series
+    const candlestickSeries = chart.addCandlestickSeries({
+      upColor: '#00E676',
+      downColor: '#FF4B4B',
+      borderVisible: false,
+      wickUpColor: '#00E676',
+      wickDownColor: '#FF4B4B',
+    });
+    
+    // Add volume series
+    const volumeSeries = chart.addHistogramSeries({
+      color: '#00E5FF',
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '',
+    });
+    
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+    });
+    
+    // Fetch and set data
+    fetchChartData(tokenAddress, chain).then(data => {
+      candlestickSeries.setData(data.candlesticks);
+      volumeSeries.setData(data.volumes);
+    });
+    
+    chartRef.current = chart;
+    
+    // Cleanup
+    return () => chart.remove();
+  }, [tokenAddress, chain]);
+  
+  return (
+    <div className="space-y-4">
+      {/* Chart Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {['1H', '4H', '1D', '1W', '1M'].map((interval) => (
+            <button
+              key={interval}
+              className="px-3 py-1 rounded bg-background-elevated hover:bg-background-hover text-sm"
+            >
+              {interval}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex gap-2">
+          <button className="px-3 py-1 rounded bg-background-elevated hover:bg-background-hover text-sm">
+            📊 Indicators
+          </button>
+          <button className="px-3 py-1 rounded bg-background-elevated hover:bg-background-hover text-sm">
+            🖊️ Draw
+          </button>
+        </div>
+      </div>
+      
+      {/* Chart */}
+      <div ref={chartContainerRef} className="rounded border border-border" />
+    </div>
+  );
+}
+
+async function fetchChartData(tokenAddress: string, chain: string) {
+  // Fetch from CoinGecko or DexScreener
+  const response = await fetch(
+    `/api/charts?token=${tokenAddress}&chain=${chain}&interval=1h&limit=168`
+  );
+  return response.json();
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #7: ONE-CLICK TRADING FROM CONTEXT FEED
+═══════════════════════════════════════════════════════════════════
+
+IMPLEMENTATION:
+
+1. Add "Buy Now" button to SignalCard:
+
+components/feed/SignalCard.tsx:
+
+export function SignalCard({ signal }) {
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  
+  return (
+    <Card>
+      {/* ... existing content ... */}
+      
+      <div className="flex gap-2">
+        <Button onClick={() => window.open(`/context/${signal.id}`, '_blank')}>
+          View Proof
+        </Button>
+        <Button onClick={() => setShowTradeModal(true)} variant="primary">
+          Buy {signal.tokenSymbol} →
+        </Button>
+      </div>
+      
+      {showTradeModal && (
+        <TradingModal
+          token={{
+            address: signal.tokenAddress,
+            symbol: signal.tokenSymbol,
+            name: signal.tokenName,
+            chain: signal.chain,
+          }}
+          onClose={() => setShowTradeModal(false)}
+        />
+      )}
+    </Card>
+  );
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #8: AUTO WALLET CREATION ON SIGNUP
+═══════════════════════════════════════════════════════════════════
+
+IMPLEMENTATION:
+
+app/api/auth/signup/route.ts:
+
+export async function POST(request: Request) {
+  const { email, password, username } = await request.json();
+  
+  // Create user account
+  const user = await createUser({ email, password, username });
+  
+  // CRITICAL: Auto-create NON-CUSTODIAL wallet
+  // This happens CLIENT-SIDE after signup
+  
+  return Response.json({
+    success: true,
+    user,
+    createWallet: true, // Signal frontend to create wallet
+  });
+}
+
+// Frontend handles wallet creation:
+// After signup success:
+if (response.createWallet) {
+  const wallet = ethers.Wallet.createRandom();
+  
+  // Show user their recovery phrase (THEY MUST SAVE IT)
+  showRecoveryPhrase(wallet.mnemonic.phrase);
+  
+  // Encrypt and store locally
+  const encrypted = await encryptPrivateKey(wallet.privateKey, password);
+  localStorage.setItem('primary_wallet', encrypted);
+  
+  // Send public address to backend
+  await fetch('/api/wallets', {
+    method: 'POST',
+    body: JSON.stringify({ address: wallet.address, isPrimary: true }),
+  });
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #9: VTX AI WITH FULL PLATFORM ACCESS & RISK WARNINGS
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENTS:
+- VTX can see all user activity
+- Give personalized advice
+- Warning notifications for risky actions
+
+IMPLEMENTATION:
+
+app/api/vtx/route.ts:
+
+export async function POST(request: Request) {
+  const { message, context } = await request.json();
+  const userId = await verifySession();
+  
+  // Get user's full context
+  const userContext = await getUserFullContext(userId);
+  
+  const systemPrompt = `You are VTX AI for Steinz Labs.
+
+User Context:
+- Username: ${userContext.username}
+- Tier: ${userContext.tier}
+- Portfolio Value: $${userContext.portfolioValue}
+- Recent Trades: ${JSON.stringify(userContext.recentTrades)}
+- Risk Profile: ${userContext.riskProfile}
+
+You have access to:
+- User's complete portfolio
+- Trading history
+- Watchlists
+- Alert settings
+
+IMPORTANT: If user is about to do something risky:
+- Warn them clearly
+- Explain the risks
+- Suggest safer alternatives
+
+Be helpful, honest, and protect the user.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2000,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: message }],
+  });
+  
+  const responseText = response.content[0].text;
+  
+  // Check if response contains risk warning
+  if (responseText.toLowerCase().includes('warning') || 
+      responseText.toLowerCase().includes('risky')) {
+    // Trigger notification to user
+    triggerRiskNotification(userId, responseText);
+  }
+  
+  return Response.json({ response: responseText });
+}
+
+// Risk notification system:
+function triggerRiskNotification(userId: string, warning: string) {
+  // Show banner notification
+  return {
+    type: 'risk_warning',
+    title: '⚠️ Risk Warning from VTX AI',
+    message: warning,
+    severity: 'high',
+  };
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #10: MARKET AREA WITH FULL CHARTS & SEARCH
+═══════════════════════════════════════════════════════════════════
+
+app/(platform)/market/page.tsx:
+
+'use client';
+
+export default function MarketPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedToken, setSelectedToken] = useState(null);
+  
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Search Bar */}
+      <Card className="p-4 mb-6">
+        <Input
+          placeholder="Search by token name, symbol, or contract address..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Card>
+      
+      {/* Token List */}
+      {!selectedToken && (
+        <TokenListView searchQuery={searchQuery} onSelect={setSelectedToken} />
+      )}
+      
+      {/* Token Detail with Chart */}
+      {selectedToken && (
+        <TokenDetailView token={selectedToken} onBack={() => setSelectedToken(null)} />
+      )}
+    </div>
+  );
+}
+
+function TokenDetailView({ token, onBack }) {
+  const [tradeAmount, setTradeAmount] = useState('');
+  
+  const handleBuy = async () => {
+    const result = await executeTrade({
+      tokenAddress: token.address,
+      amount: parseFloat(tradeAmount),
+      type: 'buy',
+    });
+    
+    // Deduct 0.5% platform fee
+    const fee = parseFloat(tradeAmount) * 0.005;
+    await sendFeeToTreasury(fee);
+    
+    // Show success
+    alert('Trade executed! Check your portfolio.');
+  };
+  
+  return (
+    <div className="space-y-6">
+      <Button onClick={onBack}>← Back to Market</Button>
+      
+      {/* Token Info */}
+      <Card className="p-6">
+        <h1 className="text-3xl font-bold">{token.name}</h1>
+        <p className="text-text-secondary">{token.symbol}</p>
+        <p className="text-2xl font-bold mt-2">${token.price}</p>
+      </Card>
+      
+      {/* Chart */}
+      <TradingChart tokenAddress={token.address} chain={token.chain} />
+      
+      {/* Trading Panel */}
+      <Card className="p-6">
+        <h3 className="font-semibold mb-4">Buy {token.symbol}</h3>
+        <Input
+          type="number"
+          placeholder="Amount in USD"
+          value={tradeAmount}
+          onChange={(e) => setTradeAmount(e.target.value)}
+        />
+        <p className="text-sm text-text-tertiary mt-2">
+          Platform fee: 0.5% (${(parseFloat(tradeAmount) * 0.005).toFixed(2)})
+        </p>
+        <Button onClick={handleBuy} className="w-full mt-4">
+          Buy Now
+        </Button>
+      </Card>
+    </div>
+  );
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #11: SOCIAL FEATURES - FOLLOW & DM REAL USERS
+═══════════════════════════════════════════════════════════════════
+
+app/(platform)/social/page.tsx:
+
+'use client';
+
+export default function SocialPage() {
+  const { data: users } = useQuery({
+    queryKey: ['real-users'],
+    queryFn: fetchRealUsers, // Only returns REAL users (2-5 people)
+  });
+  
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <h1 className="text-3xl font-bold mb-6">Discover Users</h1>
+      
+      {/* Search */}
+      <Input placeholder="Search users..." className="mb-6" />
+      
+      {/* User List - ONLY REAL USERS */}
+      <div className="grid gap-4">
+        {users?.map((user) => (
+          <UserCard key={user.id} user={user} />
+        ))}
+      </div>
+      
+      {users?.length === 0 && (
+        <p className="text-center text-text-secondary">
+          No users found yet. Invite your friends to join!
+        </p>
+      )}
+    </div>
+  );
+}
+
+// CRITICAL: Only show REAL users
+async function fetchRealUsers() {
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('is_real_user', true) // Only real people, NO DEMO ACCOUNTS
+    .order('created_at', { ascending: false });
+  
+  return data;
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #12: "COMING SOON" FOR NON-MVP FEATURES
+═══════════════════════════════════════════════════════════════════
+
+For all non-MVP features, show this:
+
+components/ComingSoon.tsx:
+
+export function ComingSoon({ featureName }: { featureName: string }) {
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+      <div className="text-6xl mb-4">🚧</div>
+      <h2 className="text-3xl font-bold mb-2">Coming Soon</h2>
+      <p className="text-text-secondary text-lg mb-6">
+        {featureName} is currently under development.
+      </p>
+      <p className="text-text-tertiary">
+        We're working hard to bring you this feature. Stay tuned!
+      </p>
+    </div>
+  );
+}
+
+// Use in routes:
+app/(platform)/predictions/page.tsx:
+export default function PredictionsPage() {
+  return <ComingSoon featureName="Predictions Market" />;
+}
+
+app/(platform)/tools/copy-trading/page.tsx:
+export default function CopyTradingPage() {
+  return <ComingSoon featureName="Copy Trading" />;
+}
+
+app/(platform)/tools/social-trading/page.tsx:
+export default function SocialTradingPage() {
+  return <ComingSoon featureName="Social Trading" />;
+}
+
+═══════════════════════════════════════════════════════════════════
+FIX #13: UPDATE PRICING TO $4 / $7 / $13
+═══════════════════════════════════════════════════════════════════
+
+Update pricing in database and UI:
+
+-- Update tier pricing
+UPDATE tier_pricing SET
+  bronze_price = 4.00,
+  silver_price = 7.00,
+  gold_price = 13.00;
+
+// Update in constants:
+export const TIER_PRICING = {
+  bronze: 4,
+  silver: 7,
+  gold: 13,
+};
+
+═══════════════════════════════════════════════════════════════════
+FIX #14: NAKA AUTO-DETECTION & TIER ASSIGNMENT
+═══════════════════════════════════════════════════════════════════
+
+On wallet connect, auto-detect NAKA and assign tier:
+
+services/blockchain/autoDetectTier.ts:
+
+export async function autoDetectAndAssignTier(walletAddress: string, userId: string) {
+  // Check NAKA balance
+  const nakaBalance = await getNakaBalance(walletAddress);
+  
+  // Calculate tier
+  let tier = 0;
+  if (nakaBalance >= 2000000) tier = 3; // Gold
+  else if (nakaBalance >= 1000000) tier = 2; // Silver
+  else if (nakaBalance >= 500000) tier = 1; // Bronze
+  
+  // Update user in database
+  await supabase
+    .from('users')
+    .update({
+      wallet_address: walletAddress,
+      naka_balance: nakaBalance,
+      tier: tier,
+    })
+    .eq('id', userId);
+  
+  // Unlock features based on tier
+  return {
+    tier,
+    tierName: getTierName(tier),
+    unlockedFeatures: getUnlockedFeatures(tier),
+  };
+}
+
+function getUnlockedFeatures(tier: number) {
+  const features = {
+    0: ['dashboard', 'market', 'portfolio', 'scanner'],
+    1: ['dashboard', 'market', 'portfolio', 'scanner', 'context_feed', 'alerts', 'watchlists'],
+    2: ['dashboard', 'market', 'portfolio', 'scanner', 'context_feed', 'alerts', 'watchlists', 'dna_analyzer', 'advanced_charts'],
+    3: ['all_features', 'priority_support', 'api_access', 'copy_trading'],
+  };
+  
+  return features[tier];
+}
+
+═══════════════════════════════════════════════════════════════════
+TESTING CHECKLIST FOR ALL FIXES
+═══════════════════════════════════════════════════════════════════
+
+☐ Portfolio shows history, P&L, multiple wallets
+☐ Users can submit verification requests
+☐ Admin can approve/reject verifications
+☐ DNA Analyzer rejects contracts with clear message
+☐ Scanner rejects wallets with clear message
+☐ "View Proof" opens in new tab
+☐ Bubblemaps render correctly
+☐ TradingView charts work with real data
+☐ One-click buy from context feed works
+☐ Auto wallet created on signup (non-custodial)
+☐ VTX AI has access to user data
+☐ Risk warnings appear when needed
+☐ Market search finds tokens
+☐ Charts load in market area
+☐ Platform fees (0.5%) go to treasury
+☐ Follow/unfollow works
+☐ DMs work between real users
+☐ Only real users show in discover
+☐ Coming Soon pages display correctly
+☐ Pricing shows $4/$7/$13
+☐ NAKA auto-detected on wallet connect
+☐ Tier assigned based on NAKA balance
+☐ Features unlock based on tier
+
+═══════════════════════════════════════════════════════════════════
+END OF FUNCTIONAL FIXES
+═══════════════════════════════════════════════════════════════════
+
+These fixes make your platform FULLY FUNCTIONAL and PROFESSIONAL.
+
+Apply them to your EXISTING steinzlabs.com codebase.
+
+Start with the most critical fixes first:
+1. Portfolio enhancements
+2. DNA Analyzer wallet detection
+3. Scanner contract detection
+4. View Proof new tab
+5. Then the rest
+
+Test each fix before moving to the next.
