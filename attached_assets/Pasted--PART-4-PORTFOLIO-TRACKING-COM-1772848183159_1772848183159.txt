@@ -1,0 +1,1161 @@
+═══════════════════════════════════════════════════════════════════
+PART 4: PORTFOLIO TRACKING - COMPLETE IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════
+
+PORTFOLIO PAGE DESIGN (DUNE.COM STYLE):
+
+┌─────────────────────────────────────────────────────────────────┐
+│ PORTFOLIO                                    [Refresh] [Settings]│
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ ┌─ Overview Stats ────────────────────────────────────────────┐ │
+│ │ Total Value          24h Change        Unrealized PnL       │ │
+│ │ $45,234.56          +$2,341 (+5.4%)    +$12,456 (+38%)     │ │
+│ │                                                              │ │
+│ │ Realized PnL         Total Invested    Portfolio ROI        │ │
+│ │ +$8,234 (+24%)      $32,778            +62.5%              │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ ┌─ Portfolio Value Chart (7D) ─────────────────────────────┐    │
+│ │  (Area chart showing portfolio value over time)          │    │
+│ │  [1D] [1W] [1M] [3M] [1Y] [All]                         │    │
+│ └──────────────────────────────────────────────────────────┘    │
+│                                                                   │
+│ ┌─ Tabs ──────────────────────────────────────────────────────┐ │
+│ │ [Holdings] [History] [PnL Analysis] [Risk Metrics]         │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ HOLDINGS TAB:                                                    │
+│ ┌──────────────────────────────────────────────────────────────┐ │
+│ │ Token      Chain    Balance      Value      24h    PnL      │ │
+│ │────────────────────────────────────────────────────────────│ │
+│ │ 🔷 ETH     ETH      10.5        $21,450    +2.3%   +$4,230  │ │
+│ │ 🟣 SOL     SOL      150         $15,600    +5.1%   +$2,890  │ │
+│ │ 🔵 USDC    ETH      5,000       $5,000     0.0%    $0       │ │
+│ │ 🟢 PEPE    ETH      150B        $3,184     +12%    +$1,336  │ │
+│ │ ...                                                          │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ HISTORY TAB:                                                     │
+│ ┌──────────────────────────────────────────────────────────────┐ │
+│ │ Date         Type    Token    Amount      Value      Status  │ │
+│ │────────────────────────────────────────────────────────────│ │
+│ │ Mar 7, 10:30 Buy     PEPE     50B        $1,200     ✓       │ │
+│ │ Mar 6, 15:45 Sell    SOL      20         $2,080     ✓       │ │
+│ │ Mar 5, 09:12 Buy     ETH      2          $4,100     ✓       │ │
+│ │ ...                                                          │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ PNL ANALYSIS TAB:                                                │
+│ ┌──────────────────────────────────────────────────────────────┐ │
+│ │ [1W] [2W] [1M] [3M] [All Time]                              │ │
+│ │                                                              │ │
+│ │ Period: Last 30 Days                                         │ │
+│ │ ─────────────────────────                                    │ │
+│ │ Realized Gains:    +$5,234                                   │ │
+│ │ Realized Losses:   -$1,123                                   │ │
+│ │ Net Realized:      +$4,111 (Profitable)                      │ │
+│ │                                                              │ │
+│ │ Unrealized Gains:  +$8,456                                   │ │
+│ │ Unrealized Losses: -$234                                     │ │
+│ │ Net Unrealized:    +$8,222                                   │ │
+│ │                                                              │ │
+│ │ Total P&L:         +$12,333 (+37.6%)                        │ │
+│ │                                                              │ │
+│ │ Top Performers:                                              │ │
+│ │ 1. PEPE: +$2,456 (+123%)                                    │ │
+│ │ 2. SOL:  +$1,890 (+54%)                                     │ │
+│ │ 3. ETH:  +$1,234 (+32%)                                     │ │
+│ │                                                              │ │
+│ │ (P&L chart by token)                                         │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ RISK METRICS TAB:                                                │
+│ ┌──────────────────────────────────────────────────────────────┐ │
+│ │ Portfolio Health Score: 78/100 (Good)                        │ │
+│ │                                                              │ │
+│ │ Diversification:     6/10 (Moderate)                         │ │
+│ │ • Top 3 holdings: 72% of portfolio                          │ │
+│ │ • Recommendation: Consider spreading across 8-10 tokens      │ │
+│ │                                                              │ │
+│ │ Liquidity Risk:      8/10 (Low)                             │ │
+│ │ • All positions easily tradeable                             │ │
+│ │ • No high-risk illiquid tokens                              │ │
+│ │                                                              │ │
+│ │ Volatility:          30-day: 45% (High)                      │ │
+│ │ • Higher than market average (35%)                           │ │
+│ │ • Driven by PEPE exposure                                    │ │
+│ │                                                              │ │
+│ │ Correlation:         0.72 (High)                             │ │
+│ │ • Most holdings move together                                │ │
+│ │ • Consider adding uncorrelated assets                        │ │
+│ │                                                              │ │
+│ │ Max Drawdown:        -28% (Oct 2024)                         │ │
+│ │ Recovery Time:       14 days                                 │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+PORTFOLIO COMPONENT IMPLEMENTATION:
+
+app/(platform)/portfolio/page.tsx:
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { PortfolioOverview } from '@/components/portfolio/PortfolioOverview';
+import { PortfolioChart } from '@/components/portfolio/PortfolioChart';
+import { TokenList } from '@/components/portfolio/TokenList';
+import { TransactionHistory } from '@/components/portfolio/TransactionHistory';
+import { PnLAnalysis } from '@/components/portfolio/PnLAnalysis';
+import { RiskMetrics } from '@/components/portfolio/RiskMetrics';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import { Button } from '@/components/ui/Button';
+import { RefreshCwIcon, SettingsIcon } from 'lucide-react';
+
+export default function PortfolioPage() {
+  const [activeTab, setActiveTab] = useState('holdings');
+  const [timeRange, setTimeRange] = useState('7d');
+  
+  const { data: portfolio, isLoading, refetch } = useQuery({
+    queryKey: ['portfolio'],
+    queryFn: fetchUserPortfolio,
+    refetchInterval: 60000, // Refresh every minute
+  });
+  
+  const { data: portfolioHistory } = useQuery({
+    queryKey: ['portfolio-history', timeRange],
+    queryFn: () => fetchPortfolioHistory(timeRange),
+  });
+  
+  if (isLoading) {
+    return <PortfolioSkeleton />;
+  }
+  
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-text-primary">Portfolio</h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+          >
+            <RefreshCwIcon className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="sm">
+            <SettingsIcon className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Overview Stats */}
+      <PortfolioOverview data={portfolio} />
+      
+      {/* Portfolio Value Chart */}
+      <PortfolioChart
+        data={portfolioHistory}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+      />
+      
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="holdings">Holdings</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="pnl">P&L Analysis</TabsTrigger>
+          <TabsTrigger value="risk">Risk Metrics</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="holdings" className="mt-6">
+          <TokenList tokens={portfolio?.tokens || []} />
+        </TabsContent>
+        
+        <TabsContent value="history" className="mt-6">
+          <TransactionHistory />
+        </TabsContent>
+        
+        <TabsContent value="pnl" className="mt-6">
+          <PnLAnalysis portfolio={portfolio} />
+        </TabsContent>
+        
+        <TabsContent value="risk" className="mt-6">
+          <RiskMetrics portfolio={portfolio} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+async function fetchUserPortfolio() {
+  const response = await fetch('/api/portfolio');
+  if (!response.ok) throw new Error('Failed to fetch portfolio');
+  return response.json();
+}
+
+async function fetchPortfolioHistory(timeRange: string) {
+  const response = await fetch(`/api/portfolio/history?range=${timeRange}`);
+  if (!response.ok) throw new Error('Failed to fetch history');
+  return response.json();
+}
+
+PORTFOLIO API ROUTE:
+
+app/api/portfolio/route.ts:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromToken } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import { getTokenBalances } from '@/services/blockchain/portfolio';
+import { getTokenPrice } from '@/services/analytics/coingecko';
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Get user's wallet address
+    const { data: userData } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', user.id)
+      .single();
+    
+    if (!userData?.wallet_address) {
+      return NextResponse.json({ error: 'No wallet connected' }, { status: 400 });
+    }
+    
+    // Fetch balances from blockchain for all chains
+    const chains = ['ethereum', 'solana', 'base', 'arbitrum', 'polygon'];
+    
+    const allTokens = await Promise.all(
+      chains.map(chain => getTokenBalances(userData.wallet_address, chain))
+    );
+    
+    const tokens = allTokens.flat();
+    
+    // Calculate totals
+    const totalValue = tokens.reduce((sum, token) => sum + (token.valueUsd || 0), 0);
+    
+    // Get 24h change
+    const change24h = await calculate24hChange(tokens);
+    
+    // Get P&L data from database
+    const { data: portfolioData } = await supabase
+      .from('portfolios')
+      .select('*')
+      .eq('user_id', user.id);
+    
+    let totalInvested = 0;
+    let realizedPnl = 0;
+    let unrealizedPnl = 0;
+    
+    portfolioData?.forEach(position => {
+      totalInvested += position.total_invested || 0;
+      realizedPnl += position.realized_pnl || 0;
+      unrealizedPnl += position.unrealized_pnl || 0;
+    });
+    
+    const portfolioRoi = totalInvested > 0 
+      ? ((totalValue - totalInvested) / totalInvested) * 100 
+      : 0;
+    
+    return NextResponse.json({
+      totalValue,
+      change24h,
+      totalInvested,
+      realizedPnl,
+      unrealizedPnl,
+      portfolioRoi,
+      tokens,
+    });
+  } catch (error: any) {
+    console.error('Portfolio fetch error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+async function calculate24hChange(tokens: any[]) {
+  let totalValueNow = 0;
+  let totalValue24hAgo = 0;
+  
+  for (const token of tokens) {
+    totalValueNow += token.valueUsd || 0;
+    
+    // Get price 24h ago
+    const price24hAgo = token.price / (1 + (token.change24h / 100));
+    const value24hAgo = token.balance * price24hAgo;
+    totalValue24hAgo += value24hAgo;
+  }
+  
+  const changeUsd = totalValueNow - totalValue24hAgo;
+  const changePercent = totalValue24hAgo > 0 
+    ? (changeUsd / totalValue24hAgo) * 100 
+    : 0;
+  
+  return {
+    usd: changeUsd,
+    percent: changePercent,
+  };
+}
+
+═══════════════════════════════════════════════════════════════════
+PART 5: DNA ANALYZER - COMPLETE WALLET INTELLIGENCE
+═══════════════════════════════════════════════════════════════════
+
+DNA ANALYZER PAGE DESIGN:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ DNA ANALYZER                                  [Silver Tier Only]│
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ Analyze any wallet to understand trading behavior and patterns   │
+│                                                                   │
+│ ┌─ Input ──────────────────────────────────────────────────────┐ │
+│ │ Wallet Address or ENS                              [Analyze] │ │
+│ │ 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb │ │
+│ │                                                              │ │
+│ │ Or analyze:                                                  │ │
+│ │ [Your Wallet] [Top Trader #1] [Recent Whale] [Random]      │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│ ═══════════════════════════════════════════════════════════════ │
+│                                                                   │
+│ WALLET DNA REPORT                                                │
+│ 0x742d...0bEb • Top Trader #127 • Verified ✓                    │
+│                                                                   │
+│ ┌─ Trading Personality ─────────────────────────────────────┐   │
+│ │                                                            │   │
+│ │        🎯 STRATEGIC ACCUMULATOR                           │   │
+│ │                                                            │   │
+│ │  This wallet demonstrates disciplined buying patterns      │   │
+│ │  with strong conviction. Typically enters positions in     │   │
+│ │  stages and holds through volatility. High success rate.   │   │
+│ │                                                            │   │
+│ │  Archetype: 60% Whale, 30% Smart Money, 10% Degen         │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Performance Metrics ──────────────────────────────────────┐   │
+│ │ Win Rate              Average Hold       Profit Factor      │   │
+│ │ 78%                   10.5 days         2.8x               │   │
+│ │ ▓▓▓▓▓▓▓▓░░            ▓▓▓▓▓▓▓░░░       ▓▓▓▓▓▓▓░░░        │   │
+│ │                                                            │   │
+│ │ Total Trades          Total Volume      Avg Position       │   │
+│ │ 234                   $45M              $192k              │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Risk Profile ─────────────────────────────────────────────┐   │
+│ │ Risk Tolerance: MODERATE                                    │   │
+│ │                                                            │   │
+│ │ • Position sizes: Typically 3-5% of portfolio              │   │
+│ │ • Max position: 8% (disciplined)                           │   │
+│ │ • Stop loss usage: Yes (sets at -15%)                      │   │
+│ │ • Leverage: Never uses leverage                            │   │
+│ │ • Volatility tolerance: Medium (avoids extreme pumps)      │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Trading Patterns ─────────────────────────────────────────┐   │
+│ │ Favorite Sectors:                                          │   │
+│ │ 🎮 Gaming: 35%    💰 DeFi: 25%    🎨 NFT: 20%            │   │
+│ │                                                            │   │
+│ │ Preferred Chains:                                          │   │
+│ │ 🔷 Ethereum: 60%  🟣 Solana: 30%  🔵 Base: 10%           │   │
+│ │                                                            │   │
+│ │ Entry Timing: EARLY                                        │   │
+│ │ Usually enters positions 3-7 days before major pumps       │   │
+│ │                                                            │   │
+│ │ Exit Strategy: STAGED                                      │   │
+│ │ Takes profits in 3 stages: 30% at 2x, 40% at 3x, 30% run │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Recent Activity (30 Days) ────────────────────────────────┐   │
+│ │ Trades: 12  •  Wins: 9  •  Losses: 2  •  Breakeven: 1     │   │
+│ │ P&L: +$45,234 (+38%)                                       │   │
+│ │                                                            │   │
+│ │ Top Performers:                                            │   │
+│ │ 1. PEPE:  +$18,234 (Bought Mar 1, Sold Mar 8, +145%)     │   │
+│ │ 2. JUP:   +$12,456 (Bought Feb 28, Still Holding, +78%)   │   │
+│ │ 3. RNDR:  +$8,901 (Bought Feb 25, Sold Mar 3, +56%)      │   │
+│ │                                                            │   │
+│ │ Current Holdings: $2.3M across 8 tokens                    │   │
+│ │ Largest: ETH ($850k), SOL ($450k), PEPE ($320k)          │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Behavioral Insights ──────────────────────────────────────┐   │
+│ │                                                            │   │
+│ │ ✓ Patience: Waits for good entries, doesn't FOMO          │   │
+│ │ ✓ Discipline: Follows plan, takes profits methodically     │   │
+│ │ ✓ Research: Only trades tokens with fundamentals           │   │
+│ │ ✓ Adaptability: Adjusts strategy based on market          │   │
+│ │ ⚠ Concentration: Sometimes over-allocates to winners       │   │
+│ │                                                            │   │
+│ │ Predicted Next Move:                                       │   │
+│ │ Based on patterns, this wallet may:                        │   │
+│ │ • Take profits on JUP soon (7-day avg hold approaching)   │   │
+│ │ • Add to ETH position if price dips to $3,200             │   │
+│ │ • Rotate into AI sector (historical pattern)              │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Copy-Worthiness Score: 87/100 (EXCELLENT) ────────────────┐   │
+│ │                                                            │   │
+│ │ This wallet is highly recommended to copy because:         │   │
+│ │ ✓ Consistently profitable (78% win rate)                   │   │
+│ │ ✓ Risk-aware (good position sizing)                        │   │
+│ │ ✓ Transparent (clear patterns)                             │   │
+│ │ ✓ Active (trades regularly)                                │   │
+│ │                                                            │   │
+│ │ [Enable Copy Trading]  [Follow Wallet]  [Set Alerts]     │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│ ┌─ Similar Wallets ──────────────────────────────────────────┐   │
+│ │ Other wallets with similar DNA:                            │   │
+│ │                                                            │   │
+│ │ • 0xabc...def (82% similar) - Win rate: 76%, Hold: 12d   │   │
+│ │ • 0x123...456 (79% similar) - Win rate: 80%, Hold: 9d    │   │
+│ │ • 0x789...012 (75% similar) - Win rate: 72%, Hold: 11d   │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+DNA ANALYZER COMPONENT:
+
+app/(platform)/dna-analyzer/page.tsx:
+
+'use client';
+
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card } from '@/components/ui/Card';
+import { TradingPersonality } from '@/components/dna/TradingPersonality';
+import { PerformanceMetrics } from '@/components/dna/PerformanceMetrics';
+import { RiskProfile } from '@/components/dna/RiskProfile';
+import { TradingPatterns } from '@/components/dna/TradingPatterns';
+import { RecentActivity } from '@/components/dna/RecentActivity';
+import { BehavioralInsights } from '@/components/dna/BehavioralInsights';
+import { CopyWorthinessScore } from '@/components/dna/CopyWorthinessScore';
+import { SimilarWallets } from '@/components/dna/SimilarWallets';
+import { useUserStore } from '@/store/userStore';
+
+export default function DNAAnalyzerPage() {
+  const [walletAddress, setWalletAddress] = useState('');
+  const { tier } = useUserStore();
+  
+  const analyzeMutation = useMutation({
+    mutationFn: analyzeWallet,
+    onSuccess: (data) => {
+      // Handle success
+    },
+  });
+  
+  const handleAnalyze = () => {
+    if (!walletAddress) return;
+    analyzeMutation.mutate(walletAddress);
+  };
+  
+  // Check tier access
+  if (tier < 2) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <div className="text-6xl mb-4">🧬</div>
+        <h1 className="text-3xl font-bold mb-2">DNA Analyzer</h1>
+        <p className="text-text-secondary mb-6">
+          Deep wallet intelligence and behavioral analysis
+        </p>
+        <Card className="p-8 bg-background-elevated border-accent-primary/20">
+          <h2 className="text-xl font-semibold mb-4">Silver Tier Required</h2>
+          <p className="text-text-secondary mb-6">
+            DNA Analyzer is available for Silver tier (1M NAKA) and above.
+            <br />
+            Upgrade to unlock advanced wallet intelligence.
+          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-text-tertiary">You need:</p>
+            <p className="text-2xl font-bold text-accent-primary">
+              {(1000000 - (tier === 1 ? 500000 : 0)).toLocaleString()} more NAKA
+            </p>
+          </div>
+          <Button className="mt-6" size="lg">
+            Buy NAKA
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold mb-2">DNA Analyzer</h1>
+        <p className="text-text-secondary">
+          Analyze any wallet to understand trading behavior, patterns, and profitability
+        </p>
+      </div>
+      
+      {/* Input */}
+      <Card className="p-6">
+        <div className="flex gap-3">
+          <Input
+            placeholder="Enter wallet address or ENS name"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            className="flex-1"
+          />
+          <Button
+            onClick={handleAnalyze}
+            disabled={!walletAddress || analyzeMutation.isPending}
+            size="lg"
+          >
+            {analyzeMutation.isPending ? 'Analyzing...' : 'Analyze'}
+          </Button>
+        </div>
+        
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWalletAddress(userWallet)}
+          >
+            Your Wallet
+          </Button>
+          <Button variant="outline" size="sm">
+            Top Trader #1
+          </Button>
+          <Button variant="outline" size="sm">
+            Recent Whale
+          </Button>
+          <Button variant="outline" size="sm">
+            Random
+          </Button>
+        </div>
+      </Card>
+      
+      {/* Results */}
+      {analyzeMutation.data && (
+        <div className="space-y-6">
+          <TradingPersonality data={analyzeMutation.data.personality} />
+          <PerformanceMetrics data={analyzeMutation.data.metrics} />
+          <RiskProfile data={analyzeMutation.data.risk} />
+          <TradingPatterns data={analyzeMutation.data.patterns} />
+          <RecentActivity data={analyzeMutation.data.activity} />
+          <BehavioralInsights data={analyzeMutation.data.insights} />
+          <CopyWorthinessScore data={analyzeMutation.data.copyScore} />
+          <SimilarWallets wallets={analyzeMutation.data.similarWallets} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function analyzeWallet(address: string) {
+  const response = await fetch('/api/dna-analyzer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  });
+  
+  if (!response.ok) throw new Error('Analysis failed');
+  return response.json();
+}
+
+DNA ANALYZER API:
+
+app/api/dna-analyzer/route.ts:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromToken } from '@/lib/auth';
+import { analyzeWalletBehavior } from '@/services/analytics/walletAnalyzer';
+import { generateDNAInsights } from '@/services/ai/dnaAnalyzer';
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getUserFromToken(request);
+    if (!user || user.tier < 2) {
+      return NextResponse.json(
+        { error: 'Silver tier required' },
+        { status: 403 }
+      );
+    }
+    
+    const { address } = await request.json();
+    
+    if (!address) {
+      return NextResponse.json(
+        { error: 'Wallet address required' },
+        { status: 400 }
+      );
+    }
+    
+    // Fetch wallet transaction history
+    const transactions = await fetchWalletTransactions(address);
+    
+    // Analyze trading behavior
+    const analysis = await analyzeWalletBehavior(transactions);
+    
+    // Generate AI insights using Claude
+    const insights = await generateDNAInsights(analysis);
+    
+    // Calculate copy-worthiness score
+    const copyScore = calculateCopyScore(analysis);
+    
+    // Find similar wallets
+    const similarWallets = await findSimilarWallets(analysis.fingerprint);
+    
+    return NextResponse.json({
+      personality: insights.personality,
+      metrics: analysis.metrics,
+      risk: analysis.riskProfile,
+      patterns: analysis.patterns,
+      activity: analysis.recentActivity,
+      insights: insights.behavioral,
+      copyScore,
+      similarWallets,
+    });
+  } catch (error: any) {
+    console.error('DNA Analyzer error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+async function fetchWalletTransactions(address: string) {
+  // Fetch from Alchemy, Helius, and Dune
+  // Combine and deduplicate
+  // Return comprehensive transaction history
+}
+
+function calculateCopyScore(analysis: any): number {
+  let score = 0;
+  
+  // Win rate (max 30 points)
+  if (analysis.metrics.winRate >= 75) score += 30;
+  else if (analysis.metrics.winRate >= 60) score += 20;
+  else if (analysis.metrics.winRate >= 50) score += 10;
+  
+  // Profit factor (max 25 points)
+  if (analysis.metrics.profitFactor >= 2.5) score += 25;
+  else if (analysis.metrics.profitFactor >= 2.0) score += 20;
+  else if (analysis.metrics.profitFactor >= 1.5) score += 15;
+  
+  // Risk management (max 20 points)
+  if (analysis.riskProfile.usesStopLoss) score += 10;
+  if (analysis.riskProfile.positionSizing === 'good') score += 10;
+  
+  // Activity (max 15 points)
+  if (analysis.metrics.totalTrades >= 100) score += 15;
+  else if (analysis.metrics.totalTrades >= 50) score += 10;
+  else if (analysis.metrics.totalTrades >= 20) score += 5;
+  
+  // Consistency (max 10 points)
+  if (analysis.patterns.consistency === 'high') score += 10;
+  else if (analysis.patterns.consistency === 'medium') score += 5;
+  
+  return Math.min(100, score);
+}
+
+═══════════════════════════════════════════════════════════════════
+PART 6: VTX AI - INTELLIGENT CONVERSATIONAL ASSISTANT
+═══════════════════════════════════════════════════════════════════
+
+VTX AI WIDGET (ALWAYS ACCESSIBLE):
+
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                   │
+│                                                                   │
+│                                               ┌─ VTX AI ───────┐ │
+│                                               │ 💬             │ │
+│                                               └────────────────┘ │
+│ (Floating button bottom-right, always visible)                   │
+└─────────────────────────────────────────────────────────────────┘
+
+WHEN CLICKED, OPENS CHAT INTERFACE:
+
+┌─ VTX AI Assistant ────────────────────────────────────────────┐
+│ 🤖 VTX                                               [×]      │
+├──────────────────────────────────────────────────────────────┤
+│                                                                │
+│ 💭 VTX: Hey! I'm VTX, your crypto intelligence assistant.     │
+│         How can I help you today?                             │
+│                                                                │
+│ 💬 You: Show me whale movements in the last hour              │
+│                                                                │
+│ 💭 VTX: I found 3 significant whale movements:                │
+│                                                                │
+│         🐋 $2.5M PEPE purchase on Ethereum                    │
+│         Trust: 87/100 • 2 min ago                             │
+│         [View Details]                                        │
+│                                                                │
+│         🐋 $1.8M SOL purchase on Solana                       │
+│         Trust: 92/100 • 15 min ago                            │
+│         [View Details]                                        │
+│                                                                │
+│         🐋 $1.2M ETH transfer to exchange                     │
+│         Trust: 78/100 • 45 min ago (Bearish signal)           │
+│         [View Details]                                        │
+│                                                                │
+│         Want me to set up alerts for similar movements?       │
+│                                                                │
+│ ┌────────────────────────────────────────────────────────────┐│
+│ │ Type your message...                              [Send]  ││
+│ └────────────────────────────────────────────────────────────┘│
+│                                                                │
+│ Quick Actions:                                                 │
+│ [🐋 Latest Whales] [📊 My Portfolio] [⚡ Create Alert]       │
+└──────────────────────────────────────────────────────────────┘
+
+VTX CAPABILITIES:
+
+1. CONVERSATIONAL QUERIES:
+   - "Show me whale movements in last hour"
+   - "What should I do with my ETH?"
+   - "Find me AI tokens being accumulated"
+   - "Analyze wallet 0x123..."
+   - "Compare my portfolio vs top traders"
+   - "Why is PEPE pumping?"
+
+2. PORTFOLIO INTEGRATION:
+   - Knows your current holdings
+   - Suggests based on your risk profile
+   - Alerts you to changes
+   - Helps with rebalancing
+
+3. ALERT CREATION:
+   - "Alert me when whales buy >$100k of AI tokens"
+   - Natural language → Creates actual alert
+
+4. TRADE EXECUTION:
+   - "Buy $500 of PEPE" → Opens trade modal with preset
+
+5. LEARNING & MEMORY:
+   - Remembers your preferences
+   - Learns your trading style
+   - Personalizes suggestions
+
+VTX COMPONENT:
+
+components/vtx/VTXWidget.tsx:
+
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { MessageCircleIcon, XIcon, SendIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  actions?: Action[];
+}
+
+interface Action {
+  type: 'view_signal' | 'trade' | 'create_alert' | 'analyze_wallet';
+  label: string;
+  data: any;
+}
+
+export function VTXWidget() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const chatMutation = useMutation({
+    mutationFn: sendMessageToVTX,
+    onSuccess: (response) => {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.content,
+        timestamp: new Date(),
+        actions: response.actions,
+      }]);
+    },
+  });
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+  
+  const handleSend = () => {
+    if (!input.trim()) return;
+    
+    const userMessage: Message = {
+      role: 'user',
+      content: input,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    chatMutation.mutate({ message: input, context: messages });
+    setInput('');
+  };
+  
+  const handleQuickAction = (action: string) => {
+    setInput(action);
+    handleSend();
+  };
+  
+  return (
+    <>
+      {/* Floating Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-accent-primary hover:bg-accent-hover text-background-DEFAULT rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+        >
+          <MessageCircleIcon className="w-6 h-6" />
+        </button>
+      )}
+      
+      {/* Chat Interface */}
+      {isOpen && (
+        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-background-surface border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-accent-primary rounded-full flex items-center justify-center">
+                🤖
+              </div>
+              <div>
+                <h3 className="font-semibold text-text-primary">VTX AI</h3>
+                <p className="text-xs text-text-tertiary">Your intelligence assistant</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-text-secondary hover:text-text-primary"
+            >
+              <XIcon className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-text-secondary py-8">
+                <div className="text-4xl mb-2">👋</div>
+                <p className="font-medium mb-1">Hey! I'm VTX</p>
+                <p className="text-sm">How can I help you today?</p>
+              </div>
+            )}
+            
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  'flex gap-2',
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                )}
+              >
+                <div
+                  className={cn(
+                    'max-w-[80%] rounded-lg p-3',
+                    msg.role === 'user'
+                      ? 'bg-accent-primary text-background-DEFAULT'
+                      : 'bg-background-elevated text-text-primary'
+                  )}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  {msg.actions && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {msg.actions.map((action, i) => (
+                        <Button
+                          key={i}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAction(action)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {chatMutation.isPending && (
+              <div className="flex gap-2">
+                <div className="bg-background-elevated rounded-lg p-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="px-4 py-2 border-t border-border">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickAction('Show latest whale movements')}
+              >
+                🐋 Latest Whales
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickAction('Show my portfolio summary')}
+              >
+                📊 My Portfolio
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickAction('Help me create an alert')}
+              >
+                ⚡ Create Alert
+              </Button>
+            </div>
+          </div>
+          
+          {/* Input */}
+          <div className="p-4 border-t border-border">
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Ask me anything..."
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || chatMutation.isPending}
+              >
+                <SendIcon className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+async function sendMessageToVTX({ message, context }: any) {
+  const response = await fetch('/api/vtx', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, context }),
+  });
+  
+  if (!response.ok) throw new Error('VTX request failed');
+  return response.json();
+}
+
+VTX API ROUTE:
+
+app/api/vtx/route.ts:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromToken } from '@/lib/auth';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { message, context } = await request.json();
+    
+    // Build system prompt with user context
+    const systemPrompt = `
+You are VTX AI, the intelligent assistant for Naka Labs crypto intelligence platform.
+
+User context:
+- Username: ${user.username}
+- Tier: ${user.tier} (${getTierName(user.tier)})
+- NAKA Balance: ${user.nakaBalance}
+
+You have access to the following tools and data:
+- Real-time whale movements and signals
+- User's portfolio data
+- Token scanner and risk analysis
+- Alert creation
+- Trading execution
+- Wallet DNA analysis
+
+Respond conversationally and helpfully. When the user asks for data:
+1. Fetch it using the available functions
+2. Present it clearly
+3. Offer actionable suggestions
+
+Keep responses concise but complete. Use emojis sparingly.
+If you can't do something, explain why and suggest alternatives.
+`;
+    
+    // Convert context to Anthropic format
+    const messages = context.map((msg: any) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+    
+    messages.push({
+      role: 'user',
+      content: message,
+    });
+    
+    // Call Claude with tools
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages,
+      tools: [
+        {
+          name: 'get_latest_signals',
+          description: 'Get latest whale movements and signals from context feed',
+          input_schema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number' },
+              chain: { type: 'string' },
+              min_amount: { type: 'number' },
+            },
+          },
+        },
+        {
+          name: 'get_user_portfolio',
+          description: 'Get the user\'s current portfolio holdings and stats',
+          input_schema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'analyze_wallet',
+          description: 'Analyze a wallet address using DNA Analyzer',
+          input_schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+            },
+            required: ['address'],
+          },
+        },
+        {
+          name: 'scan_token',
+          description: 'Scan a token for security risks',
+          input_schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              chain: { type: 'string' },
+            },
+            required: ['address', 'chain'],
+          },
+        },
+        {
+          name: 'create_alert',
+          description: 'Create a custom alert for the user',
+          input_schema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              conditions: { type: 'object' },
+            },
+            required: ['name', 'conditions'],
+          },
+        },
+      ],
+    });
+    
+    // Process tool calls if any
+    if (response.stop_reason === 'tool_use') {
+      const toolResults = await Promise.all(
+        response.content
+          .filter((block: any) => block.type === 'tool_use')
+          .map((tool: any) => executeTool(tool.name, tool.input, user))
+      );
+      
+      // Continue conversation with tool results
+      // (Implementation details for multi-turn tool use)
+    }
+    
+    // Extract text response
+    const textContent = response.content
+      .filter((block: any) => block.type === 'text')
+      .map((block: any) => block.text)
+      .join('\n');
+    
+    // Extract any actions (buttons) to show
+    const actions = extractActions(textContent);
+    
+    return NextResponse.json({
+      content: textContent,
+      actions,
+    });
+  } catch (error: any) {
+    console.error('VTX error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+async function executeTool(name: string, input: any, user: any) {
+  switch (name) {
+    case 'get_latest_signals':
+      return await fetchLatestSignals(input);
+    case 'get_user_portfolio':
+      return await fetchUserPortfolio(user.id);
+    case 'analyze_wallet':
+      return await analyzeWallet(input.address);
+    case 'scan_token':
+      return await scanToken(input.address, input.chain);
+    case 'create_alert':
+      return await createAlert(user.id, input.name, input.conditions);
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+}
+
+function getTierName(tier: number): string {
+  const names = ['Free', 'Bronze', 'Silver', 'Gold'];
+  return names[tier] || 'Unknown';
+}
+
+═══════════════════════════════════════════════════════════════════
+
+SHOULD I CONTINUE WITH:
+- Trading Modal Implementation
+- Token Scanner
+- Alerts & Watchlists
+- Social Features (Follow, DMs, Profiles)
+- Admin Dashboard
+- Navigation System (Hamburger Menu)
+- Landing Page
+- Complete API Routes
+
+Let me know and I'll keep building!​​​​​​​​​​​​​​​​
