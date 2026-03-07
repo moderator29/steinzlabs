@@ -7,7 +7,7 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: false,
   images: {
-    domains: ['hzzhgaxjlycqlopbvqxc.supabase.co'],
+    domains: ['hzzhgaxjlycqlopbvqxc.supabase.co', 'privy.com', 'images.privy.com'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
@@ -17,7 +17,13 @@ const nextConfig = {
   },
   headers: async () => [
     {
-      source: '/api/:path*',
+      source: '/api/auth/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+      ],
+    },
+    {
+      source: '/api/:path((?!auth).*)',
       headers: [
         { key: 'Cache-Control', value: 'public, s-maxage=10, stale-while-revalidate=30' },
       ],

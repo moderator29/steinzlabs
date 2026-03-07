@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { usePrivy } from '@privy-io/react-auth';
+import { useCallback } from 'react';
 
 interface User {
   id: string;
@@ -16,43 +16,32 @@ interface User {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user: privyUser, authenticated, ready, logout } = usePrivy();
 
-  useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: User } | null } }) => {
-      if (session?.user) {
-        setUser(session.user as User);
+  const user: User | null = authenticated && privyUser
+    ? {
+        id: privyUser.id,
+        email: privyUser.email?.address,
+        wallet_address: privyUser.wallet?.address,
+        created_at: privyUser.createdAt?.toString(),
+        user_metadata: {
+          full_name: privyUser.email?.address?.split('@')[0],
+        },
       }
-      setLoading(false);
-    });
+    : null;
 
-    const walletAddress = localStorage.getItem('wallet_address');
-    if (walletAddress) {
-      setUser(prev => prev || { id: walletAddress, wallet_address: walletAddress });
-      setLoading(false);
-    }
+  const signOut = useCallback(async () => {
+    try {
+      await logout();
+      localStorage.removeItem('wallet_address');
+      localStorage.removeItem('wallet_signature');
+      await fetch('/api/auth/privy-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' }),
+      }).catch(() => {});
+    } catch {}
+  }, [logout]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
-      setUser(session?.user as User || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    localStorage.removeItem('wallet_address');
-    localStorage.removeItem('wallet_signature');
-    setUser(null);
-  };
-
-  return { user, loading, signOut };
+  return { user, loading: !ready, signOut };
 }

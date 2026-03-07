@@ -1,93 +1,146 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Mail, Chrome, Wallet } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useWallet } from '@/lib/hooks/useWallet';
+import { useState, useEffect } from 'react';
+import { X, Shield, Wallet, ArrowRight, Check } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const { connectAuto, connecting: walletConnecting } = useWallet();
+type WelcomeStep = 'welcome' | 'wallet' | 'ready';
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
+export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
+  const { login, authenticated, user, ready } = usePrivy();
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeStep, setWelcomeStep] = useState<WelcomeStep>('welcome');
+  const [sessionCreated, setSessionCreated] = useState(false);
+
+  useEffect(() => {
+    if (authenticated && user && !sessionCreated) {
+      createServerSession();
+    }
+  }, [authenticated, user, sessionCreated]);
+
+  const createServerSession = async () => {
+    if (!user) return;
 
     try {
-      if (!supabase) throw new Error('Authentication service unavailable');
+      const privyToken = localStorage.getItem('privy:token') || '';
+      const res = await fetch('/api/auth/privy-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyToken }),
+      });
 
-      if (mode === 'signup') {
-        const signupRes = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const signupData = await signupRes.json();
-        if (!signupRes.ok) throw new Error(signupData.error);
+      if (!res.ok) {
+        console.error('Session creation failed');
+        return;
+      }
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-        onSuccess();
+      setSessionCreated(true);
+
+      const isNewUser = user.createdAt && (Date.now() - new Date(user.createdAt).getTime()) < 60000;
+      if (isNewUser) {
+        setShowWelcome(true);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
         onSuccess();
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Auth callback error:', err);
     }
   };
 
-  const handleGoogleAuth = async () => {
-    setLoading(true);
-    try {
-      if (!supabase) throw new Error('Authentication service unavailable');
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
+  const handleLogin = () => {
+    login();
   };
 
-  const handleWalletConnect = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      await connectAuto();
+  const handleWelcomeNext = () => {
+    if (welcomeStep === 'welcome') {
+      setWelcomeStep('wallet');
+    } else if (welcomeStep === 'wallet') {
+      setWelcomeStep('ready');
+    } else {
       onSuccess();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
+
+  if (showWelcome) {
+    return (
+      <div
+        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-[#0A0E1A] border border-white/10 rounded-2xl max-w-md w-full p-8"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {welcomeStep === 'welcome' && (
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/20 rounded-full flex items-center justify-center">
+                <Check className="w-8 h-8 text-[#0A1EFF]" />
+              </div>
+              <h2 className="text-2xl font-bold">Welcome to Steinz Labs!</h2>
+              <p className="text-gray-400">
+                Your account has been created. Let&apos;s get you set up with everything you need to start trading.
+              </p>
+              <button
+                onClick={handleWelcomeNext}
+                className="w-full bg-[#0A1EFF] px-6 py-3 rounded-lg font-semibold hover:bg-[#0A1EFF]/80 transition-colors flex items-center justify-center gap-2"
+              >
+                Continue <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {welcomeStep === 'wallet' && (
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/20 rounded-full flex items-center justify-center">
+                <Wallet className="w-8 h-8 text-[#0A1EFF]" />
+              </div>
+              <h2 className="text-2xl font-bold">Your Embedded Wallet</h2>
+              <p className="text-gray-400">
+                We&apos;ve created a secure embedded wallet for you. Back it up to ensure you never lose access.
+              </p>
+              {user?.wallet?.address && (
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-1">Wallet Address</p>
+                  <p className="text-sm font-mono text-white/80 break-all">
+                    {user.wallet.address}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={handleWelcomeNext}
+                className="w-full bg-[#0A1EFF] px-6 py-3 rounded-lg font-semibold hover:bg-[#0A1EFF]/80 transition-colors flex items-center justify-center gap-2"
+              >
+                Continue <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {welcomeStep === 'ready' && (
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
+                <Shield className="w-8 h-8 text-green-400" />
+              </div>
+              <h2 className="text-2xl font-bold">You&apos;re All Set!</h2>
+              <p className="text-gray-400">
+                Your account is ready. Start exploring on-chain intelligence, trading tools, and more.
+              </p>
+              <button
+                onClick={handleWelcomeNext}
+                className="w-full bg-[#0A1EFF] px-6 py-3 rounded-lg font-semibold hover:bg-[#0A1EFF]/80 transition-colors flex items-center justify-center gap-2"
+              >
+                Start Trading <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -99,91 +152,36 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">
-            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-          </h2>
+          <h2 className="text-2xl font-bold">Sign In to Steinz Labs</h2>
           <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
-            {error}
-          </div>
-        )}
+        <p className="text-gray-400 mb-6">
+          Access on-chain intelligence, trading tools, and portfolio analytics.
+        </p>
 
-        {success && (
-          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleEmailAuth} className="space-y-4 mb-4">
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
-            required
-          />
+        <div className="space-y-4">
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            onClick={handleLogin}
+            disabled={!ready}
+            className="w-full bg-[#0A1EFF] px-6 py-4 rounded-lg font-semibold hover:bg-[#0A1EFF]/80 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            <Mail className="w-5 h-5" />
-            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
+            <Shield className="w-5 h-5" />
+            {!ready ? 'Loading...' : 'Sign In / Sign Up'}
           </button>
-        </form>
 
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-sm text-gray-400">OR</span>
-          <div className="flex-1 h-px bg-white/10" />
+          <p className="text-center text-xs text-gray-500">
+            Sign in with email, Google, Twitter, or connect your wallet
+          </p>
         </div>
 
-        <div className="space-y-3 mb-6">
-          <button
-            onClick={handleGoogleAuth}
-            disabled={loading}
-            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
-          >
-            <Chrome className="w-5 h-5" />
-            Continue with Google
-          </button>
-
-          <button
-            onClick={handleWalletConnect}
-            disabled={loading}
-            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
-          >
-            <Wallet className="w-5 h-5" />
-            Connect Wallet
-          </button>
-        </div>
-
-        <div className="text-center text-sm">
-          <span className="text-gray-400">
-            {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-          </span>
-          <button
-            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setSuccess(''); }}
-            className="text-[#00E5FF] font-semibold hover:underline"
-          >
-            {mode === 'signin' ? 'Sign Up' : 'Sign In'}
-          </button>
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <Shield className="w-4 h-4 text-[#0A1EFF]" />
+            <span>Secured by Privy. Your keys, your crypto.</span>
+          </div>
         </div>
       </div>
     </div>

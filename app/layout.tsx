@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PrivyProvider from "@/components/providers/PrivyProvider";
 
 export const metadata: Metadata = {
   title: "STEINZ LABS - On-Chain Intelligence Redefined",
@@ -19,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
+        <PrivyProvider>{children}</PrivyProvider>
+      </body>
     </html>
   );
 }

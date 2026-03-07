@@ -249,6 +249,38 @@ async function handleSolanaToken(contractAddress: string) {
   return response;
 }
 
+const EVM_RPC_URLS: Record<string, string> = {
+  '1': 'https://eth.llamarpc.com',
+  '56': 'https://bsc-dataseed.binance.org',
+  '137': 'https://polygon-rpc.com',
+  '8453': 'https://mainnet.base.org',
+  '43114': 'https://api.avax.network/ext/bc/C/rpc',
+  '42161': 'https://arb1.arbitrum.io/rpc',
+};
+
+async function isEOAWallet(address: string, chainId: string): Promise<boolean> {
+  const rpcUrl = EVM_RPC_URLS[chainId];
+  if (!rpcUrl) return false;
+  try {
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getCode',
+        params: [address, 'latest'],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json();
+    const code = data.result;
+    return !code || code === '0x' || code === '0x0';
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { contract, chain = 'ethereum' } = await request.json();
@@ -268,9 +300,35 @@ export async function POST(request: Request) {
     }
 
     const contractAddress = contract.toLowerCase().trim();
+
+    if (/^0x[a-fA-F0-9]{40}$/i.test(contractAddress)) {
+      const isWallet = await isEOAWallet(contractAddress, chainId);
+      if (isWallet) {
+        return NextResponse.json({
+          error: 'This is a Wallet Address, Not a Contract',
+          isWalletAddress: true,
+          message: 'The address you entered belongs to an externally owned account (wallet), not a smart contract. Token Scanner only analyzes contract addresses.',
+          suggestion: 'Use the DNA Analyzer to analyze wallet addresses.',
+          redirectUrl: '/dashboard/dna-analyzer',
+        }, { status: 400 });
+      }
+    }
+
     const data = await fetchGoPlusSecurity(chainId, contractAddress);
 
     if (!data.result || !data.result[contractAddress]) {
+      if (/^0x[a-fA-F0-9]{40}$/i.test(contractAddress)) {
+        const isWallet = await isEOAWallet(contractAddress, chainId);
+        if (isWallet) {
+          return NextResponse.json({
+            error: 'This is a Wallet Address, Not a Contract',
+            isWalletAddress: true,
+            message: 'The address you entered belongs to an externally owned account (wallet), not a smart contract. Token Scanner only analyzes contract addresses.',
+            suggestion: 'Use the DNA Analyzer to analyze wallet addresses.',
+            redirectUrl: '/dashboard/dna-analyzer',
+          }, { status: 400 });
+        }
+      }
       return NextResponse.json({ error: 'Token not found. Verify the contract address and chain.' }, { status: 404 });
     }
 
