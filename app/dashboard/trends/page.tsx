@@ -20,13 +20,13 @@ export default function TrendsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <TrendingUp className="w-5 h-5 text-[#00D4AA]" />
+          <TrendingUp className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-sm font-heading font-bold">On-Chain Trends</h1>
         </div>
       </div>
@@ -34,7 +34,7 @@ export default function TrendsPage() {
       <div className="p-4 space-y-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Ethereum', 'Solana', 'BSC', 'L2s'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {f}
             </button>
           ))}
@@ -45,7 +45,7 @@ export default function TrendsPage() {
             <div key={i} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-[#00D4AA]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#00D4AA]">{trend.token}</div>
+                  <div className="w-8 h-8 bg-[#00E5FF]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#00E5FF]">{trend.token}</div>
                   <div>
                     <div className="text-xs font-bold flex items-center gap-1">
                       {trend.metric}

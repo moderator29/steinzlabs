@@ -44,11 +44,11 @@ interface Stats {
 }
 
 const STEPS = [
-  { title: 'Builder Applies', desc: 'Goes through NAKA verification. Only verified, credible builders get through.' },
+  { title: 'Builder Applies', desc: 'Goes through STEINZ verification. Only verified, credible builders get through.' },
   { title: 'Builder Pitches', desc: 'Submits full project details visible to the community and investor network.' },
   { title: 'Funding Portal Opens', desc: 'Dedicated portal opens with transparent terms visible to all participants.' },
   { title: 'Funds Are Held', desc: 'Funds held in audited smart contracts — not released to builder immediately.' },
-  { title: 'Milestone Release', desc: 'Builder hits milestones, submits proof. NAKA releases corresponding tranches.' },
+  { title: 'Milestone Release', desc: 'Builder hits milestones, submits proof. STEINZ releases corresponding tranches.' },
 ];
 
 export default function BuilderFundingPage() {
@@ -154,14 +154,14 @@ export default function BuilderFundingPage() {
 
   const milestoneIcon = (status: string) => {
     if (status === 'completed') return <CheckCircle className="w-4 h-4 text-[#10B981]" />;
-    if (status === 'in_progress') return <Loader className="w-4 h-4 text-[#00D4AA] animate-spin" />;
+    if (status === 'in_progress') return <Loader className="w-4 h-4 text-[#00E5FF] animate-spin" />;
     if (status === 'pending_review') return <Clock className="w-4 h-4 text-[#F59E0B]" />;
     return <Lock className="w-4 h-4 text-gray-600" />;
   };
 
   const milestoneColor = (status: string) => {
     if (status === 'completed') return 'text-[#10B981]';
-    if (status === 'in_progress') return 'text-[#00D4AA]';
+    if (status === 'in_progress') return 'text-[#00E5FF]';
     if (status === 'pending_review') return 'text-[#F59E0B]';
     return 'text-gray-500';
   };
@@ -174,14 +174,14 @@ export default function BuilderFundingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="px-4 pt-6">
         <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-4 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
 
         <div className="flex items-center gap-3 mb-1">
-          <Rocket className="w-5 h-5 text-[#00D4AA]" />
+          <Rocket className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-xl font-heading font-bold">Builder Funding Portal</h1>
         </div>
         <p className="text-gray-400 text-xs mb-4">Milestone-gated funding. Verified builders only. Investor-protected.</p>
@@ -192,11 +192,11 @@ export default function BuilderFundingPage() {
             <div className="text-[9px] text-gray-500">Raised</div>
           </div>
           <div className="glass rounded-xl p-2.5 border border-white/10 text-center">
-            <div className="text-sm font-bold text-[#00D4AA]">{stats.totalProjects}</div>
+            <div className="text-sm font-bold text-[#00E5FF]">{stats.totalProjects}</div>
             <div className="text-[9px] text-gray-500">Projects</div>
           </div>
           <div className="glass rounded-xl p-2.5 border border-white/10 text-center">
-            <div className="text-sm font-bold text-[#6366F1]">{stats.activeProjects}</div>
+            <div className="text-sm font-bold text-[#7C3AED]">{stats.activeProjects}</div>
             <div className="text-[9px] text-gray-500">Active</div>
           </div>
           <div className="glass rounded-xl p-2.5 border border-white/10 text-center">
@@ -212,10 +212,10 @@ export default function BuilderFundingPage() {
         )}
 
         <div className="flex gap-1 mb-4 bg-[#111827] p-1 rounded-lg">
-          <button onClick={() => setActiveTab('browse')} className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === 'browse' ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setActiveTab('browse')} className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === 'browse' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Browse Projects
           </button>
-          <button onClick={() => setActiveTab('submit')} className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === 'submit' ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setActiveTab('submit')} className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === 'submit' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Submit Project
           </button>
         </div>
@@ -223,10 +223,10 @@ export default function BuilderFundingPage() {
         {activeTab === 'browse' && (
           <>
             {showInfo && (
-              <div className="glass rounded-xl p-4 border border-[#00D4AA]/20 mb-4 bg-gradient-to-r from-[#00D4AA]/5 to-transparent">
+              <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 mb-4 bg-gradient-to-r from-[#00E5FF]/5 to-transparent">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-[#00D4AA]" />
+                    <Info className="w-4 h-4 text-[#00E5FF]" />
                     <span className="text-xs font-bold">How Milestone-Gated Funding Works</span>
                   </div>
                   <button onClick={() => setShowInfo(false)} className="text-gray-500 text-[10px]">Dismiss</button>
@@ -234,7 +234,7 @@ export default function BuilderFundingPage() {
                 <div className="space-y-3">
                   {STEPS.map((step, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
                       <div>
                         <div className="text-[11px] font-semibold text-white">{step.title}</div>
                         <div className="text-[10px] text-gray-400">{step.desc}</div>
@@ -247,7 +247,7 @@ export default function BuilderFundingPage() {
 
             <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
               {['All', 'Active', 'Funded', 'DeFi', 'Security', 'Infrastructure', 'Governance'].map((f) => (
-                <button key={f} onClick={() => setActiveFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${activeFilter === f ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'bg-[#111827] text-gray-400'}`}>
+                <button key={f} onClick={() => setActiveFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${activeFilter === f ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
                   {f}
                 </button>
               ))}
@@ -255,7 +255,7 @@ export default function BuilderFundingPage() {
 
             {loading ? (
               <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 text-[#00D4AA] mx-auto mb-3 animate-spin" />
+                <Loader2 className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin" />
                 <p className="text-sm text-gray-400">Loading projects...</p>
               </div>
             ) : (
@@ -267,7 +267,7 @@ export default function BuilderFundingPage() {
 
                   return (
                     <div key={project.id} className="glass rounded-xl border border-white/10 overflow-hidden">
-                      <div className="h-24 bg-gradient-to-br from-[#00D4AA]/10 via-[#6366F1]/10 to-[#0B0D14] flex items-center justify-between px-4">
+                      <div className="h-24 bg-gradient-to-br from-[#00E5FF]/10 via-[#7C3AED]/10 to-[#0A0E1A] flex items-center justify-between px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center">
                             <span className="text-lg font-heading font-bold text-white/30">{project.name.charAt(0)}</span>
@@ -280,7 +280,7 @@ export default function BuilderFundingPage() {
                             <div className="text-[10px] text-gray-400">{project.category} · {project.chain}</div>
                           </div>
                         </div>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${project.status === 'active' ? 'bg-[#10B981]/20 text-[#10B981]' : project.status === 'funded' ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : 'bg-[#F59E0B]/20 text-[#F59E0B]'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${project.status === 'active' ? 'bg-[#10B981]/20 text-[#10B981]' : project.status === 'funded' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-[#F59E0B]/20 text-[#F59E0B]'}`}>
                           {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
                         </span>
                       </div>
@@ -302,10 +302,10 @@ export default function BuilderFundingPage() {
                         <div className="mb-3">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-gray-400">${project.raised.toLocaleString()} of ${project.goal.toLocaleString()}</span>
-                            <span className="font-semibold text-[#00D4AA]">{pct}%</span>
+                            <span className="font-semibold text-[#00E5FF]">{pct}%</span>
                           </div>
                           <div className="w-full bg-[#111827] rounded-full h-2.5">
-                            <div className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] h-2.5 rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }}></div>
+                            <div className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] h-2.5 rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }}></div>
                           </div>
                           <div className="flex justify-between text-[10px] text-gray-500 mt-1">
                             <span>{project.investors} investors</span>
@@ -339,7 +339,7 @@ export default function BuilderFundingPage() {
                           <span className="px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] rounded text-[9px] font-semibold flex items-center gap-1">
                             <Shield className="w-2.5 h-2.5" /> Escrow Protected
                           </span>
-                          <span className="px-2 py-0.5 bg-[#00D4AA]/10 text-[#00D4AA] rounded text-[9px] font-semibold flex items-center gap-1">
+                          <span className="px-2 py-0.5 bg-[#00E5FF]/10 text-[#00E5FF] rounded text-[9px] font-semibold flex items-center gap-1">
                             <CheckCircle className="w-2.5 h-2.5" /> Milestone-Gated
                           </span>
                           {project.tags.map(tag => (
@@ -354,7 +354,7 @@ export default function BuilderFundingPage() {
                             </a>
                           )}
                           {project.status === 'active' && (
-                            <button onClick={() => setFundingModal(project)} className="flex-1 py-2 rounded-lg bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-xs font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-1">
+                            <button onClick={() => setFundingModal(project)} className="flex-1 py-2 rounded-lg bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-xs font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-1">
                               <DollarSign className="w-3 h-3" /> Fund This Project
                             </button>
                           )}
@@ -370,30 +370,30 @@ export default function BuilderFundingPage() {
 
         {activeTab === 'submit' && (
           <div className="space-y-3">
-            <div className="glass rounded-xl p-4 border border-[#00D4AA]/20 bg-gradient-to-r from-[#00D4AA]/5 to-transparent mb-2">
+            <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 bg-gradient-to-r from-[#00E5FF]/5 to-transparent mb-2">
               <p className="text-[11px] text-gray-300 leading-relaxed">Projects undergo review before listing. Only verified builders with credible track records are approved. Funds are held in escrow and released upon milestone completion.</p>
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <label className="text-[10px] text-gray-500 mb-1 block">Project Name *</label>
-              <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00D4AA]/50" placeholder="Enter project name" />
+              <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Enter project name" />
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <label className="text-[10px] text-gray-500 mb-1 block">Description *</label>
-              <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00D4AA]/50 min-h-[80px]" placeholder="Describe your project, problem it solves, and technical approach..." />
+              <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00E5FF]/50 min-h-[80px]" placeholder="Describe your project, problem it solves, and technical approach..." />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Category</label>
-                <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50">
+                <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50">
                   {['DeFi', 'Infrastructure', 'Security', 'Gaming', 'NFT', 'DAO', 'Social', 'Privacy', 'Analytics'].map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Chain</label>
-                <select value={form.chain} onChange={e => setForm(p => ({...p, chain: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50">
+                <select value={form.chain} onChange={e => setForm(p => ({...p, chain: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50">
                   {['Ethereum', 'Solana', 'BSC', 'Polygon', 'Arbitrum', 'Base', 'Optimism', 'Avalanche'].map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
@@ -402,37 +402,37 @@ export default function BuilderFundingPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Funding Goal ($) *</label>
-                <input type="number" value={form.goal} onChange={e => setForm(p => ({...p, goal: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00D4AA]/50" placeholder="100000" />
+                <input type="number" value={form.goal} onChange={e => setForm(p => ({...p, goal: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="100000" />
               </div>
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Team Size</label>
-                <input type="number" value={form.teamSize} onChange={e => setForm(p => ({...p, teamSize: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00D4AA]/50" placeholder="3" />
+                <input type="number" value={form.teamSize} onChange={e => setForm(p => ({...p, teamSize: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="3" />
               </div>
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <label className="text-[10px] text-gray-500 mb-1 block">Your Name / Team Name</label>
-              <input value={form.builderName} onChange={e => setForm(p => ({...p, builderName: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="Builder or team name" />
+              <input value={form.builderName} onChange={e => setForm(p => ({...p, builderName: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="Builder or team name" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Website</label>
-                <input value={form.website} onChange={e => setForm(p => ({...p, website: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="https://..." />
+                <input value={form.website} onChange={e => setForm(p => ({...p, website: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="https://..." />
               </div>
               <div className="glass rounded-xl p-4 border border-white/10">
                 <label className="text-[10px] text-gray-500 mb-1 block">Whitepaper</label>
-                <input value={form.whitepaper} onChange={e => setForm(p => ({...p, whitepaper: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="https://..." />
+                <input value={form.whitepaper} onChange={e => setForm(p => ({...p, whitepaper: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="https://..." />
               </div>
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <label className="text-[10px] text-gray-500 mb-1 block">Tags (comma separated)</label>
-              <input value={form.tags} onChange={e => setForm(p => ({...p, tags: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="DeFi, Cross-chain, MEV Protection" />
+              <input value={form.tags} onChange={e => setForm(p => ({...p, tags: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="DeFi, Cross-chain, MEV Protection" />
             </div>
 
             <div className="glass rounded-xl p-4 border border-white/10">
-              <h3 className="text-xs font-bold mb-3 text-[#00D4AA]">Milestone Plan</h3>
+              <h3 className="text-xs font-bold mb-3 text-[#00E5FF]">Milestone Plan</h3>
               {form.milestones.map((m, i) => (
                 <div key={i} className="mb-3 pb-3 border-b border-white/5 last:border-0 last:mb-0 last:pb-0">
                   <div className="text-[10px] font-semibold text-gray-400 mb-1.5">Milestone {i + 1}</div>
@@ -441,17 +441,17 @@ export default function BuilderFundingPage() {
                       const ms = [...form.milestones];
                       ms[i] = {...ms[i], name: e.target.value};
                       setForm(p => ({...p, milestones: ms}));
-                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="Milestone name" />
+                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="Milestone name" />
                     <textarea value={m.description} onChange={e => {
                       const ms = [...form.milestones];
                       ms[i] = {...ms[i], description: e.target.value};
                       setForm(p => ({...p, milestones: ms}));
-                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00D4AA]/50 min-h-[40px]" placeholder="Description & deliverables" />
+                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00E5FF]/50 min-h-[40px]" placeholder="Description & deliverables" />
                     <input type="number" value={m.amount} onChange={e => {
                       const ms = [...form.milestones];
                       ms[i] = {...ms[i], amount: e.target.value};
                       setForm(p => ({...p, milestones: ms}));
-                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00D4AA]/50" placeholder="Amount ($)" />
+                    }} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="Amount ($)" />
                   </div>
                 </div>
               ))}
@@ -460,7 +460,7 @@ export default function BuilderFundingPage() {
               </button>
             </div>
 
-            <button onClick={handleSubmitProject} disabled={submitting || !form.name || !form.description || !form.goal} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00D4AA] to-[#6366F1] font-semibold text-sm hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+            <button onClick={handleSubmitProject} disabled={submitting || !form.name || !form.description || !form.goal} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] font-semibold text-sm hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
               {submitting ? 'Submitting...' : 'Submit for Review'}
             </button>
@@ -471,7 +471,7 @@ export default function BuilderFundingPage() {
 
       {fundingModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setFundingModal(null)}>
-          <div className="w-full max-w-sm bg-[#0B0D14] rounded-2xl border border-white/10 p-5" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm bg-[#0A0E1A] rounded-2xl border border-white/10 p-5" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold">Fund {fundingModal.name}</h3>
               <button onClick={() => setFundingModal(null)} className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
@@ -480,17 +480,17 @@ export default function BuilderFundingPage() {
             <div className="mb-4">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-400">${fundingModal.raised.toLocaleString()} raised</span>
-                <span className="text-[#00D4AA]">{Math.round((fundingModal.raised / fundingModal.goal) * 100)}%</span>
+                <span className="text-[#00E5FF]">{Math.round((fundingModal.raised / fundingModal.goal) * 100)}%</span>
               </div>
               <div className="w-full bg-[#111827] rounded-full h-2">
-                <div className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] h-2 rounded-full" style={{ width: `${Math.min((fundingModal.raised / fundingModal.goal) * 100, 100)}%` }}></div>
+                <div className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] h-2 rounded-full" style={{ width: `${Math.min((fundingModal.raised / fundingModal.goal) * 100, 100)}%` }}></div>
               </div>
               <div className="text-[10px] text-gray-500 mt-1">Remaining: ${(fundingModal.goal - fundingModal.raised).toLocaleString()}</div>
             </div>
 
             <div className="mb-4">
               <label className="text-xs text-gray-400 mb-1 block">Investment Amount ($)</label>
-              <input type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00D4AA]/50" placeholder="1000" />
+              <input type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="1000" />
               <div className="flex gap-2 mt-2">
                 {[100, 500, 1000, 5000].map(amt => (
                   <button key={amt} onClick={() => setFundAmount(String(amt))} className="flex-1 py-1 rounded bg-[#111827] text-[10px] text-gray-400 hover:bg-white/10 transition-colors">
@@ -507,7 +507,7 @@ export default function BuilderFundingPage() {
               <div className="flex justify-between"><span>Refund if project fails</span><span className="text-[#10B981]">Yes</span></div>
             </div>
 
-            <button onClick={handleFund} disabled={funding || !fundAmount || parseFloat(fundAmount) <= 0} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00D4AA] to-[#6366F1] font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+            <button onClick={handleFund} disabled={funding || !fundAmount || parseFloat(fundAmount) <= 0} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
               {funding ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
               {funding ? 'Processing...' : `Fund $${fundAmount || '0'}`}
             </button>

@@ -15,13 +15,13 @@ export default function SwapPage() {
   const tokens = ['ETH', 'SOL', 'USDC', 'USDT', 'BNB', 'MATIC', 'ARB', 'AVAX', 'LINK', 'UNI'];
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <ArrowLeftRight className="w-5 h-5 text-[#00D4AA]" />
+          <ArrowLeftRight className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-sm font-heading font-bold">Multi-Chain Swap</h1>
           <button className="ml-auto hover:bg-white/10 p-2 rounded-lg transition-colors">
             <Settings className="w-4 h-4 text-gray-400" />
@@ -51,7 +51,7 @@ export default function SwapPage() {
 
         <div className="flex justify-center -my-2 relative z-10">
           <button className="w-10 h-10 bg-[#111827] border border-white/10 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors hover:rotate-180 duration-300">
-            <ArrowLeftRight className="w-4 h-4 text-[#00D4AA]" />
+            <ArrowLeftRight className="w-4 h-4 text-[#00E5FF]" />
           </button>
         </div>
 
@@ -90,19 +90,19 @@ export default function SwapPage() {
             </div>
             <div className="flex justify-between text-[10px]">
               <span className="text-gray-500">Route</span>
-              <span className="text-[#00D4AA]">Uniswap V3 (Best)</span>
+              <span className="text-[#00E5FF]">Uniswap V3 (Best)</span>
             </div>
           </div>
         )}
 
-        <button className="w-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
+        <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
           <Zap className="w-4 h-4" />
           {fromAmount ? 'Swap Now' : 'Enter Amount'}
         </button>
 
         <div className="flex gap-2 justify-center">
           {['0.1%', '0.5%', '1.0%', '3.0%'].map((s) => (
-            <button key={s} onClick={() => setSlippage(s.replace('%', ''))} className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold ${slippage === s.replace('%', '') ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : 'bg-[#111827] text-gray-500'}`}>
+            <button key={s} onClick={() => setSlippage(s.replace('%', ''))} className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold ${slippage === s.replace('%', '') ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-[#111827] text-gray-500'}`}>
               {s}
             </button>
           ))}

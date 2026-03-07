@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white">
+    <div className="min-h-screen bg-[#0A0E1A] text-white">
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
