@@ -94,15 +94,15 @@ export default function Predictions() {
     <div>
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="glass rounded-xl p-4 text-center border border-white/10">
-          <div className="text-2xl font-bold text-[#00E5FF]">{stats.activePredictions}</div>
+          <div className="text-2xl font-bold text-[#00D4AA]">{stats.activePredictions}</div>
           <div className="text-xs text-gray-400 mt-1">Active</div>
         </div>
         <div className="glass rounded-xl p-4 text-center border border-white/10">
-          <div className="text-2xl font-bold text-[#00E5FF]">{formatUsd(stats.totalPoolVolume)}</div>
+          <div className="text-2xl font-bold text-[#00D4AA]">{formatUsd(stats.totalPoolVolume)}</div>
           <div className="text-xs text-gray-400 mt-1">Volume</div>
         </div>
         <div className="glass rounded-xl p-4 text-center border border-white/10">
-          <div className="text-2xl font-bold text-[#00E5FF]">{stats.resolvedCount}</div>
+          <div className="text-2xl font-bold text-[#00D4AA]">{stats.resolvedCount}</div>
           <div className="text-xs text-gray-400 mt-1">Resolved</div>
         </div>
       </div>
@@ -118,9 +118,9 @@ export default function Predictions() {
           <div className="space-y-3">
             {predictions.slice(0, 5).map((pred) => {
               const catColors: Record<string, string> = {
-                market_cap: 'bg-[#7C3AED]/20 text-[#7C3AED]',
+                market_cap: 'bg-[#6366F1]/20 text-[#6366F1]',
                 price: 'bg-[#FF6B35]/20 text-[#FF6B35]',
-                volume: 'bg-[#00E5FF]/20 text-[#00E5FF]',
+                volume: 'bg-[#00D4AA]/20 text-[#00D4AA]',
                 launch: 'bg-[#10B981]/20 text-[#10B981]',
                 holder: 'bg-[#F59E0B]/20 text-[#F59E0B]',
               };

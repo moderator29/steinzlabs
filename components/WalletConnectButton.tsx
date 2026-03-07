@@ -67,7 +67,7 @@ export default function WalletConnectButton({ compact = false }: WalletConnectBu
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className={`flex items-center gap-1.5 bg-gradient-to-r from-[#00E5FF]/10 to-[#7C3AED]/10 border border-[#00E5FF]/30 rounded-lg hover:border-[#00E5FF]/60 transition-all ${compact ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs'}`}
+          className={`flex items-center gap-1.5 bg-gradient-to-r from-[#00D4AA]/10 to-[#6366F1]/10 border border-[#00D4AA]/30 rounded-lg hover:border-[#00D4AA]/60 transition-all ${compact ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs'}`}
         >
           <div className="w-2 h-2 bg-[#10B981] rounded-full flex-shrink-0" />
           <span className="font-mono font-semibold">{shortAddress}</span>
@@ -122,7 +122,7 @@ export default function WalletConnectButton({ compact = false }: WalletConnectBu
       <button
         onClick={handleConnectClick}
         disabled={connecting}
-        className={`flex items-center gap-1.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 ${compact ? 'px-2.5 py-1.5 text-[10px]' : 'px-3 py-2 text-xs'}`}
+        className={`flex items-center gap-1.5 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 ${compact ? 'px-2.5 py-1.5 text-[10px]' : 'px-3 py-2 text-xs'}`}
       >
         <Wallet className={compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
         {connecting ? 'Connecting...' : 'Connect Wallet'}

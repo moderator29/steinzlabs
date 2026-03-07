@@ -28,7 +28,7 @@ export default function ProfilePage() {
   const [walletConnected] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
       <div className="px-4 pt-6">
         <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-4 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
@@ -42,10 +42,10 @@ export default function ProfilePage() {
           {walletConnected ? (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="font-mono">0x7a2d...9f4e</span>
-              <button className="text-[#00E5FF]"><Copy className="w-3 h-3" /></button>
+              <button className="text-[#00D4AA]"><Copy className="w-3 h-3" /></button>
             </div>
           ) : (
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-5 py-2 rounded-xl text-xs font-semibold hover:scale-105 transition-transform mt-1">
+            <button className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-5 py-2 rounded-xl text-xs font-semibold hover:scale-105 transition-transform mt-1">
               Connect Wallet
             </button>
           )}
@@ -59,7 +59,7 @@ export default function ProfilePage() {
             { label: 'Rank', value: '#342' },
           ].map((stat) => (
             <div key={stat.label} className="glass rounded-lg p-2.5 text-center border border-white/10">
-              <div className="text-sm font-bold bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">{stat.value}</div>
+              <div className="text-sm font-bold bg-gradient-to-r from-[#00D4AA] to-[#6366F1] bg-clip-text text-transparent">{stat.value}</div>
               <div className="text-[9px] text-gray-500">{stat.label}</div>
             </div>
           ))}
@@ -70,7 +70,7 @@ export default function ProfilePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === tab ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}
+              className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${activeTab === tab ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'text-gray-400'}`}
             >
               {tab}
             </button>
@@ -207,7 +207,7 @@ export default function ProfilePage() {
         {activeTab === 'Achievements' && (
           <div className="grid grid-cols-2 gap-2">
             {ACHIEVEMENTS.map((a) => (
-              <div key={a.name} className={`glass rounded-xl p-3 border transition-all ${a.earned ? 'border-[#00E5FF]/30 bg-[#00E5FF]/5' : 'border-white/10 opacity-50'}`}>
+              <div key={a.name} className={`glass rounded-xl p-3 border transition-all ${a.earned ? 'border-[#00D4AA]/30 bg-[#00D4AA]/5' : 'border-white/10 opacity-50'}`}>
                 <div className="text-2xl mb-2">{a.icon}</div>
                 <div className="text-xs font-bold mb-0.5">{a.name}</div>
                 <div className="text-[10px] text-gray-500 mb-1">{a.description}</div>

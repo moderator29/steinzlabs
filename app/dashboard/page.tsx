@@ -20,7 +20,7 @@ const ProfileTab = lazy(() => import('@/components/ProfileTab'));
 function TabSpinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-[#00E5FF]/30 border-t-[#00E5FF] rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[#232637] border-t-[#00D4AA] rounded-full animate-spin" />
     </div>
   );
 }
@@ -37,8 +37,8 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <p className="text-sm text-gray-400">Something went wrong loading this tab.</p>
-          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 rounded-lg bg-[#00E5FF]/20 text-[#00E5FF] text-xs font-semibold hover:bg-[#00E5FF]/30 transition-colors">
+          <p className="text-sm text-[#9CA3AF]">Something went wrong loading this tab.</p>
+          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 rounded-lg bg-[#161822] border border-[#232637] text-[#F9FAFB] text-xs font-medium hover:bg-[#1C1F2E] transition-colors">
             Try Again
           </button>
         </div>
@@ -59,7 +59,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   ];
 
   return (
-    <div className="fixed bottom-0 w-full glass backdrop-blur-xl border-t border-white/10 z-50">
+    <div className="fixed bottom-0 w-full bg-[#0B0D14]/95 backdrop-blur-lg border-t border-[#232637] z-50">
       <div className="grid grid-cols-6 gap-0 px-1 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -69,7 +69,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
               key={item.id}
               onClick={() => onNavChange(item.id)}
               className={`flex flex-col items-center gap-0.5 py-1 transition-colors bottom-nav-item ${
-                isActive ? 'text-[#00E5FF] active' : 'text-gray-400'
+                isActive ? 'text-[#00D4AA] active' : 'text-[#6B7280]'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -117,16 +117,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
-      <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
+    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+      <div className="fixed top-0 w-full z-40 bg-[#0B0D14]/95 backdrop-blur-lg border-b border-[#232637]">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <img src="/steinz-logo-128.png" alt="STEINZ" className="w-8 h-8 flex-shrink-0" style={{ objectFit: 'contain' }} />
-            <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
+            <img src="/naka-logo.svg" alt="NAKA" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
+            <span className="text-sm font-bold tracking-tight">NAKA</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button onClick={() => setMenuOpen(!menuOpen)}>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-lg hover:bg-white/[0.04] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -134,22 +134,22 @@ export default function Dashboard() {
       </div>
 
       {showHomeTabs && (
-        <div className="fixed top-14 w-full bg-[#111827]/80 backdrop-blur-sm border-b border-white/10 z-30">
+        <div className="fixed top-14 w-full bg-[#0B0D14]/95 backdrop-blur-lg border-b border-[#232637] z-30">
           <PriceTicker />
         </div>
       )}
 
       <div className={`${showHomeTabs ? 'pt-[104px]' : 'pt-[68px]'} px-3`}>
         {showHomeTabs && (
-          <div className="flex gap-1 mb-4 bg-[#111827] p-1.5 rounded-xl max-w-sm mx-auto">
+          <div className="flex gap-1 mb-4 bg-[#161822] p-1 rounded-lg max-w-sm mx-auto border border-[#232637]">
             {['context', 'markets', 'predictions'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all text-xs ${
+                className={`flex-1 py-2 px-3 rounded-md font-medium transition-all text-xs ${
                   activeTab === tab
-                    ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#F9FAFB] text-[#0B0D14]'
+                    : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
                 }`}
               >
                 {tab === 'context' ? 'Context Feed' : tab === 'markets' ? 'Markets' : 'Predictions'}

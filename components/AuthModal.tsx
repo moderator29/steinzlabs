@@ -91,42 +91,84 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] bg-[#0B0D14] flex items-center justify-center p-4"
       onClick={onClose}
     >
+      <div className="absolute inset-0 bg-[#0B0D14]">
+        <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-[#00D4AA]/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#6366F1]/[0.03] rounded-full blur-[150px]" />
+      </div>
+
+      <div className="absolute top-6 left-6 flex items-center gap-2.5">
+        <img src="/naka-logo.svg" alt="NAKA" className="w-8 h-8" />
+        <span className="text-base font-bold tracking-tight text-[#F9FAFB]">NAKA</span>
+      </div>
+
+      <div className="absolute top-6 right-6">
+        <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.04] transition-colors text-[#6B7280] hover:text-[#F9FAFB]">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
       <div
-        className="bg-[#0A0E1A] border border-white/10 rounded-2xl max-w-md w-full p-6"
+        className="relative max-w-sm w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">
-            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-          </h2>
-          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[#F9FAFB] mb-2">
+            {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+          </h1>
+          <p className="text-sm text-[#6B7280]">
+            {mode === 'signin' ? 'Sign in to access your dashboard' : 'Get started with on-chain intelligence'}
+          </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+          <div className="mb-4 p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg text-sm text-[#EF4444]">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400">
+          <div className="mb-4 p-3 bg-[#22C55E]/10 border border-[#22C55E]/20 rounded-lg text-sm text-[#22C55E]">
             {success}
           </div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="space-y-4 mb-4">
+        <div className="space-y-3 mb-6">
+          <button
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="w-full bg-[#F9FAFB] text-[#0B0D14] px-6 py-3 rounded-lg font-medium hover:bg-[#E5E7EB] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Chrome className="w-4 h-4" />
+            Continue with Google
+          </button>
+
+          <button
+            onClick={handleWalletConnect}
+            disabled={loading}
+            className="w-full bg-[#161822] text-[#F9FAFB] border border-[#232637] px-6 py-3 rounded-lg font-medium hover:bg-[#1C1F2E] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Wallet className="w-4 h-4" />
+            Connect Wallet
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-[#232637]" />
+          <span className="text-xs text-[#6B7280]">or continue with email</span>
+          <div className="flex-1 h-px bg-[#232637]" />
+        </div>
+
+        <form onSubmit={handleEmailAuth} className="space-y-3 mb-6">
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
+            className="w-full bg-[#161822] border border-[#232637] rounded-lg px-4 py-3 text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[#00D4AA]/50 transition-colors"
             required
           />
           <input
@@ -135,56 +177,34 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50"
+            className="w-full bg-[#161822] border border-[#232637] rounded-lg px-4 py-3 text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[#00D4AA]/50 transition-colors"
             required
           />
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-[#161822] border border-[#232637] text-[#F9FAFB] px-6 py-3 rounded-lg font-medium hover:bg-[#1C1F2E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Mail className="w-5 h-5" />
-            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
+            <Mail className="w-4 h-4" />
+            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-sm text-gray-400">OR</span>
-          <div className="flex-1 h-px bg-white/10" />
-        </div>
-
-        <div className="space-y-3 mb-6">
-          <button
-            onClick={handleGoogleAuth}
-            disabled={loading}
-            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
-          >
-            <Chrome className="w-5 h-5" />
-            Continue with Google
-          </button>
-
-          <button
-            onClick={handleWalletConnect}
-            disabled={loading}
-            className="w-full glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
-          >
-            <Wallet className="w-5 h-5" />
-            Connect Wallet
-          </button>
-        </div>
-
-        <div className="text-center text-sm">
-          <span className="text-gray-400">
+        <div className="text-center text-sm mb-6">
+          <span className="text-[#6B7280]">
             {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
           </span>
           <button
             onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setSuccess(''); }}
-            className="text-[#00E5FF] font-semibold hover:underline"
+            className="text-[#00D4AA] font-medium hover:underline"
           >
             {mode === 'signin' ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
+
+        <p className="text-center text-[11px] text-[#6B7280]">
+          By creating an account you agree to our Terms of Service and Privacy Policy
+        </p>
       </div>
     </div>
   );

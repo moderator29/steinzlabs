@@ -65,8 +65,8 @@ export function AllChainsIcon({ className = 'w-4 h-4' }: { className?: string })
       <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="url(#all-grad)" strokeWidth="1.5"/>
       <defs>
         <linearGradient id="all-grad" x1="0" y1="0" x2="24" y2="24">
-          <stop stopColor="#00E5FF"/>
-          <stop offset="1" stopColor="#7C3AED"/>
+          <stop stopColor="#00D4AA"/>
+          <stop offset="1" stopColor="#6366F1"/>
         </linearGradient>
       </defs>
     </svg>

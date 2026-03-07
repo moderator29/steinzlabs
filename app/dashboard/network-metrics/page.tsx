@@ -21,13 +21,13 @@ export default function NetworkMetricsPage() {
   const m = metrics[selectedChain];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Radio className="w-5 h-5 text-[#00E5FF]" />
+          <Radio className="w-5 h-5 text-[#00D4AA]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
         </div>
       </div>
@@ -35,15 +35,15 @@ export default function NetworkMetricsPage() {
       <div className="p-4 space-y-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {chains.map((chain) => (
-            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {chain}
             </button>
           ))}
         </div>
 
         <div className="glass rounded-xl p-4 border border-white/10 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-2">
-            <Globe className="w-8 h-8 text-[#00E5FF]" />
+          <div className="w-16 h-16 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-full flex items-center justify-center mx-auto mb-2">
+            <Globe className="w-8 h-8 text-[#00D4AA]" />
           </div>
           <h2 className="text-base font-heading font-bold">{selectedChain}</h2>
           <div className="flex items-center justify-center gap-1 mt-1">
@@ -56,8 +56,8 @@ export default function NetworkMetricsPage() {
           {[
             { icon: Zap, label: 'Gas Price', value: m.gas, color: '#F59E0B' },
             { icon: Activity, label: 'TPS', value: m.tps, color: '#10B981' },
-            { icon: Cpu, label: 'Validators', value: m.validators, color: '#7C3AED' },
-            { icon: HardDrive, label: 'TVL', value: m.tvl, color: '#00E5FF' },
+            { icon: Cpu, label: 'Validators', value: m.validators, color: '#6366F1' },
+            { icon: HardDrive, label: 'TVL', value: m.tvl, color: '#00D4AA' },
           ].map((item) => (
             <div key={item.label} className="glass rounded-xl p-3 border border-white/10">
               <div className="flex items-center gap-1.5 mb-1">

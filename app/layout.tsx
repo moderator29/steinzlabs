@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "STEINZ LABS - On-Chain Intelligence Redefined",
+  title: "NAKA LABS - On-Chain Intelligence Redefined",
   description: "The only platform that shows you what Smart Money sees before everyone else.",
 };
 

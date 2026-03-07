@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Shield, Brain, Zap, Users, Target, BarChart3, Search, Compass, Globe, Lock, Layers, Cpu, TrendingUp, ExternalLink, CheckCircle, AlertTriangle, Eye, Activity, Database, GitBranch, Server, Wallet, Code, Blocks, Network, FileCode, Coins, Vote, BookOpen, Award, Clock, Heart, Star, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import SteinzLogo from '@/components/SteinzLogo';
+import NakaLogo from '@/components/NakaLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 
 function Section({ id, number, title, children }: { id: string; number: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mb-16 scroll-mt-20">
       <div className="flex items-center gap-3 mb-6">
-        <span className="text-3xl font-heading font-bold text-[#00E5FF]/20">{number}</span>
+        <span className="text-3xl font-heading font-bold text-[#00D4AA]/20">{number}</span>
         <h2 className="text-2xl md:text-3xl font-heading font-bold">{title}</h2>
       </div>
       <div className="text-gray-400 text-sm leading-relaxed space-y-4">{children}</div>
@@ -20,9 +20,9 @@ function Section({ id, number, title, children }: { id: string; number: string; 
 
 function FeatureBox({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
   return (
-    <div className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all group">
-      <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-        <Icon className="w-4 h-4 text-[#00E5FF]" />
+    <div className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00D4AA]/20 transition-all group">
+      <div className="w-9 h-9 bg-gradient-to-br from-[#00D4AA]/10 to-[#6366F1]/10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+        <Icon className="w-4 h-4 text-[#00D4AA]" />
       </div>
       <h4 className="text-xs font-heading font-bold mb-1 text-white">{title}</h4>
       <p className="text-[11px] text-gray-500 leading-relaxed">{desc}</p>
@@ -31,7 +31,7 @@ function FeatureBox({ icon: Icon, title, desc }: { icon: React.ElementType; titl
 }
 
 function ComparisonRow({ platform, ai, security, builder, launchpad, multichain, wallet, highlight }: { platform: string; ai: string; security: string; builder: string; launchpad: string; multichain: string; wallet: string; highlight?: boolean }) {
-  const cls = highlight ? 'bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5 border-[#00E5FF]/20 font-semibold text-white' : 'border-white/5 text-gray-400';
+  const cls = highlight ? 'bg-gradient-to-r from-[#00D4AA]/5 to-[#6366F1]/5 border-[#00D4AA]/20 font-semibold text-white' : 'border-white/5 text-gray-400';
   return (
     <tr className={`border-b ${cls}`}>
       <td className="py-2.5 px-3 text-xs">{platform}</td>
@@ -104,7 +104,7 @@ export default function WhitepaperPage() {
     { id: 'project-discovery', label: 'Project Discovery' },
     { id: 'wallet-system', label: 'Non-Custodial Wallet' },
     { id: 'governance', label: 'Governance' },
-    { id: 'unique', label: 'Why STEINZ Is Unique' },
+    { id: 'unique', label: 'Why NAKA Is Unique' },
     { id: 'business', label: 'Business Model' },
     { id: 'team', label: 'Team & Partners' },
     { id: 'roadmap', label: 'Roadmap' },
@@ -112,17 +112,17 @@ export default function WhitepaperPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-[#0A0E1A]/90 border-b border-white/10">
+    <div className="min-h-screen bg-[#0B0D14] text-white">
+      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-[#0B0D14]/90 border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <SteinzLogo size={28} />
-            <span className="text-sm font-heading font-bold">STEINZ</span>
+            <NakaLogo size={28} />
+            <span className="text-sm font-heading font-bold">NAKA</span>
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link href="/dashboard">
-              <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-3 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+              <button className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-3 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
                 Launch App
               </button>
             </Link>
@@ -133,23 +133,23 @@ export default function WhitepaperPage() {
       <div className="pt-24 pb-16 px-4 relative">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="max-w-3xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-4">
-            <BookOpen className="w-3 h-3 text-[#00E5FF]" />
-            <span className="text-[#00E5FF] text-[11px] font-semibold">Whitepaper v2.0 &mdash; December 2025</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#00D4AA]/5 border border-[#00D4AA]/20 rounded-full mb-4">
+            <BookOpen className="w-3 h-3 text-[#00D4AA]" />
+            <span className="text-[#00D4AA] text-[11px] font-semibold">Whitepaper v2.0 &mdash; December 2025</span>
           </div>
-          <p className="text-[#00E5FF] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Complete Platform Overview</p>
+          <p className="text-[#00D4AA] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Complete Platform Overview</p>
           <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4 leading-tight">
-            STEINZ LABS
+            NAKA LABS
           </h1>
           <p className="text-lg text-gray-400 mb-2 font-heading">The Intelligence Infrastructure Layer for the On-Chain Economy</p>
-          <p className="text-sm text-[#00E5FF] italic mb-8">&quot;Cultivate Intelligence. Navigate Risk. Grow Without Fear.&quot;</p>
+          <p className="text-sm text-[#00D4AA] italic mb-8">&quot;Cultivate Intelligence. Navigate Risk. Grow Without Fear.&quot;</p>
           <div className="grid grid-cols-4 gap-3 max-w-lg mx-auto">
             <div className="glass rounded-lg p-3 border border-white/[0.06]">
-              <div className="text-lg font-heading font-bold text-[#00E5FF]">{platformStats.chains}+</div>
+              <div className="text-lg font-heading font-bold text-[#00D4AA]">{platformStats.chains}+</div>
               <div className="text-[9px] text-gray-500 uppercase">Chains</div>
             </div>
             <div className="glass rounded-lg p-3 border border-white/[0.06]">
-              <div className="text-lg font-heading font-bold text-[#7C3AED]">AI</div>
+              <div className="text-lg font-heading font-bold text-[#6366F1]">AI</div>
               <div className="text-[9px] text-gray-500 uppercase">Powered</div>
             </div>
             <div className="glass rounded-lg p-3 border border-white/[0.06]">
@@ -169,7 +169,7 @@ export default function WhitepaperPage() {
           <div className="sticky top-20 space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">Contents</p>
             {toc.map((item) => (
-              <a key={item.id} href={`#${item.id}`} className="block text-xs text-gray-500 hover:text-[#00E5FF] transition-colors py-1 border-l-2 border-transparent hover:border-[#00E5FF]/40 pl-3">
+              <a key={item.id} href={`#${item.id}`} className="block text-xs text-gray-500 hover:text-[#00D4AA] transition-colors py-1 border-l-2 border-transparent hover:border-[#00D4AA]/40 pl-3">
                 {item.label}
               </a>
             ))}
@@ -178,15 +178,15 @@ export default function WhitepaperPage() {
 
         <div className="flex-1 min-w-0">
           <Section id="executive-summary" number="01" title="Executive Summary">
-            <p>STEINZ Labs is building the most comprehensive intelligence infrastructure layer ever created for the on-chain economy. Not just another analytics dashboard or trading tool &mdash; the complete operating system for Web3 participants: traders, builders, investors, and communities.</p>
+            <p>NAKA Labs is building the most comprehensive intelligence infrastructure layer ever created for the on-chain economy. Not just another analytics dashboard or trading tool &mdash; the complete operating system for Web3 participants: traders, builders, investors, and communities.</p>
             <p>The platform combines real-time on-chain data aggregation, AI-powered analysis, comprehensive security scanning, multi-chain trading, builder reputation systems, milestone-gated funding, native social coordination, prediction markets, project discovery, and a built-in non-custodial wallet &mdash; all unified into a single seamless experience that no other platform in the ecosystem matches.</p>
-            <div className="glass rounded-xl p-5 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent mt-4">
-              <p className="text-sm text-gray-300 font-medium">The STEINZ Difference</p>
-              <p className="text-xs text-gray-400 mt-2">While other platforms give you data, STEINZ gives you <strong className="text-white">context</strong>. While others show you transactions, STEINZ shows you <strong className="text-white">intent</strong>. While others alert you to risks, STEINZ <strong className="text-white">protects you before you get hurt</strong>. While others charge institutions thousands per month, STEINZ makes that intelligence accessible to every level of participant.</p>
+            <div className="glass rounded-xl p-5 border border-[#00D4AA]/10 bg-gradient-to-b from-[#00D4AA]/[0.03] to-transparent mt-4">
+              <p className="text-sm text-gray-300 font-medium">The NAKA Difference</p>
+              <p className="text-xs text-gray-400 mt-2">While other platforms give you data, NAKA gives you <strong className="text-white">context</strong>. While others show you transactions, NAKA shows you <strong className="text-white">intent</strong>. While others alert you to risks, NAKA <strong className="text-white">protects you before you get hurt</strong>. While others charge institutions thousands per month, NAKA makes that intelligence accessible to every level of participant.</p>
             </div>
             <div className="grid grid-cols-3 gap-3 mt-4">
               <div className="glass rounded-lg p-3 border border-white/[0.06] text-center">
-                <div className="text-lg font-heading font-bold text-[#00E5FF]">{platformStats.volumeTracked}</div>
+                <div className="text-lg font-heading font-bold text-[#00D4AA]">{platformStats.volumeTracked}</div>
                 <div className="text-[9px] text-gray-500 uppercase mt-1">Volume Tracked</div>
               </div>
               <div className="glass rounded-lg p-3 border border-white/[0.06] text-center">
@@ -194,7 +194,7 @@ export default function WhitepaperPage() {
                 <div className="text-[9px] text-gray-500 uppercase mt-1">Signal Accuracy</div>
               </div>
               <div className="glass rounded-lg p-3 border border-white/[0.06] text-center">
-                <div className="text-lg font-heading font-bold text-[#7C3AED]">{platformStats.activeUsers}</div>
+                <div className="text-lg font-heading font-bold text-[#6366F1]">{platformStats.activeUsers}</div>
                 <div className="text-[9px] text-gray-500 uppercase mt-1">Active Users</div>
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function WhitepaperPage() {
                 <p className="text-[11px] text-gray-500">Rug pulls, honeypots, and phishing attacks cost users billions annually. Existing tools are too slow or require technical expertise. By the time you detect a scam, your funds are already gone.</p>
               </div>
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <h4 className="text-xs font-heading font-bold text-[#7C3AED] mb-2">Builder Discovery Crisis</h4>
+                <h4 className="text-xs font-heading font-bold text-[#6366F1] mb-2">Builder Discovery Crisis</h4>
                 <p className="text-[11px] text-gray-500">Talented builders go undiscovered. Promising projects never find the right team. Capital sits idle while worthy builders struggle to raise. The Web3 ecosystem loses billions in potential value every year.</p>
               </div>
             </div>
@@ -239,16 +239,16 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="vision" number="03" title="Vision & Mission">
-            <p>STEINZ Labs envisions a world where every participant in the on-chain economy &mdash; from first-time traders to institutional funds &mdash; has access to the same quality of intelligence, security, and tooling. Our mission is to democratize on-chain intelligence and make Web3 safer, more transparent, and more accessible for everyone.</p>
+            <p>NAKA Labs envisions a world where every participant in the on-chain economy &mdash; from first-time traders to institutional funds &mdash; has access to the same quality of intelligence, security, and tooling. Our mission is to democratize on-chain intelligence and make Web3 safer, more transparent, and more accessible for everyone.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-              <div className="glass rounded-xl p-4 border border-[#00E5FF]/10">
-                <Eye className="w-5 h-5 text-[#00E5FF] mb-2" />
+              <div className="glass rounded-xl p-4 border border-[#00D4AA]/10">
+                <Eye className="w-5 h-5 text-[#00D4AA] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-1">Vision</h4>
                 <p className="text-[11px] text-gray-500">To become the default intelligence layer for the entire on-chain economy &mdash; the Bloomberg Terminal of Web3, accessible to everyone.</p>
               </div>
-              <div className="glass rounded-xl p-4 border border-[#7C3AED]/10">
-                <Target className="w-5 h-5 text-[#7C3AED] mb-2" />
+              <div className="glass rounded-xl p-4 border border-[#6366F1]/10">
+                <Target className="w-5 h-5 text-[#6366F1] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-1">Mission</h4>
                 <p className="text-[11px] text-gray-500">Eliminate information asymmetry in crypto. Give every participant &mdash; retail or institutional &mdash; the tools to make informed, safe decisions.</p>
               </div>
@@ -306,7 +306,7 @@ export default function WhitepaperPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <FeatureBox icon={Layers} title="Full Trading Suite" desc="Spot, limit, DCA orders across multiple DEXs from inside the dashboard." />
               <FeatureBox icon={Users} title="Copy Trading Protocol" desc="Mirror any Smart Money wallet automatically. Set parameters, deploy capital, track in real time." />
-              <FeatureBox icon={Cpu} title="STEINZ Earn Layer" desc="Yield optimization on idle assets. AI-managed allocation across protocols. Non-custodial." />
+              <FeatureBox icon={Cpu} title="NAKA Earn Layer" desc="Yield optimization on idle assets. AI-managed allocation across protocols. Non-custodial." />
               <FeatureBox icon={Network} title="Cross-Chain Bridge" desc="Native bridge integration for seamless asset transfers between supported chains." />
               <FeatureBox icon={Vote} title="DAO Governance" desc="Community-driven platform decisions. Token holder voting on features, listings, and treasury allocation." />
               <FeatureBox icon={Database} title="Institutional API" desc="Enterprise-grade data access for funds, protocols, and institutions. Custom feeds and white-label intelligence." />
@@ -314,13 +314,13 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="architecture" number="05" title="Core Platform Architecture">
-            <p>STEINZ is built as a modular intelligence suite where every component is a standalone product, and together they form an ecosystem that no single competitor matches. The architecture is designed for horizontal scalability, real-time data processing, and fault tolerance.</p>
+            <p>NAKA is built as a modular intelligence suite where every component is a standalone product, and together they form an ecosystem that no single competitor matches. The architecture is designed for horizontal scalability, real-time data processing, and fault tolerance.</p>
 
             <ArchDiagram
               title="Data Flow Architecture"
               layers={[
-                { name: 'Ingest', items: ['Chain RPCs', 'DEX APIs', 'Price Feeds', 'Whale Alerts', 'Social Signals'], color: '#00E5FF' },
-                { name: 'Process', items: ['Event Detection', 'Pattern Matching', 'Risk Scoring', 'Sentiment Tags', 'Trust Calc'], color: '#7C3AED' },
+                { name: 'Ingest', items: ['Chain RPCs', 'DEX APIs', 'Price Feeds', 'Whale Alerts', 'Social Signals'], color: '#00D4AA' },
+                { name: 'Process', items: ['Event Detection', 'Pattern Matching', 'Risk Scoring', 'Sentiment Tags', 'Trust Calc'], color: '#6366F1' },
                 { name: 'Analyze', items: ['VTX AI Reasoning', 'Narrative Generation', 'Signal Classification', 'Anomaly Detection'], color: '#F59E0B' },
                 { name: 'Deliver', items: ['Context Feed', 'Alerts', 'Dashboard', 'API', 'Push Notifications'], color: '#10B981' },
               ]}
@@ -329,7 +329,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="context-feed" number="06" title="Context Feed Deep Dive">
-            <p>The Context Feed is the heartbeat of STEINZ &mdash; a real-time stream of AI-curated on-chain intelligence that transforms raw blockchain data into actionable insights. It processes data from Ethereum, Solana, BSC, Polygon, Avalanche, Base, Arbitrum, and more.</p>
+            <p>The Context Feed is the heartbeat of NAKA &mdash; a real-time stream of AI-curated on-chain intelligence that transforms raw blockchain data into actionable insights. It processes data from Ethereum, Solana, BSC, Polygon, Avalanche, Base, Arbitrum, and more.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Event Processing Pipeline</p>
@@ -365,11 +365,11 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="vtx-ai" number="07" title="VTX AI Engine">
-            <p>VTX AI is the brain of STEINZ &mdash; a proprietary intelligence engine powered by Anthropic Claude for deep reasoning that continuously scans, classifies, and narrativizes on-chain events. This is not a chatbot bolted onto a dashboard. It is the core reasoning layer running everything.</p>
+            <p>VTX AI is the brain of NAKA &mdash; a proprietary intelligence engine powered by Anthropic Claude for deep reasoning that continuously scans, classifies, and narrativizes on-chain events. This is not a chatbot bolted onto a dashboard. It is the core reasoning layer running everything.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Brain className="w-5 h-5 text-[#7C3AED] mb-2" />
+                <Brain className="w-5 h-5 text-[#6366F1] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Capabilities</h4>
                 <ul className="space-y-1.5 text-[11px] text-gray-400">
                   <li>&bull; Natural language queries about any market, token, or wallet</li>
@@ -382,15 +382,15 @@ export default function WhitepaperPage() {
                 </ul>
               </div>
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Layers className="w-5 h-5 text-[#00E5FF] mb-2" />
+                <Layers className="w-5 h-5 text-[#00D4AA] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Tier System</h4>
                 <div className="space-y-2">
                   <div className="glass rounded-lg p-2 border border-white/[0.04]">
                     <p className="text-[10px] font-bold text-gray-300">Free Tier</p>
                     <p className="text-[10px] text-gray-500">15 messages per day. Basic analysis and market questions. No web search.</p>
                   </div>
-                  <div className="glass rounded-lg p-2 border border-[#00E5FF]/10">
-                    <p className="text-[10px] font-bold text-[#00E5FF]">Pro Tier ($4/mo)</p>
+                  <div className="glass rounded-lg p-2 border border-[#00D4AA]/10">
+                    <p className="text-[10px] font-bold text-[#00D4AA]">Pro Tier ($4/mo)</p>
                     <p className="text-[10px] text-gray-500">Unlimited messages. Web search toggle. Priority processing. Advanced portfolio analysis.</p>
                   </div>
                   <div className="glass rounded-lg p-2 border border-[#F59E0B]/10">
@@ -401,14 +401,14 @@ export default function WhitepaperPage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-[#7C3AED]/20 bg-[#7C3AED]/[0.03] mt-4">
-              <p className="text-[10px] text-[#7C3AED] font-semibold uppercase tracking-wider mb-2">VTX AI Training Data</p>
-              <p className="text-[11px] text-gray-400">VTX AI is continuously trained on STEINZ platform features, crypto market knowledge, DeFi protocols, blockchain architecture, security best practices, and real-time market data. It understands every tool on the platform and can guide users through any feature.</p>
+            <div className="glass rounded-xl p-4 border border-[#6366F1]/20 bg-[#6366F1]/[0.03] mt-4">
+              <p className="text-[10px] text-[#6366F1] font-semibold uppercase tracking-wider mb-2">VTX AI Training Data</p>
+              <p className="text-[11px] text-gray-400">VTX AI is continuously trained on NAKA platform features, crypto market knowledge, DeFi protocols, blockchain architecture, security best practices, and real-time market data. It understands every tool on the platform and can guide users through any feature.</p>
             </div>
           </Section>
 
           <Section id="dna-analyzer" number="08" title="Trading DNA Analyzer">
-            <p>Drop any wallet address and STEINZ decodes the complete trading profile &mdash; every DEX swap, every entry and exit, every win and loss analyzed by VTX AI into a full Alpha Intelligence Report.</p>
+            <p>Drop any wallet address and NAKA decodes the complete trading profile &mdash; every DEX swap, every entry and exit, every win and loss analyzed by VTX AI into a full Alpha Intelligence Report.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Analysis Components</p>
@@ -424,8 +424,8 @@ export default function WhitepaperPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {[
-                { archetype: 'Diamond Hands', desc: 'Long hold, high conviction', color: '#00E5FF' },
-                { archetype: 'Scalper', desc: 'Fast in, fast out', color: '#7C3AED' },
+                { archetype: 'Diamond Hands', desc: 'Long hold, high conviction', color: '#00D4AA' },
+                { archetype: 'Scalper', desc: 'Fast in, fast out', color: '#6366F1' },
                 { archetype: 'Whale Follower', desc: 'Mirrors smart money', color: '#10B981' },
                 { archetype: 'Degen', desc: 'High risk, high reward', color: '#F59E0B' },
               ].map(a => (
@@ -438,7 +438,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="wallet-intelligence" number="09" title="Wallet Intelligence & Clusters">
-            <p>Every active wallet on chain is classified into behavioral archetypes. STEINZ&apos;s wallet intelligence engine tracks millions of wallets across all supported chains, building comprehensive profiles of trading behavior, risk appetite, and performance metrics.</p>
+            <p>Every active wallet on chain is classified into behavioral archetypes. NAKA&apos;s wallet intelligence engine tracks millions of wallets across all supported chains, building comprehensive profiles of trading behavior, risk appetite, and performance metrics.</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
               {[
                 { name: 'Whale Wallets', desc: 'High capital, low frequency. Early macro signal source. Tracked for large movements.' },
@@ -457,12 +457,12 @@ export default function WhitepaperPage() {
 
             <div className="glass rounded-xl p-4 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-2">Cluster Analysis</p>
-              <p className="text-[11px] text-gray-500">STEINZ identifies wallet clusters &mdash; groups of wallets that consistently move together, suggesting coordinated activity. This is critical for detecting pump-and-dump schemes, identifying VC fund wallets, and tracking insider trading patterns.</p>
+              <p className="text-[11px] text-gray-500">NAKA identifies wallet clusters &mdash; groups of wallets that consistently move together, suggesting coordinated activity. This is critical for detecting pump-and-dump schemes, identifying VC fund wallets, and tracking insider trading patterns.</p>
             </div>
           </Section>
 
           <Section id="security" number="10" title="Security Center">
-            <p>The Security Center is the fortress of STEINZ &mdash; a comprehensive suite of AI-powered protection tools that scan, analyze, and alert on every potential threat before it can harm your funds. Security is not a feature. It is the foundation.</p>
+            <p>The Security Center is the fortress of NAKA &mdash; a comprehensive suite of AI-powered protection tools that scan, analyze, and alert on every potential threat before it can harm your funds. Security is not a feature. It is the foundation.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               {[
                 { title: 'Token Safety Scanner', desc: 'Enter any contract address. Receive instant Trust Score (0-100): contract verification, liquidity lock, holder distribution, buy/sell tax, developer history, honeypot simulation. Cross-references multiple databases for comprehensive coverage.', icon: Shield },
@@ -474,8 +474,8 @@ export default function WhitepaperPage() {
               ].map(item => (
                 <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06]">
                   <div className="flex items-center gap-2 mb-2">
-                    <item.icon className="w-4 h-4 text-[#00E5FF]" />
-                    <h4 className="text-xs font-heading font-bold text-[#00E5FF]">{item.title}</h4>
+                    <item.icon className="w-4 h-4 text-[#00D4AA]" />
+                    <h4 className="text-xs font-heading font-bold text-[#00D4AA]">{item.title}</h4>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">{item.desc}</p>
                 </div>
@@ -521,7 +521,7 @@ export default function WhitepaperPage() {
                   <ol className="space-y-2">
                     {['Select input token and amount', 'Select output token and destination chain', 'Token Safety Scanner runs automatically', 'Best route calculated across aggregators', 'Price impact and fees displayed transparently', 'MEV protection check (if enabled)', 'Confirm and execute with one click'].map((step, i) => (
                       <li key={step} className="flex items-start gap-2 text-[11px] text-gray-400">
-                        <span className="text-[10px] font-bold text-[#00E5FF] mt-0.5">{i + 1}.</span>
+                        <span className="text-[10px] font-bold text-[#00D4AA] mt-0.5">{i + 1}.</span>
                         {step}
                       </li>
                     ))}
@@ -552,23 +552,23 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="builder" number="13" title="Builder Network & Funding Portal">
-            <p>Beyond trading intelligence, STEINZ solves the structural problem costing Web3 billions: the best builders go undiscovered, and the best projects never find the right team.</p>
+            <p>Beyond trading intelligence, NAKA solves the structural problem costing Web3 billions: the best builders go undiscovered, and the best projects never find the right team.</p>
 
             <h3 className="text-sm font-heading font-bold text-white mt-6 mb-2">On-Chain Reputation Engine</h3>
             <p>Every builder accumulates a verifiable, tamper-proof reputation score derived from real on-chain activity. Reputation scoring measures quality outcomes, not activity volume. Reputation decays if projects fail or get abandoned.</p>
 
             <h3 className="text-sm font-heading font-bold text-white mt-6 mb-2">Milestone-Gated Launchpad</h3>
-            <p>Every other launchpad is a fundraising page with no accountability. STEINZ is categorically different:</p>
+            <p>Every other launchpad is a fundraising page with no accountability. NAKA is categorically different:</p>
             <div className="mt-3 space-y-2">
               {[
-                { step: '1', title: 'Builder Applies', desc: 'Goes through STEINZ verification. Only verified, credible builders get through. Background check on all previous projects.' },
+                { step: '1', title: 'Builder Applies', desc: 'Goes through NAKA verification. Only verified, credible builders get through. Background check on all previous projects.' },
                 { step: '2', title: 'Builder Pitches', desc: 'Full project details visible to the community and investor network. Technical documentation, team info, and roadmap required.' },
                 { step: '3', title: 'Funding Portal Opens', desc: 'Dedicated funding portal with completely transparent terms. Smart contract escrow holds all funds securely.' },
                 { step: '4', title: 'Funds Are Held', desc: 'Raised funds held in audited smart contracts, not released immediately. Multi-sig governance on fund release.' },
                 { step: '5', title: 'Milestone Release', desc: 'As milestones are hit with proof of delivery, funding tranches release. No delivery, no release. Community verification.' },
               ].map(s => (
                 <div key={s.step} className="flex items-start gap-3 glass rounded-lg p-3 border border-white/[0.06]">
-                  <div className="w-6 h-6 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-md flex items-center justify-center flex-shrink-0 text-[10px] font-bold">{s.step}</div>
+                  <div className="w-6 h-6 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-md flex items-center justify-center flex-shrink-0 text-[10px] font-bold">{s.step}</div>
                   <div>
                     <p className="text-xs font-semibold text-white">{s.title}</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
@@ -579,14 +579,14 @@ export default function WhitepaperPage() {
 
             <div className="glass rounded-xl p-4 border border-[#F59E0B]/10 bg-[#F59E0B]/[0.02] mt-4">
               <p className="text-xs font-heading font-bold text-[#F59E0B] mb-2">Builder Protection Guarantee</p>
-              <p className="text-[11px] text-gray-500">If a builder fails to deliver on milestones, remaining funds are returned to investors automatically. No disputes, no legal battles &mdash; the smart contract enforces accountability trustlessly. STEINZ takes a 2-3% fee only on successfully funded and delivered milestones.</p>
+              <p className="text-[11px] text-gray-500">If a builder fails to deliver on milestones, remaining funds are returned to investors automatically. No disputes, no legal battles &mdash; the smart contract enforces accountability trustlessly. NAKA takes a 2-3% fee only on successfully funded and delivered milestones.</p>
             </div>
           </Section>
 
           <Section id="predictions" number="14" title="Prediction Markets">
             <p>Users create prediction markets on any verifiable on-chain event. Stake tokens on Yes or No outcomes. Percentage bars update in real time. Markets resolve automatically when conditions are met. Correct predictions earn points and token rewards. Inspired by Polymarket but built natively for the on-chain ecosystem.</p>
-            <div className="glass rounded-xl p-4 border border-[#7C3AED]/20 bg-[#7C3AED]/[0.03] mt-4">
-              <p className="text-[10px] text-[#7C3AED] font-semibold uppercase tracking-wider mb-2">Example Market</p>
+            <div className="glass rounded-xl p-4 border border-[#6366F1]/20 bg-[#6366F1]/[0.03] mt-4">
+              <p className="text-[10px] text-[#6366F1] font-semibold uppercase tracking-wider mb-2">Example Market</p>
               <p className="text-sm text-white font-heading font-bold">Will SOL reach $200 in 7 days?</p>
               <p className="text-[11px] text-gray-400 mt-1">Current: $178.42 | Target: $200 | Volume: $1.2M</p>
               <div className="flex gap-2 mt-3">
@@ -611,7 +611,7 @@ export default function WhitepaperPage() {
                 'Reward distribution',
               ].map(f => (
                 <div key={f} className="flex items-center gap-2 text-[11px] text-gray-400">
-                  <CheckCircle className="w-3 h-3 text-[#7C3AED] flex-shrink-0" />
+                  <CheckCircle className="w-3 h-3 text-[#6366F1] flex-shrink-0" />
                   {f}
                 </div>
               ))}
@@ -619,7 +619,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="project-discovery" number="15" title="Project Discovery">
-            <p>STEINZ Project Discovery surfaces real, verified Web3 projects with live market data. Projects are pulled from CoinGecko with a minimum market cap threshold, ensuring quality. The NAKA GO token is featured as a pinned partner project.</p>
+            <p>NAKA Project Discovery surfaces real, verified Web3 projects with live market data. Projects are pulled from CoinGecko with a minimum market cap threshold, ensuring quality. The NAKA GO token is featured as a pinned partner project.</p>
 
             <div className="glass rounded-xl p-4 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Discovery Features</p>
@@ -642,18 +642,18 @@ export default function WhitepaperPage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-[#00E5FF]/10 bg-[#00E5FF]/[0.02] mt-4">
-              <p className="text-xs font-heading font-bold text-[#00E5FF] mb-2">Token Listing Process</p>
-              <p className="text-[11px] text-gray-500">Any project can submit a listing request through the built-in form. Submissions include token details, contract address, team info, and social links. All submissions go through STEINZ verification before being listed. Verified projects receive the gold wavy checkmark badge.</p>
+            <div className="glass rounded-xl p-4 border border-[#00D4AA]/10 bg-[#00D4AA]/[0.02] mt-4">
+              <p className="text-xs font-heading font-bold text-[#00D4AA] mb-2">Token Listing Process</p>
+              <p className="text-[11px] text-gray-500">Any project can submit a listing request through the built-in form. Submissions include token details, contract address, team info, and social links. All submissions go through NAKA verification before being listed. Verified projects receive the gold wavy checkmark badge.</p>
             </div>
           </Section>
 
           <Section id="wallet-system" number="16" title="Non-Custodial Wallet">
-            <p>STEINZ includes a built-in non-custodial wallet that gives users full control over their private keys. Create a new wallet with a mnemonic seed phrase, or import an existing wallet. View real balances, send and receive tokens, and manage your assets without leaving the platform.</p>
+            <p>NAKA includes a built-in non-custodial wallet that gives users full control over their private keys. Create a new wallet with a mnemonic seed phrase, or import an existing wallet. View real balances, send and receive tokens, and manage your assets without leaving the platform.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Wallet className="w-5 h-5 text-[#00E5FF] mb-2" />
+                <Wallet className="w-5 h-5 text-[#00D4AA] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Create Wallet</h4>
                 <ul className="space-y-1 text-[11px] text-gray-500">
                   <li>&bull; Generate BIP-39 mnemonic phrase (12/24 words)</li>
@@ -663,7 +663,7 @@ export default function WhitepaperPage() {
                 </ul>
               </div>
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Lock className="w-5 h-5 text-[#7C3AED] mb-2" />
+                <Lock className="w-5 h-5 text-[#6366F1] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Import Wallet</h4>
                 <ul className="space-y-1 text-[11px] text-gray-500">
                   <li>&bull; Import via mnemonic phrase or private key</li>
@@ -681,7 +681,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="governance" number="17" title="Governance">
-            <p>STEINZ is designed for progressive decentralization. Token holders govern platform decisions through a transparent on-chain voting mechanism.</p>
+            <p>NAKA is designed for progressive decentralization. Token holders govern platform decisions through a transparent on-chain voting mechanism.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Governance Scope</p>
@@ -697,7 +697,7 @@ export default function WhitepaperPage() {
                   'Community initiatives',
                 ].map(item => (
                   <div key={item} className="flex items-center gap-2 text-[11px] text-gray-400">
-                    <Vote className="w-3 h-3 text-[#7C3AED] flex-shrink-0" />
+                    <Vote className="w-3 h-3 text-[#6366F1] flex-shrink-0" />
                     {item}
                   </div>
                 ))}
@@ -707,9 +707,9 @@ export default function WhitepaperPage() {
             <div className="glass rounded-xl p-4 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-2">Governance Process</p>
               <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full bg-[#00E5FF]/10 text-[#00E5FF] text-[10px] font-semibold">Proposal</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#00D4AA]/10 text-[#00D4AA] text-[10px] font-semibold">Proposal</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
-                <span className="px-2 py-0.5 rounded-full bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-semibold">Discussion (7 days)</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#6366F1]/10 text-[#6366F1] text-[10px] font-semibold">Discussion (7 days)</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
                 <span className="px-2 py-0.5 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] text-[10px] font-semibold">Voting (5 days)</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
@@ -718,7 +718,7 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <Section id="unique" number="18" title="Why STEINZ Is Unique">
+          <Section id="unique" number="18" title="Why NAKA Is Unique">
             <p>No existing platform combines all of these elements into one unified intelligence layer.</p>
             <div className="overflow-x-auto mt-4">
               <table className="w-full text-left border-collapse">
@@ -741,18 +741,18 @@ export default function WhitepaperPage() {
                   <ComparisonRow platform="Revoke.cash" ai="No" security="Approvals" builder="No" launchpad="No" multichain="EVM" wallet="No" />
                   <ComparisonRow platform="DeBank" ai="No" security="Limited" builder="No" launchpad="No" multichain="Yes" wallet="Yes" />
                   <ComparisonRow platform="Zapper" ai="No" security="No" builder="No" launchpad="No" multichain="Yes" wallet="No" />
-                  <ComparisonRow platform="STEINZ LABS" ai="Full" security="Full Suite" builder="Yes" launchpad="Milestone" multichain="12+" wallet="Yes" highlight />
+                  <ComparisonRow platform="NAKA LABS" ai="Full" security="Full Suite" builder="Yes" launchpad="Milestone" multichain="12+" wallet="Yes" highlight />
                 </tbody>
               </table>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
-              <div className="glass rounded-xl p-4 border border-[#00E5FF]/10">
-                <h4 className="text-xs font-heading font-bold text-[#00E5FF] mb-2">Reputation Trading Flywheel</h4>
+              <div className="glass rounded-xl p-4 border border-[#00D4AA]/10">
+                <h4 className="text-xs font-heading font-bold text-[#00D4AA] mb-2">Reputation Trading Flywheel</h4>
                 <p className="text-[11px] text-gray-500">No other platform connects builder reputation with trading intelligence. When a high-reputation builder launches, Smart Money surfaces it to traders instantly.</p>
               </div>
-              <div className="glass rounded-xl p-4 border border-[#7C3AED]/10">
-                <h4 className="text-xs font-heading font-bold text-[#7C3AED] mb-2">AI at Chain Speed</h4>
+              <div className="glass rounded-xl p-4 border border-[#6366F1]/10">
+                <h4 className="text-xs font-heading font-bold text-[#6366F1] mb-2">AI at Chain Speed</h4>
                 <p className="text-[11px] text-gray-500">Anthropic&apos;s reasoning capabilities enable sub-second inference on live on-chain events &mdash; a genuine technical moat incumbents cannot easily replicate.</p>
               </div>
               <div className="glass rounded-xl p-4 border border-[#10B981]/10">
@@ -763,7 +763,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="business" number="19" title="Business Model & Revenue">
-            <p>STEINZ generates revenue through multiple compounding streams, designed to scale with platform adoption:</p>
+            <p>NAKA generates revenue through multiple compounding streams, designed to scale with platform adoption:</p>
             <div className="space-y-3 mt-4">
               {[
                 { title: 'Premium Subscriptions', desc: 'Free tier covers basic access. Pro ($4/mo) unlocks full wallet intelligence, all security tools, unlimited alerts, advanced VTX AI with web search, and Trading DNA Analyzer. Premium ($15/mo) adds API access and institutional features.', revenue: '~60% of revenue' },
@@ -775,7 +775,7 @@ export default function WhitepaperPage() {
                 <div key={item.title} className="glass rounded-lg p-4 border border-white/[0.06]">
                   <div className="flex items-center justify-between mb-1">
                     <h4 className="text-xs font-heading font-bold text-white">{item.title}</h4>
-                    <span className="text-[9px] text-[#00E5FF] font-semibold">{item.revenue}</span>
+                    <span className="text-[9px] text-[#00D4AA] font-semibold">{item.revenue}</span>
                   </div>
                   <p className="text-[11px] text-gray-500">{item.desc}</p>
                 </div>
@@ -784,7 +784,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="team" number="20" title="Team & Partners">
-            <p>STEINZ Labs is built by a team of experienced blockchain developers, AI engineers, and security researchers with deep roots in the Web3 ecosystem.</p>
+            <p>NAKA Labs is built by a team of experienced blockchain developers, AI engineers, and security researchers with deep roots in the Web3 ecosystem.</p>
 
             <div className="glass rounded-xl p-5 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Core Competencies</p>
@@ -798,7 +798,7 @@ export default function WhitepaperPage() {
                   { area: 'Community Building', desc: 'Crypto-native growth, social coordination, governance design' },
                 ].map(t => (
                   <div key={t.area} className="glass rounded-lg p-3 border border-white/[0.04]">
-                    <p className="text-[10px] font-bold text-[#00E5FF]">{t.area}</p>
+                    <p className="text-[10px] font-bold text-[#00D4AA]">{t.area}</p>
                     <p className="text-[9px] text-gray-500 mt-1">{t.desc}</p>
                   </div>
                 ))}
@@ -810,10 +810,10 @@ export default function WhitepaperPage() {
                 <img src="/nakago-logo.jpg" alt="NAKA GO" className="w-10 h-10 rounded-full object-cover" />
                 <div>
                   <p className="text-xs font-heading font-bold text-white">NAKA GO &mdash; Strategic Partner</p>
-                  <p className="text-[10px] text-gray-500">Powering the STEINZ ecosystem infrastructure</p>
+                  <p className="text-[10px] text-gray-500">Powering the NAKA ecosystem infrastructure</p>
                 </div>
               </div>
-              <p className="text-[11px] text-gray-500">NAKA GO provides the foundational infrastructure and community support for STEINZ Labs. As a strategic partner, NAKA GO is deeply integrated into the platform&apos;s discovery engine and community layer.</p>
+              <p className="text-[11px] text-gray-500">NAKA GO provides the foundational infrastructure and community support for NAKA Labs. As a strategic partner, NAKA GO is deeply integrated into the platform&apos;s discovery engine and community layer.</p>
             </div>
           </Section>
 
@@ -827,18 +827,18 @@ export default function WhitepaperPage() {
                 },
                 {
                   phase: 'Phase 2 &mdash; Growth (In Progress)',
-                  color: '#00E5FF',
+                  color: '#00D4AA',
                   items: ['Non-Custodial Wallet', 'VTX AI Pro tiers with web search', 'Avalanche chain support', 'Context Feed bookmarks & history', 'TradingView chart integration', 'Token listing submission system', 'Enhanced whitepaper & documentation'],
                 },
                 {
                   phase: 'Phase 3 &mdash; Expansion (Q1 2026)',
-                  color: '#7C3AED',
-                  items: ['Full Trading Suite (spot, limit, DCA)', 'Copy Trading Protocol', 'Mobile app (iOS & Android)', 'STEINZ Token launch', 'DAO Governance implementation', 'Institutional API release'],
+                  color: '#6366F1',
+                  items: ['Full Trading Suite (spot, limit, DCA)', 'Copy Trading Protocol', 'Mobile app (iOS & Android)', 'NAKA Token launch', 'DAO Governance implementation', 'Institutional API release'],
                 },
                 {
                   phase: 'Phase 4 &mdash; Ecosystem (Q2-Q3 2026)',
                   color: '#F59E0B',
-                  items: ['STEINZ Earn Layer', 'Cross-Chain Bridge', 'Community Sentiment Dashboard', 'Insider Threat Alert System', 'White-label solutions', 'Global expansion'],
+                  items: ['NAKA Earn Layer', 'Cross-Chain Bridge', 'Community Sentiment Dashboard', 'Insider Threat Alert System', 'White-label solutions', 'Global expansion'],
                 },
               ].map(p => (
                 <div key={p.phase} className="glass rounded-xl p-4 border border-white/[0.06]">
@@ -860,7 +860,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="legal" number="22" title="Legal & Compliance">
-            <p>STEINZ Labs operates with full transparency regarding regulatory obligations and user protections.</p>
+            <p>NAKA Labs operates with full transparency regarding regulatory obligations and user protections.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
@@ -876,7 +876,7 @@ export default function WhitepaperPage() {
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Disclaimers</h4>
                 <ul className="space-y-1 text-[10px] text-gray-500">
-                  <li>&bull; STEINZ does not provide financial advice</li>
+                  <li>&bull; NAKA does not provide financial advice</li>
                   <li>&bull; AI signals are informational, not recommendations</li>
                   <li>&bull; Past performance does not indicate future results</li>
                   <li>&bull; Users are responsible for their own trading decisions</li>
@@ -886,12 +886,12 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent text-center mt-8">
+          <div className="glass rounded-2xl p-8 border border-[#00D4AA]/10 bg-gradient-to-b from-[#00D4AA]/[0.03] to-transparent text-center mt-8">
             <h3 className="text-xl font-heading font-bold mb-3">Ready to Experience the Future?</h3>
-            <p className="text-sm text-gray-400 mb-6">STEINZ Labs &mdash; The intelligence infrastructure layer for the on-chain economy.</p>
+            <p className="text-sm text-gray-400 mb-6">NAKA Labs &mdash; The intelligence infrastructure layer for the on-chain economy.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
               <Link href="/dashboard">
-                <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-3 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 inline-flex items-center gap-2">
+                <button className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-8 py-3 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00D4AA]/20 inline-flex items-center gap-2">
                   Launch Platform <ArrowRight className="w-4 h-4" />
                 </button>
               </Link>
@@ -904,7 +904,7 @@ export default function WhitepaperPage() {
           </div>
 
           <div className="text-center mt-8 text-gray-600 text-[11px]">
-            &copy; 2026 STEINZ Labs &times; NAKA GO. Confidential. For Strategic Partners.
+            &copy; 2026 NAKA Labs &times; NAKA GO. Confidential. For Strategic Partners.
           </div>
         </div>
       </div>

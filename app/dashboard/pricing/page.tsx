@@ -4,24 +4,24 @@ import { Check, Zap, Crown, ArrowRight } from 'lucide-react';
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+    <div className="min-h-screen bg-[#0B0D14] text-white pt-32 pb-24 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <div className="inline-block px-4 py-2 bg-[#00E5FF]/10 border border-[#00E5FF]/30 rounded-full mb-6">
-            <span className="text-[#00E5FF] text-sm font-semibold">PRIVATE BETA ACCESS</span>
+          <div className="inline-block px-4 py-2 bg-[#00D4AA]/10 border border-[#00D4AA]/30 rounded-full mb-6">
+            <span className="text-[#00D4AA] text-sm font-semibold">PRIVATE BETA ACCESS</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">
             Join the Private Beta
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Get early access to STEINZ with exclusive pricing. Limited spots available.
+            Get early access to NAKA with exclusive pricing. Limited spots available.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div className="glass rounded-2xl p-8 border border-white/10 hover:border-[#00E5FF]/30 transition-all">
+          <div className="glass rounded-2xl p-8 border border-white/10 hover:border-[#00D4AA]/30 transition-all">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-xl flex items-center justify-center">
                 <Zap className="w-6 h-6" />
               </div>
               <div>
@@ -35,7 +35,7 @@ export default function PricingPage() {
                 <span className="text-5xl font-bold">$2</span>
                 <span className="text-gray-400">/month</span>
               </div>
-              <p className="text-sm text-[#00E5FF]">90% OFF - Beta Pricing</p>
+              <p className="text-sm text-[#00D4AA]">90% OFF - Beta Pricing</p>
               <p className="text-xs text-gray-400 line-through">Regular: $20/month</p>
             </div>
 
@@ -48,7 +48,7 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <button className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-4 rounded-xl font-semibold text-lg hover:scale-105 transition-transform flex items-center justify-center gap-2">
+            <button className="w-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-6 py-4 rounded-xl font-semibold text-lg hover:scale-105 transition-transform flex items-center justify-center gap-2">
               Get Pro <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -96,9 +96,9 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-12 max-w-2xl mx-auto glass rounded-xl p-6 border border-[#00E5FF]/30 text-center">
+        <div className="mt-12 max-w-2xl mx-auto glass rounded-xl p-6 border border-[#00D4AA]/30 text-center">
           <p className="text-sm text-gray-300 leading-relaxed">
-            <span className="font-semibold text-[#00E5FF]">Beta users lock in this pricing forever.</span> Price increases to regular rates after beta ends. No credit card required during beta - pay with crypto only. Cancel anytime.
+            <span className="font-semibold text-[#00D4AA]">Beta users lock in this pricing forever.</span> Price increases to regular rates after beta ends. No credit card required during beta - pay with crypto only. Cancel anytime.
           </p>
         </div>
 

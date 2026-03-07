@@ -1,6 +1,6 @@
 export default function PredictionsLoading() {
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white p-4">
+    <div className="min-h-screen bg-[#0B0D14] text-white p-4">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 rounded bg-white/10 animate-pulse" />
         <div className="h-6 w-48 rounded bg-white/10 animate-pulse" />

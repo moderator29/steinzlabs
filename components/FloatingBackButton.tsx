@@ -12,10 +12,10 @@ export default function FloatingBackButton() {
   return (
     <button
       onClick={() => router.back()}
-      className="fixed bottom-24 left-4 z-40 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors shadow-lg md:bottom-6"
+      className="fixed bottom-24 left-4 z-40 w-10 h-10 rounded-full bg-[#161822] border border-[#232637] flex items-center justify-center hover:bg-[#1E2030] transition-colors md:bottom-6"
       aria-label="Go back"
     >
-      <ArrowLeft className="w-5 h-5 text-white" />
+      <ArrowLeft className="w-4 h-4 text-[#9CA3AF]" />
     </button>
   );
 }
