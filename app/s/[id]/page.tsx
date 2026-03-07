@@ -39,21 +39,21 @@ export default function ShortSharePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#0B0D14] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#00D4AA] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0B0D14] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Share Not Found</h1>
           <p className="text-gray-400 mb-6">This shared event may have expired or the link is invalid.</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg font-semibold text-white"
+            className="px-6 py-2 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-lg font-semibold text-white"
           >
             Go to Dashboard
           </button>
@@ -63,13 +63,13 @@ export default function ShortSharePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0B0D14] flex items-center justify-center p-4">
       <div className="max-w-lg w-full">
         <div className="glass rounded-2xl p-6 border border-white/10">
           <div className="flex items-center gap-3 mb-6">
-            <img src="/steinz-logo-64.png" alt="Steinz Labs" className="w-8 h-8" />
+            <img src="/naka-logo.svg" alt="Naka Labs" className="w-8 h-8" />
             <div>
-              <h2 className="text-sm font-bold text-white">Steinz Labs</h2>
+              <h2 className="text-sm font-bold text-white">Naka Labs</h2>
               <p className="text-xs text-gray-400">On-Chain Intelligence</p>
             </div>
           </div>
@@ -91,13 +91,13 @@ export default function ShortSharePage() {
 
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
+            className="w-full py-3 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-xl font-semibold text-white text-sm"
           >
-            Open in Steinz Labs
+            Open in Naka Labs
           </button>
 
           <p className="text-center text-xs text-gray-500 mt-4">
-            Powered by Steinz Labs — Real-time on-chain intelligence
+            Powered by Naka Labs — Real-time on-chain intelligence
           </p>
         </div>
       </div>

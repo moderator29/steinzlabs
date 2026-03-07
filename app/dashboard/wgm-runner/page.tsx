@@ -26,8 +26,8 @@ interface SkinData {
 }
 
 const SKINS: SkinData[] = [
-  { id: 'cyber-warrior', name: 'Cyber Warrior', rarity: 'Common', rarityColor: '#60A5FA', image: '/game/skins/cyber-warrior.jpg', unlockScore: 0, glowColor: '#00E5FF', accentColor: '#3B82F6' },
-  { id: 'vertex-specter', name: 'Vertex Specter', rarity: 'Rare', rarityColor: '#A78BFA', image: '/game/skins/vertex-specter.jpg', unlockScore: 0, glowColor: '#8B5CF6', accentColor: '#7C3AED' },
+  { id: 'cyber-warrior', name: 'Cyber Warrior', rarity: 'Common', rarityColor: '#60A5FA', image: '/game/skins/cyber-warrior.jpg', unlockScore: 0, glowColor: '#00D4AA', accentColor: '#3B82F6' },
+  { id: 'vertex-specter', name: 'Vertex Specter', rarity: 'Rare', rarityColor: '#A78BFA', image: '/game/skins/vertex-specter.jpg', unlockScore: 0, glowColor: '#8B5CF6', accentColor: '#6366F1' },
   { id: 'shadow-runner', name: 'Shadow Runner', rarity: 'Epic', rarityColor: '#F87171', image: '/game/skins/shadow-runner.jpg', unlockScore: 1500, glowColor: '#EF4444', accentColor: '#DC2626' },
   { id: 'gollden', name: 'Gollden', rarity: 'Epic', rarityColor: '#FBBF24', image: '/game/skins/gollden.jpg', unlockScore: 3000, glowColor: '#F59E0B', accentColor: '#D97706' },
   { id: 'inferno-guard', name: 'Inferno Guard', rarity: 'Legendary', rarityColor: '#FB923C', image: '/game/skins/inferno-guard.jpg', unlockScore: 5000, glowColor: '#EF4444', accentColor: '#B91C1C' },
@@ -35,7 +35,7 @@ const SKINS: SkinData[] = [
 
 const LANE_COUNT = 3;
 const MILESTONE_REWARDS = [
-  { score: 500, label: '500 Points', reward: '5 $STZ Bonus', type: 'coin' as const },
+  { score: 500, label: '500 Points', reward: '5 $NAKA Bonus', type: 'coin' as const },
   { score: 1500, label: '1,500 Points', reward: 'Shadow Runner Skin', type: 'skin' as const },
   { score: 3000, label: '3,000 Points', reward: 'Gollden Skin', type: 'skin' as const },
   { score: 5000, label: '5,000 Points', reward: 'Inferno Guard Skin', type: 'skin' as const },
@@ -278,7 +278,7 @@ class GameAudio {
 
 const audioRef = { current: null as GameAudio | null };
 
-export default function STZRunnerPage() {
+export default function NakaRunnerPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cleanSpritesRef = useRef<Record<string, HTMLCanvasElement>>({});
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -334,17 +334,17 @@ export default function STZRunnerPage() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('stz_runner_username');
+    const saved = localStorage.getItem('naka_runner_username');
     if (saved) setUsername(saved);
-    const savedSkin = localStorage.getItem('stz_runner_skin');
+    const savedSkin = localStorage.getItem('naka_runner_skin');
     if (savedSkin) setSelectedSkin(parseInt(savedSkin) || 0);
-    const savedBest = localStorage.getItem('stz_runner_best');
+    const savedBest = localStorage.getItem('naka_runner_best');
     if (savedBest) setPersonalBestScore(parseInt(savedBest) || 0);
-    const savedUnlocked = localStorage.getItem('stz_runner_unlocked');
+    const savedUnlocked = localStorage.getItem('naka_runner_unlocked');
     if (savedUnlocked) { try { setUnlockedSkins(JSON.parse(savedUnlocked)); } catch {} }
-    const firstTime = !localStorage.getItem('stz_runner_played');
+    const firstTime = !localStorage.getItem('naka_runner_played');
     setIsFirstTime(firstTime);
-    const savedSound = localStorage.getItem('stz_runner_sound');
+    const savedSound = localStorage.getItem('naka_runner_sound');
     if (savedSound !== null) setSoundEnabled(savedSound !== 'false');
   }, []);
 
@@ -359,7 +359,7 @@ export default function STZRunnerPage() {
     });
     if (changed) {
       setUnlockedSkins(newUnlocked);
-      localStorage.setItem('stz_runner_unlocked', JSON.stringify(newUnlocked));
+      localStorage.setItem('naka_runner_unlocked', JSON.stringify(newUnlocked));
     }
   }, [personalBestScore]);
 
@@ -377,7 +377,7 @@ export default function STZRunnerPage() {
     scoreSubmittedRef.current = true;
     if (score > personalBestScore) {
       setPersonalBestScore(score);
-      localStorage.setItem('stz_runner_best', score.toString());
+      localStorage.setItem('naka_runner_best', score.toString());
     }
     try {
       const res = await fetch('/api/wgm-scores', {
@@ -397,7 +397,7 @@ export default function STZRunnerPage() {
     scoreSubmittedRef.current = false;
     setShowDeathOverlay(false);
     setSessionId(prev => prev + 1);
-    localStorage.setItem('stz_runner_played', '1');
+    localStorage.setItem('naka_runner_played', '1');
     setIsFirstTime(false);
     setGameState('playing');
 
@@ -827,7 +827,7 @@ export default function STZRunnerPage() {
         ctx.fillStyle = '#F59E0B';
         ctx.fillText('!', x - 3 * s, y - crH * 0.35);
       } else {
-        ctx.shadowColor = '#7C3AED';
+        ctx.shadowColor = '#6366F1';
         ctx.shadowBlur = 14 * s;
         const pulse = 0.25 + Math.sin(game.frame * 0.15) * 0.15;
         const bw = obsW * 0.9;
@@ -1057,7 +1057,7 @@ export default function STZRunnerPage() {
 
   const handleLogin = () => {
     if (!username.trim()) return;
-    localStorage.setItem('stz_runner_username', username.trim());
+    localStorage.setItem('naka_runner_username', username.trim());
     fetchLeaderboard();
     if (isFirstTime) {
       setTutorialTimer(10);
@@ -1090,7 +1090,7 @@ export default function STZRunnerPage() {
   const toggleSound = () => {
     const newVal = !soundEnabled;
     setSoundEnabled(newVal);
-    localStorage.setItem('stz_runner_sound', String(newVal));
+    localStorage.setItem('naka_runner_sound', String(newVal));
     if (audioRef.current) audioRef.current.toggle();
   };
 
@@ -1099,11 +1099,11 @@ export default function STZRunnerPage() {
       <div className="min-h-screen bg-[#050010] flex items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
           <div className="space-y-2">
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#EF4444] to-[#7C3AED] rounded-2xl flex items-center justify-center shadow-lg shadow-[#EF4444]/30">
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#EF4444] to-[#6366F1] rounded-2xl flex items-center justify-center shadow-lg shadow-[#EF4444]/30">
               <Zap className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-heading font-bold tracking-wider">
-              <span className="text-[#00E5FF]">$STZ</span> <span className="text-white">RUNNER</span>
+              <span className="text-[#00D4AA]">$NAKA</span> <span className="text-white">RUNNER</span>
             </h1>
             <p className="text-gray-500 text-sm">3-Lane Cyberpunk Endless Runner</p>
           </div>
@@ -1111,10 +1111,10 @@ export default function STZRunnerPage() {
             <input type="text" placeholder="Enter your username..."
               value={username} onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-center text-lg focus:border-[#00E5FF] focus:outline-none"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-center text-lg focus:border-[#00D4AA] focus:outline-none"
               maxLength={20} />
             <button onClick={handleLogin} disabled={!username.trim()}
-              className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold text-lg disabled:opacity-30">
+              className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#6366F1] rounded-xl font-bold text-lg disabled:opacity-30">
               ENTER
             </button>
           </div>
@@ -1128,25 +1128,25 @@ export default function STZRunnerPage() {
       { icon: <ChevronLeft className="w-7 h-7" />, text: 'Swipe LEFT to dodge obstacles' },
       { icon: <ChevronRight className="w-7 h-7" />, text: 'Swipe RIGHT to change lanes' },
       { icon: <ChevronUp className="w-7 h-7" />, text: 'Swipe UP or TAP to jump' },
-      { icon: <Sparkles className="w-7 h-7 text-[#F59E0B]" />, text: 'Collect $STZ coins for bonus points' },
+      { icon: <Sparkles className="w-7 h-7 text-[#F59E0B]" />, text: 'Collect $NAKA coins for bonus points' },
     ];
     return (
       <div className="min-h-screen bg-[#050010] flex items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
           <div className="flex items-center justify-between px-2">
             <div className="text-xs text-gray-500 uppercase tracking-widest">How to Play</div>
-            <div className="text-sm font-mono text-[#00E5FF] bg-[#00E5FF]/10 px-2.5 py-0.5 rounded-lg">{tutorialTimer}s</div>
+            <div className="text-sm font-mono text-[#00D4AA] bg-[#00D4AA]/10 px-2.5 py-0.5 rounded-lg">{tutorialTimer}s</div>
           </div>
-          <h2 className="text-2xl font-heading font-bold"><span className="text-[#00E5FF]">$STZ</span> RUNNER</h2>
+          <h2 className="text-2xl font-heading font-bold"><span className="text-[#00D4AA]">$NAKA</span> RUNNER</h2>
           <div className="space-y-3">
             {tips.map((tip, i) => (
               <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-[#00E5FF] flex-shrink-0">{tip.icon}</div>
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-[#00D4AA] flex-shrink-0">{tip.icon}</div>
                 <p className="text-sm text-left text-gray-300">{tip.text}</p>
               </div>
             ))}
           </div>
-          <button onClick={() => setGameState('prerun')} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold text-base">
+          <button onClick={() => setGameState('prerun')} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#6366F1] rounded-xl font-bold text-base">
             SKIP & PLAY
           </button>
         </div>
@@ -1161,7 +1161,7 @@ export default function STZRunnerPage() {
         <div className="max-w-sm mx-auto">
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setGameState('login')} className="p-2 hover:bg-white/10 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
-            <h1 className="text-lg font-heading font-bold tracking-wider"><span className="text-[#00E5FF]">$STZ</span> RUNNER</h1>
+            <h1 className="text-lg font-heading font-bold tracking-wider"><span className="text-[#00D4AA]">$NAKA</span> RUNNER</h1>
             <button onClick={() => { fetchLeaderboard(); setGameState('leaderboard'); }} className="p-2 hover:bg-white/10 rounded-lg"><Trophy className="w-5 h-5 text-[#F59E0B]" /></button>
           </div>
 
@@ -1182,7 +1182,7 @@ export default function STZRunnerPage() {
           </div>
 
           <button onClick={startGame} disabled={!imagesLoaded}
-            className="w-full py-4 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-2xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg shadow-[#EF4444]/20 mb-4 active:scale-95 transition-transform disabled:opacity-50">
+            className="w-full py-4 bg-gradient-to-r from-[#EF4444] to-[#6366F1] rounded-2xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg shadow-[#EF4444]/20 mb-4 active:scale-95 transition-transform disabled:opacity-50">
             {imagesLoaded ? <><Play className="w-6 h-6" fill="white" /> RUN</> : <><RotateCcw className="w-5 h-5 animate-spin" /> Loading...</>}
           </button>
 
@@ -1204,8 +1204,8 @@ export default function STZRunnerPage() {
                 const locked = skinLocked(s);
                 return (
                   <button key={s.id}
-                    onClick={() => { if (!locked) { setSelectedSkin(idx); localStorage.setItem('stz_runner_skin', idx.toString()); } }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedSkin === idx ? 'border-[#00E5FF]/50 bg-[#00E5FF]/5' : locked ? 'border-white/5 bg-white/3 opacity-60' : 'border-white/5 bg-white/5 hover:border-white/15'}`}>
+                    onClick={() => { if (!locked) { setSelectedSkin(idx); localStorage.setItem('naka_runner_skin', idx.toString()); } }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedSkin === idx ? 'border-[#00D4AA]/50 bg-[#00D4AA]/5' : locked ? 'border-white/5 bg-white/3 opacity-60' : 'border-white/5 bg-white/5 hover:border-white/15'}`}>
                     <div className="relative w-12 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-black">
                       <img src={s.image} alt={s.name} className={`w-full h-full object-cover ${locked ? 'blur-sm brightness-50' : ''}`} style={!locked ? { mixBlendMode: 'screen' } : {}} />
                       {locked && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><Lock className="w-4 h-4 text-gray-400" /></div>}
@@ -1215,7 +1215,7 @@ export default function STZRunnerPage() {
                       <p className="text-[10px] font-semibold" style={{ color: s.rarityColor }}>{s.rarity}</p>
                       {locked && <p className="text-[10px] text-gray-500">Unlock at {s.unlockScore.toLocaleString()} pts</p>}
                     </div>
-                    {selectedSkin === idx && !locked && <span className="text-[9px] text-[#00E5FF] border border-[#00E5FF]/30 px-2 py-0.5 rounded font-semibold">ACTIVE</span>}
+                    {selectedSkin === idx && !locked && <span className="text-[9px] text-[#00D4AA] border border-[#00D4AA]/30 px-2 py-0.5 rounded font-semibold">ACTIVE</span>}
                   </button>
                 );
               })}
@@ -1226,7 +1226,7 @@ export default function STZRunnerPage() {
             <div className="space-y-2">
               <div className="p-3 bg-white/5 rounded-xl border border-white/5 mb-3">
                 <p className="text-xs text-gray-400 mb-1">Your Best Score</p>
-                <p className="text-xl font-bold text-[#00E5FF] font-mono">{personalBestScore.toLocaleString()}</p>
+                <p className="text-xl font-bold text-[#00D4AA] font-mono">{personalBestScore.toLocaleString()}</p>
               </div>
               {MILESTONE_REWARDS.map((m, i) => {
                 const achieved = personalBestScore >= m.score;
@@ -1247,7 +1247,7 @@ export default function STZRunnerPage() {
                       <div className="text-right">
                         <span className="text-[10px] text-gray-500 font-mono">{Math.min(100, Math.floor((personalBestScore / m.score) * 100))}%</span>
                         <div className="w-12 h-1 bg-white/10 rounded-full mt-0.5 overflow-hidden">
-                          <div className="h-full bg-[#00E5FF] rounded-full" style={{ width: `${Math.min(100, (personalBestScore / m.score) * 100)}%` }} />
+                          <div className="h-full bg-[#00D4AA] rounded-full" style={{ width: `${Math.min(100, (personalBestScore / m.score) * 100)}%` }} />
                         </div>
                       </div>
                     )}
@@ -1261,11 +1261,11 @@ export default function STZRunnerPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
                 <div className="flex items-center gap-2">
-                  <Music className="w-4 h-4 text-[#00E5FF]" />
+                  <Music className="w-4 h-4 text-[#00D4AA]" />
                   <span className="text-sm">Music & SFX</span>
                 </div>
                 <button onClick={toggleSound}
-                  className={`w-10 h-5 rounded-full transition-all ${soundEnabled ? 'bg-[#00E5FF]' : 'bg-gray-600'}`}>
+                  className={`w-10 h-5 rounded-full transition-all ${soundEnabled ? 'bg-[#00D4AA]' : 'bg-gray-600'}`}>
                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </button>
               </div>
@@ -1279,7 +1279,7 @@ export default function STZRunnerPage() {
               </div>
               <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                 <p className="text-xs text-gray-400 mb-1">Best Score</p>
-                <p className="text-sm font-semibold text-[#00E5FF] font-mono">{personalBestScore.toLocaleString()}</p>
+                <p className="text-sm font-semibold text-[#00D4AA] font-mono">{personalBestScore.toLocaleString()}</p>
               </div>
             </div>
           )}
@@ -1304,7 +1304,7 @@ export default function STZRunnerPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-white/5 rounded-xl p-3 text-center border border-white/5">
-              <p className="text-lg font-bold text-[#00E5FF]">{stats.totalPlayers}</p><p className="text-[10px] text-gray-500">Players</p>
+              <p className="text-lg font-bold text-[#00D4AA]">{stats.totalPlayers}</p><p className="text-[10px] text-gray-500">Players</p>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center border border-white/5">
               <p className="text-lg font-bold text-[#F59E0B]">{stats.highestScore.toLocaleString()}</p><p className="text-[10px] text-gray-500">Top Score</p>
@@ -1315,16 +1315,16 @@ export default function STZRunnerPage() {
               <div className="text-center py-8 text-gray-500"><Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" /><p className="text-sm">No scores yet. Be the first!</p></div>
             )}
             {leaderboard.map((entry, idx) => (
-              <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl border ${entry.username === username ? 'border-[#00E5FF]/50 bg-[#00E5FF]/5' : 'border-white/5 bg-white/5'}`}>
+              <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl border ${entry.username === username ? 'border-[#00D4AA]/50 bg-[#00D4AA]/5' : 'border-white/5 bg-white/5'}`}>
                 <div className="w-8 text-center font-bold">
                   {idx === 0 ? <Crown className="w-5 h-5 text-[#F59E0B] mx-auto" /> : idx === 1 ? <Medal className="w-5 h-5 text-gray-300 mx-auto" /> : idx === 2 ? <Medal className="w-5 h-5 text-amber-600 mx-auto" /> : <span className="text-gray-500 text-sm">#{idx + 1}</span>}
                 </div>
                 <div className="flex-1 min-w-0"><p className="font-semibold text-sm truncate">{entry.username}</p><p className="text-[10px] text-gray-500">{entry.gamesPlayed} games</p></div>
-                <div className="text-right"><p className="font-bold text-sm text-[#00E5FF]">{entry.score.toLocaleString()}</p><p className="text-[10px] text-gray-500">{entry.coins} $STZ</p></div>
+                <div className="text-right"><p className="font-bold text-sm text-[#00D4AA]">{entry.score.toLocaleString()}</p><p className="text-[10px] text-gray-500">{entry.coins} $NAKA</p></div>
               </div>
             ))}
           </div>
-          <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold">PLAY NOW</button>
+          <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#6366F1] rounded-xl font-bold">PLAY NOW</button>
         </div>
       </div>
     );
@@ -1338,10 +1338,10 @@ export default function STZRunnerPage() {
         <div className="flex gap-1.5">
           <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
             <p className="text-[7px] text-gray-400 uppercase tracking-wider">Score</p>
-            <p className="text-sm font-bold text-[#00E5FF] font-mono">{liveScore.toLocaleString()}</p>
+            <p className="text-sm font-bold text-[#00D4AA] font-mono">{liveScore.toLocaleString()}</p>
           </div>
           <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
-            <p className="text-[7px] text-gray-400 uppercase tracking-wider">$STZ</p>
+            <p className="text-[7px] text-gray-400 uppercase tracking-wider">$NAKA</p>
             <p className="text-sm font-bold text-[#F59E0B] font-mono">{liveCoins}</p>
           </div>
           <div className="bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 px-2.5 py-1 text-center">
@@ -1368,12 +1368,12 @@ export default function STZRunnerPage() {
 
       {showDeathOverlay && (
         <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0A0E1A] border border-white/10 rounded-2xl p-6 w-full max-w-xs space-y-4 text-center">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#EF4444] to-[#7C3AED] rounded-2xl flex items-center justify-center"><Target className="w-8 h-8 text-white" /></div>
+          <div className="bg-[#0B0D14] border border-white/10 rounded-2xl p-6 w-full max-w-xs space-y-4 text-center">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#EF4444] to-[#6366F1] rounded-2xl flex items-center justify-center"><Target className="w-8 h-8 text-white" /></div>
             <h2 className="text-2xl font-heading font-bold">CRASHED!</h2>
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/5 rounded-xl p-2"><p className="text-[10px] text-gray-400">Score</p><p className="font-bold text-[#00E5FF]">{finalScore.toLocaleString()}</p></div>
-              <div className="bg-white/5 rounded-xl p-2"><p className="text-[10px] text-gray-400">$STZ</p><p className="font-bold text-[#F59E0B]">{finalCoins}</p></div>
+              <div className="bg-white/5 rounded-xl p-2"><p className="text-[10px] text-gray-400">Score</p><p className="font-bold text-[#00D4AA]">{finalScore.toLocaleString()}</p></div>
+              <div className="bg-white/5 rounded-xl p-2"><p className="text-[10px] text-gray-400">$NAKA</p><p className="font-bold text-[#F59E0B]">{finalCoins}</p></div>
               <div className="bg-white/5 rounded-xl p-2"><p className="text-[10px] text-gray-400">Distance</p><p className="font-bold">{finalDistance}m</p></div>
             </div>
             {rank > 0 && (
@@ -1383,7 +1383,7 @@ export default function STZRunnerPage() {
               </div>
             )}
             <div className="space-y-2">
-              <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#7C3AED] rounded-xl font-bold flex items-center justify-center gap-2">
+              <button onClick={startGame} className="w-full py-3 bg-gradient-to-r from-[#EF4444] to-[#6366F1] rounded-xl font-bold flex items-center justify-center gap-2">
                 <RotateCcw className="w-4 h-4" /> RUN AGAIN
               </button>
               <button onClick={handleBack} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/10">

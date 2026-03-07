@@ -10,7 +10,7 @@ interface Message {
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
-const TIER_KEY = 'steinz_user_tier';
+const TIER_KEY = 'naka_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
 
 function loadHistory(): Message[] {
@@ -139,7 +139,7 @@ export default function VtxAiPage() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **STEINZ Pro** for unlimited VTX AI access, web search, and more!' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **NAKA Pro** for unlimited VTX AI access, web search, and more!' }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
@@ -174,13 +174,13 @@ export default function VtxAiPage() {
   const isPro = tier === 'pro';
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex flex-col">
+    <div className="min-h-screen bg-[#0B0D14] text-white flex flex-col">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center">
             <Bot className="w-4 h-4" />
           </div>
           <div className="flex-1">
@@ -202,7 +202,7 @@ export default function VtxAiPage() {
               <span className="text-[10px] text-gray-400">{dailyUsage.used}/{dailyUsage.limit}</span>
               <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#00E5FF]'}`}
+                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#00D4AA]'}`}
                   style={{ width: `${(dailyUsage.used / dailyUsage.limit) * 100}%` }}
                 />
               </div>
@@ -220,15 +220,15 @@ export default function VtxAiPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
             {msg.role === 'assistant' && (
-              <div className="w-7 h-7 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
+              <div className="w-7 h-7 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
                 <Bot className="w-3.5 h-3.5" />
               </div>
             )}
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${msg.role === 'user' ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 border border-[#00E5FF]/20 text-white' : 'glass border border-white/10 text-gray-300'}`}>
+            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${msg.role === 'user' ? 'bg-gradient-to-r from-[#00D4AA]/20 to-[#6366F1]/20 border border-[#00D4AA]/20 text-white' : 'glass border border-white/10 text-gray-300'}`}>
               {msg.role === 'assistant' && (
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="w-3 h-3 text-[#00E5FF]" />
-                  <span className="text-[10px] font-semibold text-[#00E5FF]">VTX AI</span>
+                  <Sparkles className="w-3 h-3 text-[#00D4AA]" />
+                  <span className="text-[10px] font-semibold text-[#00D4AA]">VTX AI</span>
                 </div>
               )}
               <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -251,12 +251,12 @@ export default function VtxAiPage() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="w-7 h-7 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
               <Bot className="w-3.5 h-3.5" />
             </div>
             <div className="glass border border-white/10 rounded-2xl px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin text-[#00E5FF]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#00D4AA]" />
                 {webSearchEnabled ? 'Searching the web & live data...' : 'Searching live data...'}
               </div>
             </div>
@@ -266,13 +266,13 @@ export default function VtxAiPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-white/10 space-y-3 bg-[#0A0E1A]/80 backdrop-blur-sm">
+      <div className="p-4 border-t border-white/10 space-y-3 bg-[#0B0D14]/80 backdrop-blur-sm">
         {rateLimited && !isPro && (
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl">
             <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-[11px] text-amber-300 font-semibold">Daily limit reached</p>
-              <p className="text-[10px] text-gray-400">Upgrade to STEINZ Pro for unlimited messages</p>
+              <p className="text-[10px] text-gray-400">Upgrade to NAKA Pro for unlimited messages</p>
             </div>
             <button
               onClick={() => router.push('/dashboard/pricing')}
@@ -285,8 +285,8 @@ export default function VtxAiPage() {
         {messages.length <= 1 && (
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             {quickActions.map((action) => (
-              <button key={action.label} onClick={() => handleSend(action.query)} className="flex items-center gap-1.5 px-3 py-2 bg-[#111827] border border-white/10 rounded-lg text-[10px] font-semibold whitespace-nowrap hover:border-[#00E5FF]/30 transition-colors">
-                <action.icon className="w-3 h-3 text-[#00E5FF]" />
+              <button key={action.label} onClick={() => handleSend(action.query)} className="flex items-center gap-1.5 px-3 py-2 bg-[#111827] border border-white/10 rounded-lg text-[10px] font-semibold whitespace-nowrap hover:border-[#00D4AA]/30 transition-colors">
+                <action.icon className="w-3 h-3 text-[#00D4AA]" />
                 {action.label}
               </button>
             ))}
@@ -296,7 +296,7 @@ export default function VtxAiPage() {
           <div className="flex-1 flex items-center gap-2 bg-[#111827] border border-white/10 rounded-xl px-3">
             <button
               onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${webSearchEnabled ? 'bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${webSearchEnabled ? 'bg-[#00D4AA]/20 text-[#00D4AA] border border-[#00D4AA]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
               title={webSearchEnabled ? 'Web search enabled' : 'Enable web search'}
             >
               <Globe className="w-3 h-3" />
@@ -312,7 +312,7 @@ export default function VtxAiPage() {
               disabled={loading || (rateLimited && !isPro)}
             />
           </div>
-          <button onClick={() => handleSend()} disabled={loading || !input.trim() || (rateLimited && !isPro)} className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] p-3 rounded-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
+          <button onClick={() => handleSend()} disabled={loading || !input.trim() || (rateLimited && !isPro)} className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] p-3 rounded-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
             <Send className="w-4 h-4" />
           </button>
         </div>

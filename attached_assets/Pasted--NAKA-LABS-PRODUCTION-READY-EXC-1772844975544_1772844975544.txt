@@ -1,0 +1,2078 @@
+═══════════════════════════════════════════════════════════════════
+NAKA LABS - PRODUCTION-READY EXCELLENCE LAYER
+PART 3: GENERATIONAL FEATURES & PLATFORM PERFECTION
+═══════════════════════════════════════════════════════════════════
+
+MISSION:
+Transform Naka Labs from good to GENERATIONAL. This is a $1M+ platform that users LOVE and can't live without. Every feature works flawlessly. Every interaction delights. Every detail matters.
+
+This prompt covers:
+1. Advanced Intelligence Features (making MVP features insanely good)
+2. Dune Analytics Integration (full power utilization)
+3. Social Platform Features (follow, DM, profiles, discovery)
+4. Professional UI/UX (hamburger menu, docs, alerts, responsive)
+5. Code Excellence (production-grade, optimized, secure)
+6. VTX AI Enhancement (conversational, proactive, integrated)
+7. Advanced Trading Features (simulation, MEV protection, copy trading)
+8. Performance & Analytics (backtesting, attribution, comparisons)
+9. User Experience Polish (onboarding, tutorials, shortcuts)
+10. Enterprise Features (API, exports, team collaboration)
+
+═══════════════════════════════════════════════════════════════════
+SECTION 1: ADVANCED INTELLIGENCE FEATURES
+Making the 4 MVP Features Insanely Accurate & Helpful
+═══════════════════════════════════════════════════════════════════
+
+1.1 REAL-TIME INTELLIGENCE SYSTEM - ENHANCED
+
+Current: Basic whale alerts
+Upgrade To: Advanced Multi-Dimensional Intelligence
+
+ADVANCED FILTERING:
+✓ Filter by chain (ETH, SOL, Base, Arbitrum, Polygon, all)
+✓ Filter by transaction size ($10k+, $50k+, $100k+, $500k+, $1M+, custom)
+✓ Filter by token type (All, Top 100, DeFi, Meme, AI, RWA, Gaming, NFT)
+✓ Filter by wallet type (Whale, Smart Money, Exchange, VC, Influencer)
+✓ Filter by action (Buy, Sell, Transfer, Stake, LP Add/Remove)
+✓ Filter by time (Last hour, 24h, 7d, 30d, custom range)
+✓ Saved filter presets (save your favorite combinations)
+
+SMART ALERT RULES:
+Create complex alert conditions:
+- "Alert me when ANY whale buys >$100k of AI tokens on Base"
+- "Alert me when smart money wallet 0x123... makes ANY move"
+- "Alert me when 3+ whales accumulate same token within 1 hour"
+- "Alert me when large LP removal happens on tokens I hold"
+- "Alert me when wallet similar to mine makes a trade"
+
+Alert Delivery Channels:
+✓ In-platform notifications (bell icon)
+✓ Email notifications
+✓ Push notifications (mobile/desktop)
+✓ Telegram bot integration
+✓ Discord webhook integration
+✓ SMS (premium feature)
+
+TRUST SCORE ENHANCEMENT:
+Current: Basic trust score
+Upgrade To: Multi-Factor Confidence System
+
+Trust Score Calculation (0-100):
+- Source verification (30 points): Multiple data sources confirm
+- Historical accuracy (20 points): Similar past signals performed well
+- Wallet reputation (20 points): Known profitable wallet
+- Transaction depth (15 points): Multiple confirmations on-chain
+- Social sentiment (10 points): Community discussing it
+- Liquidity verification (5 points): Can actually trade this
+
+Display:
+✓ Color-coded (Green: 80-100, Yellow: 50-79, Red: 0-49)
+✓ Breakdown showing which factors contributed
+✓ Historical accuracy rate for this signal type
+✓ Comparable past signals and their outcomes
+
+CONTEXT FEED INTELLIGENCE:
+AI-Generated Analysis Includes:
+✓ What happened (clear summary)
+✓ Why it matters (market impact)
+✓ Who did it (wallet profile: history, win rate, specialty)
+✓ What they usually do next (pattern analysis)
+✓ Similar past events and outcomes
+✓ Risk assessment (high/medium/low)
+✓ Time sensitivity (act now vs monitor)
+✓ Recommended action (buy/sell/watch/ignore)
+
+Proof System Includes:
+✓ Transaction hash with explorer link
+✓ Wallet address with label and history link
+✓ Token contract verified on multiple scanners
+✓ Price chart showing impact
+✓ Volume spike visualization
+✓ Holder distribution change
+✓ Bubblemaps showing wallet relationships
+✓ Similar wallet movements (copycats)
+
+ONE-CLICK TRADING ENHANCED:
+✓ Transaction simulation before execution
+✓ Gas optimization (suggest best time to execute)
+✓ MEV protection (private transaction option)
+✓ Slippage preview (show exactly what you'll get)
+✓ Multi-hop routing visualization (show the path)
+✓ Price impact calculator
+✓ Alternative routes comparison
+✓ Failed transaction prevention (check before sending)
+
+1.2 PERSONALIZED PORTFOLIO INTELLIGENCE - ENHANCED
+
+Current: Basic portfolio tracking
+Upgrade To: Advanced Portfolio Analytics & Insights
+
+PORTFOLIO ANALYTICS:
+✓ Real-time portfolio value across all chains
+✓ 24h/7d/30d/All-time P&L
+✓ Per-token P&L with entry/exit tracking
+✓ Unrealized gains/losses
+✓ Realized gains/losses (tax-ready)
+✓ Portfolio allocation pie chart (by token, by chain, by sector)
+✓ Historical balance chart (see portfolio grow over time)
+✓ Benchmark comparison (vs BTC, ETH, Market)
+✓ Risk metrics (volatility, concentration, liquidity)
+✓ Performance attribution (what drove returns?)
+
+DNA ANALYZER ENHANCEMENT:
+Current: Basic wallet analysis
+Upgrade To: Deep Behavioral & Predictive Analysis
+
+Wallet DNA Includes:
+✓ Trading personality (Ape, Degen, Conservative, Balanced, Whale, Bot)
+✓ Win rate (% of profitable trades)
+✓ Average hold time (Scalper, Swing Trader, Long-term Holder)
+✓ Risk tolerance score (based on position sizes and volatility)
+✓ Sector preferences (DeFi, Meme, AI, Gaming, etc.)
+✓ Chain preferences (which chains they use most)
+✓ Entry timing (early, mid, late to trends)
+✓ Exit discipline (take profit levels, stop loss usage)
+✓ Profit factor (gross profit / gross loss)
+✓ Sharpe ratio (risk-adjusted returns)
+✓ Maximum drawdown (worst losing streak)
+✓ Recovery time (how fast they bounce back)
+✓ Copy-worthiness score (should others follow this wallet?)
+
+Predictive Features:
+✓ "This wallet typically holds for 7 days - consider exit timeline"
+✓ "Based on past behavior, this wallet may add to position if price drops 10%"
+✓ "Similar wallets are currently accumulating [TOKEN]"
+✓ "This wallet's sector rotation suggests next move: [SECTOR]"
+
+WALLET COMPARISON:
+✓ Compare your wallet vs any other wallet
+✓ Compare vs "Smart Money" aggregate
+✓ Compare vs Top Performers in your tier
+✓ Side-by-side metrics table
+✓ Gap analysis (what are they doing that you're not?)
+✓ Actionable insights (how to improve)
+
+COPY TRADING SYSTEM (Gold Tier):
+✓ Select wallets to auto-copy
+✓ Set parameters (min/max position size, tokens to include/exclude)
+✓ Delay options (instant, 5min, 15min - to avoid frontrunning)
+✓ Stop copying conditions (if wallet loses X%, auto-stop)
+✓ Track copy performance separately
+✓ One-click disable
+
+VTX AI ENHANCEMENT:
+Current: Basic Q&A
+Upgrade To: Intelligent Conversational Assistant
+
+Advanced Capabilities:
+✓ "Show me all whale movements in last hour on Base chain"
+✓ "Analyze this wallet: 0x123... and tell me if I should copy them"
+✓ "What should I do with my ETH position based on current signals?"
+✓ "Find me AI tokens that smart money is accumulating"
+✓ "Compare my portfolio performance vs the whales"
+✓ "Explain why NAKA is pumping right now"
+✓ "Set an alert when any whale buys more than $100k of memecoins"
+✓ "Show me my worst performing tokens and suggest what to do"
+✓ "Execute a trade: buy $500 of [TOKEN]" (with confirmation)
+✓ "What happened to my portfolio yesterday?"
+
+VTX Personality:
+✓ Remembers conversation history across sessions
+✓ Learns your preferences (risk tolerance, favorite chains, style)
+✓ Proactive suggestions ("Hey, noticed whales buying [TOKEN], want to check it out?")
+✓ Explains reasoning clearly ("I suggest this because...")
+✓ Admits uncertainty ("Not enough data to be confident, but here's what I think...")
+✓ Conversational and helpful, not robotic
+✓ Uses your portfolio context in responses
+✓ Warns about risks without being preachy
+
+VTX Integration:
+✓ Click any signal → "Ask VTX about this"
+✓ Click any wallet → "Ask VTX to analyze"
+✓ Click any token → "Ask VTX for insights"
+✓ Voice input support (speak to VTX)
+✓ VTX floating widget (always accessible)
+
+1.3 RISK PROTECTION SCANNER - ENHANCED
+
+Current: Basic token security scan
+Upgrade To: Comprehensive Risk Intelligence
+
+MULTI-SOURCE SECURITY VERIFICATION:
+✓ GoPlus API (malicious code detection)
+✓ Rugcheck (rug pull patterns)
+✓ Honeypot detection (can you sell?)
+✓ Contract verification (source code published?)
+✓ Ownership analysis (can owner mint/freeze?)
+✓ Liquidity lock status (when does it unlock?)
+✓ Top holder concentration (whale risk)
+✓ Trading tax detection (buy/sell tax %)
+✓ DEX liquidity depth (can you exit large positions?)
+✓ Historical rug patterns (creator's past projects)
+✓ Social media verification (real team vs anonymous)
+✓ Audit status (any audits completed?)
+
+RISK SCORE (0-100):
+✓ 90-100: Extremely Safe (verified, audited, established)
+✓ 70-89: Low Risk (good liquidity, locked, clean contract)
+✓ 50-69: Medium Risk (some flags, proceed with caution)
+✓ 30-49: High Risk (multiple red flags, only if you know what you're doing)
+✓ 0-29: Extreme Risk (likely scam/rug, DO NOT BUY)
+
+Visual Indicators:
+✓ Green checkmark for each passed check
+✓ Yellow warning for caution areas
+✓ Red X for failed checks
+✓ Explanation for each finding
+✓ Recommended max position size based on risk
+
+WALLET RISK ASSESSMENT (NEW):
+Beyond token scanning - assess WALLET safety:
+✓ New wallet vs established (age matters)
+✓ Interaction with known scam contracts
+✓ Suspiciously perfect timing (bot detection)
+✓ Sybil attack patterns (connected to other suspicious wallets)
+✓ Wash trading detection
+✓ Blacklisted address check
+✓ Sanctions screening (OFAC compliance)
+✓ Exchange deposit addresses (accidental sends warning)
+
+1.4 NAKA ACCESS CONTROL - ENHANCED
+
+Current: Basic tier detection
+Upgrade To: Gamified Progression System
+
+TIER BENEFITS VISUALIZATION:
+Beautiful tier comparison page showing:
+✓ Current tier badge (animated)
+✓ Progress bar to next tier
+✓ Exactly how much more NAKA needed
+✓ Estimated value of upgrade in $
+✓ Feature-by-feature comparison table
+✓ Success stories from higher tier users
+✓ Exclusive benefits callouts
+
+DYNAMIC TIER PERKS:
+Bronze (500k NAKA):
+✓ All basic features with delays
+✓ Community badge
+✓ Access to general chat
+✓ 5 DMs per day
+
+Silver (1M NAKA):
+✓ Real-time alerts (5min delay)
+✓ Full portfolio analytics
+✓ Silver badge with glow effect
+✓ 50 DMs per day
+✓ Custom watchlists (up to 10)
+✓ Priority support (24h response)
+✓ Early feature access (beta testing)
+
+Gold (2M NAKA):
+✓ Instant everything
+✓ Reduced trading fees (0.4%)
+✓ Gold badge with particle effects
+✓ Unlimited DMs
+✓ Unlimited watchlists
+✓ Copy trading enabled
+✓ API access
+✓ Data exports
+✓ Priority support (1h response)
+✓ Exclusive Gold-only chat room
+✓ Monthly strategy call with team
+✓ Custom dashboard layouts
+✓ White-label option (for influencers)
+
+ACHIEVEMENT SYSTEM:
+Unlock badges for accomplishments:
+✓ "First Trade" - Execute your first trade
+✓ "Whale Spotter" - Correctly identify 10 profitable whale moves
+✓ "Early Bird" - Buy a token before it 10x
+✓ "Diamond Hands" - Hold through 50% drawdown and recover
+✓ "Diversified" - Hold 10+ different tokens
+✓ "Multi-Chain Master" - Trade on 3+ different chains
+✓ "Community Leader" - Get 100 followers
+✓ "Profitable Trader" - Achieve 50%+ portfolio returns
+✓ "NAKA Believer" - Hold 2M+ NAKA for 30 days
+
+═══════════════════════════════════════════════════════════════════
+SECTION 2: DUNE ANALYTICS INTEGRATION
+Leveraging Dune API for Institutional-Grade Data
+═══════════════════════════════════════════════════════════════════
+
+DUNE API KEY: LAx76dtqmZJVnsT3Olg2Kg1bLkTkRk4a
+
+DUNE CAPABILITIES TO INTEGRATE:
+
+2.1 CUSTOM BLOCKCHAIN QUERIES
+
+Execute SQL queries directly on blockchain data:
+✓ Custom whale tracking beyond standard APIs
+✓ Historical pattern analysis
+✓ Cross-protocol tracking
+✓ Gas spending analysis
+✓ Smart contract interaction patterns
+✓ Token holder cohort analysis
+✓ DEX aggregated volume
+✓ Liquidity provider tracking
+
+Implementation:
+async function queryDune(sqlQuery) {
+  const response = await fetch('https://api.dune.com/api/v1/query/execute', {
+    method: 'POST',
+    headers: {
+      'X-Dune-API-Key': 'LAx76dtqmZJVnsT3Olg2Kg1bLkTkRk4a',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      query_sql: sqlQuery,
+      performance: 'large'
+    })
+  });
+  
+  return await response.json();
+}
+
+Example Queries to Implement:
+
+Whale Wallet Discovery:
+SELECT 
+  address,
+  COUNT(*) as trade_count,
+  SUM(amount_usd) as total_volume,
+  AVG(profit_usd) as avg_profit
+FROM ethereum.trades
+WHERE amount_usd > 100000
+  AND block_time > NOW() - INTERVAL '30 days'
+GROUP BY address
+HAVING AVG(profit_usd) > 0
+ORDER BY avg_profit DESC
+LIMIT 100
+
+Token Holder Analysis:
+SELECT 
+  token_address,
+  COUNT(DISTINCT holder_address) as unique_holders,
+  AVG(balance_usd) as avg_holding,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY balance_usd) as median_holding
+FROM token_balances
+WHERE token_address = '{{token_address}}'
+  AND balance > 0
+GROUP BY token_address
+
+Smart Money Tracking:
+SELECT 
+  buyer_address,
+  token_bought,
+  buy_timestamp,
+  buy_price,
+  current_price,
+  (current_price - buy_price) / buy_price * 100 as roi_percentage
+FROM trades
+WHERE buyer_address IN (SELECT address FROM profitable_wallets)
+  AND buy_timestamp > NOW() - INTERVAL '7 days'
+ORDER BY roi_percentage DESC
+
+2.2 PRE-BUILT DUNE DASHBOARDS
+
+Embed Dune's professional dashboards:
+✓ Protocol TVL tracking
+✓ DEX volume comparisons
+✓ NFT market analytics
+✓ Gas price trends
+✓ Chain activity metrics
+✓ Stablecoin flows
+✓ Bridge volume tracking
+✓ Airdrop eligibility checkers
+
+Implementation:
+function DuneDashboardEmbed({ dashboardId }) {
+  return (
+    <iframe
+      src={`https://dune.com/embeds/${dashboardId}`}
+      width="100%"
+      height="600px"
+      frameBorder="0"
+      style={{ border: 'none' }}
+    />
+  );
+}
+
+2.3 ADVANCED ANALYTICS FEATURES
+
+Powered by Dune Data:
+
+Historical Backtesting:
+"If I had followed this whale 30 days ago, what would my returns be?"
+✓ Pull whale's historical trades from Dune
+✓ Calculate hypothetical portfolio performance
+✓ Account for slippage and fees
+✓ Show day-by-day performance chart
+✓ Compare vs holding ETH/BTC
+
+Token Flow Visualization:
+✓ Query Dune for token transfer history
+✓ Build graph of wallet relationships
+✓ Identify clusters (connected wallets)
+✓ Detect potential Sybil attacks
+✓ Show token concentration changes over time
+
+Liquidity Analysis:
+✓ Query DEX liquidity depth from Dune
+✓ Calculate max tradeable size without 5% slippage
+✓ Track liquidity additions/removals
+✓ Alert when liquidity drops below threshold
+✓ Show liquidity provider profitability
+
+Airdrop Opportunity Finder:
+✓ Query Dune for protocol interaction data
+✓ Check which protocols user has interacted with
+✓ Cross-reference with known airdrop patterns
+✓ Estimate potential airdrop value
+✓ Suggest actions to maximize eligibility
+
+2.4 REAL-TIME DUNE ALERTS
+
+Set up monitoring queries:
+✓ "Alert me when any address moves >$1M to exchange"
+✓ "Alert me when Uniswap volume spikes 50%+"
+✓ "Alert me when new liquidity pairs are created"
+✓ "Alert me when gas prices drop below 20 gwei"
+
+Implementation:
+async function setupDuneMonitor(query, condition, callback) {
+  const queryId = await createDuneQuery(query);
+  
+  setInterval(async () => {
+    const result = await getDuneQueryResults(queryId);
+    if (condition(result)) {
+      callback(result);
+    }
+  }, 60000); // Check every minute
+}
+
+2.5 INSTITUTIONAL FEATURES
+
+For Gold Tier Users:
+
+Custom Dune Query Builder:
+✓ Visual SQL builder (no code needed)
+✓ Pre-built query templates
+✓ Save and share queries
+✓ Schedule automated reports
+✓ Export to CSV/JSON
+✓ API endpoint for each saved query
+
+Analytics Library:
+✓ Token holder demographics
+✓ Wallet behavior clustering
+✓ Protocol health scores
+✓ Market manipulation detection
+✓ Wash trading identification
+✓ Influencer wallet tracking
+✓ VC wallet monitoring
+✓ Exchange flow analysis
+
+═══════════════════════════════════════════════════════════════════
+SECTION 3: SOCIAL PLATFORM FEATURES
+Building a Crypto Intelligence Community
+═══════════════════════════════════════════════════════════════════
+
+3.1 USER PROFILES
+
+Comprehensive Public Profiles:
+
+Profile Page Includes:
+✓ Username (unique, changeable once per month)
+✓ Display name
+✓ Avatar (upload or NFT)
+✓ Bio (500 characters max)
+✓ Location (optional)
+✓ Website/Twitter links
+✓ Join date
+✓ NAKA tier badge (with animation)
+✓ Achievement badges
+✓ Verification checkmark (if verified)
+
+Trading Stats (Public):
+✓ Total trades executed
+✓ Portfolio ROI (opt-in to share)
+✓ Win rate percentage
+✓ Favorite tokens
+✓ Favorite chains
+✓ Active since date
+✓ Longest hold
+✓ Biggest win (opt-in)
+✓ Trading personality (from DNA Analyzer)
+
+Social Stats:
+✓ Followers count
+✓ Following count  
+✓ Total posts/signals shared
+✓ Engagement rate
+✓ Community rank (Top 1%, Top 5%, etc.)
+
+Privacy Controls:
+✓ Make profile private
+✓ Hide trading stats
+✓ Hide follower counts
+✓ Block users
+✓ Limit who can DM (Everyone, Followers, Nobody)
+
+3.2 FOLLOW SYSTEM
+
+Full Social Graph:
+
+Follow Functionality:
+✓ Click "Follow" on any user profile
+✓ Instant follow (no approval needed)
+✓ Unfollow anytime
+✓ See who you follow
+✓ See who follows you
+✓ See mutual follows
+✓ Suggested users to follow (based on trading style, tier, performance)
+
+Feed Integration:
+✓ Following feed (see signals/posts from people you follow)
+✓ Everyone feed (see all public activity)
+✓ Filter by user, chain, token
+✓ Sort by time or relevance
+
+Follow Notifications:
+✓ "[User] started following you"
+✓ "[User] shared a signal you might like"
+✓ "[User] just executed a large trade"
+✓ Mute notifications per user if too noisy
+
+3.3 USER DISCOVERY
+
+Find Interesting Traders:
+
+Search Users:
+✓ Search by username
+✓ Search by wallet address (link to profile)
+✓ Search by trading style ("whales", "early birds", "degens")
+✓ Filter by tier (Bronze, Silver, Gold)
+✓ Filter by performance (top 10%, top 25%, etc.)
+✓ Filter by chain preference
+✓ Filter by sector preference
+
+Discovery Pages:
+
+Top Performers Leaderboard:
+✓ Top traders by 30-day ROI
+✓ Top traders by win rate
+✓ Most followed users
+✓ Most active traders (trade count)
+✓ Rising stars (new users with great performance)
+✓ Your position on leaderboard (if opted in)
+
+Suggested For You:
+✓ ML algorithm suggests users based on:
+  - Similar trading patterns
+  - Same tokens held
+  - Complementary strategies
+  - Tier match
+  - Active in same chains
+✓ "Users who follow X also follow Y"
+✓ New users with high potential
+
+Community Spotlights:
+✓ Weekly featured trader
+✓ Success story of the month
+✓ Best DNA analysis breakdown
+✓ Most helpful community member
+
+3.4 DIRECT MESSAGING SYSTEM
+
+Encrypted Private Messaging:
+
+DM Features:
+✓ One-on-one conversations
+✓ Real-time messaging (WebSocket)
+✓ Message history (last 90 days)
+✓ Read receipts
+✓ Typing indicators
+✓ Rich text formatting (bold, italic, code blocks)
+✓ Share signals directly in DM
+✓ Share wallet addresses (with preview)
+✓ Share charts
+✓ Emoji reactions
+✓ Delete messages (both sides or just you)
+✓ Report abusive messages
+
+Message Limits:
+Free Users (< 500k NAKA):
+✓ 5 DMs per day
+✓ Can receive unlimited
+✓ Cannot create group chats
+✓ Message history: 7 days
+
+Bronze Tier (500k NAKA):
+✓ 25 DMs per day
+✓ Message history: 30 days
+✓ Basic formatting
+
+Silver Tier (1M NAKA):
+✓ 100 DMs per day
+✓ Message history: 90 days
+✓ Rich formatting
+✓ Share media (images)
+
+Gold Tier (2M NAKA):
+✓ Unlimited DMs
+✓ Full message history
+✓ All formatting
+✓ Share any content type
+✓ Group chats (up to 10 people)
+✓ Voice messages
+✓ Priority message delivery
+
+DM UI:
+✓ Chat list sidebar (all conversations)
+✓ Unread count badges
+✓ Search messages
+✓ Pin important conversations
+✓ Archive old chats
+✓ Mute notifications per chat
+✓ Custom chat colors/themes
+
+Security:
+✓ End-to-end encryption (E2EE)
+✓ No messages stored unencrypted on server
+✓ Report/block abusive users
+✓ Auto-delete after X days (optional)
+✓ Screenshot detection warning (mobile)
+
+3.5 ACTIVITY FEED & SHARING
+
+Social Sharing of Signals:
+
+Share Signals:
+✓ "Share" button on any Context Feed item
+✓ Add your commentary (optional)
+✓ Post to your profile
+✓ Share in DMs
+✓ Export as image
+✓ Copy link
+✓ Share to Twitter (pre-filled tweet)
+✓ Share to Telegram
+
+Your Activity Feed:
+✓ Signals you've shared
+✓ Trades you've executed (opt-in)
+✓ Achievements unlocked
+✓ Tokens added to watchlist
+✓ Comments and reactions
+✓ Privacy controls (what to show publicly)
+
+Engagement:
+✓ Like/upvote signals
+✓ Comment on shared signals
+✓ React with emojis
+✓ Save signal to bookmarks
+✓ Flag as spam/misleading
+
+3.6 COLLABORATIVE FEATURES
+
+Team & Community Tools:
+
+Shared Watchlists:
+✓ Create watchlist
+✓ Invite users to collaborate
+✓ Real-time updates when anyone adds/removes
+✓ Comments on watchlist items
+✓ Voting system (upvote promising tokens)
+✓ Export collaborative watchlist
+
+Trading Groups:
+✓ Create private or public groups
+✓ Group chat
+✓ Shared signals feed
+✓ Group performance tracking
+✓ Leaderboard within group
+✓ Admin controls (kick, mute, moderate)
+
+Copy Trading Transparency:
+✓ Opt-in to be copied
+✓ Set copy fees (% of profits)
+✓ See who's copying you
+✓ Leaderboard of most copied traders
+✓ Earnings from copiers
+
+Reputation System:
+✓ Community voting on signal quality
+✓ Reputation score (0-1000)
+✓ Benefits for high reputation:
+  - Profile badge
+  - Higher ranking in discovery
+  - Monetization options
+  - Featured on platform
+
+═══════════════════════════════════════════════════════════════════
+SECTION 4: PROFESSIONAL UI/UX OVERHAUL
+Making Platform Look & Feel Like $1M Product
+═══════════════════════════════════════════════════════════════════
+
+4.1 NAVIGATION & LAYOUT
+
+Hamburger Menu System:
+
+Mobile/Tablet (< 1024px):
+✓ Hamburger icon in TOP RIGHT corner
+✓ Click opens full-screen menu sliding from LEFT
+✓ Smooth animation (0.3s ease-in-out)
+✓ Semi-transparent backdrop
+✓ Click outside to close
+✓ ESC key to close
+
+Desktop (>= 1024px):
+✓ Persistent sidebar on left (collapsible)
+✓ Hover to expand (shows labels)
+✓ Keyboard shortcut to toggle (CMD/CTRL + B)
+
+Menu Structure:
+Navigation:
+  - 🏠 Home/Dashboard
+  - ⚡ Context Feed
+  - 📊 Portfolio
+  - 🧬 DNA Analyzer
+  - 🛡️ Token Scanner
+  - 👁️ Watchlists
+  - 🔔 Alerts
+  - 👥 Social (Follow, DMs, Profile)
+
+Quick Actions:
+  - 💰 Quick Trade
+  - 🔍 Search Anything (CMD+K)
+  - ➕ Add to Watchlist
+
+Account:
+  - 👤 Profile
+  - ⚙️ Settings
+  - 📚 Docs
+  - 🎓 Tutorials
+  - 💬 Support
+  - 🚪 Logout
+
+Tier Badge (top of menu):
+✓ Animated tier badge
+✓ NAKA balance displayed
+✓ Progress to next tier
+✓ Click to see tier benefits
+
+4.2 ALERTS SECTION
+
+Dedicated Alerts Management:
+
+Alerts Page Layout:
+✓ Active Alerts list (currently monitoring)
+✓ Alert History (recently triggered)
+✓ Create New Alert button (prominent)
+
+Alert Types:
+Price Alerts:
+  - Token hits price target
+  - Price changes X% in Y time
+  - New ATH/ATL
+
+Whale Alerts:
+  - Specific wallet makes move
+  - Any whale buys/sells token
+  - Large liquidity change
+
+Portfolio Alerts:
+  - Portfolio value hits target
+  - Token gains/loses X%
+  - Rebalancing suggestion
+
+Custom Alerts (Gold):
+  - Complex multi-condition rules
+  - Dune query results
+  - Smart contract events
+
+Alert Card UI:
+✓ Alert name/title
+✓ Condition clearly displayed
+✓ Current status vs target
+✓ Progress bar (if applicable)
+✓ Created date
+✓ Last triggered
+✓ Trigger count
+✓ Edit/Delete/Pause buttons
+
+Notification Center:
+✓ Bell icon in header (always visible)
+✓ Red dot for unread
+✓ Number badge for count
+✓ Dropdown showing recent notifications
+✓ Mark as read/unread
+✓ Clear all
+✓ Filter by type
+✓ Link to full Alerts page
+
+4.3 DOCUMENTATION
+
+Replace Whitepaper with Comprehensive Docs:
+
+Docs Structure:
+Getting Started:
+  - Welcome to Naka Labs
+  - Creating Your Account
+  - Connecting Your Wallet
+  - Understanding Tiers
+  - Quick Start Guide
+
+Features:
+  - Context Feed Explained
+  - Portfolio Tracking
+  - DNA Analyzer Guide
+  - Token Scanner Usage
+  - Setting Up Alerts
+  - One-Click Trading
+  - Copy Trading Tutorial
+
+Guides:
+  - How to Identify Profitable Whales
+  - Reading Trust Scores
+  - Interpreting Bubblemaps
+  - Managing Risk
+  - Tax Reporting Exports
+  - API Documentation (Gold Tier)
+
+FAQ:
+  - Billing & Tiers
+  - Security & Privacy
+  - Trading Fees
+  - Troubleshooting
+  - Mobile App (coming soon)
+
+Docs Features:
+✓ Search functionality (instant)
+✓ Table of contents (sticky sidebar)
+✓ Copy code blocks
+✓ Screenshots and GIFs
+✓ Interactive tutorials (step-by-step)
+✓ Video embedded explanations
+✓ Last updated dates
+✓ "Was this helpful?" feedback
+✓ Suggest edit button (community)
+✓ Dark/light mode toggle
+
+4.4 ONBOARDING EXPERIENCE
+
+First-Time User Flow:
+
+Welcome Modal:
+✓ "Welcome to Naka Labs!" animation
+✓ Brief value proposition
+✓ "Take Tour" or "Skip to Dashboard"
+
+Interactive Tutorial (if "Take Tour"):
+Step 1: Dashboard Overview
+  - Highlight key sections
+  - Explain navigation
+  - Show where everything is
+
+Step 2: Connect Wallet
+  - Guide through wallet connection
+  - Explain tier system
+  - Show NAKA balance detection
+
+Step 3: Context Feed
+  - Show sample signal
+  - Explain trust score
+  - Demo "View Proof"
+
+Step 4: Portfolio
+  - Import sample portfolio
+  - Show analytics features
+  - Highlight insights
+
+Step 5: Create First Alert
+  - Walk through alert creation
+  - Explain notification options
+  - Test notification
+
+Step 6: Explore Social
+  - Suggest users to follow
+  - Show how to send DM
+  - Explain community features
+
+Completion:
+✓ "You're all set!" celebration
+✓ Achievement badge unlocked
+✓ Suggested next actions
+✓ Link to Docs for more
+
+Tooltips & Help:
+✓ "?" icon next to complex features
+✓ Hover tooltips explaining terms
+✓ Contextual help ("Learn more" links)
+✓ Persistent help widget (bottom right)
+
+4.5 COMMAND PALETTE
+
+Quick Actions Menu (CMD+K / CTRL+K):
+
+Keyboard Shortcut Opens:
+✓ Search bar overlay (full screen dim)
+✓ Type to search anything:
+  - Navigate to pages ("portfolio", "alerts")
+  - Search tokens ("ETH", "NAKA")
+  - Search users ("@username")
+  - Search wallets ("0x123...")
+  - Execute actions ("new alert", "quick trade")
+  - Open docs ("how to copy trade")
+
+Features:
+✓ Fuzzy search (typo-tolerant)
+✓ Recent searches
+✓ Suggested actions
+✓ Keyboard navigation (up/down arrows)
+✓ Enter to execute
+✓ ESC to close
+✓ Shows keyboard shortcuts for actions
+
+Example Commands:
+- "trade sol" → Opens trade modal for SOL
+- "follow whales" → Goes to top performers page
+- "my portfolio" → Goes to portfolio
+- "@alice" → Goes to Alice's profile
+- "alert eth > $5000" → Creates price alert
+- "docs trading" → Opens trading guide
+- "dark mode" → Toggles dark mode
+
+4.6 EMPTY STATES & LOADING STATES
+
+Professional State Management:
+
+Empty States:
+Instead of blank pages, show:
+✓ Illustration/icon
+✓ Helpful message ("You don't have any alerts yet")
+✓ Clear action ("Create Your First Alert")
+✓ Link to docs ("Learn about alerts")
+✓ Example/template to get started
+
+Examples:
+- Empty Portfolio: "Connect wallet to track portfolio"
+- No Watchlists: "Start building your watchlist"
+- No Followers: "Discover traders to follow"
+- No Alerts: "Set up your first alert"
+- No DMs: "Start a conversation"
+
+Loading States:
+✓ Skeleton screens (not spinners)
+✓ Show page structure while loading
+✓ Shimmer animation
+✓ Progressive loading (show data as it arrives)
+✓ Estimated time for long operations
+✓ Cancel option for queries
+
+Error States:
+✓ Friendly error messages (not technical jargon)
+✓ Explain what went wrong
+✓ Suggest how to fix
+✓ Retry button
+✓ Contact support link
+✓ Error code (for support reference)
+
+4.7 RESPONSIVE DESIGN
+
+Perfect on Every Device:
+
+Mobile First (<640px):
+✓ Single column layout
+✓ Bottom tab navigation
+✓ Swipe gestures (swipe right to open menu)
+✓ Pull to refresh
+✓ Floating action button (+ for quick add)
+✓ Optimized tap targets (minimum 44px)
+✓ Simplified charts (tap to expand)
+✓ Collapsible sections
+✓ Mobile-optimized modals (slide up from bottom)
+
+Tablet (640px - 1024px):
+✓ Two-column layout where appropriate
+✓ Side-by-side comparisons
+✓ Larger charts
+✓ Hamburger menu + header
+✓ Split view for chats
+
+Desktop (>1024px):
+✓ Three-column layout (sidebar, main, details)
+✓ Hover states and tooltips
+✓ Keyboard shortcuts enabled
+✓ Multi-window support (drag out charts)
+✓ Dense information display
+
+Testing Checklist:
+✓ iPhone SE (smallest modern phone)
+✓ iPhone 14 Pro
+✓ iPad
+✓ iPad Pro
+✓ Desktop 1920x1080
+✓ Ultrawide 3440x1440
+✓ Vertical monitors (rotated)
+
+4.8 THEME & DARK MODE
+
+Beautiful Dark Theme (Default):
+
+Color Palette:
+Background: #0A0E1A (deep blue-black)
+Surface: #1E2433 (cards, modals)
+Border: #2D3748
+Text Primary: #FFFFFF
+Text Secondary: #A0AEC0
+Accent Primary: #00E5FF (cyan)
+Accent Secondary: #7C3AED (purple)
+Success: #00E676 (green)
+Warning: #FFA726 (orange)
+Error: #FF4B4B (red)
+
+Light Mode (Optional):
+Background: #FFFFFF
+Surface: #F7FAFC
+Border: #E2E8F0
+Text Primary: #1A202C
+Text Secondary: #718096
+(Same accent colors)
+
+Toggle:
+✓ Sun/Moon icon in header
+✓ Smooth transition (0.3s)
+✓ Persists preference
+✓ Auto-detect system preference
+✓ Gradients and shadows adjust accordingly
+
+4.9 MICRO-INTERACTIONS
+
+Delightful Details:
+
+Button States:
+✓ Hover: Slight scale (1.05x), shadow increase
+✓ Active: Scale down (0.95x)
+✓ Loading: Pulse animation, disable pointer
+✓ Success: Green checkmark briefly
+✓ Error: Red shake animation
+
+Card Interactions:
+✓ Hover: Lift effect (translateY -4px, shadow)
+✓ Click: Ripple effect from click point
+✓ Expand: Smooth height transition
+
+Form Inputs:
+✓ Focus: Border color change, subtle glow
+✓ Valid: Green checkmark appears
+✓ Invalid: Red warning, shake
+✓ Auto-complete: Fade in suggestions
+
+Notifications/Toasts:
+✓ Slide in from top-right
+✓ Auto-dismiss after 5s
+✓ Pause on hover
+✓ Swipe to dismiss (mobile)
+✓ Stack multiple notifications
+
+Scroll:
+✓ Smooth scrolling (scroll-behavior: smooth)
+✓ Progress indicator for long pages
+✓ "Back to top" button (appears after scrolling)
+✓ Infinite scroll with loading indicator
+
+Animations:
+✓ Page transitions (fade)
+✓ Modal open/close (scale + fade)
+✓ Dropdown menus (slide down)
+✓ Tooltips (fade + slight movement)
+✓ All animations respect prefers-reduced-motion
+
+═══════════════════════════════════════════════════════════════════
+SECTION 5: CODE EXCELLENCE & PERFORMANCE
+Production-Grade Implementation
+═══════════════════════════════════════════════════════════════════
+
+5.1 TYPESCRIPT EVERYWHERE
+
+Full Type Safety:
+
+Convert entire codebase to TypeScript:
+✓ No 'any' types (use 'unknown' if truly unknown)
+✓ Strict mode enabled
+✓ Interface definitions for all data structures
+✓ Type guards for runtime validation
+✓ Generic types where appropriate
+✓ Utility types (Partial, Pick, Omit, etc.)
+
+Example Interfaces:
+interface Signal {
+  id: string;
+  type: 'whale_buy' | 'whale_sell' | 'large_transfer' | 'liquidity_change';
+  chain: Chain;
+  tokenAddress: string;
+  tokenSymbol: string;
+  walletAddress: string;
+  walletLabel?: string;
+  amount: number;
+  amountUSD: number;
+  trustScore: number;
+  timestamp: number;
+  txHash: string;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+  metadata: SignalMetadata;
+}
+
+interface UserProfile {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  bio?: string;
+  walletAddress: string;
+  nakaTier: 0 | 1 | 2 | 3;
+  nakaBalance: number;
+  joinedAt: number;
+  stats: UserStats;
+  socialStats: SocialStats;
+  preferences: UserPreferences;
+}
+
+Benefits:
+✓ Catch errors at compile time
+✓ Better IDE autocomplete
+✓ Self-documenting code
+✓ Easier refactoring
+✓ Reduced runtime errors
+
+5.2 ERROR HANDLING & LOGGING
+
+Robust Error Management:
+
+Error Boundaries (React):
+<ErrorBoundary
+  FallbackComponent={ErrorFallback}
+  onError={(error, errorInfo) => {
+    logErrorToService(error, errorInfo);
+  }}
+>
+  <App />
+</ErrorBoundary>
+
+Centralized Error Handler:
+class AppError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public severity: 'low' | 'medium' | 'high' | 'critical',
+    public userMessage?: string,
+    public metadata?: Record<string, any>
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
+function handleError(error: unknown) {
+  if (error instanceof AppError) {
+    // Known error
+    logError(error);
+    showUserNotification(error.userMessage || 'Something went wrong');
+    
+    if (error.severity === 'critical') {
+      reportToSentry(error);
+    }
+  } else {
+    // Unknown error
+    console.error('Unexpected error:', error);
+    reportToSentry(error);
+    showUserNotification('An unexpected error occurred. Our team has been notified.');
+  }
+}
+
+Structured Logging:
+interface LogEntry {
+  timestamp: number;
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  context?: Record<string, any>;
+  userId?: string;
+  sessionId: string;
+}
+
+class Logger {
+  private static instance: Logger;
+  
+  private constructor() {}
+  
+  static getInstance() {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
+    }
+    return Logger.instance;
+  }
+  
+  info(message: string, context?: Record<string, any>) {
+    this.log('info', message, context);
+  }
+  
+  error(message: string, error: Error, context?: Record<string, any>) {
+    this.log('error', message, { ...context, error: error.message, stack: error.stack });
+  }
+  
+  private log(level: LogEntry['level'], message: string, context?: Record<string, any>) {
+    const entry: LogEntry = {
+      timestamp: Date.now(),
+      level,
+      message,
+      context,
+      sessionId: getSessionId(),
+      userId: getCurrentUserId(),
+    };
+    
+    // Log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console[level](message, context);
+    }
+    
+    // Send to logging service in production
+    if (process.env.NODE_ENV === 'production') {
+      sendToLoggingService(entry);
+    }
+  }
+}
+
+5.3 CACHING STRATEGY
+
+Multi-Layer Caching:
+
+Browser Cache (Service Worker):
+✓ Cache static assets (JS, CSS, images)
+✓ Cache API responses (with TTL)
+✓ Offline fallback pages
+✓ Background sync for failed requests
+
+Memory Cache (React Query):
+import { QueryClient } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      cacheTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
+
+// Example usage
+const { data, isLoading, error } = useQuery({
+  queryKey: ['signals', filters],
+  queryFn: () => fetchSignals(filters),
+  staleTime: 30 * 1000, // 30 seconds for real-time data
+});
+
+Server Cache (Redis):
+✓ Cache expensive Dune queries (1-5 minutes)
+✓ Cache token metadata (15 minutes)
+✓ Cache user profiles (5 minutes, invalidate on update)
+✓ Cache leaderboards (1 minute)
+✓ Rate limiting counters
+✓ Session storage
+
+CDN Cache (Cloudflare):
+✓ Static assets (images, fonts)
+✓ Aggressive caching with versioned URLs
+✓ Geo-distributed for low latency
+✓ Auto-minification
+
+Cache Invalidation:
+✓ Time-based (TTL)
+✓ Event-based (on data update, invalidate)
+✓ Manual purge (admin feature)
+✓ Tag-based (invalidate related caches)
+
+5.4 DATABASE OPTIMIZATION
+
+PostgreSQL Best Practices:
+
+Indexing Strategy:
+CREATE INDEX idx_signals_chain_timestamp ON signals(chain, timestamp DESC);
+CREATE INDEX idx_signals_wallet ON signals(wallet_address);
+CREATE INDEX idx_signals_token ON signals(token_address);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_wallet ON users(wallet_address);
+CREATE INDEX idx_portfolio_user_token ON portfolio(user_id, token_address);
+
+-- Composite indexes for common queries
+CREATE INDEX idx_signals_composite ON signals(chain, type, timestamp DESC) 
+  WHERE trust_score >= 70;
+
+Query Optimization:
+-- Bad (scans entire table)
+SELECT * FROM signals WHERE timestamp > NOW() - INTERVAL '24 hours';
+
+-- Good (uses index)
+SELECT 
+  id, type, chain, token_symbol, amount_usd, trust_score, timestamp
+FROM signals 
+WHERE chain = 'ethereum' 
+  AND timestamp > NOW() - INTERVAL '24 hours'
+  AND trust_score >= 70
+ORDER BY timestamp DESC
+LIMIT 100;
+
+Connection Pooling:
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  max: 20, // max connections
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+Pagination:
+-- Cursor-based (better for real-time feeds)
+SELECT * FROM signals 
+WHERE id < $1 
+ORDER BY id DESC 
+LIMIT 50;
+
+-- Offset-based (for numbered pages)
+SELECT * FROM signals 
+ORDER BY timestamp DESC 
+LIMIT 50 OFFSET 100;
+
+Database Monitoring:
+✓ Slow query logging
+✓ Index usage statistics
+✓ Connection pool metrics
+✓ Query plan analysis (EXPLAIN)
+✓ Table bloat monitoring
+
+5.5 API OPTIMIZATION
+
+Efficient API Design:
+
+Rate Limiting:
+import rateLimit from 'express-rate-limit';
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: (req) => {
+    const tier = getUserTier(req.user);
+    switch (tier) {
+      case 3: return 1000; // Gold
+      case 2: return 500;  // Silver
+      case 1: return 200;  // Bronze
+      default: return 100; // Free
+    }
+  },
+  message: 'Too many requests, please upgrade your tier or try again later.',
+});
+
+app.use('/api/', apiLimiter);
+
+Response Compression:
+import compression from 'compression';
+
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between speed and compression
+}));
+
+Request Batching:
+// Instead of multiple requests
+GET /api/tokens/eth
+GET /api/tokens/btc
+GET /api/tokens/sol
+
+// Single batched request
+POST /api/tokens/batch
+{ "symbols": ["eth", "btc", "sol"] }
+
+GraphQL for Flexible Queries:
+query GetUserDashboard {
+  user {
+    profile {
+      username
+      tier
+      nakaBalance
+    }
+    portfolio {
+      totalValue
+      tokens {
+        symbol
+        balance
+        valueUSD
+      }
+    }
+    alerts(limit: 5) {
+      id
+      title
+      triggered
+    }
+  }
+}
+
+Webhook Subscriptions:
+✓ Instead of polling, use webhooks
+✓ Alchemy webhooks for on-chain events
+✓ Internal webhooks for platform events
+✓ Secure with HMAC signatures
+✓ Retry logic for failed deliveries
+
+5.6 FRONTEND OPTIMIZATION
+
+Bundle Size Reduction:
+
+Code Splitting:
+// Route-based splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const DNAAnalyzer = lazy(() => import('./pages/DNAAnalyzer'));
+
+// Component-based splitting
+const Chart = lazy(() => import('./components/Chart'));
+
+Tree Shaking:
+// Import only what you need
+import { useState, useEffect } from 'react'; // Good
+import React from 'react'; // Bad (imports everything)
+
+// Use named imports
+import { Button } from 'components'; // Good
+import * as Components from 'components'; // Bad
+
+Image Optimization:
+✓ WebP format with fallback
+✓ Responsive images (srcset)
+✓ Lazy loading (loading="lazy")
+✓ Blur placeholder (LQIP)
+✓ CDN delivery
+✓ Proper sizing (don't load 4K for 300px display)
+
+Example:
+<img
+  src="/images/hero.webp"
+  srcSet="
+    /images/hero-400.webp 400w,
+    /images/hero-800.webp 800w,
+    /images/hero-1200.webp 1200w
+  "
+  sizes="(max-width: 600px) 400px, (max-width: 1200px) 800px, 1200px"
+  alt="Hero image"
+  loading="lazy"
+  decoding="async"
+/>
+
+Font Optimization:
+✓ Self-host fonts (don't use Google Fonts CDN)
+✓ Font subsetting (only include needed characters)
+✓ Font display: swap (prevent invisible text)
+✓ Preload critical fonts
+
+<link
+  rel="preload"
+  href="/fonts/inter-var.woff2"
+  as="font"
+  type="font/woff2"
+  crossOrigin="anonymous"
+/>
+
+Rendering Performance:
+✓ Virtual scrolling for long lists (react-window)
+✓ Memoization (React.memo, useMemo, useCallback)
+✓ Debounce expensive operations (search, resize)
+✓ RequestAnimationFrame for animations
+✓ Web Workers for heavy calculations
+
+Example Virtual Scrolling:
+import { FixedSizeList } from 'react-window';
+
+function SignalsList({ signals }) {
+  return (
+    <FixedSizeList
+      height={600}
+      itemCount={signals.length}
+      itemSize={80}
+      width="100%"
+    >
+      {({ index, style }) => (
+        <div style={style}>
+          <SignalCard signal={signals[index]} />
+        </div>
+      )}
+    </FixedSizeList>
+  );
+}
+
+5.7 SECURITY HARDENING
+
+Production-Grade Security:
+
+Content Security Policy:
+const csp = {
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'", "https://api.dune.com"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "https:"],
+    connectSrc: [
+      "'self'",
+      "https://api.1inch.dev",
+      "https://api.dune.com",
+      "https://api.coingecko.com",
+      "wss://stream.dexscreener.com",
+    ],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"],
+  },
+};
+
+API Security:
+✓ API key rotation every 90 days
+✓ Secrets in environment variables (never in code)
+✓ Request signing for sensitive endpoints
+✓ Input sanitization (prevent XSS, SQL injection)
+✓ Output encoding
+✓ CORS properly configured
+✓ HTTPS only (HSTS enabled)
+
+Authentication:
+✓ JWT with short expiration (15 minutes)
+✓ Refresh tokens (7 days)
+✓ Token rotation on refresh
+✓ HttpOnly cookies for tokens
+✓ CSRF protection
+✓ Failed login rate limiting
+✓ Account lockout after 5 failed attempts
+
+Wallet Security:
+✓ Never request private keys
+✓ Verify signatures properly
+✓ Nonce management (prevent replay attacks)
+✓ Transaction simulation before signing
+✓ Clear warnings about what user is signing
+✓ Detect and warn about malicious contracts
+
+Data Protection:
+✓ Encrypt sensitive data at rest (AES-256)
+✓ TLS 1.3 for all connections
+✓ No sensitive data in logs
+✓ PII handling (GDPR compliance)
+✓ Right to deletion
+✓ Data export capability
+
+Dependency Security:
+✓ Regular npm audit
+✓ Automated dependency updates (Dependabot)
+✓ Lock file committed (package-lock.json)
+✓ Vulnerability scanning (Snyk)
+✓ Supply chain security (verify package integrity)
+
+5.8 TESTING STRATEGY
+
+Comprehensive Testing:
+
+Unit Tests (Jest):
+describe('calculateTrustScore', () => {
+  it('should return 100 for perfect conditions', () => {
+    const signal = {
+      sourceVerification: 30,
+      historicalAccuracy: 20,
+      walletReputation: 20,
+      transactionDepth: 15,
+      socialSentiment: 10,
+      liquidityVerification: 5,
+    };
+    expect(calculateTrustScore(signal)).toBe(100);
+  });
+  
+  it('should handle missing data gracefully', () => {
+    const signal = {};
+    expect(calculateTrustScore(signal)).toBeGreaterThanOrEqual(0);
+    expect(calculateTrustScore(signal)).toBeLessThanOrEqual(100);
+  });
+});
+
+Integration Tests:
+describe('Trading Flow', () => {
+  it('should execute trade end-to-end', async () => {
+    const user = await createTestUser();
+    await connectWallet(user);
+    
+    const quote = await getTradeQuote('ETH', 1000);
+    expect(quote.success).toBe(true);
+    
+    const result = await executeTrade(quote);
+    expect(result.txHash).toBeDefined();
+    
+    const portfolio = await getPortfolio(user);
+    expect(portfolio.tokens).toContainEqual(
+      expect.objectContaining({ symbol: 'ETH' })
+    );
+  });
+});
+
+E2E Tests (Playwright):
+test('user can create alert', async ({ page }) => {
+  await page.goto('/');
+  await page.click('text=Connect Wallet');
+  // ... wallet connection flow
+  
+  await page.click('text=Alerts');
+  await page.click('text=Create Alert');
+  
+  await page.fill('[placeholder="Alert name"]', 'ETH > $5000');
+  await page.selectOption('select[name="type"]', 'price');
+  await page.fill('[name="token"]', 'ETH');
+  await page.fill('[name="price"]', '5000');
+  
+  await page.click('text=Create');
+  
+  await expect(page.locator('text=Alert created')).toBeVisible();
+});
+
+Performance Tests:
+test('signals page loads in under 2 seconds', async () => {
+  const start = Date.now();
+  await fetch('/api/signals?limit=50');
+  const duration = Date.now() - start;
+  
+  expect(duration).toBeLessThan(2000);
+});
+
+Security Tests:
+test('rejects SQL injection attempts', async () => {
+  const maliciousInput = "'; DROP TABLE users; --";
+  const response = await fetch('/api/search', {
+    method: 'POST',
+    body: JSON.stringify({ query: maliciousInput }),
+  });
+  
+  expect(response.status).toBe(400);
+});
+
+Test Coverage Target:
+✓ Unit tests: 80%+ coverage
+✓ Integration tests: Critical paths covered
+✓ E2E tests: Main user flows
+✓ Performance tests: Key pages under threshold
+✓ Security tests: OWASP Top 10 covered
+
+═══════════════════════════════════════════════════════════════════
+SECTION 6: ADDITIONAL ADVANCED FEATURES
+Making Platform Truly Generational
+═══════════════════════════════════════════════════════════════════
+
+6.1 TRANSACTION SIMULATION
+
+Preview Before Execute:
+
+Simulate Trade:
+async function simulateTransaction(params) {
+  // Use Tenderly API or similar
+  const simulation = await fetch('https://api.tenderly.co/api/v1/simulate', {
+    method: 'POST',
+    headers: {
+      'X-Access-Key': process.env.TENDERLY_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      network_id: params.chainId,
+      from: params.userAddress,
+      to: params.contractAddress,
+      input: params.calldata,
+      value: params.value,
+    }),
+  });
+  
+  const result = await simulation.json();
+  
+  return {
+    success: result.transaction.status,
+    gasUsed: result.transaction.gas_used,
+    effectiveGasPrice: result.transaction.gas_price,
+    stateChanges: result.transaction.transaction_info.state_diff,
+    assetChanges: result.transaction.transaction_info.asset_changes,
+    logs: result.transaction.transaction_info.logs,
+  };
+}
+
+Show User:
+✓ Will transaction succeed or fail?
+✓ Exact tokens in/out
+✓ Gas cost in ETH and USD
+✓ All balance changes
+✓ Any warnings (e.g., approving unlimited tokens)
+✓ "Confirm" or "Cancel" with full info
+
+6.2 MEV PROTECTION
+
+Protect from Frontrunning:
+
+Private Transaction Option:
+✓ Use Flashbots Protect RPC
+✓ Submit transaction privately
+✓ Miners include without broadcasting to mempool
+✓ Prevents sandwich attacks
+✓ Show user: "MEV Protected" badge
+
+Implementation:
+const flashbotsProvider = new FlashbotsBundleProvider(
+  provider,
+  flashbotsSigner,
+  'https://relay.flashbots.net'
+);
+
+async function sendPrivateTransaction(signedTx) {
+  const flashbotsTransaction = {
+    signedTransaction: signedTx,
+  };
+  
+  const targetBlock = await provider.getBlockNumber() + 1;
+  
+  const simulation = await flashbotsProvider.simulate(
+    [flashbotsTransaction],
+    targetBlock
+  );
+  
+  if (simulation.firstRevert) {
+    throw new Error('Transaction would revert');
+  }
+  
+  const bundleSubmission = await flashbotsProvider.sendBundle(
+    [flashbotsTransaction],
+    targetBlock
+  );
+  
+  return bundleSubmission;
+}
+
+6.3 GAS OPTIMIZATION
+
+Save User Money:
+
+Gas Price Prediction:
+✓ Show current gas price
+✓ Predict gas price in 5 min, 15 min, 1 hour
+✓ Suggest optimal time to execute
+✓ "Gas alerts" - notify when gas drops below target
+
+Example:
+Current: 50 gwei ($15)
+In 15 min: ~35 gwei ($10.50) - Save $4.50
+In 1 hour: ~25 gwei ($7.50) - Save $7.50
+
+Recommendation: "Wait 1 hour to save 50% on gas"
+
+Gas Tracker Page:
+✓ Real-time gas prices
+✓ Historical gas chart (24h, 7d, 30d)
+✓ Gas price alerts
+✓ Tips to save gas
+✓ Batch transaction suggestions
+
+6.4 PORTFOLIO RISK MANAGEMENT
+
+Automated Risk Alerts:
+
+Risk Metrics:
+✓ Portfolio concentration (% in top holding)
+✓ Liquidity risk (can you exit positions?)
+✓ Correlation risk (all holdings move together?)
+✓ Volatility (30-day standard deviation)
+✓ Drawdown (current peak to trough)
+✓ Token health scores
+
+Alerts:
+- "Warning: 60% of portfolio in single token (NAKA)"
+- "High Risk: Token XYZ has low liquidity, may be hard to sell"
+- "Diversification Tip: Consider spreading to 5+ tokens"
+- "Correlation Alert: All holdings moving together, consider hedge"
+
+Suggested Actions:
+✓ Rebalance to target allocation
+✓ Take profits on winners
+✓ Add to losers (if fundamentals good)
+✓ Exit high-risk positions
+✓ Hedge with stable positions
+
+6.5 TAX REPORTING
+
+Export for Accountants:
+
+Tax Report Generator:
+✓ All trades with dates, prices, P&L
+✓ FIFO, LIFO, or Specific ID accounting
+✓ Short-term vs long-term gains
+✓ Wash sale detection
+✓ Income (airdrops, staking, etc.)
+✓ Export to CSV or PDF
+✓ Direct integration with CoinTracker, Koinly, etc.
+
+Example Report:
+Date       | Type | Asset | Amount | Price | Cost Basis | Proceeds | Gain/Loss | Term
+-----------|------|-------|--------|-------|------------|----------|-----------|------
+2024-01-15 | Buy  | ETH   | 10     | $2000 | $20,000    | -        | -         | -
+2024-06-20 | Sell | ETH   | 5      | $3000 | $10,000    | $15,000  | $5,000    | Long
+
+Total Short-Term Gains: $X
+Total Long-Term Gains: $Y
+
+6.6 ADVANCED ALERTS & AUTOMATION
+
+Smart Conditional Alerts:
+
+Complex Rules (Gold Tier):
+IF whale_buy AND token_sector == "AI" AND buy_amount > $100k
+THEN alert_me AND auto_buy $500
+
+IF portfolio_value > $100k
+THEN take_profit 10%
+
+IF token_price_drop > 20% AND smart_money_still_holding
+THEN alert_me "buying opportunity"
+
+IF liquidity_removed AND i_hold_token
+THEN alert_me "URGENT: Exit signal"
+
+Automation Actions:
+✓ Send notification
+✓ Execute trade (with limits)
+✓ Add to watchlist
+✓ Share signal to social
+✓ Send webhook to external system
+✓ Update spreadsheet
+
+6.7 COLLABORATIVE TRADING ROOMS
+
+Team Features:
+
+Create Trading Room:
+✓ Invite team members
+✓ Shared watchlist
+✓ Group chat
+✓ Shared alerts
+✓ Collaborative analysis
+✓ Trade together (permissions-based)
+
+Room Features:
+✓ Role-based access (Admin, Trader, Viewer)
+✓ Shared portfolio view (if enabled)
+✓ Real-time collaboration
+✓ Vote on trades (democratic mode)
+✓ Track room performance
+✓ Leaderboard within room
+✓ Shared research notes
+
+Use Cases:
+- Trading teams/DAOs
+- Investment clubs
+- Learning groups
+- Family accounts
+- Business partnerships
+
+6.8 MOBILE APP FEATURES
+
+Native Apps (iOS/Android):
+
+Features:
+✓ Push notifications (instant alerts)
+✓ Face ID / Touch ID login
+✓ Biometric transaction approval
+✓ QR code scanner (wallet addresses)
+✓ Camera for uploading documents
+✓ Offline mode (view cached data)
+✓ Widget for portfolio value on home screen
+✓ Share sheet integration
+✓ Deep linking
+✓ Background refresh
+
+Development:
+✓ React Native for cross-platform
+✓ Share code with web app
+✓ Platform-specific optimizations
+✓ App Store & Play Store listings
+
+6.9 API FOR DEVELOPERS
+
+Programmatic Access (Gold Tier):
+
+REST API:
+GET /api/v1/signals?chain=ethereum&limit=50
+GET /api/v1/portfolio/:wallet
+GET /api/v1/whale/:address/history
+POST /api/v1/alerts
+GET /api/v1/tokens/:address/risk-score
+
+WebSocket API:
+wss://api.nakalabs.ai/v1/stream
+
+Subscribe to:
+- Real-time signals
+- Price updates
+- Portfolio changes
+- Alert triggers
+
+Rate Limits:
+- Gold: 10,000 requests/hour
+- Silver: 1,000 requests/hour
+- Bronze: 100 requests/hour
+
+Documentation:
+✓ OpenAPI spec
+✓ Code examples (Python, JavaScript, Go)
+✓ Postman collection
+✓ Interactive API explorer
+✓ Webhook setup guide
+
+6.10 EDUCATIONAL CONTENT
+
+Learn Section:
+
+Content Types:
+✓ Video tutorials
+✓ Written guides
+✓ Interactive lessons
+✓ Quizzes (earn badges)
+✓ Case studies
+✓ Webinars (recorded and live)
+✓ Glossary of terms
+
+Topics:
+- How to identify profitable whales
+- Reading on-chain data
+- Risk management strategies
+- Portfolio construction
+- Tax optimization
+- DeFi fundamentals
+- MEV and frontrunning
+- DAO participation
+- NFT trading strategies
+
+Gamification:
+✓ Complete lesson → Earn XP
+✓ Pass quiz → Unlock badge
+✓ Finish course → Certificate NFT
+✓ Learning leaderboard
+✓ Invite friends → Bonus XP
+
+═══════════════════════════════════════════════════════════════════
+CRITICAL FINAL CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+INTELLIGENCE FEATURES:
+☐ Advanced filtering on all feeds
+☐ Smart multi-condition alerts
+☐ Enhanced trust score with breakdown
+☐ Transaction simulation before trade
+☐ MEV protection option
+☐ Gas optimization suggestions
+☐ Portfolio risk analysis
+☐ Wallet risk assessment
+☐ Historical backtesting
+☐ Copy trading system
+
+DUNE INTEGRATION:
+☐ Custom SQL queries
+☐ Pre-built dashboards embedded
+☐ Real-time Dune alerts
+☐ Institutional analytics
+☐ Airdrop opportunity finder
+☐ Token flow visualization
+☐ Liquidity depth analysis
+
+SOCIAL FEATURES:
+☐ Full user profiles
+☐ Follow/unfollow system
+☐ User discovery/search
+☐ Encrypted DMs with limits
+☐ Activity feed
+☐ Collaborative watchlists
+☐ Trading rooms
+☐ Reputation system
+☐ Leaderboards
+☐ Achievement badges
+
+UI/UX:
+☐ Hamburger menu (right) → Slides from left
+☐ Alerts section fully functional
+☐ Comprehensive docs (not whitepaper)
+☐ Interactive onboarding
+☐ Command palette (CMD+K)
+☐ Empty states with guidance
+☐ Loading states (skeletons)
+☐ Error states with recovery
+☐ Fully responsive (mobile to desktop)
+☐ Dark mode (default) + Light mode toggle
+☐ Micro-interactions throughout
+
+CODE QUALITY:
+☐ Full TypeScript conversion
+☐ Error boundaries everywhere
+☐ Structured logging
+☐ Multi-layer caching
+☐ Database optimized (indexes, queries)
+☐ API rate limiting per tier
+☐ Bundle optimization (<200kb initial)
+☐ Image optimization (WebP, lazy)
+☐ Security hardened (CSP, HTTPS, etc.)
+
+TESTING:
+☐ Unit tests (80%+ coverage)
+☐ Integration tests (critical paths)
+☐ E2E tests (main flows)
+☐ Performance tests (< 2s loads)
+☐ Security tests (OWASP)
+
+ADVANCED FEATURES:
+☐ Transaction simulation
+☐ MEV protection
+☐ Gas price prediction
+☐ Tax reporting export
+☐ Alert automation
+☐ Trading rooms
+☐ Developer API
+☐ Educational content
+
+PRODUCTION READINESS:
+☐ Monitoring & alerting set up
+☐ Error tracking (Sentry)
+☐ Analytics (Mixpanel/Amplitude)
+☐ Performance monitoring (Lighthouse)
+☐ Security scanning (regular)
+☐ Backup strategy
+☐ Disaster recovery plan
+☐ Deployment pipeline (CI/CD)
+☐ Load testing passed
+☐ Penetration testing passed
+
+═══════════════════════════════════════════════════════════════════
+END OF GENERATIONAL PLATFORM PROMPT
+═══════════════════════════════════════════════════════════════════
+
+THIS IS NOT JUST GOOD. THIS IS GENERATIONAL.
+USERS WILL LOVE THIS PLATFORM.
+THIS LOOKS LIKE A $1M+ PRODUCT BECAUSE IT IS.
+
+EVERY DETAIL MATTERS.
+EVERY INTERACTION DELIGHTS.
+EVERY FEATURE WORKS FLAWLESSLY.
+
+BUILD THIS AND THEY WILL COME.
+BUILD THIS AND THEY WILL STAY.
+BUILD THIS AND THEY WILL PAY.
+
+LET'S FUCKING ROCK THIS. 🚀

@@ -8,21 +8,21 @@ export default function WalletClustersPage() {
 
   const clusters = [
     { id: 'C-001', name: 'Alpha Whale Group', wallets: 23, totalValue: '$142M', risk: 'Low', connections: 187, activity: 'High', color: '#10B981' },
-    { id: 'C-002', name: 'DeFi Power Users', wallets: 45, totalValue: '$89M', risk: 'Low', connections: 312, activity: 'Very High', color: '#00E5FF' },
+    { id: 'C-002', name: 'DeFi Power Users', wallets: 45, totalValue: '$89M', risk: 'Low', connections: 312, activity: 'Very High', color: '#00D4AA' },
     { id: 'C-003', name: 'Suspicious Cluster #47', wallets: 12, totalValue: '$28M', risk: 'High', connections: 56, activity: 'Medium', color: '#EF4444' },
     { id: 'C-004', name: 'NFT Collectors Ring', wallets: 67, totalValue: '$34M', risk: 'Medium', connections: 423, activity: 'High', color: '#F59E0B' },
     { id: 'C-005', name: 'MEV Bot Network', wallets: 8, totalValue: '$67M', risk: 'High', connections: 34, activity: 'Very High', color: '#EF4444' },
-    { id: 'C-006', name: 'VC Fund Wallets', wallets: 15, totalValue: '$450M', risk: 'Low', connections: 89, activity: 'Low', color: '#7C3AED' },
+    { id: 'C-006', name: 'VC Fund Wallets', wallets: 15, totalValue: '$450M', risk: 'Low', connections: 89, activity: 'Low', color: '#6366F1' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Link2 className="w-5 h-5 text-[#00E5FF]" />
+          <Link2 className="w-5 h-5 text-[#00D4AA]" />
           <h1 className="text-sm font-heading font-bold">Wallet Clusters</h1>
         </div>
       </div>
@@ -30,11 +30,11 @@ export default function WalletClustersPage() {
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-3 gap-2">
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#00E5FF]">170</div>
+            <div className="text-lg font-bold text-[#00D4AA]">170</div>
             <div className="text-[10px] text-gray-500">Clusters</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#7C3AED]">2.4K</div>
+            <div className="text-lg font-bold text-[#6366F1]">2.4K</div>
             <div className="text-[10px] text-gray-500">Wallets</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">

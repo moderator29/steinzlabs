@@ -60,8 +60,8 @@ export default function WalletTab() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
-          <Wallet className="w-4 h-4 text-[#00E5FF]" />
+        <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-lg flex items-center justify-center">
+          <Wallet className="w-4 h-4 text-[#00D4AA]" />
         </div>
         <div>
           <h2 className="text-base font-heading font-bold">Wallet</h2>
@@ -90,8 +90,8 @@ export default function WalletTab() {
             const Icon = action.icon;
             return (
               <button key={action.label} className="flex flex-col items-center gap-1.5">
-                <div className="w-10 h-10 border border-[#00E5FF]/30 rounded-full flex items-center justify-center hover:bg-[#00E5FF]/10 transition-colors">
-                  <Icon className="w-4 h-4 text-[#00E5FF]" />
+                <div className="w-10 h-10 border border-[#00D4AA]/30 rounded-full flex items-center justify-center hover:bg-[#00D4AA]/10 transition-colors">
+                  <Icon className="w-4 h-4 text-[#00D4AA]" />
                 </div>
                 <span className="text-[10px] text-gray-400">{action.label}</span>
               </button>
@@ -106,7 +106,7 @@ export default function WalletTab() {
           <div className="space-y-2">
             {balances.map((token, i) => (
               <div key={i} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-full flex items-center justify-center text-xs font-bold">
                   {token.icon}
                 </div>
                 <div className="flex-1">
@@ -128,24 +128,24 @@ export default function WalletTab() {
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 glass rounded-xl p-3 border border-white/10 text-xs text-gray-400 hover:text-[#00E5FF] transition-colors mb-4"
+          className="flex items-center justify-center gap-2 glass rounded-xl p-3 border border-white/10 text-xs text-gray-400 hover:text-[#00D4AA] transition-colors mb-4"
         >
           View on {provider === 'phantom' ? 'Solscan' : 'Etherscan'} <ExternalLink className="w-3 h-3" />
         </a>
       )}
 
-      <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 mb-4 bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5">
+      <div className="glass rounded-xl p-4 border border-[#00D4AA]/20 mb-4 bg-gradient-to-br from-[#00D4AA]/5 to-[#6366F1]/5">
         <div className="flex items-center gap-3 mb-2">
-          <Key className="w-4 h-4 text-[#00E5FF]" />
-          <h3 className="text-xs font-bold">STEINZ Built-in Wallet</h3>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#00E5FF]/20 text-[#00E5FF]">NEW</span>
+          <Key className="w-4 h-4 text-[#00D4AA]" />
+          <h3 className="text-xs font-bold">NAKA Built-in Wallet</h3>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#00D4AA]/20 text-[#00D4AA]">NEW</span>
         </div>
         <p className="text-[10px] text-gray-400 mb-2">Create or import a non-custodial wallet. Your keys stay on your device.</p>
         <WalletPageButton />
       </div>
 
       {!isConnected && (
-        <div className="glass rounded-xl p-6 border border-white/10 text-center bg-gradient-to-b from-[#00E5FF]/5 to-transparent">
+        <div className="glass rounded-xl p-6 border border-white/10 text-center bg-gradient-to-b from-[#00D4AA]/5 to-transparent">
           <div className="w-10 h-10 bg-[#1A2235] rounded-full flex items-center justify-center mx-auto mb-3">
             <Wallet className="w-5 h-5 text-gray-400" />
           </div>
@@ -156,7 +156,7 @@ export default function WalletTab() {
           <button
             onClick={connectAuto}
             disabled={connecting}
-            className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
+            className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
           >
             {connecting ? 'Connecting...' : 'Connect Wallet'}
           </button>
@@ -171,9 +171,9 @@ function WalletPageButton() {
   return (
     <button
       onClick={() => router.push('/dashboard/wallet-page')}
-      className="w-full py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+      className="w-full py-2 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
     >
-      <Plus className="w-3 h-3" /> Open STEINZ Wallet
+      <Plus className="w-3 h-3" /> Open NAKA Wallet
     </button>
   );
 }

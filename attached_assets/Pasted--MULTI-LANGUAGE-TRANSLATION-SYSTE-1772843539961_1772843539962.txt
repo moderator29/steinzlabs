@@ -1,0 +1,89 @@
+═══════════════════════════════════════════════════════════════════
+MULTI-LANGUAGE TRANSLATION SYSTEM
+═══════════════════════════════════════════════════════════════════
+
+REQUIREMENT:
+Platform must be fully translatable to support global users. VTX AI must understand and respond in user's selected language.
+
+LANGUAGES TO SUPPORT (Initial):
+- English (default)
+- Spanish
+- French
+- German
+- Italian
+- Portuguese (Brazilian)
+- Russian
+- Chinese (Simplified)
+- Japanese
+- Korean
+- Turkish
+- Indonesian
+- Vietnamese
+- Arabic
+- Hindi
+
+IMPLEMENTATION:
+
+Translation Architecture:
+✓ Use i18next or react-intl for frontend translations
+✓ Store translations in JSON files per language
+✓ Dynamic language switching without page reload
+✓ Persist language preference (localStorage + database)
+✓ Auto-detect browser language on first visit
+✓ Language selector in header/settings
+
+VTX AI Multi-Language Training:
+✓ VTX must detect user's selected language
+✓ Respond in same language user is using
+✓ Understand crypto terminology in all languages
+✓ Maintain context across language switches
+✓ Translate technical terms accurately
+✓ Handle mixed-language inputs gracefully
+
+System Prompt for VTX with Language Awareness:
+"You are VTX AI, an intelligent crypto assistant for Naka Labs. The user's current language is: [DETECTED_LANGUAGE]. You must:
+1. Always respond in [DETECTED_LANGUAGE]
+2. Understand crypto terminology in this language
+3. Provide accurate translations of technical terms
+4. Maintain professional tone in all languages
+5. If user asks something in different language, respond in that language
+6. For wallet addresses, token symbols, and blockchain data, keep original format (no translation)"
+
+Translation Coverage:
+✓ All UI text and labels
+✓ Button text
+✓ Error messages
+✓ Success notifications
+✓ Feature descriptions
+✓ Help documentation
+✓ Onboarding flows
+✓ Email notifications
+✓ Push notifications
+
+Dynamic Content Translation:
+✓ Context Feed AI summaries (translate via AI)
+✓ VTX AI responses (native multi-language support)
+✓ User-generated content (optional translation button)
+✓ Alert messages
+✓ Transaction descriptions
+
+Language Selector UI:
+✓ Flag icons + language names
+✓ Accessible from header
+✓ Show current language clearly
+✓ Smooth transition when switching
+✓ Save preference automatically
+
+Technical Implementation:
+✓ Lazy load translation files (don't load all at once)
+✓ Cache translations in browser
+✓ Fallback to English if translation missing
+✓ Translation keys follow naming convention
+✓ Easy for developers to add new strings
+
+Quality Assurance:
+✓ Professional translations (not just Google Translate)
+✓ Crypto terminology verified by native speakers
+✓ Consistent terminology across platform
+✓ Regular updates when adding new features
+✓ Community feedback mechanism for improvements

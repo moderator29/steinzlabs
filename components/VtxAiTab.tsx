@@ -10,7 +10,7 @@ interface Message {
 }
 
 const STORAGE_KEY = 'vtx-ai-chat-history';
-const TIER_KEY = 'steinz_user_tier';
+const TIER_KEY = 'naka_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
 
 function loadChatHistory(): Message[] {
@@ -134,7 +134,7 @@ export default function VtxAiTab() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **STEINZ Pro** for unlimited VTX AI access, web search, and more!' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **NAKA Pro** for unlimited VTX AI access, web search, and more!' }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
@@ -165,8 +165,8 @@ export default function VtxAiTab() {
   return (
     <div className="flex flex-col min-h-[65vh]">
       <div className="glass rounded-xl p-3 border border-white/10 flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Bot className="w-4 h-4 text-[#00E5FF]" />
+        <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+          <Bot className="w-4 h-4 text-[#00D4AA]" />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -181,11 +181,11 @@ export default function VtxAiTab() {
         </div>
         <div className="flex items-center gap-2">
           {!isPro && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#0A0E1A] rounded-lg">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#0B0D14] rounded-lg">
               <span className="text-[9px] text-gray-400">{dailyUsage.used}/{dailyUsage.limit}</span>
               <div className="w-8 h-1 bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#00E5FF]'}`}
+                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#00D4AA]'}`}
                   style={{ width: `${(dailyUsage.used / dailyUsage.limit) * 100}%` }}
                 />
               </div>
@@ -220,9 +220,9 @@ export default function VtxAiTab() {
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
-                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#00E5FF]/20 transition-all text-left"
+                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#00D4AA]/20 transition-all text-left"
                 >
-                  <Icon className="w-5 h-5 text-[#00E5FF] mb-2" />
+                  <Icon className="w-5 h-5 text-[#00D4AA] mb-2" />
                   <div className="text-xs font-semibold">{action.label}</div>
                 </button>
               );
@@ -234,13 +234,13 @@ export default function VtxAiTab() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="w-7 h-7 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                   <Bot className="w-3.5 h-3.5" />
                 </div>
               )}
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 border border-[#00E5FF]/20'
+                  ? 'bg-gradient-to-r from-[#00D4AA]/20 to-[#6366F1]/20 border border-[#00D4AA]/20'
                   : 'glass border border-white/10'
               }`}>
                 <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -255,7 +255,7 @@ export default function VtxAiTab() {
 
           {loading && (
             <div className="flex gap-3 justify-start">
-              <div className="w-7 h-7 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+              <div className="w-7 h-7 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                 <Bot className="w-3.5 h-3.5" />
               </div>
               <div className="glass border border-white/10 rounded-2xl px-4 py-3">
@@ -276,7 +276,7 @@ export default function VtxAiTab() {
           <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-[11px] text-amber-300 font-semibold">Daily limit reached</p>
-            <p className="text-[10px] text-gray-400">Upgrade to STEINZ Pro for unlimited messages</p>
+            <p className="text-[10px] text-gray-400">Upgrade to NAKA Pro for unlimited messages</p>
           </div>
           <button
             onClick={() => router.push('/dashboard/pricing')}
@@ -293,7 +293,7 @@ export default function VtxAiTab() {
             <button
               type="button"
               onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${webSearchEnabled ? 'bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${webSearchEnabled ? 'bg-[#00D4AA]/20 text-[#00D4AA] border border-[#00D4AA]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
               title={webSearchEnabled ? 'Web search enabled' : 'Enable web search'}
             >
               <Globe className="w-3 h-3" />
@@ -311,7 +311,7 @@ export default function VtxAiTab() {
           <button
             type="submit"
             disabled={loading || !message.trim() || (rateLimited && !isPro)}
-            className="w-10 h-10 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0 disabled:opacity-50"
+            className="w-10 h-10 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-xl flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0 disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>

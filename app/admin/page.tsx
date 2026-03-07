@@ -401,13 +401,13 @@ export default function AdminPanel() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#0B0D14] flex items-center justify-center px-4">
         <div className="glass rounded-2xl p-8 border border-white/10 w-full max-w-sm">
           <div className="flex items-center gap-3 mb-6 justify-center">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-heading font-bold text-white">STEINZ Admin</h1>
+            <h1 className="text-xl font-heading font-bold text-white">NAKA Admin</h1>
           </div>
           <div className="space-y-3">
             <input
@@ -416,10 +416,10 @@ export default function AdminPanel() {
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               placeholder="Admin Password"
-              className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50 text-white"
+              className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00D4AA]/50 text-white"
             />
             {loginError && <p className="text-[#EF4444] text-xs">{loginError}</p>}
-            <button onClick={handleLogin} className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3 rounded-lg font-semibold text-sm">
+            <button onClick={handleLogin} className="w-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] py-3 rounded-lg font-semibold text-sm">
               Login
             </button>
           </div>
@@ -441,17 +441,17 @@ export default function AdminPanel() {
   const fundedProjects = projects.filter(p => p.currentFunding > 0);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
+    <div className="min-h-screen bg-[#0B0D14] text-white flex">
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
       <aside className={`fixed top-0 left-0 h-full w-72 bg-[#0D1117] border-r border-white/10 z-50 transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center">
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-sm font-heading font-bold">STEINZ Admin</div>
+              <div className="text-sm font-heading font-bold">NAKA Admin</div>
               <div className="text-[10px] text-gray-500">Control Panel</div>
             </div>
           </div>
@@ -470,11 +470,11 @@ export default function AdminPanel() {
                 onClick={() => { setActiveSection(section.id); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#00E5FF]/15 to-[#7C3AED]/15 text-white border border-[#00E5FF]/20'
+                    ? 'bg-gradient-to-r from-[#00D4AA]/15 to-[#6366F1]/15 text-white border border-[#00D4AA]/20'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#00E5FF]' : ''}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#00D4AA]' : ''}`} />
                 <span className="font-medium">{section.label}</span>
                 {section.id === 'builders' && pendingBuilders.length > 0 && (
                   <span className="ml-auto bg-[#EF4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{pendingBuilders.length}</span>
@@ -496,7 +496,7 @@ export default function AdminPanel() {
       </aside>
 
       <main className="flex-1 min-h-screen">
-        <header className="sticky top-0 z-40 bg-[#0A0E1A]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-40 bg-[#0B0D14]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden hover:bg-white/10 p-2 rounded-lg">
               <Menu className="w-5 h-5" />
@@ -525,28 +525,28 @@ export default function AdminPanel() {
           {activeSection === 'overview' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Coins className="w-4 h-4" />} label="Total Market Cap" value={formatNumber(totalMarketCap)} sub="Top 25 tokens" color="text-[#00E5FF]" loading={loadingTokens} />
-                <StatCard icon={<Target className="w-4 h-4" />} label="Active Predictions" value={activePredictions.length.toString()} sub={`${formatNumber(totalPredictionPool)} pooled`} color="text-[#7C3AED]" loading={loadingPredictions} />
+                <StatCard icon={<Coins className="w-4 h-4" />} label="Total Market Cap" value={formatNumber(totalMarketCap)} sub="Top 25 tokens" color="text-[#00D4AA]" loading={loadingTokens} />
+                <StatCard icon={<Target className="w-4 h-4" />} label="Active Predictions" value={activePredictions.length.toString()} sub={`${formatNumber(totalPredictionPool)} pooled`} color="text-[#6366F1]" loading={loadingPredictions} />
                 <StatCard icon={<Users className="w-4 h-4" />} label="Builders" value={builders.length.toString()} sub={`${approvedBuilders.length} approved`} color="text-[#10B981]" loading={loadingBuilders} />
                 <StatCard icon={<Server className="w-4 h-4" />} label="API Status" value={`${onlineApis}/${totalApis}`} sub="Services online" color={onlineApis === totalApis ? 'text-[#10B981]' : 'text-[#F59E0B]'} loading={false} />
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Briefcase className="w-4 h-4" />} label="Projects" value={projects.length.toString()} sub={`${fundedProjects.length} funded`} color="text-[#F59E0B]" loading={loadingBuilders} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="Whale Events" value={whaleEvents.length.toString()} sub="Recent activity" color="text-[#00E5FF]" loading={loadingWhales} />
-                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="HODL Runner" value={gameStats.totalPlayers.toString()} sub={`${gameStats.totalGamesPlayed} games`} color="text-[#7C3AED]" loading={loadingGames} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="Whale Events" value={whaleEvents.length.toString()} sub="Recent activity" color="text-[#00D4AA]" loading={loadingWhales} />
+                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="HODL Runner" value={gameStats.totalPlayers.toString()} sub={`${gameStats.totalGamesPlayed} games`} color="text-[#6366F1]" loading={loadingGames} />
                 <StatCard icon={<Briefcase className="w-4 h-4" />} label="Token Listings" value={tokenListings.length.toString()} sub={`${tokenListings.filter(l => l.status === 'pending').length} pending`} color="text-[#F59E0B]" loading={loadingListings} />
               </div>
 
               {platformStats && (
-                <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5">
+                <div className="glass rounded-xl p-4 border border-[#00D4AA]/20 bg-gradient-to-r from-[#00D4AA]/5 to-[#6366F1]/5">
                   <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                    <Globe className="w-3.5 h-3.5 text-[#00E5FF]" />
+                    <Globe className="w-3.5 h-3.5 text-[#00D4AA]" />
                     Platform Stats (Public)
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-[#00E5FF]">{platformStats.chains}</div>
+                      <div className="text-lg font-bold text-[#00D4AA]">{platformStats.chains}</div>
                       <div className="text-[9px] text-gray-400">Chains Supported</div>
                     </div>
                     <div className="text-center">
@@ -554,7 +554,7 @@ export default function AdminPanel() {
                       <div className="text-[9px] text-gray-400">Signal Accuracy</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-[#7C3AED]">{platformStats.volumeTracked}</div>
+                      <div className="text-lg font-bold text-[#6366F1]">{platformStats.volumeTracked}</div>
                       <div className="text-[9px] text-gray-400">Global Volume (CoinGecko)</div>
                     </div>
                     <div className="text-center">
@@ -567,7 +567,7 @@ export default function AdminPanel() {
 
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-[#00E5FF]" />
+                  <Activity className="w-3.5 h-3.5 text-[#00D4AA]" />
                   API Health Status
                 </div>
                 <div className="grid grid-cols-3 lg:grid-cols-5 gap-3">
@@ -629,7 +629,7 @@ export default function AdminPanel() {
                     <span className="text-xs font-bold text-[#F59E0B]">Action Required</span>
                   </div>
                   <p className="text-xs text-gray-300">{pendingBuilders.length} builder application(s) pending review. {pendingProjects.length} project(s) awaiting approval.</p>
-                  <button onClick={() => setActiveSection('builders')} className="mt-2 text-[10px] text-[#00E5FF] hover:underline flex items-center gap-1">
+                  <button onClick={() => setActiveSection('builders')} className="mt-2 text-[10px] text-[#00D4AA] hover:underline flex items-center gap-1">
                     Review Now <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
@@ -649,7 +649,7 @@ export default function AdminPanel() {
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
                       placeholder="Search tokens..."
-                      className="bg-[#111827] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00E5FF]/50 w-48"
+                      className="bg-[#111827] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00D4AA]/50 w-48"
                     />
                   </div>
                 </div>
@@ -708,8 +708,8 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Zap className="w-4 h-4" />} label="Status" value={tokens.length > 0 ? 'Active' : 'Offline'} sub={tokens.length > 0 ? 'All systems operational' : 'No data'} color={tokens.length > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'} loading={loadingTokens} />
                 <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Trending" value={tokens.length > 0 ? 'Live' : 'Loading'} sub="CoinGecko data" color="text-[#10B981]" loading={loadingTokens} />
-                <StatCard icon={<BarChart3 className="w-4 h-4" />} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="text-[#7C3AED]" loading={loadingTokens} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="24h Volume" value={formatNumber(totalVolume)} sub="Across tracked tokens" color="text-[#00E5FF]" loading={loadingTokens} />
+                <StatCard icon={<BarChart3 className="w-4 h-4" />} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="text-[#6366F1]" loading={loadingTokens} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="24h Volume" value={formatNumber(totalVolume)} sub="Across tracked tokens" color="text-[#00D4AA]" loading={loadingTokens} />
               </div>
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3">Trading Suite Features</div>
@@ -722,7 +722,7 @@ export default function AdminPanel() {
                     { label: 'Paste CA / Token Scanner', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'Watchlist', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'TradingView Charts', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'STEINZ Terminal', status: 'Live', color: 'text-[#10B981]' },
+                    { label: 'NAKA Terminal', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'Multi-Chain Support', status: 'Live', color: 'text-[#10B981]' },
                     { label: 'AI Risk Scanner', status: 'Live', color: 'text-[#10B981]' },
                   ].map((f, i) => (
@@ -734,7 +734,7 @@ export default function AdminPanel() {
                 </div>
               </div>
               <a href="/dashboard/trading-suite" target="_blank" className="block">
-                <button className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-xs font-semibold hover:opacity-90 transition-opacity">
+                <button className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00D4AA] to-[#6366F1] text-xs font-semibold hover:opacity-90 transition-opacity">
                   Open Trading Suite
                 </button>
               </a>
@@ -744,10 +744,10 @@ export default function AdminPanel() {
           {activeSection === 'predictions' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Target className="w-4 h-4" />} label="Active" value={activePredictions.length.toString()} sub="Open markets" color="text-[#00E5FF]" loading={loadingPredictions} />
+                <StatCard icon={<Target className="w-4 h-4" />} label="Active" value={activePredictions.length.toString()} sub="Open markets" color="text-[#00D4AA]" loading={loadingPredictions} />
                 <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Resolved" value={resolvedPredictions.length.toString()} sub="Settled markets" color="text-[#10B981]" loading={loadingPredictions} />
                 <StatCard icon={<DollarSign className="w-4 h-4" />} label="Total Pool" value={formatNumber(totalPredictionPool)} sub="All markets" color="text-[#F59E0B]" loading={loadingPredictions} />
-                <StatCard icon={<Users className="w-4 h-4" />} label="Participants" value={predictions.reduce((s, p) => s + (p.participants || 0), 0).toString()} sub="Total bettors" color="text-[#7C3AED]" loading={loadingPredictions} />
+                <StatCard icon={<Users className="w-4 h-4" />} label="Participants" value={predictions.reduce((s, p) => s + (p.participants || 0), 0).toString()} sub="Total bettors" color="text-[#6366F1]" loading={loadingPredictions} />
               </div>
 
               {loadingPredictions ? (
@@ -758,7 +758,7 @@ export default function AdminPanel() {
                     <div key={pred.id} className="glass rounded-xl p-4 border border-white/10">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${pred.resolved ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#00E5FF]/20 text-[#00E5FF]'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${pred.resolved ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#00D4AA]/20 text-[#00D4AA]'}`}>
                             {pred.resolved ? 'Resolved' : 'Active'}
                           </span>
                           <span className="text-xs font-bold">{pred.title || `${pred.token} ${pred.type}`}</span>
@@ -793,7 +793,7 @@ export default function AdminPanel() {
               <div className="grid grid-cols-3 gap-3">
                 <StatCard icon={<Clock className="w-4 h-4" />} label="Pending" value={pendingBuilders.length.toString()} sub="Awaiting review" color="text-[#F59E0B]" loading={loadingBuilders} />
                 <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Approved" value={approvedBuilders.length.toString()} sub="Verified builders" color="text-[#10B981]" loading={loadingBuilders} />
-                <StatCard icon={<Users className="w-4 h-4" />} label="Total" value={builders.length.toString()} sub="All applications" color="text-[#00E5FF]" loading={loadingBuilders} />
+                <StatCard icon={<Users className="w-4 h-4" />} label="Total" value={builders.length.toString()} sub="All applications" color="text-[#00D4AA]" loading={loadingBuilders} />
               </div>
 
               {loadingBuilders ? (
@@ -839,10 +839,10 @@ export default function AdminPanel() {
           {activeSection === 'funding' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Projects" value={projects.length.toString()} sub="Submitted" color="text-[#00E5FF]" loading={loadingBuilders} />
+                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Projects" value={projects.length.toString()} sub="Submitted" color="text-[#00D4AA]" loading={loadingBuilders} />
                 <StatCard icon={<Clock className="w-4 h-4" />} label="Pending" value={pendingProjects.length.toString()} sub="Awaiting review" color="text-[#F59E0B]" loading={loadingBuilders} />
                 <StatCard icon={<DollarSign className="w-4 h-4" />} label="Total Funded" value={formatNumber(projects.reduce((s, p) => s + (p.currentFunding || 0), 0))} sub="All projects" color="text-[#10B981]" loading={loadingBuilders} />
-                <StatCard icon={<Layers className="w-4 h-4" />} label="Funded Projects" value={fundedProjects.length.toString()} sub="With backing" color="text-[#7C3AED]" loading={loadingBuilders} />
+                <StatCard icon={<Layers className="w-4 h-4" />} label="Funded Projects" value={fundedProjects.length.toString()} sub="With backing" color="text-[#6366F1]" loading={loadingBuilders} />
               </div>
 
               {loadingBuilders ? (
@@ -871,7 +871,7 @@ export default function AdminPanel() {
                       </div>
                       {project.fundingGoal > 0 && (
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
-                          <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-full" style={{ width: `${Math.min(100, project.fundingGoal ? (project.currentFunding / project.fundingGoal) * 100 : 0)}%` }} />
+                          <div className="h-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-full" style={{ width: `${Math.min(100, project.fundingGoal ? (project.currentFunding / project.fundingGoal) * 100 : 0)}%` }} />
                         </div>
                       )}
                       {project.milestones && project.milestones.length > 0 && (
@@ -882,7 +882,7 @@ export default function AdminPanel() {
                               <span className="text-gray-300">{i + 1}. {m.name}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-500">{formatNumber(m.amount)}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${m.status === 'completed' ? 'bg-[#10B981]/20 text-[#10B981]' : m.status === 'in_progress' || m.status === 'pending_review' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-white/10 text-gray-500'}`}>{m.status || 'pending'}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${m.status === 'completed' ? 'bg-[#10B981]/20 text-[#10B981]' : m.status === 'in_progress' || m.status === 'pending_review' ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : 'bg-white/10 text-gray-500'}`}>{m.status || 'pending'}</span>
                                 {(m.status === 'in_progress' || m.status === 'pending_review') && (
                                   <button
                                     onClick={() => handleProjectAction(project.id, 'approve_milestone', i)}
@@ -920,7 +920,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-400">Real-time whale activity from blockchain data</div>
-                <button onClick={fetchWhales} className="text-[10px] text-[#00E5FF] hover:underline flex items-center gap-1">
+                <button onClick={fetchWhales} className="text-[10px] text-[#00D4AA] hover:underline flex items-center gap-1">
                   <RotateCcw className={`w-3 h-3 ${loadingWhales ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
@@ -932,8 +932,8 @@ export default function AdminPanel() {
                   <div className="divide-y divide-white/5">
                     {whaleEvents.map((event, i) => (
                       <div key={i} className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${event.type === 'sell' ? 'bg-[#EF4444]/10' : event.type === 'buy' ? 'bg-[#10B981]/10' : 'bg-[#00E5FF]/10'}`}>
-                          {event.type === 'sell' ? <TrendingDown className="w-4 h-4 text-[#EF4444]" /> : event.type === 'buy' ? <TrendingUp className="w-4 h-4 text-[#10B981]" /> : <Activity className="w-4 h-4 text-[#00E5FF]" />}
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${event.type === 'sell' ? 'bg-[#EF4444]/10' : event.type === 'buy' ? 'bg-[#10B981]/10' : 'bg-[#00D4AA]/10'}`}>
+                          {event.type === 'sell' ? <TrendingDown className="w-4 h-4 text-[#EF4444]" /> : event.type === 'buy' ? <TrendingUp className="w-4 h-4 text-[#10B981]" /> : <Activity className="w-4 h-4 text-[#00D4AA]" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold">{event.token} <span className="text-gray-500 font-normal">{event.type}</span></div>
@@ -1006,7 +1006,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-400">Real-time status of all platform APIs</div>
-                <button onClick={checkApiHealth} className="text-[10px] text-[#00E5FF] hover:underline flex items-center gap-1">
+                <button onClick={checkApiHealth} className="text-[10px] text-[#00D4AA] hover:underline flex items-center gap-1">
                   <RotateCcw className="w-3 h-3" /> Recheck All
                 </button>
               </div>
@@ -1042,18 +1042,18 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Send className="w-3.5 h-3.5 text-[#00E5FF]" />
+                  <Send className="w-3.5 h-3.5 text-[#00D4AA]" />
                   Broadcast Notification
                 </div>
                 <textarea
                   value={broadcastMsg}
                   onChange={(e) => setBroadcastMsg(e.target.value)}
                   placeholder="Write a platform-wide notification message..."
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50 min-h-[80px] text-white mb-3"
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00D4AA]/50 min-h-[80px] text-white mb-3"
                 />
                 <button
                   onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }}
-                  className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-2 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
+                  className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-4 py-2 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
                 >
                   Send Broadcast
                 </button>
@@ -1064,8 +1064,8 @@ export default function AdminPanel() {
                 <div className="text-xs font-bold mb-3">Quick Alerts</div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {[
-                    { label: 'Scheduled Maintenance', msg: 'STEINZ Labs will undergo scheduled maintenance in 1 hour. Some features may be temporarily unavailable.', color: 'text-[#F59E0B]' },
-                    { label: 'New Feature Launch', msg: 'New feature available! Check out the latest updates on the platform.', color: 'text-[#00E5FF]' },
+                    { label: 'Scheduled Maintenance', msg: 'NAKA Labs will undergo scheduled maintenance in 1 hour. Some features may be temporarily unavailable.', color: 'text-[#F59E0B]' },
+                    { label: 'New Feature Launch', msg: 'New feature available! Check out the latest updates on the platform.', color: 'text-[#00D4AA]' },
                     { label: 'Security Advisory', msg: 'Security advisory: Please verify any tokens before trading. Use the Security Center for safety checks.', color: 'text-[#EF4444]' },
                     { label: 'Market Alert', msg: 'Significant market movement detected. Check whale tracker for details.', color: 'text-[#10B981]' },
                   ].map((alert, i) => (
@@ -1088,8 +1088,8 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="Total Players" value={gameStats.totalPlayers.toString()} sub="Registered players" color="text-[#10B981]" loading={loadingGames} />
                 <StatCard icon={<Trophy className="w-4 h-4" />} label="Highest Score" value={gameStats.highestScore.toLocaleString()} sub={`by ${gameStats.topPlayer}`} color="text-[#F59E0B]" loading={loadingGames} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="Games Played" value={gameStats.totalGamesPlayed.toString()} sub="Total rounds" color="text-[#00E5FF]" loading={loadingGames} />
-                <StatCard icon={<Star className="w-4 h-4" />} label="Top Player" value={gameStats.topPlayer} sub="Current leader" color="text-[#7C3AED]" loading={loadingGames} />
+                <StatCard icon={<Activity className="w-4 h-4" />} label="Games Played" value={gameStats.totalGamesPlayed.toString()} sub="Total rounds" color="text-[#00D4AA]" loading={loadingGames} />
+                <StatCard icon={<Star className="w-4 h-4" />} label="Top Player" value={gameStats.topPlayer} sub="Current leader" color="text-[#6366F1]" loading={loadingGames} />
               </div>
 
               <div className="glass rounded-xl p-4 border border-white/10">
@@ -1142,7 +1142,7 @@ export default function AdminPanel() {
                             <td className="py-2 px-2 text-right text-[#F59E0B]">{player.coins.toLocaleString()}</td>
                             <td className="py-2 px-2 text-right text-gray-300">{player.distance.toLocaleString()}</td>
                             <td className="py-2 px-2 text-right text-gray-400">{player.gamesPlayed}</td>
-                            <td className="py-2 px-2 text-right text-[#00E5FF]">{player.bestStreak.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right text-[#00D4AA]">{player.bestStreak.toLocaleString()}</td>
                             <td className="py-2 px-2 text-right">
                               <button
                                 onClick={() => handleDeleteGameScore(player.id)}
@@ -1164,15 +1164,15 @@ export default function AdminPanel() {
           {activeSection === 'token-listings' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="text-[#00E5FF]" loading={loadingListings} />
+                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="text-[#00D4AA]" loading={loadingListings} />
                 <StatCard icon={<Clock className="w-4 h-4" />} label="Pending Review" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting action" color="text-[#F59E0B]" loading={loadingListings} />
                 <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Listed" value={tokenListings.filter(l => l.status === 'listed').length.toString()} sub="Live on discovery" color="text-[#10B981]" loading={loadingListings} />
-                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved tokens" color="text-[#7C3AED]" loading={loadingListings} />
+                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved tokens" color="text-[#6366F1]" loading={loadingListings} />
               </div>
 
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold flex items-center gap-2 mb-3">
-                  <Briefcase className="w-3.5 h-3.5 text-[#00E5FF]" />
+                  <Briefcase className="w-3.5 h-3.5 text-[#00D4AA]" />
                   Token Listing Submissions
                 </div>
 
@@ -1193,7 +1193,7 @@ export default function AdminPanel() {
                             {listing.logoUrl ? (
                               <img src={listing.logoUrl} alt={listing.tokenName} className="w-8 h-8 rounded-full object-cover" />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 flex items-center justify-center text-[10px] font-bold">
                                 {listing.symbol?.slice(0, 2) || '?'}
                               </div>
                             )}
@@ -1205,7 +1205,7 @@ export default function AdminPanel() {
                                   listing.status === 'listed' ? 'bg-[#10B981]/20 text-[#10B981]' :
                                   listing.status === 'rejected' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
                                   listing.status === 'paid' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                                  'bg-[#00E5FF]/20 text-[#00E5FF]'
+                                  'bg-[#00D4AA]/20 text-[#00D4AA]'
                                 }`}>
                                   {listing.status === 'approved_pending_payment' ? 'APPROVED' :
                                    listing.status === 'payment_sent' ? 'PAYMENT SENT' :
@@ -1219,9 +1219,9 @@ export default function AdminPanel() {
                                 <div className="text-[10px] text-gray-400 mt-1 line-clamp-2">{listing.description}</div>
                               )}
                               <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-500">
-                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Website</a>}
-                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Telegram</a>}
-                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#00E5FF]">Twitter</a>}
+                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#00D4AA]">Website</a>}
+                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#00D4AA]">Telegram</a>}
+                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#00D4AA]">Twitter</a>}
                                 {listing.email && <span>Contact: {listing.email}</span>}
                                 <span>Submitted: {new Date(listing.submittedAt).toLocaleDateString()}</span>
                               </div>
@@ -1239,7 +1239,7 @@ export default function AdminPanel() {
                               </div>
                             )}
                             {listing.status === 'approved_pending_payment' && (
-                              <button onClick={() => handleListingAction(listing.id, 'send_payment_email')} className="px-2.5 py-1 bg-[#7C3AED]/20 text-[#7C3AED] text-[10px] font-semibold rounded hover:bg-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'send_payment_email')} className="px-2.5 py-1 bg-[#6366F1]/20 text-[#6366F1] text-[10px] font-semibold rounded hover:bg-[#6366F1]/30 transition-colors flex items-center gap-1">
                                 <Send className="w-3 h-3" /> Send Payment Email
                               </button>
                             )}
@@ -1249,14 +1249,14 @@ export default function AdminPanel() {
                               </button>
                             )}
                             {listing.status === 'paid' && (
-                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-2.5 py-1 bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 text-[#00E5FF] text-[10px] font-semibold rounded hover:from-[#00E5FF]/30 hover:to-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-2.5 py-1 bg-gradient-to-r from-[#00D4AA]/20 to-[#6366F1]/20 text-[#00D4AA] text-[10px] font-semibold rounded hover:from-[#00D4AA]/30 hover:to-[#6366F1]/30 transition-colors flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" /> List on Discovery
                               </button>
                             )}
                             {listing.status === 'listed' && (
                               <span className="text-[9px] text-[#10B981] font-semibold">Live on Discovery</span>
                             )}
-                            <a href={`/dashboard/token-preview/${listing.id}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-500 hover:text-[#00E5FF] transition-colors">
+                            <a href={`/dashboard/token-preview/${listing.id}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-500 hover:text-[#00D4AA] transition-colors">
                               Preview Link
                             </a>
                           </div>
@@ -1287,7 +1287,7 @@ export default function AdminPanel() {
 
               <div className="glass rounded-xl p-4 border border-white/10">
                 <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Database className="w-3.5 h-3.5 text-[#7C3AED]" />
+                  <Database className="w-3.5 h-3.5 text-[#6366F1]" />
                   Data Sources
                 </div>
                 <div className="space-y-2 text-xs">

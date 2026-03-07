@@ -82,28 +82,28 @@ export default function DNAAnalyzerPage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return '#10B981';
-    if (score >= 60) return '#00E5FF';
+    if (score >= 60) return '#00D4AA';
     if (score >= 40) return '#F59E0B';
     return '#EF4444';
   };
 
   const getGradeColor = (grade: string) => {
     if (grade.startsWith('A')) return '#10B981';
-    if (grade.startsWith('B')) return '#00E5FF';
+    if (grade.startsWith('B')) return '#00D4AA';
     if (grade.startsWith('C')) return '#F59E0B';
     return '#EF4444';
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-8">
+    <div className="min-h-screen bg-[#0B0D14] text-white pb-8">
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center px-4 h-14 gap-3">
           <button onClick={() => router.push('/dashboard')} className="hover:bg-white/10 p-2 rounded-lg">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Dna className="w-5 h-5 text-[#00E5FF]" />
+          <Dna className="w-5 h-5 text-[#00D4AA]" />
           <h1 className="font-heading font-bold">Trading DNA Analyzer</h1>
-          <span className="ml-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>
+          <span className="ml-auto text-[10px] px-2 py-1 bg-[#6366F1]/20 text-[#6366F1] rounded-full font-semibold">AI Powered</span>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ export default function DNAAnalyzerPage() {
         {!analysis && !loading && (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Dna className="w-10 h-10" />
               </div>
               <h2 className="text-2xl font-heading font-bold mb-2">Decode Your Trading DNA</h2>
@@ -126,7 +126,7 @@ export default function DNAAnalyzerPage() {
                 </div>
                 <button
                   onClick={() => runAnalysis(walletAddress)}
-                  className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+                  className="w-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
                 >
                   <Brain className="w-5 h-5" /> Analyze My Trading DNA
                 </button>
@@ -134,7 +134,7 @@ export default function DNAAnalyzerPage() {
             ) : (
               <button
                 onClick={connectAndAnalyze}
-                className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+                className="w-full bg-gradient-to-r from-[#00D4AA] to-[#6366F1] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
               >
                 Connect Wallet & Analyze
               </button>
@@ -142,7 +142,7 @@ export default function DNAAnalyzerPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-              <div className="relative flex justify-center"><span className="px-4 bg-[#0A0E1A] text-xs text-gray-500">or analyze any wallet</span></div>
+              <div className="relative flex justify-center"><span className="px-4 bg-[#0B0D14] text-xs text-gray-500">or analyze any wallet</span></div>
             </div>
 
             <div className="flex gap-2">
@@ -151,14 +151,14 @@ export default function DNAAnalyzerPage() {
                 value={manualAddress}
                 onChange={(e) => setManualAddress(e.target.value)}
                 placeholder="Enter wallet address (0x...)"
-                className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50"
+                className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#00D4AA]/50"
               />
               <button
                 onClick={() => manualAddress && runAnalysis(manualAddress)}
                 disabled={!manualAddress}
                 className="bg-[#111827] border border-white/10 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
               >
-                <Zap className="w-4 h-4 text-[#00E5FF]" />
+                <Zap className="w-4 h-4 text-[#00D4AA]" />
               </button>
             </div>
 
@@ -172,15 +172,15 @@ export default function DNAAnalyzerPage() {
 
         {loading && (
           <div className="text-center py-20">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-10 h-10 text-[#00E5FF] animate-spin" />
+            <div className="w-20 h-20 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Loader2 className="w-10 h-10 text-[#00D4AA] animate-spin" />
             </div>
             <h3 className="text-xl font-heading font-bold mb-2">Analyzing Your DNA...</h3>
             <p className="text-gray-400 text-sm">AI is scanning your on-chain history and trading patterns</p>
             <div className="mt-6 max-w-xs mx-auto space-y-2">
               {['Scanning wallet history', 'Analyzing trade patterns', 'Computing risk profile', 'Generating recommendations'].map((step, i) => (
                 <div key={step} className="flex items-center gap-2 text-xs text-gray-400 animate-fadeInUp" style={{ animationDelay: `${i * 0.5}s` }}>
-                  <Loader2 className="w-3 h-3 animate-spin text-[#00E5FF]" />
+                  <Loader2 className="w-3 h-3 animate-spin text-[#00D4AA]" />
                   {step}
                 </div>
               ))}
@@ -214,8 +214,8 @@ export default function DNAAnalyzerPage() {
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-[#00E5FF]" />
+                <div className="w-10 h-10 bg-gradient-to-br from-[#00D4AA]/20 to-[#6366F1]/20 rounded-lg flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-[#00D4AA]" />
                 </div>
                 <div>
                   <div className="font-bold text-sm">{analysis.tradingStyle}</div>
@@ -224,7 +224,7 @@ export default function DNAAnalyzerPage() {
                 <div className="ml-auto">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     analysis.riskProfile === 'Conservative' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                    analysis.riskProfile === 'Moderate' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' :
+                    analysis.riskProfile === 'Moderate' ? 'bg-[#00D4AA]/20 text-[#00D4AA]' :
                     analysis.riskProfile === 'Aggressive' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
                     'bg-[#EF4444]/20 text-[#EF4444]'
                   }`}>
@@ -241,7 +241,7 @@ export default function DNAAnalyzerPage() {
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="w-4 h-4 text-[#00E5FF]" />
+                <BarChart3 className="w-4 h-4 text-[#00D4AA]" />
                 <span className="font-bold text-sm">Performance Metrics</span>
               </div>
               <div className="space-y-3">
@@ -259,9 +259,9 @@ export default function DNAAnalyzerPage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-[#00E5FF]/20 bg-gradient-to-r from-[#00E5FF]/5 to-transparent">
+            <div className="glass rounded-xl p-4 border border-[#00D4AA]/20 bg-gradient-to-r from-[#00D4AA]/5 to-transparent">
               <div className="flex items-start gap-3">
-                <Target className="w-5 h-5 text-[#00E5FF] flex-shrink-0 mt-0.5" />
+                <Target className="w-5 h-5 text-[#00D4AA] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold text-sm mb-1">Key Insight</div>
                   <p className="text-sm text-gray-300">{analysis.topInsight}</p>
@@ -300,13 +300,13 @@ export default function DNAAnalyzerPage() {
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
+                <TrendingUp className="w-4 h-4 text-[#6366F1]" />
                 <span className="font-bold text-sm">AI Recommendations</span>
               </div>
               <div className="space-y-2">
                 {analysis.recommendations.map((r, i) => (
                   <div key={i} className="flex items-start gap-3 text-sm text-gray-300 py-2 border-b border-white/5 last:border-0">
-                    <span className="w-5 h-5 bg-[#7C3AED]/20 rounded flex items-center justify-center text-[10px] font-bold text-[#7C3AED] flex-shrink-0">{i + 1}</span>
+                    <span className="w-5 h-5 bg-[#6366F1]/20 rounded flex items-center justify-center text-[10px] font-bold text-[#6366F1] flex-shrink-0">{i + 1}</span>
                     {r}
                   </div>
                 ))}
@@ -315,7 +315,7 @@ export default function DNAAnalyzerPage() {
 
             <div className="glass rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-4 h-4 text-[#00E5FF]" />
+                <Shield className="w-4 h-4 text-[#00D4AA]" />
                 <span className="font-bold text-sm">Market Outlook</span>
               </div>
               <p className="text-sm text-gray-400">{analysis.marketOutlook}</p>
