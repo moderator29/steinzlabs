@@ -101,12 +101,12 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
         onClick={() => setIsFullScreen(false)}
       >
         <div
-          className="bg-[#0B0D14] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden m-4"
+          className="bg-[#0A0E1A] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden m-4"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-4 h-4" />
               </div>
               <div>
@@ -167,18 +167,18 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
       onClick={onClose}
     >
       <div
-        className="bg-[#0B0D14] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-[#0A0E1A] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#0B0D14] border-b border-white/10 p-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#00D4AA] to-[#6366F1] rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0">
               <CheckCircle className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <h2 className="text-sm font-bold truncate">{event.tokenName || 'On-Chain Proof'}</h2>
               <p className="text-[10px] text-gray-500 truncate">
-                {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Verified by Naka AI'}
+                {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Verified by Steinz AI'}
                 {event.tokenPrice ? ` · ${event.tokenPrice}` : ''}
                 {event.platform ? ` · ${event.platform}` : ''}
               </p>
@@ -260,7 +260,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                 href={dexPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#00D4AA] to-[#6366F1] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
               >
                 <ShoppingCart className="w-4 h-4" />
                 Buy {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}
@@ -323,7 +323,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                 href={explorerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 py-2 border border-[#00D4AA]/30 rounded-lg text-[#00D4AA] text-xs font-semibold hover:bg-[#00D4AA]/10 transition-colors"
+                className="flex items-center justify-center gap-1.5 py-2 border border-[#00E5FF]/30 rounded-lg text-[#00E5FF] text-xs font-semibold hover:bg-[#00E5FF]/10 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 View on {chainId === 'solana' ? 'Solscan' : 'Etherscan'}

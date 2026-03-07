@@ -106,15 +106,15 @@ export default function SecurityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Shield className="w-5 h-5 text-[#00D4AA]" />
+          <Shield className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-sm font-heading font-bold">Security Center</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#00D4AA]/20 text-[#00D4AA] rounded text-[10px] font-semibold">GOPLUS</span>
+          <span className="ml-auto px-2 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">GOPLUS</span>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export default function SecurityPage() {
             <button
               key={chain.id}
               onClick={() => setSelectedChain(chain.key)}
-              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#00D4AA]/10 border-[#00D4AA]/30 text-[#00D4AA]' : 'glass border-white/10 hover:border-white/20 text-gray-400'}`}
+              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#00E5FF]/10 border-[#00E5FF]/30 text-[#00E5FF]' : 'glass border-white/10 hover:border-white/20 text-gray-400'}`}
             >
               {chain.label}
             </button>
@@ -138,12 +138,12 @@ export default function SecurityPage() {
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="Enter token contract address (0x...)"
-            className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#00D4AA]/30"
+            className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#00E5FF]/30"
           />
           <button
             onClick={handleScan}
             disabled={scanning || !scanInput.trim()}
-            className="bg-gradient-to-r from-[#00D4AA] to-[#6366F1] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
@@ -153,9 +153,9 @@ export default function SecurityPage() {
         {scanning && (
           <div className="text-center py-12">
             <div className="relative w-16 h-16 mx-auto mb-4">
-              <div className="absolute inset-0 rounded-full border-2 border-[#00D4AA]/20"></div>
-              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#00D4AA] animate-spin"></div>
-              <Shield className="w-6 h-6 text-[#00D4AA] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute inset-0 rounded-full border-2 border-[#00E5FF]/20"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#00E5FF] animate-spin"></div>
+              <Shield className="w-6 h-6 text-[#00E5FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
             <p className="text-sm text-gray-400">Scanning contract with GoPlus Security...</p>
             <p className="text-[10px] text-gray-600 mt-1">Analyzing honeypot risk, ownership, taxes, and more</p>
@@ -182,7 +182,7 @@ export default function SecurityPage() {
                   href={explorerUrl(result.contract)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-[#00D4AA] hover:underline"
+                  className="flex items-center gap-1 text-[10px] text-[#00E5FF] hover:underline"
                 >
                   View on Explorer <ExternalLink className="w-3 h-3" />
                 </a>
@@ -313,13 +313,13 @@ export default function SecurityPage() {
               <p className="text-[10px] text-gray-600">Try these examples:</p>
               <button
                 onClick={() => { setScanInput('0xdac17f958d2ee523a2206206994597c13d831ec7'); setSelectedChain('ethereum'); }}
-                className="text-[10px] text-[#00D4AA]/60 hover:text-[#00D4AA] font-mono block mx-auto"
+                className="text-[10px] text-[#00E5FF]/60 hover:text-[#00E5FF] font-mono block mx-auto"
               >
                 USDT (Ethereum)
               </button>
               <button
                 onClick={() => { setScanInput('0x55d398326f99059ff775485246999027b3197955'); setSelectedChain('bsc'); }}
-                className="text-[10px] text-[#00D4AA]/60 hover:text-[#00D4AA] font-mono block mx-auto"
+                className="text-[10px] text-[#00E5FF]/60 hover:text-[#00E5FF] font-mono block mx-auto"
               >
                 USDT (BSC)
               </button>

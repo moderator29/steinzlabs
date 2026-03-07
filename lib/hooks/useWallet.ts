@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { connectMetaMask, connectPhantom, clearStoredWallet } from '@/lib/wallet';
 
-const WALLET_CHANGE_EVENT = 'naka_wallet_changed';
+const WALLET_CHANGE_EVENT = 'steinz_wallet_changed';
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);

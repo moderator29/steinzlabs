@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       ? holdings.map((h: any) => `${h.symbol}: $${h.valueUsd} (${h.balance})`).join(', ')
       : 'No on-chain holdings detected';
 
-    const prompt = `You are a professional crypto trading DNA analyst for the NAKA LABS platform. Analyze this trader's wallet and provide a comprehensive Trading DNA profile.
+    const prompt = `You are a professional crypto trading DNA analyst for the STEINZ LABS platform. Analyze this trader's wallet and provide a comprehensive Trading DNA profile.
 
 Wallet: ${walletAddress}
 Total Balance: $${totalBalance || 0}

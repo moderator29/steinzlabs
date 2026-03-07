@@ -19,7 +19,7 @@ export default function AlertsPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([
     { id: '1', name: 'ETH Price Alert', type: 'Price', condition: 'ETH > $4,000', active: true, triggered: 3, icon: TrendingUp, color: '#10B981' },
-    { id: '2', name: 'Whale Movement', type: 'Whale', condition: 'Any tx > $1M on ETH', active: true, triggered: 12, icon: Fish, color: '#00D4AA' },
+    { id: '2', name: 'Whale Movement', type: 'Whale', condition: 'Any tx > $1M on ETH', active: true, triggered: 12, icon: Fish, color: '#00E5FF' },
     { id: '3', name: 'Rug Pull Warning', type: 'Security', condition: 'Liquidity removal > 50%', active: true, triggered: 1, icon: Shield, color: '#EF4444' },
     { id: '4', name: 'Gas Spike Alert', type: 'Network', condition: 'ETH gas > 100 Gwei', active: false, triggered: 8, icon: Zap, color: '#F59E0B' },
   ]);
@@ -33,15 +33,15 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Bell className="w-5 h-5 text-[#00D4AA]" />
+          <Bell className="w-5 h-5 text-[#00E5FF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
-          <button className="ml-auto bg-gradient-to-r from-[#00D4AA] to-[#6366F1] p-2 rounded-lg">
+          <button className="ml-auto bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] p-2 rounded-lg">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -50,7 +50,7 @@ export default function AlertsPage() {
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-2 gap-2">
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#00D4AA]">{alerts.filter(a => a.active).length}</div>
+            <div className="text-lg font-bold text-[#00E5FF]">{alerts.filter(a => a.active).length}</div>
             <div className="text-[10px] text-gray-500">Active</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">

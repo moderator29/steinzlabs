@@ -71,9 +71,9 @@ const TABS: { id: Tab; label: string; icon: typeof Target }[] = [
 ];
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  market_cap: { bg: 'bg-[#6366F1]/20', text: 'text-[#6366F1]' },
+  market_cap: { bg: 'bg-[#7C3AED]/20', text: 'text-[#7C3AED]' },
   price: { bg: 'bg-[#FF6B35]/20', text: 'text-[#FF6B35]' },
-  volume: { bg: 'bg-[#00D4AA]/20', text: 'text-[#00D4AA]' },
+  volume: { bg: 'bg-[#00E5FF]/20', text: 'text-[#00E5FF]' },
   launch: { bg: 'bg-[#10B981]/20', text: 'text-[#10B981]' },
   holder: { bg: 'bg-[#F59E0B]/20', text: 'text-[#F59E0B]' },
 };
@@ -158,7 +158,7 @@ function TokenIcon({ src, symbol }: { src: string; symbol: string }) {
   const [error, setError] = useState(false);
   if (error || !src) {
     return (
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#6366F1] flex items-center justify-center text-xs font-bold flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#7C3AED] flex items-center justify-center text-xs font-bold flex-shrink-0">
         {symbol?.slice(0, 2) || '?'}
       </div>
     );
@@ -200,7 +200,7 @@ function DropdownFilter({ label, value, options, onChange }: {
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors ${
-                  value === opt.value ? 'text-[#00D4AA] font-semibold' : 'text-gray-400'
+                  value === opt.value ? 'text-[#00E5FF] font-semibold' : 'text-gray-400'
                 }`}
               >
                 {opt.label}
@@ -259,7 +259,7 @@ function PredictionModal({
   if (success) {
     return (
       <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center" onClick={onClose}>
-        <div className="bg-[#0B0D14] border border-white/10 rounded-2xl w-full max-w-md p-8 text-center mx-4" onClick={e => e.stopPropagation()}>
+        <div className="bg-[#0A0E1A] border border-white/10 rounded-2xl w-full max-w-md p-8 text-center mx-4" onClick={e => e.stopPropagation()}>
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#10B981]/20 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-[#10B981]" />
           </div>
@@ -275,10 +275,10 @@ function PredictionModal({
   return (
     <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-[#0B0D14] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto mx-0 sm:mx-4"
+        className="bg-[#0A0E1A] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto mx-0 sm:mx-4"
         onClick={e => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#0B0D14] border-b border-white/10 p-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
               side === 'yes' ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#EF4444]/20 text-[#EF4444]'
@@ -326,7 +326,7 @@ function PredictionModal({
                   onClick={() => setAmount(String(v))}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                     amount === String(v)
-                      ? 'border-[#00D4AA]/50 bg-[#00D4AA]/10 text-[#00D4AA]'
+                      ? 'border-[#00E5FF]/50 bg-[#00E5FF]/10 text-[#00E5FF]'
                       : 'border-white/10 text-gray-400 hover:bg-white/5'
                   }`}
                 >
@@ -658,7 +658,7 @@ export default function PredictionsPage() {
   const userActiveCount = Object.keys(userPredictions).length;
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white pb-20">
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="px-4 pt-6">
         <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-4 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
@@ -674,8 +674,8 @@ export default function PredictionsPage() {
         <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
           {[
             { label: 'Active', value: stats.activePredictions, icon: Zap, color: '#FF6B35' },
-            { label: 'Total Pool', value: formatUsd(stats.totalPoolVolume), icon: DollarSign, color: '#00D4AA' },
-            { label: 'Your Active', value: userActiveCount, icon: Target, color: '#6366F1' },
+            { label: 'Total Pool', value: formatUsd(stats.totalPoolVolume), icon: DollarSign, color: '#00E5FF' },
+            { label: 'Your Active', value: userActiveCount, icon: Target, color: '#7C3AED' },
             { label: 'Wagered', value: formatUsd(userTotalWagered), icon: BarChart3, color: '#F59E0B' },
             { label: 'Potential', value: formatUsd(userPotentialWinnings), icon: Trophy, color: '#FFD700' },
           ].map(stat => {

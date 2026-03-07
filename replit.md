@@ -1,12 +1,12 @@
-# Naka Labs
+# Steinz Labs
 
 ## Overview
-Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain intelligence platform for crypto analytics with AI-powered whale tracking, security scanning, and predictions market. Rebranded from Steinz Labs to Naka Labs ($NAKA).
+Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain intelligence platform for crypto analytics with AI-powered whale tracking, security scanning, and predictions market.
 
 ## Tech Stack
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS with Dune.com-inspired professional dark theme (Inter, JetBrains Mono fonts)
+- **Styling**: Tailwind CSS with custom dark theme (Space Grotesk, Inter, JetBrains Mono fonts)
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
 - **Auth/Database**: Supabase (direct client via @supabase/supabase-js)
@@ -19,9 +19,9 @@ Next.js 14 application using App Router, TypeScript, and Tailwind CSS. On-chain 
 ## Project Structure
 ```
 app/
-├── globals.css              # Global styles, professional design system, clean animations
+├── globals.css              # Global styles, fonts, animations, glass/gradient/glow utilities
 ├── layout.tsx               # Root layout
-├── page.tsx                 # Landing page (Dune.com-inspired: clean nav, hero, stats, features, security, FAQ, CTA, footer)
+├── page.tsx                 # Landing page (fixed nav, hero, stats, features, security, whitepaper, FAQ, CTA, footer)
 ├── admin/
 │   └── page.tsx             # Admin panel (password: 195656, review system with 6 tabs)
 └── dashboard/
@@ -34,14 +34,14 @@ app/
     ├── launchpad/           # Project launchpad (fundraising progress, filters)
     ├── messages/            # Group messaging (Telegram-style)
     ├── network-metrics/     # Network stats per chain (gas, TPS, TVL, validators)
-    ├── predictions/         # Polymarket-style predictions market
+    ├── predictions/         # Polymarket-style predictions market (auto-generated from CoinGecko/Pump.fun, YES/NO pools, payout calculator, DexScreener charts, countdown timers, resolved tab)
     ├── profile/             # Full profile with Activity/Settings/Achievements tabs
     ├── project-discovery/   # Project discovery with search & filters
     ├── risk-scanner/        # AI Portfolio Risk Scanner (full scan, risk breakdown)
     ├── security/            # Security Center (token scanner, contract analyzer, rug/phishing)
     ├── smart-money/         # Smart Money Watchlist (top wallets, follow/unfollow)
-    ├── social-trading/      # Social Trading
-    ├── wgm-runner/          # NAKA Runner (3-lane cyberpunk endless runner, sprite-based character skins)
+    ├── social-trading/      # Social Trading (Coming Soon page with feature preview)
+    ├── wgm-runner/          # STZ Runner (3-lane cyberpunk endless runner, sprite-based character skins from images, 5 skins with milestone unlocks, pre-run tutorial, skins/rewards/settings tabs, immersive 3D tunnel with red lasers/archways, leaderboard, $STZ coins)
     ├── swap/                # Multi-Chain Swap (token swap with slippage, routing)
     ├── trends/              # On-Chain Trends (metrics per chain, hot indicators)
     ├── vtx-ai/              # VTX AI full-page assistant (chat, quick actions)
@@ -49,72 +49,108 @@ app/
     ├── wallet-intelligence/ # Wallet Intelligence (scan any address, AI assessment)
     └── whale-tracker/       # Whale Tracker (live feed of buys/sells/transfers)
 components/
-├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs
-├── TradingViewChart.tsx     # TradingView candlestick widget
-├── ViewProofModal.tsx       # On-chain proof modal
+├── ContextFeed.tsx          # Context Feed tab with chain sub-tabs (All Chains, Solana, Ethereum, BSC, Polygon, Bookmarks, Archive), gradient tab styling, chain badges, live indicator, 5s auto-refresh, bookmark toggle per post (localStorage)
+├── TradingViewChart.tsx     # TradingView candlestick widget with SYMBOL_MAP (60+ tokens), getTradingViewSymbol(), isKnownTradingViewSymbol()
+├── ViewProofModal.tsx       # On-chain proof modal (TradingView chart + DexScreener fallback, buy button, trust score, voting)
 ├── Markets.tsx              # Markets tab (token list with filters)
-├── Predictions.tsx          # Predictions market
-├── SocialTab.tsx            # Social Trading tab
-├── VtxAiTab.tsx             # VTX AI assistant tab
-├── DiscoverTab.tsx          # Project Discovery tab
-├── WalletTab.tsx            # Wallet tab
-├── WalletConnectButton.tsx  # Reusable wallet connect/disconnect button
-├── ProfileTab.tsx           # Profile tab
-├── NakaLogo.tsx             # Logo component (renders /naka-logo.svg)
-├── AuthModal.tsx            # Full-page auth experience (email, Google OAuth, wallet connect)
-├── SidebarMenu.tsx          # Clean slide-out sidebar navigation
-├── FloatingBackButton.tsx   # Minimal back button for sub-pages
-├── ThemeToggle.tsx          # Dark/Light/Bingo theme toggle
-└── PriceTicker.tsx          # Live crypto price ticker
-```
-
-## Design System
-- **Background**: #0B0D14 (clean dark)
-- **Surface**: #12141D, Card: #161822, Elevated: #1C1F2E
-- **Borders**: #232637, Subtle: #1A1D2B
-- **Accent Colors**: Teal (#00D4AA), Indigo (#6366F1)
-- **Status**: Success (#22C55E), Warning (#EAB308), Danger (#EF4444)
-- **Text**: Primary (#F9FAFB), Secondary (#9CA3AF), Tertiary (#6B7280)
-- **Fonts**: Inter (headings + body), JetBrains Mono (code)
-- **Theme Modes**: Dark, Light, Bingo — toggled via ThemeToggle, stored in localStorage `naka_theme`, applied via `[data-theme]` CSS selectors
-- **Design Philosophy**: 70% Dune.com, 20% fresh, 10% Helium. Professional, institutional-grade. No neon/cyberpunk effects. Clean solid buttons, subtle hover states, professional data tables.
-- **Button Styles**: `.btn-primary` (white bg, dark text), `.btn-secondary` (outline), `.btn-gradient` (accent gradient)
-- **CSS Utilities**: `.glass`, `.glass-card-enhanced`, `.gradient-text`, `.card-hover`, `.grid-pattern`, `.dot-pattern`, `.section-divider`, `.stat-card`, `.feature-card`, `.scrollbar-hide`, `.font-heading`
-- **Animations**: Minimal and professional. `animate-fadeInUp`, `animate-fadeIn`, `animate-slide-up`, `animate-reveal-up`, `animate-float-subtle`. Stagger classes `.stagger-1` through `.stagger-8`.
-- **Auth System**: Full-page AuthModal with Google OAuth (primary), wallet connect, email sign in/up. Terms footer.
-- **Logo**: SVG at `/public/naka-logo.svg` (dark rounded rect with "NN" lettering in white + gradient). Component: `components/NakaLogo.tsx`.
-
-## Security Headers (next.config.js)
-- X-Frame-Options: DENY
-- X-Content-Type-Options: nosniff
-- Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
-- Referrer-Policy: strict-origin-when-cross-origin
-- Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+├── Predictions.tsx          # Predictions market (active predictions with vote yes/no)
+├── SocialTab.tsx            # Social Trading tab (Coming Soon view with planned features)
+├── VtxAiTab.tsx             # VTX AI assistant tab (chat + quick actions)
+├── DiscoverTab.tsx          # Project Discovery tab (search, filters, project cards)
+├── WalletTab.tsx            # Wallet tab (balance, send/receive, connect via useWallet hook)
+├── WalletConnectButton.tsx  # Reusable wallet connect/disconnect button with dropdown (MetaMask + Phantom, mobile deep links)
+├── ProfileTab.tsx           # Profile tab (stats, settings, achievements, notification center, uses useWallet hook)
+└── SidebarMenu.tsx          # Slide-out sidebar with working navigation (Core, Intelligence, Tools, Discover, Play)
 
 ## API Routes
 ```
 app/api/
-├── ca-lookup/               # CA lookup (DexScreener + GoPlus)
+├── ca-lookup/               # CA lookup (DexScreener + GoPlus, Solana uses DexScreener only)
 ├── dna-analyzer/            # AI DNA analysis via Anthropic Claude
 ├── game-scores/             # HODL Runner leaderboard (in-memory)
-├── wgm-scores/              # NAKA Runner leaderboard (in-memory)
-├── token-scanner/           # Token security scanner
+├── wgm-scores/              # WGM Runner leaderboard (in-memory)
+├── token-scanner/           # Token security scanner (GoPlus for EVM, DexScreener for Solana)
 ├── wallet-intelligence/     # Wallet analysis (Alchemy for EVM, Solana RPC for SOL)
-├── portfolio/               # Portfolio data
-├── prices/                  # Real-time crypto prices (30 coins via CoinGecko)
-├── market-data/             # Market data with trending/gainers/losers
-├── context-feed/            # Multi-chain context feed
-├── predictions/             # Predictions market API
-├── vtx-ai/                  # VTX AI assistant (Anthropic Claude)
-├── platform-stats/          # Platform stats
-├── customer-service/        # AI customer service chat
-└── builder-submissions/     # Builder Network & Funding Portal API
+└── portfolio/               # Portfolio data
 ```
+
+## Key Implementation Notes
+- **Solana Support**: Token scanner uses DexScreener fallback (GoPlus doesn't support Solana well). CA lookup skips GoPlus for Solana. Wallet intelligence has native Solana RPC support. DNA analyzer fetches wallet data from wallet-intelligence API.
+- **Non-custodial Wallet**: Uses ethers.js for EVM chains. Send/receive only available on EVM chains (ETH, Base, Polygon, Avalanche). Solana balance viewing works but send/receive requires Solana keypair (coming soon). 12 chains displayed, 5 live for balance queries.
+- **Game Scores**: Both HODL Runner and WGM Runner use in-memory Map storage (resets on restart). Shared game-scores pattern with username-based dedup.
+- **Social Trading**: Replaced with Coming Soon page showing planned features (copy trading, signals, profiles, leaderboards).
+- **Whitepaper**: System Architecture, Technology Stack, Bullish Event Example, and Tokenomics sections removed.
+lib/
+├── supabase.ts              # Supabase client + admin (service role) client
+├── wallet.ts                # MetaMask + Phantom wallet connect/disconnect utilities
+└── hooks/
+    ├── useContextFeed.ts      # Context feed hook with chain filter param (ChainFilter type), 5s auto-refresh, deduplication
+    ├── useAuth.ts            # Auth hook (sign in/up, wallet connect, localStorage session)
+    ├── useWallet.ts          # Centralized wallet state hook (connect/disconnect MetaMask & Phantom, Supabase upsert, cross-component sync via custom events, mobile deep links)
+    ├── usePrices.ts          # Live price feed hook (BTC, ETH, SOL from /api/prices)
+    └── useTheme.ts           # Theme toggle hook (dark/light/bingo modes)
+app/api/
+├── prices/route.ts           # Real-time crypto prices — 30 coins via CoinGecko markets endpoint
+├── market-data/route.ts      # Market data with trending/gainers/losers (CoinGecko)
+├── token-scanner/route.ts    # Token contract security scanner
+├── context-feed/route.ts     # Multi-chain context feed with ?chain= param (all/solana/ethereum/bsc/polygon). 5s cache, 50+ events. Sources: Alchemy ETH whales+ERC20, Helius Solana, Pump.fun 10 tokens, DexScreener trending+profiles+DEX searches (Raydium, Meteora, Jupiter, Orca, PancakeSwap, FourMeme, Uniswap, SushiSwap, QuickSwap). ETH: PEPE/SHIB/LINK/UNI/ARB searches. BSC: fourmeme+four.meme searches. 5s auto-refresh.
+├── predictions/route.ts      # Predictions market API. Auto-generates from CoinGecko ($2+ min), Pump.fun, DexScreener DEXes (Raydium/PancakeSwap/Uniswap with chartPairAddress). 2-min cache refresh, in-memory pools, 3% fee, payout math. 4 resolved predictions.
+├── engagement/route.ts       # Event engagement tracking (views, likes, shares, comments)
+├── coin-discovery/route.ts   # Coin discovery — top 50 coins with full market data (CoinGecko)
+├── vtx-ai/route.ts           # VTX AI assistant (Anthropic Claude, enhanced with Fear&Greed, gas prices, wallet analysis, platform context)
+├── portfolio/route.ts        # Portfolio API (Alchemy token balances + CoinGecko prices)
+├── wallet-intelligence/route.ts  # Real wallet analysis (Alchemy ETH balances, Solana RPC, auto-chain detection)
+├── whale-tracker/route.ts    # Real whale tracking (Alchemy large transfers, CoinGecko market activity, 60s cache)
+├── notifications/route.ts    # Real notifications (CoinGecko price alerts, trending, security alerts)
+└── builder-submissions/route.ts  # Builder Network & Funding Portal API (applications, projects, milestones, endorsements, admin actions)
+```
+
+## Pages & Navigation
+- `/` — Landing page with scroll-reactive nav, animated hero with gradient mesh + hex grid + floating particles + data stream + spotlight effect + concentric hero rings, intersection observer section reveals, live PriceTicker, stats row, feature cards, "How It Works" 4-step section, security suite, whitepaper, FAQ, CTA with pricing link, footer
+- `/dashboard` — Main app with 6-tab bottom nav, AuthModal gate, theme toggle, live PriceTicker:
+  - **Home** — Sub-tabs: Context Feed, Markets, Predictions (with live price ticker bar)
+  - **Social** — Social trading with messages & connect wallet
+  - **VTX AI** — AI assistant with chat input + quick actions (Market Overview, Portfolio, Risk, Signals)
+  - **Discover** — Project Discovery with search, category filters, project cards
+  - **Wallet** — Balance display, Send/Receive/Scan actions, Connect Wallet CTA
+  - **Profile** — Guest user stats, Achievements, Analytics, Settings, Support, Sign Out
+- `/dashboard/wallet-page` — Trust Wallet-style non-custodial wallet (create/import mnemonic, send ETH, receive, add custom ERC-20 tokens, 12-chain support with real CoinGecko logos, multi-chain portfolio scan, market prices with 24h change, hide/show balance toggle)
+- `/dashboard/project-discovery` — Project grid with real CoinGecko data (>500K mcap), NAKA GO pinned, chain filters, token listing form
+- `/dashboard/builder-funding` — Launchpad with milestone-based escrow, progress bars, submit form
+- `/dashboard/predictions` — Full predictions market with TradingView candlestick charts, YES/NO voting, pool sizes, payout calculator
+- `/dashboard/messages` — Discord/Telegram hybrid chat with channels, reactions, pinned messages
+- `/dashboard/social-trading` — Top traders, copy trading, leaderboard, following
+- `/dashboard/portfolio` — Wallet holdings, token balances, P&L tracking
+- `/dashboard/profile` — Extended profile with Activity, Settings (notifications/preferences/privacy), Achievements
+- `/admin` — Password-protected admin panel (195656, hidden from sidebar) with 7 tabs:
+  - Platform Overview: user stats, system health indicators, activity preview
+  - Context Feed Stats: engagement metrics, trending hashtags
+  - Predictions Market: active predictions, resolved, staked value, leaderboard
+  - Builder Funding: submission review workflow with approve/reject actions
+  - Top Tokens: CoinGecko top 10 with prices/volumes
+  - Recent Activity: typed event feed (prediction, feed, funding, user, alert)
+  - Quick Actions: force refresh, clear cache, review flagged content, send alerts
+- `/s/[id]` — Short share link page (fetches from /api/share?id=shortId)
+
+## Design System
+- **Background**: #0A0E1A (dark navy)
+- **Card**: #111827, Elevated: #1A2235
+- **Accent Colors**: Cyan (#00E5FF), Purple (#7C3AED)
+- **Status**: Success (#10B981), Warning (#F59E0B), Danger (#EF4444)
+- **Fonts**: Space Grotesk (headings), Inter (body), JetBrains Mono (code)
+- **Theme Modes**: Dark, Light, Bingo (default) — toggled via ThemeToggle component, stored in localStorage as `steinz_theme`, applied via `[data-theme]` CSS selectors
+- **CSS Utilities**: `.glass`, `.glass-card-enhanced`, `.gradient-text`, `.btn-gradient`, `.card-hover`, `.glow-card`, `.grid-pattern`, `.dot-pattern`, `.hero-mesh`, `.hero-mesh-enhanced`, `.aurora-bg`, `.morph-blob`, `.shimmer-btn`, `.gradient-border`, `.holographic-border`, `.neon-text`, `.neon-text-subtle`, `.cyber-line`, `.scrollbar-hide`, `.font-heading`, `.animate-float-subtle`, `.noise-overlay`, `.logo-glow`, `.btn-glow`, `.hero-ring`, `.hero-title`, `.feature-card`, `.security-card`, `.security-icon-glow`, `.section-divider`, `.stat-card`, `.stat-card-glow`, `.step-card`, `.data-stream-line`, `.pulse-dot`, `.depth-shadow`, `.radial-spotlight`, `.gradient-flow-bg`, `.dashboard-card-enter`, `.bottom-nav-item`, `.tab-indicator`, `.animate-ripple`
+- **Animations**: `animate-float`, `animate-float-subtle`, `animate-float-3d`, `animate-fadeInUp`, `animate-fadeIn`, `animate-fadeInScale`, `animate-borderGlow`, `animate-textGradient`, `animate-shimmer`, `animate-pulse-glow`, `animate-glow-pulse`, `animate-spin-slow`, `animate-slide-up`, `animate-slide-in-left`, `animate-slide-in-right`, `animate-reveal-up`, `animate-breathe`, `animate-scanline`, `animate-neon-flicker`, `animate-particle`, `data-stream`, `ripple`, `gradient-flow`, `border-trace`
+- **Stagger classes**: `.stagger-1` through `.stagger-8` for sequential entrance animations
+- **Scroll offset**: `[id] { scroll-margin-top: 80px }` for fixed nav anchor links
+- **Auth System**: AuthModal with email sign in/up (Supabase), Google OAuth (Supabase), wallet connect (MetaMask + Phantom via lib/wallet.ts). Session stored in localStorage.
+- **Dashboard Nav**: Bottom nav uses `.bottom-nav-item` with `.active` indicator; notification bell hidden when not signed in
 
 ## Running
 - **Dev**: `npm run dev` (port 5000)
 - **Build**: `npm run build`
 - **Start**: `npm run start` (port 5000)
+- **Lint**: `npm run lint`
 
 ## Environment Variables
 Configured in `.env.local`:
@@ -126,13 +162,42 @@ Configured in `.env.local`:
 - `LUNARCRUSH_KEY_1` through `LUNARCRUSH_KEY_4` — LunarCrush social metrics
 - `HELIUS_KEY_1`, `HELIUS_KEY_2` — Helius Solana RPC
 
-## Key Notes
-- Admin panel password: 195656, URL: `/admin` (hidden from sidebar)
-- Social links: X (https://x.com/nakalabs), Telegram (https://t.me/nakalabs)
-- NAKA GO branding: Logo at `/public/nakago-logo.jpg`, displayed in landing page footer
-- Non-custodial wallet: ethers@6.13.4, `/dashboard/wallet-page`, XOR+base64 encrypted key storage
-- VTX AI tiers: Free = 15 msgs/day (IP-tracked), Pro = unlimited
-- Context feed: History preserved (200 events), bookmarks in localStorage `naka_bookmarks`
+## Performance Optimizations
+- **Lazy Loading**: All dashboard tab components (ContextFeed, Markets, Predictions, SocialTab, VtxAiTab, DiscoverTab, WalletTab, ProfileTab) use `React.lazy()` with Suspense fallback spinners
+- **Loading Skeletons**: `app/dashboard/loading.tsx` and `app/dashboard/predictions/loading.tsx` show animated skeleton UI during page transitions
+- **Route Prefetching**: SidebarMenu prefetches all 23 dashboard routes on mount via `router.prefetch()`
+- **API Caching**: All API routes return `Cache-Control` headers (s-maxage + stale-while-revalidate). Context feed: 5s/15s, Prices: 30s/60s, Predictions: 10s/30s
+- **Polling Optimization**: Context feed polls every 15s (was 5s), slows to 60s when tab hidden. Removed cache-busting `t=Date.now()` param. Engagement views batched and delayed 2s
+- **React.memo**: BottomNav, SidebarItem components wrapped in memo to prevent unnecessary re-renders
+- **Bundle Splitting**: `optimizePackageImports` for lucide-react, date-fns, recharts in next.config.js
+- **Compression**: gzip enabled (`compress: true`), WebP/AVIF image formats, 1hr image cache TTL
+- **Debounce Hook**: `lib/hooks/useDebounce.ts` available for search inputs (300ms default)
+- **Engagement Optimization**: View tracking limited to 5 events at a time with 2s debounce, prevents hundreds of POST requests
+
+## Notes
+- `image-hash` version updated from ^5.5.0 to ^7.0.1 (v5.x does not exist on npm)
 - Project uses root-level `app/` and `lib/` directories (no `src/` prefix)
 - `@/*` path alias maps to project root (`./`)
-- TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`
+- Many features now connected to real APIs (GoPlus security, CoinGecko prices, Alchemy blockchain data, CoinGecko whale activity)
+- Verified badge image: `public/verified-badge.png` (yellow checkmark, used across builder/social pages)
+- Landing page uses CSS-only entrance animations (no React state transitions)
+- Admin panel password: 195656, URL: `/admin` (hidden from sidebar). Features: hamburger sidebar with 13 sections. NO demo/mock data - all sections show real data or honest empty states. Token Listings has multi-step flow: pending → approve → send payment email → confirm payment → list on discovery. Overview shows real platform stats. Trading Suite shows real feature statuses (all Live).
+- Social links: X (https://x.com/steinzlabs), Telegram (https://t.me/steinzlabs) — in landing page footer
+- NAKA GO branding: Logo at `/public/nakago-logo.jpg` (Shiba Inu mascot), displayed in landing page footer with "Proudly Powered by NAKA GO" + Telegram link (https://t.me/NakaGoCult)
+- Promo videos: `attached_assets/generated_videos/` — steinz_hero_reveal.mp4, steinz_feature_walkthrough.mp4, steinz_nothing_like_this.mp4, steinz_labs_intro.mp4
+- Trading Suite: `/dashboard/trading-suite` — 7 tabs (Terminal, Trending, Scanner, Sniper, Pulse, Perps, LIVE). Real CoinGecko trending + market data, DexScreener new pairs, Fear & Greed index. TradingView chart view (click token → full Binance-style chart), CA lookup (paste contract → real price/liquidity/holders/security from DexScreener + GoPlus), bottom trader toolbar (Market/Alerts/Scan CA/Portfolio/Tools), enhanced LIVE section with full streamer guide + FAQ. APIs: `/api/trading-suite/route.ts` (30s cache), `/api/ca-lookup/route.ts` (DexScreener + GoPlus)
+- Social Trading: Functional hub with 3 tabs (Leaderboard, My Profile, Following). Trader cards with PnL%, win rate, followers, strategy tags. Copy trading with allocation settings. Profile creation stored in localStorage. Verified badge for top traders.
+- Sidebar order: Dashboard → Portfolio → Full Trading Suite (HOT) → Trading DNA Analyzer → Intelligence → Tools (STEINZ Wallet NEW, Swap, VTX AI, Alerts, Pricing, Social, Copy, Security, Risk) → Discover → Play (HODL Runner with PLAY badge)
+- Non-custodial wallet: ethers@6.13.4, `/dashboard/wallet-page`, XOR+base64 encrypted key storage in localStorage, dispatches `steinz_wallet_changed` event for portfolio sync
+- VTX AI tiers: Free = 15 msgs/day (IP-tracked in-memory), Pro = unlimited, web search toggle, model: claude-sonnet-4-20250514
+- Context feed: History preserved (200 events), bookmarks in localStorage `steinz_bookmarks`, Avalanche chain tab, 24hr retention with Archive tab for old events (>24hrs), server-side event store
+- Project listing API: `/api/project-listing` — Multi-step flow: POST submits (returns preview URL), PUT with actions: approve/send_payment_email/confirm_payment/list/reject. Preview page at `/dashboard/token-preview/[id]`. In-memory storage.
+- Platform stats API: `/api/platform-stats` — Real data: chains count (12), signal accuracy (Beta), global volume from CoinGecko, 5-min cache
+- AI Customer Service: `/api/customer-service` — Anthropic Claude-powered support chat on Profile tab. Answers platform questions, escalates complex issues. Chat history in localStorage `steinz_support_chat`.
+- Verified badge (new): `/public/verified-badge-new.png` (gold wavy checkmark)
+- Wallet Intelligence: Multi-chain support — ETH (Alchemy), SOL (Solana RPC), Base, Polygon, Avalanche (public RPCs). Chain selector in UI. Token balances only on Alchemy-supported chains.
+- Security Center (token-scanner): Multi-chain via GoPlus — ETH, BSC, Polygon, Solana, Base, Avalanche, Arbitrum. Chain selector in UI.
+- HODL Runner game: `/dashboard/hodl-runner` — canvas-based endless runner, global leaderboard at `/api/game-scores`
+- Share links: In-memory Map (8-char hex ID), route `/s/[id]`, resets on server restart
+- TradingView: All tokens use TradingView by default via `getTradingViewSymbol()`. Known symbols get exact exchange mapping; unknown tokens fall back to `BINANCE:{SYMBOL}USDT`
+- Logo: Custom swirling vortex (cyan/blue/purple), transparent PNG. Files: `public/steinz-logo-32.png`, `public/steinz-logo-64.png`, `public/steinz-logo-128.png`, `public/steinz-logo-192.png`, `public/steinz-logo-full.png`. Component: `components/SteinzLogo.tsx` renders `<img>` tag. Favicon: `app/favicon.ico`.
