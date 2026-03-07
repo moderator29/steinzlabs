@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy } from 'lucide-react';
+import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -48,6 +48,7 @@ export default function SecurityPage() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [walletRejection, setWalletRejection] = useState<{ error: string; message: string; suggestion: string; redirectUrl: string } | null>(null);
 
   const handleScan = async () => {
     const address = scanInput.trim();
@@ -56,6 +57,7 @@ export default function SecurityPage() {
     setScanning(true);
     setError(null);
     setResult(null);
+    setWalletRejection(null);
 
     try {
       const res = await fetch('/api/token-scanner', {
@@ -67,6 +69,10 @@ export default function SecurityPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.isWalletAddress) {
+          setWalletRejection(data);
+          return;
+        }
         setError(data.error || 'Failed to scan token');
         return;
       }
@@ -162,7 +168,27 @@ export default function SecurityPage() {
           </div>
         )}
 
-        {error && !scanning && (
+        {walletRejection && !scanning && (
+          <div className="glass rounded-xl p-6 border border-orange-500/30 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <Wallet className="w-8 h-8 text-orange-400" />
+            </div>
+            <h3 className="text-lg font-bold text-orange-400 mb-2">{walletRejection.error}</h3>
+            <p className="text-sm text-gray-400 mb-1">{walletRejection.message}</p>
+            <p className="text-xs text-gray-500 mb-4">{walletRejection.suggestion}</p>
+            <button
+              onClick={() => router.push(`${walletRejection.redirectUrl}?address=${encodeURIComponent(scanInput.trim())}`)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            >
+              Go to DNA Analyzer <ArrowRight className="w-4 h-4" />
+            </button>
+            <p className="text-[10px] text-gray-600 mt-3">
+              The Token Scanner only accepts smart contract addresses for security analysis.
+            </p>
+          </div>
+        )}
+
+        {error && !scanning && !walletRejection && (
           <div className="glass rounded-xl p-4 border border-red-500/20 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
@@ -304,7 +330,7 @@ export default function SecurityPage() {
           </>
         )}
 
-        {!result && !scanning && !error && (
+        {!result && !scanning && !error && !walletRejection && (
           <div className="text-center py-8">
             <Shield className="w-12 h-12 text-gray-700 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-gray-500">Enter a contract address to scan</h3>

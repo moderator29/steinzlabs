@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
+import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RotateCcw, FileCode2, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 
@@ -32,13 +32,65 @@ export default function DNAAnalyzerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [manualAddress, setManualAddress] = useState('');
+  const [isContractAddress, setIsContractAddress] = useState(false);
+  const [contractAddress, setContractAddress] = useState('');
+
+  const checkIfContract = async (address: string): Promise<boolean> => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return false;
+
+    try {
+      const rpcUrls = [
+        'https://eth.llamarpc.com',
+        'https://rpc.ankr.com/eth',
+        'https://cloudflare-eth.com',
+      ];
+
+      for (const rpcUrl of rpcUrls) {
+        try {
+          const res = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              method: 'eth_getCode',
+              params: [address, 'latest'],
+              id: 1,
+            }),
+            signal: AbortSignal.timeout(5000),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.result && data.result !== '0x' && data.result !== '0x0') {
+              return true;
+            }
+            return false;
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch {}
+
+    return false;
+  };
 
   const runAnalysis = async (address: string) => {
     setLoading(true);
     setError('');
     setAnalysis(null);
+    setIsContractAddress(false);
+    setContractAddress('');
 
     try {
+      const isContract = await checkIfContract(address.trim());
+      if (isContract) {
+        setIsContractAddress(true);
+        setContractAddress(address.trim());
+        setLoading(false);
+        return;
+      }
+
       let holdings: any[] = [];
       let totalBalance = 0;
 
@@ -108,7 +160,7 @@ export default function DNAAnalyzerPage() {
       </div>
 
       <div className="pt-20 px-4 max-w-2xl mx-auto">
-        {!analysis && !loading && (
+        {!analysis && !loading && !isContractAddress && (
           <div className="space-y-6">
             <div className="text-center mb-8">
               <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -167,6 +219,61 @@ export default function DNAAnalyzerPage() {
                 {error}
               </div>
             )}
+          </div>
+        )}
+
+        {isContractAddress && (
+          <div className="space-y-6 animate-fadeInUp">
+            <div className="text-center mb-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#F59E0B]/20 to-[#EF4444]/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#F59E0B]/30">
+                <FileCode2 className="w-10 h-10 text-[#F59E0B]" />
+              </div>
+              <h2 className="text-2xl font-heading font-bold mb-2 text-[#F59E0B]">This is a Smart Contract Address</h2>
+              <p className="text-gray-400 text-sm max-w-md mx-auto">
+                The address you entered is a smart contract, not a wallet. The DNA Analyzer is designed to analyze 
+                <span className="text-white font-semibold"> wallet addresses only</span> — it examines personal trading patterns, risk profiles, and portfolio behavior.
+              </p>
+            </div>
+
+            <div className="glass rounded-xl p-4 border border-[#F59E0B]/20 bg-[#F59E0B]/5">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-sm mb-1 text-[#F59E0B]">Why can't contracts be analyzed here?</div>
+                  <p className="text-sm text-gray-400">
+                    Smart contracts don't have trading behavior or portfolio history. They are programs deployed on the blockchain. 
+                    To analyze a contract's security, audit status, and risk factors, use our <span className="text-white font-semibold">Token Scanner</span> instead.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass rounded-xl p-4 border border-white/10">
+              <div className="text-[10px] text-gray-500 mb-1">Address Detected</div>
+              <div className="text-sm font-mono text-gray-300 break-all">{contractAddress}</div>
+              <div className="mt-2 inline-block px-2 py-1 bg-[#F59E0B]/10 text-[#F59E0B] rounded text-[10px] font-semibold uppercase tracking-wider">
+                Smart Contract
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push('/dashboard/security')}
+              className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+            >
+              <Shield className="w-5 h-5" /> Go to Token Scanner
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
+
+            <button
+              onClick={() => {
+                setIsContractAddress(false);
+                setContractAddress('');
+                setManualAddress('');
+              }}
+              className="w-full border border-white/10 py-3 rounded-xl text-sm text-gray-400 hover:text-white hover:border-white/20 transition-colors flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" /> Enter a Wallet Address Instead
+            </button>
           </div>
         )}
 

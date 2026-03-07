@@ -174,7 +174,8 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
     };
   }, [symbol, interval, showTools]);
 
-  const stableId = useRef(`tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`);
+  const idCounter = useRef(0);
+  const stableId = useRef(`tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}-${++idCounter.current}`);
 
   return (
     <div
