@@ -1,0 +1,151 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Neue Haas Grotesk Text",
+      "role": "body"
+    },
+    {
+      "family": "Geist",
+      "role": "unknown"
+    },
+    {
+      "family": "Roboto",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#216BA5",
+    "accent": "#F6F6F7",
+    "background": "#FFFFFF",
+    "textPrimary": "#0F0F15",
+    "link": "#1D5D90"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Neue Haas Grotesk Text",
+      "heading": "Neue Haas Grotesk Text"
+    },
+    "fontStacks": {
+      "heading": [
+        "tiemposHeadlineLight",
+        "tiemposHeadlineLight Fallback",
+        "serif"
+      ],
+      "body": [
+        "Geist",
+        "Roboto",
+        "Helvetica",
+        "Arial",
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "Noto Color Emoji",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Geist",
+        "Roboto",
+        "Helvetica",
+        "Arial",
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "Noto Color Emoji",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "100px",
+      "h2": "58px",
+      "body": "14px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "8px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#FFFFFF",
+      "textColor": "#0F0F15",
+      "borderColor": "#0F0F15",
+      "borderRadius": "33554400px",
+      "borderRadiusCorners": {
+        "topLeft": "33554400px",
+        "topRight": "33554400px",
+        "bottomRight": "33554400px",
+        "bottomLeft": "33554400px"
+      },
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#F6F6F7",
+      "textColor": "#0F0F15",
+      "borderColor": "#E0E0E3",
+      "borderRadius": "33554400px",
+      "borderRadiusCorners": {
+        "topLeft": "33554400px",
+        "topRight": "33554400px",
+        "bottomRight": "33554400px",
+        "bottomLeft": "33554400px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.svg",
+    "ogImage": "File saved at: attached_assets/ogImage.png",
+    "logoHref": "https://dune.com/home"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it is located in the header, links to the homepage, and matches the favicon, indicating it is the main brand logo.",
+    "confidence": 0.9,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 1,
+      "text": "Get started",
+      "reasoning": "Button #0 ('Get started') is likely the primary CTA due to its action-oriented text, which is common for primary actions. Although it shares the same color group as other buttons, its text suggests a primary action."
+    },
+    "secondary": {
+      "index": 2,
+      "text": "How Dune helps OP Labs to power ecosystem growth and transparency OP Labs",
+      "reasoning": "Button #5 ('How Dune helps OP Labs...') is selected as secondary due to its different color group (#F6F6F7) and informative text, which is typical for secondary actions."
+    },
+    "confidence": 0.85
+  },
+  "personality": {
+    "tone": "professional",
+    "energy": "medium",
+    "targetAudience": "data analysts and blockchain enthusiasts"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.85,
+    "colors": 0.9,
+    "overall": 0.875
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it is located in the header, links to the homepage, and matches the favicon, indicating it is the main brand logo.",
+        "confidence": 0.9
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
