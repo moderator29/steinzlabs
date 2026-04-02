@@ -18,18 +18,44 @@ if (!fs.existsSync(filePath)) {
 }
 
 let content = fs.readFileSync(filePath, 'utf8');
+let patched = false;
 
-const oldPattern =
-  'if(d.externalWallets.solana.connectors)return d.externalWallets.solana.connectors.onMount(),()=>d.externalWallets.solana.connectors.onUnmount()';
-const safePattern =
-  'if("function"===typeof d.externalWallets?.solana?.connectors?.onMount)return d.externalWallets.solana.connectors.onMount(),()=>{"function"===typeof d.externalWallets?.solana?.connectors?.onUnmount&&d.externalWallets.solana.connectors.onUnmount()}';
+const PATCHES = [
+  {
+    name: 'Solana onMount typeof guard',
+    old: 'if(d.externalWallets.solana.connectors)return d.externalWallets.solana.connectors.onMount(),()=>d.externalWallets.solana.connectors.onUnmount()',
+    new: 'try{if("function"===typeof d.externalWallets?.solana?.connectors?.onMount)return d.externalWallets.solana.connectors.onMount(),()=>{"function"===typeof d.externalWallets?.solana?.connectors?.onUnmount&&d.externalWallets.solana.connectors.onUnmount()}}catch(e){}',
+  },
+  {
+    name: 'Solana onMount typeof guard (already step1 patched)',
+    old: 'if("function"===typeof d.externalWallets?.solana?.connectors?.onMount)return d.externalWallets.solana.connectors.onMount(),()=>{"function"===typeof d.externalWallets?.solana?.connectors?.onUnmount&&d.externalWallets.solana.connectors.onUnmount()}',
+    new: 'try{if("function"===typeof d.externalWallets?.solana?.connectors?.onMount)return d.externalWallets.solana.connectors.onMount(),()=>{"function"===typeof d.externalWallets?.solana?.connectors?.onUnmount&&d.externalWallets.solana.connectors.onUnmount()}}catch(e){}',
+  },
+  {
+    name: 'Solana connectors dependency array optional chain',
+    old: '}),[d.externalWallets.solana.connectors])',
+    new: '}),[d.externalWallets?.solana?.connectors])',
+  },
+];
 
-if (content.includes(oldPattern)) {
-  content = content.replace(oldPattern, safePattern);
+const ALREADY_DONE_MARKER = 'try{if("function"===typeof d.externalWallets?.solana?.connectors?.onMount)';
+
+for (const patch of PATCHES) {
+  if (patch.old === ALREADY_DONE_MARKER) continue;
+  if (content.includes(patch.old)) {
+    content = content.replace(patch.old, patch.new);
+    console.log(`[patch-privy] Applied: ${patch.name}`);
+    patched = true;
+  } else if (content.includes(patch.new)) {
+    console.log(`[patch-privy] Already applied: ${patch.name}`);
+  } else {
+    console.log(`[patch-privy] Pattern not found for: ${patch.name}`);
+  }
+}
+
+if (patched) {
   fs.writeFileSync(filePath, content);
-  console.log('[patch-privy] Patched Solana connector onMount check');
-} else if (content.includes(safePattern)) {
-  console.log('[patch-privy] Already patched');
+  console.log('[patch-privy] Wrote patched file');
 } else {
-  console.log('[patch-privy] Pattern not found - Privy version may have changed');
+  console.log('[patch-privy] No changes needed');
 }
