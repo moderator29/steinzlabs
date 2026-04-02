@@ -7,7 +7,7 @@ const PLANNED_FEATURES = [
     icon: Copy,
     title: 'Copy Trading',
     description: 'Automatically mirror trades from top-performing traders in real-time. Set your own risk limits, position sizes, and stop-losses while following proven strategies.',
-    color: '#00E5FF',
+    color: '#0A1EFF',
   },
   {
     icon: Signal,
@@ -46,7 +46,7 @@ export default function SocialTradingPage() {
     <div className="min-h-screen p-4 pb-24">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
           <div>
@@ -56,16 +56,16 @@ export default function SocialTradingPage() {
         </div>
 
         <div className="relative glass rounded-2xl border border-white/10 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#00E5FF]/5 via-transparent to-[#7C3AED]/5" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0A1EFF]/5 via-transparent to-[#7C3AED]/5" />
           <div className="relative p-8 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-white/10">
-              <Users className="w-9 h-9 text-[#00E5FF]" />
+            <div className="w-20 h-20 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-white/10">
+              <Users className="w-9 h-9 text-[#0A1EFF]" />
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full border border-[#00E5FF]/30 mb-4">
-              <div className="w-2 h-2 bg-[#00E5FF] rounded-full animate-pulse" />
-              <span className="text-xs font-semibold text-[#00E5FF]">Coming Soon</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full border border-[#0A1EFF]/30 mb-4">
+              <div className="w-2 h-2 bg-[#0A1EFF] rounded-full animate-pulse" />
+              <span className="text-xs font-semibold text-[#0A1EFF]">Coming Soon</span>
             </div>
-            <h2 className="text-2xl font-heading font-bold mb-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] bg-clip-text text-transparent">
+            <h2 className="text-2xl font-heading font-bold mb-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] bg-clip-text text-transparent">
               Social Trading is Coming
             </h2>
             <p className="text-sm text-gray-400 max-w-lg mx-auto leading-relaxed">
@@ -99,7 +99,7 @@ export default function SocialTradingPage() {
         <div className="glass rounded-xl p-6 border border-white/10 text-center">
           <div className="flex items-center justify-center gap-6 mb-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-[#00E5FF]">Q3</div>
+              <div className="text-2xl font-bold text-[#0A1EFF]">Q3</div>
               <div className="text-[10px] text-gray-400">2025</div>
             </div>
             <div className="w-px h-10 bg-white/10" />

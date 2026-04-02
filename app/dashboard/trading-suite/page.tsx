@@ -206,7 +206,7 @@ export default function TradingSuitePage() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF] via-[#7C3AED] to-[#EF4444] rounded-xl flex items-center justify-center">
+                <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] via-[#7C3AED] to-[#EF4444] rounded-xl flex items-center justify-center">
                   <Crosshair className="w-4.5 h-4.5" />
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#10B981] rounded-full border-2 border-[#060A12]" />
@@ -214,7 +214,7 @@ export default function TradingSuitePage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-base font-heading font-bold tracking-tight">STEINZ Terminal</h1>
-                  <span className="px-2 py-0.5 rounded-md text-[8px] font-bold bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 text-[#00E5FF] border border-[#00E5FF]/20">PRO</span>
+                  <span className="px-2 py-0.5 rounded-md text-[8px] font-bold bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 text-[#0A1EFF] border border-[#0A1EFF]/20">PRO</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-[9px] mt-0.5">
                   <span className="flex items-center gap-1 text-[#10B981]"><span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"/>LIVE</span>
@@ -226,12 +226,12 @@ export default function TradingSuitePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowCAModal(true)} className="flex items-center gap-1.5 px-3 py-2 bg-[#0f1320] border border-[#1a1f2e] rounded-xl text-[10px] text-gray-400 hover:border-[#00E5FF]/30 hover:text-[#00E5FF] transition-all">
+              <button onClick={() => setShowCAModal(true)} className="flex items-center gap-1.5 px-3 py-2 bg-[#0f1320] border border-[#1a1f2e] rounded-xl text-[10px] text-gray-400 hover:border-[#0A1EFF]/30 hover:text-[#0A1EFF] transition-all">
                 <Copy className="w-3 h-3" /> CA
               </button>
               <div className="relative">
                 <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Token or CA..." className="w-28 bg-[#0f1320] border border-[#1a1f2e] rounded-xl pl-7 pr-3 py-2 text-[10px] text-white focus:outline-none focus:border-[#00E5FF]/40 focus:w-44 transition-all placeholder:text-gray-600" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Token or CA..." className="w-28 bg-[#0f1320] border border-[#1a1f2e] rounded-xl pl-7 pr-3 py-2 text-[10px] text-white focus:outline-none focus:border-[#0A1EFF]/40 focus:w-44 transition-all placeholder:text-gray-600" />
               </div>
               <button onClick={fetchData} className="p-2 rounded-xl hover:bg-white/5 transition-colors">
                 <RotateCcw className={`w-3.5 h-3.5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
@@ -261,10 +261,10 @@ export default function TradingSuitePage() {
 
       {showCAModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowCAModal(false)}>
-          <div className="bg-[#0a0e1a] rounded-2xl p-6 w-full max-w-sm border border-[#1a1f2e] shadow-2xl shadow-[#00E5FF]/5" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0a0e1a] rounded-2xl p-6 w-full max-w-sm border border-[#1a1f2e] shadow-2xl shadow-[#0A1EFF]/5" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
                   <ScanLine className="w-4 h-4" />
                 </div>
                 <div>
@@ -275,14 +275,14 @@ export default function TradingSuitePage() {
               <button onClick={() => setShowCAModal(false)} className="p-1 hover:bg-white/5 rounded-lg"><X className="w-4 h-4 text-gray-500"/></button>
             </div>
 
-            <input type="text" value={pasteCA} onChange={(e) => setPasteCA(e.target.value)} placeholder="0x... or So1... paste contract address" className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#00E5FF]/50 font-mono mb-4" autoFocus />
+            <input type="text" value={pasteCA} onChange={(e) => setPasteCA(e.target.value)} placeholder="0x... or So1... paste contract address" className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/50 font-mono mb-4" autoFocus />
 
             <div className="mb-4">
               <div className="text-[9px] text-gray-500 mb-2 font-medium">Select Chain</div>
               <div className="grid grid-cols-3 gap-2">
                 {['ETH','SOL','BSC','BASE','ARB','POLY'].map(c => (
                   <button key={c} onClick={() => setSelectedChain(c)}
-                    className={`py-2 rounded-lg border text-[10px] font-semibold transition-all ${selectedChain === c ? 'border-[#00E5FF]/50 text-[#00E5FF] bg-[#00E5FF]/5' : 'border-[#1a1f2e] text-gray-500 hover:border-[#00E5FF]/30 hover:text-[#00E5FF]'}`}>{c}</button>
+                    className={`py-2 rounded-lg border text-[10px] font-semibold transition-all ${selectedChain === c ? 'border-[#0A1EFF]/50 text-[#0A1EFF] bg-[#0A1EFF]/5' : 'border-[#1a1f2e] text-gray-500 hover:border-[#0A1EFF]/30 hover:text-[#0A1EFF]'}`}>{c}</button>
                 ))}
               </div>
             </div>
@@ -291,7 +291,7 @@ export default function TradingSuitePage() {
 
             <button onClick={() => { if (pasteCA) lookupCA(pasteCA, selectedChain); }}
               disabled={caLoading || !pasteCA}
-              className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
+              className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
               {caLoading ? <><RotateCcw className="w-4 h-4 animate-spin"/>Scanning...</> : <><ScanLine className="w-4 h-4"/>Analyze Token</>}
             </button>
           </div>
@@ -328,7 +328,7 @@ export default function TradingSuitePage() {
               {l:'24h High',v:fmtP(selectedToken.high24h),c:'text-[#10B981]'},
               {l:'24h Low',v:fmtP(selectedToken.low24h),c:'text-[#EF4444]'},
               {l:'Volume',v:fmt(selectedToken.volume),c:'text-[#7C3AED]'},
-              {l:'MCap',v:fmt(selectedToken.marketCap),c:'text-[#00E5FF]'},
+              {l:'MCap',v:fmt(selectedToken.marketCap),c:'text-[#0A1EFF]'},
             ].map(s=>(
               <div key={s.l} className="bg-[#060A12] px-3 py-2 text-center">
                 <div className="text-[8px] text-gray-600 uppercase">{s.l}</div>
@@ -358,7 +358,7 @@ export default function TradingSuitePage() {
           <div className="space-y-4">
             <div className="grid grid-cols-4 gap-2">
               {[
-                {label:'Total MCap',value:fmt(topTokens.reduce((s,t)=>s+(t.marketCap||0),0)),color:'text-[#00E5FF]',icon:Globe},
+                {label:'Total MCap',value:fmt(topTokens.reduce((s,t)=>s+(t.marketCap||0),0)),color:'text-[#0A1EFF]',icon:Globe},
                 {label:'24h Volume',value:fmt(topTokens.reduce((s,t)=>s+(t.volume||0),0)),color:'text-[#7C3AED]',icon:BarChart3},
                 {label:'Fear & Greed',value:fearGreed.value,color:'',icon:Activity,customColor:fgC},
                 {label:'Gas (Gwei)',value:`${gasPrice.fast}`,color:'text-[#10B981]',icon:Zap},
@@ -376,14 +376,14 @@ export default function TradingSuitePage() {
                 <span className="text-xs font-bold flex items-center gap-2"><Crown className="w-4 h-4 text-[#F59E0B]"/>Top Tokens</span>
                 <div className="flex gap-1">
                   {['MCap','24h','Vol'].map((s,i) => (
-                    <button key={s} className={`px-2.5 py-1 rounded-lg text-[9px] font-semibold ${i===0?'bg-[#00E5FF]/10 text-[#00E5FF]':'text-gray-600 hover:text-gray-400'}`}>{s}</button>
+                    <button key={s} className={`px-2.5 py-1 rounded-lg text-[9px] font-semibold ${i===0?'bg-[#0A1EFF]/10 text-[#0A1EFF]':'text-gray-600 hover:text-gray-400'}`}>{s}</button>
                   ))}
                 </div>
               </div>
               {loading ? <div className="p-10 text-center text-gray-600 text-xs">Loading terminal data...</div> : (
                 <div className="divide-y divide-[#1a1f2e]/50">
                   {topTokens.filter(t => !searchQuery || t.name?.toLowerCase().includes(searchQuery.toLowerCase()) || t.symbol?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 15).map((t, i) => (
-                    <div key={t.id} className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-white/[0.02] ${selectedToken?.id === t.id ? 'bg-[#00E5FF]/[0.03]' : ''}`}
+                    <div key={t.id} className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-white/[0.02] ${selectedToken?.id === t.id ? 'bg-[#0A1EFF]/[0.03]' : ''}`}
                       onClick={() => setSelectedToken(selectedToken?.id === t.id ? null : t)}>
                       <span className="text-[9px] text-gray-700 w-5 text-center font-mono">{t.rank||i+1}</span>
                       {t.image && <img src={t.image} alt="" className="w-7 h-7 rounded-full"/>}
@@ -411,7 +411,7 @@ export default function TradingSuitePage() {
             </div>
 
             {selectedToken && (
-              <div className="bg-[#0f1320] rounded-2xl border border-[#00E5FF]/20 p-4 space-y-3">
+              <div className="bg-[#0f1320] rounded-2xl border border-[#0A1EFF]/20 p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   {selectedToken.image && <img src={selectedToken.image} alt="" className="w-8 h-8 rounded-full"/>}
                   <div className="flex-1">
@@ -474,10 +474,10 @@ export default function TradingSuitePage() {
                 ))}
               </div>
               <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-4">
-                <div className="text-[10px] font-bold mb-3 flex items-center gap-1.5"><Droplets className="w-3.5 h-3.5 text-[#00E5FF]"/>New Listings</div>
+                <div className="text-[10px] font-bold mb-3 flex items-center gap-1.5"><Droplets className="w-3.5 h-3.5 text-[#0A1EFF]"/>New Listings</div>
                 {newPairs.slice(0,5).map((p,i)=>(
                   <div key={i} className="flex items-center gap-2.5 py-1.5">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 flex items-center justify-center overflow-hidden">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center overflow-hidden">
                       {p.icon?<img src={p.icon} alt="" className="w-full h-full object-cover"/>:<Hash className="w-2.5 h-2.5 text-gray-600"/>}
                     </div>
                     <span className="text-[9px] font-mono text-gray-500 flex-1 truncate">{p.address?.slice(0,6)}...{p.address?.slice(-3)}</span>
@@ -514,10 +514,10 @@ export default function TradingSuitePage() {
             </div>
             {loading ? <div className="space-y-3">{[...Array(6)].map((_,i)=><div key={i} className="h-16 bg-[#0f1320] rounded-2xl animate-pulse"/>)}</div> : (
               trending.filter(t => !searchQuery || t.name?.toLowerCase().includes(searchQuery.toLowerCase()) || t.symbol?.toLowerCase().includes(searchQuery.toLowerCase())).map((t,i) => (
-                <div key={t.id||i} className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] hover:border-[#00E5FF]/15 transition-all group">
+                <div key={t.id||i} className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] hover:border-[#0A1EFF]/15 transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      {t.thumb?<img src={t.thumb} alt="" className="w-9 h-9 rounded-full ring-1 ring-[#1a1f2e]"/>:<div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold">{t.symbol?.slice(0,2)}</div>}
+                      {t.thumb?<img src={t.thumb} alt="" className="w-9 h-9 rounded-full ring-1 ring-[#1a1f2e]"/>:<div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold">{t.symbol?.slice(0,2)}</div>}
                       <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#060A12] rounded-full flex items-center justify-center border border-[#1a1f2e]"><span className="text-[7px] font-bold text-gray-500">{i+1}</span></div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -542,12 +542,12 @@ export default function TradingSuitePage() {
         {activeTab === 'scanner' && (
           <div className="space-y-4">
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-5">
-              <div className="text-xs font-bold mb-2 flex items-center gap-2"><ScanLine className="w-4 h-4 text-[#00E5FF]"/>Token Scanner</div>
+              <div className="text-xs font-bold mb-2 flex items-center gap-2"><ScanLine className="w-4 h-4 text-[#0A1EFF]"/>Token Scanner</div>
               <p className="text-[10px] text-gray-500 mb-4">Paste any contract address to fetch real token data — price, liquidity, holders, security audit</p>
               <div className="flex gap-2 mb-3">
-                <input type="text" value={pasteCA} onChange={e=>setPasteCA(e.target.value)} placeholder="Paste contract address (0x... or So1...)" className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-2.5 text-[11px] font-mono text-white focus:outline-none focus:border-[#00E5FF]/40"/>
+                <input type="text" value={pasteCA} onChange={e=>setPasteCA(e.target.value)} placeholder="Paste contract address (0x... or So1...)" className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-2.5 text-[11px] font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40"/>
                 <button onClick={() => { if (pasteCA) lookupCA(pasteCA, selectedChain); }} disabled={caLoading}
-                  className="px-4 py-2.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl text-[10px] font-bold disabled:opacity-50 flex items-center gap-1.5">
+                  className="px-4 py-2.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-[10px] font-bold disabled:opacity-50 flex items-center gap-1.5">
                   {caLoading ? <RotateCcw className="w-3 h-3 animate-spin"/> : <ScanLine className="w-3 h-3"/>}
                   Scan
                 </button>
@@ -555,14 +555,14 @@ export default function TradingSuitePage() {
               <div className="flex gap-1.5">
                 {['ETH','SOL','BSC','BASE','ARB','POLY'].map(c => (
                   <button key={c} onClick={() => setSelectedChain(c)}
-                    className={`px-2.5 py-1 rounded-lg text-[9px] font-semibold transition-all ${selectedChain === c ? 'bg-[#00E5FF]/10 text-[#00E5FF] border border-[#00E5FF]/30' : 'text-gray-600 border border-transparent hover:text-gray-400'}`}>{c}</button>
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-semibold transition-all ${selectedChain === c ? 'bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/30' : 'text-gray-600 border border-transparent hover:text-gray-400'}`}>{c}</button>
                 ))}
               </div>
             </div>
 
             {caLoading && !caResult && (
-              <div className="bg-[#0f1320] rounded-2xl border border-[#00E5FF]/20 p-8 text-center">
-                <RotateCcw className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin"/>
+              <div className="bg-[#0f1320] rounded-2xl border border-[#0A1EFF]/20 p-8 text-center">
+                <RotateCcw className="w-8 h-8 text-[#0A1EFF] mx-auto mb-3 animate-spin"/>
                 <div className="text-sm font-bold mb-1">Scanning Contract...</div>
                 <div className="text-[10px] text-gray-500">Fetching token data, liquidity, and security audit</div>
               </div>
@@ -578,7 +578,7 @@ export default function TradingSuitePage() {
 
             {caResult && caResult.token && (
               <div className="space-y-4">
-                <div className="bg-[#0f1320] rounded-2xl border border-[#00E5FF]/20 p-5">
+                <div className="bg-[#0f1320] rounded-2xl border border-[#0A1EFF]/20 p-5">
                   <div className="flex items-center gap-3 mb-4">
                     {caResult.token.image && <img src={caResult.token.image} alt="" className="w-10 h-10 rounded-full"/>}
                     <div className="flex-1">
@@ -609,7 +609,7 @@ export default function TradingSuitePage() {
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className="bg-[#060A12] rounded-lg p-3 text-center">
                       <div className="text-[8px] text-gray-600 uppercase mb-0.5">Liquidity</div>
-                      <div className="text-sm font-bold text-[#00E5FF]">{fmt(caResult.token.liquidity)}</div>
+                      <div className="text-sm font-bold text-[#0A1EFF]">{fmt(caResult.token.liquidity)}</div>
                     </div>
                     <div className="bg-[#060A12] rounded-lg p-3 text-center">
                       <div className="text-[8px] text-gray-600 uppercase mb-0.5">Market Cap</div>
@@ -664,7 +664,7 @@ export default function TradingSuitePage() {
 
                   {caResult.token.url && (
                     <a href={caResult.token.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-xl text-[10px] text-[#00E5FF] font-semibold hover:bg-[#00E5FF]/10 transition-colors">
+                      className="flex items-center justify-center gap-2 py-2.5 bg-[#0A1EFF]/5 border border-[#0A1EFF]/20 rounded-xl text-[10px] text-[#0A1EFF] font-semibold hover:bg-[#0A1EFF]/10 transition-colors">
                       <ExternalLink className="w-3 h-3"/>View on DexScreener
                     </a>
                   )}
@@ -744,7 +744,7 @@ export default function TradingSuitePage() {
                         <span className="text-[9px] capitalize text-gray-500">{p.dex}</span>
                         <span className="text-[9px] text-gray-500">{p.chain}</span>
                         <span className="text-[10px] font-mono">${p.price}</span>
-                        <span className="text-[9px] text-[#00E5FF]">{fmt(p.liquidity)} liq</span>
+                        <span className="text-[9px] text-[#0A1EFF]">{fmt(p.liquidity)} liq</span>
                       </div>
                     ))}
                   </div>
@@ -757,7 +757,7 @@ export default function TradingSuitePage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     {icon:Shield,title:'Honeypot Check',desc:'Detect honeypot & rug pull contracts',color:'text-[#10B981]',bg:'bg-[#10B981]/5'},
-                    {icon:Droplets,title:'Liquidity Analysis',desc:'Pool depth, lock status, LP tokens',color:'text-[#00E5FF]',bg:'bg-[#00E5FF]/5'},
+                    {icon:Droplets,title:'Liquidity Analysis',desc:'Pool depth, lock status, LP tokens',color:'text-[#0A1EFF]',bg:'bg-[#0A1EFF]/5'},
                     {icon:Users,title:'Holder Distribution',desc:'Top holders, whale concentration',color:'text-[#7C3AED]',bg:'bg-[#7C3AED]/5'},
                     {icon:Lock,title:'Contract Audit',desc:'Open source, proxy, mint functions',color:'text-[#F59E0B]',bg:'bg-[#F59E0B]/5'},
                   ].map((f,i) => (
@@ -806,12 +806,12 @@ export default function TradingSuitePage() {
               <div className="space-y-3">
                 <div>
                   <label className="text-[9px] text-gray-500 block mb-1.5 font-medium">Buy Amount (SOL)</label>
-                  <input type="text" value={sniperSettings.amount} onChange={e=>setSniperSettings(p=>({...p,amount:e.target.value}))} className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#00E5FF]/40"/>
+                  <input type="text" value={sniperSettings.amount} onChange={e=>setSniperSettings(p=>({...p,amount:e.target.value}))} className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40"/>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[9px] text-gray-500 block mb-1.5 font-medium">Slippage %</label>
-                    <input type="text" value={sniperSettings.slippage} onChange={e=>setSniperSettings(p=>({...p,slippage:e.target.value}))} className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#00E5FF]/40"/>
+                    <input type="text" value={sniperSettings.slippage} onChange={e=>setSniperSettings(p=>({...p,slippage:e.target.value}))} className="w-full bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40"/>
                   </div>
                   <div>
                     <label className="text-[9px] text-gray-500 block mb-1.5 font-medium">Priority Fee</label>
@@ -893,7 +893,7 @@ export default function TradingSuitePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-4 text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1.5">Total Market Cap</div>
-                <div className="text-base font-bold text-[#00E5FF]">{fmt(topTokens.reduce((s,t)=>s+(t.marketCap||0),0))}</div>
+                <div className="text-base font-bold text-[#0A1EFF]">{fmt(topTokens.reduce((s,t)=>s+(t.marketCap||0),0))}</div>
               </div>
               <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-4 text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1.5">24h Volume</div>
@@ -913,7 +913,7 @@ export default function TradingSuitePage() {
                       <span className="text-gray-500">{pct.toFixed(1)}%</span>
                     </div>
                     <div className="h-1.5 bg-[#1a1f2e] rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-full transition-all" style={{width:`${pct}%`}}/>
+                      <div className="h-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-full transition-all" style={{width:`${pct}%`}}/>
                     </div>
                   </div>
                 );
@@ -925,7 +925,7 @@ export default function TradingSuitePage() {
         {activeTab === 'perps' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-[#7C3AED]/5 to-transparent rounded-2xl border border-[#7C3AED]/15 p-6 text-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-[#7C3AED] to-[#00E5FF] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#7C3AED]/20">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#7C3AED] to-[#0A1EFF] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#7C3AED]/20">
                 <Layers className="w-7 h-7"/>
               </div>
               <h3 className="text-lg font-heading font-bold mb-2">Perpetual Futures</h3>
@@ -979,11 +979,11 @@ export default function TradingSuitePage() {
             </div>
 
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-5">
-              <div className="text-xs font-bold mb-4 flex items-center gap-2"><BookOpen className="w-4 h-4 text-[#00E5FF]"/>How Live Trading Works</div>
+              <div className="text-xs font-bold mb-4 flex items-center gap-2"><BookOpen className="w-4 h-4 text-[#0A1EFF]"/>How Live Trading Works</div>
               {[
                 {s:'1',t:'Set Up Your Stream',d:'Connect your STEINZ Terminal, choose which data to show on screen (chart, positions, PnL). Set stream title and tags.',c:'text-[#EF4444]',icon:Camera},
                 {s:'2',t:'Go Live',d:'Hit the Go Live button. Your screen is broadcast in HD to all your followers. Audio supported for live commentary.',c:'text-[#F59E0B]',icon:Play},
-                {s:'3',t:'Trade Transparently',d:'Every trade you execute is shown in real-time on stream. Viewers see your entries, exits, position sizes, and PnL — full transparency.',c:'text-[#00E5FF]',icon:Eye},
+                {s:'3',t:'Trade Transparently',d:'Every trade you execute is shown in real-time on stream. Viewers see your entries, exits, position sizes, and PnL — full transparency.',c:'text-[#0A1EFF]',icon:Eye},
                 {s:'4',t:'Interact with Viewers',d:'Live chat lets your audience ask questions, debate your thesis, and learn from your strategy in real-time. Build a community.',c:'text-[#7C3AED]',icon:MessageCircle},
                 {s:'5',t:'Viewers Copy Your Trades',d:'Followers can enable 1-click copy trading with customizable risk controls (max per trade, stop loss, position sizing). They mirror your moves automatically.',c:'text-[#10B981]',icon:Copy},
                 {s:'6',t:'Earn Revenue',d:'Monetize through subscriber tiers, viewer tips, and copy-trade performance fees. Top streamers earn passive income from their audience.',c:'text-[#F59E0B]',icon:DollarSign},
@@ -1008,7 +1008,7 @@ export default function TradingSuitePage() {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   {title:'Subscriber Revenue',desc:'Monthly subscription tiers for exclusive access',icon:DollarSign,color:'text-[#10B981]'},
-                  {title:'Copy Trade Fees',desc:'Earn % on profits generated for your copiers',icon:Percent,color:'text-[#00E5FF]'},
+                  {title:'Copy Trade Fees',desc:'Earn % on profits generated for your copiers',icon:Percent,color:'text-[#0A1EFF]'},
                   {title:'Tips & Donations',desc:'Viewers can tip during live sessions',icon:Gift,color:'text-[#F59E0B]'},
                   {title:'Leaderboard Fame',desc:'Top streamers featured on platform homepage',icon:Trophy,color:'text-[#7C3AED]'},
                 ].map((b,i) => (
@@ -1022,7 +1022,7 @@ export default function TradingSuitePage() {
             </div>
 
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-5">
-              <div className="text-xs font-bold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-[#00E5FF]"/>Viewer Guide</div>
+              <div className="text-xs font-bold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-[#0A1EFF]"/>Viewer Guide</div>
               <div className="space-y-3">
                 {[
                   {q:'How do I watch a live stream?',a:'Navigate to the LIVE tab and browse active streams. Click any stream to join. No account needed to watch.'},
@@ -1032,7 +1032,7 @@ export default function TradingSuitePage() {
                   {q:'Can I become a streamer?',a:'Yes! Any user can apply to become a verified streamer. You need a minimum trading history and passing a basic review. Apply through the Social Trading hub.'},
                 ].map((faq,i) => (
                   <div key={i} className="bg-[#060A12] rounded-xl p-3.5">
-                    <div className="text-[10px] font-bold mb-1 flex items-center gap-1.5"><Info className="w-3 h-3 text-[#00E5FF]"/>{faq.q}</div>
+                    <div className="text-[10px] font-bold mb-1 flex items-center gap-1.5"><Info className="w-3 h-3 text-[#0A1EFF]"/>{faq.q}</div>
                     <div className="text-[9px] text-gray-500 leading-relaxed pl-4.5">{faq.a}</div>
                   </div>
                 ))}
@@ -1046,7 +1046,7 @@ export default function TradingSuitePage() {
         <div className="px-2 pt-1 pb-1 safe-area-bottom">
           <div className="grid grid-cols-5 gap-1">
             {[
-              {id:'market',label:'Market',icon:BarChart3,color:'text-[#00E5FF]'},
+              {id:'market',label:'Market',icon:BarChart3,color:'text-[#0A1EFF]'},
               {id:'alerts',label:'Alerts',icon:Bell,color:'text-[#F59E0B]'},
               {id:'scan',label:'Scan CA',icon:ScanLine,color:'text-[#10B981]'},
               {id:'portfolio',label:'Portfolio',icon:Wallet,color:'text-[#7C3AED]'},

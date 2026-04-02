@@ -26,7 +26,7 @@ function ArchiveIcon({ className = 'w-4 h-4' }: { className?: string }) {
 type FeedMode = ChainFilter | 'archive';
 
 const CHAIN_TABS: { id: FeedMode; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
-  { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#00E5FF', gradient: 'from-[#00E5FF] to-[#7C3AED]' },
+  { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#0A1EFF', gradient: 'from-[#0A1EFF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
   { id: 'ethereum', label: 'Ethereum', icon: EthereumIcon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
   { id: 'bsc', label: 'BSC', icon: BscIcon, color: '#F0B90B', gradient: 'from-[#F0B90B] to-[#FCD535]' },
@@ -43,7 +43,7 @@ function getChainBadgeIcon(chain: string) {
     case 'bsc': return { Icon: BscIcon, color: '#F0B90B', bg: '#F0B90B15', label: 'BSC' };
     case 'polygon': return { Icon: PolygonIcon, color: '#8247E5', bg: '#8247E515', label: 'POLY' };
     case 'avalanche': return { Icon: AvalancheIcon, color: '#E84142', bg: '#E8414215', label: 'AVAX' };
-    default: return { Icon: AllChainsIcon, color: '#00E5FF', bg: '#00E5FF15', label: chain.toUpperCase().slice(0, 4) };
+    default: return { Icon: AllChainsIcon, color: '#0A1EFF', bg: '#0A1EFF15', label: chain.toUpperCase().slice(0, 4) };
   }
 }
 
@@ -133,7 +133,7 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
 
         {generating ? (
           <div className="flex items-center justify-center py-6">
-            <div className="w-5 h-5 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-[#0A1EFF] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -390,7 +390,7 @@ export default function ContextFeed() {
         </div>
         <button
           onClick={handleRefresh}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#00E5FF] hover:bg-white/5 transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#0A1EFF] hover:bg-white/5 transition-all"
         >
           <RefreshIcon spinning={refreshing} />
           <span className="hidden sm:inline">Refresh</span>
@@ -452,7 +452,7 @@ export default function ContextFeed() {
           return (
             <div
               key={`${event.id}-${i}`}
-              className="glass rounded-2xl p-5 border border-white/10 hover:border-[#00E5FF]/30 transition-all overflow-hidden"
+              className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0A1EFF]/30 transition-all overflow-hidden"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -547,7 +547,7 @@ export default function ContextFeed() {
                 </div>
                 <button
                   onClick={() => setSelectedEvent(event)}
-                  className="text-[#00E5FF] font-semibold text-xs hover:underline flex-shrink-0 ml-2"
+                  className="text-[#0A1EFF] font-semibold text-xs hover:underline flex-shrink-0 ml-2"
                 >
                   View Proof &rarr;
                 </button>
@@ -561,8 +561,8 @@ export default function ContextFeed() {
                   onClick={() => handleShare(event)}
                   className={`flex items-center gap-1.5 transition-all ${
                     eng.shared
-                      ? 'text-[#00E5FF]'
-                      : 'hover:text-[#00E5FF]'
+                      ? 'text-[#0A1EFF]'
+                      : 'hover:text-[#0A1EFF]'
                   }`}
                 >
                   <Share2 className="w-3.5 h-3.5" /> {eng.shares.toLocaleString()}

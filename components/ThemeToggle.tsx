@@ -23,7 +23,7 @@ export default function ThemeToggle() {
         const active = mounted && theme === m.id;
         return (
           <button key={m.id} onClick={() => setTheme(m.id)} suppressHydrationWarning
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${active ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${active ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
             <Icon className="w-3 h-3" />
             {m.label}
           </button>

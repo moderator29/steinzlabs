@@ -110,7 +110,7 @@ export default function BuilderNetworkPage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return '#10B981';
-    if (score >= 70) return '#00E5FF';
+    if (score >= 70) return '#0A1EFF';
     if (score >= 50) return '#F59E0B';
     return '#EF4444';
   };
@@ -122,7 +122,7 @@ export default function BuilderNetworkPage() {
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Building2 className="w-5 h-5 text-[#00E5FF]" />
+          <Building2 className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Builder Network</h1>
           <span className="ml-auto text-[10px] text-gray-500">{builders.length} builders</span>
         </div>
@@ -135,7 +135,7 @@ export default function BuilderNetworkPage() {
             <div className="text-[10px] text-gray-500">Verified</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#00E5FF]">{builders.reduce((s, b) => s + b.completedProjects, 0)}</div>
+            <div className="text-lg font-bold text-[#0A1EFF]">{builders.reduce((s, b) => s + b.completedProjects, 0)}</div>
             <div className="text-[10px] text-gray-500">Projects</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
@@ -147,7 +147,7 @@ export default function BuilderNetworkPage() {
         {!applied && (
           <button
             onClick={() => setShowApply(true)}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
           >
             <Plus className="w-4 h-4" /> Apply as Builder
           </button>
@@ -165,7 +165,7 @@ export default function BuilderNetworkPage() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Verified', 'Available', 'Developers', 'Auditors', 'Designers'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {f}
             </button>
           ))}
@@ -173,7 +173,7 @@ export default function BuilderNetworkPage() {
 
         {loading ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 text-[#00E5FF] mx-auto mb-3 animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
             <p className="text-sm text-gray-400">Loading builders...</p>
           </div>
         ) : (
@@ -182,7 +182,7 @@ export default function BuilderNetworkPage() {
               <div key={builder.id} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all cursor-pointer" onClick={() => setSelectedBuilder(builder)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold relative">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold relative">
                       {builder.name.split(' ').map(n => n[0]).join('')}
                       {builder.verified && (
                         <img src="/verified-badge.png" alt="Verified" className="absolute -bottom-1 -right-1 w-5 h-5" />
@@ -230,11 +230,11 @@ export default function BuilderNetworkPage() {
             <div className="p-4 space-y-3">
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Full Name *</label>
-                <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="Your full name" />
+                <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Your full name" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Role *</label>
-                <select value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50">
+                <select value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50">
                   <option value="">Select role</option>
                   <option>Full-Stack Developer</option>
                   <option>Smart Contract Developer</option>
@@ -249,29 +249,29 @@ export default function BuilderNetworkPage() {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Skills (comma separated) *</label>
-                <input value={form.skills} onChange={e => setForm(p => ({...p, skills: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="Solidity, React, Rust..." />
+                <input value={form.skills} onChange={e => setForm(p => ({...p, skills: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Solidity, React, Rust..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Bio *</label>
-                <textarea value={form.bio} onChange={e => setForm(p => ({...p, bio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50 min-h-[60px]" placeholder="Tell us about yourself and your experience..." />
+                <textarea value={form.bio} onChange={e => setForm(p => ({...p, bio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50 min-h-[60px]" placeholder="Tell us about yourself and your experience..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Experience</label>
-                <input value={form.experience} onChange={e => setForm(p => ({...p, experience: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="3 years blockchain, 5 years total" />
+                <input value={form.experience} onChange={e => setForm(p => ({...p, experience: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="3 years blockchain, 5 years total" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-gray-500 mb-1 block">GitHub</label>
-                  <input value={form.github} onChange={e => setForm(p => ({...p, github: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="username" />
+                  <input value={form.github} onChange={e => setForm(p => ({...p, github: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="username" />
                 </div>
                 <div>
                   <label className="text-[10px] text-gray-500 mb-1 block">Twitter</label>
-                  <input value={form.twitter} onChange={e => setForm(p => ({...p, twitter: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="@handle" />
+                  <input value={form.twitter} onChange={e => setForm(p => ({...p, twitter: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="@handle" />
                 </div>
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Portfolio URL</label>
-                <input value={form.portfolio} onChange={e => setForm(p => ({...p, portfolio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#00E5FF]/50" placeholder="https://yoursite.com" />
+                <input value={form.portfolio} onChange={e => setForm(p => ({...p, portfolio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50" placeholder="https://yoursite.com" />
               </div>
               {walletAddress && (
                 <div className="glass rounded-lg p-2 border border-[#10B981]/20">
@@ -279,7 +279,7 @@ export default function BuilderNetworkPage() {
                   <p className="text-xs font-mono text-[#10B981]">{walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}</p>
                 </div>
               )}
-              <button onClick={handleApply} disabled={applying || !form.name || !form.role || !form.bio} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={handleApply} disabled={applying || !form.name || !form.role || !form.bio} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
                 {applying ? 'Submitting...' : 'Submit Application'}
               </button>
@@ -298,7 +298,7 @@ export default function BuilderNetworkPage() {
             </div>
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-lg font-bold relative">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-lg font-bold relative">
                   {selectedBuilder.name.split(' ').map(n => n[0]).join('')}
                   {selectedBuilder.verified && (
                     <img src="/verified-badge.png" alt="Verified" className="absolute -bottom-1 -right-1 w-6 h-6" />
@@ -317,7 +317,7 @@ export default function BuilderNetworkPage() {
                   <div className="text-[9px] text-gray-500">Reputation</div>
                 </div>
                 <div className="glass rounded-lg p-2 border border-white/10 text-center">
-                  <div className="text-sm font-bold text-[#00E5FF]">{selectedBuilder.completedProjects}</div>
+                  <div className="text-sm font-bold text-[#0A1EFF]">{selectedBuilder.completedProjects}</div>
                   <div className="text-[9px] text-gray-500">Projects</div>
                 </div>
                 <div className="glass rounded-lg p-2 border border-white/10 text-center">
@@ -359,13 +359,13 @@ export default function BuilderNetworkPage() {
                   className={`flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                     endorsed.includes(selectedBuilder.id)
                       ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
-                      : 'border border-[#00E5FF]/30 text-[#00E5FF] hover:bg-[#00E5FF]/10'
+                      : 'border border-[#0A1EFF]/30 text-[#0A1EFF] hover:bg-[#0A1EFF]/10'
                   }`}
                 >
                   <Star className="w-3.5 h-3.5" />
                   {endorsed.includes(selectedBuilder.id) ? 'Endorsed' : 'Endorse'}
                 </button>
-                <button className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-xs font-semibold flex items-center justify-center gap-1.5">
+                <button className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-semibold flex items-center justify-center gap-1.5">
                   <MessageSquare className="w-3.5 h-3.5" /> Contact
                 </button>
               </div>

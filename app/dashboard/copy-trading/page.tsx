@@ -6,7 +6,7 @@ export default function CopyTradingPage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
       <div className="max-w-4xl mx-auto text-center">
-        <div className="w-24 h-24 bg-gradient-to-br from-[#10B981] to-[#00E5FF] rounded-3xl flex items-center justify-center mx-auto mb-6">
+        <div className="w-24 h-24 bg-gradient-to-br from-[#10B981] to-[#0A1EFF] rounded-3xl flex items-center justify-center mx-auto mb-6">
           <Copy className="w-12 h-12" />
         </div>
 
@@ -45,8 +45,8 @@ export default function CopyTradingPage() {
               { step: '3', title: 'Auto-Pilot', desc: 'System automatically mirrors their trades in real-time' },
             ].map((s) => (
               <div key={s.step}>
-                <div className="w-10 h-10 bg-[#00E5FF]/20 rounded-lg flex items-center justify-center mb-3">
-                  <span className="text-[#00E5FF] font-bold">{s.step}</span>
+                <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center mb-3">
+                  <span className="text-[#0A1EFF] font-bold">{s.step}</span>
                 </div>
                 <h4 className="font-semibold mb-2">{s.title}</h4>
                 <p className="text-sm text-gray-400">{s.desc}</p>
@@ -55,8 +55,8 @@ export default function CopyTradingPage() {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-8 border border-[#00E5FF]/30 max-w-md mx-auto">
-          <Bell className="w-8 h-8 text-[#00E5FF] mx-auto mb-4" />
+        <div className="glass rounded-2xl p-8 border border-[#0A1EFF]/30 max-w-md mx-auto">
+          <Bell className="w-8 h-8 text-[#0A1EFF] mx-auto mb-4" />
           <h3 className="font-bold text-xl mb-3">Get Early Access</h3>
           <p className="text-sm text-gray-400 mb-4">
             Copy Trading launches next month for Max tier users. Join the waitlist now.
@@ -65,9 +65,9 @@ export default function CopyTradingPage() {
             <input
               type="email"
               placeholder="Enter your email"
-              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#00E5FF]/50 text-sm"
+              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#0A1EFF]/50 text-sm"
             />
-            <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
+            <button className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
               Join Waitlist
             </button>
           </div>

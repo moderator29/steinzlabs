@@ -198,7 +198,7 @@ export default function HodlRunnerPage() {
       if (!game.player.jumping) {
         game.player.vy = -12;
         game.player.jumping = true;
-        addParticles(game.player.x, game.player.y + PLAYER_H, '#00E5FF', 5);
+        addParticles(game.player.x, game.player.y + PLAYER_H, '#0A1EFF', 5);
       } else if (!game.player.doubleJump) {
         game.player.vy = -10;
         game.player.doubleJump = true;
@@ -245,8 +245,8 @@ export default function HodlRunnerPage() {
       ctx.roundRect(px + 1 + legSwing, py + PLAYER_H - 12, 8, 12, 2);
       ctx.fill();
 
-      ctx.fillStyle = '#00E5FF';
-      ctx.shadowColor = '#00E5FF';
+      ctx.fillStyle = '#0A1EFF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 4;
       ctx.beginPath();
       ctx.roundRect(px - 4 - legSwing, py + PLAYER_H - 4, 6, 4, 1);
@@ -265,17 +265,17 @@ export default function HodlRunnerPage() {
       ctx.roundRect(px - 12, py + 8, 24, 22, 4);
       ctx.fill();
 
-      ctx.strokeStyle = '#00E5FF';
+      ctx.strokeStyle = '#0A1EFF';
       ctx.lineWidth = 1;
-      ctx.shadowColor = '#00E5FF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.roundRect(px - 12, py + 8, 24, 22, 4);
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      ctx.fillStyle = '#00E5FF';
-      ctx.shadowColor = '#00E5FF';
+      ctx.fillStyle = '#0A1EFF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(px, py + 18, 4, 0, Math.PI * 2);
@@ -287,7 +287,7 @@ export default function HodlRunnerPage() {
       ctx.arc(px, py + 18, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#00E5FF';
+      ctx.fillStyle = '#0A1EFF';
       ctx.font = 'bold 6px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('W', px, py + 20);
@@ -302,8 +302,8 @@ export default function HodlRunnerPage() {
       ctx.roundRect(px + 11, py + 10 - armSwing, 5, 14, 2);
       ctx.fill();
 
-      ctx.fillStyle = '#00E5FF';
-      ctx.shadowColor = '#00E5FF';
+      ctx.fillStyle = '#0A1EFF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 3;
       ctx.beginPath();
       ctx.roundRect(px - 16, py + 22 + armSwing, 5, 3, 1);
@@ -326,9 +326,9 @@ export default function HodlRunnerPage() {
       ctx.roundRect(px - 10, py - 14, 20, 18, 6);
       ctx.fill();
 
-      ctx.strokeStyle = '#00E5FF';
+      ctx.strokeStyle = '#0A1EFF';
       ctx.lineWidth = 0.8;
-      ctx.shadowColor = '#00E5FF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 4;
       ctx.beginPath();
       ctx.roundRect(px - 10, py - 14, 20, 18, 6);
@@ -336,11 +336,11 @@ export default function HodlRunnerPage() {
       ctx.shadowBlur = 0;
 
       const visorGrad = ctx.createLinearGradient(px - 7, py - 8, px + 7, py - 4);
-      visorGrad.addColorStop(0, '#00E5FF');
+      visorGrad.addColorStop(0, '#0A1EFF');
       visorGrad.addColorStop(0.5, '#7C3AED');
-      visorGrad.addColorStop(1, '#00E5FF');
+      visorGrad.addColorStop(1, '#0A1EFF');
       ctx.fillStyle = visorGrad;
-      ctx.shadowColor = '#00E5FF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.roundRect(px - 7, py - 9, 14, 6, 3);
@@ -353,8 +353,8 @@ export default function HodlRunnerPage() {
       ctx.roundRect(px - 7, py - 9, 14, 6, 3);
       ctx.fill();
 
-      ctx.fillStyle = '#00E5FF';
-      ctx.shadowColor = '#00E5FF';
+      ctx.fillStyle = '#0A1EFF';
+      ctx.shadowColor = '#0A1EFF';
       ctx.shadowBlur = 3;
       ctx.beginPath();
       ctx.moveTo(px - 2, py - 16);
@@ -388,7 +388,7 @@ export default function HodlRunnerPage() {
           game.particles.push({
             x: px - 3 - legSwing, y: py + PLAYER_H,
             vx: -1 - Math.random(), vy: -0.5,
-            life: 8, maxLife: 8, color: '#00E5FF', size: 1.5,
+            life: 8, maxLife: 8, color: '#0A1EFF', size: 1.5,
           });
         }
       }
@@ -619,7 +619,7 @@ export default function HodlRunnerPage() {
           game.deathTimer = 0;
           addParticles(game.player.x, game.player.y + PLAYER_H / 2, '#EF4444', 20);
           addParticles(game.player.x, game.player.y + PLAYER_H / 2, '#F59E0B', 10);
-          addParticles(game.player.x, game.player.y + PLAYER_H / 2, '#00E5FF', 8);
+          addParticles(game.player.x, game.player.y + PLAYER_H / 2, '#0A1EFF', 8);
           game.shakeX = (Math.random() - 0.5) * 12;
           game.shakeY = (Math.random() - 0.5) * 12;
         }
@@ -692,7 +692,7 @@ export default function HodlRunnerPage() {
           game.particles.push({
             x: game.player.x, y: game.player.y + PLAYER_H,
             vx: (Math.random() - 0.5) * 2, vy: 1 + Math.random(),
-            life: 15, maxLife: 15, color: '#00E5FF', size: 2,
+            life: 15, maxLife: 15, color: '#0A1EFF', size: 2,
           });
         }
       }
@@ -759,8 +759,8 @@ export default function HodlRunnerPage() {
             </div>
           </div>
 
-          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-[#00E5FF]/20 px-3 py-1.5">
-            <span className="text-sm font-bold text-[#00E5FF]">{liveDistance}m</span>
+          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-[#0A1EFF]/20 px-3 py-1.5">
+            <span className="text-sm font-bold text-[#0A1EFF]">{liveDistance}m</span>
           </div>
         </div>
 
@@ -774,7 +774,7 @@ export default function HodlRunnerPage() {
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="bg-[#060A12] rounded-xl p-2.5">
                   <div className="text-[8px] text-gray-600 uppercase mb-0.5">Score</div>
-                  <div className="text-base font-bold text-[#00E5FF]">{finalScore.toLocaleString()}</div>
+                  <div className="text-base font-bold text-[#0A1EFF]">{finalScore.toLocaleString()}</div>
                 </div>
                 <div className="bg-[#060A12] rounded-xl p-2.5">
                   <div className="text-[8px] text-gray-600 uppercase mb-0.5">Coins</div>
@@ -803,7 +803,7 @@ export default function HodlRunnerPage() {
               <div className="flex gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); startGame(); }}
-                  className="flex-1 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" /> Run Again
                 </button>
@@ -830,7 +830,7 @@ export default function HodlRunnerPage() {
           </a>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Gamepad2 className="w-5 h-5 text-[#00E5FF]" />
+              <Gamepad2 className="w-5 h-5 text-[#0A1EFF]" />
               <h1 className="text-lg font-heading font-bold">HODL RUNNER</h1>
               <span className="px-2 py-0.5 rounded-md text-[8px] font-bold bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">PLAY</span>
             </div>
@@ -840,22 +840,22 @@ export default function HodlRunnerPage() {
 
         {gameState === 'login' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-[#00E5FF]/5 to-[#7C3AED]/5 rounded-2xl border border-[#1a1f2e] p-6 text-center">
+            <div className="bg-gradient-to-br from-[#0A1EFF]/5 to-[#7C3AED]/5 rounded-2xl border border-[#1a1f2e] p-6 text-center">
               <div className="w-24 h-24 mx-auto mb-4 relative">
-                <div className="w-24 h-24 bg-gradient-to-br from-[#0d1333] to-[#1a2555] rounded-2xl flex items-center justify-center shadow-lg shadow-[#00E5FF]/20 border border-[#00E5FF]/30 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#00E5FF]/10 to-transparent" />
+                <div className="w-24 h-24 bg-gradient-to-br from-[#0d1333] to-[#1a2555] rounded-2xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20 border border-[#0A1EFF]/30 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A1EFF]/10 to-transparent" />
                   <div className="relative">
                     <div className="w-10 h-12 relative">
-                      <div className="absolute w-8 h-7 bg-gradient-to-b from-[#1a2555] to-[#0d1333] rounded-t-lg left-1 top-0 border border-[#00E5FF]/40" />
-                      <div className="absolute w-6 h-2.5 bg-gradient-to-r from-[#00E5FF] via-[#7C3AED] to-[#00E5FF] rounded left-2 top-1.5 shadow-[0_0_8px_rgba(0,229,255,0.6)]" />
-                      <div className="absolute w-10 h-8 bg-gradient-to-b from-[#1a2555] to-[#0d1333] rounded top-5 border border-[#00E5FF]/30" />
-                      <div className="absolute w-3 h-3 bg-[#00E5FF]/30 rounded-full left-3.5 top-7 border border-[#00E5FF]/50 flex items-center justify-center">
-                        <span className="text-[5px] text-[#00E5FF] font-bold">W</span>
+                      <div className="absolute w-8 h-7 bg-gradient-to-b from-[#1a2555] to-[#0d1333] rounded-t-lg left-1 top-0 border border-[#0A1EFF]/40" />
+                      <div className="absolute w-6 h-2.5 bg-gradient-to-r from-[#0A1EFF] via-[#7C3AED] to-[#0A1EFF] rounded left-2 top-1.5 shadow-[0_0_8px_rgba(10,30,255,0.6)]" />
+                      <div className="absolute w-10 h-8 bg-gradient-to-b from-[#1a2555] to-[#0d1333] rounded top-5 border border-[#0A1EFF]/30" />
+                      <div className="absolute w-3 h-3 bg-[#0A1EFF]/30 rounded-full left-3.5 top-7 border border-[#0A1EFF]/50 flex items-center justify-center">
+                        <span className="text-[5px] text-[#0A1EFF] font-bold">W</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-16 h-3 bg-[#00E5FF]/10 rounded-full blur-sm" />
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-16 h-3 bg-[#0A1EFF]/10 rounded-full blur-sm" />
               </div>
               <h2 className="text-xl font-heading font-bold mb-2">HODL RUNNER</h2>
               <p className="text-[11px] text-gray-400 max-w-xs mx-auto mb-1 leading-relaxed">
@@ -864,7 +864,7 @@ export default function HodlRunnerPage() {
               <div className="flex items-center justify-center gap-4 mt-3">
                 <div className="text-center">
                   <div className="text-[8px] text-gray-600 uppercase">Controls</div>
-                  <div className="text-[10px] text-[#00E5FF] font-semibold">Tap / Space</div>
+                  <div className="text-[10px] text-[#0A1EFF] font-semibold">Tap / Space</div>
                 </div>
                 <div className="w-px h-6 bg-[#1a1f2e]" />
                 <div className="text-center">
@@ -889,7 +889,7 @@ export default function HodlRunnerPage() {
                   onKeyDown={(e) => { if (e.key === 'Enter' && username.trim()) startGame(); }}
                   placeholder="CryptoKing, DiamondHands, etc."
                   maxLength={20}
-                  className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#00E5FF]/50 placeholder:text-gray-700"
+                  className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50 placeholder:text-gray-700"
                   autoFocus
                 />
               </div>
@@ -897,7 +897,7 @@ export default function HodlRunnerPage() {
               <button
                 onClick={startGame}
                 disabled={!username.trim()}
-                className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-4 rounded-2xl text-base font-bold hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 shadow-lg shadow-[#00E5FF]/20"
+                className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-4 rounded-2xl text-base font-bold hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
               >
                 <Play className="w-5 h-5" /> Start Running
               </button>
@@ -913,7 +913,7 @@ export default function HodlRunnerPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#0f1320] rounded-xl p-3 border border-[#1a1f2e] text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1">Total Players</div>
-                <div className="text-base font-bold text-[#00E5FF]">{stats.totalPlayers}</div>
+                <div className="text-base font-bold text-[#0A1EFF]">{stats.totalPlayers}</div>
               </div>
               <div className="bg-[#0f1320] rounded-xl p-3 border border-[#1a1f2e] text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1">Highest Score</div>
@@ -969,7 +969,7 @@ export default function HodlRunnerPage() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-[#060A12] rounded-xl p-3">
                   <div className="text-[8px] text-gray-600 uppercase mb-1">Score</div>
-                  <div className="text-lg font-bold text-[#00E5FF]">{finalScore.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-[#0A1EFF]">{finalScore.toLocaleString()}</div>
                 </div>
                 <div className="bg-[#060A12] rounded-xl p-3">
                   <div className="text-[8px] text-gray-600 uppercase mb-1">Coins</div>
@@ -998,7 +998,7 @@ export default function HodlRunnerPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={startGame}
-                  className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" /> Play Again
                 </button>
@@ -1017,13 +1017,13 @@ export default function HodlRunnerPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold flex items-center gap-2"><Trophy className="w-5 h-5 text-[#F59E0B]"/>Leaderboard</h2>
-              <button onClick={() => setGameState('login')} className="text-[10px] text-[#00E5FF] font-semibold">Back to Game</button>
+              <button onClick={() => setGameState('login')} className="text-[10px] text-[#0A1EFF] font-semibold">Back to Game</button>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#0f1320] rounded-xl p-3 border border-[#1a1f2e] text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1">Players</div>
-                <div className="text-base font-bold text-[#00E5FF]">{stats.totalPlayers}</div>
+                <div className="text-base font-bold text-[#0A1EFF]">{stats.totalPlayers}</div>
               </div>
               <div className="bg-[#0f1320] rounded-xl p-3 border border-[#1a1f2e] text-center">
                 <div className="text-[8px] text-gray-600 uppercase mb-1">Games</div>
@@ -1048,13 +1048,13 @@ export default function HodlRunnerPage() {
               ) : (
                 <div className="divide-y divide-[#1a1f2e]/50">
                   {leaderboard.map((entry, i) => (
-                    <div key={entry.id} className={`px-4 py-3 flex items-center gap-3 ${entry.username.toLowerCase() === username.toLowerCase() ? 'bg-[#00E5FF]/[0.03]' : ''}`}>
+                    <div key={entry.id} className={`px-4 py-3 flex items-center gap-3 ${entry.username.toLowerCase() === username.toLowerCase() ? 'bg-[#0A1EFF]/[0.03]' : ''}`}>
                       <div className="w-6 flex items-center justify-center">{getRankBadge(i)}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-bold truncate">{entry.username}</span>
                           {entry.username.toLowerCase() === username.toLowerCase() && (
-                            <span className="text-[7px] px-1 py-0.5 rounded bg-[#00E5FF]/10 text-[#00E5FF] font-bold">YOU</span>
+                            <span className="text-[7px] px-1 py-0.5 rounded bg-[#0A1EFF]/10 text-[#0A1EFF] font-bold">YOU</span>
                           )}
                         </div>
                         <div className="text-[8px] text-gray-600 mt-0.5">
@@ -1074,7 +1074,7 @@ export default function HodlRunnerPage() {
             <button
               onClick={startGame}
               disabled={!username.trim()}
-              className="w-full bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] py-3.5 rounded-2xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3.5 rounded-2xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4" /> Play Now
             </button>

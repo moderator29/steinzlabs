@@ -14,7 +14,7 @@ const securityHeaders = {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://s.tradingview.com https://s3.tradingview.com",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' https://fonts.gstatic.com https://s.tradingview.com",
-    "connect-src 'self' https: wss:",
+    "connect-src 'self' https://auth.privy.io https://*.privy.io https://api.coingecko.com https://*.tradingview.com https://*.ethereum.org https://*.infura.io https://*.alchemy.com https://*.walletconnect.com https://*.walletconnect.org https://rpc.walletconnect.com https://rpc.walletconnect.org wss://*.tradingview.com wss://*.walletconnect.com wss://*.walletconnect.org wss://relay.walletconnect.com wss://relay.walletconnect.org",
     "frame-src 'self' https://auth.privy.io https://*.privy.io https://s.tradingview.com https://s3.tradingview.com",
     "object-src 'none'",
     "base-uri 'self'",

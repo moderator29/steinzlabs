@@ -47,7 +47,7 @@ export default function Markets() {
             onClick={() => setActiveFilter(filter)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors capitalize ${
               activeFilter === filter
-                ? 'bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/30'
+                ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30'
                 : 'text-gray-400 border border-white/10 hover:text-white'
             }`}
           >

@@ -518,12 +518,12 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(124, 58, 237, 0.2) !important;
 }
 
-[data-theme="bingo"] .text-\[\#00E5FF\],
+[data-theme="bingo"] .text-\[\#0A1EFF\],
 [data-theme="bingo"] .text-neon-blue {
   color: #E040FB !important;
 }
 
-[data-theme="bingo"] .from-\[\#00E5FF\],
+[data-theme="bingo"] .from-\[\#0A1EFF\],
 [data-theme="bingo"] .from-neon-blue {
   --tw-gradient-from: #E040FB !important;
 }
@@ -532,7 +532,7 @@ h1, h2, h3, h4, h5, h6 {
   --tw-gradient-to: #FF6D00 !important;
 }
 
-[data-theme="bingo"] .shadow-\[\#00E5FF\]\/20 {
+[data-theme="bingo"] .shadow-\[\#0A1EFF\]\/20 {
   --tw-shadow-color: rgba(224, 64, 251, 0.2) !important;
 }
 

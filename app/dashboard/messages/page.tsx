@@ -67,7 +67,7 @@ export default function MessagesPage() {
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-[#00E5FF]" />
+          <MessageSquare className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-lg font-heading font-bold">Messages</h1>
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function MessagesPage() {
                   />
                 </div>
               </div>
-              <button className="w-8 h-8 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+              <button className="w-8 h-8 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
@@ -108,7 +108,7 @@ export default function MessagesPage() {
                 key={group.id}
                 onClick={() => { setActiveGroupId(group.id); setShowMobile('chat'); }}
                 className={`w-full flex items-center gap-3 px-3 py-3 hover:bg-white/5 transition-colors ${
-                  activeGroupId === group.id ? 'bg-[#00E5FF]/5 border-l-2 border-[#00E5FF]' : ''
+                  activeGroupId === group.id ? 'bg-[#0A1EFF]/5 border-l-2 border-[#0A1EFF]' : ''
                 }`}
               >
                 <div className="relative">
@@ -125,7 +125,7 @@ export default function MessagesPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500 truncate">{group.lastUser}: {group.lastMessage}</span>
                     {group.unread > 0 && (
-                      <span className="w-4 h-4 bg-[#00E5FF] rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">{group.unread}</span>
+                      <span className="w-4 h-4 bg-[#0A1EFF] rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">{group.unread}</span>
                     )}
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export default function MessagesPage() {
                       <span className="text-[10px] font-semibold">{msg.user}</span>
                       <span className="text-[9px] text-gray-600">{msg.time}</span>
                     </div>
-                    <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${msg.isOwn ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 border border-[#00E5FF]/20' : 'bg-[#1A2235]'}`}>
+                    <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${msg.isOwn ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20' : 'bg-[#1A2235]'}`}>
                       {msg.text}
                     </div>
                     {msg.reactions.length > 0 && (
@@ -201,7 +201,7 @@ export default function MessagesPage() {
               <button
                 onClick={handleSend}
                 className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  messageText.trim() ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] hover:scale-105' : 'bg-[#111827] cursor-not-allowed'
+                  messageText.trim() ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] hover:scale-105' : 'bg-[#111827] cursor-not-allowed'
                 }`}
                 disabled={!messageText.trim()}
               >

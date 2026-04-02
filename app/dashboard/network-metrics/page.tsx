@@ -27,7 +27,7 @@ export default function NetworkMetricsPage() {
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Radio className="w-5 h-5 text-[#00E5FF]" />
+          <Radio className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
         </div>
       </div>
@@ -35,15 +35,15 @@ export default function NetworkMetricsPage() {
       <div className="p-4 space-y-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {chains.map((chain) => (
-            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {chain}
             </button>
           ))}
         </div>
 
         <div className="glass rounded-xl p-4 border border-white/10 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-2">
-            <Globe className="w-8 h-8 text-[#00E5FF]" />
+          <div className="w-16 h-16 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-2">
+            <Globe className="w-8 h-8 text-[#0A1EFF]" />
           </div>
           <h2 className="text-base font-heading font-bold">{selectedChain}</h2>
           <div className="flex items-center justify-center gap-1 mt-1">
@@ -57,7 +57,7 @@ export default function NetworkMetricsPage() {
             { icon: Zap, label: 'Gas Price', value: m.gas, color: '#F59E0B' },
             { icon: Activity, label: 'TPS', value: m.tps, color: '#10B981' },
             { icon: Cpu, label: 'Validators', value: m.validators, color: '#7C3AED' },
-            { icon: HardDrive, label: 'TVL', value: m.tvl, color: '#00E5FF' },
+            { icon: HardDrive, label: 'TVL', value: m.tvl, color: '#0A1EFF' },
           ].map((item) => (
             <div key={item.label} className="glass rounded-xl p-3 border border-white/10">
               <div className="flex items-center gap-1.5 mb-1">
