@@ -40,7 +40,7 @@ export default function ShortSharePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[#0A1EFF] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -53,7 +53,7 @@ export default function ShortSharePage() {
           <p className="text-gray-400 mb-6">This shared event may have expired or the link is invalid.</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg font-semibold text-white"
+            className="px-6 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg font-semibold text-white"
           >
             Go to Dashboard
           </button>
@@ -91,7 +91,7 @@ export default function ShortSharePage() {
 
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
+            className="w-full py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
           >
             Open in Steinz Labs
           </button>

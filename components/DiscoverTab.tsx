@@ -26,7 +26,7 @@ const FILTERS = ['All', 'Trending', 'DexScreener', 'Verified'];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Trending: 'bg-[#F59E0B]/20 text-[#F59E0B]',
-  DexScreener: 'bg-[#00E5FF]/20 text-[#00E5FF]',
+  DexScreener: 'bg-[#0A1EFF]/20 text-[#0A1EFF]',
   Pinned: 'bg-gradient-to-r from-[#FFD700]/20 to-[#FF6B00]/20 text-[#FFD700]',
 };
 
@@ -78,8 +78,8 @@ export default function DiscoverTab() {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
-            <Zap className="w-4 h-4 text-[#00E5FF]" />
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
+            <Zap className="w-4 h-4 text-[#0A1EFF]" />
           </div>
           <div>
             <h2 className="text-sm font-heading font-bold">Project Discovery</h2>
@@ -87,7 +87,7 @@ export default function DiscoverTab() {
           </div>
         </div>
         <button onClick={fetchProjects} disabled={loading} className="p-1.5 hover:bg-white/10 rounded-lg transition-all group">
-          <RotateCcw className={`w-3.5 h-3.5 text-[#00E5FF] ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+          <RotateCcw className={`w-3.5 h-3.5 text-[#0A1EFF] ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
         </button>
       </div>
 
@@ -98,7 +98,7 @@ export default function DiscoverTab() {
 
       <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-hide">
         {FILTERS.map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
             {f}
           </button>
         ))}
@@ -106,7 +106,7 @@ export default function DiscoverTab() {
 
       {loading && projects.length === 0 ? (
         <div className="text-center py-10">
-          <RotateCcw className="w-6 h-6 text-[#00E5FF] mx-auto mb-2 animate-spin" />
+          <RotateCcw className="w-6 h-6 text-[#0A1EFF] mx-auto mb-2 animate-spin" />
           <p className="text-xs text-gray-400">Loading live projects...</p>
         </div>
       ) : (
@@ -116,14 +116,14 @@ export default function DiscoverTab() {
             const isPositive = changeNum > 0;
             return (
               <div key={`${project.slug}-${i}`} className={`glass rounded-xl p-3 border transition-all ${
-                project.pinned ? 'border-[#FFD700]/30 bg-gradient-to-r from-[#FFD700]/5 to-transparent' : 'border-white/10 hover:border-[#00E5FF]/20'
+                project.pinned ? 'border-[#FFD700]/30 bg-gradient-to-r from-[#FFD700]/5 to-transparent' : 'border-white/10 hover:border-[#0A1EFF]/20'
               }`}>
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-[#111827] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {project.thumb ? (
                       <img src={project.thumb} alt="" className="w-7 h-7 rounded-full object-cover" />
                     ) : (
-                      <Zap className="w-3.5 h-3.5 text-[#00E5FF]" />
+                      <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -158,13 +158,13 @@ export default function DiscoverTab() {
       <div className="flex gap-2 mt-3">
         <button
           onClick={() => router.push('/dashboard/project-discovery')}
-          className="flex-1 py-2 rounded-lg border border-white/10 text-xs font-semibold text-[#00E5FF] hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
+          className="flex-1 py-2 rounded-lg border border-white/10 text-xs font-semibold text-[#0A1EFF] hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
         >
           View All <ExternalLink className="w-3 h-3" />
         </button>
         <button
           onClick={() => router.push('/dashboard/project-discovery')}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-xs font-semibold flex items-center gap-1"
+          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-semibold flex items-center gap-1"
         >
           <Plus className="w-3 h-3" /> List Token
         </button>

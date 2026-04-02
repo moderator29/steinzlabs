@@ -69,7 +69,7 @@ export default function WhaleTrackerPage() {
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Fish className="w-5 h-5 text-[#00E5FF]" />
+          <Fish className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Whale Tracker</h1>
           <div className="ml-auto flex items-center gap-2">
             <div className="flex items-center gap-1">
@@ -92,7 +92,7 @@ export default function WhaleTrackerPage() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Buys', 'Sells', 'Transfers'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {f}
             </button>
           ))}
@@ -103,14 +103,14 @@ export default function WhaleTrackerPage() {
 
         {loading && events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 text-[#00E5FF] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#0A1EFF] animate-spin" />
             <p className="text-sm text-gray-400">Scanning blockchain for whale activity...</p>
           </div>
         ) : error && events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Fish className="w-10 h-10 text-gray-600" />
             <p className="text-sm text-red-400">{error}</p>
-            <button onClick={() => fetchWhaleData()} className="text-xs text-[#00E5FF] hover:underline">
+            <button onClick={() => fetchWhaleData()} className="text-xs text-[#0A1EFF] hover:underline">
               Try again
             </button>
           </div>
@@ -143,7 +143,7 @@ export default function WhaleTrackerPage() {
                       <span>{event.chain}</span>
                     </div>
                     {link ? (
-                      <a href={link} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] hover:underline text-[10px] flex items-center gap-0.5">
+                      <a href={link} target="_blank" rel="noopener noreferrer" className="text-[#0A1EFF] hover:underline text-[10px] flex items-center gap-0.5">
                         View <ExternalLink className="w-3 h-3" />
                       </a>
                     ) : (

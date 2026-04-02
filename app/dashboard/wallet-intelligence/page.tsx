@@ -160,7 +160,7 @@ export default function WalletIntelligencePage() {
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Search className="w-5 h-5 text-[#00E5FF]" />
+          <Search className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Wallet Intelligence</h1>
         </div>
       </div>
@@ -194,12 +194,12 @@ export default function WalletIntelligencePage() {
               onChange={(e) => setAddress(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Enter wallet address (0x... or SOL)"
-              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#00E5FF]/30"
+              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
             />
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+              className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Scan
@@ -218,7 +218,7 @@ export default function WalletIntelligencePage() {
 
         {loading && (
           <div className="text-center py-12">
-            <Loader2 className="w-10 h-10 text-[#00E5FF] mx-auto mb-3 animate-spin" />
+            <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
             <h3 className="text-sm font-semibold text-gray-400">Scanning wallet...</h3>
             <p className="text-xs text-gray-600 mt-1">Fetching on-chain data</p>
           </div>
@@ -229,8 +229,8 @@ export default function WalletIntelligencePage() {
             <div className="glass rounded-xl p-4 border border-white/10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-[#00E5FF]" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-[#0A1EFF]" />
                   </div>
                   <div>
                     <div className="text-xs font-mono font-semibold">{walletData.address.slice(0, 8)}...{walletData.address.slice(-6)}</div>
@@ -241,7 +241,7 @@ export default function WalletIntelligencePage() {
                   href={getExplorerUrl(walletData.address, walletData.chain, walletData.explorerUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-[#00E5FF] hover:underline"
+                  className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline"
                 >
                   Explorer <ExternalLink className="w-3 h-3" />
                 </a>
@@ -250,7 +250,7 @@ export default function WalletIntelligencePage() {
                 {[
                   { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: '#10B981' },
                   { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: '#7C3AED' },
-                  { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#00E5FF' },
+                  { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#0A1EFF' },
                   { label: 'Chain', value: walletData.chain, icon: Clock, color: '#F59E0B' },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#111827] rounded-lg p-3">
@@ -273,7 +273,7 @@ export default function WalletIntelligencePage() {
                   walletData.holdings.slice(0, 10).map((h, i) => (
                     <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-[#00E5FF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#00E5FF]">
+                        <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
                           {h.symbol.charAt(0)}
                         </div>
                         <div>
@@ -297,7 +297,7 @@ export default function WalletIntelligencePage() {
               <h3 className="font-bold text-sm mb-3">AI Wallet Assessment</h3>
               {aiLoading ? (
                 <div className="flex items-center gap-3 py-4">
-                  <Loader2 className="w-5 h-5 text-[#00E5FF] animate-spin" />
+                  <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
                   <span className="text-xs text-gray-400">Running AI analysis...</span>
                 </div>
               ) : aiAnalysis ? (
@@ -344,7 +344,7 @@ export default function WalletIntelligencePage() {
                   )}
                   {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
                     <div>
-                      <span className="text-[10px] text-[#00E5FF] font-semibold">Recommendations:</span>
+                      <span className="text-[10px] text-[#0A1EFF] font-semibold">Recommendations:</span>
                       <ul className="mt-1 space-y-0.5">
                         {aiAnalysis.recommendations.map((r, i) => (
                           <li key={i} className="text-[10px] text-gray-400">• {r}</li>

@@ -10,7 +10,7 @@ function Section({ id, number, title, children }: { id: string; number: string; 
   return (
     <section id={id} className="mb-16 scroll-mt-20">
       <div className="flex items-center gap-3 mb-6">
-        <span className="text-3xl font-heading font-bold text-[#00E5FF]/20">{number}</span>
+        <span className="text-3xl font-heading font-bold text-[#0A1EFF]/20">{number}</span>
         <h2 className="text-2xl md:text-3xl font-heading font-bold">{title}</h2>
       </div>
       <div className="text-gray-400 text-sm leading-relaxed space-y-4">{children}</div>
@@ -20,9 +20,9 @@ function Section({ id, number, title, children }: { id: string; number: string; 
 
 function FeatureBox({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
   return (
-    <div className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#00E5FF]/20 transition-all group">
-      <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF]/10 to-[#7C3AED]/10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-        <Icon className="w-4 h-4 text-[#00E5FF]" />
+    <div className="glass rounded-xl p-4 border border-white/[0.06] hover:border-[#0A1EFF]/20 transition-all group">
+      <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF]/10 to-[#7C3AED]/10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+        <Icon className="w-4 h-4 text-[#0A1EFF]" />
       </div>
       <h4 className="text-xs font-heading font-bold mb-1 text-white">{title}</h4>
       <p className="text-[11px] text-gray-500 leading-relaxed">{desc}</p>
@@ -31,7 +31,7 @@ function FeatureBox({ icon: Icon, title, desc }: { icon: React.ElementType; titl
 }
 
 function ComparisonRow({ platform, ai, security, builder, launchpad, multichain, wallet, highlight }: { platform: string; ai: string; security: string; builder: string; launchpad: string; multichain: string; wallet: string; highlight?: boolean }) {
-  const cls = highlight ? 'bg-gradient-to-r from-[#00E5FF]/5 to-[#7C3AED]/5 border-[#00E5FF]/20 font-semibold text-white' : 'border-white/5 text-gray-400';
+  const cls = highlight ? 'bg-gradient-to-r from-[#0A1EFF]/5 to-[#7C3AED]/5 border-[#0A1EFF]/20 font-semibold text-white' : 'border-white/5 text-gray-400';
   return (
     <tr className={`border-b ${cls}`}>
       <td className="py-2.5 px-3 text-xs">{platform}</td>
@@ -122,7 +122,7 @@ export default function WhitepaperPage() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link href="/dashboard">
-              <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-3 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+              <button className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-3 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
                 Launch App
               </button>
             </Link>
@@ -133,19 +133,19 @@ export default function WhitepaperPage() {
       <div className="pt-24 pb-16 px-4 relative">
         <div className="absolute inset-0 hero-mesh-enhanced pointer-events-none"></div>
         <div className="max-w-3xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-full mb-4">
-            <BookOpen className="w-3 h-3 text-[#00E5FF]" />
-            <span className="text-[#00E5FF] text-[11px] font-semibold">Whitepaper v2.0 &mdash; December 2025</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#0A1EFF]/5 border border-[#0A1EFF]/20 rounded-full mb-4">
+            <BookOpen className="w-3 h-3 text-[#0A1EFF]" />
+            <span className="text-[#0A1EFF] text-[11px] font-semibold">Whitepaper v2.0 &mdash; December 2025</span>
           </div>
-          <p className="text-[#00E5FF] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Complete Platform Overview</p>
+          <p className="text-[#0A1EFF] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Complete Platform Overview</p>
           <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4 leading-tight">
             STEINZ LABS
           </h1>
           <p className="text-lg text-gray-400 mb-2 font-heading">The Intelligence Infrastructure Layer for the On-Chain Economy</p>
-          <p className="text-sm text-[#00E5FF] italic mb-8">&quot;Cultivate Intelligence. Navigate Risk. Grow Without Fear.&quot;</p>
+          <p className="text-sm text-[#0A1EFF] italic mb-8">&quot;Cultivate Intelligence. Navigate Risk. Grow Without Fear.&quot;</p>
           <div className="grid grid-cols-4 gap-3 max-w-lg mx-auto">
             <div className="glass rounded-lg p-3 border border-white/[0.06]">
-              <div className="text-lg font-heading font-bold text-[#00E5FF]">{platformStats.chains}+</div>
+              <div className="text-lg font-heading font-bold text-[#0A1EFF]">{platformStats.chains}+</div>
               <div className="text-[9px] text-gray-500 uppercase">Chains</div>
             </div>
             <div className="glass rounded-lg p-3 border border-white/[0.06]">
@@ -169,7 +169,7 @@ export default function WhitepaperPage() {
           <div className="sticky top-20 space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">Contents</p>
             {toc.map((item) => (
-              <a key={item.id} href={`#${item.id}`} className="block text-xs text-gray-500 hover:text-[#00E5FF] transition-colors py-1 border-l-2 border-transparent hover:border-[#00E5FF]/40 pl-3">
+              <a key={item.id} href={`#${item.id}`} className="block text-xs text-gray-500 hover:text-[#0A1EFF] transition-colors py-1 border-l-2 border-transparent hover:border-[#0A1EFF]/40 pl-3">
                 {item.label}
               </a>
             ))}
@@ -180,13 +180,13 @@ export default function WhitepaperPage() {
           <Section id="executive-summary" number="01" title="Executive Summary">
             <p>STEINZ Labs is building the most comprehensive intelligence infrastructure layer ever created for the on-chain economy. Not just another analytics dashboard or trading tool &mdash; the complete operating system for Web3 participants: traders, builders, investors, and communities.</p>
             <p>The platform combines real-time on-chain data aggregation, AI-powered analysis, comprehensive security scanning, multi-chain trading, builder reputation systems, milestone-gated funding, native social coordination, prediction markets, project discovery, and a built-in non-custodial wallet &mdash; all unified into a single seamless experience that no other platform in the ecosystem matches.</p>
-            <div className="glass rounded-xl p-5 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent mt-4">
+            <div className="glass rounded-xl p-5 border border-[#0A1EFF]/10 bg-gradient-to-b from-[#0A1EFF]/[0.03] to-transparent mt-4">
               <p className="text-sm text-gray-300 font-medium">The STEINZ Difference</p>
               <p className="text-xs text-gray-400 mt-2">While other platforms give you data, STEINZ gives you <strong className="text-white">context</strong>. While others show you transactions, STEINZ shows you <strong className="text-white">intent</strong>. While others alert you to risks, STEINZ <strong className="text-white">protects you before you get hurt</strong>. While others charge institutions thousands per month, STEINZ makes that intelligence accessible to every level of participant.</p>
             </div>
             <div className="grid grid-cols-3 gap-3 mt-4">
               <div className="glass rounded-lg p-3 border border-white/[0.06] text-center">
-                <div className="text-lg font-heading font-bold text-[#00E5FF]">{platformStats.volumeTracked}</div>
+                <div className="text-lg font-heading font-bold text-[#0A1EFF]">{platformStats.volumeTracked}</div>
                 <div className="text-[9px] text-gray-500 uppercase mt-1">Volume Tracked</div>
               </div>
               <div className="glass rounded-lg p-3 border border-white/[0.06] text-center">
@@ -242,8 +242,8 @@ export default function WhitepaperPage() {
             <p>STEINZ Labs envisions a world where every participant in the on-chain economy &mdash; from first-time traders to institutional funds &mdash; has access to the same quality of intelligence, security, and tooling. Our mission is to democratize on-chain intelligence and make Web3 safer, more transparent, and more accessible for everyone.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-              <div className="glass rounded-xl p-4 border border-[#00E5FF]/10">
-                <Eye className="w-5 h-5 text-[#00E5FF] mb-2" />
+              <div className="glass rounded-xl p-4 border border-[#0A1EFF]/10">
+                <Eye className="w-5 h-5 text-[#0A1EFF] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-1">Vision</h4>
                 <p className="text-[11px] text-gray-500">To become the default intelligence layer for the entire on-chain economy &mdash; the Bloomberg Terminal of Web3, accessible to everyone.</p>
               </div>
@@ -319,7 +319,7 @@ export default function WhitepaperPage() {
             <ArchDiagram
               title="Data Flow Architecture"
               layers={[
-                { name: 'Ingest', items: ['Chain RPCs', 'DEX APIs', 'Price Feeds', 'Whale Alerts', 'Social Signals'], color: '#00E5FF' },
+                { name: 'Ingest', items: ['Chain RPCs', 'DEX APIs', 'Price Feeds', 'Whale Alerts', 'Social Signals'], color: '#0A1EFF' },
                 { name: 'Process', items: ['Event Detection', 'Pattern Matching', 'Risk Scoring', 'Sentiment Tags', 'Trust Calc'], color: '#7C3AED' },
                 { name: 'Analyze', items: ['VTX AI Reasoning', 'Narrative Generation', 'Signal Classification', 'Anomaly Detection'], color: '#F59E0B' },
                 { name: 'Deliver', items: ['Context Feed', 'Alerts', 'Dashboard', 'API', 'Push Notifications'], color: '#10B981' },
@@ -382,15 +382,15 @@ export default function WhitepaperPage() {
                 </ul>
               </div>
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Layers className="w-5 h-5 text-[#00E5FF] mb-2" />
+                <Layers className="w-5 h-5 text-[#0A1EFF] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Tier System</h4>
                 <div className="space-y-2">
                   <div className="glass rounded-lg p-2 border border-white/[0.04]">
                     <p className="text-[10px] font-bold text-gray-300">Free Tier</p>
                     <p className="text-[10px] text-gray-500">15 messages per day. Basic analysis and market questions. No web search.</p>
                   </div>
-                  <div className="glass rounded-lg p-2 border border-[#00E5FF]/10">
-                    <p className="text-[10px] font-bold text-[#00E5FF]">Pro Tier ($4/mo)</p>
+                  <div className="glass rounded-lg p-2 border border-[#0A1EFF]/10">
+                    <p className="text-[10px] font-bold text-[#0A1EFF]">Pro Tier ($4/mo)</p>
                     <p className="text-[10px] text-gray-500">Unlimited messages. Web search toggle. Priority processing. Advanced portfolio analysis.</p>
                   </div>
                   <div className="glass rounded-lg p-2 border border-[#F59E0B]/10">
@@ -424,7 +424,7 @@ export default function WhitepaperPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {[
-                { archetype: 'Diamond Hands', desc: 'Long hold, high conviction', color: '#00E5FF' },
+                { archetype: 'Diamond Hands', desc: 'Long hold, high conviction', color: '#0A1EFF' },
                 { archetype: 'Scalper', desc: 'Fast in, fast out', color: '#7C3AED' },
                 { archetype: 'Whale Follower', desc: 'Mirrors smart money', color: '#10B981' },
                 { archetype: 'Degen', desc: 'High risk, high reward', color: '#F59E0B' },
@@ -474,8 +474,8 @@ export default function WhitepaperPage() {
               ].map(item => (
                 <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06]">
                   <div className="flex items-center gap-2 mb-2">
-                    <item.icon className="w-4 h-4 text-[#00E5FF]" />
-                    <h4 className="text-xs font-heading font-bold text-[#00E5FF]">{item.title}</h4>
+                    <item.icon className="w-4 h-4 text-[#0A1EFF]" />
+                    <h4 className="text-xs font-heading font-bold text-[#0A1EFF]">{item.title}</h4>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">{item.desc}</p>
                 </div>
@@ -521,7 +521,7 @@ export default function WhitepaperPage() {
                   <ol className="space-y-2">
                     {['Select input token and amount', 'Select output token and destination chain', 'Token Safety Scanner runs automatically', 'Best route calculated across aggregators', 'Price impact and fees displayed transparently', 'MEV protection check (if enabled)', 'Confirm and execute with one click'].map((step, i) => (
                       <li key={step} className="flex items-start gap-2 text-[11px] text-gray-400">
-                        <span className="text-[10px] font-bold text-[#00E5FF] mt-0.5">{i + 1}.</span>
+                        <span className="text-[10px] font-bold text-[#0A1EFF] mt-0.5">{i + 1}.</span>
                         {step}
                       </li>
                     ))}
@@ -568,7 +568,7 @@ export default function WhitepaperPage() {
                 { step: '5', title: 'Milestone Release', desc: 'As milestones are hit with proof of delivery, funding tranches release. No delivery, no release. Community verification.' },
               ].map(s => (
                 <div key={s.step} className="flex items-start gap-3 glass rounded-lg p-3 border border-white/[0.06]">
-                  <div className="w-6 h-6 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-md flex items-center justify-center flex-shrink-0 text-[10px] font-bold">{s.step}</div>
+                  <div className="w-6 h-6 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-md flex items-center justify-center flex-shrink-0 text-[10px] font-bold">{s.step}</div>
                   <div>
                     <p className="text-xs font-semibold text-white">{s.title}</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
@@ -642,8 +642,8 @@ export default function WhitepaperPage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-[#00E5FF]/10 bg-[#00E5FF]/[0.02] mt-4">
-              <p className="text-xs font-heading font-bold text-[#00E5FF] mb-2">Token Listing Process</p>
+            <div className="glass rounded-xl p-4 border border-[#0A1EFF]/10 bg-[#0A1EFF]/[0.02] mt-4">
+              <p className="text-xs font-heading font-bold text-[#0A1EFF] mb-2">Token Listing Process</p>
               <p className="text-[11px] text-gray-500">Any project can submit a listing request through the built-in form. Submissions include token details, contract address, team info, and social links. All submissions go through STEINZ verification before being listed. Verified projects receive the gold wavy checkmark badge.</p>
             </div>
           </Section>
@@ -653,7 +653,7 @@ export default function WhitepaperPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               <div className="glass rounded-xl p-4 border border-white/[0.06]">
-                <Wallet className="w-5 h-5 text-[#00E5FF] mb-2" />
+                <Wallet className="w-5 h-5 text-[#0A1EFF] mb-2" />
                 <h4 className="text-xs font-heading font-bold text-white mb-2">Create Wallet</h4>
                 <ul className="space-y-1 text-[11px] text-gray-500">
                   <li>&bull; Generate BIP-39 mnemonic phrase (12/24 words)</li>
@@ -707,7 +707,7 @@ export default function WhitepaperPage() {
             <div className="glass rounded-xl p-4 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-2">Governance Process</p>
               <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full bg-[#00E5FF]/10 text-[#00E5FF] text-[10px] font-semibold">Proposal</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#0A1EFF]/10 text-[#0A1EFF] text-[10px] font-semibold">Proposal</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
                 <span className="px-2 py-0.5 rounded-full bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-semibold">Discussion (7 days)</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
@@ -747,8 +747,8 @@ export default function WhitepaperPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
-              <div className="glass rounded-xl p-4 border border-[#00E5FF]/10">
-                <h4 className="text-xs font-heading font-bold text-[#00E5FF] mb-2">Reputation Trading Flywheel</h4>
+              <div className="glass rounded-xl p-4 border border-[#0A1EFF]/10">
+                <h4 className="text-xs font-heading font-bold text-[#0A1EFF] mb-2">Reputation Trading Flywheel</h4>
                 <p className="text-[11px] text-gray-500">No other platform connects builder reputation with trading intelligence. When a high-reputation builder launches, Smart Money surfaces it to traders instantly.</p>
               </div>
               <div className="glass rounded-xl p-4 border border-[#7C3AED]/10">
@@ -775,7 +775,7 @@ export default function WhitepaperPage() {
                 <div key={item.title} className="glass rounded-lg p-4 border border-white/[0.06]">
                   <div className="flex items-center justify-between mb-1">
                     <h4 className="text-xs font-heading font-bold text-white">{item.title}</h4>
-                    <span className="text-[9px] text-[#00E5FF] font-semibold">{item.revenue}</span>
+                    <span className="text-[9px] text-[#0A1EFF] font-semibold">{item.revenue}</span>
                   </div>
                   <p className="text-[11px] text-gray-500">{item.desc}</p>
                 </div>
@@ -798,7 +798,7 @@ export default function WhitepaperPage() {
                   { area: 'Community Building', desc: 'Crypto-native growth, social coordination, governance design' },
                 ].map(t => (
                   <div key={t.area} className="glass rounded-lg p-3 border border-white/[0.04]">
-                    <p className="text-[10px] font-bold text-[#00E5FF]">{t.area}</p>
+                    <p className="text-[10px] font-bold text-[#0A1EFF]">{t.area}</p>
                     <p className="text-[9px] text-gray-500 mt-1">{t.desc}</p>
                   </div>
                 ))}
@@ -827,7 +827,7 @@ export default function WhitepaperPage() {
                 },
                 {
                   phase: 'Phase 2 &mdash; Growth (In Progress)',
-                  color: '#00E5FF',
+                  color: '#0A1EFF',
                   items: ['Non-Custodial Wallet', 'VTX AI Pro tiers with web search', 'Avalanche chain support', 'Context Feed bookmarks & history', 'TradingView chart integration', 'Token listing submission system', 'Enhanced whitepaper & documentation'],
                 },
                 {
@@ -886,12 +886,12 @@ export default function WhitepaperPage() {
             </div>
           </Section>
 
-          <div className="glass rounded-2xl p-8 border border-[#00E5FF]/10 bg-gradient-to-b from-[#00E5FF]/[0.03] to-transparent text-center mt-8">
+          <div className="glass rounded-2xl p-8 border border-[#0A1EFF]/10 bg-gradient-to-b from-[#0A1EFF]/[0.03] to-transparent text-center mt-8">
             <h3 className="text-xl font-heading font-bold mb-3">Ready to Experience the Future?</h3>
             <p className="text-sm text-gray-400 mb-6">STEINZ Labs &mdash; The intelligence infrastructure layer for the on-chain economy.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
               <Link href="/dashboard">
-                <button className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-8 py-3 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#00E5FF]/20 inline-flex items-center gap-2">
+                <button className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-8 py-3 rounded-xl font-semibold text-sm hover:scale-[1.03] transition-all shimmer-btn shadow-xl shadow-[#0A1EFF]/20 inline-flex items-center gap-2">
                   Launch Platform <ArrowRight className="w-4 h-4" />
                 </button>
               </Link>

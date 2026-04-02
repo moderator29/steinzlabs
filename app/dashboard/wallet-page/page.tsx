@@ -291,7 +291,7 @@ export default function WalletPage() {
         {wallets.length === 0 ? (
           <div className="px-4 pt-8">
             <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-3xl flex items-center justify-center shadow-2xl shadow-[#00E5FF]/20">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-3xl flex items-center justify-center shadow-2xl shadow-[#0A1EFF]/20">
                 <Wallet className="w-12 h-12 text-white" />
               </div>
               <h1 className="text-2xl font-heading font-bold mb-2">STEINZ Wallet</h1>
@@ -299,7 +299,7 @@ export default function WalletPage() {
 
               <div className="bg-[#111827] rounded-2xl border border-white/5 p-5 mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Globe className="w-4 h-4 text-[#00E5FF]" />
+                  <Globe className="w-4 h-4 text-[#0A1EFF]" />
                   <span className="text-sm font-bold">12 Chains Supported</span>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
@@ -313,7 +313,7 @@ export default function WalletPage() {
               </div>
 
               <div className="space-y-3">
-                <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#00E5FF]/20">
+                <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20">
                   <Plus className="w-5 h-5" /> Create New Wallet
                 </button>
                 <button onClick={() => setView('import')} className="w-full py-4 bg-[#111827] border border-white/10 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-white/5">
@@ -406,7 +406,7 @@ export default function WalletPage() {
               <div className="flex justify-center gap-4 mb-6">
                 {EVM_LIVE_CHAINS.includes(activeChain.id) ? (
                   <>
-                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#00E5FF" onClick={() => setView('send')} />
+                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#0A1EFF" onClick={() => setView('send')} />
                     <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => setView('receive')} />
                     <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
                     <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
@@ -522,12 +522,12 @@ export default function WalletPage() {
                     className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#00E5FF]" />
+                      <Layers className="w-4 h-4 text-[#0A1EFF]" />
                       <span className="text-sm font-semibold">Multi-Chain Portfolio</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {Object.keys(multiChainBalances).length > 0 && !hideBalance && (
-                        <span className="text-xs font-mono text-[#00E5FF]">${totalMultiChainUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span className="text-xs font-mono text-[#0A1EFF]">${totalMultiChainUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       )}
                       {multiChainLoading ? <RotateCcw className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                     </div>
@@ -676,7 +676,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Plus className="w-5 h-5" />
           </div>
           <div>
@@ -689,11 +689,11 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
-              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
+              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" />
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Secure password to encrypt your keys" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Secure password to encrypt your keys" />
             </div>
             <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
@@ -702,7 +702,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
               </div>
               <p className="text-[11px] text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
             </div>
-            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
               {creating ? 'Generating...' : 'Generate Wallet'}
             </button>
           </div>
@@ -742,15 +742,15 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
 
             <div className="p-3.5 bg-[#111827] rounded-xl border border-white/5">
               <p className="text-[10px] text-gray-400 mb-1 font-medium">Address:</p>
-              <p className="text-xs font-mono text-[#00E5FF] break-all">{address}</p>
+              <p className="text-xs font-mono text-[#0A1EFF] break-all">{address}</p>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded accent-[#00E5FF]" />
+              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded accent-[#0A1EFF]" />
               <span className="text-xs text-gray-400">I have saved my recovery phrase securely</span>
             </label>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
               <Check className="w-4 h-4" /> Continue to Wallet
             </button>
           </div>
@@ -790,7 +790,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Download className="w-5 h-5" />
           </div>
           <div>
@@ -800,10 +800,10 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         </div>
 
         <div className="flex gap-2 mb-5 bg-[#111827] rounded-xl p-1">
-          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'phrase' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'phrase' ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Recovery Phrase
           </button>
-          <button onClick={() => setMethod('key')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'key' ? 'bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setMethod('key')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'key' ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Private Key
           </button>
         </div>
@@ -811,21 +811,21 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         <div className="space-y-4">
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
-            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" />
+            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">{method === 'phrase' ? 'Recovery Phrase (12 or 24 words)' : 'Private Key'}</label>
             <textarea value={input} onChange={e => setInput(e.target.value)}
               rows={method === 'phrase' ? 4 : 2}
-              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50 resize-none"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50 resize-none"
               placeholder={method === 'phrase' ? 'word1 word2 word3 ...' : '0x...'} />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Encrypt your keys" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Encrypt your keys" />
           </div>
           {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 6} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 6} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             {importing ? 'Importing...' : 'Import Wallet'}
           </button>
         </div>
@@ -879,7 +879,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             </div>
             <h2 className="text-xl font-bold mb-2">Transaction Sent!</h2>
             <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
-            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-xs underline flex items-center justify-center gap-1">
+            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#0A1EFF] text-xs underline flex items-center justify-center gap-1">
               View on {chain.explorerName} <ExternalLink className="w-3 h-3" />
             </a>
             <button onClick={onBack} className="w-full mt-6 py-3 bg-[#111827] border border-white/10 rounded-xl text-sm font-semibold">Done</button>
@@ -888,18 +888,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Recipient Address</label>
-              <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
+              <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Amount ({chain.symbol})</label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0.01" />
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0.01" />
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#00E5FF]/50" placeholder="Enter your wallet password" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Enter your wallet password" />
             </div>
             {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
               {status === 'sending' ? 'Sending...' : 'Send Transaction'}
             </button>
           </div>
@@ -940,12 +940,12 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
 
           <div className="bg-[#111827] border border-white/10 rounded-xl p-4 mb-4">
-            <p className="text-xs font-mono break-all text-[#00E5FF]">{address}</p>
+            <p className="text-xs font-mono break-all text-[#0A1EFF]">{address}</p>
           </div>
 
           <button
             onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+            className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
             {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
           </button>
 
@@ -979,7 +979,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Search className="w-5 h-5" />
           </div>
           <div>
@@ -991,10 +991,10 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
         <div className="space-y-4">
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Token Contract Address</label>
-            <input value={address} onChange={e => { setAddress(e.target.value); setError(''); }} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00E5FF]/50" placeholder="0x..." />
+            <input value={address} onChange={e => { setAddress(e.target.value); setError(''); }} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
           </div>
           {error && <p className="text-xs text-[#EF4444]">{error}</p>}
-          <button onClick={handleAdd} disabled={!address} className="w-full py-3.5 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          <button onClick={handleAdd} disabled={!address} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             Add Token
           </button>
 

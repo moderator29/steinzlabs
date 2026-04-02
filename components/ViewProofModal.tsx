@@ -106,7 +106,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
         >
           <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-4 h-4" />
               </div>
               <div>
@@ -172,7 +172,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
       >
         <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#00E5FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0">
               <CheckCircle className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -260,7 +260,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                 href={dexPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
               >
                 <ShoppingCart className="w-4 h-4" />
                 Buy {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}
@@ -323,7 +323,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                 href={explorerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 py-2 border border-[#00E5FF]/30 rounded-lg text-[#00E5FF] text-xs font-semibold hover:bg-[#00E5FF]/10 transition-colors"
+                className="flex items-center justify-center gap-1.5 py-2 border border-[#0A1EFF]/30 rounded-lg text-[#0A1EFF] text-xs font-semibold hover:bg-[#0A1EFF]/10 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 View on {chainId === 'solana' ? 'Solscan' : 'Etherscan'}

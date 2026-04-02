@@ -57,7 +57,7 @@ export default function SharePage() {
           <p className="text-gray-400 mb-6">This shared event may have expired or the link is invalid.</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-6 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg font-semibold text-white"
+            className="px-6 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg font-semibold text-white"
           >
             Go to Dashboard
           </button>
@@ -95,7 +95,7 @@ export default function SharePage() {
 
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
+            className="w-full py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
           >
             Open in Steinz Labs
           </button>

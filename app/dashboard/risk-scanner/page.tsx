@@ -30,24 +30,24 @@ export default function RiskScannerPage() {
           <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Target className="w-5 h-5 text-[#00E5FF]" />
+          <Target className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">AI Risk Scanner</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#00E5FF]/20 text-[#00E5FF] rounded text-[10px] font-semibold">NEW</span>
+          <span className="ml-auto px-2 py-0.5 bg-[#0A1EFF]/20 text-[#0A1EFF] rounded text-[10px] font-semibold">NEW</span>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         {!scanned && (
           <div className="glass rounded-xl p-6 border border-white/10 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Target className="w-8 h-8 text-[#00E5FF]" />
+            <div className="w-16 h-16 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Target className="w-8 h-8 text-[#0A1EFF]" />
             </div>
             <h2 className="text-base font-heading font-bold mb-1">AI Portfolio Risk Scanner</h2>
             <p className="text-xs text-gray-500 mb-4">Scan your connected wallet for risks across all positions</p>
             <button
               onClick={handleScan}
               disabled={scanning}
-              className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
+              className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
             >
               {scanning ? (
                 <>
@@ -101,7 +101,7 @@ export default function RiskScannerPage() {
               ))}
             </div>
 
-            <button onClick={() => setScanned(false)} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#00E5FF] border border-white/10 hover:bg-white/5 transition-colors">
+            <button onClick={() => setScanned(false)} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0A1EFF] border border-white/10 hover:bg-white/5 transition-colors">
               Scan Again
             </button>
           </>

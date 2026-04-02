@@ -86,7 +86,7 @@ export default function ProfileTab() {
 
   const getNotifIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'whale': return <AlertTriangle className="w-4 h-4 text-[#00E5FF]" />;
+      case 'whale': return <AlertTriangle className="w-4 h-4 text-[#0A1EFF]" />;
       case 'price': return <TrendingUp className="w-4 h-4 text-[#10B981]" />;
       case 'prediction': return <Target className="w-4 h-4 text-[#F59E0B]" />;
       case 'trending': return <Flame className="w-4 h-4 text-[#EF4444]" />;
@@ -235,7 +235,7 @@ export default function ProfileTab() {
             <div key={key} className="flex items-center justify-between px-3 py-3 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-3">
                 {key === 'showWallet' ? <Wallet className="w-4 h-4 text-[#7C3AED]" /> :
-                 key === 'showActivity' ? <BarChart3 className="w-4 h-4 text-[#00E5FF]" /> :
+                 key === 'showActivity' ? <BarChart3 className="w-4 h-4 text-[#0A1EFF]" /> :
                  key === 'showPredictions' ? <Award className="w-4 h-4 text-[#F59E0B]" /> :
                  key === 'allowDMs' ? <MessageCircle className="w-4 h-4 text-[#10B981]" /> :
                  <Globe className="w-4 h-4 text-[#EF4444]" />}
@@ -258,7 +258,7 @@ export default function ProfileTab() {
               </div>
               <button
                 onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !value }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#00E5FF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
               </button>
@@ -300,7 +300,7 @@ export default function ProfileTab() {
         <div className="mt-6 glass rounded-lg p-4 border border-white/10 text-center">
           <p className="text-sm font-semibold mb-1">Still need help?</p>
           <p className="text-xs text-gray-500 mb-3">Contact our support team for personalized assistance.</p>
-          <a href="mailto:support@steinzlabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+          <a href="mailto:support@steinzlabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
             <Mail className="w-3 h-3" /> Contact Support
           </a>
         </div>
@@ -317,7 +317,7 @@ export default function ProfileTab() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-heading font-bold flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#00E5FF]" /> AI Support
+              <Bot className="w-5 h-5 text-[#0A1EFF]" /> AI Support
             </h2>
             <p className="text-xs text-gray-500">Ask anything about STEINZ LABS</p>
           </div>
@@ -332,8 +332,8 @@ export default function ProfileTab() {
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {chatMessages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border border-white/10">
-                  <Headphones className="w-6 h-6 text-[#00E5FF]" />
+                <div className="w-12 h-12 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border border-white/10">
+                  <Headphones className="w-6 h-6 text-[#0A1EFF]" />
                 </div>
                 <p className="text-sm font-semibold mb-1">How can we help?</p>
                 <p className="text-[11px] text-gray-500 mb-4 max-w-[250px]">Ask about features, wallet setup, trading, predictions, security, or anything else.</p>
@@ -342,7 +342,7 @@ export default function ProfileTab() {
                     <button
                       key={q}
                       onClick={() => { setChatInput(q); }}
-                      className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white hover:border-[#00E5FF]/30 transition-colors"
+                      className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white hover:border-[#0A1EFF]/30 transition-colors"
                     >
                       {q}
                     </button>
@@ -352,11 +352,11 @@ export default function ProfileTab() {
             )}
             {chatMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#7C3AED]/20 border border-[#00E5FF]/20' : 'bg-white/5 border border-white/10'}`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20' : 'bg-white/5 border border-white/10'}`}>
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Bot className="w-3 h-3 text-[#00E5FF]" />
-                      <span className="text-[9px] text-[#00E5FF] font-semibold">STEINZ Support</span>
+                      <Bot className="w-3 h-3 text-[#0A1EFF]" />
+                      <span className="text-[9px] text-[#0A1EFF] font-semibold">STEINZ Support</span>
                     </div>
                   )}
                   <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -370,13 +370,13 @@ export default function ProfileTab() {
               <div className="flex justify-start">
                 <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Bot className="w-3 h-3 text-[#00E5FF]" />
-                    <span className="text-[9px] text-[#00E5FF] font-semibold">STEINZ Support</span>
+                    <Bot className="w-3 h-3 text-[#0A1EFF]" />
+                    <span className="text-[9px] text-[#0A1EFF] font-semibold">STEINZ Support</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -392,12 +392,12 @@ export default function ProfileTab() {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendSupportMessage()}
                 placeholder="Type your question..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00E5FF]/30"
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/30"
               />
               <button
                 onClick={sendSupportMessage}
                 disabled={!chatInput.trim() || chatLoading}
-                className="p-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] rounded-lg hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100"
+                className="p-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100"
               >
                 <Send className="w-3.5 h-3.5 text-white" />
               </button>
@@ -430,7 +430,7 @@ export default function ProfileTab() {
             <select
               value={preferences.defaultChain}
               onChange={(e) => setPreferences(prev => ({ ...prev, defaultChain: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#00E5FF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
             >
               <option value="ethereum">Ethereum</option>
               <option value="solana">Solana</option>
@@ -449,7 +449,7 @@ export default function ProfileTab() {
             <select
               value={preferences.currency}
               onChange={(e) => setPreferences(prev => ({ ...prev, currency: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#00E5FF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
             >
               <option value="usd">USD ($)</option>
               <option value="eur">EUR (&euro;)</option>
@@ -467,7 +467,7 @@ export default function ProfileTab() {
             <select
               value={preferences.language}
               onChange={(e) => setPreferences(prev => ({ ...prev, language: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#00E5FF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
             >
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -491,7 +491,7 @@ export default function ProfileTab() {
               </div>
               <button
                 onClick={() => setPreferences(prev => ({ ...prev, [item.key]: !(prev as any)[item.key] }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#00E5FF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-full transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${(preferences as any)[item.key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
@@ -511,7 +511,7 @@ export default function ProfileTab() {
         >
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Bell className="w-5 h-5 text-[#00E5FF]" />
+              <Bell className="w-5 h-5 text-[#0A1EFF]" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-bold flex items-center justify-center text-white">{unreadCount}</span>
               )}
@@ -528,7 +528,7 @@ export default function ProfileTab() {
           <div className="border-t border-white/5">
             {unreadCount > 0 && (
               <div className="flex justify-end px-4 py-2 border-b border-white/5">
-                <button onClick={markAllRead} className="text-[10px] text-[#00E5FF] hover:text-[#00E5FF]/80 font-semibold transition-colors">
+                <button onClick={markAllRead} className="text-[10px] text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-semibold transition-colors">
                   Mark all read
                 </button>
               </div>
@@ -536,7 +536,7 @@ export default function ProfileTab() {
             <div className="max-h-[320px] overflow-y-auto">
               {notifLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="w-5 h-5 border-2 border-[#00E5FF]/30 border-t-[#00E5FF] rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
                   <span className="text-xs text-gray-500 ml-2">Loading notifications...</span>
                 </div>
               ) : notifList.length === 0 ? (
@@ -555,7 +555,7 @@ export default function ProfileTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold">{n.title}</span>
-                        {!n.read && <span className="w-1.5 h-1.5 bg-[#00E5FF] rounded-full flex-shrink-0" />}
+                        {!n.read && <span className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full flex-shrink-0" />}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
                       <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
@@ -569,11 +569,11 @@ export default function ProfileTab() {
       </div>
 
       <div className="flex flex-col items-center mb-6">
-        <div className="w-20 h-20 bg-gradient-to-br from-[#00E5FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
+        <div className="w-20 h-20 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
           {user?.user_metadata?.avatar_url ? (
             <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (
-            <User className="w-10 h-10 text-[#00E5FF]" />
+            <User className="w-10 h-10 text-[#0A1EFF]" />
           )}
         </div>
         <h2 className="text-lg font-heading font-bold">{displayName}</h2>
@@ -608,7 +608,7 @@ export default function ProfileTab() {
       {user?.email && (
         <div className="glass rounded-lg p-3 mb-3 border border-white/10">
           <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-[#00E5FF]" />
+            <Mail className="w-4 h-4 text-[#0A1EFF]" />
             <div className="flex-1">
               <div className="text-[10px] text-gray-500">Email</div>
               <div className="text-xs text-gray-300">{user.email}</div>
@@ -665,7 +665,7 @@ export default function ProfileTab() {
             </div>
             <button
               onClick={() => setNotifications(prev => ({ ...prev, [key]: !value }))}
-              className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#00E5FF]' : 'bg-gray-600'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
             >
               <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
             </button>
@@ -689,7 +689,7 @@ export default function ProfileTab() {
           rel="noopener noreferrer"
           className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/5 rounded-lg transition-colors text-sm text-gray-400"
         >
-          <ExternalLink className="w-4 h-4 text-[#00E5FF]" />
+          <ExternalLink className="w-4 h-4 text-[#0A1EFF]" />
           <span>View on Etherscan</span>
           <ChevronRight className="w-4 h-4 ml-auto text-gray-600" />
         </a>
@@ -722,7 +722,7 @@ function ProfileRow({ icon: Icon, label, sub, onClick }: { icon: React.ElementTy
       onClick={onClick}
       className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/5 rounded-lg transition-colors border-b border-white/5"
     >
-      <Icon className="w-4 h-4 text-[#00E5FF] flex-shrink-0" />
+      <Icon className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
       <div className="flex-1 text-left">
         <div className="text-sm font-semibold">{label}</div>
         <div className="text-[10px] text-gray-500">{sub}</div>
@@ -735,10 +735,10 @@ function ProfileRow({ icon: Icon, label, sub, onClick }: { icon: React.ElementTy
 function HelpItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`glass rounded-xl overflow-hidden border transition-all duration-300 ${open ? 'border-[#00E5FF]/30 bg-gradient-to-r from-[#00E5FF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06]'}`}>
+    <div className={`glass rounded-xl overflow-hidden border transition-all duration-300 ${open ? 'border-[#0A1EFF]/30 bg-gradient-to-r from-[#0A1EFF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06]'}`}>
       <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-white/[0.02] transition-colors">
         <span className="font-semibold text-xs pr-3">{question}</span>
-        <ChevronDown className={`w-4 h-4 text-[#00E5FF] transition-transform duration-300 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-[#0A1EFF] transition-transform duration-300 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
       <div className={`overflow-hidden transition-all duration-300 ${open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-4 pb-3 text-gray-400 text-xs leading-relaxed">{answer}</div>

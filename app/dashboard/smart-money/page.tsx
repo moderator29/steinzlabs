@@ -39,7 +39,7 @@ export default function SmartMoneyPage() {
           <div key={wallet.id} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B]/20 to-[#00E5FF]/20 rounded-full flex items-center justify-center text-sm font-bold text-[#F59E0B]">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B]/20 to-[#0A1EFF]/20 rounded-full flex items-center justify-center text-sm font-bold text-[#F59E0B]">
                   #{wallet.rank}
                 </div>
                 <div>
@@ -52,14 +52,14 @@ export default function SmartMoneyPage() {
               </div>
               <button
                 onClick={() => toggleWatch(wallet.id)}
-                className={`p-1.5 rounded-lg transition-colors ${watching.includes(wallet.id) ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'text-gray-500 hover:bg-white/10'}`}
+                className={`p-1.5 rounded-lg transition-colors ${watching.includes(wallet.id) ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'text-gray-500 hover:bg-white/10'}`}
               >
                 {watching.includes(wallet.id) ? <Eye className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               </button>
             </div>
             <div className="flex items-center gap-4 text-[10px]">
               <span className="text-[#10B981] font-semibold">Win: {wallet.winRate}</span>
-              <span className="text-[#00E5FF] font-semibold">P&L: {wallet.pnl}</span>
+              <span className="text-[#0A1EFF] font-semibold">P&L: {wallet.pnl}</span>
               <span className="text-gray-500">{wallet.trades} trades</span>
               <span className="text-gray-500 ml-auto">{wallet.lastActive}</span>
             </div>

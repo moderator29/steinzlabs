@@ -73,7 +73,7 @@ const TABS: { id: Tab; label: string; icon: typeof Target }[] = [
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   market_cap: { bg: 'bg-[#7C3AED]/20', text: 'text-[#7C3AED]' },
   price: { bg: 'bg-[#FF6B35]/20', text: 'text-[#FF6B35]' },
-  volume: { bg: 'bg-[#00E5FF]/20', text: 'text-[#00E5FF]' },
+  volume: { bg: 'bg-[#0A1EFF]/20', text: 'text-[#0A1EFF]' },
   launch: { bg: 'bg-[#10B981]/20', text: 'text-[#10B981]' },
   holder: { bg: 'bg-[#F59E0B]/20', text: 'text-[#F59E0B]' },
 };
@@ -200,7 +200,7 @@ function DropdownFilter({ label, value, options, onChange }: {
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors ${
-                  value === opt.value ? 'text-[#00E5FF] font-semibold' : 'text-gray-400'
+                  value === opt.value ? 'text-[#0A1EFF] font-semibold' : 'text-gray-400'
                 }`}
               >
                 {opt.label}
@@ -326,7 +326,7 @@ function PredictionModal({
                   onClick={() => setAmount(String(v))}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                     amount === String(v)
-                      ? 'border-[#00E5FF]/50 bg-[#00E5FF]/10 text-[#00E5FF]'
+                      ? 'border-[#0A1EFF]/50 bg-[#0A1EFF]/10 text-[#0A1EFF]'
                       : 'border-white/10 text-gray-400 hover:bg-white/5'
                   }`}
                 >
@@ -674,7 +674,7 @@ export default function PredictionsPage() {
         <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
           {[
             { label: 'Active', value: stats.activePredictions, icon: Zap, color: '#FF6B35' },
-            { label: 'Total Pool', value: formatUsd(stats.totalPoolVolume), icon: DollarSign, color: '#00E5FF' },
+            { label: 'Total Pool', value: formatUsd(stats.totalPoolVolume), icon: DollarSign, color: '#0A1EFF' },
             { label: 'Your Active', value: userActiveCount, icon: Target, color: '#7C3AED' },
             { label: 'Wagered', value: formatUsd(userTotalWagered), icon: BarChart3, color: '#F59E0B' },
             { label: 'Potential', value: formatUsd(userPotentialWinnings), icon: Trophy, color: '#FFD700' },

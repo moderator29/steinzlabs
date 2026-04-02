@@ -7,20 +7,22 @@ import SteinzLogo from '@/components/SteinzLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
-  const numericPart = value.replace(/[^0-9.]/g, '');
-  const target = parseFloat(numericPart);
-  const isNumeric = !isNaN(target) && target > 0;
-  const [display, setDisplay] = useState(isNumeric ? '0' : value);
+  const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
+  const hasNumber = !!match;
+  const prefix = match ? match[1] : '';
+  const numericStr = match ? match[2].replace(/,/g, '') : '';
+  const suffix = match ? match[3] : '';
+  const target = hasNumber ? parseFloat(numericStr) : 0;
+  const isAnimatable = hasNumber && !isNaN(target) && target > 0;
+  const [display, setDisplay] = useState(isAnimatable ? `${prefix}0${suffix}` : value);
   const ref = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!isNumeric) {
+    if (!isAnimatable) {
       setDisplay(value);
       return;
     }
-    const prefix = value.match(/^[^0-9]*/)?.[0] || '';
-    const suffix = value.match(/[^0-9.]*$/)?.[0] || '';
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
@@ -32,12 +34,13 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
             const progress = Math.min(elapsed / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 4);
             const current = target * eased;
-            if (numericPart.includes('.')) {
+            if (numericStr.includes('.')) {
               setDisplay(`${prefix}${current.toFixed(1)}${suffix}`);
             } else {
-              setDisplay(`${prefix}${Math.floor(current)}${suffix}`);
+              setDisplay(`${prefix}${Math.floor(current).toLocaleString()}${suffix}`);
             }
             if (progress < 1) requestAnimationFrame(animate);
+            else setDisplay(value);
           };
           requestAnimationFrame(animate);
         }
@@ -46,7 +49,7 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [value, isNumeric, numericPart, target]);
+  }, [value, isAnimatable, numericStr, target, prefix, suffix]);
 
   return (
     <div ref={ref} className="text-center">
