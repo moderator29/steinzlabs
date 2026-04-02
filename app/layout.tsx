@@ -3,8 +3,8 @@ import "./globals.css";
 import PrivyProvider from "@/components/providers/PrivyProvider";
 
 export const metadata: Metadata = {
-  title: "STEINZ LABS - On-Chain Intelligence Redefined",
-  description: "The only platform that shows you what Smart Money sees before everyone else.",
+  title: "Naka Labs - On-Chain Intelligence Powered by $NAKA",
+  description: "Professional on-chain intelligence platform. Track whales, analyze wallets, scan tokens, and act on blockchain data — powered by $NAKA.",
 };
 
 export const viewport: Viewport = {

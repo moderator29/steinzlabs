@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
-import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, TrendingUp, TrendingDown, Activity, BarChart3, Zap, Shield, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, TrendingUp, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import SidebarMenu from '@/components/SidebarMenu';
 import PriceTicker from '@/components/PriceTicker';
-import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/lib/hooks/useAuth';
 
@@ -113,14 +113,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const { user, loading: authLoading } = useAuth();
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    }
-  }, [user, authLoading]);
+  const router = useRouter();
 
   const showHomeTabs = activeNav === 'home';
 
@@ -158,11 +152,19 @@ export default function Dashboard() {
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
-            <img src="/steinz-logo-128.png" alt="STEINZ" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
-            <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
+            <img src="/steinz-logo-128.png" alt="NAKA" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
+            <span className="text-sm font-heading font-bold tracking-tight">NAKA</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            {!authLoading && !user && (
+              <button
+                onClick={() => router.push('/auth')}
+                className="text-xs font-semibold px-3 py-1.5 bg-[#0A1EFF] text-white rounded-lg hover:bg-[#0818CC] transition-colors"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -210,13 +212,6 @@ export default function Dashboard() {
       <BottomNav activeNav={activeNav} onNavChange={handleNavChange} />
 
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
-
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
-      )}
     </div>
   );
 }

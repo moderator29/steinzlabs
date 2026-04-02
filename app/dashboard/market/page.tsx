@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search, ArrowUpRight, ArrowDownRight,
-  Clock, Wallet, ChevronDown, Star
+  Clock, Wallet, ChevronDown, Star, Loader2, ExternalLink, Zap
 } from 'lucide-react';
 import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 
@@ -23,6 +23,43 @@ interface TokenInfo {
   circulatingSupply: number;
   rank: number;
 }
+
+interface DexResult {
+  symbol: string;
+  name: string;
+  address: string;
+  chain: string;
+  price: string;
+  priceUsd: number;
+  change24h: number;
+  volume24h: number;
+  liquidity: number;
+  fdv: number;
+  dexUrl: string;
+  pairAddress: string;
+}
+
+function fmtVol(n: number) {
+  if (!n) return '--';
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+const CHAIN_LABELS: Record<string, string> = {
+  ethereum: 'ETH',
+  bsc: 'BSC',
+  polygon: 'POLY',
+  arbitrum: 'ARB',
+  optimism: 'OP',
+  base: 'BASE',
+  avalanche: 'AVAX',
+  solana: 'SOL',
+  fantom: 'FTM',
+  cronos: 'CRO',
+  zksync: 'ZK',
+};
 
 const POPULAR_TOKENS: TokenInfo[] = [
   { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', image: '', price: 0, priceChange24h: 0, volume24h: 0, marketCap: 0, fdv: 0, high24h: 0, low24h: 0, totalSupply: 21000000, circulatingSupply: 19600000, rank: 1 },
@@ -86,7 +123,11 @@ export default function MarketPage() {
   const [tokenData, setTokenData] = useState<TokenInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [dexResults, setDexResults] = useState<DexResult[]>([]);
+  const [dexLoading, setDexLoading] = useState(false);
+  const [selectedDexToken, setSelectedDexToken] = useState<DexResult | null>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchTokenData = useCallback(async (tokenId: string) => {
     try {
@@ -143,10 +184,40 @@ export default function MarketPage() {
     );
   };
 
-  const tradingSymbol = getTradingViewSymbol(selectedToken.symbol) || `BINANCE:${selectedToken.symbol}USDT`;
-  const priceChange = tokenData?.priceChange24h || selectedToken.priceChange24h;
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (q.length < 2) {
+      setDexResults([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setDexLoading(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setDexResults(data.results || []);
+      } catch {
+        setDexResults([]);
+      } finally {
+        setDexLoading(false);
+      }
+    }, 400);
+  };
+
+  const handleDexSelect = (token: DexResult) => {
+    setSelectedDexToken(token);
+    setShowTokenSelector(false);
+    setSearchQuery('');
+    setDexResults([]);
+  };
+
+  const tradingSymbol = selectedDexToken
+    ? (getTradingViewSymbol(selectedDexToken.symbol) || `BINANCE:${selectedDexToken.symbol}USDT`)
+    : (getTradingViewSymbol(selectedToken.symbol) || `BINANCE:${selectedToken.symbol}USDT`);
+  const priceChange = selectedDexToken ? selectedDexToken.change24h : (tokenData?.priceChange24h || selectedToken.priceChange24h);
   const isPositive = priceChange >= 0;
-  const currentPrice = tokenData?.price || selectedToken.price;
+  const currentPrice = selectedDexToken ? selectedDexToken.priceUsd : (tokenData?.price || selectedToken.price);
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white">
@@ -159,8 +230,19 @@ export default function MarketPage() {
                   onClick={() => setShowTokenSelector(!showTokenSelector)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
                 >
-                  <span className="font-semibold text-lg">{selectedToken.symbol}</span>
-                  <span className="text-gray-400 text-sm">/ USDT</span>
+                  {selectedDexToken ? (
+                    <>
+                      <span className="font-semibold text-lg">{selectedDexToken.symbol}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#0A1EFF]/20 text-[#0A1EFF] rounded font-medium">
+                        {CHAIN_LABELS[selectedDexToken.chain] || selectedDexToken.chain.toUpperCase()}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-lg">{selectedToken.symbol}</span>
+                      <span className="text-gray-400 text-sm">/ USDT</span>
+                    </>
+                  )}
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </button>
 
@@ -172,64 +254,118 @@ export default function MarketPage() {
                         <input
                           type="text"
                           value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                          placeholder="Search by name or CA..."
-                          className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon-blue/50"
+                          onChange={e => handleSearchChange(e.target.value)}
+                          placeholder="Name, symbol, or contract address..."
+                          className="w-full pl-9 pr-8 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50"
+                          autoFocus
                         />
+                        {dexLoading && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1EFF] animate-spin" />
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex gap-1 px-3 py-2 border-b border-white/5 overflow-x-auto scrollbar-hide">
-                      {CATEGORIES.map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => setActiveCategory(cat)}
-                          className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
-                            activeCategory === cat
-                              ? 'bg-neon-blue text-white'
-                              : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="max-h-64 overflow-y-auto">
-                      {filteredTokens.length === 0 ? (
-                        <div className="p-6 text-center text-gray-500 text-sm">No tokens found</div>
-                      ) : (
-                        filteredTokens.map(token => (
-                          <button
-                            key={token.id}
-                            onClick={() => {
-                              setSelectedToken(token);
-                              setShowTokenSelector(false);
-                              setSearchQuery('');
-                            }}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/5 transition-colors ${
-                              selectedToken.id === token.id ? 'bg-neon-blue/10 border-l-2 border-neon-blue' : ''
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-neon-blue/30 to-purple/30 flex items-center justify-center text-xs font-bold">
-                                {token.symbol.slice(0, 2)}
-                              </div>
-                              <div className="text-left">
-                                <div className="text-sm font-medium">{token.symbol}</div>
-                                <div className="text-xs text-gray-500">{token.name}</div>
-                              </div>
+                    {searchQuery.length >= 2 ? (
+                      <div className="max-h-80 overflow-y-auto">
+                        {dexLoading && dexResults.length === 0 ? (
+                          <div className="p-6 text-center text-gray-500 text-sm flex flex-col items-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-[#0A1EFF]" />
+                            Searching all chains...
+                          </div>
+                        ) : dexResults.length === 0 ? (
+                          <div className="p-6 text-center text-gray-500 text-sm">No results found</div>
+                        ) : (
+                          <>
+                            <div className="px-3 py-1.5 text-[10px] text-gray-500 flex items-center gap-1.5 border-b border-white/5">
+                              <Zap className="w-3 h-3 text-[#0A1EFF]" />
+                              DEXSCREENER — {dexResults.length} results across all chains
                             </div>
+                            {dexResults.map((token, i) => (
+                              <button
+                                key={i}
+                                onClick={() => handleDexSelect(token)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/30 to-[#7C3AED]/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                  {token.symbol.slice(0, 2)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">{token.symbol}</span>
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-white/10 rounded text-gray-400">
+                                      {CHAIN_LABELS[token.chain] || token.chain.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-gray-500 truncate">{token.name}</div>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <div className="text-sm font-mono">{token.price}</div>
+                                  <div className="text-[10px]" style={{ color: token.change24h >= 0 ? '#10B981' : '#EF4444' }}>
+                                    {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(1)}%
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex gap-1 px-3 py-2 border-b border-white/5 overflow-x-auto scrollbar-hide">
+                          {CATEGORIES.map(cat => (
                             <button
-                              onClick={e => { e.stopPropagation(); toggleFavorite(token.symbol); }}
-                              className="p-1"
+                              key={cat}
+                              onClick={() => setActiveCategory(cat)}
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
+                                activeCategory === cat
+                                  ? 'bg-[#0A1EFF] text-white'
+                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                              }`}
                             >
-                              <Star className={`w-3.5 h-3.5 ${favorites.includes(token.symbol) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                              {cat}
                             </button>
-                          </button>
-                        ))
-                      )}
-                    </div>
+                          ))}
+                        </div>
+
+                        <div className="max-h-64 overflow-y-auto">
+                          {filteredTokens.length === 0 ? (
+                            <div className="p-6 text-center text-gray-500 text-sm">No tokens found</div>
+                          ) : (
+                            filteredTokens.map(token => (
+                              <button
+                                key={token.id}
+                                onClick={() => {
+                                  setSelectedToken(token);
+                                  setSelectedDexToken(null);
+                                  setShowTokenSelector(false);
+                                  setSearchQuery('');
+                                  setDexResults([]);
+                                }}
+                                className={`w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/5 transition-colors ${
+                                  selectedToken.id === token.id && !selectedDexToken ? 'bg-[#0A1EFF]/10 border-l-2 border-[#0A1EFF]' : ''
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0A1EFF]/30 to-[#7C3AED]/30 flex items-center justify-center text-xs font-bold">
+                                    {token.symbol.slice(0, 2)}
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="text-sm font-medium">{token.symbol}</div>
+                                    <div className="text-xs text-gray-500">{token.name}</div>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={e => { e.stopPropagation(); toggleFavorite(token.symbol); }}
+                                  className="p-1"
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${favorites.includes(token.symbol) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                                </button>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -286,24 +422,53 @@ export default function MarketPage() {
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-px bg-white/5 border-t border-white/5">
-            <KeyStat label="Liquidity" value={formatNumber((tokenData?.volume24h || 0) * 0.3)} />
-            <KeyStat label="Mcap" value={formatNumber(tokenData?.marketCap || 0)} />
-            <KeyStat label="FDV" value={formatNumber(selectedToken.fdv || tokenData?.marketCap || 0)} />
-            <KeyStat label="Supply" value={selectedToken.circulatingSupply ? `${(selectedToken.circulatingSupply / 1e6).toFixed(0)}M` : '--'} />
-            <KeyStat label="Vol 5m" value={formatNumber((tokenData?.volume24h || 0) / 288)} />
-            <KeyStat label="Vol 24h" value={formatNumber(tokenData?.volume24h || 0)} />
-            <KeyStat label="24h%" value={`${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`} positive={priceChange >= 0} />
-            <KeyStat label="Holders" value="--" />
-            <KeyStat label="Age" value="--" />
+            {selectedDexToken ? (
+              <>
+                <KeyStat label="Liquidity" value={formatNumber(selectedDexToken.liquidity)} />
+                <KeyStat label="FDV" value={formatNumber(selectedDexToken.fdv)} />
+                <KeyStat label="Vol 24h" value={formatNumber(selectedDexToken.volume24h)} />
+                <KeyStat label="24h%" value={`${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`} positive={priceChange >= 0} />
+                <KeyStat label="Chain" value={CHAIN_LABELS[selectedDexToken.chain] || selectedDexToken.chain.toUpperCase()} />
+                <KeyStat label="Price" value={selectedDexToken.price} />
+                <KeyStat label="Mcap" value="--" />
+                <KeyStat label="Holders" value="--" />
+                <KeyStat label="Age" value="--" />
+              </>
+            ) : (
+              <>
+                <KeyStat label="Liquidity" value={formatNumber((tokenData?.volume24h || 0) * 0.3)} />
+                <KeyStat label="Mcap" value={formatNumber(tokenData?.marketCap || 0)} />
+                <KeyStat label="FDV" value={formatNumber(selectedToken.fdv || tokenData?.marketCap || 0)} />
+                <KeyStat label="Supply" value={selectedToken.circulatingSupply ? `${(selectedToken.circulatingSupply / 1e6).toFixed(0)}M` : '--'} />
+                <KeyStat label="Vol 5m" value={formatNumber((tokenData?.volume24h || 0) / 288)} />
+                <KeyStat label="Vol 24h" value={formatNumber(tokenData?.volume24h || 0)} />
+                <KeyStat label="24h%" value={`${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`} positive={priceChange >= 0} />
+                <KeyStat label="Holders" value="--" />
+                <KeyStat label="Age" value="--" />
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2 px-4 py-3 border-t border-white/5 bg-[#111827]/60">
-            <button className="flex-1 py-3 rounded-lg font-semibold text-sm bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/20">
-              Buy {selectedToken.symbol}
-            </button>
-            <button className="flex-1 py-3 rounded-lg font-semibold text-sm bg-red-500 hover:bg-red-400 text-white transition-colors shadow-lg shadow-red-500/20">
-              Sell {selectedToken.symbol}
-            </button>
+            {selectedDexToken ? (
+              <a
+                href={selectedDexToken.dexUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3 rounded-lg font-semibold text-sm bg-[#0A1EFF] hover:bg-[#0818CC] text-white transition-colors text-center flex items-center justify-center gap-2"
+              >
+                View on DexScreener <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            ) : (
+              <>
+                <button className="flex-1 py-3 rounded-lg font-semibold text-sm bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/20">
+                  Buy {selectedToken.symbol}
+                </button>
+                <button className="flex-1 py-3 rounded-lg font-semibold text-sm bg-red-500 hover:bg-red-400 text-white transition-colors shadow-lg shadow-red-500/20">
+                  Sell {selectedToken.symbol}
+                </button>
+              </>
+            )}
           </div>
 
           <div className="border-t border-white/5 bg-[#111827]/40">
