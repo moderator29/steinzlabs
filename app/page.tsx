@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowRight, ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send } from 'lucide-react';
 import Link from 'next/link';
-import SteinzLogo from '@/components/SteinzLogo';
+import NakaLogo from '@/components/NakaLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
@@ -82,7 +82,7 @@ const featureCategories = [
       { icon: TrendingUp, label: "Portfolio P&L tracking" },
       { icon: BarChart3, label: "Trading DNA profiling" },
       { icon: Layers, label: "Multi-chain swaps" },
-      { icon: Search, label: "Project discovery" },
+      { icon: Search, label: "Token discovery" },
     ],
     accent: "#7C3AED",
   },
@@ -91,7 +91,7 @@ const featureCategories = [
     title: "Never get rugged again",
     description: "AI-powered contract analysis, rug detection, and risk scoring. Every token scanned, every wallet profiled, every risk surfaced before you commit.",
     features: [
-      { icon: Shield, label: "AI risk scoring (0-100)" },
+      { icon: Shield, label: "AI risk scoring (0–100)" },
       { icon: Lock, label: "Contract audit verification" },
       { icon: Zap, label: "Rug pull detection" },
       { icon: Eye, label: "MEV protection alerts" },
@@ -114,8 +114,12 @@ const featureCategories = [
 
 const faqs = [
   {
-    q: "What is Steinz Labs?",
-    a: "Steinz Labs is an AI-powered on-chain intelligence platform. We analyze blockchain data across Ethereum, Solana, BSC, Polygon, and 8+ other chains to surface actionable insights — whale moves, risk signals, and trading opportunities.",
+    q: "What is Naka Labs?",
+    a: "Naka Labs is a professional on-chain intelligence platform powered by $NAKA. We analyze blockchain data across Ethereum, Solana, BSC, Polygon, and 8+ other chains to surface actionable insights — whale moves, risk signals, and trading opportunities.",
+  },
+  {
+    q: "What does 'powered by $NAKA' mean?",
+    a: "$NAKA is the token that powers the Naka Labs ecosystem. $NAKA holders get access to premium intelligence features, advanced analytics, and exclusive platform benefits. The more $NAKA you hold, the more intelligence you unlock.",
   },
   {
     q: "Is my wallet data private?",
@@ -126,16 +130,12 @@ const faqs = [
     a: "Ethereum, Solana, BSC, Polygon, Arbitrum, Optimism, Avalanche, Base, Fantom, Bitcoin, and Tron. More chains added based on community demand.",
   },
   {
-    q: "How much does it cost?",
-    a: "Free tier includes 20 events/day and 1 wallet tracking. Pro ($4/month) unlocks unlimited access. Premium ($15/month) adds predictions, copy trading, and API access.",
-  },
-  {
     q: "How accurate is the whale tracking?",
     a: "We track verified whale wallets (>$1M holdings) in real-time. Every signal links to the actual on-chain transaction — verify it yourself on Etherscan or Solscan.",
   },
   {
-    q: "Can I cancel anytime?",
-    a: "Yes. No contracts, no hidden fees. Cancel with one click. Your data stays yours.",
+    q: "Can I use Naka Labs without $NAKA?",
+    a: "Yes. Free tier includes real-time feeds and basic analytics. $NAKA holders unlock premium features: unlimited whale tracking, DNA Analyzer, advanced portfolio analytics, and priority signals.",
   },
 ];
 
@@ -180,8 +180,8 @@ export default function LandingPage() {
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20' : 'bg-transparent border-b border-transparent'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <SteinzLogo size={28} />
-            <span className="text-sm font-heading font-bold tracking-tight">STEINZ LABS</span>
+            <NakaLogo size={28} />
+            <span className="text-sm font-heading font-bold tracking-tight">NAKA LABS</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-[13px] text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -209,23 +209,23 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full mb-8 animate-fade-slide-in">
             <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></div>
-            <span className="text-[12px] text-gray-400 font-medium">Live on 12+ blockchains</span>
+            <span className="text-[12px] text-gray-400 font-medium">On-chain intelligence powered by $NAKA</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold mb-6 leading-[1.08] tracking-tight animate-fade-slide-in" style={{ animationDelay: '0.1s' }}>
-            Make on-chain intelligence
+            The intelligence layer
             <br />
-            <span className="gradient-text-blue">work for you</span>
+            <span className="gradient-text-blue">for on-chain alpha</span>
           </h1>
 
           <p className="text-base sm:text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed animate-fade-slide-in" style={{ animationDelay: '0.2s' }}>
-            Community-driven analytics for blockchain ecosystems. Explore, analyze, and act on on-chain data with AI-powered tools.
+            Track whales. Analyze wallets. Scan contracts. Act on real-time blockchain data before the crowd — powered by $NAKA.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-20 animate-fade-slide-in" style={{ animationDelay: '0.3s' }}>
             <Link href="/dashboard" className="flex-1">
               <button className="w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
-                Get Started <ArrowRight className="w-4 h-4" />
+                Launch App <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
             <Link href="/whitepaper" className="flex-1">
@@ -352,6 +352,80 @@ export default function LandingPage() {
       <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
 
       <section
+        id="naka"
+        ref={(el) => { sectionRefs.current['naka'] = el; }}
+        className="py-24 px-4 sm:px-6"
+      >
+        <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('naka') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="text-center mb-12">
+            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">$NAKA Token</p>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+              Unlock the full intelligence layer
+            </h2>
+            <p className="text-gray-500 text-sm max-w-lg mx-auto">
+              $NAKA holders get access to premium intelligence tools, priority signals, and exclusive platform benefits.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                tier: "Free",
+                desc: "Get started with core features",
+                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "Community access"],
+                accent: "#6B7280",
+                cta: "Start Free",
+              },
+              {
+                tier: "$NAKA Holder",
+                desc: "Full intelligence suite unlocked",
+                perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Priority signals & alerts"],
+                accent: "#0A1EFF",
+                cta: "Get $NAKA",
+                featured: true,
+              },
+              {
+                tier: "$NAKA Pro",
+                desc: "For professional analysts",
+                perks: ["Everything in Holder tier", "API access for developers", "Custom alert creation", "VTX AI (unlimited queries)"],
+                accent: "#7C3AED",
+                cta: "Coming Soon",
+              },
+            ].map((plan) => (
+              <div
+                key={plan.tier}
+                className={`rounded-xl border p-6 ${plan.featured ? 'border-neon-blue/30 bg-neon-blue/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}
+              >
+                {plan.featured && (
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-neon-blue mb-3">Most Popular</div>
+                )}
+                <h3 className="text-lg font-heading font-bold mb-1" style={{ color: plan.accent }}>{plan.tier}</h3>
+                <p className="text-gray-500 text-xs mb-4">{plan.desc}</p>
+                <div className="space-y-2 mb-6">
+                  {plan.perks.map((perk) => (
+                    <div key={perk} className="flex items-center gap-2 text-[13px] text-gray-300">
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: plan.accent }}></div>
+                      {perk}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/dashboard">
+                  <button
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
+                    style={plan.featured ? { backgroundColor: plan.accent, color: 'white' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                  >
+                    {plan.cta}
+                  </button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
+
+      <section
         id="faq"
         ref={(el) => { sectionRefs.current['faq'] = el; }}
         className="py-24 px-4 sm:px-6"
@@ -408,10 +482,10 @@ export default function LandingPage() {
         </div>
         <div className="max-w-2xl mx-auto text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Start exploring on-chain data
+            Start your intelligence journey
           </h2>
           <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-            Free to start. No credit card required. Connect your wallet or browse as a guest.
+            Free to start. No credit card required. Connect your wallet or sign in with email to unlock Naka Labs intelligence.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
             <Link href="/dashboard" className="flex-1">
@@ -419,11 +493,11 @@ export default function LandingPage() {
                 Launch App <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
-            <Link href="/dashboard/pricing" className="flex-1">
-              <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all">
-                View Pricing
+            <a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="flex-1">
+              <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" /> Join Community
               </button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -433,11 +507,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
-                <SteinzLogo size={24} />
-                <span className="text-sm font-heading font-bold">STEINZ LABS</span>
+                <NakaLogo size={24} />
+                <span className="text-sm font-heading font-bold">NAKA LABS</span>
               </div>
               <p className="text-gray-500 text-xs leading-relaxed">
-                On-chain intelligence platform for the modern analyst.
+                Professional on-chain intelligence powered by $NAKA.
               </p>
             </div>
             <div>
@@ -453,28 +527,28 @@ export default function LandingPage() {
               <h4 className="font-semibold text-xs mb-3 text-gray-300 uppercase tracking-wider">Resources</h4>
               <div className="space-y-2 text-gray-500 text-xs">
                 <div><Link href="/whitepaper" className="hover:text-white transition-colors">Whitepaper</Link></div>
-                <div><Link href="/dashboard/pricing" className="hover:text-white transition-colors">Pricing</Link></div>
                 <div><Link href="/whitepaper#architecture" className="hover:text-white transition-colors">Documentation</Link></div>
+                <div><Link href="/dashboard/market" className="hover:text-white transition-colors">Market</Link></div>
               </div>
             </div>
             <div>
               <h4 className="font-semibold text-xs mb-3 text-gray-300 uppercase tracking-wider">Community</h4>
               <div className="space-y-2 text-gray-500 text-xs">
-                <div><a href="https://x.com/steinzlabs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter / X</a></div>
-                <div><a href="https://t.me/steinzlabs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a></div>
+                <div><a href="https://x.com/nakalabs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter / X</a></div>
+                <div><a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a></div>
                 <div><span className="hover:text-white transition-colors cursor-pointer">Discord</span></div>
               </div>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/[0.06] pt-8">
             <div className="flex items-center gap-3">
-              <p className="text-gray-600 text-[11px]">&copy; 2026 Steinz Labs. All rights reserved.</p>
+              <p className="text-gray-600 text-[11px]">&copy; 2026 Naka Labs. All rights reserved.</p>
             </div>
             <div className="flex items-center gap-3">
               <p className="text-gray-600 text-[11px]">Powered by</p>
               <div className="flex items-center gap-2">
-                <img src="/nakago-logo.jpg" alt="NAKA GO" className="w-5 h-5 rounded-full object-cover" />
-                <span className="text-xs font-semibold text-gray-400">NAKA GO</span>
+                <img src="/nakago-logo.jpg" alt="NAKA" className="w-5 h-5 rounded-full object-cover" />
+                <span className="text-xs font-semibold text-gray-400">$NAKA</span>
                 <a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="w-6 h-6 bg-white/[0.04] rounded-full flex items-center justify-center hover:bg-white/[0.08] transition-colors">
                   <Send className="w-3 h-3 text-gray-500" />
                 </a>

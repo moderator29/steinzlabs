@@ -81,7 +81,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/20 rounded-full flex items-center justify-center">
                 <Check className="w-8 h-8 text-[#0A1EFF]" />
               </div>
-              <h2 className="text-2xl font-bold">Welcome to Steinz Labs!</h2>
+              <h2 className="text-2xl font-bold">Welcome to Naka Labs!</h2>
               <p className="text-gray-400">
                 Your account has been created. Let&apos;s get you set up with everything you need to start trading.
               </p>
@@ -152,14 +152,14 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Sign In to Steinz Labs</h2>
+          <h2 className="text-2xl font-bold">Sign In to Naka Labs</h2>
           <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <p className="text-gray-400 mb-6">
-          Access on-chain intelligence, trading tools, and portfolio analytics.
+          Access on-chain intelligence powered by $NAKA. Track whales, analyze wallets, and act on real data.
         </p>
 
         <div className="space-y-4">
