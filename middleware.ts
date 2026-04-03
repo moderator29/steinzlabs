@@ -39,6 +39,28 @@ function applyHeaders(response: NextResponse) {
   return response;
 }
 
+function isValidJWT(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+
+    if (!payload.sub || typeof payload.sub !== 'string') return false;
+
+    if (payload.exp) {
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp < now) return false;
+    }
+
+    if (payload.iss && !payload.iss.includes('supabase')) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
@@ -46,16 +68,26 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
   if (isProtected && !isPublic) {
-    const hasSession = ['naka_session', 'steinz_session'].some(name => {
-      const cookie = request.cookies.get(name)?.value;
-      return cookie && cookie.length > 10;
-    });
+    const sessionCookie = request.cookies.get('naka_session')?.value;
+    const hasValidSession = sessionCookie ? isValidJWT(sessionCookie) : false;
 
-    const hasSupabaseSession = request.cookies.getAll().some(c =>
-      c.name.startsWith('sb-') && c.name.endsWith('-auth-token') && c.value.length > 10
-    );
+    let hasSupabaseSession = false;
+    if (!hasValidSession) {
+      const sbCookie = request.cookies.getAll().find(c =>
+        c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+      );
+      if (sbCookie?.value) {
+        try {
+          const parsed = JSON.parse(sbCookie.value);
+          const token = Array.isArray(parsed) ? parsed[0] : parsed?.access_token;
+          hasSupabaseSession = token ? isValidJWT(token) : false;
+        } catch {
+          hasSupabaseSession = false;
+        }
+      }
+    }
 
-    if (!hasSession && !hasSupabaseSession) {
+    if (!hasValidSession && !hasSupabaseSession) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('from', path);
