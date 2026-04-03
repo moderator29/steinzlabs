@@ -20,7 +20,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
 
-    const supabaseAdmin = getSupabaseAdmin();
+    let supabaseAdmin;
+    try {
+      supabaseAdmin = getSupabaseAdmin();
+    } catch (e: any) {
+      console.error('Admin client init failed:', e.message);
+      return NextResponse.json({ error: 'Server configuration error. Please try again later.' }, { status: 500 });
+    }
 
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
