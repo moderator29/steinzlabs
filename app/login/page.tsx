@@ -73,7 +73,9 @@ function LoginPageInner() {
         email = profile.email;
       }
 
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+      const signInPromise = supabase.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 15000));
+      const { data: signInData, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
 
       if (error) {
         if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {

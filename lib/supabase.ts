@@ -7,9 +7,23 @@ const SESSION_SECONDS = 60 * 60 * 48;
 let _supabase: SupabaseClient | null = null;
 let _configured = false;
 
+function sanitizeUrl(raw: string | undefined): string {
+  if (!raw) return '';
+  let url = raw.trim().replace(/^["']+|["']+$/g, '');
+  if (url && !url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+  return url;
+}
+
+function sanitizeKey(raw: string | undefined): string {
+  if (!raw) return '';
+  return raw.trim().replace(/^["']+|["']+$/g, '');
+}
+
 function isConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   return !!(
     url && url.startsWith('https://') && url.includes('.supabase.co') && url !== PLACEHOLDER_URL &&
     key && key !== PLACEHOLDER_KEY && key.length > 20
@@ -20,8 +34,8 @@ function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
   _configured = isConfigured();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || PLACEHOLDER_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PLACEHOLDER_KEY;
+  const supabaseUrl = sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL) || PLACEHOLDER_URL;
+  const supabaseAnonKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) || PLACEHOLDER_KEY;
 
   _supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
