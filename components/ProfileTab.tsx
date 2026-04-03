@@ -23,7 +23,7 @@ interface ChatMessage {
   timestamp: number;
 }
 
-type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support';
+type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security';
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
@@ -228,6 +228,75 @@ export default function ProfileTab() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  if (subPage === 'security') {
+    return (
+      <div>
+        <button onClick={() => setSubPage(null)} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Profile
+        </button>
+        <h2 className="text-lg font-heading font-bold mb-1">Account Security</h2>
+        <p className="text-xs text-gray-500 mb-4">Manage your account security settings.</p>
+
+        <div className="glass rounded-lg border border-white/10 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-[#0A1EFF]" />
+              <div>
+                <div className="text-sm font-semibold">Email</div>
+                <div className="text-[10px] text-gray-500">{user?.email || 'Not set'}</div>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] text-[9px] font-bold rounded">VERIFIED</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <Key className="w-4 h-4 text-[#F59E0B]" />
+              <div>
+                <div className="text-sm font-semibold">Password</div>
+                <div className="text-[10px] text-gray-500">Last changed: Unknown</div>
+              </div>
+            </div>
+            <button className="px-3 py-1 bg-white/5 rounded-lg text-[10px] font-semibold hover:bg-white/10 transition-colors">Change</button>
+          </div>
+          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <Smartphone className="w-4 h-4 text-[#7C3AED]" />
+              <div>
+                <div className="text-sm font-semibold">Two-Factor Authentication</div>
+                <div className="text-[10px] text-gray-500">Add an extra layer of security</div>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-[9px] font-bold rounded">OFF</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-[#10B981]" />
+              <div>
+                <div className="text-sm font-semibold">Login Activity</div>
+                <div className="text-[10px] text-gray-500">Monitor login sessions</div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          </div>
+          <div className="flex items-center justify-between px-3 py-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-[#EF4444]" />
+              <div>
+                <div className="text-sm font-semibold">Delete Account</div>
+                <div className="text-[10px] text-gray-500">Permanently delete your account and data</div>
+              </div>
+            </div>
+            <button className="px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] rounded-lg text-[10px] font-semibold hover:bg-[#EF4444]/20 transition-colors">Delete</button>
+          </div>
+        </div>
+
+        <div className="mt-4 glass rounded-lg p-3 border border-[#0A1EFF]/20 bg-[#0A1EFF]/5">
+          <p className="text-[11px] text-[#0A1EFF]">Your account is protected with industry-standard encryption. Enable two-factor authentication for maximum security.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (subPage === 'privacy') {
     return (
@@ -680,7 +749,7 @@ export default function ProfileTab() {
         ))}
       </div>
 
-      <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => router.push('/dashboard/security')} />
+      <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />
       <ProfileRow icon={Shield} label="Privacy" sub="Manage data & visibility" onClick={() => setSubPage('privacy')} />
       <ProfileRow icon={Settings} label="Preferences" sub="Customize your experience" onClick={() => setSubPage('preferences')} />
 

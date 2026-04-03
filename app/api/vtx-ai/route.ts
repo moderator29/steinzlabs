@@ -546,12 +546,14 @@ export async function POST(request: Request) {
 
     const systemPrompt = `${STEINZ_PLATFORM_CONTEXT}
 
-CRITICAL FORMATTING RULES:
-1. NEVER use ** for bold. NEVER use ## for headers. NEVER use -- for dashes. NEVER use bullet point dashes or asterisks.
-2. Write in clean plain text only. Use line breaks and spacing to organize.
-3. Use labels like "Token:" or "Risk Level:" followed by the value on the same line.
-4. For lists, use numbers (1. 2. 3.) or just line breaks. No dashes, no bullets, no asterisks.
-5. When presenting data sections, use a blank line between sections with a clear label.
+ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
+1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.
+2. Write ONLY clean plain text. Use line breaks and spacing to organize content.
+3. For labels use "Token:" or "Risk Level:" followed by value on same line.
+4. For lists use numbers (1. 2. 3.) or separate lines. NEVER start a line with - or * or bullet.
+5. Separate sections with blank lines and clear text labels.
+6. EXAMPLE OF WHAT NEVER TO DO: "**Bitcoin** is trading at..." or "- First item" or "## Market Overview" or "### Analysis"
+7. EXAMPLE OF CORRECT FORMAT: "Bitcoin is trading at $67,000. 24-hour change: negative 0.19%."
 
 CRITICAL ANALYSIS RULES:
 1. When intelligence data is available below, use ALL of it. Combine Arkham, on-chain, and market data together.
@@ -597,7 +599,8 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
     }
 
     const data = await response.json();
-    const reply = data.content?.[0]?.text || 'No response generated';
+    let reply = data.content?.[0]?.text || 'No response generated';
+    reply = reply.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
     if (!isPro) {
       incrementUsage(ip);

@@ -256,26 +256,33 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
             </div>
           )}
 
-          {dexPageUrl && (
+          {(event.tokenSymbol || event.pairAddress) && (
             <div className="flex gap-2">
-              <a
-                href={dexPageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
+                  if (event.tokenName) params.set('name', event.tokenName || '');
+                  if (event.pairAddress) params.set('pair', event.pairAddress);
+                  if (event.chain) params.set('chain', event.chain);
+                  router.push(`/dashboard/swap?${params.toString()}`);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
               >
                 <ShoppingCart className="w-4 h-4" />
                 Buy {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}
-              </a>
-              <a
-                href={dexPageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              </button>
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
+                  if (event.chain) params.set('chain', event.chain);
+                  router.push(`/dashboard/swap?${params.toString()}`);
+                }}
                 className="flex items-center justify-center gap-1.5 px-4 py-3 border border-white/10 rounded-xl text-xs font-semibold hover:bg-white/5 transition-colors"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                DexScreener
-              </a>
+                Swap
+              </button>
             </div>
           )}
 

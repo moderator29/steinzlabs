@@ -144,24 +144,6 @@ export default function WalletTab() {
         <WalletPageButton />
       </div>
 
-      {!isConnected && (
-        <div className="glass rounded-xl p-6 border border-white/10 text-center bg-gradient-to-b from-[#0A1EFF]/5 to-transparent">
-          <div className="w-10 h-10 bg-[#1A2235] rounded-full flex items-center justify-center mx-auto mb-3">
-            <Wallet className="w-5 h-5 text-gray-400" />
-          </div>
-          <h3 className="text-sm font-heading font-bold mb-1">Connect External Wallet</h3>
-          <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-            Link MetaMask or Phantom to track your portfolio
-          </p>
-          <button
-            onClick={connectAuto}
-            disabled={connecting}
-            className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
-          >
-            {connecting ? 'Connecting...' : 'Connect Wallet'}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

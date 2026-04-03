@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive } from 'lucide-react';
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
-import ViewProofModal from './ViewProofModal';
 
 interface EngagementData {
   views: number;
@@ -206,9 +205,8 @@ export default function ContextFeed() {
   const isArchive = activeMode === 'archive';
   const activeChain: ChainFilter = isArchive ? 'all' : activeMode as ChainFilter;
   const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
-  const { events, loading, refresh, hasArchive } = useContextFeed(20, feedChain);
+  const { events, loading, refresh, hasArchive } = useContextFeed(50, feedChain);
   const { events: archivedEvents, loading: archiveLoading, refresh: refreshArchive } = useArchivedFeed(feedChain);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [shareEvent, setShareEvent] = useState<any>(null);
@@ -480,7 +478,7 @@ export default function ContextFeed() {
                   {event.valueUsd >= 50000 && (
                     <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/20 flex-shrink-0">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                      ARKHAM
+                      INTEL
                     </span>
                   )}
                   {event.trustScore >= 75 && (
@@ -557,7 +555,10 @@ export default function ContextFeed() {
                   </span>
                 </div>
                 <button
-                  onClick={() => setSelectedEvent(event)}
+                  onClick={() => {
+                    sessionStorage.setItem('steinz_proof_event', JSON.stringify(event));
+                    window.location.href = `/dashboard/proof?id=${event.id}`;
+                  }}
                   className="text-[#0A1EFF] font-semibold text-xs hover:underline flex-shrink-0 ml-2"
                 >
                   View Proof &rarr;
@@ -568,18 +569,6 @@ export default function ContextFeed() {
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
                 </span>
-                {event.tokenSymbol && (
-                  <a
-                    href={`https://app.bubblemaps.io/eth/token/${event.tokenSymbol.toLowerCase()}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 hover:text-[#0A1EFF] transition-colors"
-                    title="Bubblemaps"
-                  >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>
-                    Bubbles
-                  </a>
-                )}
                 <button
                   onClick={() => handleShare(event)}
                   className={`flex items-center gap-1.5 transition-all ${
@@ -622,40 +611,6 @@ export default function ContextFeed() {
         />
       )}
 
-      {selectedEvent && (
-        <ViewProofModal
-          key={selectedEvent.id}
-          event={{
-            id: selectedEvent.id,
-            title: selectedEvent.title,
-            summary: selectedEvent.summary,
-            from: selectedEvent.from,
-            to: selectedEvent.to,
-            value: selectedEvent.value,
-            valueUsd: selectedEvent.valueUsd,
-            chain: selectedEvent.chain,
-            trustScore: selectedEvent.trustScore,
-            txHash: selectedEvent.txHash,
-            timestamp: selectedEvent.timestamp,
-            sentiment: selectedEvent.sentiment,
-            views: engagement[selectedEvent.id]?.views || 0,
-            comments: engagement[selectedEvent.id]?.comments || 0,
-            shares: engagement[selectedEvent.id]?.shares || 0,
-            likes: engagement[selectedEvent.id]?.likes || 0,
-            pairAddress: selectedEvent.pairAddress || '',
-            dexUrl: selectedEvent.dexUrl || '',
-            tokenName: selectedEvent.tokenName || '',
-            tokenSymbol: selectedEvent.tokenSymbol || '',
-            tokenPrice: selectedEvent.tokenPrice || '',
-            platform: selectedEvent.platform || '',
-            tokenVolume24h: selectedEvent.tokenVolume24h || 0,
-            tokenLiquidity: selectedEvent.tokenLiquidity || 0,
-            tokenMarketCap: selectedEvent.tokenMarketCap || 0,
-            tokenPriceChange24h: selectedEvent.tokenPriceChange24h || 0,
-          }}
-          onClose={() => setSelectedEvent(null)}
-        />
-      )}
     </div>
   );
 }

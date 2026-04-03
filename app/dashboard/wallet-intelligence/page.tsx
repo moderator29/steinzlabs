@@ -53,6 +53,27 @@ function detectAddressType(address: string): 'EVM' | 'SOL' | 'UNKNOWN' {
   return 'UNKNOWN';
 }
 
+async function checkIfContract(address: string, addrType: 'EVM' | 'SOL' | 'UNKNOWN'): Promise<boolean> {
+  try {
+    if (addrType === 'EVM') {
+      const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+      const rpcUrl = alchemyKey
+        ? `https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`
+        : 'https://eth.llamarpc.com';
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getCode', params: [address, 'latest'] }),
+      });
+      const data = await res.json();
+      return data.result && data.result !== '0x' && data.result.length > 2;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function getExplorerUrl(address: string, chain: string, explorerUrl?: string): string {
   if (explorerUrl) return `${explorerUrl}/address/${address}`;
   if (chain === 'Solana' || chain === 'SOL') return `https://solscan.io/account/${address}`;
@@ -79,7 +100,13 @@ export default function WalletIntelligencePage() {
 
     const addrType = detectAddressType(trimmed);
     if (addrType === 'UNKNOWN') {
-      setError('Invalid address format. Enter an EVM (0x...) or SOL address.');
+      setError('Invalid address format. Enter an EVM (0x...) or Solana wallet address.');
+      return;
+    }
+
+    const isLikelyContract = await checkIfContract(trimmed, addrType);
+    if (isLikelyContract) {
+      setError('This looks like a token contract address, not a wallet. Use Security Center to scan contracts. Wallet Intelligence is for wallet addresses only.');
       return;
     }
 

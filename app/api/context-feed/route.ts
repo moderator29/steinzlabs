@@ -149,7 +149,7 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
     const whaleTransfers = transfers.filter((tx: any) => {
       if (tx.category === 'erc20') return true;
       return (tx.value || 0) >= 1;
-    }).slice(0, 20);
+    }).slice(0, 50);
 
     return whaleTransfers.map((tx: any, i: number) => {
       const isErc20 = tx.category === 'erc20';
@@ -401,7 +401,7 @@ async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
     const boostsData = await boostsRes.json();
     if (!Array.isArray(boostsData)) return [];
 
-    const topTokens = boostsData.slice(0, 20);
+    const topTokens = boostsData.slice(0, 40);
 
     const pairResults = await Promise.allSettled(
       topTokens.map((t: any) =>
