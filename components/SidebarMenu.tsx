@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Zap, Wallet, CandlestickChart
+  Zap, Wallet, CandlestickChart, Archive, Globe
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -39,6 +39,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: CandlestickChart, label: 'Market', path: '/dashboard/market', badge: 'NEW' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
       { icon: Zap, label: 'Trading Suite', path: '/dashboard/trading-suite' },
+      { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges', badge: 'NEW' },
     ],
   },
   {
@@ -61,6 +62,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: Shield, label: 'Security Center', path: '/dashboard/security' },
       { icon: Target, label: 'Risk Scanner', path: '/dashboard/risk-scanner' },
+      { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },
   {
