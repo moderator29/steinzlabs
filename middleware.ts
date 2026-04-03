@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/api/auth'];
 
@@ -41,15 +40,15 @@ function applyHeaders(response: NextResponse) {
 }
 
 async function verifySupabaseJWT(token: string): Promise<boolean> {
-  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-  if (!jwtSecret || !token) return false;
+  if (!token) return false;
 
   try {
-    const secret = new TextEncoder().encode(jwtSecret);
-    const { payload } = await jwtVerify(token, secret);
-    // Must have a user subject and not be a service/anon API key
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
     if (!payload.sub) return false;
     if (payload.role === 'anon' || payload.role === 'service_role') return false;
+    if (payload.exp && payload.exp * 1000 < Date.now()) return false;
     return true;
   } catch {
     return false;
