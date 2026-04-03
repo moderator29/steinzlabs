@@ -42,6 +42,10 @@ export function useAuthProvider(): AuthContextType {
 
   const fetchProfile = useCallback(async (supaUser: SupabaseUser) => {
     try {
+      if (!supabase) {
+        setUser({ id: supaUser.id, email: supaUser.email, created_at: supaUser.created_at });
+        return;
+      }
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
@@ -58,9 +62,13 @@ export function useAuthProvider(): AuthContextType {
           created_at: profile.created_at,
         });
       } else {
+        const meta = supaUser.user_metadata || {};
         setUser({
           id: supaUser.id,
           email: supaUser.email,
+          first_name: meta.first_name,
+          last_name: meta.last_name,
+          username: meta.username,
           created_at: supaUser.created_at,
         });
       }
@@ -80,16 +88,25 @@ export function useAuthProvider(): AuthContextType {
   }, [supabaseUser, fetchProfile]);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     async function init() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && mounted) {
-          setSupabaseUser(session.user);
-          await fetchProfile(session.user);
+        const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+        const sessionPromise = supabase.auth.getSession();
+        const result = await Promise.race([sessionPromise, timeout]);
+        
+        if (result && 'data' in result && result.data?.session?.user && mounted) {
+          setSupabaseUser(result.data.session.user);
+          await fetchProfile(result.data.session.user);
         }
-      } catch {
+      } catch (err) {
+        console.error('Auth init error:', err);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -119,7 +136,9 @@ export function useAuthProvider(): AuthContextType {
 
   const signOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
       setUser(null);
       setSupabaseUser(null);
     } catch {}

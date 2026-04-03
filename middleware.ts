@@ -46,16 +46,16 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
   if (isProtected && !isPublic) {
-    const hasSupabaseSession = request.cookies.getAll().some(c =>
-      c.name.startsWith('sb-') && c.name.endsWith('-auth-token') && c.value.length > 10
-    );
-
-    const hasLegacySession = ['naka_session', 'steinz_session'].some(name => {
+    const hasSession = ['naka_session', 'steinz_session'].some(name => {
       const cookie = request.cookies.get(name)?.value;
       return cookie && cookie.length > 10;
     });
 
-    if (!hasSupabaseSession && !hasLegacySession) {
+    const hasSupabaseSession = request.cookies.getAll().some(c =>
+      c.name.startsWith('sb-') && c.name.endsWith('-auth-token') && c.value.length > 10
+    );
+
+    if (!hasSession && !hasSupabaseSession) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('from', path);

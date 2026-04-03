@@ -1,7 +1,7 @@
 # Naka Labs
 
 ## Overview
-Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Privy auth (email/Google/Twitter/wallet), full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX AI, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
+Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX AI, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
 **Brand**: Everything is "Naka Labs" / "NAKA" / "Naka AI". $NAKA token drives tier access (Free/Holder/Pro).
 
@@ -9,125 +9,104 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **Framework**: Next.js 15.0.8 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS — neon-blue design system (#0A1EFF primary), Inter + JetBrains Mono fonts
-- **Auth**: Privy v3.16.0 (`@privy-io/react-auth`) — email, Google, Twitter, wallet login, embedded wallets, httpOnly JWT cookies via `jose`
+- **Auth**: Supabase Auth (email/password) — fully client-side, profiles table for username/name storage
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
-- **Database**: Supabase (legacy)
+- **Database**: Supabase (auth + profiles)
 - **Blockchain**: Alchemy SDK, ethers.js
 - **AI**: Anthropic AI SDK
 - **Charts**: TradingView Widget (candlestick), Recharts, Lightweight Charts
 - **Visualization**: D3.js (bubblemaps)
-- **UI**: Lucide React, Framer Motion, Sonner toasts
-- **Security**: Custom middleware, rate limiting, Zod validation, security headers, CSRF-safe httpOnly cookies
+- **UI**: Lucide React, Framer Motion, Sonner toasts, custom Toast/ToastProvider
+- **Security**: Custom middleware, rate limiting, Zod validation, security headers
 - **On-chain data**: DexScreener API (universal token search — all chains, any token/CA), CoinGecko API
 
-## Auth (Privy)
-- App ID: `cmmfxnapf01sz0cjsg53245k2` (env: `NEXT_PUBLIC_PRIVY_APP_ID`)
-- App Secret: `PRIVY_APP_SECRET` (Replit secret)
-- JWT: `JWT_SECRET` (Replit secret)
-- **Known Issue**: Privy v3.16.0 has a Solana connector bug (`onMount is not a function`). Fixed via `scripts/patch-privy.js` (postinstall). Patches `index-Bvw5OxHl.mjs` with try-catch + optional chaining on dependency array. Error boundary in `PrivyProvider.tsx` as additional safety net.
-- **Permanent fix**: Disable Solana wallets in Privy Dashboard at https://dashboard.privy.io → Login Methods.
+## Auth (Supabase)
+- **Client**: `@supabase/supabase-js` — client-side only (browser connects directly to Supabase)
+- **Signup**: First name, last name, username (unique), email, password → `supabase.auth.signUp()` + profile insert
+- **Login**: Email OR username + password → username resolves to email via profiles table → `supabase.auth.signInWithPassword()`
+- **Session**: Supabase manages JWT tokens in localStorage, cookies set by Supabase client (sb-*-auth-token)
+- **Middleware**: Checks for `sb-*-auth-token` cookies to protect /dashboard/** routes
+- **Logout**: `supabase.auth.signOut()` → redirect to /login
+- **Important**: Email confirmation should be DISABLED in Supabase Dashboard for immediate login after signup
 
 ## Auth Flow
-- `/auth` — full-page sign-in (split panel: features left / login form right)
-- Dashboard header shows "Sign In" button → routes to `/auth` when unauthenticated
-- No auth modal on dashboard; `AuthModal.tsx` exists but is unused in main flow
+- `/login` — full-page sign-in (split panel: welcome left / login form right)
+- `/signup` — full-page registration (split panel: features left / registration form right)
+- `/auth` — redirects to `/login` (legacy compatibility)
+- Dashboard header shows user info when authenticated
 - After login → redirected to `/dashboard`
+- After signup → auto-login → redirected to `/dashboard`
+
+## Supabase Database
+- **profiles table**: `id` (UUID, FK to auth.users), `first_name`, `last_name`, `username` (unique), `email`, `created_at`
+- RLS enabled with policies for user profile access and public username lookup
 
 ## Project Structure
 ```
 app/
 ├── globals.css              # Global styles, CSS variables, neon-blue design tokens
-├── layout.tsx               # Root layout (PrivyProvider wrapper, suppressHydrationWarning)
+├── layout.tsx               # Root layout (AuthProvider + ToastProvider wrapper)
 ├── page.tsx                 # Landing page — Dune.com-inspired, $NAKA tiers, FAQ
-├── auth/                    # Full-page auth (split-panel Privy login)
+├── login/                   # Login page (email OR username + password)
+├── signup/                  # Signup page (first name, last name, username, email, password)
+├── auth/                    # Legacy redirect → /login
 ├── admin/                   # Admin panel
 └── dashboard/
     ├── layout.tsx           # Dashboard layout wrapper
-    ├── page.tsx             # Dashboard: stat cards, bottom nav, sidebar, Sign In button
+    ├── page.tsx             # Dashboard: stat cards, bottom nav, sidebar
     ├── market/              # Market page: TradingView chart, DexScreener search, buy/sell, watchlist
     ├── portfolio/           # Portfolio: 4-tab (Balance | History | Unrealized PnL | P&L)
     ├── dna-analyzer/        # Trading DNA Analyzer — WALLET ONLY (rejects contracts → Token Scanner)
     ├── security/            # Token Scanner — CONTRACT ONLY (rejects wallets → DNA Analyzer)
-    ├── alerts/              # Smart Alerts
-    ├── builder-funding/     # Builder Funding
-    ├── builder-network/     # Builder Network
-    ├── community/           # Community
-    ├── copy-trading/        # Copy Trading
-    ├── hodl-runner/         # HODL Runner game
-    ├── launchpad/           # Launchpad
-    ├── messages/            # Messaging
-    ├── network-metrics/     # Network Metrics
-    ├── predictions/         # Predictions
-    ├── pricing/             # Pricing
-    ├── profile/             # Profile
-    ├── project-discovery/   # Project Discovery
-    ├── risk-scanner/        # Risk Scanner
-    ├── smart-money/         # Smart Money
-    ├── social-trading/      # Social Trading
-    ├── swap/                # Multi-Chain Swap
-    ├── trends/              # On-Chain Trends
-    ├── vtx-ai/              # VTX AI Chat
-    ├── wallet-clusters/     # Wallet Clusters
-    ├── wallet-intelligence/ # Wallet Intelligence
-    ├── wallet-page/         # Wallet
-    ├── whale-tracker/       # Whale Tracker
-    └── wgm-runner/          # STZ Runner game
-
-app/api/
-├── search/route.ts          # DexScreener universal token search (name, symbol, or CA → all chains)
-├── portfolio/               # Portfolio data (EVM wallet balances + prices)
-├── prices/                  # CoinGecko price feed
-├── context-feed/            # Context/intelligence feed
-└── ...other API routes
+    └── ...other dashboard pages
 
 components/
 ├── providers/
-│   └── PrivyProvider.tsx    # Privy auth provider + PrivyErrorBoundary class
-├── AuthModal.tsx            # Auth modal (exists but unused in main flow — /auth page used instead)
+│   └── AuthProvider.tsx     # Supabase auth context provider
+├── Toast.tsx                # Toast notification system + ToastProvider
 ├── NakaLogo.tsx             # Naka Labs logo component (wraps steinz-logo-128.png)
-├── SidebarMenu.tsx          # Left sidebar (240px, neon-blue active states, category headers)
+├── SidebarMenu.tsx          # Left sidebar (240px, neon-blue active states)
+├── ProfileTab.tsx           # User profile tab with sign out
 ├── TradingViewChart.tsx     # TradingView candlestick chart widget
 ├── PriceTicker.tsx          # Live price ticker strip
 ├── Markets.tsx              # Markets tab component
 ├── ContextFeed.tsx          # Context feed tab
-├── WalletConnectButton.tsx  # Wallet connection button
 └── ...other components
 
 lib/
-├── auth.ts                  # JWT session management (createSession, verifySession, getSession)
-├── rateLimit.ts             # In-memory rate limiter (Map-based, LRU-eviction)
-├── errorHandler.ts          # API error handler (no stack trace leaks)
-├── validation.ts            # Zod schemas (wallet, contract, email, search, etc.)
+├── supabase.ts              # Supabase client (browser) + getSupabaseAdmin (server)
+├── rateLimit.ts             # In-memory rate limiter
+├── errorHandler.ts          # API error handler
+├── validation.ts            # Zod schemas
 ├── hooks/
-│   ├── useAuth.ts           # usePrivy wrapper for auth state
+│   ├── useAuth.ts           # Supabase auth hook (AuthContext, useAuthProvider)
 │   └── useWallet.ts         # Wallet connection hook
 └── supabase.ts              # Supabase client
 
-middleware.ts                # Security headers (CSP, HSTS, X-Frame-Options) + DexScreener in connect-src
-scripts/
-└── patch-privy.js           # Patches Privy ESM to fix Solana onMount crash (postinstall)
+middleware.ts                # Security headers + auth cookie check for /dashboard/**
 ```
 
 ## Key Files
 | File | Purpose |
 |---|---|
-| `middleware.ts` | Security headers (CSP, HSTS, X-Frame-Options), applied to all routes |
+| `middleware.ts` | Security headers (CSP, HSTS, X-Frame-Options) + auth guard for /dashboard/** |
+| `lib/supabase.ts` | Supabase browser client + admin client factory |
+| `lib/hooks/useAuth.ts` | Auth context with session management, profile fetching, sign out |
+| `components/providers/AuthProvider.tsx` | Wraps app with auth context |
+| `app/login/page.tsx` | Login page (email or username + password) |
+| `app/signup/page.tsx` | Signup page (full registration form) |
 | `next.config.js` | ESLint ignore, image domains, headers, performance opts |
 | `tailwind.config.ts` | Neon-blue (#0A1EFF) design tokens, shadows, animations |
 | `app/globals.css` | Glass effects, glow utilities, scrollbar styles |
-| `app/api/search/route.ts` | DexScreener search API — returns any on-chain token by name/symbol/CA |
-| `scripts/patch-privy.js` | Privy Solana connector crash fix (postinstall) |
 
 ## Environment Variables
 | Variable | Location | Purpose |
 |---|---|---|
-| `NEXT_PUBLIC_PRIVY_APP_ID` | `.env.local` | Privy App ID (public) |
-| `PRIVY_APP_SECRET` | Replit Secret | Privy server-side verification |
-| `JWT_SECRET` | Replit Secret | JWT session signing |
-| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` | Supabase URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` | Supabase public key |
-| `SUPABASE_SERVICE_KEY` | `.env.local` | Supabase admin key |
+| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` | Supabase project URL (public) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` | Supabase anonymous/public key |
+| `SUPABASE_SERVICE_KEY` | Replit Secret | Supabase service role key (server-side only) |
+| `JWT_SECRET` | Replit Secret | JWT session signing (legacy) |
 | `ALCHEMY_API_KEY` | `.env.local` | Alchemy RPC key |
 
 ## Design System
@@ -145,18 +124,11 @@ scripts/
 - API: `https://api.dexscreener.com/latest/dex/search?q=<query>` and `/tokens/<address>`
 - Used in: Market page token selector (search by name, symbol, or contract address across all chains)
 - Results show: symbol, name, chain badge, price, 24h%, volume, liquidity, FDV
-- When DexToken selected: key stats show DexScreener data; buy/sell replaced with "View on DexScreener"
 
 ## $NAKA Token Tiers
 - **Free**: Context feed, DNA analysis (limited), basic market data
 - **Holder**: Full DNA analysis, portfolio tracking, whale alerts, priority AI
 - **Pro**: Everything + advanced intelligence, API access, custom alerts
-
-## Portfolio (4 Tabs)
-- **Balance**: Holdings list + allocation bar
-- **History**: Portfolio value chart (time-ranged) + historical snapshots
-- **Unrealized PnL**: Per-token unrealized P&L with mini sparkbars
-- **Profit & Loss**: Realized P&L breakdown + win rate + range selector
 
 ## Run
 ```bash
@@ -169,6 +141,6 @@ npm run dev   # starts on port 5000
 - Token Scanner: **CONTRACT addresses only** — shows clear rejection + redirect for wallets
 - **NO** tokenomics/token sale data, prediction markets, forex/stocks
 - **NO** cyan #00E5FF — use #0A1EFF neon-blue only
-- No Solana-specific features in our code (Privy SDK has Solana but we disable it)
+- **Auth is fully client-side** — Supabase JS client runs in the browser, NOT via API routes (Replit server can't reach external APIs)
 - `reactStrictMode: false` in next.config.js
 - `eslint.ignoreDuringBuilds: true` in next.config.js
