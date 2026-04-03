@@ -3,33 +3,12 @@ import type { NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/api/auth'];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-let supabaseDomain = '';
-try {
-  if (supabaseUrl && supabaseUrl.startsWith('http')) {
-    supabaseDomain = new URL(supabaseUrl).hostname;
-  }
-} catch {}
-
-const securityHeaders = {
-  'X-Frame-Options': 'DENY',
+const securityHeaders: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-  'Content-Security-Policy': [
-    "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://s.tradingview.com https://s3.tradingview.com https://apis.google.com https://www.gstatic.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://s.tradingview.com https://s3.tradingview.com",
-    "img-src 'self' data: blob: https: http:",
-    "font-src 'self' https://fonts.gstatic.com https://s.tradingview.com",
-    `connect-src 'self' https://${supabaseDomain} https://api.coingecko.com https://*.tradingview.com https://*.ethereum.org https://*.infura.io https://*.alchemy.com https://api.dexscreener.com https://io.dexscreener.com wss://*.tradingview.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://appleid.apple.com`,
-    "frame-src 'self' https://s.tradingview.com https://s3.tradingview.com https://stringent-mvp.firebaseapp.com https://accounts.google.com https://appleid.apple.com",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join('; '),
 };
 
 function applyHeaders(response: NextResponse) {

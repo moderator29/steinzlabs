@@ -114,23 +114,30 @@ export function useAuthProvider(): AuthContextType {
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
-        if (!mounted) return;
-        if (session?.user) {
-          setSupabaseUser(session.user);
-          await fetchProfile(session.user);
-        } else {
-          setUser(null);
-          setSupabaseUser(null);
+    let subscription: any = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event: string, session: any) => {
+          if (!mounted) return;
+          if (session?.user) {
+            setSupabaseUser(session.user);
+            await fetchProfile(session.user);
+          } else {
+            setUser(null);
+            setSupabaseUser(null);
+          }
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    );
+      );
+      subscription = data?.subscription;
+    } catch (err) {
+      console.error('Auth listener error:', err);
+      if (mounted) setLoading(false);
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      try { subscription?.unsubscribe(); } catch {}
     };
   }, [fetchProfile]);
 

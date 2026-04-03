@@ -1,8 +1,10 @@
 'use client';
 
-import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, Users, PieChart } from 'lucide-react';
+import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, Users, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+type TabMode = 'wallet' | 'contract';
 
 interface WalletData {
   chain: string;
@@ -38,6 +40,33 @@ interface AiAnalysis {
   marketOutlook: string;
 }
 
+interface ContractResult {
+  contract: string;
+  chainId: string;
+  name: string;
+  symbol: string;
+  totalSupply: string;
+  holderCount: number;
+  creatorAddress: string;
+  ownerAddress: string;
+  trustScore: number;
+  safetyLevel: string;
+  safetyColor: string;
+  buyTax: string;
+  sellTax: string;
+  isHoneypot: boolean;
+  isOpenSource: boolean;
+  isMintable: boolean;
+  isProxy: boolean;
+  hasHiddenOwner: boolean;
+  canTakeBackOwnership: boolean;
+  ownerCanChangeBalance: boolean;
+  lpHolders: any[];
+  lpTotalSupply: string;
+  checks: { label: string; status: string }[];
+  timestamp: string;
+}
+
 const CHAIN_OPTIONS = [
   { key: 'auto', label: 'Auto Detect', color: '#9CA3AF' },
   { key: 'ethereum', label: 'Ethereum', color: '#627EEA' },
@@ -45,6 +74,16 @@ const CHAIN_OPTIONS = [
   { key: 'polygon', label: 'Polygon', color: '#8247E5' },
   { key: 'avalanche', label: 'Avalanche', color: '#E84142' },
   { key: 'solana', label: 'Solana', color: '#14F195' },
+];
+
+const CONTRACT_CHAINS = [
+  { id: '1', label: 'Ethereum', key: 'ethereum', color: '#627EEA' },
+  { id: '56', label: 'BSC', key: 'bsc', color: '#F0B90B' },
+  { id: '137', label: 'Polygon', key: 'polygon', color: '#8247E5' },
+  { id: 'solana', label: 'Solana', key: 'solana', color: '#14F195' },
+  { id: '8453', label: 'Base', key: 'base', color: '#0052FF' },
+  { id: '43114', label: 'Avalanche', key: 'avalanche', color: '#E84142' },
+  { id: '42161', label: 'Arbitrum', key: 'arbitrum', color: '#28A0F0' },
 ];
 
 function detectAddressType(address: string): 'EVM' | 'SOL' | 'UNKNOWN' {
@@ -86,6 +125,7 @@ function getExplorerUrl(address: string, chain: string, explorerUrl?: string): s
 
 export default function WalletIntelligencePage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabMode>('wallet');
   const [address, setAddress] = useState('');
   const [selectedChain, setSelectedChain] = useState('auto');
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -94,7 +134,14 @@ export default function WalletIntelligencePage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSearch = async () => {
+  const [contractInput, setContractInput] = useState('');
+  const [contractChain, setContractChain] = useState('ethereum');
+  const [contractResult, setContractResult] = useState<ContractResult | null>(null);
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractError, setContractError] = useState('');
+  const [copied, setCopied] = useState('');
+
+  const handleWalletSearch = async () => {
     const trimmed = address.trim();
     if (!trimmed) return;
 
@@ -106,7 +153,7 @@ export default function WalletIntelligencePage() {
 
     const isLikelyContract = await checkIfContract(trimmed, addrType);
     if (isLikelyContract) {
-      setError('This looks like a token contract address, not a wallet. Use Security Center to scan contracts. Wallet Intelligence is for wallet addresses only.');
+      setError('This looks like a token contract address, not a wallet. Switch to the Contract tab to scan contracts.');
       return;
     }
 
@@ -165,6 +212,43 @@ export default function WalletIntelligencePage() {
     }
   };
 
+  const handleContractScan = async () => {
+    const ca = contractInput.trim();
+    if (!ca) return;
+
+    setContractLoading(true);
+    setContractError('');
+    setContractResult(null);
+
+    try {
+      const chainObj = CONTRACT_CHAINS.find(c => c.key === contractChain);
+      const params = new URLSearchParams({ address: ca, chain: chainObj?.id || '1' });
+      const res = await fetch(`/api/security-scan?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.suggestion) {
+          setContractError(`${data.error}. ${data.message}`);
+        } else {
+          setContractError(data.error || 'Failed to scan contract');
+        }
+        setContractLoading(false);
+        return;
+      }
+
+      setContractResult(data);
+    } catch (err: any) {
+      setContractError(err.message || 'Network error');
+    }
+    setContractLoading(false);
+  };
+
+  const copyAddr = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(''), 1500);
+  };
+
   const scoreColor = (score: number) => {
     if (score >= 70) return '#10B981';
     if (score >= 40) return '#F59E0B';
@@ -193,242 +277,451 @@ export default function WalletIntelligencePage() {
       </div>
 
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
-        <div className="glass rounded-xl p-4 border border-white/10">
-          <h2 className="font-bold text-sm mb-2">Analyze Any Wallet</h2>
-          <p className="text-[10px] text-gray-500 mb-3">Get AI-powered insights on any wallet address across chains</p>
-
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {CHAIN_OPTIONS.map((chain) => (
-              <button
-                key={chain.key}
-                onClick={() => setSelectedChain(chain.key)}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border"
-                style={{
-                  borderColor: selectedChain === chain.key ? chain.color : 'rgba(255,255,255,0.1)',
-                  backgroundColor: selectedChain === chain.key ? `${chain.color}20` : 'transparent',
-                  color: selectedChain === chain.key ? chain.color : '#9CA3AF',
-                }}
-              >
-                {chain.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter wallet address (0x... or SOL)"
-              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-              Scan
-            </button>
-          </div>
+        <div className="flex rounded-xl bg-[#111827] border border-white/[0.06] p-1">
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'wallet'
+                ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            Wallet
+          </button>
+          <button
+            onClick={() => setActiveTab('contract')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'contract'
+                ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <FileCode className="w-3.5 h-3.5" />
+            Contract
+          </button>
         </div>
 
-        {error && (
-          <div className="glass rounded-xl p-4 border border-red-500/30 bg-red-500/5">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400" />
-              <span className="text-xs text-red-400">{error}</span>
-            </div>
-          </div>
-        )}
-
-        {loading && (
-          <div className="text-center py-12">
-            <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
-            <h3 className="text-sm font-semibold text-gray-400">Scanning wallet...</h3>
-            <p className="text-xs text-gray-600 mt-1">Fetching on-chain data</p>
-          </div>
-        )}
-
-        {walletData && !loading && (
+        {activeTab === 'wallet' && (
           <>
             <div className="glass rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-[#0A1EFF]" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-mono font-semibold">{walletData.address.slice(0, 8)}...{walletData.address.slice(-6)}</div>
-                    <div className="text-[10px] text-gray-500">{walletData.chain}</div>
-                  </div>
-                </div>
-                <a
-                  href={getExplorerUrl(walletData.address, walletData.chain, walletData.explorerUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline"
+              <h2 className="font-bold text-sm mb-2">Analyze Any Wallet</h2>
+              <p className="text-[10px] text-gray-500 mb-3">Get AI-powered insights on any wallet address across chains</p>
+
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {CHAIN_OPTIONS.map((chain) => (
+                  <button
+                    key={chain.key}
+                    onClick={() => setSelectedChain(chain.key)}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border"
+                    style={{
+                      borderColor: selectedChain === chain.key ? chain.color : 'rgba(255,255,255,0.1)',
+                      backgroundColor: selectedChain === chain.key ? `${chain.color}20` : 'transparent',
+                      color: selectedChain === chain.key ? chain.color : '#9CA3AF',
+                    }}
+                  >
+                    {chain.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleWalletSearch()}
+                  placeholder="Enter wallet address (0x... or SOL)"
+                  className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+                />
+                <button
+                  onClick={handleWalletSearch}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Explorer <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                {[
-                  { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: '#10B981' },
-                  { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: '#7C3AED' },
-                  { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#0A1EFF' },
-                  { label: 'Chain', value: walletData.chain, icon: Clock, color: '#F59E0B' },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-[#111827] rounded-lg p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <stat.icon className="w-3 h-3" style={{ color: stat.color }} />
-                      <span className="text-[10px] text-gray-500">{stat.label}</span>
-                    </div>
-                    <div className="text-sm font-bold">{stat.value}</div>
-                  </div>
-                ))}
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  Scan
+                </button>
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-white/10">
-              <h3 className="font-bold text-sm mb-3">Top Holdings</h3>
-              <div className="space-y-2">
-                {walletData.holdings.length === 0 ? (
-                  <p className="text-xs text-gray-500 text-center py-4">No holdings found</p>
-                ) : (
-                  walletData.holdings.slice(0, 10).map((h, i) => (
-                    <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
-                          {h.symbol.charAt(0)}
+            {error && (
+              <div className="glass rounded-xl p-4 border border-red-500/30 bg-red-500/5">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span className="text-xs text-red-400">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {loading && (
+              <div className="text-center py-12">
+                <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
+                <h3 className="text-sm font-semibold text-gray-400">Scanning wallet...</h3>
+                <p className="text-xs text-gray-600 mt-1">Fetching on-chain data</p>
+              </div>
+            )}
+
+            {walletData && !loading && (
+              <>
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-[#0A1EFF]" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-mono font-semibold">{walletData.address.slice(0, 8)}...{walletData.address.slice(-6)}</div>
+                        <div className="text-[10px] text-gray-500">{walletData.chain}</div>
+                      </div>
+                    </div>
+                    <a
+                      href={getExplorerUrl(walletData.address, walletData.chain, walletData.explorerUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline"
+                    >
+                      Explorer <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    {[
+                      { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: '#10B981' },
+                      { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: '#7C3AED' },
+                      { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#0A1EFF' },
+                      { label: 'Chain', value: walletData.chain, icon: Clock, color: '#F59E0B' },
+                    ].map((stat) => (
+                      <div key={stat.label} className="bg-[#111827] rounded-lg p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <stat.icon className="w-3 h-3" style={{ color: stat.color }} />
+                          <span className="text-[10px] text-gray-500">{stat.label}</span>
                         </div>
+                        <div className="text-sm font-bold">{stat.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <h3 className="font-bold text-sm mb-3">Top Holdings</h3>
+                  <div className="space-y-2">
+                    {walletData.holdings.length === 0 ? (
+                      <p className="text-xs text-gray-500 text-center py-4">No holdings found</p>
+                    ) : (
+                      walletData.holdings.slice(0, 10).map((h, i) => (
+                        <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                              {h.symbol.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold">{h.symbol}</div>
+                              <div className="text-[10px] text-gray-500">{h.name}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-semibold">
+                              {h.valueUsd ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : h.balance}
+                            </div>
+                            <div className="text-[10px] text-gray-500">{h.balance} {h.symbol}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
+                      <PieChart className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                    </div>
+                    <h3 className="font-bold text-sm">Portfolio Breakdown</h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { label: 'Token Types', value: `${walletData.holdings.length}`, color: '#0A1EFF' },
+                      { label: 'Largest Hold', value: walletData.holdings[0]?.symbol || '—', color: '#7C3AED' },
+                      { label: 'Diversity', value: walletData.holdings.length > 5 ? 'HIGH' : walletData.holdings.length > 2 ? 'MODERATE' : 'LOW', color: walletData.holdings.length > 5 ? '#10B981' : walletData.holdings.length > 2 ? '#F59E0B' : '#EF4444' },
+                    ].map((stat) => (
+                      <div key={stat.label} className="bg-[#111827] rounded-lg p-2.5 text-center">
+                        <div className="text-[9px] text-gray-500 mb-0.5">{stat.label}</div>
+                        <div className="text-xs font-bold" style={{ color: stat.color }}>{stat.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-1.5">
+                    {walletData.holdings.slice(0, 5).map((h, i) => {
+                      const pct = Math.max(5, Math.round(100 / (i + 1.5)));
+                      return (
+                        <div key={`portfolio-${i}`} className="flex items-center gap-2">
+                          <span className="text-[9px] text-gray-500 w-4 text-right">{i + 1}</span>
+                          <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
+                            <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: i === 0 ? '#0A1EFF' : i === 1 ? '#7C3AED' : i === 2 ? '#10B981' : '#F59E0B' }} />
+                          </div>
+                          <span className="text-[9px] font-semibold text-gray-400 w-12 text-right">{h.symbol}</span>
+                          <span className="text-[9px] font-mono text-gray-500 w-8 text-right">{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <h3 className="font-bold text-sm mb-3">AI Wallet Assessment</h3>
+                  {aiLoading ? (
+                    <div className="flex items-center gap-3 py-4">
+                      <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
+                      <span className="text-xs text-gray-400">Running AI analysis...</span>
+                    </div>
+                  ) : aiAnalysis ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="text-2xl font-bold" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
+                        <div className="flex-1">
+                          <div className="w-full bg-white/10 rounded-full h-2">
+                            <div className="h-2 rounded-full" style={{ width: `${aiAnalysis.overallScore}%`, backgroundColor: scoreColor(aiAnalysis.overallScore) }}></div>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${scoreColor(aiAnalysis.overallScore)}20`, color: scoreColor(aiAnalysis.overallScore) }}>
+                          {scoreLabel(aiAnalysis.overallScore)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="bg-[#111827] rounded-lg p-2">
+                          <span className="text-[10px] text-gray-500">Style</span>
+                          <div className="text-xs font-semibold">{aiAnalysis.tradingStyle}</div>
+                        </div>
+                        <div className="bg-[#111827] rounded-lg p-2">
+                          <span className="text-[10px] text-gray-500">Risk</span>
+                          <div className="text-xs font-semibold">{aiAnalysis.riskProfile}</div>
+                        </div>
+                        <div className="bg-[#111827] rounded-lg p-2">
+                          <span className="text-[10px] text-gray-500">Grade</span>
+                          <div className="text-xs font-semibold">{aiAnalysis.portfolioGrade}</div>
+                        </div>
+                        <div className="bg-[#111827] rounded-lg p-2">
+                          <span className="text-[10px] text-gray-500">Outlook</span>
+                          <div className="text-[10px] font-semibold leading-tight">{aiAnalysis.marketOutlook?.slice(0, 60)}...</div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 leading-relaxed mb-2">{aiAnalysis.topInsight}</p>
+                      {aiAnalysis.strengths && aiAnalysis.strengths.length > 0 && (
+                        <div className="mb-2">
+                          <span className="text-[10px] text-[#10B981] font-semibold">Strengths:</span>
+                          <ul className="mt-1 space-y-0.5">
+                            {aiAnalysis.strengths.map((s, i) => (
+                              <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1.5">
+                                <span className="text-[#10B981] mt-px">•</span> {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
                         <div>
-                          <div className="text-xs font-semibold">{h.symbol}</div>
-                          <div className="text-[10px] text-gray-500">{h.name}</div>
+                          <span className="text-[10px] text-[#0A1EFF] font-semibold">Recommendations:</span>
+                          <ul className="mt-1 space-y-0.5">
+                            {aiAnalysis.recommendations.map((r, i) => (
+                              <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1.5">
+                                <span className="text-[#0A1EFF] mt-px">•</span> {r}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-semibold">
-                          {h.valueUsd ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : h.balance}
-                        </div>
-                        <div className="text-[10px] text-gray-500">{h.balance} {h.symbol}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="glass rounded-xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
-                  <PieChart className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                </div>
-                <h3 className="font-bold text-sm">Portfolio Breakdown</h3>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {[
-                  { label: 'Token Types', value: `${walletData.holdings.length}`, color: '#0A1EFF' },
-                  { label: 'Largest Hold', value: walletData.holdings[0]?.symbol || '—', color: '#7C3AED' },
-                  { label: 'Diversity', value: walletData.holdings.length > 5 ? 'HIGH' : walletData.holdings.length > 2 ? 'MODERATE' : 'LOW', color: walletData.holdings.length > 5 ? '#10B981' : walletData.holdings.length > 2 ? '#F59E0B' : '#EF4444' },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-[#111827] rounded-lg p-2.5 text-center">
-                    <div className="text-[9px] text-gray-500 mb-0.5">{stat.label}</div>
-                    <div className="text-xs font-bold" style={{ color: stat.color }}>{stat.value}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                {walletData.holdings.slice(0, 5).map((h, i) => {
-                  const pct = Math.max(5, Math.round(100 / (i + 1.5)));
-                  return (
-                    <div key={`portfolio-${i}`} className="flex items-center gap-2">
-                      <span className="text-[9px] text-gray-500 w-4 text-right">{i + 1}</span>
-                      <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
-                        <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: i === 0 ? '#0A1EFF' : i === 1 ? '#7C3AED' : i === 2 ? '#10B981' : '#F59E0B' }} />
-                      </div>
-                      <span className="text-[9px] font-semibold text-gray-400 w-12 text-right">{h.symbol}</span>
-                      <span className="text-[9px] font-mono text-gray-500 w-8 text-right">{pct}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="glass rounded-xl p-4 border border-white/10">
-              <h3 className="font-bold text-sm mb-3">AI Wallet Assessment</h3>
-              {aiLoading ? (
-                <div className="flex items-center gap-3 py-4">
-                  <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
-                  <span className="text-xs text-gray-400">Running AI analysis...</span>
-                </div>
-              ) : aiAnalysis ? (
-                <>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="text-2xl font-bold" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
-                    <div className="flex-1">
-                      <div className="w-full bg-white/10 rounded-full h-2">
-                        <div className="h-2 rounded-full" style={{ width: `${aiAnalysis.overallScore}%`, backgroundColor: scoreColor(aiAnalysis.overallScore) }}></div>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${scoreColor(aiAnalysis.overallScore)}20`, color: scoreColor(aiAnalysis.overallScore) }}>
-                      {scoreLabel(aiAnalysis.overallScore)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div className="bg-[#111827] rounded-lg p-2">
-                      <span className="text-[10px] text-gray-500">Style</span>
-                      <div className="text-xs font-semibold">{aiAnalysis.tradingStyle}</div>
-                    </div>
-                    <div className="bg-[#111827] rounded-lg p-2">
-                      <span className="text-[10px] text-gray-500">Risk</span>
-                      <div className="text-xs font-semibold">{aiAnalysis.riskProfile}</div>
-                    </div>
-                    <div className="bg-[#111827] rounded-lg p-2">
-                      <span className="text-[10px] text-gray-500">Grade</span>
-                      <div className="text-xs font-semibold">{aiAnalysis.portfolioGrade}</div>
-                    </div>
-                    <div className="bg-[#111827] rounded-lg p-2">
-                      <span className="text-[10px] text-gray-500">Outlook</span>
-                      <div className="text-[10px] font-semibold leading-tight">{aiAnalysis.marketOutlook?.slice(0, 60)}...</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400 leading-relaxed mb-2">{aiAnalysis.topInsight}</p>
-                  {aiAnalysis.strengths && aiAnalysis.strengths.length > 0 && (
-                    <div className="mb-2">
-                      <span className="text-[10px] text-[#10B981] font-semibold">Strengths:</span>
-                      <ul className="mt-1 space-y-0.5">
-                        {aiAnalysis.strengths.map((s, i) => (
-                          <li key={i} className="text-[10px] text-gray-400">• {s}</li>
-                        ))}
-                      </ul>
-                    </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500">AI analysis unavailable. Wallet data is shown above.</p>
                   )}
-                  {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-[#0A1EFF] font-semibold">Recommendations:</span>
-                      <ul className="mt-1 space-y-0.5">
-                        {aiAnalysis.recommendations.map((r, i) => (
-                          <li key={i} className="text-[10px] text-gray-400">• {r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-gray-500">AI analysis unavailable. Wallet data is shown above.</p>
-              )}
-            </div>
+                </div>
+              </>
+            )}
+
+            {!walletData && !loading && !error && (
+              <div className="text-center py-12">
+                <Wallet className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-500">Enter a wallet address to begin</h3>
+                <p className="text-xs text-gray-600 mt-1">Supports Ethereum, Base, Polygon, Avalanche and Solana</p>
+              </div>
+            )}
           </>
         )}
 
-        {!walletData && !loading && !error && (
-          <div className="text-center py-12">
-            <Search className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-gray-500">Enter a wallet address to begin</h3>
-            <p className="text-xs text-gray-600 mt-1">Supports Ethereum, Base, Polygon, Avalanche & Solana</p>
-          </div>
+        {activeTab === 'contract' && (
+          <>
+            <div className="glass rounded-xl p-4 border border-white/10">
+              <h2 className="font-bold text-sm mb-2">Analyze Smart Contract</h2>
+              <p className="text-[10px] text-gray-500 mb-3">Scan any token contract for security risks, honeypot detection, and tax analysis</p>
+
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {CONTRACT_CHAINS.map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => setContractChain(c.key)}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border"
+                    style={{
+                      borderColor: contractChain === c.key ? c.color : 'rgba(255,255,255,0.1)',
+                      backgroundColor: contractChain === c.key ? `${c.color}20` : 'transparent',
+                      color: contractChain === c.key ? c.color : '#9CA3AF',
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={contractInput}
+                  onChange={(e) => setContractInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleContractScan()}
+                  placeholder="Enter contract address (0x...)"
+                  className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+                />
+                <button
+                  onClick={handleContractScan}
+                  disabled={contractLoading}
+                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {contractLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
+                  Scan
+                </button>
+              </div>
+            </div>
+
+            {contractError && (
+              <div className="glass rounded-xl p-4 border border-red-500/30 bg-red-500/5">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span className="text-xs text-red-400">{contractError}</span>
+                </div>
+              </div>
+            )}
+
+            {contractLoading && (
+              <div className="text-center py-12">
+                <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
+                <h3 className="text-sm font-semibold text-gray-400">Scanning contract...</h3>
+                <p className="text-xs text-gray-600 mt-1">Analyzing security risks and tax structure</p>
+              </div>
+            )}
+
+            {contractResult && !contractLoading && (
+              <>
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${contractResult.safetyColor}20` }}>
+                        <Shield className="w-5 h-5" style={{ color: contractResult.safetyColor }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{contractResult.name}</span>
+                          <span className="text-xs text-gray-500">{contractResult.symbol}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-mono text-gray-500">{contractResult.contract.slice(0, 10)}...{contractResult.contract.slice(-8)}</span>
+                          <button onClick={() => copyAddr(contractResult.contract, 'contract')} className="hover:text-[#0A1EFF] transition-colors">
+                            {copied === 'contract' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-500" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold" style={{ color: contractResult.safetyColor }}>{contractResult.trustScore}</div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: `${contractResult.safetyColor}20`, color: contractResult.safetyColor }}>
+                        {contractResult.safetyLevel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+                    <div className="bg-[#111827] rounded-lg p-2.5 text-center">
+                      <div className="text-[9px] text-gray-500">Holders</div>
+                      <div className="text-sm font-bold text-[#0A1EFF]">{contractResult.holderCount.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-[#111827] rounded-lg p-2.5 text-center">
+                      <div className="text-[9px] text-gray-500">Buy Tax</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.buyTax}%</div>
+                    </div>
+                    <div className="bg-[#111827] rounded-lg p-2.5 text-center">
+                      <div className="text-[9px] text-gray-500">Sell Tax</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.sellTax}%</div>
+                    </div>
+                    <div className="bg-[#111827] rounded-lg p-2.5 text-center">
+                      <div className="text-[9px] text-gray-500">Honeypot</div>
+                      <div className="text-sm font-bold" style={{ color: contractResult.isHoneypot ? '#EF4444' : '#10B981' }}>
+                        {contractResult.isHoneypot ? 'YES' : 'NO'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {contractResult.isHoneypot && (
+                    <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span className="text-xs text-red-400 font-medium">HONEYPOT DETECTED - Do not buy this token. You will not be able to sell.</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <h3 className="font-bold text-sm mb-3">Security Checks</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {contractResult.checks.map((check, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-[#111827] rounded-lg p-2.5">
+                        {check.status === 'safe' ? (
+                          <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                        ) : check.status === 'danger' ? (
+                          <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                        )}
+                        <span className="text-xs text-gray-300">{check.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/10">
+                  <h3 className="font-bold text-sm mb-3">Contract Details</h3>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Creator', value: contractResult.creatorAddress },
+                      { label: 'Owner', value: contractResult.ownerAddress },
+                      { label: 'Total Supply', value: contractResult.totalSupply },
+                      { label: 'Open Source', value: contractResult.isOpenSource ? 'Yes' : 'No' },
+                      { label: 'Mintable', value: contractResult.isMintable ? 'Yes' : 'No' },
+                      { label: 'Proxy', value: contractResult.isProxy ? 'Yes' : 'No' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                        <span className="text-[10px] text-gray-500">{item.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono text-gray-300">
+                            {item.value.length > 20 ? `${item.value.slice(0, 10)}...${item.value.slice(-8)}` : item.value}
+                          </span>
+                          {item.value.startsWith('0x') && (
+                            <button onClick={() => copyAddr(item.value, item.label)} className="hover:text-[#0A1EFF] transition-colors">
+                              {copied === item.label ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-600" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!contractResult && !contractLoading && !contractError && (
+              <div className="text-center py-12">
+                <FileCode className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-500">Enter a contract address to scan</h3>
+                <p className="text-xs text-gray-600 mt-1">Honeypot detection, tax analysis, and security checks</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
