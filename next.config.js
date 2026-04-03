@@ -7,7 +7,7 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: false,
   images: {
-    domains: ['hzzhgaxjlycqlopbvqxc.supabase.co'],
+    domains: ['phvewrldcdxupsnakddx.supabase.co'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
