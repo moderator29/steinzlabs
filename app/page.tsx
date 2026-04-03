@@ -6,6 +6,7 @@ import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 import LaunchAppButton from '@/components/LaunchAppButton';
+import LoginModal from '@/components/LoginModal';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
@@ -144,6 +145,7 @@ export default function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
   const stats = [
@@ -190,12 +192,27 @@ export default function LandingPage() {
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             <Link href="/whitepaper" className="hover:text-white transition-colors">Docs</Link>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <ThemeToggle />
-            <LaunchAppButton className="hidden sm:flex items-center gap-2 bg-neon-blue px-4 py-2 rounded-lg text-[13px] font-semibold text-white hover:bg-neon-blue-400 transition-all shadow-neon-sm" iconSize="w-3.5 h-3.5" />
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="hidden sm:block text-[13px] font-medium text-gray-300 hover:text-white px-3 py-2 transition-colors"
+            >
+              Log In
+            </button>
+            <Link href="/signup">
+              <button className="hidden sm:flex items-center bg-white text-black px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-gray-100 transition-all">
+                Sign Up
+              </button>
+            </Link>
+            <button className="sm:hidden p-2 text-gray-400 hover:text-white" onClick={() => setShowLoginModal(true)}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
           </div>
         </div>
       </nav>
+
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
 
       <section className="pt-32 pb-20 px-4 sm:px-6 relative">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
