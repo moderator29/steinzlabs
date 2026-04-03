@@ -7,12 +7,11 @@
     "build": "next build",
     "start": "next start -p 5000",
     "lint": "next lint",
-    "postinstall": "node scripts/patch-privy.js"
+    "postinstall": "echo 'Setup complete'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
     "@hookform/resolvers": "^3.3.4",
-    "@privy-io/react-auth": "^3.16.0",
     "@solana-program/memo": "^0.11.0",
     "@solana/kit": "^3.0.3",
     "@solana/wallet-adapter-base": "^0.9.27",

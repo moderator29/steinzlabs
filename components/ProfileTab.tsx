@@ -195,11 +195,19 @@ export default function ProfileTab() {
     localStorage.setItem('steinz_preferences', JSON.stringify(preferences));
   }, [preferences]);
 
-  const displayName = user?.email
+  const displayName = user?.username
+    ? user.username
+    : user?.first_name
+    ? `${user.first_name} ${user.last_name || ''}`.trim()
+    : user?.email
     ? user.email.split('@')[0]
     : walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : 'Guest User';
+
+  const fullName = user?.first_name
+    ? `${user.first_name} ${user.last_name || ''}`.trim()
+    : displayName;
 
   const isConnected = !!user || !!walletAddress;
 
@@ -210,7 +218,8 @@ export default function ProfileTab() {
   const handleSignOut = async () => {
     await signOut();
     disconnectWallet();
-    window.location.reload();
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    window.location.href = '/login';
   };
 
   const copyAddress = () => {
@@ -570,13 +579,12 @@ export default function ProfileTab() {
 
       <div className="flex flex-col items-center mb-6">
         <div className="w-20 h-20 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
-          {user?.user_metadata?.avatar_url ? (
-            <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-          ) : (
-            <User className="w-10 h-10 text-[#0A1EFF]" />
-          )}
+          <User className="w-10 h-10 text-[#0A1EFF]" />
         </div>
         <h2 className="text-lg font-heading font-bold">{displayName}</h2>
+        {user?.first_name && user?.username && (
+          <p className="text-xs text-gray-500 mt-0.5">{fullName}</p>
+        )}
         <p className="text-xs text-gray-400">
           {isConnected ? 'Free Tier' : 'Sign in to unlock features'}
         </p>
