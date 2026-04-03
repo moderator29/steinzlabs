@@ -4,15 +4,21 @@ const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
 const PLACEHOLDER_KEY = 'placeholder';
 
 let _supabase: SupabaseClient | null = null;
+let _configured = false;
 
 function isConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return !!(url && url.startsWith('https://') && url.includes('.supabase.co'));
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return !!(
+    url && url.startsWith('https://') && url.includes('.supabase.co') && url !== PLACEHOLDER_URL &&
+    key && key !== PLACEHOLDER_KEY && key.length > 20
+  );
 }
 
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
+  _configured = isConfigured();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || PLACEHOLDER_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PLACEHOLDER_KEY;
 
@@ -27,24 +33,33 @@ function getClient(): SupabaseClient {
     },
   });
 
-  if (typeof window !== 'undefined' && isConfigured()) {
-    _supabase.auth.onAuthStateChange((event: string, session: any) => {
-      const isSecure = window.location.protocol === 'https:';
-      const securePart = isSecure ? '; Secure' : '';
-      if (session) {
-        const remember = localStorage.getItem('steinz_remember_me') !== 'false';
-        const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
-        document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${securePart}${maxAge}`;
-        localStorage.setItem('steinz_has_session', 'true');
-      } else {
-        document.cookie = `steinz_session=; path=/; max-age=0${securePart}`;
-        localStorage.removeItem('steinz_remember_me');
-        localStorage.removeItem('steinz_has_session');
-      }
-    });
+  if (typeof window !== 'undefined' && _configured) {
+    try {
+      _supabase.auth.onAuthStateChange((event: string, session: any) => {
+        const isSecure = window.location.protocol === 'https:';
+        const securePart = isSecure ? '; Secure' : '';
+        if (session) {
+          const remember = localStorage.getItem('steinz_remember_me') !== 'false';
+          const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
+          document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${securePart}${maxAge}`;
+          localStorage.setItem('steinz_has_session', 'true');
+        } else {
+          document.cookie = `steinz_session=; path=/; max-age=0${securePart}`;
+          localStorage.removeItem('steinz_remember_me');
+          localStorage.removeItem('steinz_has_session');
+        }
+      });
+    } catch (err) {
+      console.error('Auth state listener setup failed:', err);
+    }
   }
 
   return _supabase;
+}
+
+export function isSupabaseReady(): boolean {
+  getClient();
+  return _configured;
 }
 
 export const supabase = new Proxy({} as SupabaseClient, {

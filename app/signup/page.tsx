@@ -149,8 +149,13 @@ export default function SignUpPage() {
 
       showToast('Welcome to STEINZ LABS!', 'success');
       router.push('/dashboard');
-    } catch {
-      showToast('Something went wrong. Please try again.', 'error');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {
+        showToast('Unable to connect. Check your internet connection.', 'error');
+      } else {
+        showToast('Sign up failed. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }

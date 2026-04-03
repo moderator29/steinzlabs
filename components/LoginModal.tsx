@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, EyeOff, X, Loader2, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase, setRememberMe } from '@/lib/supabase';
+import { supabase, setRememberMe, isSupabaseReady } from '@/lib/supabase';
 import { useToast } from '@/components/Toast';
 import SteinzLogo from '@/components/SteinzLogo';
 import { socialSignIn } from '@/lib/socialAuth';
@@ -63,27 +63,43 @@ export default function LoginModal({ onClose }: LoginModalProps) {
     }
   };
 
+  const submittingRef = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     setRememberMe(true);
+
+    if (!isSupabaseReady()) {
+      showToast('Auth service is not configured.', 'error');
+      setLoading(false);
+      submittingRef.current = false;
+      return;
+    }
+
     try {
       let email = identifier.trim();
       if (!email.includes('@')) {
-        const { data: profile } = await supabase.from('profiles').select('email').eq('username', email.toLowerCase()).maybeSingle();
+        const { data: profile, error: lookupError } = await supabase.from('profiles').select('email').eq('username', email.toLowerCase()).maybeSingle();
+        if (lookupError) {
+          showToast('Unable to connect. Check your internet connection.', 'error');
+          return;
+        }
         if (!profile?.email) {
           showToast('No account found with that username.', 'error');
           setErrors({ identifier: 'Username not found' });
-          setLoading(false);
           return;
         }
         email = profile.email;
       }
       const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.toLowerCase().includes('invalid')) {
+        if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
           setErrors({ password: 'Incorrect email/username or password' });
+        } else if (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('network')) {
+          showToast('Unable to connect. Check your internet connection.', 'error');
         } else {
           showToast(error.message || 'Sign in failed.', 'error');
         }
@@ -98,10 +114,16 @@ export default function LoginModal({ onClose }: LoginModalProps) {
       showToast('Welcome back!', 'success');
       onClose();
       router.push('/dashboard');
-    } catch {
-      showToast('Something went wrong. Try again.', 'error');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {
+        showToast('Unable to connect to auth server.', 'error');
+      } else {
+        showToast('Sign in failed. Try again.', 'error');
+      }
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
