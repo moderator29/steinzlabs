@@ -1,7 +1,8 @@
 'use client';
 
-import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, ShoppingCart, Maximize2, Minimize2 } from 'lucide-react';
+import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, Maximize2, Minimize2 } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from './TradingViewChart';
 
 interface ViewProofEvent {
@@ -39,6 +40,7 @@ interface ViewProofModalProps {
 }
 
 export default function ViewProofModal({ event, onClose }: ViewProofModalProps) {
+  const router = useRouter();
   const [voted, setVoted] = useState<'yes' | 'no' | null>(null);
   const [yesVotes, setYesVotes] = useState(0);
   const [noVotes, setNoVotes] = useState(0);
@@ -368,6 +370,23 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
             <button onClick={onClose} className="flex-1 glass px-4 py-3 rounded-lg text-sm font-semibold hover:bg-white/10 transition-colors">
               Close
             </button>
+            {(event.tokenSymbol || event.pairAddress) && (
+              <button
+                onClick={() => {
+                  onClose();
+                  const params = new URLSearchParams();
+                  if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
+                  if (event.tokenName) params.set('name', event.tokenName);
+                  if (event.pairAddress) params.set('pair', event.pairAddress);
+                  if (event.chain) params.set('chain', event.chain);
+                  router.push(`/dashboard/market?${params.toString()}`);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3 rounded-lg text-sm font-bold transition-colors"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Trade This
+              </button>
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-6 text-[10px] text-gray-500 pb-2">

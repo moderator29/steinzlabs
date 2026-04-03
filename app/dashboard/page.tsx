@@ -1,26 +1,20 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
-import { Home, Users, MessageSquare, Compass, Wallet, User, Menu, X, TrendingUp, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
+import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import SidebarMenu from '@/components/SidebarMenu';
 import PriceTicker from '@/components/PriceTicker';
-import ThemeToggle from '@/components/ThemeToggle';
-import { useAuth } from '@/lib/hooks/useAuth';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
 const Markets = lazy(() => import('@/components/Markets'));
-const Predictions = lazy(() => import('@/components/Predictions'));
-const SocialTab = lazy(() => import('@/components/SocialTab'));
 const VtxAiTab = lazy(() => import('@/components/VtxAiTab'));
-const DiscoverTab = lazy(() => import('@/components/DiscoverTab'));
 const WalletTab = lazy(() => import('@/components/WalletTab'));
 const ProfileTab = lazy(() => import('@/components/ProfileTab'));
 
 function TabSpinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-neon-blue/30 border-t-neon-blue rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
     </div>
   );
 }
@@ -38,7 +32,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
       return (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <p className="text-sm text-gray-400">Something went wrong loading this tab.</p>
-          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 rounded-lg bg-neon-blue/10 text-neon-blue-300 text-xs font-semibold hover:bg-neon-blue/20 transition-colors">
+          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 rounded-lg bg-[#0A1EFF]/10 text-white text-xs font-semibold hover:bg-[#0A1EFF]/20 transition-colors">
             Try Again
           </button>
         </div>
@@ -56,10 +50,10 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
   trend: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="bg-surface border border-white/[0.06] rounded-xl p-4 hover:border-neon-blue/20 transition-all duration-200 group">
+    <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-4 hover:border-[#0A1EFF]/20 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-neon-blue/[0.06] group-hover:bg-neon-blue/10 transition-colors">
-          <Icon className="w-4 h-4 text-neon-blue-400" />
+        <div className="p-2 rounded-lg bg-[#0A1EFF]/[0.06]">
+          <Icon className="w-4 h-4 text-[#0A1EFF]" />
         </div>
         <div className={`flex items-center gap-1 text-xs font-medium ${
           trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
@@ -77,16 +71,14 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
-    { id: 'social', icon: Users, label: 'Social' },
     { id: 'vtxai', icon: MessageSquare, label: 'VTX AI' },
-    { id: 'discover', icon: Compass, label: 'Discover' },
     { id: 'wallet', icon: Wallet, label: 'Wallet' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 
   return (
     <div className="fixed bottom-0 w-full bg-[#0A0E1A]/95 backdrop-blur-xl border-t border-white/[0.06] z-50">
-      <div className="grid grid-cols-6 gap-0 px-1 py-2">
+      <div className="grid grid-cols-4 gap-0 px-2 py-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeNav === item.id;
@@ -94,13 +86,13 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
             <button
               key={item.id}
               onClick={() => onNavChange(item.id)}
-              className={`flex flex-col items-center gap-0.5 py-1 transition-colors ${
-                isActive ? 'text-neon-blue-400' : 'text-gray-500 hover:text-gray-300'
+              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all ${
+                isActive ? 'text-[#0A1EFF]' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <Icon className="w-5 h-5" />
               <span className={`text-[10px] ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
-              {isActive && <div className="w-1 h-1 rounded-full bg-neon-blue mt-0.5" />}
+              {isActive && <div className="w-1 h-1 rounded-full bg-[#0A1EFF] mt-0.5" />}
             </button>
           );
         })}
@@ -113,8 +105,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
 
   const showHomeTabs = activeNav === 'home';
 
@@ -127,11 +117,8 @@ export default function Dashboard() {
     if (activeNav === 'home') {
       if (activeTab === 'context') return <ContextFeed />;
       if (activeTab === 'markets') return <Markets />;
-      if (activeTab === 'predictions') return <Predictions />;
     }
-    if (activeNav === 'social') return <SocialTab />;
     if (activeNav === 'vtxai') return <VtxAiTab />;
-    if (activeNav === 'discover') return <DiscoverTab />;
     if (activeNav === 'wallet') return <WalletTab />;
     if (activeNav === 'profile') return <ProfileTab />;
     return null;
@@ -155,17 +142,6 @@ export default function Dashboard() {
             <img src="/steinz-logo-128.png" alt="NAKA" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
             <span className="text-sm font-heading font-bold tracking-tight">NAKA</span>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            {!authLoading && !user && (
-              <button
-                onClick={() => router.push('/auth')}
-                className="text-xs font-semibold px-3 py-1.5 bg-[#0A1EFF] text-white rounded-lg hover:bg-[#0818CC] transition-colors"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -184,18 +160,21 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <div className="flex gap-1 mb-4 bg-surface border border-white/[0.06] p-1 rounded-xl max-w-md mx-auto">
-              {['context', 'markets', 'predictions'].map((tab) => (
+            <div className="flex gap-1 mb-4 bg-[#111827] border border-white/[0.06] p-1 rounded-xl max-w-xs mx-auto">
+              {[
+                { id: 'context', label: 'Context Feed' },
+                { id: 'markets', label: 'Market' },
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-xs ${
-                    activeTab === tab
-                      ? 'bg-neon-blue text-white shadow-neon-sm'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                    activeTab === tab.id
+                      ? 'bg-[#0A1EFF] text-white'
                       : 'text-gray-500 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  {tab === 'context' ? 'Context Feed' : tab === 'markets' ? 'Markets' : 'Predictions'}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -210,7 +189,6 @@ export default function Dashboard() {
       </div>
 
       <BottomNav activeNav={activeNav} onNavChange={handleNavChange} />
-
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
     </div>
   );
