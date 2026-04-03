@@ -80,7 +80,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         }
         email = profile.email;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.toLowerCase().includes('invalid')) {
           setErrors({ password: 'Incorrect email/username or password' });
@@ -89,7 +89,12 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         }
         return;
       }
-      if (typeof window !== 'undefined') localStorage.setItem('naka_has_session', 'true');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('naka_has_session', 'true');
+        if (signInData?.session?.access_token) {
+          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+        }
+      }
       showToast('Welcome back!', 'success');
       onClose();
       router.push('/dashboard');

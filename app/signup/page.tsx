@@ -150,8 +150,26 @@ export default function SignUpPage() {
         return;
       }
 
-      showToast('Account created! You can now sign in.', 'success');
-      router.push('/login');
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
+      if (signInError) {
+        showToast('Account created! Sign in to continue.', 'success');
+        router.push('/login');
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('naka_has_session', 'true');
+        if (signInData?.session?.access_token) {
+          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+        }
+      }
+
+      showToast('Welcome to Naka Labs!', 'success');
+      router.push('/dashboard');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
     } finally {

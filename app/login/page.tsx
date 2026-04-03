@@ -82,7 +82,7 @@ export default function LoginPage() {
         email = profile.email;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         if (error.message.toLowerCase().includes('invalid')) {
@@ -94,7 +94,14 @@ export default function LoginPage() {
         return;
       }
 
-      if (typeof window !== 'undefined') localStorage.setItem('naka_has_session', 'true');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('naka_has_session', 'true');
+        if (signInData?.session?.access_token) {
+          const remember = rememberMe;
+          const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
+          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}`;
+        }
+      }
       showToast('Welcome back!', 'success');
       const from = searchParams.get('from');
       router.push(from || '/dashboard');
