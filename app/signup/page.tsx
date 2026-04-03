@@ -113,69 +113,58 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        options: {
-          data: { first_name: form.firstName.trim(), last_name: form.lastName.trim(), username: form.username.trim().toLowerCase() },
-        },
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          username: form.username.trim().toLowerCase(),
+        }),
       });
 
-      if (error) {
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
 
-        if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many')) {
+        const errMsg = data.error || 'Signup failed';
+
+        if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many')) {
           if (newAttempts >= MAX_ATTEMPTS) {
             startCooldown();
             showToast(`Too many attempts. Please wait ${COOLDOWN_SECONDS} seconds.`, 'error');
           } else {
             showToast(`Rate limited. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? 's' : ''} left before waiting.`, 'error');
           }
-        } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        } else if (errMsg.includes('already') && (errMsg.includes('registered') || errMsg.includes('exists') || errMsg.includes('email'))) {
           showToast('An account with this email already exists. Try signing in.', 'error');
-        } else if (error.message.includes('invalid') && error.message.includes('email')) {
-          showToast('Please enter a valid email address.', 'error');
-          setErrors(prev => ({ ...prev, email: 'Invalid email' }));
+        } else if (errMsg.includes('Username')) {
+          showToast(errMsg, 'error');
+          setErrors(prev => ({ ...prev, username: 'Username taken' }));
         } else {
-          showToast(error.message || 'Signup failed. Please try again.', 'error');
+          showToast(errMsg, 'error');
         }
         return;
       }
 
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').upsert({
-          id: data.user.id,
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          username: form.username.trim().toLowerCase(),
-          email: form.email.trim().toLowerCase(),
-          created_at: new Date().toISOString(),
-        });
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: form.password,
+      });
 
-        if (profileError) {
-          await supabase.auth.signOut();
-          if (profileError.message?.includes('duplicate') || profileError.code === '23505') {
-            showToast('Username is already taken. Please choose another.', 'error');
-            setErrors(prev => ({ ...prev, username: 'Username taken' }));
-          } else if (profileError.code === '42P01') {
-            showToast('Database not ready. Please contact support.', 'error');
-          } else {
-            showToast('Profile setup failed. Please try again.', 'error');
-          }
-          return;
-        }
-
-        if (typeof window !== 'undefined') localStorage.setItem('naka_has_session', 'true');
-
-        if (data.session) {
-          showToast('Welcome to Naka Labs! 🎉', 'success');
-          router.push('/dashboard');
-        } else {
-          showToast('Check your email to confirm your account, then sign in.', 'success');
-          router.push('/login?confirmed=pending');
-        }
+      if (signInError) {
+        showToast('Account created! Please sign in.', 'success');
+        router.push('/login');
+        return;
       }
+
+      if (typeof window !== 'undefined') localStorage.setItem('naka_has_session', 'true');
+      showToast('Welcome to Naka Labs!', 'success');
+      router.push('/dashboard');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
     } finally {

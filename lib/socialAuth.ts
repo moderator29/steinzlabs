@@ -58,13 +58,26 @@ export async function socialSignIn(provider: SocialProvider): Promise<{ success:
 
     return { success: true };
   } catch (err: any) {
-    if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+    const code = err?.code || '';
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
       return { success: false, error: 'Sign-in cancelled' };
     }
-    if (err?.code === 'auth/popup-blocked') {
+    if (code === 'auth/popup-blocked') {
       return { success: false, error: 'Pop-up was blocked. Please allow pop-ups for this site.' };
     }
-    console.error('Social auth error:', err);
+    if (code === 'auth/unauthorized-domain') {
+      return { success: false, error: 'This domain is not authorized for sign-in. Contact support.' };
+    }
+    if (code === 'auth/operation-not-allowed') {
+      return { success: false, error: `${provider === 'google' ? 'Google' : 'Apple'} sign-in is not enabled yet.` };
+    }
+    if (code === 'auth/network-request-failed') {
+      return { success: false, error: 'Network error. Check your connection and try again.' };
+    }
+    if (code === 'auth/internal-error' || code === 'auth/web-storage-unsupported') {
+      return { success: false, error: 'Browser not supported. Try a different browser or enable cookies.' };
+    }
+    console.error('Social auth error:', code, err?.message);
     return { success: false, error: err?.message || 'Sign-in failed. Please try again.' };
   }
 }
