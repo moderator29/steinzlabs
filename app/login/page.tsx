@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { supabase, setRememberMe } from '@/lib/supabase';
+import { supabase, setRememberMe, isSupabaseReady } from '@/lib/supabase';
 
 function LoginPageInner() {
   const router = useRouter();
@@ -38,21 +38,35 @@ function LoginPageInner() {
     return Object.keys(e).length === 0;
   };
 
+  const submitting = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || submitting.current) return;
 
+    submitting.current = true;
     setLoading(true);
     setRememberMe(rememberMe);
+
+    if (!isSupabaseReady()) {
+      showToast('Auth service is not configured. Please contact support.', 'error');
+      setLoading(false);
+      submitting.current = false;
+      return;
+    }
+
     try {
       let email = identifier.trim();
 
       if (!email.includes('@')) {
-        const { data: profile } = await supabase.from('profiles').select('email').eq('username', email.toLowerCase()).maybeSingle();
+        const { data: profile, error: lookupError } = await supabase.from('profiles').select('email').eq('username', email.toLowerCase()).maybeSingle();
+        if (lookupError) {
+          showToast('Unable to connect. Check your internet connection.', 'error');
+          return;
+        }
         if (!profile?.email) {
           showToast('No account found with that username.', 'error');
           setErrors({ identifier: 'Username not found' });
-          setLoading(false);
           return;
         }
         email = profile.email;
@@ -61,11 +75,13 @@ function LoginPageInner() {
       const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
-        if (error.message.toLowerCase().includes('invalid')) {
+        if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
           showToast('Incorrect email/username or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
+        } else if (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('network')) {
+          showToast('Unable to connect. Check your internet connection.', 'error');
         } else {
-          showToast(error.message || 'Sign in failed. Please try again.', 'error');
+          showToast(error.message || 'Sign in failed.', 'error');
         }
         return;
       }
@@ -81,10 +97,16 @@ function LoginPageInner() {
       showToast('Welcome back!', 'success');
       const from = searchParams.get('from');
       router.push(from || '/dashboard');
-    } catch {
-      showToast('Something went wrong. Please try again.', 'error');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network') || msg.includes('CORS')) {
+        showToast('Unable to connect to auth server. Check your connection.', 'error');
+      } else {
+        showToast('Sign in failed. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
+      submitting.current = false;
     }
   };
 
