@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const FIREBASE_PROJECT_ID = 'stringent-mvp';
 

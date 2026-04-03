@@ -113,25 +113,37 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/signup', {
+      const cleanEmail = form.email.trim().toLowerCase();
+      const cleanUsername = form.username.trim().toLowerCase();
+
+      const usernameRes = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          username: form.username.trim().toLowerCase(),
-        }),
+        body: JSON.stringify({ username: cleanUsername }),
+      });
+      const usernameData = await usernameRes.json();
+      if (usernameData.available === false) {
+        showToast('Username is already taken', 'error');
+        setErrors(prev => ({ ...prev, username: 'Username taken' }));
+        return;
+      }
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: form.password,
+        options: {
+          data: {
+            first_name: form.firstName.trim(),
+            last_name: form.lastName.trim(),
+            username: cleanUsername,
+          },
+        },
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
+      if (signUpError) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-
-        const errMsg = data.error || 'Signup failed';
+        const errMsg = signUpError.message;
 
         if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many')) {
           if (newAttempts >= MAX_ATTEMPTS) {
@@ -140,21 +152,12 @@ export default function SignUpPage() {
           } else {
             showToast(`Rate limited. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? 's' : ''} left before waiting.`, 'error');
           }
-        } else if (errMsg.includes('already') && (errMsg.includes('registered') || errMsg.includes('exists') || errMsg.includes('email'))) {
+        } else if (errMsg.includes('already') || errMsg.includes('exists') || errMsg.includes('User already registered')) {
           showToast('An account with this email already exists. Try signing in.', 'error');
-        } else if (errMsg.includes('Username')) {
-          showToast(errMsg, 'error');
-          setErrors(prev => ({ ...prev, username: 'Username taken' }));
         } else {
           showToast(errMsg, 'error');
         }
         return;
-      }
-
-      if (!data.emailSent) {
-        try {
-          await supabase.auth.resend({ type: 'signup', email: data.email });
-        } catch {}
       }
 
       showToast('Account created! Check your email to confirm, then sign in.', 'success');
