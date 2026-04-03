@@ -43,7 +43,7 @@ export async function socialSignIn(provider: SocialProvider): Promise<{ success:
       return { success: false, error: 'Invalid server response' };
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.sessionKey,
     });
@@ -54,6 +54,9 @@ export async function socialSignIn(provider: SocialProvider): Promise<{ success:
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('naka_has_session', 'true');
+      if (signInData?.session?.access_token) {
+        document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+      }
     }
 
     return { success: true };
