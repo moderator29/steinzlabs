@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
       if (createError || !newUser?.user) {
         if (createError?.message?.includes('already been registered')) {
-          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1 });
+          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
           const found = listData?.users?.find(u => u.email?.toLowerCase() === email);
           if (found) {
             userId = found.id;

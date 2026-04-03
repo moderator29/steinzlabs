@@ -18,13 +18,17 @@ export const supabase = supabaseUrl && supabaseAnonKey
 
 if (typeof window !== 'undefined' && supabase) {
   supabase.auth.onAuthStateChange((event: string, session: any) => {
+    const isSecure = window.location.protocol === 'https:';
+    const securePart = isSecure ? '; Secure' : '';
     if (session) {
       const remember = localStorage.getItem('steinz_remember_me') !== 'false';
       const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
-      document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${maxAge}`;
+      document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${securePart}${maxAge}`;
+      localStorage.setItem('steinz_has_session', 'true');
     } else {
-      document.cookie = 'steinz_session=; path=/; max-age=0';
+      document.cookie = `steinz_session=; path=/; max-age=0${securePart}`;
       localStorage.removeItem('steinz_remember_me');
+      localStorage.removeItem('steinz_has_session');
     }
   });
 }
