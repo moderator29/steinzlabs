@@ -19,11 +19,20 @@ export const supabase = supabaseUrl && supabaseAnonKey
 if (typeof window !== 'undefined' && supabase) {
   supabase.auth.onAuthStateChange((event, session) => {
     if (session) {
-      document.cookie = `naka_session=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      const remember = localStorage.getItem('naka_remember_me') !== 'false';
+      const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
+      document.cookie = `naka_session=${session.access_token}; path=/; SameSite=Lax${maxAge}`;
     } else {
       document.cookie = 'naka_session=; path=/; max-age=0';
+      localStorage.removeItem('naka_remember_me');
     }
   });
+}
+
+export function setRememberMe(value: boolean) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('naka_remember_me', value ? 'true' : 'false');
+  }
 }
 
 export function getSupabaseAdmin() {

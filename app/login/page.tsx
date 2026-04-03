@@ -7,7 +7,7 @@ import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
+import { supabase, setRememberMe } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +39,7 @@ export default function LoginPage() {
     if (!validate()) return;
 
     setLoading(true);
+    setRememberMe(rememberMe);
     try {
       let email = identifier.trim();
 
