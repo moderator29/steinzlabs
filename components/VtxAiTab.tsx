@@ -134,7 +134,7 @@ export default function VtxAiTab() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **STEINZ Pro** for unlimited VTX AI access, web search, and more!' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **Naka Pro** for unlimited VTX AI access, web search, and more!' }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
@@ -276,7 +276,7 @@ export default function VtxAiTab() {
           <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-[11px] text-amber-300 font-semibold">Daily limit reached</p>
-            <p className="text-[10px] text-gray-400">Upgrade to STEINZ Pro for unlimited messages</p>
+            <p className="text-[10px] text-gray-400">Upgrade to Naka Pro for unlimited messages</p>
           </div>
           <button
             onClick={() => router.push('/dashboard/pricing')}

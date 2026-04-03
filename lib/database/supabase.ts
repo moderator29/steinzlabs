@@ -1,11 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '../supabaseAdmin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+function getAdmin() {
+  return getSupabaseAdmin();
+}
 
 export async function saveUser(data: {
   walletAddress: string;
@@ -16,6 +13,7 @@ export async function saveUser(data: {
   entityName?: string;
   blocked?: boolean;
 }) {
+  const supabaseAdmin = getAdmin();
   const { data: user, error } = await supabaseAdmin
     .from('users')
     .upsert(
@@ -39,6 +37,7 @@ export async function saveUser(data: {
 }
 
 export async function getUserByWallet(walletAddress: string) {
+  const supabaseAdmin = getAdmin();
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('*')
@@ -58,6 +57,7 @@ export async function saveScanResult(data: {
   riskScore: number;
   reason?: string;
 }) {
+  const supabaseAdmin = getAdmin();
   const { data: scan, error } = await supabaseAdmin
     .from('scans')
     .insert({
@@ -82,9 +82,10 @@ export async function saveThreat(data: {
   tokenAddress: string;
   tokenSymbol: string;
   threatType: string;
-  threatData: any;
+  threatData: Record<string, unknown>;
   recommendation: string;
 }) {
+  const supabaseAdmin = getAdmin();
   const { data: threat, error } = await supabaseAdmin
     .from('threats')
     .insert({
@@ -104,6 +105,7 @@ export async function saveThreat(data: {
 }
 
 export async function getUserThreats(userId: string) {
+  const supabaseAdmin = getAdmin();
   const { data, error } = await supabaseAdmin
     .from('threats')
     .select('*')
@@ -126,6 +128,7 @@ export async function savePosition(data: {
   autoExitEnabled?: boolean;
   followingEntity?: string;
 }) {
+  const supabaseAdmin = getAdmin();
   const { data: position, error } = await supabaseAdmin
     .from('positions')
     .insert({
@@ -147,6 +150,7 @@ export async function savePosition(data: {
 }
 
 export async function getUserPositions(userId: string) {
+  const supabaseAdmin = getAdmin();
   const { data, error } = await supabaseAdmin
     .from('positions')
     .select('*')
