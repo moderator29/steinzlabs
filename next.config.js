@@ -5,7 +5,7 @@ const nextConfig = {
   },
   compress: true,
   poweredByHeader: false,
-  reactStrictMode: true,
+  reactStrictMode: false,
   images: {
     domains: ['hzzhgaxjlycqlopbvqxc.supabase.co'],
     formats: ['image/webp', 'image/avif'],
