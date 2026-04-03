@@ -107,7 +107,7 @@ function LoginPageInner() {
         <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center justify-between mb-8">
             <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>

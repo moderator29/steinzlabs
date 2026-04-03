@@ -134,7 +134,7 @@ export default function VtxAiTab() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **STEINZ Pro** for unlimited VTX AI access, web search, and more!' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access and web search.' }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
@@ -151,7 +151,7 @@ export default function VtxAiTab() {
         }
       }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to connect to VTX AI. Please try again.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please try again.' }]);
     } finally {
       setLoading(false);
     }
@@ -170,14 +170,14 @@ export default function VtxAiTab() {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <div className="text-sm font-bold">VTX AI</div>
+            <div className="text-sm font-bold">VTX Agent</div>
             {isPro && (
               <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded text-[9px] text-amber-400 font-bold">
                 <Crown className="w-2.5 h-2.5" /> PRO
               </span>
             )}
           </div>
-          <div className="text-[10px] text-gray-400">Powered by Claude &bull; Live market data</div>
+          <div className="text-[10px] text-gray-400">On-chain intelligence engine</div>
         </div>
         <div className="flex items-center gap-2">
           {!isPro && (
@@ -303,7 +303,7 @@ export default function VtxAiTab() {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask VTX AI about markets, signals, risk..."
+              placeholder="Ask VTX Agent about markets, signals, risk..."
               className="bg-transparent focus:outline-none text-xs w-full text-gray-300 placeholder-gray-500 py-3"
               disabled={loading || (rateLimited && !isPro)}
             />

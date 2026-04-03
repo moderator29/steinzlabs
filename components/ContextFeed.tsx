@@ -528,7 +528,7 @@ export default function ContextFeed() {
                   </span>
                 )}
                 {event.tokenLiquidity && event.tokenLiquidity > 0 && (
-                  <span className="flex-shrink-0">Liq: ${event.tokenLiquidity >= 1000 ? `${(event.tokenLiquidity / 1000).toFixed(0)}K` : event.tokenLiquidity.toFixed(0)}</span>
+                  <span className="flex-shrink-0">Liq: ${event.tokenLiquidity.toLocaleString()}</span>
                 )}
               </div>
 
@@ -568,6 +568,18 @@ export default function ContextFeed() {
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
                 </span>
+                {event.tokenSymbol && (
+                  <a
+                    href={`https://app.bubblemaps.io/eth/token/${event.tokenSymbol.toLowerCase()}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-[#0A1EFF] transition-colors"
+                    title="Bubblemaps"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>
+                    Bubbles
+                  </a>
+                )}
                 <button
                   onClick={() => handleShare(event)}
                   className={`flex items-center gap-1.5 transition-all ${

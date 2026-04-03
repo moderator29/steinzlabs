@@ -143,7 +143,7 @@ export default function SecurityPage() {
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-            placeholder="Enter token contract address (0x...)"
+            placeholder="Contract address only (0x...) — no wallet addresses"
             className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
           />
           <button

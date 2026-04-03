@@ -254,7 +254,10 @@ export default function WalletPage() {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
 
+  const MAX_WALLETS = 5;
+
   const handleWalletCreated = (wallet: StoredWallet) => {
+    if (wallets.length >= MAX_WALLETS) return;
     const updated = [...wallets, wallet];
     saveWallets(updated);
     setActiveWallet(wallet);
@@ -580,11 +583,16 @@ export default function WalletPage() {
                 </div>
               )}
 
+              {wallets.length >= MAX_WALLETS && (
+                <div className="mt-3 p-3 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
+                  <p className="text-xs text-[#F59E0B]">Maximum {MAX_WALLETS} wallets reached. Remove a wallet to add a new one.</p>
+                </div>
+              )}
               <div className="mt-4 flex gap-2">
-                <button onClick={() => setView('create')} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all">
+                <button onClick={() => setView('create')} disabled={wallets.length >= MAX_WALLETS} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                   <Plus className="w-3.5 h-3.5" /> New Wallet
                 </button>
-                <button onClick={() => setView('import')} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all">
+                <button onClick={() => setView('import')} disabled={wallets.length >= MAX_WALLETS} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                   <Download className="w-3.5 h-3.5" /> Import
                 </button>
                 <button onClick={() => activeWallet && removeWallet(activeWallet.address)} className="py-3 px-4 bg-[#111827] border border-[#EF4444]/10 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/10 transition-all">
