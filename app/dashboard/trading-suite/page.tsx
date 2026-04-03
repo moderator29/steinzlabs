@@ -352,18 +352,18 @@ export default function TradingSuitePage() {
         </div>
       )}
 
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 max-w-7xl mx-auto">
 
         {activeTab === 'terminal' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               {[
                 {label:'Total MCap',value:fmt(topTokens.reduce((s,t)=>s+(t.marketCap||0),0)),color:'text-[#0A1EFF]',icon:Globe},
                 {label:'24h Volume',value:fmt(topTokens.reduce((s,t)=>s+(t.volume||0),0)),color:'text-[#7C3AED]',icon:BarChart3},
                 {label:'Fear & Greed',value:fearGreed.value,color:'',icon:Activity,customColor:fgC},
                 {label:'Gas (Gwei)',value:`${gasPrice.fast}`,color:'text-[#10B981]',icon:Zap},
               ].map((s,i) => (
-                <div key={i} className="bg-[#0f1320] rounded-xl p-3 border border-[#1a1f2e] text-center">
+                <div key={i} className="bg-black rounded-xl p-3 border border-[#1a1f2e] text-center">
                   <s.icon className={`w-3.5 h-3.5 mx-auto mb-1.5 ${s.color || ''}`} style={s.customColor ? {color:s.customColor} : {}}/>
                   <div className="text-[8px] text-gray-500 uppercase tracking-wider mb-0.5">{s.label}</div>
                   <div className={`text-sm font-bold font-mono ${s.color}`} style={s.customColor ? {color:s.customColor} : {}}>{s.value}</div>

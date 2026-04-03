@@ -9,7 +9,7 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Framework**: Next.js 15.0.8 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS — neon-blue design system (#0A1EFF primary), Inter + JetBrains Mono fonts
-- **Auth**: Supabase Auth (email/password) + Firebase Auth (Google/Apple OAuth via popup) — profiles table for username/name storage
+- **Auth**: Supabase Auth (email/password only — no Google/Apple OAuth) — profiles table for username/name storage
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
 - **Database**: Supabase (auth + profiles + scans + positions + threats + followed_entities + alerts + entity_cache)
@@ -34,16 +34,15 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Session**: Supabase manages JWT tokens in localStorage, cookies set by Supabase client (sb-*-auth-token)
 - **Middleware**: Checks for `steinz_session` or `sb-*-auth-token` cookies to protect /dashboard/** routes
 - **Logout**: `supabase.auth.signOut()` + `firebaseSignOut()` → redirect to /login
-- **Google/Apple OAuth**: Firebase popup auth → API route `/api/auth/social-login` verifies Firebase ID token → Supabase Admin creates/finds user → sets temp password → client signs in with Supabase
-- **Firebase config**: `lib/firebase.ts` (project: `stringent-mvp`), social auth helper: `lib/socialAuth.ts`
 - **Important**: Email confirmation should be DISABLED in Supabase Dashboard for immediate login after signup
+- **No social auth**: Google/Apple OAuth removed — email/password only
 - **Cookie/localStorage keys**: `steinz_session`, `steinz_has_session`, `steinz_remember_me`, `steinz-auth-token`
 
 ## Auth Flow
 - **Nav**: "Log In" (text link → opens LoginModal overlay) + "Sign Up" (white button → /signup page)
-- **LoginModal** (`components/LoginModal.tsx`): Dark card overlay on landing page, email/password + Google OAuth, ESC/click-outside to close
-- `/login` — full-page sign-in (email OR username + password)
-- `/signup` — full-page registration with live password requirements checklist (8–100 chars, lowercase, uppercase, number, special char), rate limiting (5 attempts/60s cooldown), Google OAuth at top
+- **LoginModal** (`components/LoginModal.tsx`): Dark card overlay on landing page, email/password, ESC/click-outside to close
+- `/login` — full-page sign-in (email OR username + password), form renders immediately (no auth spinner blocking)
+- `/signup` — full-page registration with live password requirements checklist (8–100 chars, lowercase, uppercase, number, special char), rate limiting (5 attempts/60s cooldown), full-width name fields
 - `/auth/callback` — handles OAuth redirects, auto-creates profiles for Google users
 - **Google OAuth**: Requires enabling Google provider in Supabase Dashboard (Auth → Providers → Google)
 - **LaunchAppButton**: Routes new users to /signup, returning users (localStorage `steinz_has_session`) to /login
