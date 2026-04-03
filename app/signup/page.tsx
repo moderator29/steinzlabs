@@ -110,7 +110,17 @@ export default function SignUpPage() {
         });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          // Hard fail — clean up the auth user and surface the error
+          await supabase.auth.signOut();
+          if (profileError.message?.includes('duplicate') || profileError.code === '23505') {
+            showToast('Username is already taken. Please choose another.', 'error');
+            setErrors({ username: 'Username taken' });
+          } else if (profileError.message?.includes('relation') || profileError.code === '42P01') {
+            showToast('Database setup required. Please contact support.', 'error');
+          } else {
+            showToast('Failed to create profile. Please try again.', 'error');
+          }
+          return;
         }
 
         if (data.session) {
