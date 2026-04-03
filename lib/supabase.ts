@@ -1,18 +1,20 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
+const PLACEHOLDER_KEY = 'placeholder';
+
 let _supabase: SupabaseClient | null = null;
-let _initialized = false;
 
-function getSupabaseClient(): SupabaseClient | null {
-  if (_initialized) return _supabase;
-  _initialized = true;
+function isConfigured(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return !!(url && url.startsWith('https://') && url.includes('.supabase.co'));
+}
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+function getClient(): SupabaseClient {
+  if (_supabase) return _supabase;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return null;
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || PLACEHOLDER_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PLACEHOLDER_KEY;
 
   _supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -25,7 +27,7 @@ function getSupabaseClient(): SupabaseClient | null {
     },
   });
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && isConfigured()) {
     _supabase.auth.onAuthStateChange((event: string, session: any) => {
       const isSecure = window.location.protocol === 'https:';
       const securePart = isSecure ? '; Secure' : '';
@@ -46,19 +48,13 @@ function getSupabaseClient(): SupabaseClient | null {
 }
 
 export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const client = getSupabaseClient();
-    if (!client) {
-      if (prop === 'auth') {
-        return new Proxy({}, {
-          get() {
-            return () => Promise.resolve({ data: null, error: new Error('Supabase not configured') });
-          }
-        });
-      }
-      return undefined;
+  get(_target, prop, receiver) {
+    const client = getClient();
+    const value = (client as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
     }
-    return (client as any)[prop];
+    return value;
   }
 });
 
