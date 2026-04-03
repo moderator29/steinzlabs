@@ -1,43 +1,43 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
-const PLACEHOLDER_KEY = 'placeholder';
+const FALLBACK_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
 const SESSION_SECONDS = 60 * 60 * 48;
 
 let _supabase: SupabaseClient | null = null;
 let _configured = false;
 
-function sanitizeUrl(raw: string | undefined): string {
-  if (!raw) return '';
-  let url = raw.trim().replace(/^["']+|["']+$/g, '');
-  if (url && !url.startsWith('http')) {
-    url = 'https://' + url;
-  }
-  return url;
-}
-
-function sanitizeKey(raw: string | undefined): string {
+function clean(raw: string | undefined): string {
   if (!raw) return '';
   return raw.trim().replace(/^["']+|["']+$/g, '');
 }
 
+function getUrl(): string {
+  const env = clean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  if (env && env.startsWith('https://') && env.includes('.supabase.co')) return env;
+  return FALLBACK_URL;
+}
+
+function getKey(): string {
+  return clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 function isConfigured(): boolean {
-  const url = sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  return !!(
-    url && url.startsWith('https://') && url.includes('.supabase.co') && url !== PLACEHOLDER_URL &&
-    key && key !== PLACEHOLDER_KEY && key.length > 20
-  );
+  const key = getKey();
+  return !!(key && key.length > 20);
 }
 
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
   _configured = isConfigured();
-  const supabaseUrl = sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL) || PLACEHOLDER_URL;
-  const supabaseAnonKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) || PLACEHOLDER_KEY;
+  const supabaseUrl = getUrl();
+  const supabaseAnonKey = getKey();
 
-  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  if (!supabaseAnonKey) {
+    console.warn('[Supabase] Anon key not available, auth will not work');
+  }
+
+  _supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder', {
     auth: {
       autoRefreshToken: true,
       persistSession: true,

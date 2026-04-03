@@ -129,10 +129,18 @@ export default function SignUpPage() {
         return;
       }
 
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      if (data.needsConfirmation) {
+        showToast('Account created! Check your email to confirm, then sign in.', 'success');
+        router.push('/login');
+        return;
+      }
+
+      const signInPromise = supabase.auth.signInWithPassword({
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000));
+      const { data: signInData, error: signInError } = await Promise.race([signInPromise, timeoutPromise]) as any;
 
       if (signInError) {
         showToast('Account created! Sign in to continue.', 'success');
