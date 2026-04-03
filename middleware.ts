@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/api/auth'];
 
@@ -39,55 +40,56 @@ function applyHeaders(response: NextResponse) {
   return response;
 }
 
-function isValidJWT(token: string): boolean {
+async function verifySupabaseJWT(token: string): Promise<boolean> {
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!jwtSecret || !token) return false;
+
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-
-    if (!payload.sub || typeof payload.sub !== 'string') return false;
-
-    if (payload.exp) {
-      const now = Math.floor(Date.now() / 1000);
-      if (payload.exp < now) return false;
-    }
-
-    if (payload.iss && !payload.iss.includes('supabase')) return false;
-
+    const secret = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jwtVerify(token, secret);
+    // Must have a user subject and not be a service/anon API key
+    if (!payload.sub) return false;
+    if (payload.role === 'anon' || payload.role === 'service_role') return false;
     return true;
   } catch {
     return false;
   }
 }
 
-export function middleware(request: NextRequest) {
+function extractTokenFromCookies(request: NextRequest): string | null {
+  // Check naka_session cookie (set by our client on auth state change)
+  const nakaCookie = request.cookies.get('naka_session')?.value;
+  if (nakaCookie) return nakaCookie;
+
+  // Check Supabase SSR auth token cookies (sb-<ref>-auth-token)
+  const sbCookie = request.cookies.getAll().find(c =>
+    c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+  );
+  if (sbCookie?.value) {
+    try {
+      // Supabase SSR stores as JSON array or object
+      const parsed = JSON.parse(sbCookie.value);
+      if (Array.isArray(parsed) && parsed[0]) return parsed[0];
+      if (parsed?.access_token) return parsed.access_token;
+    } catch {
+      return sbCookie.value;
+    }
+  }
+
+  return null;
+}
+
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const isProtected = path.startsWith('/dashboard');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
   if (isProtected && !isPublic) {
-    const sessionCookie = request.cookies.get('naka_session')?.value;
-    const hasValidSession = sessionCookie ? isValidJWT(sessionCookie) : false;
+    const token = extractTokenFromCookies(request);
+    const isValid = await verifySupabaseJWT(token ?? '');
 
-    let hasSupabaseSession = false;
-    if (!hasValidSession) {
-      const sbCookie = request.cookies.getAll().find(c =>
-        c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
-      );
-      if (sbCookie?.value) {
-        try {
-          const parsed = JSON.parse(sbCookie.value);
-          const token = Array.isArray(parsed) ? parsed[0] : parsed?.access_token;
-          hasSupabaseSession = token ? isValidJWT(token) : false;
-        } catch {
-          hasSupabaseSession = false;
-        }
-      }
-    }
-
-    if (!hasValidSession && !hasSupabaseSession) {
+    if (!isValid) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('from', path);
