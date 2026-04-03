@@ -7,6 +7,7 @@ import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -40,9 +41,12 @@ export default function SignUpPage() {
     const timer = setTimeout(async () => {
       setCheckingUsername(true);
       try {
-        const res = await fetch(`/api/auth/check-username?username=${form.username}`);
-        const data = await res.json();
-        setUsernameAvailable(data.available);
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', form.username.toLowerCase())
+          .maybeSingle();
+        setUsernameAvailable(!data);
       } catch {
         setUsernameAvailable(null);
       } finally {
@@ -74,47 +78,56 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          username: form.username.trim().toLowerCase(),
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        }),
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        options: {
+          data: {
+            first_name: form.firstName.trim(),
+            last_name: form.lastName.trim(),
+            username: form.username.trim().toLowerCase(),
+          },
+        },
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.error || 'Sign up failed', 'error');
+      if (error) {
+        if (error.message.includes('already registered') || error.message.includes('already exists')) {
+          showToast('An account with this email already exists', 'error');
+        } else {
+          showToast(error.message, 'error');
+        }
         return;
       }
 
-      showToast('Account created! Signing you in...', 'success');
-      
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: form.email.trim().toLowerCase(),
-          password: form.password,
-        }),
-      });
-
-      const loginData = await loginRes.json();
-
-      if (loginRes.ok && loginData.session) {
-        const { supabase } = await import('@/lib/supabase');
-        await supabase.auth.setSession({
-          access_token: loginData.session.access_token,
-          refresh_token: loginData.session.refresh_token,
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          username: form.username.trim().toLowerCase(),
+          email: form.email.trim().toLowerCase(),
+          created_at: new Date().toISOString(),
         });
-        router.push('/dashboard');
-      } else {
-        router.push('/login');
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        if (data.session) {
+          showToast('Account created! Welcome to Naka Labs', 'success');
+          router.push('/dashboard');
+        } else {
+          showToast('Account created! Signing you in...', 'success');
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+          });
+          if (!signInError) {
+            router.push('/dashboard');
+          } else {
+            router.push('/login');
+          }
+        }
       }
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
@@ -205,6 +218,7 @@ export default function SignUpPage() {
                       onChange={(e) => updateField('firstName', e.target.value)}
                       className={`w-full bg-white/[0.04] border ${errors.firstName ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                       placeholder="John"
+                      autoComplete="given-name"
                     />
                   </div>
                   {errors.firstName && <p className="text-red-400 text-[11px] mt-1">{errors.firstName}</p>}
@@ -219,6 +233,7 @@ export default function SignUpPage() {
                       onChange={(e) => updateField('lastName', e.target.value)}
                       className={`w-full bg-white/[0.04] border ${errors.lastName ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                       placeholder="Doe"
+                      autoComplete="family-name"
                     />
                   </div>
                   {errors.lastName && <p className="text-red-400 text-[11px] mt-1">{errors.lastName}</p>}
@@ -236,6 +251,7 @@ export default function SignUpPage() {
                     className={`w-full bg-white/[0.04] border ${errors.username ? 'border-red-500/50' : usernameAvailable === true ? 'border-emerald-500/40' : 'border-white/[0.08]'} rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                     placeholder="johndoe"
                     maxLength={20}
+                    autoComplete="username"
                   />
                   {checkingUsername && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
                   {!checkingUsername && usernameAvailable === true && form.username.length >= 3 && <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />}
@@ -254,6 +270,7 @@ export default function SignUpPage() {
                     onChange={(e) => updateField('email', e.target.value)}
                     className={`w-full bg-white/[0.04] border ${errors.email ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                     placeholder="john@example.com"
+                    autoComplete="email"
                   />
                 </div>
                 {errors.email && <p className="text-red-400 text-[11px] mt-1">{errors.email}</p>}
@@ -269,6 +286,7 @@ export default function SignUpPage() {
                     onChange={(e) => updateField('password', e.target.value)}
                     className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                     placeholder="Min. 8 characters"
+                    autoComplete="new-password"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

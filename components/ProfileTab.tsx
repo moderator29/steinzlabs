@@ -218,7 +218,6 @@ export default function ProfileTab() {
   const handleSignOut = async () => {
     await signOut();
     disconnectWallet();
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     window.location.href = '/login';
   };
 

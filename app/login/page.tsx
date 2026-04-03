@@ -7,6 +7,7 @@ import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,36 +40,41 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: identifier.trim(),
-          password,
-        }),
+      let email = identifier.trim();
+
+      const isEmail = email.includes('@');
+      if (!isEmail) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', email.toLowerCase())
+          .maybeSingle();
+
+        if (!profile?.email) {
+          showToast('Invalid username or password', 'error');
+          setErrors({ password: 'Invalid credentials' });
+          setLoading(false);
+          return;
+        }
+        email = profile.email;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.error || 'Login failed', 'error');
-        setErrors({ identifier: ' ', password: 'Invalid credentials' });
+      if (error) {
+        showToast('Invalid email/username or password', 'error');
+        setErrors({ password: 'Invalid credentials' });
         return;
       }
 
-      if (data.session) {
-        const { supabase } = await import('@/lib/supabase');
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
+      showToast('Welcome back!', 'success');
 
-        showToast('Welcome back!', 'success');
-
-        const params = new URLSearchParams(window.location.search);
-        const from = params.get('from');
-        router.push(from || '/dashboard');
-      }
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get('from');
+      router.push(from || '/dashboard');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
     } finally {
@@ -142,6 +148,7 @@ export default function LoginPage() {
                     onChange={(e) => { setIdentifier(e.target.value); setErrors({}); }}
                     className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                     placeholder="john@example.com or johndoe"
+                    autoComplete="username"
                   />
                 </div>
                 {errors.identifier && errors.identifier !== ' ' && <p className="text-red-400 text-[11px] mt-1">{errors.identifier}</p>}
@@ -157,6 +164,7 @@ export default function LoginPage() {
                     onChange={(e) => { setPassword(e.target.value); setErrors({}); }}
                     className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
