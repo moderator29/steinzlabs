@@ -1,7 +1,7 @@
 # Naka Labs
 
 ## Overview
-Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Privy auth (email/Google/Twitter/wallet), security hardening, AI-powered analytics across 12+ blockchains. Includes real-time whale tracking, trading DNA analysis, token security scanning, DexScreener universal search, market/trading page, and full portfolio analytics.
+Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Privy auth (email/Google/Twitter/wallet), full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX AI, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
 **Brand**: Everything is "Naka Labs" / "NAKA" / "Naka AI". $NAKA token drives tier access (Free/Holder/Pro).
 

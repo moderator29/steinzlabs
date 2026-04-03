@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const SESSION_COOKIES = ['naka_session', 'steinz_session'];
+
+const PUBLIC_PATHS = ['/', '/auth', '/api/auth'];
+
 const securityHeaders = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
@@ -22,18 +26,38 @@ const securityHeaders = {
   ].join('; '),
 };
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
-
+function applyHeaders(response: NextResponse, request: NextRequest) {
   Object.entries(securityHeaders).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
-
   return response;
+}
+
+export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  const isProtected = path.startsWith('/dashboard');
+  const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
+
+  if (isProtected && !isPublic) {
+    const hasSession = SESSION_COOKIES.some(name => {
+      const cookie = request.cookies.get(name)?.value;
+      return cookie && cookie.length > 10;
+    });
+
+    if (!hasSession) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth';
+      url.searchParams.set('from', path);
+      return applyHeaders(NextResponse.redirect(url), request);
+    }
+  }
+
+  return applyHeaders(NextResponse.next(), request);
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|steinz-logo-128.png|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)',
   ],
 };

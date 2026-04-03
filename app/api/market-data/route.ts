@@ -36,6 +36,7 @@ export async function GET(request: Request) {
       change7d: coin.price_change_percentage_7d_in_currency,
       volume24h: coin.total_volume,
       marketCap: coin.market_cap,
+      rank: coin.market_cap_rank,
       sparkline: coin.sparkline_in_7d?.price || [],
       image: coin.image
     }));
