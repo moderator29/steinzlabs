@@ -31,9 +31,13 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **Important**: Email confirmation should be DISABLED in Supabase Dashboard for immediate login after signup
 
 ## Auth Flow
-- `/login` — full-page sign-in (split panel: welcome left / login form right)
-- `/signup` — full-page registration (split panel: features left / registration form right)
-- `/auth` — redirects to `/login` (legacy compatibility)
+- **Nav**: "Log In" (text link → opens LoginModal overlay) + "Sign Up" (white button → /signup page) — Arkham-style
+- **LoginModal** (`components/LoginModal.tsx`): Dark card overlay on landing page, email/password + Google OAuth, ESC/click-outside to close
+- `/login` — full-page sign-in (email OR username + password)
+- `/signup` — full-page registration with live password requirements checklist (8–100 chars, lowercase, uppercase, number, special char), rate limiting (5 attempts/60s cooldown), Google OAuth at top
+- `/auth/callback` — handles OAuth redirects, auto-creates profiles for Google users
+- **Google OAuth**: Requires enabling Google provider in Supabase Dashboard (Auth → Providers → Google)
+- **LaunchAppButton**: Routes new users to /signup, returning users (localStorage `naka_has_session`) to /login
 - Dashboard header shows user info when authenticated
 - After login → redirected to `/dashboard`
 - After signup → auto-login → redirected to `/dashboard`
@@ -66,7 +70,10 @@ components/
 │   └── AuthProvider.tsx     # Supabase auth context provider
 ├── Toast.tsx                # Toast notification system + ToastProvider
 ├── NakaLogo.tsx             # Naka Labs logo component (wraps steinz-logo-128.png)
-├── SidebarMenu.tsx          # Left sidebar (240px, neon-blue active states)
+├── SidebarMenu.tsx          # Left sidebar (260px, categories: Overview, Market, Intelligence, Tools, Account)
+├── ThemeToggle.tsx          # Dropdown theme toggle (Dark/Light/Bingo), returns null until mounted
+├── LoginModal.tsx           # Login modal overlay (email/password + Google OAuth)
+├── LaunchAppButton.tsx      # Smart CTA (new users → /signup, returning → /login)
 ├── ProfileTab.tsx           # User profile tab with sign out
 ├── TradingViewChart.tsx     # TradingView candlestick chart widget
 ├── PriceTicker.tsx          # Live price ticker strip
