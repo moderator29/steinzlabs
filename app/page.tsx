@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send } from 'lucide-react';
+import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send } from 'lucide-react';
 import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import ThemeToggle from '@/components/ThemeToggle';
+import LaunchAppButton from '@/components/LaunchAppButton';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
@@ -191,11 +192,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link href="/dashboard">
-              <button className="hidden sm:flex items-center gap-2 bg-neon-blue px-4 py-2 rounded-lg text-[13px] font-semibold text-white hover:bg-neon-blue-400 transition-all shadow-neon-sm">
-                Launch App <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </Link>
+            <LaunchAppButton className="hidden sm:flex items-center gap-2 bg-neon-blue px-4 py-2 rounded-lg text-[13px] font-semibold text-white hover:bg-neon-blue-400 transition-all shadow-neon-sm" iconSize="w-3.5 h-3.5" />
           </div>
         </div>
       </nav>
@@ -223,11 +220,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-20 animate-fade-slide-in" style={{ animationDelay: '0.3s' }}>
-            <Link href="/dashboard" className="flex-1">
-              <button className="w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
-                Launch App <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
+            <LaunchAppButton className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
             <Link href="/whitepaper" className="flex-1">
               <button className="w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all">
                 Read Docs
@@ -488,11 +481,7 @@ export default function LandingPage() {
             Free to start. No credit card required. Connect your wallet or sign in with email to unlock Naka Labs intelligence.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-            <Link href="/dashboard" className="flex-1">
-              <button className="w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
-                Launch App <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
+            <LaunchAppButton className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
             <a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="flex-1">
               <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" /> Join Community
