@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL ? '' : ''}http://localhost:5000/api/engagement?eventId=__totals__`);
-    return NextResponse.json({ views: 0, likes: 0, shares: 0 });
+    const supabase = getSupabaseAdmin();
+
+    const [viewsRes, likesRes, sharesRes] = await Promise.all([
+      supabase.from('engagement').select('*', { count: 'exact', head: true }).eq('action', 'view'),
+      supabase.from('engagement').select('*', { count: 'exact', head: true }).eq('action', 'like'),
+      supabase.from('engagement').select('*', { count: 'exact', head: true }).eq('action', 'share'),
+    ]);
+
+    return NextResponse.json({
+      views: viewsRes.count ?? 0,
+      likes: likesRes.count ?? 0,
+      shares: sharesRes.count ?? 0,
+    });
   } catch {
     return NextResponse.json({ views: 0, likes: 0, shares: 0 });
   }

@@ -7,7 +7,20 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: false,
   images: {
-    domains: ['phvewrldcdxupsnakddx.supabase.co'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'phvewrldcdxupsnakddx.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.coingecko.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dd.dexscreener.com',
+      },
+    ],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
@@ -27,20 +40,16 @@ const nextConfig = {
   },
   headers: async () => [
     {
-      source: '/:path*',
+      source: '/_next/static/:path*',
       headers: [
-        { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
-        { key: 'Pragma', value: 'no-cache' },
-        { key: 'Expires', value: '0' },
-        { key: 'Surrogate-Control', value: 'no-store' },
-        { key: 'CDN-Cache-Control', value: 'no-store' },
-        { key: 'Vary', value: '*' },
+        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
       ],
     },
     {
       source: '/api/auth/:path*',
       headers: [
         { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+        { key: 'Pragma', value: 'no-cache' },
       ],
     },
     {
@@ -50,11 +59,9 @@ const nextConfig = {
       ],
     },
     {
-      source: '/_next/static/:path*',
+      source: '/:path((?!_next|api).*)',
       headers: [
-        { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
-        { key: 'Surrogate-Control', value: 'no-store' },
-        { key: 'CDN-Cache-Control', value: 'no-store' },
+        { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
       ],
     },
   ],

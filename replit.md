@@ -151,7 +151,7 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `components/providers/AuthProvider.tsx` | Wraps app with auth context |
 | `app/login/page.tsx` | Login page (email or username + password) |
 | `app/signup/page.tsx` | Signup page (full registration form) |
-| `next.config.js` | ESLint ignore, image domains, headers, performance opts |
+| `next.config.js` | ESLint ignore, image remotePatterns, production cache headers, performance opts |
 | `tailwind.config.ts` | Neon-blue (#0A1EFF) design tokens, shadows, animations |
 | `app/globals.css` | Glass effects, glow utilities, scrollbar styles |
 
