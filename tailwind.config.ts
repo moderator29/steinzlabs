@@ -69,8 +69,13 @@ const config: Config = {
         "shimmer": "shimmer 3s linear infinite",
         "fade-slide-in": "fadeSlideIn 0.5s ease-out forwards",
         "glow-pulse": "glowPulse 4s ease-in-out infinite",
+        "marquee": "marquee 30s linear infinite",
       },
       keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
         fadeIn: {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
