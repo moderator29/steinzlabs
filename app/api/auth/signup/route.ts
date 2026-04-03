@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
       password,
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: {
         first_name: firstName?.trim() || '',
         last_name: lastName?.trim() || '',
@@ -68,9 +68,27 @@ export async function POST(request: Request) {
       console.error('Profile error:', profileError.message);
     }
 
+    let emailSent = false;
+    try {
+      const { error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: cleanEmail,
+        password,
+      });
+      if (!linkError) {
+        emailSent = true;
+      } else {
+        console.error('Generate link error:', linkError.message);
+      }
+    } catch (e: any) {
+      console.error('Generate link exception:', e.message);
+    }
+
     return NextResponse.json({
       success: true,
       email: cleanEmail,
+      emailSent,
+      requiresConfirmation: true,
     });
 
   } catch (err: any) {

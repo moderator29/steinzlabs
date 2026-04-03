@@ -23,6 +23,9 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showResend, setShowResend] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
 
   useEffect(() => {
     if (!authLoading && user) router.replace('/dashboard');
@@ -86,7 +89,9 @@ export default function LoginPage() {
 
       if (error) {
         if (error.message.toLowerCase().includes('email not confirmed')) {
-          showToast('Please check your email and click the confirmation link first.', 'error');
+          setResendEmail(email);
+          setShowResend(true);
+          showToast('Email not confirmed yet. Check your inbox or resend below.', 'error');
         } else if (error.message.toLowerCase().includes('invalid')) {
           showToast('Incorrect email/username or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
@@ -213,6 +218,36 @@ export default function LoginPage() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
+
+            {showResend && (
+              <div className="mt-4 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+                <p className="text-xs text-yellow-400/90 mb-2">Email not confirmed. Didn&apos;t receive it?</p>
+                <button
+                  type="button"
+                  disabled={resending}
+                  onClick={async () => {
+                    setResending(true);
+                    try {
+                      const { error } = await supabase.auth.resend({ type: 'signup', email: resendEmail });
+                      if (error) {
+                        showToast(error.message || 'Failed to resend. Try again later.', 'error');
+                      } else {
+                        showToast('Confirmation email resent! Check your inbox.', 'success');
+                        setShowResend(false);
+                      }
+                    } catch {
+                      showToast('Failed to resend. Try again later.', 'error');
+                    } finally {
+                      setResending(false);
+                    }
+                  }}
+                  className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {resending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  {resending ? 'Sending...' : 'Resend Confirmation Email'}
+                </button>
+              </div>
+            )}
 
             <p className="text-center text-sm text-gray-500 mt-5">
               Don&apos;t have an account?{' '}
