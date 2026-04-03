@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { supabase } from '@/lib/supabase';
-import { signOut as firebaseSignOut } from 'firebase/auth';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -141,8 +140,8 @@ export function useAuthProvider(): AuthContextType {
         await supabase.auth.signOut();
       }
       try {
-        const { auth } = await import('@/lib/firebase');
-        await firebaseSignOut(auth);
+        const { firebaseSignOut } = await import('@/lib/firebase');
+        await firebaseSignOut();
       } catch {}
       setUser(null);
       setSupabaseUser(null);
