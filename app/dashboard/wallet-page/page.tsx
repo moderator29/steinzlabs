@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X } from 'lucide-react';
 import Link from 'next/link';
+import SteinzLogo from '@/components/SteinzLogo';
 
 interface TokenBalance {
   symbol: string;
@@ -66,7 +67,7 @@ const COIN_LOGOS: Record<string, string> = {
   AAVE: 'https://assets.coingecko.com/coins/images/12645/small/aave-token-round.png',
   SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
   PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
-  BASE: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  BASE: 'https://assets.coingecko.com/coins/images/31164/small/base.png',
 };
 
 const SUPPORTED_CHAINS: ChainInfo[] = [
@@ -291,8 +292,8 @@ export default function WalletPage() {
         {wallets.length === 0 ? (
           <div className="px-4 pt-8">
             <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-3xl flex items-center justify-center shadow-2xl shadow-[#0A1EFF]/20">
-                <Wallet className="w-12 h-12 text-white" />
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center shadow-2xl shadow-[#0A1EFF]/20 border border-[#0A1EFF]/20">
+                <SteinzLogo size={56} />
               </div>
               <h1 className="text-2xl font-heading font-bold mb-2">STEINZ Wallet</h1>
               <p className="text-gray-400 text-sm mb-8">Your gateway to multi-chain crypto</p>
@@ -647,6 +648,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
   const [showPhrase, setShowPhrase] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [phraseCopied, setPhraseCopied] = useState(false);
 
   const createWallet = async () => {
     if (!password || password.length < 6) return;
@@ -668,41 +670,47 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
     onCreated({ address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
   };
 
+  const handleCopyPhrase = () => {
+    navigator.clipboard.writeText(mnemonic);
+    setPhraseCopied(true);
+    setTimeout(() => setPhraseCopied(false), 2500);
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-sm hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+        </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
-            <Plus className="w-5 h-5" />
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center border border-[#0A1EFF]/20">
+            <SteinzLogo size={48} />
           </div>
-          <div>
-            <h1 className="text-xl font-heading font-bold">Create New Wallet</h1>
-            <p className="text-gray-400 text-xs">Your keys, your crypto</p>
-          </div>
+          <h1 className="text-2xl font-heading font-bold mb-1">Create New Wallet</h1>
+          <p className="text-gray-400 text-sm">Your keys, your crypto</p>
         </div>
 
         {step === 'password' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
-              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" />
+              <label className="text-sm text-gray-300 mb-2 block font-medium">Wallet Name</label>
+              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Secure password to encrypt your keys" />
+              <label className="text-sm text-gray-300 mb-2 block font-medium">Set Password (min 6 chars)</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" placeholder="Secure password to encrypt your keys" />
             </div>
             <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
                 <span className="text-xs font-semibold text-[#F59E0B]">Important</span>
               </div>
-              <p className="text-[11px] text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
+              <p className="text-xs text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
             </div>
-            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 transition-colors shadow-lg shadow-[#0A1EFF]/20">
               {creating ? 'Generating...' : 'Generate Wallet'}
             </button>
           </div>
@@ -713,45 +721,54 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
             <div className="p-4 bg-[#EF4444]/5 border border-[#EF4444]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-4 h-4 text-[#EF4444]" />
-                <span className="text-xs font-bold text-[#EF4444]">Write Down Your Recovery Phrase</span>
+                <span className="text-sm font-bold text-[#EF4444]">Write Down Your Recovery Phrase</span>
               </div>
-              <p className="text-[11px] text-gray-400">This is the ONLY way to recover your wallet. Write it down and store it safely.</p>
+              <p className="text-xs text-gray-400">This is the ONLY way to recover your wallet. Write it down and store it safely. Never share it with anyone.</p>
             </div>
 
             <div className="relative">
               <div className={`grid grid-cols-3 gap-2 p-4 bg-[#111827] rounded-xl border border-white/10 ${!showPhrase ? 'blur-md select-none' : ''}`}>
                 {mnemonic.split(' ').map((word, i) => (
-                  <div key={i} className="flex items-center gap-1.5 py-1.5 px-2 bg-white/5 rounded-lg">
-                    <span className="text-[10px] text-gray-500 w-4">{i + 1}.</span>
-                    <span className="text-xs font-mono">{word}</span>
+                  <div key={i} className="flex items-center gap-1.5 py-2 px-2.5 bg-white/5 rounded-lg">
+                    <span className="text-[10px] text-gray-500 w-4 font-mono">{i + 1}.</span>
+                    <span className="text-sm font-mono">{word}</span>
                   </div>
                 ))}
               </div>
               {!showPhrase && (
                 <button onClick={() => setShowPhrase(true)} className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl backdrop-blur-sm">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-[#111827] rounded-xl border border-white/10 shadow-xl">
-                    <Eye className="w-4 h-4" /> <span className="text-xs font-semibold">Tap to Reveal</span>
+                  <div className="flex items-center gap-2 px-5 py-3 bg-[#111827] rounded-xl border border-white/10 shadow-xl">
+                    <Eye className="w-5 h-5" /> <span className="text-sm font-semibold">Tap to Reveal</span>
                   </div>
                 </button>
               )}
             </div>
 
-            <button onClick={() => navigator.clipboard.writeText(mnemonic)} className="w-full py-2.5 border border-white/10 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-white/5">
-              <Copy className="w-3.5 h-3.5" /> Copy Phrase
+            <button
+              onClick={handleCopyPhrase}
+              className={`w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                phraseCopied
+                  ? 'bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981]'
+                  : 'border border-white/10 hover:bg-white/5 text-white'
+              }`}
+            >
+              {phraseCopied ? <><Check className="w-4 h-4" /> Copied to Clipboard!</> : <><Copy className="w-4 h-4" /> Copy Recovery Phrase</>}
             </button>
 
-            <div className="p-3.5 bg-[#111827] rounded-xl border border-white/5">
-              <p className="text-[10px] text-gray-400 mb-1 font-medium">Address:</p>
-              <p className="text-xs font-mono text-[#0A1EFF] break-all">{address}</p>
+            <div className="p-4 bg-[#111827] rounded-xl border border-white/5">
+              <p className="text-xs text-gray-400 mb-1.5 font-medium">Your Wallet Address</p>
+              <p className="text-sm font-mono text-[#0A1EFF] break-all">{address}</p>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded accent-[#0A1EFF]" />
-              <span className="text-xs text-gray-400">I have saved my recovery phrase securely</span>
+            <label className="flex items-center gap-3 cursor-pointer p-3 bg-[#111827] rounded-xl border border-white/5">
+              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${confirmed ? 'bg-[#0A1EFF] border-[#0A1EFF]' : 'border-white/20 bg-transparent'}`}>
+                {confirmed && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
+              <span className="text-sm text-gray-300">I have saved my recovery phrase securely</span>
             </label>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-              <Check className="w-4 h-4" /> Continue to Wallet
+            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0A1EFF]/20">
+              <Check className="w-5 h-5" /> Continue to Wallet
             </button>
           </div>
         )}

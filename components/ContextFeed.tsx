@@ -477,6 +477,17 @@ export default function ContextFeed() {
                       {event.platform}
                     </span>
                   )}
+                  {event.valueUsd >= 50000 && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/20 flex-shrink-0">
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      ARKHAM
+                    </span>
+                  )}
+                  {event.trustScore >= 75 && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 flex-shrink-0">
+                      VERIFIED
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   <button

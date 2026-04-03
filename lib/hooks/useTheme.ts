@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 export type ThemeMode = 'dark' | 'light' | 'bingo';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<ThemeMode>('bingo');
+  const [theme, setThemeState] = useState<ThemeMode>('dark');
 
   useEffect(() => {
     const stored = localStorage.getItem('steinz_theme') as ThemeMode | null;
@@ -13,7 +13,9 @@ export function useTheme() {
       setThemeState(stored);
       document.documentElement.setAttribute('data-theme', stored);
     } else {
-      document.documentElement.setAttribute('data-theme', 'bingo');
+      setThemeState('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('steinz_theme', 'dark');
     }
   }, []);
 

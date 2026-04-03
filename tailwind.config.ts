@@ -70,6 +70,7 @@ const config: Config = {
         "fade-slide-in": "fadeSlideIn 0.5s ease-out forwards",
         "glow-pulse": "glowPulse 4s ease-in-out infinite",
         "marquee": "marquee 15s linear infinite",
+        "marquee-fast": "marquee 8s linear infinite",
         "slide-in-right": "slideInRight 0.3s ease-out",
       },
       keyframes: {
