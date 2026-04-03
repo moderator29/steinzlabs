@@ -27,7 +27,7 @@ export function getSupabaseAdmin() {
     }
   } catch {}
 
-  return createClient(supabaseUrl, serviceKey, {
+  return createClient(supabaseUrl, serviceKey!, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

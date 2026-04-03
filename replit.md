@@ -12,9 +12,11 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **Auth**: Supabase Auth (email/password) + Firebase Auth (Google/Apple OAuth via popup) — profiles table for username/name storage
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
-- **Database**: Supabase (auth + profiles)
+- **Database**: Supabase (auth + profiles + scans + positions + threats + followed_entities + alerts + entity_cache)
 - **Blockchain**: Alchemy SDK, ethers.js
-- **AI**: Anthropic AI SDK
+- **On-chain Intelligence**: Arkham Intelligence API (address intel, entity lookup, token holders, wallet connections, scam detection)
+- **Security**: Shadow Guardian (pre-trade scanning, scam detection, AI risk assessment) + Wallet Reputation scoring
+- **AI**: Anthropic Claude claude-sonnet-4-20250514 (risk analysis, trade intelligence)
 - **Charts**: TradingView Widget (candlestick), Recharts, Lightweight Charts
 - **Visualization**: D3.js (bubblemaps)
 - **UI**: Lucide React, Framer Motion, Sonner toasts, custom Toast/ToastProvider
@@ -45,8 +47,16 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - After signup → auto-login → redirected to `/dashboard`
 
 ## Supabase Database
-- **profiles table**: `id` (UUID, FK to auth.users), `first_name`, `last_name`, `username` (unique), `email`, `created_at`
-- RLS enabled with policies for user profile access and public username lookup
+- **profiles**: `id` (UUID, FK to auth.users), `first_name`, `last_name`, `username` (unique), `email`, `created_at`
+- **users**: `id`, `wallet_address` (unique), `reputation_score`, `reputation_status`, `is_verified_entity`, `entity_id`, `entity_name`, `blocked`, `last_seen`
+- **scans**: `id`, `user_id` (FK users), `token_address`, `scan_result` (JSONB), `allowed`, `blocked`, `risk_score`, `reason`
+- **positions**: `id`, `user_id` (FK users), `token_address`, `token_symbol`, `chain`, `entry_price`, `amount`, `value_usd`, `status`, `auto_exit_enabled`, `following_entity`
+- **threats**: `id`, `user_id` (FK users), `severity`, `token_address`, `token_symbol`, `threat_type`, `threat_data` (JSONB), `recommendation`, `acknowledged`
+- **followed_entities**: `id`, `user_id` (FK users), `entity_id`, `entity_name`, `entity_type`, `notify_trades`, `notify_large_moves`
+- **alerts**: `id`, `user_id` (FK users), `alert_type`, `entity_id`, `token_address`, `condition_type`, `condition_value` (JSONB), `triggered`, `triggered_at`
+- **entity_cache**: `id`, `entity_id` (unique), `entity_data` (JSONB), `portfolio_data` (JSONB), `performance_data` (JSONB), `last_updated`
+- SQL migration: `scripts/create-tables.sql` — run in Supabase SQL Editor
+- RLS enabled on profiles with policies for user access and public username lookup
 
 ## Project Structure
 ```
@@ -84,14 +94,26 @@ components/
 └── ...other components
 
 lib/
-├── supabase.ts              # Supabase client (browser) + getSupabaseAdmin (server)
+├── supabase.ts              # Supabase client (browser)
+├── supabaseAdmin.ts         # Supabase admin client (server-only)
 ├── rateLimit.ts             # In-memory rate limiter
 ├── errorHandler.ts          # API error handler
 ├── validation.ts            # Zod schemas
+├── arkham/
+│   ├── types.ts             # Arkham Intelligence type definitions
+│   └── api.ts               # Arkham API wrapper (address intel, holders, entities, scam detection)
+├── security/
+│   ├── types.ts             # Security type definitions (ScanResult, WalletReputation, PortfolioThreat)
+│   ├── shadowGuardian.ts    # Shadow Guardian pre-trade scanner (scam detection + AI risk analysis)
+│   └── walletReputation.ts  # Wallet reputation scoring system
+├── anthropic/
+│   └── api.ts               # Anthropic Claude API wrapper for AI risk analysis
+├── database/
+│   └── supabase.ts          # Database helper functions (users, scans, positions, threats)
 ├── hooks/
 │   ├── useAuth.ts           # Supabase auth hook (AuthContext, useAuthProvider)
 │   └── useWallet.ts         # Wallet connection hook
-└── supabase.ts              # Supabase client
+└── firebase.ts              # Firebase Auth (Google/Apple OAuth)
 
 middleware.ts                # Security headers + auth cookie check for /dashboard/**
 ```
@@ -117,6 +139,8 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `SUPABASE_SERVICE_KEY` | Replit Secret | Supabase service role key (server-side only) |
 | `JWT_SECRET` | Replit Secret | JWT session signing (legacy) |
 | `ALCHEMY_API_KEY` | `.env.local` | Alchemy RPC key |
+| `ARKHAM_API_KEY` | Replit Secret | Arkham Intelligence API key |
+| `ANTHROPIC_API_KEY` | Replit Secret | Anthropic Claude API key (needed for AI risk analysis) |
 
 ## Design System
 - **Primary accent**: `#0A1EFF` (neon blue) — buttons, active states, borders, glows — NEVER #00E5FF cyan
