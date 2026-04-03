@@ -1,6 +1,57 @@
+# STEINZ LABS - PROMPT #3: DEEP ARKHAM INTELLIGENCE + COMPLETE FRONTEND
+
+You are building the deep intelligence layer (backend) and complete user interface (frontend) for STEINZ Labs. This is the final prompt that brings everything together into a production-ready platform.
+
+## WHAT THIS PROMPT BUILDS
+
+This massive prompt delivers:
+
+**BACKEND (Deep Intelligence):**
+- Complete holder intelligence system (every token gets full Arkham analysis)
+- Bubblemaps data generation (D3.js visualization ready)
+- Pattern matching system (historical trade outcomes)
+- Liquidity depth analysis
+- Similar token analysis
+- Entity performance tracking
+- Whale tracking system
+- Social sentiment integration (Twitter/Telegram)
+- Order book analysis
+- Predictive AI system
+
+**FRONTEND (All 19 Features + Components):**
+- Dashboard (Arkham threat alerts, smart money overview)
+- Portfolio (entity overlap, P&L with intelligence)
+- Market page (rebuilt with Bubblemaps, entity panel, full intelligence)
+- Trading Suite (professional terminal with entity positioning)
+- Swap (Shadow Guardian protection overlay)
+- DNA Analyzer (entity verification, full profiles)
+- Wallet Intelligence (deep entity metrics UI)
+- Wallet Clusters (network graph visualization)
+- On-Chain Trends (entity-driven trend cards)
+- Smart Money (Money Radar dashboard)
+- Network Metrics (entity flow charts)
+- Whale Tracker (entity-attributed movements)
+- Alerts (entity movement alerts UI)
+- Security Center (holder intelligence display)
+- Risk Scanner (Arkham threat monitoring UI)
+- Context Feed (multi-chain signals, icons not emojis)
+- View Proof (full page intelligence report)
+- VTX AI (chat with Arkham context)
+- All UI components (40+ components)
+
+---
+
+## PART 1: DEEP HOLDER INTELLIGENCE SYSTEM
+
+This is the CORE that powers View Proof and every token analysis.
+
+### File: `lib/intelligence/holderAnalysis.ts`
+
+Complete deep intelligence system:
+
+```typescript
 import { arkhamAPI } from '../arkham/api';
 import { ArkhamHolder } from '../arkham/types';
-import { analyzeLiquidity, findSimilarTokens, LiquidityAnalysis, PatternMatchingResults } from './historicalTracking';
 
 export interface HolderIntelligence {
   tokenAddress: string;
@@ -24,29 +75,35 @@ export interface EnrichedHolder {
   balanceUSD: string;
   percentage: number;
   rank: number;
+  // Arkham entity data
   entity: {
     id: string | null;
     name: string;
-    type: string | null;
+    type: string | null;           // "Market Maker", "VC", "Exchange", "Whale"
     verified: boolean;
     logo?: string;
     website?: string;
     twitter?: string;
   };
-  labels: string[];
+  // Labels
+  labels: string[];                // ["scammer", "mixer", "whale", etc.]
   isScammer: boolean;
   isVerified: boolean;
   isExchange: boolean;
+  // Performance (if entity)
   performance?: {
     winRate: number;
     avgHoldTime: number;
     totalTrades: number;
     avgGain: number;
   };
+  // Behavior
   behavior: 'ACCUMULATING' | 'HOLDING' | 'DISTRIBUTING' | 'UNKNOWN';
+  // P&L on this token
   entryPrice?: string;
   currentPnL?: string;
   pnlPercentage?: number;
+  // Network
   connections: {
     mixers: number;
     scammers: number;
@@ -59,7 +116,7 @@ export interface HolderComposition {
     percentage: number;
     count: number;
     totalValue: string;
-    entities: string[];
+    entities: string[];             // Entity names
   };
   exchanges: {
     percentage: number;
@@ -87,19 +144,19 @@ export interface NetworkAnalysis {
     mixerConnections: number;
     scammerConnections: number;
     entityConnections: number;
-    suspiciousScore: number;
+    suspiciousScore: number;        // 0-10
   }[];
-  overallNetworkHealth: number;
+  overallNetworkHealth: number;     // 0-10 (10 = clean)
   redFlags: string[];
 }
 
 export interface SafetyAnalysis {
-  overallScore: number;
+  overallScore: number;             // 0-10 (10 = safest)
   factors: {
     noScammers: boolean;
     strongInstitutional: boolean;
     noMixerConnections: boolean;
-    decentralized: boolean;
+    decentralized: boolean;         // Top 10 < 50%
     verifiedEntities: boolean;
   };
   warnings: string[];
@@ -108,20 +165,22 @@ export interface SafetyAnalysis {
 
 export interface SmartMoneyAnalysis {
   present: boolean;
-  totalSmartMoney: number;
-  totalSmartMoneyValue: string;
-  totalSmartMoneyPercentage: number;
+  totalSmartMoney: number;          // Count
+  totalSmartMoneyValue: string;     // USD
+  totalSmartMoneyPercentage: number; // % of supply
   entities: {
     id: string;
     name: string;
     type: string;
-    position: string;
-    percentage: number;
-    behavior: string;
+    position: string;               // USD value
+    percentage: number;             // % of supply
+    behavior: string;               // "ACCUMULATING" etc.
     winRate: number;
     avgHoldTime: number;
     currentPnL: string;
     pnlPercentage: number;
+    entryDate: string;
+    recentActivity: string;
   }[];
   patterns: {
     vcBacked: boolean;
@@ -155,74 +214,136 @@ export interface BubbleMapData {
     verifiedNodes: number;
     scammerNodes: number;
     largestHolder: string;
-    concentration: number;
+    concentration: number;          // Top 10 holders %
   };
 }
 
 export interface BubbleNode {
-  id: string;
-  label: string;
-  value: number;
-  percentage: number;
+  id: string;                       // Wallet address
+  label: string;                    // Entity name or shortened address
+  value: number;                    // Token balance
+  percentage: number;               // % of supply
   valueUSD: string;
+  // Entity data
   entityId: string | null;
   entityName: string | null;
   entityType: string | null;
   verified: boolean;
-  color: string;
-  size: number;
+  // Visual properties
+  color: string;                    // Green=verified, Red=scammer, Blue=exchange, White=retail
+  size: number;                     // Based on holding size
+  // Behavior indicators
   behavior: 'ACCUMULATING' | 'HOLDING' | 'DISTRIBUTING' | 'UNKNOWN';
+  // Risk
   isScammer: boolean;
-  riskScore: number;
+  riskScore: number;                // 0-10
+  // Performance
   winRate?: number;
   avgHoldTime?: number;
   currentPnL?: string;
 }
 
 export interface BubbleLink {
-  source: string;
-  target: string;
-  value: number;
+  source: string;                   // Wallet address
+  target: string;                   // Wallet address
+  value: number;                    // Transaction volume
   type: 'transfer' | 'swap' | 'suspicious';
 }
 
+export interface LiquidityAnalysis {
+  totalLiquidity: string;           // USD
+  liquidityProviders: {
+    address: string;
+    entity: string | null;
+    amount: string;
+    percentage: number;
+  }[];
+  locked: boolean;
+  lockDuration?: string;            // "180 days"
+  unlockDate?: string;
+  depth: {
+    buy2Percent: string;            // Liquidity for 2% price move
+    sell2Percent: string;
+  };
+}
+
+export interface PatternMatchingResults {
+  similarTokens: SimilarToken[];
+  historicalOutcomes: {
+    avgGain: number;
+    avgHoldTime: number;
+    successRate: number;            // % profitable
+    totalMatches: number;
+  };
+  aiPrediction: {
+    expectedGain: string;           // "+60% to +120%"
+    confidence: number;             // 0-100
+    timeframe: string;              // "5-7 days"
+    reasoning: string;
+  };
+}
+
+export interface SimilarToken {
+  tokenAddress: string;
+  tokenSymbol: string;
+  similarity: number;               // 0-100
+  matchingFactors: string[];        // ["Same entities", "Similar holder profile"]
+  outcome: {
+    gain: number;
+    holdTime: number;
+    date: string;
+  };
+}
+
+// =====================================================================
+// MAIN FUNCTION: Load complete holder intelligence for any token
+// =====================================================================
 export async function loadHolderIntelligence(
   tokenAddress: string,
   chain?: string,
   holderLimit: number = 20
 ): Promise<HolderIntelligence> {
-
-  console.log(`Loading holder intelligence for ${tokenAddress}...`);
+  
+  console.log(`📊 Loading holder intelligence for ${tokenAddress}...`);
 
   try {
+    // STEP 1: Get top holders from Arkham
     const holders = await arkhamAPI.getTokenHolders(tokenAddress, holderLimit, chain);
 
     if (!holders || holders.length === 0) {
       throw new Error('No holder data available');
     }
 
+    // STEP 2: Enrich each holder with deep intelligence
     const enrichedHolders: EnrichedHolder[] = await Promise.all(
       holders.map(async (holder, index) => {
-        return await enrichHolder(holder, index + 1);
+        return await enrichHolder(holder, index + 1, tokenAddress);
       })
     );
 
+    // STEP 3: Analyze composition
     const composition = analyzeComposition(enrichedHolders);
 
-    const network = analyzeNetwork(enrichedHolders);
+    // STEP 4: Network analysis (check connections)
+    const network = await analyzeNetwork(enrichedHolders);
 
+    // STEP 5: Safety analysis
     const safetyAnalysis = analyzeSafety(enrichedHolders, composition, network);
 
+    // STEP 6: Smart money analysis
     const smartMoneyPresence = analyzeSmartMoney(enrichedHolders);
 
+    // STEP 7: Scammer analysis
     const scammerAnalysis = analyzeScammers(enrichedHolders);
 
+    // STEP 8: Generate Bubblemaps data
     const bubbleMapData = generateBubbleMapData(enrichedHolders);
 
-    const [liquidityAnalysis, patternMatching] = await Promise.all([
-      analyzeLiquidity(tokenAddress, chain),
-      findSimilarTokens(tokenAddress),
-    ]);
+    // STEP 9: Liquidity analysis
+    const liquidityAnalysis = await analyzeLiquidity(tokenAddress, chain);
+
+    // STEP 10: Pattern matching
+    const patternMatching = await findSimilarTokens(enrichedHolders, tokenAddress);
 
     return {
       tokenAddress,
@@ -246,23 +367,31 @@ export async function loadHolderIntelligence(
   }
 }
 
+// =====================================================================
+// Enrich single holder with all Arkham data
+// =====================================================================
 async function enrichHolder(
   holder: ArkhamHolder,
   rank: number,
+  tokenAddress: string
 ): Promise<EnrichedHolder> {
-
+  
   try {
+    // Get full address intelligence
     const addressIntel = await arkhamAPI.getAddressIntel(holder.address);
 
-    const isScammer =
+    // Check if scammer
+    const isScammer = 
       addressIntel.labels?.includes('scammer') ||
       addressIntel.labels?.includes('rug_puller') ||
       !!addressIntel.scamHistory;
 
-    const isExchange =
+    // Check if exchange
+    const isExchange = 
       addressIntel.labels?.includes('exchange') ||
       addressIntel.arkhamEntity?.type === 'Exchange';
 
+    // Get performance if entity
     let performance = undefined;
     if (addressIntel.arkhamEntity?.id) {
       try {
@@ -273,13 +402,22 @@ async function enrichHolder(
           totalTrades: entityPerf.totalTrades,
           avgGain: entityPerf.avgGainOnWinners,
         };
-      } catch {
+      } catch (error) {
         // Performance not available
       }
     }
 
+    // Determine behavior (ACCUMULATING/HOLDING/DISTRIBUTING)
+    const behavior = await determineBehavior(holder.address, tokenAddress);
+
+    // Calculate P&L (if we can determine entry price)
+    let entryPrice: string | undefined;
+    let currentPnL: string | undefined;
+    let pnlPercentage: number | undefined;
+
+    // Get network connections
     const connections = await arkhamAPI.getWalletConnections(holder.address, 50);
-    const mixerCount = connections.filter(c =>
+    const mixerCount = connections.filter(c => 
       c.labels?.includes('mixer') || c.labels?.includes('tornado_cash')
     ).length;
     const scammerCount = connections.filter(c =>
@@ -307,7 +445,10 @@ async function enrichHolder(
       isVerified: addressIntel.arkhamEntity?.verified || false,
       isExchange,
       performance,
-      behavior: 'UNKNOWN',
+      behavior,
+      entryPrice,
+      currentPnL,
+      pnlPercentage,
       connections: {
         mixers: mixerCount,
         scammers: scammerCount,
@@ -317,7 +458,8 @@ async function enrichHolder(
 
   } catch (error) {
     console.error(`Failed to enrich holder ${holder.address}:`, error);
-
+    
+    // Return basic data on error
     return {
       address: holder.address,
       balance: holder.balance,
@@ -344,9 +486,12 @@ async function enrichHolder(
   }
 }
 
+// =====================================================================
+// Analyze holder composition (institutions vs retail vs scammers)
+// =====================================================================
 function analyzeComposition(holders: EnrichedHolder[]): HolderComposition {
-  const institutions = holders.filter(h =>
-    h.isVerified &&
+  const institutions = holders.filter(h => 
+    h.isVerified && 
     h.entity.type !== 'Exchange' &&
     !h.isScammer
   );
@@ -355,13 +500,13 @@ function analyzeComposition(holders: EnrichedHolder[]): HolderComposition {
 
   const scammers = holders.filter(h => h.isScammer);
 
-  const retail = holders.filter(h =>
-    !h.isVerified &&
-    !h.isExchange &&
+  const retail = holders.filter(h => 
+    !h.isVerified && 
+    !h.isExchange && 
     !h.isScammer
   );
 
-  const totalPercentage = holders.reduce((sum, h) => sum + h.percentage, 0) || 1;
+  const totalPercentage = holders.reduce((sum, h) => sum + h.percentage, 0);
 
   const calcPercentage = (group: EnrichedHolder[]) => {
     const groupPercentage = group.reduce((sum, h) => sum + h.percentage, 0);
@@ -399,7 +544,10 @@ function analyzeComposition(holders: EnrichedHolder[]): HolderComposition {
   };
 }
 
-function analyzeNetwork(holders: EnrichedHolder[]): NetworkAnalysis {
+// =====================================================================
+// Analyze network connections
+// =====================================================================
+async function analyzeNetwork(holders: EnrichedHolder[]): Promise<NetworkAnalysis> {
   const topHolderConnections = holders.slice(0, 5).map(holder => ({
     address: holder.address,
     entity: holder.entity.name,
@@ -409,9 +557,9 @@ function analyzeNetwork(holders: EnrichedHolder[]): NetworkAnalysis {
     suspiciousScore: calculateSuspiciousScore(holder.connections),
   }));
 
-  const avgSuspiciousScore = topHolderConnections.length > 0
-    ? topHolderConnections.reduce((sum, h) => sum + h.suspiciousScore, 0) / topHolderConnections.length
-    : 0;
+  const avgSuspiciousScore = topHolderConnections.reduce(
+    (sum, h) => sum + h.suspiciousScore, 0
+  ) / topHolderConnections.length;
 
   const overallNetworkHealth = 10 - avgSuspiciousScore;
 
@@ -428,12 +576,15 @@ function analyzeNetwork(holders: EnrichedHolder[]): NetworkAnalysis {
   };
 }
 
+// =====================================================================
+// Analyze safety
+// =====================================================================
 function analyzeSafety(
   holders: EnrichedHolder[],
   composition: HolderComposition,
   network: NetworkAnalysis
 ): SafetyAnalysis {
-
+  
   const noScammers = composition.scammers.count === 0;
   const strongInstitutional = composition.institutions.percentage > 30;
   const noMixerConnections = network.topHolderConnections.every(h => h.mixerConnections < 5);
@@ -477,9 +628,12 @@ function analyzeSafety(
   };
 }
 
+// =====================================================================
+// Analyze smart money presence
+// =====================================================================
 function analyzeSmartMoney(holders: EnrichedHolder[]): SmartMoneyAnalysis {
-  const smartMoneyHolders = holders.filter(h =>
-    h.isVerified &&
+  const smartMoneyHolders = holders.filter(h => 
+    h.isVerified && 
     h.entity.type !== 'Exchange' &&
     !h.isScammer
   );
@@ -501,9 +655,11 @@ function analyzeSmartMoney(holders: EnrichedHolder[]): SmartMoneyAnalysis {
     avgHoldTime: h.performance?.avgHoldTime || 0,
     currentPnL: h.currentPnL || '$0',
     pnlPercentage: h.pnlPercentage || 0,
+    entryDate: 'Unknown', // Would come from historical data
+    recentActivity: 'ACCUMULATING', // Would come from recent transactions
   }));
 
-  const vcBacked = smartMoneyHolders.some(h =>
+  const vcBacked = smartMoneyHolders.some(h => 
     h.entity.type === 'VC' || h.entity.type === 'Venture Capital'
   );
 
@@ -511,8 +667,10 @@ function analyzeSmartMoney(holders: EnrichedHolder[]): SmartMoneyAnalysis {
     h.entity.type === 'Market Maker'
   ).length >= 2;
 
-  const coordinatedAccumulation =
+  const coordinatedAccumulation = 
     smartMoneyHolders.filter(h => h.behavior === 'ACCUMULATING').length >= 2;
+
+  const recentInstitutionalEntry = false; // Would need historical data
 
   return {
     present,
@@ -526,11 +684,14 @@ function analyzeSmartMoney(holders: EnrichedHolder[]): SmartMoneyAnalysis {
       vcBacked,
       multipleMarketMakers,
       coordinatedAccumulation,
-      recentInstitutionalEntry: false,
+      recentInstitutionalEntry,
     },
   };
 }
 
+// =====================================================================
+// Analyze scammers
+// =====================================================================
 function analyzeScammers(holders: EnrichedHolder[]): ScammerAnalysis {
   const scammers = holders.filter(h => h.isScammer);
 
@@ -549,7 +710,7 @@ function analyzeScammers(holders: EnrichedHolder[]): ScammerAnalysis {
     address: h.address,
     name: h.entity.name,
     percentage: h.percentage,
-    rugPulls: 0,
+    rugPulls: 0, // Would come from Arkham scamHistory
     totalStolen: '$0',
     victims: 0,
     lastScam: 'Unknown',
@@ -564,13 +725,18 @@ function analyzeScammers(holders: EnrichedHolder[]): ScammerAnalysis {
   };
 }
 
+// =====================================================================
+// Generate Bubblemaps visualization data
+// =====================================================================
 function generateBubbleMapData(holders: EnrichedHolder[]): BubbleMapData {
   const nodes: BubbleNode[] = holders.map(holder => {
-    let color = '#FFFFFF';
-    if (holder.isScammer) color = '#FF4444';
-    else if (holder.isVerified) color = '#00FF88';
-    else if (holder.isExchange) color = '#4488FF';
+    // Determine color based on type
+    let color = '#FFFFFF'; // White for retail
+    if (holder.isScammer) color = '#FF4444'; // Red for scammers
+    else if (holder.isVerified) color = '#00FF88'; // Green for verified
+    else if (holder.isExchange) color = '#4488FF'; // Blue for exchanges
 
+    // Size based on percentage (logarithmic for better visualization)
     const size = Math.log(holder.percentage + 1) * 20 + 10;
 
     return {
@@ -594,6 +760,8 @@ function generateBubbleMapData(holders: EnrichedHolder[]): BubbleMapData {
     };
   });
 
+  // Generate links (connections between holders)
+  // For now, this is simplified - would need transaction data for real links
   const links: BubbleLink[] = [];
 
   return {
@@ -609,6 +777,56 @@ function generateBubbleMapData(holders: EnrichedHolder[]): BubbleMapData {
   };
 }
 
+// =====================================================================
+// Analyze liquidity
+// =====================================================================
+async function analyzeLiquidity(
+  tokenAddress: string,
+  chain?: string
+): Promise<LiquidityAnalysis> {
+  // This would integrate with DEX APIs to get liquidity data
+  // For now, return placeholder
+  return {
+    totalLiquidity: '$0',
+    liquidityProviders: [],
+    locked: false,
+    depth: {
+      buy2Percent: '$0',
+      sell2Percent: '$0',
+    },
+  };
+}
+
+// =====================================================================
+// Find similar tokens (pattern matching)
+// =====================================================================
+async function findSimilarTokens(
+  holders: EnrichedHolder[],
+  tokenAddress: string
+): Promise<PatternMatchingResults> {
+  // This would query historical data to find tokens with similar holder profiles
+  // For now, return placeholder
+  return {
+    similarTokens: [],
+    historicalOutcomes: {
+      avgGain: 0,
+      avgHoldTime: 0,
+      successRate: 0,
+      totalMatches: 0,
+    },
+    aiPrediction: {
+      expectedGain: 'Unknown',
+      confidence: 0,
+      timeframe: 'Unknown',
+      reasoning: 'Insufficient historical data',
+    },
+  };
+}
+
+// =====================================================================
+// Helper functions
+// =====================================================================
+
 function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
@@ -623,4 +841,13 @@ function calculateSuspiciousScore(connections: {
   score += connections.scammers * 2;
   score -= connections.entities * 0.3;
   return Math.min(Math.max(score, 0), 10);
+}
+
+async function determineBehavior(
+  address: string,
+  tokenAddress: string
+): Promise<'ACCUMULATING' | 'HOLDING' | 'DISTRIBUTING' | 'UNKNOWN'> {
+  // Would need to analyze recent transactions
+  // For now, return UNKNOWN
+  return 'UNKNOWN';
 }

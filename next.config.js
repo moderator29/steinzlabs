@@ -24,20 +24,6 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
-  transpilePackages: ['styled-jsx'],
-  compiler: {
-    styledJsx: true,
-  },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'styled-jsx': require.resolve('styled-jsx'),
-        'styled-jsx/style': require.resolve('styled-jsx/style'),
-      };
-    }
-    return config;
-  },
   headers: async () => [
     {
       source: '/_next/static/:path*',
