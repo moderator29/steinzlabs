@@ -82,9 +82,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          showToast('Check your email and click the confirmation link first.', 'error');
-        } else if (error.message.toLowerCase().includes('invalid')) {
+        if (error.message.toLowerCase().includes('invalid')) {
           setErrors({ password: 'Incorrect email/username or password' });
         } else {
           showToast(error.message || 'Sign in failed.', 'error');
