@@ -2,18 +2,58 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Shield, LogOut, Eye, CheckCircle, XCircle, MessageSquare, AlertTriangle,
-  ChevronRight, Clock, Users, FileText, Code, Globe, Activity, Lock,
-  ChevronDown, BarChart3, TrendingUp, TrendingDown, Zap, RotateCcw,
-  DollarSign, Layers, Target, Bell, Settings, Database, Wifi,
-  ArrowUpRight, ArrowDownRight, Coins, PieChart, Send, Trash2, Ban,
-  UserCheck, Menu, X, Home, Briefcase, ShieldCheck, Radio, Search,
-  ExternalLink, Copy, ChevronLeft, Server, Cpu, HardDrive, ToggleLeft,
-  ToggleRight, Hash, Filter, Download, Upload, Star, Flag, Bookmark,
-  Gamepad2, Trophy
+  Shield, LogOut, Eye, CheckCircle, XCircle, AlertTriangle, Clock,
+  Users, Activity, Lock, BarChart3, TrendingUp, TrendingDown, Zap,
+  RotateCcw, DollarSign, Layers, Bell, Settings, Database, Wifi,
+  ArrowUpRight, ArrowDownRight, Send, Trash2, Ban, UserCheck, Menu,
+  X, Home, ShieldCheck, Search, ExternalLink, Server, Briefcase,
+  Globe, ChevronRight, Heart, Share2, LayoutDashboard, UserPlus,
+  ShieldAlert, Radio, RefreshCw
 } from 'lucide-react';
 
 const ADMIN_PASSWORD = '195656';
+const REFRESH_INTERVAL = 30000;
+
+interface AdminStats {
+  users: {
+    total: number;
+    profiles: number;
+    verified: number;
+    todaySignups: number;
+    weekSignups: number;
+    recentUsers: Array<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      username: string;
+      email: string;
+      created_at: string;
+    }>;
+  };
+  platform: {
+    totalScans: number;
+    totalPositions: number;
+    activePositions: number;
+    totalThreats: number;
+    totalAlerts: number;
+    followedEntities: number;
+  };
+  engagement: {
+    views: number;
+    likes: number;
+    shares: number;
+  };
+  timestamp: string;
+}
+
+interface UserData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
+  created_at: string;
+}
 
 interface TokenData {
   id: string;
@@ -26,75 +66,6 @@ interface TokenData {
   image: string;
 }
 
-interface PredictionData {
-  id: string;
-  title: string;
-  token: string;
-  type: string;
-  yesPool: number;
-  noPool: number;
-  totalPool: number;
-  participants: number;
-  endTime: string;
-  resolved: boolean;
-  outcome?: string;
-}
-
-interface BuilderData {
-  id: string;
-  name: string;
-  role: string;
-  skills: string;
-  wallet: string;
-  status: string;
-  appliedAt: string;
-  verified: boolean;
-  endorsements: number;
-}
-
-interface ProjectData {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  chain: string;
-  fundingGoal: number;
-  currentFunding: number;
-  status: string;
-  submittedAt: string;
-  builderId: string;
-  milestones: { name: string; amount: number; status: string }[];
-}
-
-interface WhaleEvent {
-  type: string;
-  token: string;
-  amount: string;
-  usdValue: string;
-  chain: string;
-  timestamp: string;
-  address?: string;
-}
-
-interface GameScoreData {
-  id: string;
-  username: string;
-  score: number;
-  coins: number;
-  distance: number;
-  timestamp: number;
-  gamesPlayed: number;
-  bestStreak: number;
-}
-
-interface GameStats {
-  leaderboard: GameScoreData[];
-  totalPlayers: number;
-  totalGamesPlayed: number;
-  highestScore: number;
-  topPlayer: string;
-}
-
 interface ApiHealth {
   name: string;
   status: 'online' | 'degraded' | 'offline';
@@ -103,20 +74,59 @@ interface ApiHealth {
 }
 
 const ADMIN_SECTIONS = [
-  { id: 'overview', label: 'Overview', icon: Home },
-  { id: 'market', label: 'Market Data', icon: TrendingUp },
-  { id: 'trading', label: 'Trading Suite', icon: Zap },
-  { id: 'predictions', label: 'Predictions', icon: Target },
-  { id: 'builders', label: 'Builder Network', icon: Users },
-  { id: 'funding', label: 'Funding Portal', icon: Briefcase },
-  { id: 'whales', label: 'Whale Activity', icon: Activity },
-  { id: 'security', label: 'Security', icon: ShieldCheck },
-  { id: 'api-health', label: 'API Health', icon: Server },
-  { id: 'game-stats', label: 'Game Stats', icon: Gamepad2 },
-  { id: 'token-listings', label: 'Token Listings', icon: Briefcase },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard, description: 'Platform overview & real-time stats' },
+  { id: 'users', label: 'User Management', icon: Users, description: 'Manage platform users' },
+  { id: 'market', label: 'Market Data', icon: TrendingUp, description: 'Live market intelligence' },
+  { id: 'api-health', label: 'API Health', icon: Server, description: 'Service status monitoring' },
+  { id: 'token-listings', label: 'Token Listings', icon: Briefcase, description: 'Listing submissions' },
+  { id: 'security', label: 'Security', icon: ShieldCheck, description: 'Platform security overview' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Broadcast messages' },
+  { id: 'settings', label: 'Settings', icon: Settings, description: 'Configuration & data' },
 ];
+
+function MetricCard({ icon: Icon, label, value, sub, color, loading, trend }: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  loading: boolean;
+  trend?: 'up' | 'down' | 'neutral';
+}) {
+  return (
+    <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 group">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2 rounded-lg bg-gradient-to-br ${color === 'blue' ? 'from-[#0A1EFF]/10 to-[#0A1EFF]/5' : color === 'green' ? 'from-[#10B981]/10 to-[#10B981]/5' : color === 'purple' ? 'from-[#7C3AED]/10 to-[#7C3AED]/5' : color === 'amber' ? 'from-[#F59E0B]/10 to-[#F59E0B]/5' : 'from-[#EF4444]/10 to-[#EF4444]/5'}`}>
+          <Icon className={`w-4 h-4 ${color === 'blue' ? 'text-[#0A1EFF]' : color === 'green' ? 'text-[#10B981]' : color === 'purple' ? 'text-[#7C3AED]' : color === 'amber' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`} />
+        </div>
+        {trend && (
+          <div className={`flex items-center gap-0.5 text-[10px] font-medium ${trend === 'up' ? 'text-[#10B981]' : trend === 'down' ? 'text-[#EF4444]' : 'text-gray-500'}`}>
+            {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
+          </div>
+        )}
+      </div>
+      {loading ? (
+        <div className="h-8 bg-white/5 rounded-lg animate-pulse mb-1" />
+      ) : (
+        <div className="text-2xl font-bold text-white tracking-tight font-mono">{value}</div>
+      )}
+      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">{label}</div>
+      <div className="text-[10px] text-gray-600 mt-0.5">{sub}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 className="text-sm font-heading font-bold text-white">{title}</h2>
+        <p className="text-[10px] text-gray-500 mt-0.5">{subtitle}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -126,121 +136,87 @@ export default function AdminPanel() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [countdown, setCountdown] = useState(30);
 
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const [userTotal, setUserTotal] = useState(0);
+  const [userTotalPages, setUserTotalPages] = useState(0);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [tokens, setTokens] = useState<TokenData[]>([]);
-  const [predictions, setPredictions] = useState<PredictionData[]>([]);
-  const [builders, setBuilders] = useState<BuilderData[]>([]);
-  const [projects, setProjects] = useState<ProjectData[]>([]);
-  const [whaleEvents, setWhaleEvents] = useState<WhaleEvent[]>([]);
-  const [apiHealth, setApiHealth] = useState<ApiHealth[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
-  const [loadingPredictions, setLoadingPredictions] = useState(false);
-  const [loadingBuilders, setLoadingBuilders] = useState(false);
-  const [loadingWhales, setLoadingWhales] = useState(false);
-  const [gameStats, setGameStats] = useState<GameStats>({ leaderboard: [], totalPlayers: 0, totalGamesPlayed: 0, highestScore: 0, topPlayer: 'N/A' });
-  const [loadingGames, setLoadingGames] = useState(false);
+  const [apiHealth, setApiHealth] = useState<ApiHealth[]>([]);
   const [tokenListings, setTokenListings] = useState<any[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
-  const [platformStats, setPlatformStats] = useState<any>(null);
-
+  const [searchFilter, setSearchFilter] = useState('');
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
-  const [searchFilter, setSearchFilter] = useState('');
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/stats?password=${ADMIN_PASSWORD}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (e) { console.error('Failed to fetch stats:', e); }
+    setLoadingStats(false);
+  }, []);
+
+  const fetchUsers = useCallback(async (search?: string, page?: number) => {
+    setLoadingUsers(true);
+    try {
+      const s = search ?? userSearch;
+      const p = page ?? userPage;
+      const res = await fetch(`/api/admin/users?password=${ADMIN_PASSWORD}&search=${encodeURIComponent(s)}&page=${p}&limit=20`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+        setUserTotal(data.total || 0);
+        setUserTotalPages(data.totalPages || 0);
+      }
+    } catch (e) { console.error('Failed to fetch users:', e); }
+    setLoadingUsers(false);
+  }, [userSearch, userPage]);
 
   const fetchTokens = useCallback(async () => {
     setLoadingTokens(true);
     try {
-      const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=25&page=1&sparkline=false&price_change_percentage=1h,24h,7d');
-      if (res.ok) {
-        const data = await res.json();
-        setTokens(data);
-      }
+      const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false');
+      if (res.ok) setTokens(await res.json());
     } catch (e) { console.error('Failed to fetch tokens:', e); }
     setLoadingTokens(false);
   }, []);
 
-  const fetchPredictions = useCallback(async () => {
-    setLoadingPredictions(true);
-    try {
-      const res = await fetch('/api/predictions');
-      if (res.ok) {
-        const data = await res.json();
-        setPredictions(data.predictions || []);
+  const checkApiHealth = useCallback(async () => {
+    const apis = [
+      { name: 'Supabase Auth', url: `${process.env.NEXT_PUBLIC_SUPABASE_URL || ''}/rest/v1/` },
+      { name: 'CoinGecko', url: 'https://api.coingecko.com/api/v3/ping' },
+      { name: 'VTX AI (Claude)', url: '/api/vtx-ai' },
+      { name: 'Context Feed', url: '/api/context-feed' },
+      { name: 'Search Engine', url: '/api/search/coins?q=btc' },
+      { name: 'Price Feed', url: '/api/prices' },
+      { name: 'Project Discovery', url: '/api/project-discovery' },
+      { name: 'Platform Stats', url: '/api/platform-stats' },
+    ];
+    const results: ApiHealth[] = [];
+    for (const api of apis) {
+      const start = Date.now();
+      try {
+        const res = await fetch(api.url, { signal: AbortSignal.timeout(8000) });
+        const latency = Date.now() - start;
+        results.push({ name: api.name, status: res.ok ? (latency > 3000 ? 'degraded' : 'online') : 'degraded', latency, lastCheck: new Date().toLocaleTimeString() });
+      } catch {
+        results.push({ name: api.name, status: 'offline', latency: Date.now() - start, lastCheck: new Date().toLocaleTimeString() });
       }
-    } catch (e) { console.error('Failed to fetch predictions:', e); }
-    setLoadingPredictions(false);
+    }
+    setApiHealth(results);
   }, []);
 
-  const fetchBuilders = useCallback(async () => {
-    setLoadingBuilders(true);
-    try {
-      const [buildersRes, projectsRes] = await Promise.all([
-        fetch('/api/builder-submissions?type=builders&status=all'),
-        fetch('/api/builder-submissions?type=projects&status=all'),
-      ]);
-      if (buildersRes.ok) {
-        const bData = await buildersRes.json();
-        setBuilders((bData.builders || []).map((b: any) => ({
-          id: b.id,
-          name: b.name,
-          role: b.role,
-          skills: Array.isArray(b.skills) ? b.skills.join(', ') : b.skills || '',
-          wallet: b.walletAddress || b.wallet || '',
-          status: b.status,
-          appliedAt: b.appliedAt,
-          verified: b.verified,
-          endorsements: b.endorsements || 0,
-        })));
-      }
-      if (projectsRes.ok) {
-        const pData = await projectsRes.json();
-        setProjects((pData.projects || []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          category: p.category,
-          chain: p.chain,
-          fundingGoal: p.goal || p.fundingGoal || 0,
-          currentFunding: p.raised || p.currentFunding || 0,
-          status: p.status,
-          submittedAt: p.submittedAt,
-          builderId: p.builder || p.builderId || '',
-          milestones: (p.milestones || []).map((m: any) => ({
-            name: m.name,
-            amount: m.amount,
-            status: m.status,
-          })),
-        })));
-      }
-    } catch (e) { console.error('Failed to fetch builders:', e); }
-    setLoadingBuilders(false);
-  }, []);
-
-  const fetchWhales = useCallback(async () => {
-    setLoadingWhales(true);
-    try {
-      const res = await fetch('/api/whale-tracker');
-      if (res.ok) {
-        const data = await res.json();
-        setWhaleEvents(data.events || []);
-      }
-    } catch (e) { console.error('Failed to fetch whales:', e); }
-    setLoadingWhales(false);
-  }, []);
-
-  const fetchGames = useCallback(async () => {
-    setLoadingGames(true);
-    try {
-      const res = await fetch('/api/game-scores');
-      if (res.ok) {
-        const data = await res.json();
-        setGameStats(data);
-      }
-    } catch (e) { console.error('Failed to fetch game stats:', e); }
-    setLoadingGames(false);
-  }, []);
-
-  const fetchTokenListings = useCallback(async () => {
+  const fetchListings = useCallback(async () => {
     setLoadingListings(true);
     try {
       const res = await fetch(`/api/project-listing?password=${ADMIN_PASSWORD}`);
@@ -252,16 +228,6 @@ export default function AdminPanel() {
     setLoadingListings(false);
   }, []);
 
-  const fetchPlatformStats = useCallback(async () => {
-    try {
-      const res = await fetch('/api/platform-stats');
-      if (res.ok) {
-        const data = await res.json();
-        setPlatformStats(data);
-      }
-    } catch (e) { console.error('Failed to fetch platform stats:', e); }
-  }, []);
-
   const handleListingAction = async (id: string, action: string) => {
     try {
       await fetch('/api/project-listing', {
@@ -269,118 +235,51 @@ export default function AdminPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action, password: ADMIN_PASSWORD }),
       });
-      fetchTokenListings();
+      fetchListings();
     } catch (e) { console.error('Listing action failed:', e); }
   };
 
-  const handleDeleteGameScore = async (id?: string) => {
-    try {
-      const url = id
-        ? `/api/game-scores?password=${ADMIN_PASSWORD}&id=${id}`
-        : `/api/game-scores?password=${ADMIN_PASSWORD}`;
-      await fetch(url, { method: 'DELETE' });
-      fetchGames();
-    } catch (e) { console.error('Delete failed:', e); }
-  };
-
-  const checkApiHealth = useCallback(async () => {
-    const apis = [
-      { name: 'CoinGecko Market Data', url: 'https://api.coingecko.com/api/v3/ping' },
-      { name: 'Predictions Engine', url: '/api/predictions' },
-      { name: 'Builder Submissions', url: '/api/builder-submissions' },
-      { name: 'Whale Tracker', url: '/api/whale-tracker' },
-      { name: 'VTX AI Assistant', url: '/api/vtx-ai' },
-      { name: 'Token Scanner (GoPlus)', url: '/api/token-scanner' },
-      { name: 'Context Feed', url: '/api/context-feed' },
-      { name: 'Notifications', url: '/api/notifications' },
-      { name: 'Wallet Intelligence', url: '/api/wallet-intelligence' },
-    ];
-
-    const results: ApiHealth[] = [];
-    for (const api of apis) {
-      const start = Date.now();
-      try {
-        const res = await fetch(api.url, { method: api.url.startsWith('http') ? 'GET' : 'GET' });
-        const latency = Date.now() - start;
-        results.push({
-          name: api.name,
-          status: res.ok ? (latency > 2000 ? 'degraded' : 'online') : 'degraded',
-          latency,
-          lastCheck: new Date().toLocaleTimeString(),
-        });
-      } catch {
-        results.push({
-          name: api.name,
-          status: 'offline',
-          latency: Date.now() - start,
-          lastCheck: new Date().toLocaleTimeString(),
-        });
-      }
-    }
-    setApiHealth(results);
-  }, []);
-
   const refreshAll = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchTokens(), fetchPredictions(), fetchBuilders(), fetchWhales(), fetchGames(), fetchTokenListings(), fetchPlatformStats(), checkApiHealth()]);
+    await Promise.all([fetchStats(), fetchTokens(), checkApiHealth(), fetchListings()]);
     setLastRefresh(new Date());
+    setCountdown(30);
     setIsRefreshing(false);
-  }, [fetchTokens, fetchPredictions, fetchBuilders, fetchWhales, fetchGames, fetchTokenListings, fetchPlatformStats, checkApiHealth]);
+  }, [fetchStats, fetchTokens, checkApiHealth, fetchListings]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
     refreshAll();
-    const interval = setInterval(refreshAll, 60000);
+    if (activeSection === 'users') fetchUsers();
+    const interval = setInterval(refreshAll, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [isLoggedIn, refreshAll]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const timer = setInterval(() => {
+      setCountdown(prev => (prev <= 1 ? 30 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && activeSection === 'users') fetchUsers();
+  }, [activeSection, isLoggedIn]);
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
       setIsLoggedIn(true);
       setLoginError('');
     } else {
-      setLoginError('Invalid credentials');
+      setLoginError('Invalid admin credentials');
     }
   };
 
-  const handleBuilderAction = async (builderId: string, action: string) => {
-    try {
-      await fetch('/api/builder-submissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: action === 'approve' ? 'admin_approve' : 'admin_reject',
-          targetType: 'builder',
-          targetId: builderId,
-          password: ADMIN_PASSWORD,
-        }),
-      });
-      fetchBuilders();
-    } catch (e) { console.error('Action failed:', e); }
-  };
-
-  const handleProjectAction = async (projectId: string, action: string, milestoneIndex?: number) => {
-    try {
-      if (action === 'approve_milestone' && milestoneIndex !== undefined) {
-        await fetch('/api/builder-submissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'approve_milestone', projectId, milestoneIndex, password: ADMIN_PASSWORD }),
-        });
-      } else {
-        await fetch('/api/builder-submissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: action === 'approve' ? 'admin_approve' : 'admin_reject',
-            targetType: 'project',
-            targetId: projectId,
-            password: ADMIN_PASSWORD,
-          }),
-        });
-      }
-      fetchBuilders();
-    } catch (e) { console.error('Action failed:', e); }
+  const handleUserSearch = (val: string) => {
+    setUserSearch(val);
+    setUserPage(1);
+    fetchUsers(val, 1);
   };
 
   const formatNumber = (n: number) => {
@@ -399,30 +298,47 @@ export default function AdminPanel() {
     return `$${p.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   };
 
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center px-4">
-        <div className="glass rounded-2xl p-8 border border-white/10 w-full max-w-sm">
-          <div className="flex items-center gap-3 mb-6 justify-center">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5" />
+        <div className="w-full max-w-sm">
+          <div className="bg-[#111827]/80 rounded-2xl p-8 border border-white/[0.06] backdrop-blur-xl">
+            <div className="flex flex-col items-center gap-3 mb-8">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#0A1EFF] to-[#0A1EFF]/60 rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
+                <Shield className="w-7 h-7 text-white" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-lg font-heading font-bold text-white">STEINZ LABS</h1>
+                <p className="text-[11px] text-gray-500 mt-1">Admin Control Panel</p>
+              </div>
             </div>
-            <h1 className="text-xl font-heading font-bold text-white">STEINZ Admin</h1>
+            <div className="space-y-3">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                placeholder="Enter admin password"
+                className="w-full bg-[#0A0E1A] border border-white/[0.08] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white placeholder-gray-600 transition-colors"
+              />
+              {loginError && <p className="text-[#EF4444] text-xs text-center">{loginError}</p>}
+              <button onClick={handleLogin} className="w-full bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
+                Access Panel
+              </button>
+            </div>
           </div>
-          <div className="space-y-3">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              placeholder="Admin Password"
-              className="w-full bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50 text-white"
-            />
-            {loginError && <p className="text-[#EF4444] text-xs">{loginError}</p>}
-            <button onClick={handleLogin} className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-lg font-semibold text-sm">
-              Login
-            </button>
-          </div>
+          <p className="text-center text-[10px] text-gray-700 mt-4">Protected access — authorized personnel only</p>
         </div>
       </div>
     );
@@ -432,205 +348,282 @@ export default function AdminPanel() {
   const totalApis = apiHealth.length;
   const totalMarketCap = tokens.reduce((s, t) => s + (t.market_cap || 0), 0);
   const totalVolume = tokens.reduce((s, t) => s + (t.total_volume || 0), 0);
-  const activePredictions = predictions.filter(p => !p.resolved);
-  const resolvedPredictions = predictions.filter(p => p.resolved);
-  const totalPredictionPool = predictions.reduce((s, p) => s + (p.totalPool || 0), 0);
-  const pendingBuilders = builders.filter(b => b.status === 'pending');
-  const approvedBuilders = builders.filter(b => b.status === 'approved');
-  const pendingProjects = projects.filter(p => p.status === 'pending' || p.status === 'submitted');
-  const fundedProjects = projects.filter(p => p.currentFunding > 0);
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white flex">
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
-      <aside className={`fixed top-0 left-0 h-full w-72 bg-[#0D1117] border-r border-white/10 z-50 transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
-              <Shield className="w-4 h-4" />
+      <aside className={`fixed top-0 left-0 h-full w-[260px] bg-[#0D1117] border-r border-white/[0.06] z-50 transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-4 border-b border-white/[0.06]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <img src="/steinz-logo-128.png" alt="STEINZ" className="w-8 h-8 rounded-lg" style={{ objectFit: 'contain' }} />
+              <div>
+                <div className="text-sm font-heading font-bold tracking-tight">STEINZ LABS</div>
+                <div className="text-[9px] text-gray-500 font-medium uppercase tracking-wider">Admin Panel</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-heading font-bold">STEINZ Admin</div>
-              <div className="text-[10px] text-gray-500">Control Panel</div>
-            </div>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden hover:bg-white/[0.06] p-1.5 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden hover:bg-white/10 p-1.5 rounded-lg">
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]">
+        <nav className="p-2.5 space-y-0.5 overflow-y-auto h-[calc(100vh-140px)]">
           {ADMIN_SECTIONS.map((section) => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;
+            const pendingListings = tokenListings.filter(l => l.status === 'pending').length;
             return (
               <button
                 key={section.id}
                 onClick={() => { setActiveSection(section.id); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#0A1EFF]/15 to-[#7C3AED]/15 text-white border border-[#0A1EFF]/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#0A1EFF]/10 text-white border border-[#0A1EFF]/20'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.03]'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#0A1EFF]' : ''}`} />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : ''}`} />
                 <span className="font-medium">{section.label}</span>
-                {section.id === 'builders' && pendingBuilders.length > 0 && (
-                  <span className="ml-auto bg-[#EF4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{pendingBuilders.length}</span>
-                )}
-                {section.id === 'funding' && pendingProjects.length > 0 && (
-                  <span className="ml-auto bg-[#F59E0B] text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">{pendingProjects.length}</span>
+                {section.id === 'token-listings' && pendingListings > 0 && (
+                  <span className="ml-auto bg-[#F59E0B] text-black text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{pendingListings}</span>
                 )}
               </button>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10 bg-[#0D1117]">
-          <button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all">
+        <div className="absolute bottom-0 left-0 right-0 p-2.5 border-t border-white/[0.06] bg-[#0D1117]">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0A1EFF]/5 border border-[#0A1EFF]/10 mb-2">
+            <Radio className="w-3 h-3 text-[#10B981] animate-pulse" />
+            <span className="text-[10px] text-gray-400">Auto-refresh in <span className="text-white font-mono font-bold">{countdown}s</span></span>
+          </div>
+          <button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-[#EF4444] hover:bg-[#EF4444]/5 transition-all">
             <LogOut className="w-4 h-4" />
-            <span>Logout</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
       <main className="flex-1 min-h-screen">
-        <header className="sticky top-0 z-40 bg-[#0A0E1A]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden hover:bg-white/10 p-2 rounded-lg">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-lg font-heading font-bold capitalize">{ADMIN_SECTIONS.find(s => s.id === activeSection)?.label}</h1>
-              <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                <span className="flex items-center gap-1"><Wifi className="w-2.5 h-2.5 text-[#10B981]" /> Live</span>
-                <span>|</span>
-                <span>Updated: {lastRefresh.toLocaleTimeString()}</span>
+        <header className="sticky top-0 z-40 bg-[#0A0E1A]/90 backdrop-blur-xl border-b border-white/[0.06] px-4 lg:px-6 py-3">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden hover:bg-white/[0.06] p-2 rounded-lg transition-colors">
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-base font-heading font-bold">{ADMIN_SECTIONS.find(s => s.id === activeSection)?.label}</h1>
+                <p className="text-[10px] text-gray-500">{ADMIN_SECTIONS.find(s => s.id === activeSection)?.description}</p>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={refreshAll} className={`hover:bg-white/10 p-2 rounded-lg transition-colors ${isRefreshing ? 'animate-spin' : ''}`}>
-              <RotateCcw className="w-4 h-4 text-gray-400" />
-            </button>
-            <a href="/dashboard" className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-              <ExternalLink className="w-4 h-4 text-gray-400" />
-            </a>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-500 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.06]">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                <span>Live</span>
+                <span className="text-gray-600">|</span>
+                <span>{lastRefresh.toLocaleTimeString()}</span>
+              </div>
+              <button onClick={refreshAll} disabled={isRefreshing} className={`p-2 rounded-lg hover:bg-white/[0.06] transition-colors ${isRefreshing ? 'animate-spin' : ''}`}>
+                <RefreshCw className="w-4 h-4 text-gray-400" />
+              </button>
+              <a href="/dashboard" className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors" title="Open Dashboard">
+                <ExternalLink className="w-4 h-4 text-gray-400" />
+              </a>
+            </div>
           </div>
         </header>
 
-        <div className="p-4 max-w-7xl mx-auto">
+        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
 
           {activeSection === 'overview' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard icon={Users} label="Total Users" value={stats?.users.total?.toString() || '0'} sub="Registered accounts" color="blue" loading={loadingStats} trend="up" />
+                <MetricCard icon={UserCheck} label="Verified Users" value={stats?.users.verified?.toString() || '0'} sub="Identity confirmed" color="green" loading={loadingStats} />
+                <MetricCard icon={UserPlus} label="Today's Signups" value={stats?.users.todaySignups?.toString() || '0'} sub="New registrations" color="purple" loading={loadingStats} trend="up" />
+                <MetricCard icon={Users} label="This Week" value={stats?.users.weekSignups?.toString() || '0'} sub="7-day signups" color="amber" loading={loadingStats} />
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard icon={Eye} label="Total Views" value={stats?.engagement.views?.toLocaleString() || '0'} sub="Platform-wide" color="blue" loading={loadingStats} />
+                <MetricCard icon={Heart} label="Total Likes" value={stats?.engagement.likes?.toLocaleString() || '0'} sub="Content engagement" color="red" loading={loadingStats} />
+                <MetricCard icon={Share2} label="Total Shares" value={stats?.engagement.shares?.toLocaleString() || '0'} sub="Content shared" color="purple" loading={loadingStats} />
+                <MetricCard icon={Server} label="API Status" value={totalApis > 0 ? `${onlineApis}/${totalApis}` : '—'} sub="Services online" color={onlineApis === totalApis ? 'green' : 'amber'} loading={false} />
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard icon={ShieldAlert} label="Security Scans" value={stats?.platform.totalScans?.toString() || '0'} sub="Token scans run" color="green" loading={loadingStats} />
+                <MetricCard icon={Layers} label="Positions" value={`${stats?.platform.activePositions || 0} active`} sub={`${stats?.platform.totalPositions || 0} total`} color="blue" loading={loadingStats} />
+                <MetricCard icon={AlertTriangle} label="Threats" value={stats?.platform.totalThreats?.toString() || '0'} sub="Detected threats" color="red" loading={loadingStats} />
+                <MetricCard icon={Bell} label="Alerts" value={stats?.platform.totalAlerts?.toString() || '0'} sub="User alerts set" color="amber" loading={loadingStats} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-[#0A1EFF]" />
+                      <span className="text-xs font-heading font-bold">Recent Signups</span>
+                    </div>
+                    <button onClick={() => setActiveSection('users')} className="text-[10px] text-[#0A1EFF] hover:underline flex items-center gap-1">
+                      View All <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {loadingStats ? (
+                      [...Array(5)].map((_, i) => <div key={i} className="h-10 bg-white/[0.03] rounded-lg animate-pulse" />)
+                    ) : (stats?.users.recentUsers || []).slice(0, 8).map((user) => (
+                      <div key={user.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                            {(user.first_name?.[0] || user.username?.[0] || '?').toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold">{user.first_name} {user.last_name}</div>
+                            <div className="text-[10px] text-gray-500">@{user.username} · {user.email}</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-gray-600">{timeAgo(user.created_at)}</span>
+                      </div>
+                    ))}
+                    {!loadingStats && (!stats?.users.recentUsers || stats.users.recentUsers.length === 0) && (
+                      <div className="text-center py-6 text-gray-600 text-[11px]">No users registered yet</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="w-4 h-4 text-[#0A1EFF]" />
+                      <span className="text-xs font-heading font-bold">API Health</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {apiHealth.slice(0, 8).map((api) => (
+                        <div key={api.name} className="flex items-center gap-2 py-1">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />
+                          <span className="text-[10px] text-gray-400 truncate">{api.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-[#10B981]" />
+                      <span className="text-xs font-heading font-bold">Market Snapshot</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-gray-500">Total Market Cap</span>
+                        <span className="text-white font-mono font-semibold">{formatNumber(totalMarketCap)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-gray-500">24h Volume</span>
+                        <span className="text-white font-mono font-semibold">{formatNumber(totalVolume)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-gray-500">Tokens Tracked</span>
+                        <span className="text-white font-mono font-semibold">{tokens.length}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-gray-500">Entities Followed</span>
+                        <span className="text-white font-mono font-semibold">{stats?.platform.followedEntities || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-[#0A1EFF]/5 to-transparent rounded-xl p-4 border border-[#0A1EFF]/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <Globe className="w-4 h-4 text-[#0A1EFF]" />
+                  <span className="text-xs font-heading font-bold">Platform Intelligence</span>
+                </div>
+                <p className="text-[10px] text-gray-500">Stats auto-refresh every 30 seconds. All data sourced from Supabase, CoinGecko, and internal APIs. Last synced: {lastRefresh.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'users' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Coins className="w-4 h-4" />} label="Total Market Cap" value={formatNumber(totalMarketCap)} sub="Top 25 tokens" color="text-[#0A1EFF]" loading={loadingTokens} />
-                <StatCard icon={<Target className="w-4 h-4" />} label="Active Predictions" value={activePredictions.length.toString()} sub={`${formatNumber(totalPredictionPool)} pooled`} color="text-[#7C3AED]" loading={loadingPredictions} />
-                <StatCard icon={<Users className="w-4 h-4" />} label="Builders" value={builders.length.toString()} sub={`${approvedBuilders.length} approved`} color="text-[#10B981]" loading={loadingBuilders} />
-                <StatCard icon={<Server className="w-4 h-4" />} label="API Status" value={`${onlineApis}/${totalApis}`} sub="Services online" color={onlineApis === totalApis ? 'text-[#10B981]' : 'text-[#F59E0B]'} loading={false} />
-              </div>
+              <SectionHeader
+                title="User Management"
+                subtitle={`${userTotal} total users registered`}
+                action={
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input
+                      type="text"
+                      value={userSearch}
+                      onChange={(e) => handleUserSearch(e.target.value)}
+                      placeholder="Search users..."
+                      className="bg-[#111827] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-56 transition-colors"
+                    />
+                  </div>
+                }
+              />
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Projects" value={projects.length.toString()} sub={`${fundedProjects.length} funded`} color="text-[#F59E0B]" loading={loadingBuilders} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="Whale Events" value={whaleEvents.length.toString()} sub="Recent activity" color="text-[#0A1EFF]" loading={loadingWhales} />
-                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="HODL Runner" value={gameStats.totalPlayers.toString()} sub={`${gameStats.totalGamesPlayed} games`} color="text-[#7C3AED]" loading={loadingGames} />
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Token Listings" value={tokenListings.length.toString()} sub={`${tokenListings.filter(l => l.status === 'pending').length} pending`} color="text-[#F59E0B]" loading={loadingListings} />
+                <MetricCard icon={Users} label="Total Users" value={userTotal.toString()} sub="All accounts" color="blue" loading={false} />
+                <MetricCard icon={UserCheck} label="Verified" value={stats?.users.verified?.toString() || '0'} sub="Confirmed identity" color="green" loading={loadingStats} />
+                <MetricCard icon={UserPlus} label="Today" value={stats?.users.todaySignups?.toString() || '0'} sub="New today" color="purple" loading={loadingStats} />
+                <MetricCard icon={Users} label="This Week" value={stats?.users.weekSignups?.toString() || '0'} sub="Past 7 days" color="amber" loading={loadingStats} />
               </div>
 
-              {platformStats && (
-                <div className="glass rounded-xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-r from-[#0A1EFF]/5 to-[#7C3AED]/5">
-                  <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                    <Globe className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                    Platform Stats (Public)
+              <div className="bg-[#111827]/80 rounded-xl border border-white/[0.06] overflow-hidden">
+                {loadingUsers ? (
+                  <div className="p-6 space-y-2">
+                    {[...Array(8)].map((_, i) => <div key={i} className="h-12 bg-white/[0.03] rounded-lg animate-pulse" />)}
                   </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-[#0A1EFF]">{platformStats.chains}</div>
-                      <div className="text-[9px] text-gray-400">Chains Supported</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-[#10B981]">{platformStats.signalAccuracy}</div>
-                      <div className="text-[9px] text-gray-400">Signal Accuracy</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-[#7C3AED]">{platformStats.volumeTracked}</div>
-                      <div className="text-[9px] text-gray-400">Global Volume (CoinGecko)</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-[#F59E0B]">{platformStats.activeUsers}</div>
-                      <div className="text-[9px] text-gray-400">Platform Status</div>
-                    </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
+                          <th className="text-left px-4 py-3">User</th>
+                          <th className="text-left px-4 py-3">Username</th>
+                          <th className="text-left px-4 py-3">Email</th>
+                          <th className="text-left px-4 py-3">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((user) => (
+                          <tr key={user.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                                  {(user.first_name?.[0] || '?').toUpperCase()}
+                                </div>
+                                <span className="text-xs font-semibold">{user.first_name} {user.last_name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-400">@{user.username}</td>
+                            <td className="px-4 py-3 text-xs text-gray-500">{user.email}</td>
+                            <td className="px-4 py-3 text-[11px] text-gray-600">{new Date(user.created_at).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </div>
-              )}
-
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                  API Health Status
-                </div>
-                <div className="grid grid-cols-3 lg:grid-cols-5 gap-3">
-                  {apiHealth.slice(0, 10).map((api) => (
-                    <div key={api.name} className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />
-                      <div className="text-[9px] text-gray-400 leading-tight">{api.name}</div>
-                      <div className="text-[9px] text-gray-600">{api.latency}ms</div>
-                    </div>
-                  ))}
-                </div>
+                )}
+                {!loadingUsers && users.length === 0 && (
+                  <div className="text-center py-12 text-gray-600 text-xs">
+                    {userSearch ? `No users found for "${userSearch}"` : 'No users registered yet'}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="glass rounded-xl p-4 border border-white/10">
-                  <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#10B981]" />
-                    Top Movers (24h)
-                  </div>
-                  <div className="space-y-2">
-                    {[...tokens].sort((a, b) => Math.abs(b.price_change_percentage_24h || 0) - Math.abs(a.price_change_percentage_24h || 0)).slice(0, 5).map((t) => (
-                      <div key={t.id} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          {t.image && <img src={t.image} alt="" className="w-4 h-4 rounded-full" />}
-                          <span className="font-semibold">{t.symbol?.toUpperCase()}</span>
-                        </div>
-                        <span className={t.price_change_percentage_24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}>
-                          {t.price_change_percentage_24h >= 0 ? '+' : ''}{t.price_change_percentage_24h?.toFixed(2)}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="glass rounded-xl p-4 border border-white/10">
-                  <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                    <Activity className="w-3.5 h-3.5 text-[#F59E0B]" />
-                    Recent Whale Activity
-                  </div>
-                  <div className="space-y-2">
-                    {whaleEvents.slice(0, 5).map((e, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full ${e.type === 'sell' ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
-                          <span className="text-gray-300">{e.token} {e.type}</span>
-                        </div>
-                        <span className="text-gray-400">{e.usdValue || e.amount}</span>
-                      </div>
-                    ))}
-                    {whaleEvents.length === 0 && <div className="text-[10px] text-gray-500">Loading whale data...</div>}
-                  </div>
-                </div>
-              </div>
-
-              {pendingBuilders.length > 0 && (
-                <div className="glass rounded-xl p-4 border border-[#F59E0B]/30 bg-[#F59E0B]/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-                    <span className="text-xs font-bold text-[#F59E0B]">Action Required</span>
-                  </div>
-                  <p className="text-xs text-gray-300">{pendingBuilders.length} builder application(s) pending review. {pendingProjects.length} project(s) awaiting approval.</p>
-                  <button onClick={() => setActiveSection('builders')} className="mt-2 text-[10px] text-[#0A1EFF] hover:underline flex items-center gap-1">
-                    Review Now <ChevronRight className="w-3 h-3" />
+              {userTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <button disabled={userPage <= 1} onClick={() => { setUserPage(p => p - 1); fetchUsers(userSearch, userPage - 1); }} className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
+                    Previous
+                  </button>
+                  <span className="text-[11px] text-gray-500">Page {userPage} of {userTotalPages}</span>
+                  <button disabled={userPage >= userTotalPages} onClick={() => { setUserPage(p => p + 1); fetchUsers(userSearch, userPage + 1); }} className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
+                    Next
                   </button>
                 </div>
               )}
@@ -639,60 +632,66 @@ export default function AdminPanel() {
 
           {activeSection === 'market' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-400">Live market data from CoinGecko</div>
-                <div className="flex items-center gap-2">
+              <SectionHeader
+                title="Market Intelligence"
+                subtitle="Live data from CoinGecko"
+                action={
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                      type="text"
-                      value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
-                      placeholder="Search tokens..."
-                      className="bg-[#111827] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/50 w-48"
-                    />
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-48 transition-colors" />
                   </div>
-                </div>
+                }
+              />
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard icon={BarChart3} label="Total Market Cap" value={formatNumber(totalMarketCap)} sub="Top 50 tokens" color="blue" loading={loadingTokens} />
+                <MetricCard icon={Activity} label="24h Volume" value={formatNumber(totalVolume)} sub="Trading volume" color="green" loading={loadingTokens} />
+                <MetricCard icon={TrendingUp} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="purple" loading={loadingTokens} />
+                <MetricCard icon={Zap} label="Data Source" value="Live" sub="CoinGecko API" color="green" loading={false} />
               </div>
 
               {loadingTokens ? (
-                <div className="text-center py-10 text-gray-500 text-sm">Loading market data...</div>
+                <div className="bg-[#111827]/80 rounded-xl p-6 border border-white/[0.06]">
+                  <div className="space-y-2">
+                    {[...Array(10)].map((_, i) => <div key={i} className="h-12 bg-white/[0.03] rounded-lg animate-pulse" />)}
+                  </div>
+                </div>
               ) : (
-                <div className="glass rounded-xl border border-white/10 overflow-hidden">
+                <div className="bg-[#111827]/80 rounded-xl border border-white/[0.06] overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/10 text-[10px] text-gray-500 uppercase">
+                        <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
                           <th className="text-left px-4 py-3">#</th>
                           <th className="text-left px-4 py-3">Token</th>
                           <th className="text-right px-4 py-3">Price</th>
-                          <th className="text-right px-4 py-3">24h Change</th>
+                          <th className="text-right px-4 py-3">24h</th>
                           <th className="text-right px-4 py-3">Volume</th>
                           <th className="text-right px-4 py-3">Market Cap</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tokens.filter(t => !searchFilter || t.name?.toLowerCase().includes(searchFilter.toLowerCase()) || t.symbol?.toLowerCase().includes(searchFilter.toLowerCase())).map((token, i) => (
-                          <tr key={token.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                            <td className="px-4 py-3 text-[10px] text-gray-500">{i + 1}</td>
+                          <tr key={token.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-3 text-[10px] text-gray-600 font-mono">{i + 1}</td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                {token.image && <img src={token.image} alt="" className="w-5 h-5 rounded-full" />}
+                              <div className="flex items-center gap-2.5">
+                                {token.image && <img src={token.image} alt="" className="w-6 h-6 rounded-full" />}
                                 <div>
                                   <div className="text-xs font-bold">{token.symbol?.toUpperCase()}</div>
                                   <div className="text-[10px] text-gray-500">{token.name}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right text-xs font-semibold">{formatPrice(token.current_price)}</td>
+                            <td className="px-4 py-3 text-right text-xs font-mono font-semibold">{formatPrice(token.current_price)}</td>
                             <td className="px-4 py-3 text-right">
                               <span className={`text-xs font-semibold flex items-center gap-0.5 justify-end ${token.price_change_percentage_24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
                                 {token.price_change_percentage_24h >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 {Math.abs(token.price_change_percentage_24h || 0).toFixed(2)}%
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right text-xs text-gray-300">{formatNumber(token.total_volume)}</td>
-                            <td className="px-4 py-3 text-right text-xs text-gray-300">{formatNumber(token.market_cap)}</td>
+                            <td className="px-4 py-3 text-right text-xs text-gray-400 font-mono">{formatNumber(token.total_volume)}</td>
+                            <td className="px-4 py-3 text-right text-xs text-gray-400 font-mono">{formatNumber(token.market_cap)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -700,462 +699,45 @@ export default function AdminPanel() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {activeSection === 'trading' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Zap className="w-4 h-4" />} label="Status" value={tokens.length > 0 ? 'Active' : 'Offline'} sub={tokens.length > 0 ? 'All systems operational' : 'No data'} color={tokens.length > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'} loading={loadingTokens} />
-                <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Trending" value={tokens.length > 0 ? 'Live' : 'Loading'} sub="CoinGecko data" color="text-[#10B981]" loading={loadingTokens} />
-                <StatCard icon={<BarChart3 className="w-4 h-4" />} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="text-[#7C3AED]" loading={loadingTokens} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="24h Volume" value={formatNumber(totalVolume)} sub="Across tracked tokens" color="text-[#0A1EFF]" loading={loadingTokens} />
-              </div>
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3">Trading Suite Features</div>
-                <div className="space-y-2">
-                  {[
-                    { label: 'Trending Tokens', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Top by Market Cap', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'New Pairs (DexScreener)', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Market Pulse & Fear/Greed', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Paste CA / Token Scanner', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Watchlist', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'TradingView Charts', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'STEINZ Terminal', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'Multi-Chain Support', status: 'Live', color: 'text-[#10B981]' },
-                    { label: 'AI Risk Scanner', status: 'Live', color: 'text-[#10B981]' },
-                  ].map((f, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0">
-                      <span className="text-gray-300">{f.label}</span>
-                      <span className={`font-semibold text-[10px] ${f.color}`}>{f.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <a href="/dashboard/trading-suite" target="_blank" className="block">
-                <button className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-semibold hover:opacity-90 transition-opacity">
-                  Open Trading Suite
-                </button>
-              </a>
-            </div>
-          )}
-
-          {activeSection === 'predictions' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Target className="w-4 h-4" />} label="Active" value={activePredictions.length.toString()} sub="Open markets" color="text-[#0A1EFF]" loading={loadingPredictions} />
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Resolved" value={resolvedPredictions.length.toString()} sub="Settled markets" color="text-[#10B981]" loading={loadingPredictions} />
-                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Total Pool" value={formatNumber(totalPredictionPool)} sub="All markets" color="text-[#F59E0B]" loading={loadingPredictions} />
-                <StatCard icon={<Users className="w-4 h-4" />} label="Participants" value={predictions.reduce((s, p) => s + (p.participants || 0), 0).toString()} sub="Total bettors" color="text-[#7C3AED]" loading={loadingPredictions} />
-              </div>
-
-              {loadingPredictions ? (
-                <div className="text-center py-10 text-gray-500 text-sm">Loading predictions...</div>
-              ) : (
-                <div className="space-y-3">
-                  {predictions.map((pred) => (
-                    <div key={pred.id} className="glass rounded-xl p-4 border border-white/10">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${pred.resolved ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#0A1EFF]/20 text-[#0A1EFF]'}`}>
-                            {pred.resolved ? 'Resolved' : 'Active'}
-                          </span>
-                          <span className="text-xs font-bold">{pred.title || `${pred.token} ${pred.type}`}</span>
-                        </div>
-                        <span className="text-[10px] text-gray-500">{pred.participants || 0} participants</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[#10B981] font-semibold">YES: {formatNumber(pred.yesPool || 0)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[#EF4444] font-semibold">NO: {formatNumber(pred.noPool || 0)}</span>
-                        </div>
-                        <span className="text-gray-500">Pool: {formatNumber(pred.totalPool || 0)}</span>
-                      </div>
-                      <div className="mt-2 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10B981] rounded-full" style={{ width: `${pred.totalPool ? ((pred.yesPool || 0) / pred.totalPool) * 100 : 50}%` }} />
-                      </div>
-                      {pred.resolved && pred.outcome && (
-                        <div className="mt-2 text-[10px] font-semibold text-[#10B981]">Outcome: {pred.outcome}</div>
-                      )}
-                    </div>
-                  ))}
-                  {predictions.length === 0 && <div className="text-center py-10 text-gray-500 text-sm">No predictions found</div>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeSection === 'builders' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <StatCard icon={<Clock className="w-4 h-4" />} label="Pending" value={pendingBuilders.length.toString()} sub="Awaiting review" color="text-[#F59E0B]" loading={loadingBuilders} />
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Approved" value={approvedBuilders.length.toString()} sub="Verified builders" color="text-[#10B981]" loading={loadingBuilders} />
-                <StatCard icon={<Users className="w-4 h-4" />} label="Total" value={builders.length.toString()} sub="All applications" color="text-[#0A1EFF]" loading={loadingBuilders} />
-              </div>
-
-              {loadingBuilders ? (
-                <div className="text-center py-10 text-gray-500 text-sm">Loading builder data...</div>
-              ) : (
-                <div className="space-y-3">
-                  {builders.map((builder) => (
-                    <div key={builder.id} className={`glass rounded-xl p-4 border ${builder.status === 'pending' ? 'border-[#F59E0B]/30' : 'border-white/10'}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${builder.status === 'pending' ? 'bg-[#F59E0B] animate-pulse' : builder.status === 'approved' ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`} />
-                          <span className="text-sm font-bold">{builder.name}</span>
-                          {builder.verified && <img src="/verified-badge.png" alt="Verified" className="w-4 h-4" />}
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                          builder.status === 'pending' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
-                          builder.status === 'approved' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                          'bg-[#EF4444]/20 text-[#EF4444]'
-                        }`}>{builder.status}</span>
-                      </div>
-                      <div className="text-[10px] text-gray-400 mb-2">{builder.role} | Skills: {builder.skills}</div>
-                      <div className="text-[10px] text-gray-500 mb-3">Wallet: {builder.wallet} | Endorsements: {builder.endorsements || 0}</div>
-                      {builder.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleBuilderAction(builder.id, 'approve')} className="flex-1 py-1.5 rounded-lg bg-[#10B981]/20 text-[#10B981] text-[11px] font-semibold hover:bg-[#10B981]/30 transition-colors flex items-center justify-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Approve
-                          </button>
-                          <button onClick={() => handleBuilderAction(builder.id, 'reject')} className="flex-1 py-1.5 rounded-lg bg-[#EF4444]/20 text-[#EF4444] text-[11px] font-semibold hover:bg-[#EF4444]/30 transition-colors flex items-center justify-center gap-1">
-                            <XCircle className="w-3 h-3" /> Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {builders.length === 0 && (
-                    <div className="text-center py-10 text-gray-500 text-sm">No builder applications yet. Applications submitted through the Builder Network page will appear here.</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeSection === 'funding' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Projects" value={projects.length.toString()} sub="Submitted" color="text-[#0A1EFF]" loading={loadingBuilders} />
-                <StatCard icon={<Clock className="w-4 h-4" />} label="Pending" value={pendingProjects.length.toString()} sub="Awaiting review" color="text-[#F59E0B]" loading={loadingBuilders} />
-                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Total Funded" value={formatNumber(projects.reduce((s, p) => s + (p.currentFunding || 0), 0))} sub="All projects" color="text-[#10B981]" loading={loadingBuilders} />
-                <StatCard icon={<Layers className="w-4 h-4" />} label="Funded Projects" value={fundedProjects.length.toString()} sub="With backing" color="text-[#7C3AED]" loading={loadingBuilders} />
-              </div>
-
-              {loadingBuilders ? (
-                <div className="text-center py-10 text-gray-500 text-sm">Loading projects...</div>
-              ) : (
-                <div className="space-y-3">
-                  {projects.map((project) => (
-                    <div key={project.id} className="glass rounded-xl p-4 border border-white/10">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{project.name}</span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/10 text-gray-400">{project.category}</span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/10 text-gray-400">{project.chain}</span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                          project.status === 'pending' || project.status === 'submitted' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
-                          project.status === 'approved' || project.status === 'funded' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                          'bg-[#EF4444]/20 text-[#EF4444]'
-                        }`}>{project.status}</span>
-                      </div>
-                      <p className="text-[10px] text-gray-400 mb-2">{project.description}</p>
-                      <div className="flex items-center gap-4 text-[10px] text-gray-500 mb-3">
-                        <span>Goal: {formatNumber(project.fundingGoal || 0)}</span>
-                        <span>Funded: {formatNumber(project.currentFunding || 0)}</span>
-                        <span>Progress: {project.fundingGoal ? ((project.currentFunding / project.fundingGoal) * 100).toFixed(0) : 0}%</span>
-                      </div>
-                      {project.fundingGoal > 0 && (
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
-                          <div className="h-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-full" style={{ width: `${Math.min(100, project.fundingGoal ? (project.currentFunding / project.fundingGoal) * 100 : 0)}%` }} />
-                        </div>
-                      )}
-                      {project.milestones && project.milestones.length > 0 && (
-                        <div className="mb-3">
-                          <div className="text-[10px] font-bold text-gray-400 mb-1">Milestones</div>
-                          {project.milestones.map((m, i) => (
-                            <div key={i} className="flex items-center justify-between text-[10px] py-1">
-                              <span className="text-gray-300">{i + 1}. {m.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500">{formatNumber(m.amount)}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${m.status === 'completed' ? 'bg-[#10B981]/20 text-[#10B981]' : m.status === 'in_progress' || m.status === 'pending_review' ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'bg-white/10 text-gray-500'}`}>{m.status || 'pending'}</span>
-                                {(m.status === 'in_progress' || m.status === 'pending_review') && (
-                                  <button
-                                    onClick={() => handleProjectAction(project.id, 'approve_milestone', i)}
-                                    className="px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] text-[8px] font-bold hover:bg-[#10B981]/30 transition-colors flex items-center gap-0.5"
-                                  >
-                                    <CheckCircle className="w-2.5 h-2.5" /> Approve
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {(project.status === 'pending' || project.status === 'submitted') && (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleProjectAction(project.id, 'approve')} className="flex-1 py-1.5 rounded-lg bg-[#10B981]/20 text-[#10B981] text-[11px] font-semibold hover:bg-[#10B981]/30 transition-colors flex items-center justify-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Approve Project
-                          </button>
-                          <button onClick={() => handleProjectAction(project.id, 'reject')} className="flex-1 py-1.5 rounded-lg bg-[#EF4444]/20 text-[#EF4444] text-[11px] font-semibold hover:bg-[#EF4444]/30 transition-colors flex items-center justify-center gap-1">
-                            <XCircle className="w-3 h-3" /> Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {projects.length === 0 && (
-                    <div className="text-center py-10 text-gray-500 text-sm">No projects submitted yet. Projects from the Builder Funding Portal will appear here for review.</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeSection === 'whales' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-400">Real-time whale activity from blockchain data</div>
-                <button onClick={fetchWhales} className="text-[10px] text-[#0A1EFF] hover:underline flex items-center gap-1">
-                  <RotateCcw className={`w-3 h-3 ${loadingWhales ? 'animate-spin' : ''}`} /> Refresh
-                </button>
-              </div>
-
-              {loadingWhales ? (
-                <div className="text-center py-10 text-gray-500 text-sm">Loading whale data...</div>
-              ) : (
-                <div className="glass rounded-xl border border-white/10 overflow-hidden">
-                  <div className="divide-y divide-white/5">
-                    {whaleEvents.map((event, i) => (
-                      <div key={i} className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${event.type === 'sell' ? 'bg-[#EF4444]/10' : event.type === 'buy' ? 'bg-[#10B981]/10' : 'bg-[#0A1EFF]/10'}`}>
-                          {event.type === 'sell' ? <TrendingDown className="w-4 h-4 text-[#EF4444]" /> : event.type === 'buy' ? <TrendingUp className="w-4 h-4 text-[#10B981]" /> : <Activity className="w-4 h-4 text-[#0A1EFF]" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold">{event.token} <span className="text-gray-500 font-normal">{event.type}</span></div>
-                          <div className="text-[10px] text-gray-500">{event.chain} | {event.timestamp}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs font-bold">{event.usdValue || event.amount}</div>
-                          {event.address && <div className="text-[9px] text-gray-600 font-mono">{event.address.slice(0, 8)}...{event.address.slice(-4)}</div>}
-                        </div>
-                      </div>
-                    ))}
-                    {whaleEvents.length === 0 && <div className="text-center py-10 text-gray-500 text-sm">No whale events detected</div>}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeSection === 'security' && (
-            <div className="space-y-4">
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
-                  Security Overview
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <div className="text-[10px] text-gray-500 mb-1">Token Scanner</div>
-                    <div className="text-xs text-[#10B981] font-semibold">GoPlus API Active</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500 mb-1">Auth Provider</div>
-                    <div className="text-xs text-[#10B981] font-semibold">Supabase Active</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500 mb-1">Admin Access</div>
-                    <div className="text-xs text-[#10B981] font-semibold">Password Protected</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500 mb-1">API Rate Limiting</div>
-                    <div className="text-xs text-[#F59E0B] font-semibold">Cache-based</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3">Platform Security Checklist</div>
-                <div className="space-y-2">
-                  {[
-                    { label: 'HTTPS/TLS Encryption', status: true },
-                    { label: 'Admin Password Protection', status: true },
-                    { label: 'GoPlus Token Security Integration', status: true },
-                    { label: 'Input Validation & Sanitization', status: true },
-                    { label: 'API Rate Limiting (Cache-based)', status: true },
-                    { label: 'Supabase Auth Integration', status: true },
-                    { label: 'XSS Protection Headers', status: true },
-                    { label: 'Environment Variables for Secrets', status: true },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <CheckCircle className={`w-3.5 h-3.5 ${item.status ? 'text-[#10B981]' : 'text-gray-600'}`} />
-                      <span className={item.status ? 'text-gray-300' : 'text-gray-600'}>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
           {activeSection === 'api-health' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-400">Real-time status of all platform APIs</div>
-                <button onClick={checkApiHealth} className="text-[10px] text-[#0A1EFF] hover:underline flex items-center gap-1">
-                  <RotateCcw className="w-3 h-3" /> Recheck All
-                </button>
-              </div>
+              <SectionHeader
+                title="Service Health Monitor"
+                subtitle="Real-time status of all platform services"
+                action={
+                  <button onClick={checkApiHealth} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A1EFF]/10 text-[#0A1EFF] text-[11px] font-semibold hover:bg-[#0A1EFF]/20 transition-colors">
+                    <RefreshCw className="w-3 h-3" /> Recheck All
+                  </button>
+                }
+              />
 
               <div className="grid grid-cols-3 gap-3">
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Online" value={apiHealth.filter(a => a.status === 'online').length.toString()} sub="Services" color="text-[#10B981]" loading={false} />
-                <StatCard icon={<AlertTriangle className="w-4 h-4" />} label="Degraded" value={apiHealth.filter(a => a.status === 'degraded').length.toString()} sub="Slow response" color="text-[#F59E0B]" loading={false} />
-                <StatCard icon={<XCircle className="w-4 h-4" />} label="Offline" value={apiHealth.filter(a => a.status === 'offline').length.toString()} sub="Down" color="text-[#EF4444]" loading={false} />
+                <MetricCard icon={CheckCircle} label="Online" value={apiHealth.filter(a => a.status === 'online').length.toString()} sub="Healthy services" color="green" loading={false} />
+                <MetricCard icon={AlertTriangle} label="Degraded" value={apiHealth.filter(a => a.status === 'degraded').length.toString()} sub="Slow response" color="amber" loading={false} />
+                <MetricCard icon={XCircle} label="Offline" value={apiHealth.filter(a => a.status === 'offline').length.toString()} sub="Unreachable" color="red" loading={false} />
               </div>
 
               <div className="space-y-2">
                 {apiHealth.map((api) => (
-                  <div key={api.name} className="glass rounded-xl p-4 border border-white/10 flex items-center justify-between">
+                  <div key={api.name} className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06] flex items-center justify-between hover:border-white/[0.1] transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'} ${api.status !== 'online' ? 'animate-pulse' : ''}`} />
                       <div>
                         <div className="text-xs font-semibold">{api.name}</div>
-                        <div className="text-[10px] text-gray-500">Last check: {api.lastCheck}</div>
+                        <div className="text-[10px] text-gray-600">Checked: {api.lastCheck}</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className={`text-xs font-bold capitalize ${api.status === 'online' ? 'text-[#10B981]' : api.status === 'degraded' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>{api.status}</div>
-                      <div className="text-[10px] text-gray-500">{api.latency}ms</div>
+                      <div className="text-[10px] text-gray-600 font-mono">{api.latency}ms</div>
                     </div>
                   </div>
                 ))}
-                {apiHealth.length === 0 && <div className="text-center py-10 text-gray-500 text-sm">Checking API health...</div>}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'notifications' && (
-            <div className="space-y-4">
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Send className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                  Broadcast Notification
-                </div>
-                <textarea
-                  value={broadcastMsg}
-                  onChange={(e) => setBroadcastMsg(e.target.value)}
-                  placeholder="Write a platform-wide notification message..."
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/50 min-h-[80px] text-white mb-3"
-                />
-                <button
-                  onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }}
-                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
-                >
-                  Send Broadcast
-                </button>
-                {broadcastSent && <p className="text-[10px] text-[#10B981] mt-2">Notification broadcast sent successfully!</p>}
-              </div>
-
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3">Quick Alerts</div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                  {[
-                    { label: 'Scheduled Maintenance', msg: 'STEINZ Labs will undergo scheduled maintenance in 1 hour. Some features may be temporarily unavailable.', color: 'text-[#F59E0B]' },
-                    { label: 'New Feature Launch', msg: 'New feature available! Check out the latest updates on the platform.', color: 'text-[#0A1EFF]' },
-                    { label: 'Security Advisory', msg: 'Security advisory: Please verify any tokens before trading. Use the Security Center for safety checks.', color: 'text-[#EF4444]' },
-                    { label: 'Market Alert', msg: 'Significant market movement detected. Check whale tracker for details.', color: 'text-[#10B981]' },
-                  ].map((alert, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setBroadcastMsg(alert.msg)}
-                      className="glass rounded-lg p-3 border border-white/10 hover:border-white/20 text-left transition-all"
-                    >
-                      <div className={`text-[11px] font-bold ${alert.color}`}>{alert.label}</div>
-                      <div className="text-[10px] text-gray-500 mt-0.5">{alert.msg.slice(0, 60)}...</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'game-stats' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="Total Players" value={gameStats.totalPlayers.toString()} sub="Registered players" color="text-[#10B981]" loading={loadingGames} />
-                <StatCard icon={<Trophy className="w-4 h-4" />} label="Highest Score" value={gameStats.highestScore.toLocaleString()} sub={`by ${gameStats.topPlayer}`} color="text-[#F59E0B]" loading={loadingGames} />
-                <StatCard icon={<Activity className="w-4 h-4" />} label="Games Played" value={gameStats.totalGamesPlayed.toString()} sub="Total rounds" color="text-[#0A1EFF]" loading={loadingGames} />
-                <StatCard icon={<Star className="w-4 h-4" />} label="Top Player" value={gameStats.topPlayer} sub="Current leader" color="text-[#7C3AED]" loading={loadingGames} />
-              </div>
-
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-bold flex items-center gap-2">
-                    <Gamepad2 className="w-3.5 h-3.5 text-[#10B981]" />
-                    HODL Runner Leaderboard
-                  </div>
-                  <button
-                    onClick={() => handleDeleteGameScore()}
-                    className="text-[10px] text-[#EF4444] hover:bg-[#EF4444]/10 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" /> Clear All
-                  </button>
-                </div>
-
-                {loadingGames ? (
-                  <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-10 bg-white/5 rounded animate-pulse" />
-                    ))}
-                  </div>
-                ) : gameStats.leaderboard.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 text-xs">No game scores yet</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-gray-500 border-b border-white/5">
-                          <th className="text-left py-2 px-2">#</th>
-                          <th className="text-left py-2 px-2">Player</th>
-                          <th className="text-right py-2 px-2">Score</th>
-                          <th className="text-right py-2 px-2">Coins</th>
-                          <th className="text-right py-2 px-2">Distance</th>
-                          <th className="text-right py-2 px-2">Games</th>
-                          <th className="text-right py-2 px-2">Best Streak</th>
-                          <th className="text-right py-2 px-2">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gameStats.leaderboard.map((player, idx) => (
-                          <tr key={player.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td className="py-2 px-2">
-                              <span className={`font-bold ${idx === 0 ? 'text-[#F59E0B]' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-[#CD7F32]' : 'text-gray-500'}`}>
-                                {idx + 1}
-                              </span>
-                            </td>
-                            <td className="py-2 px-2 font-semibold text-white">{player.username}</td>
-                            <td className="py-2 px-2 text-right text-[#10B981] font-bold">{player.score.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right text-[#F59E0B]">{player.coins.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right text-gray-300">{player.distance.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right text-gray-400">{player.gamesPlayed}</td>
-                            <td className="py-2 px-2 text-right text-[#0A1EFF]">{player.bestStreak.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right">
-                              <button
-                                onClick={() => handleDeleteGameScore(player.id)}
-                                className="text-[#EF4444] hover:bg-[#EF4444]/10 p-1 rounded transition-colors"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                {apiHealth.length === 0 && (
+                  <div className="text-center py-12 text-gray-600 text-xs">Running health checks...</div>
                 )}
               </div>
             </div>
@@ -1163,66 +745,54 @@ export default function AdminPanel() {
 
           {activeSection === 'token-listings' && (
             <div className="space-y-4">
+              <SectionHeader title="Token Listing Submissions" subtitle="Review and manage listing requests" />
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={<Briefcase className="w-4 h-4" />} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="text-[#0A1EFF]" loading={loadingListings} />
-                <StatCard icon={<Clock className="w-4 h-4" />} label="Pending Review" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting action" color="text-[#F59E0B]" loading={loadingListings} />
-                <StatCard icon={<CheckCircle className="w-4 h-4" />} label="Listed" value={tokenListings.filter(l => l.status === 'listed').length.toString()} sub="Live on discovery" color="text-[#10B981]" loading={loadingListings} />
-                <StatCard icon={<DollarSign className="w-4 h-4" />} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved tokens" color="text-[#7C3AED]" loading={loadingListings} />
+                <MetricCard icon={Briefcase} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="blue" loading={loadingListings} />
+                <MetricCard icon={Clock} label="Pending" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting review" color="amber" loading={loadingListings} />
+                <MetricCard icon={CheckCircle} label="Listed" value={tokenListings.filter(l => l.status === 'listed').length.toString()} sub="Live on platform" color="green" loading={loadingListings} />
+                <MetricCard icon={DollarSign} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved" color="purple" loading={loadingListings} />
               </div>
 
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold flex items-center gap-2 mb-3">
-                  <Briefcase className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                  Token Listing Submissions
-                </div>
-
+              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
                 {loadingListings ? (
                   <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-16 bg-white/5 rounded animate-pulse" />
-                    ))}
+                    {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-white/[0.03] rounded-lg animate-pulse" />)}
                   </div>
                 ) : tokenListings.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 text-xs">No token listing submissions yet</div>
+                  <div className="text-center py-12 text-gray-600 text-xs">No token listing submissions yet</div>
                 ) : (
                   <div className="space-y-3">
                     {tokenListings.map((listing) => (
-                      <div key={listing.id} className="glass rounded-lg p-3 border border-white/5 hover:border-white/10 transition-colors">
+                      <div key={listing.id} className="bg-[#0A0E1A]/60 rounded-xl p-4 border border-white/[0.04] hover:border-white/[0.08] transition-colors">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
                             {listing.logoUrl ? (
-                              <img src={listing.logoUrl} alt={listing.tokenName} className="w-8 h-8 rounded-full object-cover" />
+                              <img src={listing.logoUrl} alt={listing.tokenName} className="w-10 h-10 rounded-xl object-cover" />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0A1EFF]/15 to-[#7C3AED]/15 flex items-center justify-center text-xs font-bold text-[#0A1EFF]">
                                 {listing.symbol?.slice(0, 2) || '?'}
                               </div>
                             )}
                             <div>
-                              <div className="text-xs font-bold flex items-center gap-2">
-                                {listing.tokenName} <span className="text-gray-500">({listing.symbol})</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
-                                  listing.status === 'pending' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
-                                  listing.status === 'listed' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                                  listing.status === 'rejected' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
-                                  listing.status === 'paid' ? 'bg-[#10B981]/20 text-[#10B981]' :
-                                  'bg-[#0A1EFF]/20 text-[#0A1EFF]'
+                              <div className="text-sm font-bold flex items-center gap-2">
+                                {listing.tokenName}
+                                <span className="text-gray-500 text-xs font-normal">({listing.symbol})</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                  listing.status === 'pending' ? 'bg-[#F59E0B]/15 text-[#F59E0B]' :
+                                  listing.status === 'listed' ? 'bg-[#10B981]/15 text-[#10B981]' :
+                                  listing.status === 'rejected' ? 'bg-[#EF4444]/15 text-[#EF4444]' :
+                                  'bg-[#0A1EFF]/15 text-[#0A1EFF]'
                                 }`}>
-                                  {listing.status === 'approved_pending_payment' ? 'APPROVED' :
-                                   listing.status === 'payment_sent' ? 'PAYMENT SENT' :
-                                   listing.status?.toUpperCase()}
+                                  {listing.status === 'approved_pending_payment' ? 'APPROVED' : listing.status?.toUpperCase()}
                                 </span>
                               </div>
-                              <div className="text-[10px] text-gray-500 mt-0.5">
-                                {listing.chain} · {listing.contractAddress?.slice(0, 6)}...{listing.contractAddress?.slice(-4)}
-                              </div>
-                              {listing.description && (
-                                <div className="text-[10px] text-gray-400 mt-1 line-clamp-2">{listing.description}</div>
-                              )}
-                              <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-500">
-                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF]">Website</a>}
-                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF]">Telegram</a>}
-                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF]">Twitter</a>}
-                                {listing.email && <span>Contact: {listing.email}</span>}
+                              <div className="text-[10px] text-gray-500 mt-0.5">{listing.chain} · {listing.contractAddress?.slice(0, 8)}...{listing.contractAddress?.slice(-4)}</div>
+                              {listing.description && <div className="text-[10px] text-gray-500 mt-1 line-clamp-1">{listing.description}</div>}
+                              <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-600">
+                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Website</a>}
+                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Telegram</a>}
+                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Twitter</a>}
                                 <span>Submitted: {new Date(listing.submittedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
@@ -1230,35 +800,29 @@ export default function AdminPanel() {
                           <div className="flex flex-col items-end gap-1.5 shrink-0">
                             {listing.status === 'pending' && (
                               <div className="flex items-center gap-1.5">
-                                <button onClick={() => handleListingAction(listing.id, 'approve')} className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1">
+                                <button onClick={() => handleListingAction(listing.id, 'approve')} className="px-3 py-1.5 bg-[#10B981]/10 text-[#10B981] text-[10px] font-semibold rounded-lg hover:bg-[#10B981]/20 transition-colors flex items-center gap-1">
                                   <CheckCircle className="w-3 h-3" /> Approve
                                 </button>
-                                <button onClick={() => handleListingAction(listing.id, 'reject')} className="px-2.5 py-1 bg-[#EF4444]/20 text-[#EF4444] text-[10px] font-semibold rounded hover:bg-[#EF4444]/30 transition-colors flex items-center gap-1">
+                                <button onClick={() => handleListingAction(listing.id, 'reject')} className="px-3 py-1.5 bg-[#EF4444]/10 text-[#EF4444] text-[10px] font-semibold rounded-lg hover:bg-[#EF4444]/20 transition-colors flex items-center gap-1">
                                   <XCircle className="w-3 h-3" /> Reject
                                 </button>
                               </div>
                             )}
                             {listing.status === 'approved_pending_payment' && (
-                              <button onClick={() => handleListingAction(listing.id, 'send_payment_email')} className="px-2.5 py-1 bg-[#7C3AED]/20 text-[#7C3AED] text-[10px] font-semibold rounded hover:bg-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'send_payment_email')} className="px-3 py-1.5 bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-semibold rounded-lg hover:bg-[#7C3AED]/20 transition-colors flex items-center gap-1">
                                 <Send className="w-3 h-3" /> Send Payment Email
                               </button>
                             )}
                             {listing.status === 'payment_sent' && (
-                              <button onClick={() => handleListingAction(listing.id, 'confirm_payment')} className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] text-[10px] font-semibold rounded hover:bg-[#10B981]/30 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'confirm_payment')} className="px-3 py-1.5 bg-[#10B981]/10 text-[#10B981] text-[10px] font-semibold rounded-lg hover:bg-[#10B981]/20 transition-colors flex items-center gap-1">
                                 <DollarSign className="w-3 h-3" /> Confirm Payment
                               </button>
                             )}
                             {listing.status === 'paid' && (
-                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-2.5 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 text-[#0A1EFF] text-[10px] font-semibold rounded hover:from-[#0A1EFF]/30 hover:to-[#7C3AED]/30 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-3 py-1.5 bg-[#0A1EFF]/10 text-[#0A1EFF] text-[10px] font-semibold rounded-lg hover:bg-[#0A1EFF]/20 transition-colors flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" /> List on Discovery
                               </button>
                             )}
-                            {listing.status === 'listed' && (
-                              <span className="text-[9px] text-[#10B981] font-semibold">Live on Discovery</span>
-                            )}
-                            <a href={`/dashboard/token-preview/${listing.id}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-500 hover:text-[#0A1EFF] transition-colors">
-                              Preview Link
-                            </a>
                           </div>
                         </div>
                       </div>
@@ -1269,73 +833,193 @@ export default function AdminPanel() {
             </div>
           )}
 
+          {activeSection === 'security' && (
+            <div className="space-y-4">
+              <SectionHeader title="Security Overview" subtitle="Shadow Guardian & platform security metrics" />
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard icon={ShieldCheck} label="Scans Run" value={stats?.platform.totalScans?.toString() || '0'} sub="Token security scans" color="green" loading={loadingStats} />
+                <MetricCard icon={AlertTriangle} label="Threats Found" value={stats?.platform.totalThreats?.toString() || '0'} sub="Detected threats" color="red" loading={loadingStats} />
+                <MetricCard icon={ShieldAlert} label="Active Alerts" value={stats?.platform.totalAlerts?.toString() || '0'} sub="User-configured" color="amber" loading={loadingStats} />
+                <MetricCard icon={Eye} label="Entities Tracked" value={stats?.platform.followedEntities?.toString() || '0'} sub="Money Radar" color="blue" loading={loadingStats} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck className="w-4 h-4 text-[#10B981]" />
+                    <span className="text-xs font-heading font-bold">Shadow Guardian Status</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Pre-Trade Scanning', status: 'Active', color: 'text-[#10B981]' },
+                      { label: 'Scam Detection Engine', status: 'Active', color: 'text-[#10B981]' },
+                      { label: 'AI Risk Assessment', status: 'Active', color: 'text-[#10B981]' },
+                      { label: 'Wallet Reputation', status: 'Active', color: 'text-[#10B981]' },
+                      { label: 'Holder Intelligence', status: 'Active', color: 'text-[#10B981]' },
+                      { label: 'Bubblemaps Analysis', status: 'Active', color: 'text-[#10B981]' },
+                    ].map((f, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] py-1.5 border-b border-white/[0.03] last:border-0">
+                        <span className="text-gray-400">{f.label}</span>
+                        <span className={`font-semibold ${f.color}`}>{f.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="w-4 h-4 text-[#0A1EFF]" />
+                    <span className="text-xs font-heading font-bold">Trading Infrastructure</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Jupiter Aggregator (Solana)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: '1inch Router (EVM)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'Arkham Intelligence', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'Money Radar (Copy Trade)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'VTX AI (Claude)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'Multi-Chain Search', status: 'Live', color: 'text-[#10B981]' },
+                    ].map((f, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] py-1.5 border-b border-white/[0.03] last:border-0">
+                        <span className="text-gray-400">{f.label}</span>
+                        <span className={`font-semibold ${f.color}`}>{f.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'notifications' && (
+            <div className="space-y-4">
+              <SectionHeader title="Broadcast Notifications" subtitle="Send platform-wide messages" />
+
+              <div className="bg-[#111827]/80 rounded-xl p-5 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-4">
+                  <Send className="w-4 h-4 text-[#0A1EFF]" />
+                  <span className="text-xs font-heading font-bold">Compose Broadcast</span>
+                </div>
+                <textarea
+                  value={broadcastMsg}
+                  onChange={(e) => setBroadcastMsg(e.target.value)}
+                  placeholder="Write a platform-wide notification message..."
+                  className="w-full bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#0A1EFF]/30 min-h-[100px] text-white placeholder-gray-600 mb-4 transition-colors resize-none"
+                />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }} className="bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5" /> Send Broadcast
+                    </button>
+                    {broadcastSent && <span className="text-[#10B981] text-[11px] font-medium">Sent successfully!</span>}
+                  </div>
+                  <span className="text-[10px] text-gray-600">{broadcastMsg.length} chars</span>
+                </div>
+              </div>
+
+              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="text-xs font-heading font-bold mb-3">Quick Templates</div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {[
+                    { label: 'Scheduled Maintenance', msg: 'STEINZ LABS will undergo scheduled maintenance shortly. Some features may be temporarily unavailable.', icon: Clock, color: 'text-[#F59E0B]' },
+                    { label: 'New Feature', msg: 'New feature available! Check out the latest updates on STEINZ LABS.', icon: Zap, color: 'text-[#0A1EFF]' },
+                    { label: 'Security Advisory', msg: 'Security advisory: Always verify tokens before trading. Use Shadow Guardian for safety checks.', icon: ShieldAlert, color: 'text-[#EF4444]' },
+                    { label: 'Market Alert', msg: 'Significant market movement detected. Check VTX AI for analysis.', icon: TrendingUp, color: 'text-[#10B981]' },
+                  ].map((alert, i) => {
+                    const AlertIcon = alert.icon;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setBroadcastMsg(alert.msg)}
+                        className="bg-[#0A0E1A]/60 rounded-xl p-3.5 border border-white/[0.04] hover:border-white/[0.1] text-left transition-all flex items-start gap-3"
+                      >
+                        <AlertIcon className={`w-4 h-4 ${alert.color} flex-shrink-0 mt-0.5`} />
+                        <div>
+                          <div className={`text-[11px] font-bold ${alert.color}`}>{alert.label}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{alert.msg}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeSection === 'settings' && (
             <div className="space-y-4">
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Settings className="w-3.5 h-3.5 text-gray-400" />
-                  Platform Configuration
+              <SectionHeader title="Platform Configuration" subtitle="Data sources, settings, and admin tools" />
+
+              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-4">
+                  <Database className="w-4 h-4 text-[#7C3AED]" />
+                  <span className="text-xs font-heading font-bold">Data Sources & Infrastructure</span>
                 </div>
-                <div className="space-y-4">
-                  <div className="text-center py-6 text-gray-500">
-                    <Settings className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <div className="text-xs">Platform configuration managed via environment variables and API routes</div>
-                    <div className="text-[10px] mt-1">Auto-refresh: 60s | Prediction fees: 3% | Context feed: 15s poll</div>
+                <div className="space-y-1">
+                  {[
+                    { label: 'Authentication', value: 'Supabase Auth + Firebase', status: 'Connected' },
+                    { label: 'Database', value: 'Supabase PostgreSQL', status: 'Connected' },
+                    { label: 'Market Data', value: 'CoinGecko API', status: 'Connected' },
+                    { label: 'DEX Data', value: 'DexScreener API', status: 'Connected' },
+                    { label: 'On-chain Intel', value: 'Arkham Intelligence', status: 'Connected' },
+                    { label: 'AI Engine', value: 'Anthropic Claude', status: 'Connected' },
+                    { label: 'Solana Trading', value: 'Jupiter Aggregator', status: 'Connected' },
+                    { label: 'EVM Trading', value: '1inch Router', status: 'Connected' },
+                    { label: 'Token Security', value: 'GoPlus Labs', status: 'Connected' },
+                    { label: 'Social Auth', value: 'Firebase (Google/Apple)', status: 'Connected' },
+                  ].map((source, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0 text-[11px]">
+                      <span className="text-gray-400">{source.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-300 font-medium">{source.value}</span>
+                        <span className="text-[#10B981] font-semibold text-[9px]">{source.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-4">
+                  <Settings className="w-4 h-4 text-gray-400" />
+                  <span className="text-xs font-heading font-bold">Platform Settings</span>
+                </div>
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex justify-between py-2 border-b border-white/[0.03]">
+                    <span className="text-gray-400">Auto-refresh Interval</span>
+                    <span className="text-white font-mono">30 seconds</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-white/[0.03]">
+                    <span className="text-gray-400">Price Feed Interval</span>
+                    <span className="text-white font-mono">30 seconds</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-white/[0.03]">
+                    <span className="text-gray-400">Context Feed Poll</span>
+                    <span className="text-white font-mono">15 seconds</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-white/[0.03]">
+                    <span className="text-gray-400">Chains Supported</span>
+                    <span className="text-white font-mono">12+</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-400">Framework</span>
+                    <span className="text-white font-mono">Next.js 15</span>
                   </div>
                 </div>
               </div>
 
-              <div className="glass rounded-xl p-4 border border-white/10">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2">
-                  <Database className="w-3.5 h-3.5 text-[#7C3AED]" />
-                  Data Sources
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">Market Data</span>
-                    <span className="text-[#10B981] font-semibold">CoinGecko API</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">Blockchain Data</span>
-                    <span className="text-[#10B981] font-semibold">Alchemy SDK</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">Token Security</span>
-                    <span className="text-[#10B981] font-semibold">GoPlus Labs</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">AI Assistant</span>
-                    <span className="text-[#10B981] font-semibold">Anthropic Claude</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">Authentication</span>
-                    <span className="text-[#10B981] font-semibold">Supabase Auth</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-white/5">
-                    <span className="text-gray-400">DEX Data</span>
-                    <span className="text-[#10B981] font-semibold">DexScreener API</span>
-                  </div>
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-gray-400">Fear & Greed Index</span>
-                    <span className="text-[#10B981] font-semibold">Alternative.me</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-xl p-4 border border-[#EF4444]/20">
-                <div className="text-xs font-bold mb-3 flex items-center gap-2 text-[#EF4444]">
-                  <Lock className="w-3.5 h-3.5" />
-                  Danger Zone
+              <div className="bg-[#111827]/80 rounded-xl p-4 border border-[#EF4444]/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lock className="w-4 h-4 text-[#EF4444]" />
+                  <span className="text-xs font-heading font-bold text-[#EF4444]">Danger Zone</span>
                 </div>
                 <div className="space-y-2">
-                  <button className="w-full py-2 px-3 rounded-lg border border-[#EF4444]/20 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/10 transition-colors text-left flex items-center gap-2">
-                    <Trash2 className="w-3 h-3" /> Clear All Caches
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-left flex items-center gap-2.5">
+                    <Trash2 className="w-3.5 h-3.5" /> Clear All Caches
                   </button>
-                  <button className="w-full py-2 px-3 rounded-lg border border-[#EF4444]/20 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/10 transition-colors text-left flex items-center gap-2">
-                    <Ban className="w-3 h-3" /> Enable Maintenance Mode
-                  </button>
-                  <button className="w-full py-2 px-3 rounded-lg border border-[#EF4444]/20 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/10 transition-colors text-left flex items-center gap-2">
-                    <Trash2 className="w-3 h-3" /> Reset Builder Submissions
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-left flex items-center gap-2.5">
+                    <Ban className="w-3.5 h-3.5" /> Enable Maintenance Mode
                   </button>
                 </div>
               </div>
@@ -1344,23 +1028,6 @@ export default function AdminPanel() {
 
         </div>
       </main>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, sub, color, loading }: { icon: React.ReactNode; label: string; value: string; sub: string; color: string; loading: boolean }) {
-  return (
-    <div className="glass rounded-xl p-4 border border-white/10">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={color}>{icon}</div>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</span>
-      </div>
-      {loading ? (
-        <div className="h-7 bg-white/5 rounded animate-pulse" />
-      ) : (
-        <div className={`text-xl font-bold ${color}`}>{value}</div>
-      )}
-      <div className="text-[10px] text-gray-500 mt-0.5">{sub}</div>
     </div>
   );
 }
