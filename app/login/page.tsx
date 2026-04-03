@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase, setRememberMe, isSupabaseReady } from '@/lib/supabase';
+
+const SESSION_HOURS = 48;
 
 function LoginPageInner() {
   const router = useRouter();
@@ -17,9 +19,9 @@ function LoginPageInner() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMeState] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submitting = useRef(false);
 
   useEffect(() => {
     if (!authLoading && user) router.replace('/dashboard');
@@ -28,6 +30,7 @@ function LoginPageInner() {
   useEffect(() => {
     const confirmed = searchParams.get('confirmed');
     if (confirmed === 'pending') showToast('Account created! Sign in below.', 'success');
+    if (confirmed === 'reset') showToast('Password updated! Sign in with your new password.', 'success');
   }, [searchParams, showToast]);
 
   const validate = () => {
@@ -38,15 +41,13 @@ function LoginPageInner() {
     return Object.keys(e).length === 0;
   };
 
-  const submitting = useRef(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate() || submitting.current) return;
 
     submitting.current = true;
     setLoading(true);
-    setRememberMe(rememberMe);
+    setRememberMe(true);
 
     if (!isSupabaseReady()) {
       showToast('Auth service is not configured. Please contact support.', 'error');
@@ -89,8 +90,7 @@ function LoginPageInner() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('steinz_has_session', 'true');
         if (signInData?.session?.access_token) {
-          const remember = rememberMe;
-          const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
+          const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
           document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}`;
         }
       }
@@ -124,7 +124,15 @@ function LoginPageInner() {
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Welcome back to<br /><span className="text-[#0A1EFF]">STEINZ LABS</span></h1>
-          <p className="text-gray-400 text-sm leading-relaxed">Access your intelligence dashboard. Track whales, analyze wallets, and act on real blockchain data before the crowd.</p>
+          <p className="text-gray-400 text-sm leading-relaxed mb-8">Access your intelligence dashboard. Track whales, analyze wallets, and act on real blockchain data before the crowd.</p>
+          <div className="space-y-3">
+            {['Real-time on-chain intelligence', 'AI-powered trading analysis', 'Professional security scanning'].map(t => (
+              <div key={t} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-[#0A1EFF]/10 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-[#0A1EFF]" /></div>
+                <span className="text-sm text-gray-300">{t}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
       </div>
@@ -156,13 +164,17 @@ function LoginPageInner() {
                   className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                   placeholder="john@example.com or johndoe"
                   autoComplete="username"
+                  autoFocus
                 />
               </div>
               {errors.identifier && <p className="text-red-400 text-xs mt-1.5">{errors.identifier}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-300">Password</label>
+                <Link href="/forgot-password" className="text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">Forgot password?</Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
@@ -180,14 +192,11 @@ function LoginPageInner() {
               {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <button type="button" onClick={() => setRememberMeState(!rememberMe)} className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${rememberMe ? 'bg-[#0A1EFF] border-[#0A1EFF]' : 'border-white/20 bg-transparent'}`}>
-                {rememberMe && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </button>
-              <span className="text-sm text-gray-400">Keep me signed in for 7 days</span>
-            </div>
-
-            <button type="submit" disabled={loading} className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
+            >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

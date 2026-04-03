@@ -143,7 +143,7 @@ export default function SignUpPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('steinz_has_session', 'true');
         if (signInData?.session?.access_token) {
-          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 48}`;
         }
       }
 

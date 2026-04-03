@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
 const PLACEHOLDER_KEY = 'placeholder';
+const SESSION_SECONDS = 60 * 60 * 48;
 
 let _supabase: SupabaseClient | null = null;
 let _configured = false;
@@ -39,9 +40,7 @@ function getClient(): SupabaseClient {
         const isSecure = window.location.protocol === 'https:';
         const securePart = isSecure ? '; Secure' : '';
         if (session) {
-          const remember = localStorage.getItem('steinz_remember_me') !== 'false';
-          const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
-          document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${securePart}${maxAge}`;
+          document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${securePart}; max-age=${SESSION_SECONDS}`;
           localStorage.setItem('steinz_has_session', 'true');
         } else {
           document.cookie = `steinz_session=; path=/; max-age=0${securePart}`;

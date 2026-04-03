@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send } from 'lucide-react';
+import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import ThemeToggle from '@/components/ThemeToggle';
-import LaunchAppButton from '@/components/LaunchAppButton';
-import LoginModal from '@/components/LoginModal';
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
@@ -145,7 +143,6 @@ export default function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
   const stats = [
@@ -194,32 +191,23 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="hidden sm:block text-[13px] font-medium text-gray-300 hover:text-white px-3 py-2 transition-colors"
-            >
+            <Link href="/login" className="hidden sm:block text-[13px] font-medium text-gray-300 hover:text-white px-3 py-2 transition-colors">
               Log In
-            </button>
-            <Link href="/signup">
-              <button className="hidden sm:flex items-center bg-white text-black px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-gray-100 transition-all">
-                Sign Up
-              </button>
+            </Link>
+            <Link href="/signup" className="hidden sm:flex items-center bg-white text-black px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-gray-100 transition-all">
+              Sign Up
             </Link>
             <div className="flex sm:hidden items-center gap-1">
-              <button className="text-[13px] font-medium text-gray-300 hover:text-white px-2 py-1.5 transition-colors" onClick={() => setShowLoginModal(true)}>
+              <Link href="/login" className="text-[13px] font-medium text-gray-300 hover:text-white px-2 py-1.5 transition-colors">
                 Log In
-              </button>
-              <Link href="/signup">
-                <button className="bg-white text-black px-3 py-1.5 rounded-lg text-[12px] font-semibold hover:bg-gray-100 transition-all">
-                  Sign Up
-                </button>
+              </Link>
+              <Link href="/signup" className="bg-white text-black px-3 py-1.5 rounded-lg text-[12px] font-semibold hover:bg-gray-100 transition-all">
+                Sign Up
               </Link>
             </div>
           </div>
         </div>
       </nav>
-
-      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
 
       <section className="pt-32 pb-20 px-4 sm:px-6 relative">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -244,11 +232,11 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-20 animate-fade-slide-in" style={{ animationDelay: '0.3s' }}>
-            <LaunchAppButton onClick={() => setShowLoginModal(true)} className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
-            <Link href="/whitepaper" className="flex-1">
-              <button className="w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all">
-                Read Docs
-              </button>
+            <Link href="/login" className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
+              Launch App <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link href="/whitepaper" className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all text-center">
+              Read Docs
             </Link>
           </div>
 
@@ -505,7 +493,9 @@ export default function LandingPage() {
             Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-            <LaunchAppButton onClick={() => setShowLoginModal(true)} className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
+            <Link href="/login" className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
+              Launch App <ArrowRight className="w-4 h-4" />
+            </Link>
             <Link href="/whitepaper" className="flex-1">
               <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
                 Learn More
