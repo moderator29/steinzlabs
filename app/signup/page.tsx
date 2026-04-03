@@ -151,20 +151,14 @@ export default function SignUpPage() {
         return;
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: form.password,
-      });
-
-      if (signInError) {
-        showToast('Account created! Please sign in.', 'success');
-        router.push('/login');
-        return;
+      if (!data.emailSent) {
+        try {
+          await supabase.auth.resend({ type: 'signup', email: data.email });
+        } catch {}
       }
 
-      if (typeof window !== 'undefined') localStorage.setItem('naka_has_session', 'true');
-      showToast('Welcome to Naka Labs!', 'success');
-      router.push('/dashboard');
+      showToast('Account created! Check your email to confirm, then sign in.', 'success');
+      router.push('/login?confirmed=pending');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
     } finally {
