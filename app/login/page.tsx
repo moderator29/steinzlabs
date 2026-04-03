@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
-import NakaLogo from '@/components/NakaLogo';
+import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase, setRememberMe } from '@/lib/supabase';
 import { socialSignIn } from '@/lib/socialAuth';
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -95,11 +95,11 @@ export default function LoginPage() {
       }
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('naka_has_session', 'true');
+        localStorage.setItem('steinz_has_session', 'true');
         if (signInData?.session?.access_token) {
           const remember = rememberMe;
           const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
-          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}`;
+          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}`;
         }
       }
       showToast('Welcome back!', 'success');
@@ -125,20 +125,20 @@ export default function LoginPage() {
 
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">
-          <NakaLogo size={32} />
-          <span className="text-base font-bold tracking-tight">NAKA LABS</span>
+          <SteinzLogo size={32} />
+          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
         </Link>
         <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight mb-4">Welcome back to<br /><span className="text-[#0A1EFF]">Naka Labs</span></h1>
+          <h1 className="text-4xl font-bold leading-tight mb-4">Welcome back to<br /><span className="text-[#0A1EFF]">STEINZ LABS</span></h1>
           <p className="text-gray-400 text-sm leading-relaxed">Access your intelligence dashboard. Track whales, analyze wallets, and act on real blockchain data before the crowd.</p>
         </div>
-        <p className="text-xs text-gray-600">&copy; 2026 Naka Labs. Powered by $NAKA.</p>
+        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center justify-between mb-8">
-            <Link href="/" className="flex items-center gap-2"><NakaLogo size={28} /><span className="text-sm font-bold">NAKA LABS</span></Link>
+            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
             <Link href="/" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back</Link>
           </div>
 
@@ -233,5 +233,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

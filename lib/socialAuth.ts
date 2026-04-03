@@ -53,9 +53,9 @@ export async function socialSignIn(provider: SocialProvider): Promise<{ success:
     }
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('naka_has_session', 'true');
+      localStorage.setItem('steinz_has_session', 'true');
       if (signInData?.session?.access_token) {
-        document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+        document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
       }
     }
 

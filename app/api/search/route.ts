@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       : `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`;
 
     const res = await fetch(endpoint, {
-      headers: { 'User-Agent': 'NakaLabs/1.0' },
+      headers: { 'User-Agent': 'SteinzLabs/1.0' },
       next: { revalidate: 30 },
     });
 

@@ -139,8 +139,8 @@ export default function Dashboard() {
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
-            <img src="/steinz-logo-128.png" alt="NAKA" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
-            <span className="text-sm font-heading font-bold tracking-tight">NAKA</span>
+            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
+            <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
           </div>
         </div>
       </div>

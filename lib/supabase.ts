@@ -10,7 +10,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
         persistSession: true,
         detectSessionInUrl: true,
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        storageKey: 'naka-auth-token',
+        storageKey: 'steinz-auth-token',
         flowType: 'implicit',
       },
     })
@@ -19,19 +19,19 @@ export const supabase = supabaseUrl && supabaseAnonKey
 if (typeof window !== 'undefined' && supabase) {
   supabase.auth.onAuthStateChange((event: string, session: any) => {
     if (session) {
-      const remember = localStorage.getItem('naka_remember_me') !== 'false';
+      const remember = localStorage.getItem('steinz_remember_me') !== 'false';
       const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';
-      document.cookie = `naka_session=${session.access_token}; path=/; SameSite=Lax${maxAge}`;
+      document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax${maxAge}`;
     } else {
-      document.cookie = 'naka_session=; path=/; max-age=0';
-      localStorage.removeItem('naka_remember_me');
+      document.cookie = 'steinz_session=; path=/; max-age=0';
+      localStorage.removeItem('steinz_remember_me');
     }
   });
 }
 
 export function setRememberMe(value: boolean) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('naka_remember_me', value ? 'true' : 'false');
+    localStorage.setItem('steinz_remember_me', value ? 'true' : 'false');
   }
 }
 

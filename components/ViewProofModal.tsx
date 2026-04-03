@@ -180,7 +180,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
             <div className="min-w-0">
               <h2 className="text-sm font-bold truncate">{event.tokenName || 'On-Chain Proof'}</h2>
               <p className="text-[10px] text-gray-500 truncate">
-                {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Verified by Naka AI'}
+                {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Verified by VTX AI'}
                 {event.tokenPrice ? ` · ${event.tokenPrice}` : ''}
                 {event.platform ? ` · ${event.platform}` : ''}
               </p>

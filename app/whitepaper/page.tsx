@@ -619,7 +619,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="project-discovery" number="15" title="Project Discovery">
-            <p>STEINZ Project Discovery surfaces real, verified Web3 projects with live market data. Projects are pulled from CoinGecko with a minimum market cap threshold, ensuring quality. The NAKA GO token is featured as a pinned partner project.</p>
+            <p>STEINZ Project Discovery surfaces real, verified Web3 projects with live market data. Projects are pulled from CoinGecko with a minimum market cap threshold, ensuring quality.</p>
 
             <div className="glass rounded-xl p-4 border border-white/[0.06] mt-4">
               <p className="text-xs font-heading font-bold text-white mb-3">Discovery Features</p>
@@ -629,7 +629,7 @@ export default function WhitepaperPage() {
                   'Chain-specific filtering (ETH, SOL, BSC, etc.)',
                   'Market cap, volume, and price data',
                   'Verified badge system (gold wavy checkmark)',
-                  'NAKA GO pinned at top as partner',
+                  'Featured projects section',
                   'Token listing submission form',
                   'Category-based browsing',
                   'Price change indicators (24h)',
@@ -805,15 +805,9 @@ export default function WhitepaperPage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 border border-[#F59E0B]/10 bg-[#F59E0B]/[0.02] mt-4">
-              <div className="flex items-center gap-3 mb-3">
-                <img src="/nakago-logo.jpg" alt="NAKA GO" className="w-10 h-10 rounded-full object-cover" />
-                <div>
-                  <p className="text-xs font-heading font-bold text-white">NAKA GO &mdash; Strategic Partner</p>
-                  <p className="text-[10px] text-gray-500">Powering the STEINZ ecosystem infrastructure</p>
-                </div>
-              </div>
-              <p className="text-[11px] text-gray-500">NAKA GO provides the foundational infrastructure and community support for STEINZ Labs. As a strategic partner, NAKA GO is deeply integrated into the platform&apos;s discovery engine and community layer.</p>
+            <div className="glass rounded-xl p-4 border border-[#0A1EFF]/10 bg-[#0A1EFF]/[0.02] mt-4">
+              <p className="text-xs font-heading font-bold text-[#0A1EFF] mb-2">Platform Roadmap</p>
+              <p className="text-[11px] text-gray-500">STEINZ LABS is continuously evolving. Upcoming features include expanded chain support, institutional-grade analytics, and advanced AI-driven trading signals. Stay tuned for updates.</p>
             </div>
           </Section>
 
@@ -904,7 +898,7 @@ export default function WhitepaperPage() {
           </div>
 
           <div className="text-center mt-8 text-gray-600 text-[11px]">
-            &copy; 2026 STEINZ Labs &times; NAKA GO. Confidential. For Strategic Partners.
+            &copy; 2026 STEINZ LABS. All rights reserved.
           </div>
         </div>
       </div>

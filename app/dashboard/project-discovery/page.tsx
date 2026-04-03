@@ -339,11 +339,11 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Token Name *</label>
-                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="NAKA GO" />
+                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. Bitcoin" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Symbol *</label>
-                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="NAKAGO" />
+                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. BTC" />
               </div>
             </div>
             <div>

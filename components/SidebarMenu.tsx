@@ -90,8 +90,8 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <img src="/steinz-logo-128.png" alt="NAKA" className="w-7 h-7" style={{ objectFit: 'contain' }} />
-            <span className="text-sm font-heading font-bold tracking-tight text-white">NAKA</span>
+            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7" style={{ objectFit: 'contain' }} />
+            <span className="text-sm font-heading font-bold tracking-tight text-white">STEINZ LABS</span>
           </div>
           <button
             onClick={onClose}
@@ -125,7 +125,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         </div>
 
         <div className="px-4 py-3 border-t border-white/[0.06] flex-shrink-0">
-          <div className="text-[10px] text-gray-600 font-mono">Naka Labs v1.0.0-beta</div>
+          <div className="text-[10px] text-gray-600 font-mono">STEINZ LABS v1.0.0-beta</div>
         </div>
       </div>
     </>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Eye, EyeOff, ArrowLeft, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
 import Link from 'next/link';
-import NakaLogo from '@/components/NakaLogo';
+import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -95,7 +95,7 @@ export default function SignUpPage() {
     try {
       const result = await socialSignIn(provider);
       if (result.success) {
-        showToast('Welcome to Naka Labs!', 'success');
+        showToast('Welcome to STEINZ LABS!', 'success');
         router.push('/dashboard');
       } else if (result.error && result.error !== 'Sign-in cancelled') {
         showToast(result.error, 'error');
@@ -162,13 +162,13 @@ export default function SignUpPage() {
       }
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('naka_has_session', 'true');
+        localStorage.setItem('steinz_has_session', 'true');
         if (signInData?.session?.access_token) {
-          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
         }
       }
 
-      showToast('Welcome to Naka Labs!', 'success');
+      showToast('Welcome to STEINZ LABS!', 'success');
       router.push('/dashboard');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
@@ -195,8 +195,8 @@ export default function SignUpPage() {
 
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">
-          <NakaLogo size={32} />
-          <span className="text-base font-bold tracking-tight">NAKA LABS</span>
+          <SteinzLogo size={32} />
+          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Join the intelligence<br /><span className="text-[#0A1EFF]">revolution</span></h1>
@@ -210,13 +210,13 @@ export default function SignUpPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-gray-600">&copy; 2026 Naka Labs. Powered by $NAKA.</p>
+        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center justify-between mb-8">
-            <Link href="/" className="flex items-center gap-2"><NakaLogo size={28} /><span className="text-sm font-bold">NAKA LABS</span></Link>
+            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
             <Link href="/" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back</Link>
           </div>
 
@@ -224,7 +224,7 @@ export default function SignUpPage() {
             <div className="text-center mb-6">
               <div className="w-12 h-12 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-3 border border-[#0A1EFF]/20"><Shield className="w-6 h-6 text-[#0A1EFF]" /></div>
               <h2 className="text-xl font-bold mb-1">Create your account</h2>
-              <p className="text-gray-500 text-sm">Get started with Naka Labs</p>
+              <p className="text-gray-500 text-sm">Get started with STEINZ LABS</p>
             </div>
 
             <button
