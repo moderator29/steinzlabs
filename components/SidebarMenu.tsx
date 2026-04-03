@@ -57,7 +57,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     title: 'Tools',
     items: [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
-      { icon: Bot, label: 'VTX AI', path: '/dashboard/vtx-ai' },
+      { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: Shield, label: 'Security Center', path: '/dashboard/security' },
       { icon: Target, label: 'Risk Scanner', path: '/dashboard/risk-scanner' },

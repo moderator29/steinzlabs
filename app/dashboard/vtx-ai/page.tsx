@@ -22,7 +22,7 @@ function loadHistory(): Message[] {
     }
   } catch {}
   return [
-    { role: 'assistant', content: 'Hey! I\'m VTX AI — I search live market data before answering so you always get current prices and trends. Ask me anything about crypto, markets, or really anything else.' },
+    { role: 'assistant', content: 'VTX Agent online. I pull live market data, on-chain intelligence, and security analysis before every response. What do you need?' },
   ];
 }
 
@@ -102,7 +102,7 @@ export default function VtxAiPage() {
 
   const clearChat = () => {
     const fresh = [
-      { role: 'assistant' as const, content: 'Chat cleared! Ask me anything — I search live market data before answering.' },
+      { role: 'assistant' as const, content: 'Chat cleared. VTX Agent ready. What do you need?' },
     ];
     setMessages(fresh);
     saveHistory(fresh);
@@ -139,7 +139,7 @@ export default function VtxAiPage() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: '⚡ You\'ve reached your daily free limit of 15 messages. Upgrade to **STEINZ Pro** for unlimited VTX AI access, web search, and more!' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access and web search.' }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
@@ -156,7 +156,7 @@ export default function VtxAiPage() {
         }
       }
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to connect to VTX AI. Please check your connection and try again.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please check your connection and try again.' }]);
     } finally {
       setLoading(false);
     }
@@ -185,7 +185,7 @@ export default function VtxAiPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-heading font-bold">VTX AI Assistant</h1>
+              <h1 className="text-sm font-heading font-bold">VTX Agent</h1>
               {isPro && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded text-[9px] text-amber-400 font-bold">
                   <Crown className="w-2.5 h-2.5" /> PRO
@@ -228,7 +228,7 @@ export default function VtxAiPage() {
               {msg.role === 'assistant' && (
                 <div className="flex items-center gap-1.5 mb-2">
                   <Sparkles className="w-3 h-3 text-[#0A1EFF]" />
-                  <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX AI</span>
+                  <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX Agent</span>
                 </div>
               )}
               <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -307,7 +307,7 @@ export default function VtxAiPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask VTX AI anything..."
+              placeholder="Ask VTX Agent anything..."
               className="flex-1 bg-transparent py-3 text-xs placeholder-gray-600 focus:outline-none"
               disabled={loading || (rateLimited && !isPro)}
             />

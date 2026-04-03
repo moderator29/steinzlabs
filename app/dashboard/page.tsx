@@ -71,7 +71,7 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
-    { id: 'vtxai', icon: MessageSquare, label: 'VTX AI' },
+    { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent' },
     { id: 'wallet', icon: Wallet, label: 'Wallet' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];

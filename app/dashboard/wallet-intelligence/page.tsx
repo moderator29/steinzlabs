@@ -298,14 +298,13 @@ export default function WalletIntelligencePage() {
                 <div className="w-6 h-6 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
                   <PieChart className="w-3.5 h-3.5 text-[#0A1EFF]" />
                 </div>
-                <h3 className="font-bold text-sm">Holder Concentration</h3>
-                <span className="ml-auto px-2 py-0.5 rounded text-[9px] font-bold bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/20">BUBBLEMAPS</span>
+                <h3 className="font-bold text-sm">Portfolio Breakdown</h3>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {[
-                  { label: 'Top 10 Holders', value: `${Math.min(85, Math.max(20, Math.round(walletData.holdings.length * 3.7 + 15)))}%`, color: '#EF4444' },
-                  { label: 'Unique Holders', value: walletData.holdings.length > 5 ? `${(walletData.holdings.length * 127).toLocaleString()}` : '—', color: '#0A1EFF' },
-                  { label: 'Concentration', value: walletData.holdings.length > 3 ? 'MODERATE' : 'HIGH', color: walletData.holdings.length > 3 ? '#F59E0B' : '#EF4444' },
+                  { label: 'Token Types', value: `${walletData.holdings.length}`, color: '#0A1EFF' },
+                  { label: 'Largest Hold', value: walletData.holdings[0]?.symbol || '—', color: '#7C3AED' },
+                  { label: 'Diversity', value: walletData.holdings.length > 5 ? 'HIGH' : walletData.holdings.length > 2 ? 'MODERATE' : 'LOW', color: walletData.holdings.length > 5 ? '#10B981' : walletData.holdings.length > 2 ? '#F59E0B' : '#EF4444' },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#111827] rounded-lg p-2.5 text-center">
                     <div className="text-[9px] text-gray-500 mb-0.5">{stat.label}</div>
@@ -317,7 +316,7 @@ export default function WalletIntelligencePage() {
                 {walletData.holdings.slice(0, 5).map((h, i) => {
                   const pct = Math.max(5, Math.round(100 / (i + 1.5)));
                   return (
-                    <div key={`bubble-${i}`} className="flex items-center gap-2">
+                    <div key={`portfolio-${i}`} className="flex items-center gap-2">
                       <span className="text-[9px] text-gray-500 w-4 text-right">{i + 1}</span>
                       <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
                         <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: i === 0 ? '#0A1EFF' : i === 1 ? '#7C3AED' : i === 2 ? '#10B981' : '#F59E0B' }} />
@@ -327,10 +326,6 @@ export default function WalletIntelligencePage() {
                     </div>
                   );
                 })}
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Shield className="w-3 h-3 text-[#10B981]" />
-                <span className="text-[10px] text-gray-500">Powered by Bubblemaps — holder analysis & cluster detection</span>
               </div>
             </div>
 

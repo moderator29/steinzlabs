@@ -1,7 +1,7 @@
 # STEINZ LABS
 
 ## Overview
-Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX AI, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
+Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX Agent, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
 **Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free / Pro / Enterprise.
 
@@ -25,7 +25,12 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **On-chain data**: DexScreener API, CoinGecko API, Pump.fun API — universal multi-chain search with Arkham enrichment
 - **Money Radar**: Copy trading engine — follow Arkham entities, detect trades, auto-exit positions
 - **Real-time**: WebSocket price feeds via DEXScreener
-- **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis, Bubblemaps data generation
+- **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis
+- **Bubblemaps**: Integrated in context feed (per-event Bubbles link) and trading suite (chart header icon) — NOT in wallet intelligence
+- **VTX Agent**: Renamed from "VTX AI" — plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener)
+- **Wallet**: Non-custodial, max 5 wallets per user
+- **Back Button**: Top-left, no circle, plain arrow (FloatingBackButton.tsx)
+- **Security Center**: Contract addresses only — rejects wallet addresses with clear error
 
 ## Auth (Supabase)
 - **Client**: `@supabase/supabase-js` — client-side only (browser connects directly to Supabase)
