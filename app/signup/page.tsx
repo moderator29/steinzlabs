@@ -113,37 +113,24 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
-      const cleanEmail = form.email.trim().toLowerCase();
-      const cleanUsername = form.username.trim().toLowerCase();
-
-      const usernameRes = await fetch('/api/auth/signup', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanUsername }),
-      });
-      const usernameData = await usernameRes.json();
-      if (usernameData.available === false) {
-        showToast('Username is already taken', 'error');
-        setErrors(prev => ({ ...prev, username: 'Username taken' }));
-        return;
-      }
-
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: form.password,
-        options: {
-          data: {
-            first_name: form.firstName.trim(),
-            last_name: form.lastName.trim(),
-            username: cleanUsername,
-          },
-        },
+        body: JSON.stringify({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          username: form.username.trim().toLowerCase(),
+        }),
       });
 
-      if (signUpError) {
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-        const errMsg = signUpError.message;
+        const errMsg = data.error || 'Signup failed';
 
         if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many')) {
           if (newAttempts >= MAX_ATTEMPTS) {
@@ -152,16 +139,19 @@ export default function SignUpPage() {
           } else {
             showToast(`Rate limited. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? 's' : ''} left before waiting.`, 'error');
           }
-        } else if (errMsg.includes('already') || errMsg.includes('exists') || errMsg.includes('User already registered')) {
+        } else if (errMsg.includes('already') || errMsg.includes('exists')) {
           showToast('An account with this email already exists. Try signing in.', 'error');
+        } else if (errMsg.includes('Username')) {
+          showToast(errMsg, 'error');
+          setErrors(prev => ({ ...prev, username: 'Username taken' }));
         } else {
           showToast(errMsg, 'error');
         }
         return;
       }
 
-      showToast('Account created! Check your email to confirm, then sign in.', 'success');
-      router.push('/login?confirmed=pending');
+      showToast('Account created! You can now sign in.', 'success');
+      router.push('/login');
     } catch {
       showToast('Something went wrong. Please try again.', 'error');
     } finally {
