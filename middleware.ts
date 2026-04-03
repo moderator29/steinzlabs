@@ -56,9 +56,8 @@ async function verifySupabaseJWT(token: string): Promise<boolean> {
 }
 
 function extractTokenFromCookies(request: NextRequest): string | null {
-  // Check naka_session cookie (set by our client on auth state change)
-  const nakaCookie = request.cookies.get('naka_session')?.value;
-  if (nakaCookie) return nakaCookie;
+  const steinzCookie = request.cookies.get('steinz_session')?.value;
+  if (steinzCookie) return steinzCookie;
 
   // Check Supabase SSR auth token cookies (sb-<ref>-auth-token)
   const sbCookie = request.cookies.getAll().find(c =>

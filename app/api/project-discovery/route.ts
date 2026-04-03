@@ -1,64 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const NAKA_GO_CONTRACT = '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898';
-
 const MANUALLY_LISTED: any[] = [];
 
 let cache: { data: any; timestamp: number } | null = null;
 const CACHE_TTL = 120000;
-
-async function fetchNakaGoData() {
-  try {
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${NAKA_GO_CONTRACT}`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pair = data.pairs?.[0];
-    if (!pair) return null;
-    return {
-      name: pair.baseToken?.name || 'NAKA GO',
-      symbol: pair.baseToken?.symbol || 'NAKAGO',
-      slug: NAKA_GO_CONTRACT,
-      description: 'Community-powered meme token on Ethereum. Proudly powering Naka Labs platform.',
-      category: 'Pinned',
-      price: pair.priceUsd ? `$${parseFloat(pair.priceUsd) < 0.01 ? parseFloat(pair.priceUsd).toFixed(8) : parseFloat(pair.priceUsd).toFixed(4)}` : '$0.00',
-      priceChange24h: pair.priceChange?.h24?.toFixed(1) || '0',
-      marketCap: pair.marketCap ? `$${(pair.marketCap / 1e6).toFixed(2)}M` : pair.fdv ? `$${(pair.fdv / 1e6).toFixed(2)}M` : '—',
-      marketCapRaw: pair.marketCap || pair.fdv || 0,
-      volume24h: pair.volume?.h24 ? `$${(pair.volume.h24 / 1e3).toFixed(1)}K` : '—',
-      liquidity: pair.liquidity?.usd ? `$${(pair.liquidity.usd / 1e3).toFixed(1)}K` : '—',
-      thumb: '/nakago-logo.jpg',
-      verified: true,
-      pinned: true,
-      source: 'manual',
-      chain: 'ethereum',
-      pairAddress: pair.pairAddress || '',
-      dexUrl: pair.url || `https://dexscreener.com/ethereum/${NAKA_GO_CONTRACT}`,
-    };
-  } catch {
-    return {
-      name: 'NAKA GO',
-      symbol: 'NAKAGO',
-      slug: NAKA_GO_CONTRACT,
-      description: 'Community-powered meme token on Ethereum. Proudly powering Naka Labs platform.',
-      category: 'Pinned',
-      price: '—',
-      priceChange24h: '0',
-      marketCap: '—',
-      marketCapRaw: 0,
-      volume24h: '—',
-      liquidity: '—',
-      thumb: '/nakago-logo.jpg',
-      verified: true,
-      pinned: true,
-      source: 'manual',
-      chain: 'ethereum',
-      pairAddress: '',
-      dexUrl: `https://dexscreener.com/ethereum/${NAKA_GO_CONTRACT}`,
-    };
-  }
-}
 
 async function fetchTopCoins() {
   try {
@@ -163,15 +108,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ projects, timestamp: new Date().toISOString() });
     }
 
-    const [nakaGo, topCoins, dexTrending] = await Promise.all([
-      fetchNakaGoData(),
+    const [topCoins, dexTrending] = await Promise.all([
       fetchTopCoins(),
       fetchDexScreenerTrending(),
     ]);
 
     const allProjects: any[] = [];
-
-    if (nakaGo) allProjects.push(nakaGo);
 
     for (const listed of MANUALLY_LISTED) {
       allProjects.push({ ...listed, pinned: false, source: 'manual', verified: true });

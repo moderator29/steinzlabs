@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
         }
 
         if (typeof window !== 'undefined') {
-          localStorage.setItem('naka_has_session', 'true');
+          localStorage.setItem('steinz_has_session', 'true');
         }
 
         router.replace('/dashboard');

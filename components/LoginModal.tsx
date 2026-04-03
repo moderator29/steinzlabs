@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase, setRememberMe } from '@/lib/supabase';
 import { useToast } from '@/components/Toast';
-import NakaLogo from '@/components/NakaLogo';
+import SteinzLogo from '@/components/SteinzLogo';
 import { socialSignIn } from '@/lib/socialAuth';
 
 interface LoginModalProps {
@@ -90,9 +90,9 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         return;
       }
       if (typeof window !== 'undefined') {
-        localStorage.setItem('naka_has_session', 'true');
+        localStorage.setItem('steinz_has_session', 'true');
         if (signInData?.session?.access_token) {
-          document.cookie = `naka_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
         }
       }
       showToast('Welcome back!', 'success');
@@ -119,8 +119,8 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         </button>
 
         <div className="flex items-center gap-2.5 mb-5">
-          <NakaLogo size={28} />
-          <span className="text-sm font-bold tracking-tight">NAKA LABS</span>
+          <SteinzLogo size={28} />
+          <span className="text-sm font-bold tracking-tight">STEINZ LABS</span>
         </div>
 
         <h2 className="text-xl font-bold mb-1">Login</h2>

@@ -4,8 +4,8 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
-  title: "Naka Labs - On-Chain Intelligence Powered by $NAKA",
-  description: "Professional on-chain intelligence platform. Track whales, analyze wallets, scan tokens, and act on blockchain data — powered by $NAKA.",
+  title: "STEINZ LABS - On-Chain Intelligence Platform",
+  description: "Professional on-chain intelligence platform. Track whales, analyze wallets, scan tokens, and act on real-time blockchain data.",
 };
 
 export const viewport: Viewport = {

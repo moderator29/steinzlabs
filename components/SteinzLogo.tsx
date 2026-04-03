@@ -4,7 +4,7 @@ export default function SteinzLogo({ size = 32, className = '' }: { size?: numbe
   return (
     <img
       src="/steinz-logo-128.png"
-      alt="STEINZ"
+      alt="STEINZ LABS"
       width={size}
       height={size}
       className={className}
