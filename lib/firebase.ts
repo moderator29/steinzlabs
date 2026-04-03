@@ -1,7 +1,8 @@
-'use client';
-
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
+let _firebaseApp: any = null;
+let _auth: any = null;
+let _googleProvider: any = null;
+let _appleProvider: any = null;
+let _initPromise: Promise<void> | null = null;
 
 const firebaseConfig = {
   apiKey: "AIzaSyBq4N0ot92FKC_7RyO-MXLLLNBcP9dH0",
@@ -13,14 +14,48 @@ const firebaseConfig = {
   measurementId: "G-1MTR0NSGMS"
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+async function initFirebase() {
+  if (_auth) return;
+  if (_initPromise) { await _initPromise; return; }
 
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+  _initPromise = (async () => {
+    const { initializeApp, getApps } = await import('firebase/app');
+    const { getAuth, GoogleAuthProvider, OAuthProvider } = await import('firebase/auth');
 
-const appleProvider = new OAuthProvider('apple.com');
-appleProvider.addScope('email');
-appleProvider.addScope('name');
+    _firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    _auth = getAuth(_firebaseApp);
 
-export { auth, googleProvider, appleProvider };
+    _googleProvider = new GoogleAuthProvider();
+    _googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+    _appleProvider = new OAuthProvider('apple.com');
+    _appleProvider.addScope('email');
+    _appleProvider.addScope('name');
+  })();
+
+  await _initPromise;
+}
+
+export async function getFirebaseAuth() {
+  await initFirebase();
+  return _auth;
+}
+
+export async function getGoogleProvider() {
+  await initFirebase();
+  return _googleProvider;
+}
+
+export async function getAppleProvider() {
+  await initFirebase();
+  return _appleProvider;
+}
+
+export async function firebaseSignOut() {
+  try {
+    if (_auth) {
+      const { signOut } = await import('firebase/auth');
+      await signOut(_auth);
+    }
+  } catch {}
+}

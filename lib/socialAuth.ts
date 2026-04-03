@@ -1,14 +1,19 @@
 'use client';
 
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider, appleProvider } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 
 export type SocialProvider = 'google' | 'apple';
 
 export async function socialSignIn(provider: SocialProvider): Promise<{ success: boolean; error?: string }> {
   try {
-    const firebaseProvider = provider === 'google' ? googleProvider : appleProvider;
+    const { getFirebaseAuth, getGoogleProvider, getAppleProvider } = await import('@/lib/firebase');
+    const { signInWithPopup } = await import('firebase/auth');
+
+    const auth = await getFirebaseAuth();
+    const firebaseProvider = provider === 'google'
+      ? await getGoogleProvider()
+      : await getAppleProvider();
+
     const result = await signInWithPopup(auth, firebaseProvider);
     const user = result.user;
 
