@@ -5,6 +5,7 @@ export interface ArkhamEntity {
   verified: boolean;
   description?: string;
   addresses?: string[];
+  logo?: string;
   website?: string;
   twitter?: string;
   crunchbase?: string;

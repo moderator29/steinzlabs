@@ -13,15 +13,19 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
 - **Database**: Supabase (auth + profiles + scans + positions + threats + followed_entities + alerts + entity_cache)
-- **Blockchain**: Alchemy SDK, ethers.js
+- **Blockchain**: Alchemy SDK, ethers.js, @solana/web3.js
 - **On-chain Intelligence**: Arkham Intelligence API (address intel, entity lookup, token holders, wallet connections, scam detection)
+- **Trading Execution**: Jupiter Aggregator (Solana swaps), 1inch API (EVM swaps), unified execution router with Shadow Guardian pre-trade scanning
 - **Security**: Shadow Guardian (pre-trade scanning, scam detection, AI risk assessment) + Wallet Reputation scoring
 - **AI**: Anthropic Claude claude-sonnet-4-20250514 (risk analysis, trade intelligence)
 - **Charts**: TradingView Widget (candlestick), Recharts, Lightweight Charts
 - **Visualization**: D3.js (bubblemaps)
 - **UI**: Lucide React, Framer Motion, Sonner toasts, custom Toast/ToastProvider
 - **Security**: Custom middleware, rate limiting, Zod validation, security headers
-- **On-chain data**: DexScreener API (universal token search — all chains, any token/CA), CoinGecko API
+- **On-chain data**: DexScreener API, CoinGecko API, Pump.fun API — universal multi-chain search with Arkham enrichment
+- **Money Radar**: Copy trading engine — follow Arkham entities, detect trades, auto-exit positions
+- **Real-time**: WebSocket price feeds via DEXScreener
+- **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis, Bubblemaps data generation
 
 ## Auth (Supabase)
 - **Client**: `@supabase/supabase-js` — client-side only (browser connects directly to Supabase)
@@ -100,8 +104,27 @@ lib/
 ├── errorHandler.ts          # API error handler
 ├── validation.ts            # Zod schemas
 ├── arkham/
-│   ├── types.ts             # Arkham Intelligence type definitions
+│   ├── types.ts             # Arkham Intelligence type definitions (ArkhamEntity, ArkhamHolder, etc.)
 │   └── api.ts               # Arkham API wrapper (address intel, holders, entities, scam detection)
+├── trading/
+│   ├── types.ts             # TradeQuote, TradeExecution, PriceUpdate, RouteInfo types
+│   ├── jupiter.ts           # Jupiter Aggregator API (Solana swaps — quote + execute)
+│   ├── oneinch.ts           # 1inch API (EVM swaps — 7 chains supported)
+│   └── execution.ts         # Unified trade router — Shadow Guardian pre-scan → execute → save position
+├── market/
+│   └── priceFeeds.ts        # WebSocket price feed manager (DEXScreener WS, pub/sub, auto-reconnect)
+├── search/
+│   ├── types.ts             # SearchResult type (with Arkham enrichment fields)
+│   ├── dexscreener.ts       # DEXScreener search (all chains)
+│   ├── coingecko.ts         # CoinGecko search (multi-chain)
+│   ├── pumpfun.ts           # Pump.fun search (Solana launches)
+│   └── universalSearch.ts   # Aggregates all sources, deduplicates, enriches with Arkham data
+├── moneyRadar/
+│   ├── types.ts             # FollowedEntity, EntityTrade, CopyTradeParams types
+│   ├── monitor.ts           # Entity monitoring engine (60s polling, trade detection, auto-exit)
+│   └── copyTrade.ts         # Copy trade execution (follows entity buys/sells)
+├── intelligence/
+│   └── holderAnalysis.ts    # Deep holder intelligence (Arkham enrichment, composition, safety, smart money, scammer analysis, Bubblemaps data)
 ├── security/
 │   ├── types.ts             # Security type definitions (ScanResult, WalletReputation, PortfolioThreat)
 │   ├── shadowGuardian.ts    # Shadow Guardian pre-trade scanner (scam detection + AI risk analysis)
@@ -131,6 +154,18 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `tailwind.config.ts` | Neon-blue (#0A1EFF) design tokens, shadows, animations |
 | `app/globals.css` | Glass effects, glow utilities, scrollbar styles |
 
+## API Routes (Prompt #2)
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/trade/quote` | POST | Get optimal swap quote (Jupiter for Solana, 1inch for EVM) |
+| `/api/trade/execute` | POST | Prepare trade execution (frontend signs tx client-side) |
+| `/api/search/coins?q=` | GET | Universal multi-chain search (DEXScreener + CoinGecko + Pump.fun + Arkham enrichment) |
+| `/api/moneyRadar/follow` | POST | Follow an Arkham entity (saves wallets to DB) |
+| `/api/moneyRadar/copy` | POST | Execute copy trade based on entity's trade |
+| `/api/portfolio/holdings?wallet=&chain=` | GET | Get Solana/EVM token holdings for wallet |
+| `/api/intelligence/holders?token=&chain=&limit=` | GET | Deep holder intelligence with Arkham enrichment |
+| `/api/intelligence/bubblemaps?token=&chain=` | GET | Bubblemaps visualization data (nodes, links, metadata) |
+
 ## Environment Variables
 | Variable | Location | Purpose |
 |---|---|---|
@@ -141,6 +176,8 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `ALCHEMY_API_KEY` | `.env.local` | Alchemy RPC key |
 | `ARKHAM_API_KEY` | Replit Secret | Arkham Intelligence API key |
 | `ANTHROPIC_API_KEY` | Replit Secret | Anthropic Claude API key (needed for AI risk analysis) |
+| `SOLANA_RPC_URL` | `.env.local` | Solana RPC endpoint (defaults to public mainnet) |
+| `ONEINCH_API_KEY` | Replit Secret | 1inch API key (EVM swaps) |
 
 ## Design System
 - **Primary accent**: `#0A1EFF` (neon blue) — buttons, active states, borders, glows — NEVER #00E5FF cyan
