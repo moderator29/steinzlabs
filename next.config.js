@@ -28,13 +28,14 @@ const nextConfig = {
   headers: async () => [
     {
       source: '/:path*',
-      headers: process.env.NODE_ENV !== 'production'
-        ? [
-            { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
-            { key: 'Pragma', value: 'no-cache' },
-            { key: 'Expires', value: '0' },
-          ]
-        : [],
+      headers: [
+        { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
+        { key: 'Pragma', value: 'no-cache' },
+        { key: 'Expires', value: '0' },
+        { key: 'Surrogate-Control', value: 'no-store' },
+        { key: 'CDN-Cache-Control', value: 'no-store' },
+        { key: 'Vary', value: '*' },
+      ],
     },
     {
       source: '/api/auth/:path*',
@@ -50,9 +51,11 @@ const nextConfig = {
     },
     {
       source: '/_next/static/:path*',
-      headers: process.env.NODE_ENV === 'production'
-        ? [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }]
-        : [{ key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' }],
+      headers: [
+        { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
+        { key: 'Surrogate-Control', value: 'no-store' },
+        { key: 'CDN-Cache-Control', value: 'no-store' },
+      ],
     },
   ],
 }
