@@ -45,11 +45,29 @@ export default function LoginModal({ onClose }: LoginModalProps) {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: true,
+        },
       });
-      if (error) showToast('Google sign-in failed. Try again.', 'error');
+      if (error) {
+        if (error.message?.toLowerCase().includes('unsupported provider') || error.message?.toLowerCase().includes('not enabled')) {
+          showToast('Google sign-in is not available yet. Please use email/password.', 'error');
+        } else {
+          showToast('Google sign-in failed. Try again.', 'error');
+        }
+        return;
+      }
+      if (data?.url) {
+        try {
+          const testRes = await fetch(data.url, { method: 'HEAD', mode: 'no-cors' }).catch(() => null);
+          window.location.href = data.url;
+        } catch {
+          window.location.href = data.url;
+        }
+      }
     } catch {
       showToast('Google sign-in failed. Try again.', 'error');
     } finally {

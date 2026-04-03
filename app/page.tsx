@@ -205,9 +205,16 @@ export default function LandingPage() {
                 Sign Up
               </button>
             </Link>
-            <button className="sm:hidden p-2 text-gray-400 hover:text-white" onClick={() => setShowLoginModal(true)}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
+            <div className="flex sm:hidden items-center gap-1">
+              <button className="text-[13px] font-medium text-gray-300 hover:text-white px-2 py-1.5 transition-colors" onClick={() => setShowLoginModal(true)}>
+                Log In
+              </button>
+              <Link href="/signup">
+                <button className="bg-white text-black px-3 py-1.5 rounded-lg text-[12px] font-semibold hover:bg-gray-100 transition-all">
+                  Sign Up
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -237,7 +244,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-20 animate-fade-slide-in" style={{ animationDelay: '0.3s' }}>
-            <LaunchAppButton className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
+            <LaunchAppButton onClick={() => setShowLoginModal(true)} className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
             <Link href="/whitepaper" className="flex-1">
               <button className="w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all">
                 Read Docs
@@ -498,7 +505,7 @@ export default function LandingPage() {
             Free to start. No credit card required. Connect your wallet or sign in with email to unlock Naka Labs intelligence.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-            <LaunchAppButton className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
+            <LaunchAppButton onClick={() => setShowLoginModal(true)} className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2" />
             <a href="https://t.me/NakaGoCult" target="_blank" rel="noopener noreferrer" className="flex-1">
               <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" /> Join Community
