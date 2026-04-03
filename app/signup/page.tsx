@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Check, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
 import Link from 'next/link';
 import NakaLogo from '@/components/NakaLogo';
 import { useToast } from '@/components/Toast';
@@ -11,6 +11,16 @@ import { supabase } from '@/lib/supabase';
 
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_SECONDS = 60;
+
+function getPasswordChecks(pw: string) {
+  return [
+    { label: 'Between 8 and 100 characters', ok: pw.length >= 8 && pw.length <= 100 },
+    { label: 'At least one lowercase letter', ok: /[a-z]/.test(pw) },
+    { label: 'At least one uppercase letter', ok: /[A-Z]/.test(pw) },
+    { label: 'At least one number', ok: /[0-9]/.test(pw) },
+    { label: 'At least one special character', ok: /[^a-zA-Z0-9]/.test(pw) },
+  ];
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -72,7 +82,7 @@ export default function SignUpPage() {
     if (!form.email.trim()) e.email = 'Required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email';
     if (!form.password) e.password = 'Required';
-    else if (form.password.length < 8) e.password = 'At least 8 characters';
+    else if (!getPasswordChecks(form.password).every(c => c.ok)) e.password = 'Password does not meet requirements';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -285,12 +295,24 @@ export default function SignUpPage() {
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={e => updateField('password', e.target.value)} className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`} placeholder="Min. 8 characters" autoComplete="new-password" />
+                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={e => updateField('password', e.target.value)} className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`} placeholder="Create a strong password" autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-400 text-[11px] mt-1">{errors.password}</p>}
+                {form.password.length > 0 && (
+                  <div className="mt-2.5 space-y-1.5">
+                    {getPasswordChecks(form.password).map(({ label, ok }) => (
+                      <div key={label} className="flex items-center gap-2">
+                        {ok
+                          ? <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                          : <X className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+                        }
+                        <span className={`text-[11px] ${ok ? 'text-emerald-400' : 'text-gray-500'}`}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {cooldown > 0 && (
