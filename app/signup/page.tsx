@@ -8,6 +8,7 @@ import NakaLogo from '@/components/NakaLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { socialSignIn } from '@/lib/socialAuth';
 
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_SECONDS = 60;
@@ -30,6 +31,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
@@ -87,31 +89,21 @@ export default function SignUpPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
+  const handleSocialSignIn = async (provider: 'google' | 'apple') => {
+    const setLoaderFn = provider === 'google' ? setGoogleLoading : setAppleLoading;
+    setLoaderFn(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          skipBrowserRedirect: true,
-        },
-      });
-      if (error) {
-        if (error.message?.toLowerCase().includes('unsupported provider') || error.message?.toLowerCase().includes('not enabled')) {
-          showToast('Google sign-in is not available yet. Please use email/password.', 'error');
-        } else {
-          showToast('Google sign-in failed. Try again.', 'error');
-        }
-        return;
-      }
-      if (data?.url) {
-        window.location.href = data.url;
+      const result = await socialSignIn(provider);
+      if (result.success) {
+        showToast('Welcome to Naka Labs!', 'success');
+        router.push('/dashboard');
+      } else if (result.error && result.error !== 'Sign-in cancelled') {
+        showToast(result.error, 'error');
       }
     } catch {
-      showToast('Google sign-in failed. Try again.', 'error');
+      showToast(`${provider === 'google' ? 'Google' : 'Apple'} sign-in failed. Try again.`, 'error');
     } finally {
-      setGoogleLoading(false);
+      setLoaderFn(false);
     }
   };
 
@@ -242,9 +234,9 @@ export default function SignUpPage() {
             </div>
 
             <button
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading || cooldown > 0}
-              className="w-full flex items-center justify-center gap-3 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.12] rounded-xl py-3 text-sm font-medium transition-all mb-4 disabled:opacity-50"
+              onClick={() => handleSocialSignIn('google')}
+              disabled={googleLoading || appleLoading || cooldown > 0}
+              className="w-full flex items-center justify-center gap-3 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.12] rounded-xl py-3 text-sm font-medium transition-all mb-2.5 disabled:opacity-50"
             >
               {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -255,6 +247,19 @@ export default function SignUpPage() {
                 </svg>
               )}
               Continue with Google
+            </button>
+
+            <button
+              onClick={() => handleSocialSignIn('apple')}
+              disabled={appleLoading || googleLoading || cooldown > 0}
+              className="w-full flex items-center justify-center gap-3 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.12] rounded-xl py-3 text-sm font-medium transition-all mb-4 disabled:opacity-50"
+            >
+              {appleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+              )}
+              Continue with Apple
             </button>
 
             <div className="flex items-center gap-3 mb-4">
