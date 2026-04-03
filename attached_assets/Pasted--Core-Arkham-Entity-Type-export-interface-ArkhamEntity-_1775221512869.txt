@@ -1,0 +1,65 @@
+// Core Arkham Entity Type
+export interface ArkhamEntity {
+  id: string;                    // "jump-trading"
+  name: string;                  // "Jump Trading"
+  type: string;                  // "Market Maker", "VC", "Exchange", "Whale"
+  verified: boolean;             // true if Arkham verified
+  description?: string;
+  addresses?: string[];          // All wallet addresses
+  website?: string;
+  twitter?: string;
+  crunchbase?: string;
+  linkedin?: string;
+}
+
+// Address Intelligence Response
+export interface ArkhamAddress {
+  address: string;
+  chain: string;                 // "ethereum", "solana", "base", etc.
+  arkhamEntity: ArkhamEntity | null;
+  labels: string[];              // ["scammer", "mixer", "exchange", etc.]
+  firstSeen: string;             // ISO date
+  lastSeen: string;
+  transactionCount: number;
+  totalVolume?: string;          // USD value
+  scamHistory?: ScamHistory;     // Only if flagged as scammer
+}
+
+// Scammer History (when wallet is flagged)
+export interface ScamHistory {
+  totalRugs: number;             // Number of rug pulls
+  totalStolen: string;           // "$3.2M"
+  victims: number;               // Number of victims
+  scams: ScamDetails[];          // Array of individual scams
+  lastScam: string;              // ISO date of most recent
+  status: 'active' | 'inactive'; // Current threat level
+}
+
+export interface ScamDetails {
+  token: string;                 // Token name
+  date: string;                  // ISO date
+  amount: string;                // Amount stolen
+  victims: number;
+  type: 'rug_pull' | 'honeypot' | 'liquidity_theft';
+}
+
+// Token Holder Information
+export interface ArkhamHolder {
+  address: string;
+  balance: string;               // Token amount
+  balanceUSD: string;            // USD value
+  percentage: number;            // % of supply
+  entity?: ArkhamEntity;         // Entity if identified
+  labels?: string[];             // Wallet labels
+  firstAcquired?: string;        // When they got tokens
+  lastActivity?: string;         // Last transaction
+}
+
+// Wallet Network Connections
+export interface ArkhamConnection {
+  address: string;
+  entity?: ArkhamEntity;
+  relationship: string;          // "frequent_counterparty", "fund_transfer", etc.
+  labels: string[];              // ["mixer", "mule", "exchange"]
+  totalValue: string;            // Total USD transacted
+  transactionCount: number;

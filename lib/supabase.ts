@@ -17,7 +17,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
   : null as any;
 
 if (typeof window !== 'undefined' && supabase) {
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange((event: string, session: any) => {
     if (session) {
       const remember = localStorage.getItem('naka_remember_me') !== 'false';
       const maxAge = remember ? `; max-age=${60 * 60 * 24 * 7}` : '';

@@ -115,7 +115,7 @@ export function useAuthProvider(): AuthContextType {
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         if (!mounted) return;
         if (session?.user) {
           setSupabaseUser(session.user);

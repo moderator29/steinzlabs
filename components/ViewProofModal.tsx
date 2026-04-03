@@ -1,6 +1,6 @@
 'use client';
 
-import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, Maximize2, Minimize2 } from 'lucide-react';
+import { X, ExternalLink, CheckCircle, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, Maximize2, Minimize2, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from './TradingViewChart';

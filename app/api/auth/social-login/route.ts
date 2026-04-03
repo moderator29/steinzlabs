@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUser(userId, {
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       password: sessionPassword,
     });
 
