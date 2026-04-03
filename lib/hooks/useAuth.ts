@@ -146,10 +146,6 @@ export function useAuthProvider(): AuthContextType {
       if (supabase) {
         await supabase.auth.signOut();
       }
-      try {
-        const { firebaseSignOut } = await import('@/lib/firebase');
-        await firebaseSignOut();
-      } catch {}
       setUser(null);
       setSupabaseUser(null);
     } catch {}
