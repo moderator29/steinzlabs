@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import SidebarMenu from '@/components/SidebarMenu';
-import PriceTicker from '@/components/PriceTicker';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
 const Markets = lazy(() => import('@/components/Markets'));
@@ -167,23 +166,17 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="fixed top-0 w-full z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
-            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7 flex-shrink-0" style={{ objectFit: 'contain' }} />
-            <span className="text-sm font-heading font-bold tracking-tight">STEINZ</span>
+            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-6 h-6 flex-shrink-0" style={{ objectFit: 'contain' }} />
           </div>
+          <span className="text-[11px] font-heading font-semibold tracking-wider text-gray-400">STEINZ Terminal</span>
         </div>
       </div>
 
-      {showHomeTabs && (
-        <div className="fixed top-14 w-full bg-[#0A0E1A]/90 backdrop-blur-sm border-b border-white/[0.06] z-30">
-          <PriceTicker />
-        </div>
-      )}
-
-      <div className={`${showHomeTabs ? 'pt-[104px]' : 'pt-[68px]'} px-3 lg:px-6 max-w-7xl mx-auto`}>
+      <div className="pt-[68px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

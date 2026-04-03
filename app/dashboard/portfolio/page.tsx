@@ -144,13 +144,12 @@ export default function PortfolioPage() {
               <Wallet className="w-10 h-10 text-[#0A1EFF]" />
             </div>
             <h2 className="text-2xl font-heading font-bold mb-2">Track Your Portfolio</h2>
-            <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">Connect your wallet to see real-time holdings, P&L, and performance analytics across all chains.</p>
+            <p className="text-gray-400 text-sm mb-4 max-w-xs mx-auto">Create or import a wallet in the Wallet tab to see real-time holdings, P&L, and performance analytics across all chains.</p>
             <button
-              onClick={connectAuto}
-              disabled={connecting}
-              className="bg-[#0A1EFF] hover:bg-[#0818CC] px-8 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
+              onClick={() => router.push('/dashboard/wallet-page')}
+              className="bg-[#0A1EFF] hover:bg-[#0818CC] px-8 py-3 rounded-xl font-semibold transition-all"
             >
-              {connecting ? 'Connecting...' : 'Connect Wallet'}
+              Open STEINZ Wallet
             </button>
           </div>
         ) : (

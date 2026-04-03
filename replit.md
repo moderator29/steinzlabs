@@ -26,11 +26,19 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Money Radar**: Copy trading engine — follow Arkham entities, detect trades, auto-exit positions
 - **Real-time**: WebSocket price feeds via DEXScreener
 - **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis
-- **Bubblemaps**: Integrated in context feed (per-event Bubbles link) and trading suite (chart header icon) — NOT in wallet intelligence
-- **VTX Agent**: Renamed from "VTX AI" — plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener)
-- **Wallet**: Non-custodial, max 5 wallets per user
+- **Bubblemaps**: Custom bubble visualization built into View Proof page (no external links to bubblemaps.io)
+- **VTX Agent**: Renamed from "VTX AI" — plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener). Server-side strips markdown. ChatGPT-style UI with New Chat button.
+- **Wallet**: Non-custodial, max 5 wallets per user. No "Connect Wallet" anywhere — use STEINZ built-in wallet only.
 - **Back Button**: Top-left, no circle, plain arrow (FloatingBackButton.tsx)
 - **Security Center**: Contract addresses only — rejects wallet addresses with clear error
+- **Wallet Intelligence**: Wallet addresses only — rejects contract addresses with eth_getCode check
+- **View Proof**: Full page at /dashboard/proof (not a modal popup). Shows AI analysis, bubble visualization, trust score, blockchain verification, buy/swap buttons to internal swap page.
+- **Swap Page**: /dashboard/swap — Raydium-style professional UI with token selector modal, real-time quote API (/api/swap), chain selector, slippage settings panel, route visualization, price impact display. Supports Jupiter (Solana) and 1inch (EVM) backends.
+- **Swap API**: /api/swap — Quote endpoint returning rate, price impact, min received, gas estimate, route info. Token address resolution for all major chains.
+- **Profile Security**: Opens account security settings subpage (not Security Center scanner)
+- **Dashboard Header**: STEINZ logo left, "STEINZ Terminal" text small on right side. Price ticker removed.
+- **Context Feed**: No ARKHAM badge (uses "INTEL" label instead). No external Bubblemaps links. Initial fetch 50 events, merges up to 200. Archive tab for events >24hrs old.
+- **Exchange APIs**: Jupiter Aggregator (Solana), 1inch (EVM chains), unified execution router in lib/trading/. Shadow Guardian pre-trade scanning.
 
 ## Auth (Supabase)
 - **Client**: `@supabase/supabase-js` — client-side only (browser connects directly to Supabase)

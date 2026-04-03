@@ -318,9 +318,6 @@ export default function TradingSuitePage() {
               <button onClick={()=>toggleWatchlist(selectedToken.id)} className="p-1.5 hover:bg-white/5 rounded-lg">
                 <Star className={`w-4 h-4 ${watchlist.includes(selectedToken.id)?'text-[#F59E0B] fill-[#F59E0B]':'text-gray-600'}`}/>
               </button>
-              <a href={`https://app.bubblemaps.io/eth/token/${selectedToken.symbol.toLowerCase()}`} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-white/5 rounded-lg" title="View on Bubblemaps">
-                <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>
-              </a>
               <a href={`https://www.coingecko.com/en/coins/${selectedToken.id}`} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-white/5 rounded-lg">
                 <ExternalLink className="w-4 h-4 text-gray-600"/>
               </a>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Trash2, Globe, Crown, Lock } from 'lucide-react';
+import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Trash2, Globe, Crown, Lock, Plus, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Message {
@@ -164,11 +164,11 @@ export default function VtxAiTab() {
 
   return (
     <div className="flex flex-col min-h-[65vh]">
-      <div className="glass rounded-xl p-3 border border-white/10 flex items-center gap-3 mb-4">
+      <div className="glass rounded-xl p-3 border border-white/10 flex items-center gap-2 mb-4">
         <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center flex-shrink-0">
           <Bot className="w-4 h-4 text-[#0A1EFF]" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <div className="text-sm font-bold">VTX Agent</div>
             {isPro && (
@@ -176,34 +176,33 @@ export default function VtxAiTab() {
                 <Crown className="w-2.5 h-2.5" /> PRO
               </span>
             )}
+            <div className="flex items-center gap-1 ml-auto">
+              <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
+              <span className="text-[9px] text-[#10B981] font-semibold">Live</span>
+            </div>
           </div>
-          <div className="text-[10px] text-gray-400">On-chain intelligence engine</div>
-        </div>
-        <div className="flex items-center gap-2">
           {!isPro && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#0A0E1A] rounded-lg">
-              <span className="text-[9px] text-gray-400">{dailyUsage.used}/{dailyUsage.limit}</span>
-              <div className="w-8 h-1 bg-gray-700 rounded-full overflow-hidden">
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="w-12 h-1 bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0A1EFF]'}`}
                   style={{ width: `${(dailyUsage.used / dailyUsage.limit) * 100}%` }}
                 />
               </div>
+              <span className="text-[9px] text-gray-500">{dailyUsage.remaining} left</span>
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-1">
           {messages.length > 0 && (
             <button
               onClick={clearChat}
               className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-              title="Clear chat"
+              title="New chat"
             >
-              <Trash2 className="w-3.5 h-3.5 text-gray-500" />
+              <Plus className="w-3.5 h-3.5 text-gray-400" />
             </button>
           )}
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
-            <span className="text-[10px] text-[#10B981] font-semibold">Live</span>
-          </div>
         </div>
       </div>
 
@@ -243,7 +242,7 @@ export default function VtxAiTab() {
                   ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20'
                   : 'glass border border-white/10'
               }`}>
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap">{msg.role === 'assistant' ? msg.content.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]+\s/gm, '').replace(/^—\s/gm, '') : msg.content}</div>
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
