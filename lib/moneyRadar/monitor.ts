@@ -112,6 +112,9 @@ class MoneyRadarMonitor {
     await supabaseAdmin.from('alerts').insert({
       user_id: userId,
       alert_type: 'ENTITY_MOVEMENT',
+      entity_id: trade.entityId,
+      token_address: trade.tokenAddress,
+      condition_type: 'ENTITY_TRADE',
       condition_value: {
         entityId: trade.entityId,
         entityName: trade.entityName,

@@ -56,6 +56,80 @@ class ArkhamAPI {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
+  private mapAddressResponse(raw: any): ArkhamAddress {
+    const entity = raw.arkhamEntity || null;
+    const label = raw.arkhamLabel || null;
+
+    const mappedEntity: ArkhamEntity | null = entity ? {
+      id: entity.id || '',
+      name: entity.name || '',
+      type: entity.type || '',
+      verified: true,
+      description: entity.note || undefined,
+      addresses: entity.addresses || undefined,
+      logo: entity.logo || undefined,
+      website: entity.website || undefined,
+      twitter: entity.twitter || undefined,
+      crunchbase: entity.crunchbase || undefined,
+      linkedin: entity.linkedin || undefined,
+    } : null;
+
+    const labels: string[] = [];
+    if (label?.name) labels.push(label.name);
+    if (raw.contract) labels.push('contract');
+
+    return {
+      address: raw.address || '',
+      chain: raw.chain || '',
+      arkhamEntity: mappedEntity,
+      labels,
+      firstSeen: '',
+      lastSeen: '',
+      transactionCount: 0,
+    };
+  }
+
+  private mapTransferResponse(raw: any): ArkhamTransaction {
+    return {
+      hash: raw.transactionHash || '',
+      chain: raw.chain || '',
+      timestamp: raw.blockTimestamp || '',
+      blockNumber: raw.blockNumber || 0,
+      from: {
+        address: raw.fromAddress?.address || '',
+        entity: raw.fromAddress?.arkhamEntity ? {
+          id: raw.fromAddress.arkhamEntity.id || '',
+          name: raw.fromAddress.arkhamEntity.name || '',
+          type: raw.fromAddress.arkhamEntity.type || '',
+          verified: true,
+        } : undefined,
+      },
+      to: {
+        address: raw.toAddress?.address || '',
+        entity: raw.toAddress?.arkhamEntity ? {
+          id: raw.toAddress.arkhamEntity.id || '',
+          name: raw.toAddress.arkhamEntity.name || '',
+          type: raw.toAddress.arkhamEntity.type || '',
+          verified: true,
+        } : undefined,
+      },
+      value: String(raw.unitValue || '0'),
+      valueUSD: String(raw.historicalUSD || '0'),
+      token: raw.tokenAddress ? {
+        symbol: raw.tokenSymbol || '',
+        address: raw.tokenAddress || '',
+        amount: String(raw.unitValue || '0'),
+      } : (raw.tokenSymbol ? {
+        symbol: raw.tokenSymbol || '',
+        address: '',
+        amount: String(raw.unitValue || '0'),
+      } : undefined),
+      gasUsed: '0',
+      gasFee: '0',
+      type: 'transfer',
+    };
+  }
+
   async getAddressIntel(address: string, chain?: string): Promise<ArkhamAddress> {
     const cacheKey = `address:${address}:${chain || 'all'}`;
     const cached = this.getCached(cacheKey);
@@ -65,7 +139,8 @@ class ArkhamAPI {
       ? `/intelligence/address/${address}?chain=${chain}`
       : `/intelligence/address/${address}`;
 
-    const data = await this.fetch(endpoint);
+    const raw = await this.fetch(endpoint);
+    const data = this.mapAddressResponse(raw);
     this.setCache(cacheKey, data);
     return data;
   }
@@ -75,9 +150,30 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const data = await this.fetch(`/intelligence/entity/${entityId}`);
-    this.setCache(cacheKey, data);
-    return data;
+    try {
+      const data = await this.fetch(`/intelligence/entity/${entityId}`);
+
+      const entity: ArkhamEntity = {
+        id: data.id || entityId,
+        name: data.name || entityId,
+        type: data.type || '',
+        verified: true,
+        description: data.note || undefined,
+        addresses: data.addresses || undefined,
+        website: data.website || undefined,
+        twitter: data.twitter || undefined,
+      };
+
+      this.setCache(cacheKey, entity);
+      return entity;
+    } catch {
+      return {
+        id: entityId,
+        name: entityId,
+        type: '',
+        verified: false,
+      };
+    }
   }
 
   async getTokenHolders(
@@ -89,29 +185,53 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const endpoint = chain
-      ? `/token/${tokenAddress}/holders?limit=${limit}&chain=${chain}`
-      : `/token/${tokenAddress}/holders?limit=${limit}`;
+    try {
+      const transfers = await this.getAddressTransfers(tokenAddress, limit * 2, chain);
 
-    const data = await this.fetch(endpoint);
+      const holderMap = new Map<string, { address: string; count: number }>();
 
-    const enriched = await Promise.all(
-      (data.holders || []).map(async (holder: any) => {
-        try {
-          const addressIntel = await this.getAddressIntel(holder.address);
-          return {
-            ...holder,
-            entity: addressIntel.arkhamEntity,
-            labels: addressIntel.labels,
-          };
-        } catch {
-          return holder;
+      for (const tx of transfers) {
+        const addr = tx.to.address;
+        if (addr && addr !== tokenAddress) {
+          const existing = holderMap.get(addr) || { address: addr, count: 0 };
+          existing.count++;
+          holderMap.set(addr, existing);
         }
-      })
-    );
+      }
 
-    this.setCache(cacheKey, enriched);
-    return enriched;
+      const topAddresses = Array.from(holderMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      const enriched: ArkhamHolder[] = await Promise.all(
+        topAddresses.map(async (holder, index) => {
+          try {
+            const addressIntel = await this.getAddressIntel(holder.address);
+            return {
+              address: holder.address,
+              balance: '0',
+              balanceUSD: '0',
+              percentage: 0,
+              entity: addressIntel.arkhamEntity || undefined,
+              labels: addressIntel.labels,
+            };
+          } catch {
+            return {
+              address: holder.address,
+              balance: '0',
+              balanceUSD: '0',
+              percentage: 0,
+            };
+          }
+        })
+      );
+
+      this.setCache(cacheKey, enriched);
+      return enriched;
+    } catch (error) {
+      console.error('Token holders lookup failed, returning empty:', error);
+      return [];
+    }
   }
 
   async getWalletConnections(
@@ -122,12 +242,40 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const data = await this.fetch(
-      `/intelligence/address/${address}/connections?limit=${limit}`
-    );
+    try {
+      const transfers = await this.getAddressTransfers(address, limit);
 
-    this.setCache(cacheKey, data.connections || []);
-    return data.connections || [];
+      const connectionMap = new Map<string, ArkhamConnection>();
+
+      for (const tx of transfers) {
+        const otherAddress = tx.from.address === address ? tx.to.address : tx.from.address;
+        const otherEntity = tx.from.address === address ? tx.to.entity : tx.from.entity;
+
+        if (!connectionMap.has(otherAddress)) {
+          connectionMap.set(otherAddress, {
+            address: otherAddress,
+            entity: otherEntity,
+            relationship: 'transfer',
+            labels: [],
+            totalValue: tx.valueUSD || '0',
+            transactionCount: 1,
+          });
+        } else {
+          const conn = connectionMap.get(otherAddress)!;
+          conn.transactionCount++;
+          conn.totalValue = String(
+            parseFloat(conn.totalValue) + parseFloat(tx.valueUSD || '0')
+          );
+        }
+      }
+
+      const connections = Array.from(connectionMap.values());
+      this.setCache(cacheKey, connections);
+      return connections;
+    } catch (error) {
+      console.error('Wallet connections lookup failed:', error);
+      return [];
+    }
   }
 
   async getByLabel(label: string): Promise<ArkhamAddress[]> {
@@ -135,9 +283,14 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const data = await this.fetch(`/intelligence/labels/${label}`);
-    this.setCache(cacheKey, data.addresses || []);
-    return data.addresses || [];
+    try {
+      const data = await this.fetch(`/intelligence/labels/${label}`);
+      const addresses = (data.addresses || []).map((a: any) => this.mapAddressResponse(a));
+      this.setCache(cacheKey, addresses);
+      return addresses;
+    } catch {
+      return [];
+    }
   }
 
   async getScammerDatabase(): Promise<ArkhamAddress[]> {
@@ -150,8 +303,9 @@ class ArkhamAPI {
     if (cached) return cached;
 
     const data = await this.fetch(`/tx/${txHash}`);
-    this.setCache(cacheKey, data);
-    return data;
+    const mapped = this.mapTransferResponse(data);
+    this.setCache(cacheKey, mapped);
+    return mapped;
   }
 
   async getAddressTransfers(
@@ -160,15 +314,18 @@ class ArkhamAPI {
     chain?: string
   ): Promise<ArkhamTransaction[]> {
     const params = new URLSearchParams({
+      base: address,
       limit: limit.toString(),
       ...(chain && { chain }),
     });
 
-    const data = await this.fetch(
-      `/transfers/address/${address}?${params.toString()}`
+    const data = await this.fetch(`/transfers?${params.toString()}`);
+
+    const transfers = (data.transfers || []).map((tx: any) =>
+      this.mapTransferResponse(tx)
     );
 
-    return data.transfers || [];
+    return transfers;
   }
 
   async getEntityPortfolio(entityId: string): Promise<EntityPortfolio> {
@@ -176,9 +333,19 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const data = await this.fetch(`/portfolio/entity/${entityId}`);
-    this.setCache(cacheKey, data);
-    return data;
+    try {
+      const now = Date.now();
+      const data = await this.fetch(`/portfolio/entity/${entityId}?time=${now}`);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch {
+      return {
+        entityId,
+        totalValue: '0',
+        lastUpdated: new Date().toISOString(),
+        holdings: {},
+      };
+    }
   }
 
   async getEntityPerformance(entityId: string): Promise<EntityPerformance> {
@@ -186,9 +353,23 @@ class ArkhamAPI {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const data = await this.fetch(`/intelligence/entity/${entityId}/performance`);
-    this.setCache(cacheKey, data);
-    return data;
+    try {
+      const data = await this.fetch(`/intelligence/entity/${entityId}/performance`);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch {
+      return {
+        entityId,
+        winRate: 0,
+        totalTrades: 0,
+        avgHoldTime: 0,
+        avgGainOnWinners: 0,
+        avgLossOnLosers: 0,
+        bestTrade: { token: '', entryDate: '', exitDate: '', holdTime: 0, gain: 0, amountUSD: '0' },
+        worstTrade: { token: '', entryDate: '', exitDate: '', holdTime: 0, gain: 0, amountUSD: '0' },
+        recentTrades: [],
+      };
+    }
   }
 
   async isScammer(address: string): Promise<boolean> {

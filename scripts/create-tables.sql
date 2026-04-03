@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS followed_entities (
   entity_id TEXT NOT NULL,
   entity_name TEXT NOT NULL,
   entity_type TEXT,
+  wallets JSONB DEFAULT '[]'::jsonb,
   notify_trades BOOLEAN DEFAULT TRUE,
   notify_large_moves BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),

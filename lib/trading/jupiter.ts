@@ -2,7 +2,8 @@ import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { TradeQuote, TradeExecution } from './types';
 
 class JupiterAPI {
-  private baseUrl = 'https://quote-api.jup.ag/v6';
+  private quoteUrl = 'https://lite-api.jup.ag/swap/v1';
+  private priceUrl = 'https://api.jup.ag/price/v2';
   private connection = new Connection(
     process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com'
   );
@@ -23,7 +24,7 @@ class JupiterAPI {
         slippageBps: slippage.toString(),
       });
 
-      const response = await fetch(`${this.baseUrl}/quote?${params}`);
+      const response = await fetch(`${this.quoteUrl}/quote?${params}`);
 
       if (!response.ok) {
         throw new Error(`Jupiter quote failed: ${response.statusText}`);
@@ -35,16 +36,18 @@ class JupiterAPI {
         protocol: step.swapInfo?.label || 'Jupiter',
         fromToken: step.swapInfo?.inputMint || inputMint,
         toToken: step.swapInfo?.outputMint || outputMint,
-        portion: 100 / (data.routePlan?.length || 1),
+        portion: step.percent || (100 / (data.routePlan?.length || 1)),
       })) || [];
+
+      const outDecimals = data.outputMint === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' ? 1e6 : 1e9;
 
       return {
         fromToken: inputMint,
         toToken: outputMint,
         fromAmount: amount.toString(),
-        toAmount: (parseInt(data.outAmount) / 1e9).toString(),
-        fromAmountUSD: '0',
-        toAmountUSD: '0',
+        toAmount: (parseInt(data.outAmount) / outDecimals).toString(),
+        fromAmountUSD: data.swapUsdValue || '0',
+        toAmountUSD: data.swapUsdValue || '0',
         priceImpact: parseFloat(data.priceImpactPct || '0'),
         route,
         gasEstimate: '0.00001',
@@ -64,7 +67,7 @@ class JupiterAPI {
     signTransaction: (tx: VersionedTransaction) => Promise<VersionedTransaction>
   ): Promise<TradeExecution> {
     try {
-      const response = await fetch(`${this.baseUrl}/swap`, {
+      const response = await fetch(`${this.quoteUrl}/swap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,9 +128,9 @@ class JupiterAPI {
 
   async getTokenPrice(tokenAddress: string): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/price?ids=${tokenAddress}`);
+      const response = await fetch(`${this.priceUrl}?ids=${tokenAddress}`);
       const data = await response.json();
-      return data.data?.[tokenAddress]?.price || 0;
+      return parseFloat(data.data?.[tokenAddress]?.price || '0');
     } catch (error) {
       console.error('Failed to get token price:', error);
       return 0;
