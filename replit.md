@@ -9,7 +9,7 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **Framework**: Next.js 15.0.8 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS — neon-blue design system (#0A1EFF primary), Inter + JetBrains Mono fonts
-- **Auth**: Supabase Auth (email/password) — fully client-side, profiles table for username/name storage
+- **Auth**: Supabase Auth (email/password) + Firebase Auth (Google/Apple OAuth via popup) — profiles table for username/name storage
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation + @hookform/resolvers
 - **Database**: Supabase (auth + profiles)
@@ -27,7 +27,9 @@ Next.js 15 on-chain intelligence platform powered by the $NAKA token. Dune.com-i
 - **Login**: Email OR username + password → username resolves to email via profiles table → `supabase.auth.signInWithPassword()`
 - **Session**: Supabase manages JWT tokens in localStorage, cookies set by Supabase client (sb-*-auth-token)
 - **Middleware**: Checks for `sb-*-auth-token` cookies to protect /dashboard/** routes
-- **Logout**: `supabase.auth.signOut()` → redirect to /login
+- **Logout**: `supabase.auth.signOut()` + `firebaseSignOut()` → redirect to /login
+- **Google/Apple OAuth**: Firebase popup auth → API route `/api/auth/social-login` verifies Firebase ID token → Supabase Admin creates/finds user → sets temp password → client signs in with Supabase
+- **Firebase config**: `lib/firebase.ts` (project: `stringent-mvp`), social auth helper: `lib/socialAuth.ts`
 - **Important**: Email confirmation should be DISABLED in Supabase Dashboard for immediate login after signup
 
 ## Auth Flow
