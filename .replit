@@ -49,4 +49,3 @@ externalPort = 80
 [userenv]
 
 [userenv.shared]
-NEXT_PUBLIC_PRIVY_APP_ID = "cmmfxnapf01sz0cjsg53245k2"

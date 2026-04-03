@@ -1,47 +1,129 @@
 'use client';
 
-import { usePrivy } from '@privy-io/react-auth';
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-interface User {
+export interface UserProfile {
   id: string;
   email?: string;
-  wallet_address?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
   created_at?: string;
-  user_metadata?: {
-    avatar_url?: string;
-    full_name?: string;
-    [key: string]: unknown;
-  };
 }
 
-export function useAuth() {
-  const { user: privyUser, authenticated, ready, logout } = usePrivy();
+interface AuthContextType {
+  user: UserProfile | null;
+  supabaseUser: SupabaseUser | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
 
-  const user: User | null = authenticated && privyUser
-    ? {
-        id: privyUser.id,
-        email: privyUser.email?.address,
-        wallet_address: privyUser.wallet?.address,
-        created_at: privyUser.createdAt?.toString(),
-        user_metadata: {
-          full_name: privyUser.email?.address?.split('@')[0],
-        },
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  supabaseUser: null,
+  loading: true,
+  signOut: async () => {},
+  refreshProfile: async () => {},
+});
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export { AuthContext };
+
+export function useAuthProvider(): AuthContextType {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfile = useCallback(async (supaUser: SupabaseUser) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supaUser.id)
+        .single();
+
+      if (profile) {
+        setUser({
+          id: supaUser.id,
+          email: supaUser.email,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          username: profile.username,
+          created_at: profile.created_at,
+        });
+      } else {
+        setUser({
+          id: supaUser.id,
+          email: supaUser.email,
+          created_at: supaUser.created_at,
+        });
       }
-    : null;
+    } catch {
+      setUser({
+        id: supaUser.id,
+        email: supaUser.email,
+        created_at: supaUser.created_at,
+      });
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (supabaseUser) {
+      await fetchProfile(supabaseUser);
+    }
+  }, [supabaseUser, fetchProfile]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function init() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && mounted) {
+          setSupabaseUser(session.user);
+          await fetchProfile(session.user);
+        }
+      } catch {
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          await fetchProfile(session.user);
+        } else {
+          setUser(null);
+          setSupabaseUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
     try {
-      await logout();
-      localStorage.removeItem('wallet_address');
-      localStorage.removeItem('wallet_signature');
-      await fetch('/api/auth/privy-callback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'logout' }),
-      }).catch(() => {});
+      await supabase.auth.signOut();
+      setUser(null);
+      setSupabaseUser(null);
     } catch {}
-  }, [logout]);
+  }, []);
 
-  return { user, loading: !ready, signOut };
+  return { user, supabaseUser, loading, signOut, refreshProfile };
 }

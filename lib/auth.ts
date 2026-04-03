@@ -14,9 +14,7 @@ function getSecret() {
 
 export interface SessionPayload extends JWTPayload {
   userId: string;
-  privyId: string;
   email?: string;
-  walletAddress?: string;
 }
 
 export async function createSession(payload: Omit<SessionPayload, 'iat' | 'exp'>): Promise<string> {

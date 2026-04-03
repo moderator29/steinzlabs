@@ -70,6 +70,7 @@ const config: Config = {
         "fade-slide-in": "fadeSlideIn 0.5s ease-out forwards",
         "glow-pulse": "glowPulse 4s ease-in-out infinite",
         "marquee": "marquee 30s linear infinite",
+        "slide-in-right": "slideInRight 0.3s ease-out",
       },
       keyframes: {
         marquee: {
@@ -103,6 +104,10 @@ const config: Config = {
         glowPulse: {
           "0%, 100%": { boxShadow: "0 0 20px rgba(10, 30, 255, 0.1), 0 0 60px rgba(10, 30, 255, 0.05)" },
           "50%": { boxShadow: "0 0 40px rgba(10, 30, 255, 0.2), 0 0 80px rgba(10, 30, 255, 0.1), 0 0 120px rgba(124, 58, 237, 0.05)" },
+        },
+        slideInRight: {
+          "0%": { transform: "translateX(100%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
         },
       },
     },
