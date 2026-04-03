@@ -38,7 +38,10 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Profile Security**: Opens account security settings subpage (not Security Center scanner)
 - **Dashboard Header**: STEINZ logo left, "STEINZ Terminal" text small on right side. Price ticker removed.
 - **Context Feed**: No ARKHAM badge (uses "INTEL" label instead). No external Bubblemaps links. Initial fetch 50 events, merges up to 200. Archive tab for events >24hrs old.
-- **Exchange APIs**: Jupiter Aggregator (Solana), 1inch (EVM chains), unified execution router in lib/trading/. Shadow Guardian pre-trade scanning.
+- **Exchange APIs**: Jupiter Aggregator (Solana), 1inch (EVM chains), unified execution router in lib/trading/. Shadow Guardian pre-trade scanning. Exchange hub page (/dashboard/exchanges) with live Binance ticker data, CEX/DEX directory, and API status monitoring.
+- **Archive Page**: /dashboard/archive — standalone page for events >24h. Filterable by type and chain.
+- **Wallet Intelligence Tabs**: Wallet tab (wallet address analysis + AI assessment) and Contract tab (security scan with honeypot detection, tax analysis). Uses /api/token-scanner for contract scans.
+- **Middleware**: Security headers only (X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, HSTS, Permissions-Policy). CSP removed to prevent production script blocking.
 
 ## Auth (Supabase)
 - **Client**: `@supabase/supabase-js` — client-side only (browser connects directly to Supabase)

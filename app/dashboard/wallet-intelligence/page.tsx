@@ -221,14 +221,16 @@ export default function WalletIntelligencePage() {
     setContractResult(null);
 
     try {
-      const chainObj = CONTRACT_CHAINS.find(c => c.key === contractChain);
-      const params = new URLSearchParams({ address: ca, chain: chainObj?.id || '1' });
-      const res = await fetch(`/api/security-scan?${params.toString()}`);
+      const res = await fetch('/api/token-scanner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contract: ca, chain: contractChain }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.suggestion) {
-          setContractError(`${data.error}. ${data.message}`);
+        if (data.isWalletAddress) {
+          setContractError(`${data.error}. ${data.message || 'Switch to the Wallet tab to analyze wallets.'}`);
         } else {
           setContractError(data.error || 'Failed to scan contract');
         }
