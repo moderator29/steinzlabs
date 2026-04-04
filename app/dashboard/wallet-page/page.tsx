@@ -344,8 +344,7 @@ export default function WalletPage() {
                 <Settings className="w-4 h-4 text-gray-400 cursor-pointer hover:text-white" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold">{activeWallet?.name || 'Wallet'}</span>
-                {wallets.length > 1 && (
+                {wallets.length > 1 ? (
                   <select
                     className="bg-transparent text-sm font-bold appearance-none cursor-pointer pr-1"
                     value={activeWallet?.address}
@@ -358,6 +357,8 @@ export default function WalletPage() {
                       <option key={w.address} value={w.address} className="bg-[#111827] text-white">{w.name}</option>
                     ))}
                   </select>
+                ) : (
+                  <span className="text-sm font-bold">{activeWallet?.name || 'Wallet'}</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -649,7 +650,13 @@ function TokenRow({ token, chainSymbol, chainColor, hideBalance }: { token: Toke
 function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated: (w: StoredWallet) => void }) {
   const [step, setStep] = useState<'password' | 'phrase' | 'confirm'>('password');
   const [password, setPassword] = useState('');
-  const [walletName, setWalletName] = useState('Wallet 1');
+  const [walletName, setWalletName] = useState(() => {
+    try {
+      const stored = localStorage.getItem('steinz_wallets');
+      const count = stored ? JSON.parse(stored).length : 0;
+      return `Wallet ${count + 1}`;
+    } catch { return 'Wallet 1'; }
+  });
   const [mnemonic, setMnemonic] = useState('');
   const [address, setAddress] = useState('');
   const [privateKey, setPrivateKey] = useState('');

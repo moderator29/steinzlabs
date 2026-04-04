@@ -376,25 +376,31 @@ export default function LandingPage() {
             {[
               {
                 tier: "Free",
+                price: "$0",
                 desc: "Get started with core features",
-                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "Community access"],
+                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (15 msgs/day)"],
                 accent: "#6B7280",
                 cta: "Start Free",
+                link: "/signup",
               },
               {
                 tier: "STEINZ Pro",
+                price: "$19/mo",
                 desc: "Full intelligence suite unlocked",
-                perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Priority signals & alerts"],
+                perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
                 accent: "#0A1EFF",
-                cta: "Upgrade",
+                cta: "Coming Soon",
                 featured: true,
+                link: "#",
               },
               {
-                tier: "STEINZ Enterprise",
-                desc: "For professional analysts",
-                perks: ["Everything in Pro tier", "API access for developers", "Custom alert creation", "VTX AI (unlimited queries)"],
-                accent: "#7C3AED",
+                tier: "Premium",
+                price: "$99/mo",
+                desc: "Maximum power for professionals",
+                perks: ["Everything in Pro tier", "API access for developers", "Custom webhook alerts", "Priority support"],
+                accent: "#F59E0B",
                 cta: "Coming Soon",
+                link: "#",
               },
             ].map((plan) => (
               <div
@@ -405,6 +411,7 @@ export default function LandingPage() {
                   <div className="text-[10px] font-bold uppercase tracking-widest text-neon-blue mb-3">Most Popular</div>
                 )}
                 <h3 className="text-lg font-heading font-bold mb-1" style={{ color: plan.accent }}>{plan.tier}</h3>
+                <div className="text-xl font-bold mb-1">{plan.price}</div>
                 <p className="text-gray-500 text-xs mb-4">{plan.desc}</p>
                 <div className="space-y-2 mb-6">
                   {plan.perks.map((perk) => (
@@ -414,10 +421,11 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/dashboard">
+                <Link href={plan.link}>
                   <button
                     className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
                     style={plan.featured ? { backgroundColor: plan.accent, color: 'white' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                    disabled={plan.cta === 'Coming Soon'}
                   >
                     {plan.cta}
                   </button>
@@ -531,7 +539,7 @@ export default function LandingPage() {
               <div className="space-y-2 text-gray-500 text-xs">
                 <div><Link href="/whitepaper" className="hover:text-white transition-colors">Whitepaper</Link></div>
                 <div><Link href="/whitepaper#architecture" className="hover:text-white transition-colors">Documentation</Link></div>
-                <div><Link href="/dashboard/market" className="hover:text-white transition-colors">Market</Link></div>
+                <div><Link href="/dashboard/trading-suite" className="hover:text-white transition-colors">STEINZ Terminal</Link></div>
               </div>
             </div>
             <div>

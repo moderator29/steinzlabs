@@ -34,12 +34,11 @@ const NAV_CATEGORIES: NavCategory[] = [
     ],
   },
   {
-    title: 'Market',
+    title: 'Trading',
     items: [
-      { icon: CandlestickChart, label: 'Market', path: '/dashboard/market', badge: 'NEW' },
+      { icon: Zap, label: 'STEINZ Terminal', path: '/dashboard/trading-suite', badge: 'PRO' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
-      { icon: Zap, label: 'Trading Suite', path: '/dashboard/trading-suite' },
-      { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges', badge: 'NEW' },
+      { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges' },
     ],
   },
   {
