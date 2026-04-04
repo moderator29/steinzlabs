@@ -108,22 +108,24 @@ export async function POST(request: Request) {
 
     if (linkError || !linkData?.properties?.action_link) {
       console.error('[Signup] generateLink error:', linkError?.message);
-      await admin.auth.admin.updateUserById(newUser.user.id, { email_confirm: true });
-      return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
+      await admin.auth.admin.deleteUser(newUser.user.id);
+      return NextResponse.json({ error: 'Failed to generate verification link. Please try again.' }, { status: 500 });
     }
 
     let confirmUrl = linkData.properties.action_link;
     confirmUrl = confirmUrl.replace(/redirect_to=http[^&]*/g, 'redirect_to=https://steinzlabs.com/auth/callback');
     confirmUrl = confirmUrl.replace('http://localhost:3000', 'https://steinzlabs.com');
     confirmUrl = confirmUrl.replace('http://localhost:5000', 'https://steinzlabs.com');
+
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
     if (!emailSent) {
-      console.error('[Signup] Email send failed, auto-confirming user');
-      await admin.auth.admin.updateUserById(newUser.user.id, { email_confirm: true });
-      return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
+      console.error('[Signup] Email send failed, deleting user and asking to retry');
+      await admin.auth.admin.deleteUser(newUser.user.id);
+      return NextResponse.json({ error: 'Failed to send verification email. Please try again.' }, { status: 500 });
     }
 
+    console.log(`[Signup] Verification email sent to ${cleanEmail}`);
     return NextResponse.json({ success: true, email: cleanEmail, needsConfirmation: true });
 
   } catch (err: any) {

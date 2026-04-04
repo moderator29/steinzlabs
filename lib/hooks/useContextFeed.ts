@@ -34,10 +34,10 @@ interface ContextEvent {
 
 export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'avalanche' | 'bookmarks';
 
-const POLL_INTERVAL = 15000;
-const POLL_INTERVAL_HIDDEN = 60000;
+const POLL_INTERVAL = 8000;
+const POLL_INTERVAL_HIDDEN = 30000;
 
-export function useContextFeed(limit: number = 50, chain: ChainFilter = 'all') {
+export function useContextFeed(limit: number = 150, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasArchive, setHasArchive] = useState(false);

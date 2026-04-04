@@ -213,7 +213,7 @@ export default function ProfileTab() {
 
   const joinedDate = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : 'Not signed in';
+    : 'Member';
 
   const handleSignOut = async () => {
     await signOut();
