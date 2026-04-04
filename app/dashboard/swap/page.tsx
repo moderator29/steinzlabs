@@ -90,14 +90,14 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full max-w-[420px] bg-[#111827] border border-white/10 rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-[420px] bg-[#0f1320] border border-[#1a1f2e] rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <h3 className="font-bold text-sm text-white">Select a token</h3>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-400" /></button>
         </div>
 
         <div className="p-4 space-y-3 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2 bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0A1EFF]/40 transition-colors">
+          <div className="flex items-center gap-2 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0A1EFF]/40 transition-colors">
             <Search className="w-4 h-4 text-gray-600" />
             <input
               ref={inputRef}
@@ -115,7 +115,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
                 <button
                   key={t.symbol}
                   onClick={() => { onSelect(t.symbol); onClose(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A0E1A] border border-white/[0.06] rounded-full hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#060A12] border border-white/[0.06] rounded-full hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all"
                 >
                   <TokenBadge symbol={t.symbol} size={18} />
                   <span className="text-xs font-semibold text-white">{t.symbol}</span>
@@ -160,7 +160,7 @@ function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
   if (!isOpen) return null;
 
   return (
-    <div className="bg-[#111827] border border-white/[0.06] rounded-2xl p-4 space-y-4 shadow-xl">
+    <div className="bg-[#0f1320] border border-white/[0.06] rounded-2xl p-4 space-y-4 shadow-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Settings className="w-4 h-4 text-gray-400" />
@@ -181,7 +181,7 @@ function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
               className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 slippage === s && !customSlippage
                   ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
-                  : 'bg-[#0A0E1A] text-gray-400 hover:text-white hover:bg-[#0A0E1A]/80'
+                  : 'bg-[#060A12] text-gray-400 hover:text-white hover:bg-[#060A12]/80'
               }`}
             >
               {s}%
@@ -198,7 +198,7 @@ function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
             if (e.target.value) setSlippage(e.target.value);
           }}
           placeholder="Custom"
-          className="flex-1 bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 transition-colors text-white placeholder-gray-600"
+          className="flex-1 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 transition-colors text-white placeholder-gray-600"
         />
         <span className="text-sm text-gray-500">%</span>
       </div>
@@ -301,7 +301,7 @@ export default function SwapPage() {
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
+    <div className="min-h-screen bg-[#060A12] text-white">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#0A1EFF]/[0.03] rounded-full blur-[120px]" />
       </div>
@@ -328,7 +328,7 @@ export default function SwapPage() {
                 onClick={() => { setChain(c.id); setFromToken(c.symbol); simulateQuote(fromAmount, c.symbol, toToken, c.id); }}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                   chain === c.id
-                    ? 'bg-white/10 text-white border border-white/10'
+                    ? 'bg-white/10 text-white border border-[#1a1f2e]'
                     : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
                 }`}
               >
@@ -341,7 +341,7 @@ export default function SwapPage() {
           <SettingsPanel slippage={slippage} setSlippage={setSlippage} isOpen={showSettings} onClose={() => setShowSettings(false)} />
           {showSettings && <div className="h-3" />}
 
-          <div className="bg-[#111827]/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/20">
+          <div className="bg-[#0f1320]/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/20">
             <div className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
@@ -361,7 +361,7 @@ export default function SwapPage() {
                 />
                 <button
                   onClick={() => setShowTokenSelect('from')}
-                  className="flex items-center gap-2 bg-[#0A0E1A] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-white/10 shrink-0 group"
+                  className="flex items-center gap-2 bg-[#060A12] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-[#1a1f2e] shrink-0 group"
                 >
                   <TokenBadge symbol={fromToken} size={24} />
                   <span className="text-white">{fromToken}</span>
@@ -409,7 +409,7 @@ export default function SwapPage() {
                 )}
                 <button
                   onClick={() => setShowTokenSelect('to')}
-                  className="flex items-center gap-2 bg-[#0A0E1A] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-white/10 shrink-0 group"
+                  className="flex items-center gap-2 bg-[#060A12] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-[#1a1f2e] shrink-0 group"
                 >
                   <TokenBadge symbol={toToken} size={24} />
                   <span className="text-white">{toToken}</span>
@@ -478,7 +478,7 @@ export default function SwapPage() {
               className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 fromAmount && parseFloat(fromAmount) > 0 && !swapping && !fetchingQuote
                   ? 'bg-[#0A1EFF] hover:bg-[#0918CC] active:scale-[0.98] text-white shadow-lg shadow-[#0A1EFF]/20'
-                  : 'bg-[#111827] text-gray-600 cursor-not-allowed border border-white/[0.04]'
+                  : 'bg-[#0f1320] text-gray-600 cursor-not-allowed border border-white/[0.04]'
               }`}
             >
               {swapping ? (
@@ -503,7 +503,7 @@ export default function SwapPage() {
           </div>
 
           {hasQuote && (
-            <div className="mt-3 bg-[#111827]/60 rounded-2xl border border-white/[0.04] p-4">
+            <div className="mt-3 bg-[#0f1320]/60 rounded-2xl border border-white/[0.04] p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
                 <span className="text-xs text-gray-400 font-medium">Order routing</span>
@@ -518,11 +518,11 @@ export default function SwapPage() {
                 </div>
 
                 <div className="flex-1 mx-4 flex items-center">
-                  <div className="flex-1 border-t border-dashed border-white/10" />
+                  <div className="flex-1 border-t border-dashed border-[#1a1f2e]" />
                   <div className="mx-2 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-white/[0.06]" style={{ backgroundColor: activeChain.color + '15', color: activeChain.color }}>
                     {activeChain.dex}
                   </div>
-                  <div className="flex-1 border-t border-dashed border-white/10" />
+                  <div className="flex-1 border-t border-dashed border-[#1a1f2e]" />
                 </div>
 
                 <div className="flex items-center gap-2.5">
