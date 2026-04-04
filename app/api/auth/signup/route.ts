@@ -1,28 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
-
-function getUrl(): string {
-  const env = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^["']+|["']+$/g, '');
-  return (env && env.startsWith('https://')) ? env : SUPABASE_URL;
-}
-
-function getAnonKey(): string {
-  return (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim().replace(/^["']+|["']+$/g, '');
-}
-
-function getAdminClient() {
-  const serviceKey = (process.env.SUPABASE_SERVICE_KEY || '').trim().replace(/^["']+|["']+$/g, '');
-  if (!serviceKey) return null;
-  try {
-    return createClient(getUrl(), serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  } catch {
-    return null;
-  }
-}
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
   try {
@@ -33,8 +10,10 @@ export async function POST(request: Request) {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
       }
-      const admin = getAdminClient();
-      if (!admin) return NextResponse.json({ available: true });
+      let admin;
+      try { admin = getSupabaseAdmin(); } catch {
+        return NextResponse.json({ available: true });
+      }
       const { data: existingProfile } = await admin
         .from('profiles')
         .select('id')
@@ -64,10 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
     }
 
-    const admin = getAdminClient();
-    if (!admin) {
-      return NextResponse.json({ error: 'Auth service not configured.' }, { status: 500 });
-    }
+    const admin = getSupabaseAdmin();
 
     const { data: existingUsers } = await admin.auth.admin.listUsers();
     const emailExists = existingUsers?.users?.some(
@@ -77,65 +53,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
     }
 
-    const metadata = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      username: cleanUsername,
-    };
+    const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+      email: cleanEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        username: cleanUsername,
+      },
+    });
 
-    const anonKey = getAnonKey();
-    let needsConfirmation = false;
-    let userId: string | null = null;
-
-    if (anonKey && anonKey.length > 20) {
-      const supabase = createClient(getUrl(), anonKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: { data: metadata },
-      });
-
-      if (!signUpError && signUpData?.user && signUpData.user.identities?.length !== 0) {
-        userId = signUpData.user.id;
-        needsConfirmation = true;
-      } else if (signUpError) {
-        const msg = signUpError.message.toLowerCase();
-        if (msg.includes('already') || msg.includes('exists')) {
-          return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
-        }
-        if (msg.includes('rate') || msg.includes('limit')) {
-          return NextResponse.json({ error: 'Too many signup attempts. Please wait a moment.' }, { status: 429 });
-        }
-        console.warn('[Signup] signUp failed, falling back to admin:', signUpError.message);
+    if (createError) {
+      console.error('[Signup] createUser error:', createError.message);
+      if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
+        return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
       }
+      return NextResponse.json({ error: createError.message }, { status: 500 });
     }
 
-    if (!userId) {
-      const { data: newUser, error: createError } = await admin.auth.admin.createUser({
-        email: cleanEmail,
-        password: password,
-        email_confirm: true,
-        user_metadata: metadata,
-      });
-
-      if (createError) {
-        if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
-          return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
-        }
-        return NextResponse.json({ error: createError.message }, { status: 500 });
-      }
-
-      userId = newUser?.user?.id || null;
-      needsConfirmation = false;
-    }
-
-    if (userId) {
+    if (newUser?.user) {
       try {
         await admin.from('profiles').upsert({
-          id: userId,
+          id: newUser.user.id,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           username: cleanUsername,
@@ -145,11 +85,7 @@ export async function POST(request: Request) {
       } catch {}
     }
 
-    return NextResponse.json({
-      success: true,
-      email: cleanEmail,
-      needsConfirmation,
-    });
+    return NextResponse.json({ success: true, email: cleanEmail });
 
   } catch (err: any) {
     console.error('[Signup] error:', err.message);

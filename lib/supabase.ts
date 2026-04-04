@@ -1,43 +1,18 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const FALLBACK_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
+const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodmV3cmxkY2R4dXBzbmFrZGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDA0NjMsImV4cCI6MjA5MDc3NjQ2M30.xHGPMphDjMsPN566gRcGle5Mp8mEBxGiI1HXDX9M7ZU';
 const SESSION_SECONDS = 60 * 60 * 48;
 
 let _supabase: SupabaseClient | null = null;
-let _configured = false;
-
-function clean(raw: string | undefined): string {
-  if (!raw) return '';
-  return raw.trim().replace(/^["']+|["']+$/g, '');
-}
-
-function getUrl(): string {
-  const env = clean(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  if (env && env.startsWith('https://') && env.includes('.supabase.co')) return env;
-  return FALLBACK_URL;
-}
-
-function getKey(): string {
-  return clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
-
-function isConfigured(): boolean {
-  const key = getKey();
-  return !!(key && key.length > 20);
-}
 
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  _configured = isConfigured();
-  const supabaseUrl = getUrl();
-  const supabaseAnonKey = getKey();
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim() || SUPABASE_URL;
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim() || SUPABASE_ANON_KEY;
 
-  if (!supabaseAnonKey) {
-    console.warn('[Supabase] Anon key not available, auth will not work');
-  }
-
-  _supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder', {
+  _supabase = createClient(url, key, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -48,7 +23,7 @@ function getClient(): SupabaseClient {
     },
   });
 
-  if (typeof window !== 'undefined' && _configured) {
+  if (typeof window !== 'undefined') {
     try {
       _supabase.auth.onAuthStateChange((event: string, session: any) => {
         const isSecure = window.location.protocol === 'https:';
@@ -72,7 +47,7 @@ function getClient(): SupabaseClient {
 
 export function isSupabaseReady(): boolean {
   getClient();
-  return _configured;
+  return true;
 }
 
 export const supabase = new Proxy({} as SupabaseClient, {
