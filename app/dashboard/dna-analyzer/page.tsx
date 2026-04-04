@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap, BarChart3, AlertTriangle, CheckCircle, RotateCcw, FileCode2, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
@@ -34,6 +34,8 @@ export default function DNAAnalyzerPage() {
   const [manualAddress, setManualAddress] = useState('');
   const [isContractAddress, setIsContractAddress] = useState(false);
   const [contractAddress, setContractAddress] = useState('');
+  const [walletHoldings, setWalletHoldings] = useState<any[]>([]);
+  const bubbleCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const checkIfContract = async (address: string): Promise<boolean> => {
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return false;
@@ -101,6 +103,7 @@ export default function DNAAnalyzerPage() {
           if (balData.holdings) {
             holdings = balData.holdings;
             totalBalance = parseFloat(balData.totalBalanceUsd || '0');
+            setWalletHoldings(holdings);
           }
         }
       } catch {}
@@ -427,8 +430,181 @@ export default function DNAAnalyzerPage() {
               </div>
               <p className="text-sm text-gray-400">{analysis.marketOutlook}</p>
             </div>
+
+            {walletHoldings.length > 0 && (
+              <div className="glass rounded-xl p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Dna className="w-4 h-4 text-[#0A1EFF]" />
+                  <span className="font-bold text-sm">Portfolio DNA Map</span>
+                </div>
+                <PortfolioBubbleMap holdings={walletHoldings} />
+              </div>
+            )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+const BUBBLE_COLORS = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#14B8A6', '#F97316', '#8B5CF6'];
+
+function PortfolioBubbleMap({ holdings }: { holdings: any[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  const totalValue = holdings.reduce((sum, h) => sum + (h.valueUsd || h.balance * (h.priceUsd || 0) || 0), 0);
+  const sorted = [...holdings]
+    .map((h, i) => ({
+      symbol: h.symbol || 'Unknown',
+      value: h.valueUsd || h.balance * (h.priceUsd || 0) || 0,
+      balance: h.balance || 0,
+      pct: totalValue > 0 ? ((h.valueUsd || h.balance * (h.priceUsd || 0) || 0) / totalValue) * 100 : 0,
+      color: BUBBLE_COLORS[i % BUBBLE_COLORS.length],
+    }))
+    .filter(h => h.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 15);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || sorted.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = Math.min(w, h) * 0.38;
+
+    const bubbles = sorted.map((item, i) => {
+      const r = Math.max(12, Math.sqrt(item.pct / 100) * maxR);
+      const angle = (i / sorted.length) * Math.PI * 2;
+      const dist = maxR * 0.5 * (1 - item.pct / 100);
+      return {
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        r,
+        ...item,
+        idx: i,
+      };
+    });
+
+    for (let iter = 0; iter < 100; iter++) {
+      for (let i = 0; i < bubbles.length; i++) {
+        for (let j = i + 1; j < bubbles.length; j++) {
+          const dx = bubbles[j].x - bubbles[i].x;
+          const dy = bubbles[j].y - bubbles[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = bubbles[i].r + bubbles[j].r + 3;
+          if (dist < minDist && dist > 0) {
+            const push = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            bubbles[i].x -= nx * push;
+            bubbles[i].y -= ny * push;
+            bubbles[j].x += nx * push;
+            bubbles[j].y += ny * push;
+          }
+        }
+        const dx = bubbles[i].x - cx;
+        const dy = bubbles[i].y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist + bubbles[i].r > maxR * 1.3) {
+          bubbles[i].x -= dx * 0.05;
+          bubbles[i].y -= dy * 0.05;
+        }
+      }
+    }
+
+    ctx.clearRect(0, 0, w, h);
+
+    bubbles.forEach((b, i) => {
+      const isHovered = hoveredIdx === i;
+      const grad = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, 0, b.x, b.y, b.r);
+      grad.addColorStop(0, b.color + (isHovered ? 'FF' : 'CC'));
+      grad.addColorStop(1, b.color + (isHovered ? '88' : '44'));
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r * (isHovered ? 1.08 : 1), 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = b.color + '88';
+      ctx.lineWidth = isHovered ? 2 : 1;
+      ctx.stroke();
+
+      if (b.r > 16) {
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.min(b.r * 0.45, 14)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(b.symbol, b.x, b.y - (b.r > 25 ? 6 : 0));
+        if (b.r > 25) {
+          ctx.fillStyle = '#ffffff99';
+          ctx.font = `${Math.min(b.r * 0.3, 10)}px sans-serif`;
+          ctx.fillText(`${b.pct.toFixed(1)}%`, b.x, b.y + 8);
+        }
+      }
+    });
+
+    (canvas as any).__bubbles = bubbles;
+  }, [sorted, hoveredIdx]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const bubbles = (canvas as any).__bubbles || [];
+    let found = -1;
+    for (let i = 0; i < bubbles.length; i++) {
+      const dx = x - bubbles[i].x;
+      const dy = y - bubbles[i].y;
+      if (Math.sqrt(dx * dx + dy * dy) <= bubbles[i].r) {
+        found = i;
+        break;
+      }
+    }
+    setHoveredIdx(found >= 0 ? found : null);
+  };
+
+  if (sorted.length === 0) {
+    return <div className="text-center text-gray-500 text-sm py-8">No holdings to visualize</div>;
+  }
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        className="w-full rounded-lg cursor-pointer"
+        style={{ height: 260 }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIdx(null)}
+      />
+      {hoveredIdx !== null && sorted[hoveredIdx] && (
+        <div className="mt-2 bg-white/5 rounded-lg p-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sorted[hoveredIdx].color }} />
+            <span className="font-bold text-white">{sorted[hoveredIdx].symbol}</span>
+          </div>
+          <span className="text-gray-400">{sorted[hoveredIdx].pct.toFixed(1)}% of portfolio</span>
+          <span className="text-white font-semibold">${sorted[hoveredIdx].value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {sorted.slice(0, 8).map((h, i) => (
+          <div key={i} className="flex items-center gap-1.5 text-[10px]">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: h.color }} />
+            <span className="text-gray-400">{h.symbol}</span>
+            <span className="text-white font-semibold">{h.pct.toFixed(1)}%</span>
+          </div>
+        ))}
       </div>
     </div>
   );

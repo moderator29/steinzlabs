@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, Cpu, ChevronDown, X, Wallet, Network } from 'lucide-react';
+import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, Cpu, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
@@ -29,6 +29,7 @@ interface Message {
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
+const HISTORY_INDEX_KEY = 'vtx-ai-chat-sessions';
 const TIER_KEY = 'steinz_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
 const SETTINGS_KEY = 'vtx-ai-settings';
@@ -210,6 +211,8 @@ export default function VtxAiPage() {
   const [rateLimited, setRateLimited] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [chatSessions, setChatSessions] = useState<{ id: string; title: string; date: string; preview: string }[]>([]);
   const [settings, setSettings] = useState<AgentSettings>({ webSearch: false, responseStyle: 'detailed', autoContext: true });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -222,6 +225,10 @@ export default function VtxAiPage() {
       setTier(getUserTier());
       setDailyUsage(getDailyUsage());
       setSettings(loadSettings());
+      try {
+        const sessions = localStorage.getItem(HISTORY_INDEX_KEY);
+        if (sessions) setChatSessions(JSON.parse(sessions));
+      } catch {}
     }
   }, []);
 
@@ -236,8 +243,38 @@ export default function VtxAiPage() {
     saveSettings(updated);
   };
 
+  const saveChatSession = () => {
+    if (messages.length <= 1) return;
+    const userMsgs = messages.filter(m => m.role === 'user');
+    if (userMsgs.length === 0) return;
+    const title = userMsgs[0].content.slice(0, 50) + (userMsgs[0].content.length > 50 ? '...' : '');
+    const session = {
+      id: Date.now().toString(),
+      title,
+      date: new Date().toISOString(),
+      preview: messages[messages.length - 1].content.slice(0, 80),
+    };
+    try {
+      localStorage.setItem(`vtx-chat-${session.id}`, JSON.stringify(messages));
+      const updated = [session, ...chatSessions].slice(0, 20);
+      setChatSessions(updated);
+      localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(updated));
+    } catch {}
+  };
+
+  const loadChatSession = (sessionId: string) => {
+    try {
+      const stored = localStorage.getItem(`vtx-chat-${sessionId}`);
+      if (stored) {
+        setMessages(JSON.parse(stored));
+        setShowHistory(false);
+      }
+    } catch {}
+  };
+
   const clearChat = () => {
-    const fresh: Message[] = [{ role: 'assistant', content: 'Chat cleared. VTX Agent ready. What do you need?', timestamp: Date.now() }];
+    saveChatSession();
+    const fresh: Message[] = [{ role: 'assistant', content: 'New chat started. VTX Agent ready. What do you need?', timestamp: Date.now() }];
     setMessages(fresh);
     saveHistory(fresh);
   };
@@ -335,16 +372,45 @@ export default function VtxAiPage() {
                 </div>
               </div>
             )}
+            <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="New chat">
+              <MessageSquarePlus className="w-4 h-4 text-gray-500" />
+            </button>
+            <button onClick={() => setShowHistory(!showHistory)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Chat history">
+              <History className="w-4 h-4 text-gray-500" />
+            </button>
             <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
               <Settings className="w-4 h-4 text-gray-500" />
             </button>
-            {messages.length > 1 && (
-              <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Clear chat">
-                <Trash2 className="w-4 h-4 text-gray-600" />
-              </button>
-            )}
           </div>
         </div>
+
+        {showHistory && (
+          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-60 overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-gray-300">Chat History</span>
+              <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+            </div>
+            {chatSessions.length === 0 ? (
+              <p className="text-[10px] text-gray-600 text-center py-3">No previous chats</p>
+            ) : (
+              <div className="space-y-1">
+                {chatSessions.map(session => (
+                  <button
+                    key={session.id}
+                    onClick={() => loadChatSession(session.id)}
+                    className="w-full text-left p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all flex items-center gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-gray-300 truncate">{session.title}</div>
+                      <div className="text-[9px] text-gray-600 truncate">{session.preview}</div>
+                    </div>
+                    <ChevronRight className="w-3 h-3 text-gray-600 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {showSettings && (
           <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16]">
@@ -371,6 +437,15 @@ export default function VtxAiPage() {
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoContext ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
               </label>
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs text-gray-400">Security Warnings</span>
+                </div>
+                <button className="w-9 h-5 rounded-full transition-colors relative bg-[#0A1EFF]">
+                  <div className="w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] right-[3px]" />
+                </button>
+              </label>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-3.5 h-3.5 text-gray-500" />
@@ -380,6 +455,11 @@ export default function VtxAiPage() {
                   <button onClick={() => updateSettings({ responseStyle: 'concise' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'concise' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Concise</button>
                   <button onClick={() => updateSettings({ responseStyle: 'detailed' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'detailed' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Detailed</button>
                 </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.04]">
+                <button onClick={clearChat} className="flex items-center gap-2 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" /> Clear current chat
+                </button>
               </div>
             </div>
           </div>

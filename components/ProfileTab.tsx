@@ -5,10 +5,11 @@ import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, Che
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
+import { getLocalNotifications } from '@/lib/notifications';
 
 interface Notification {
   id: string;
-  type: 'whale' | 'price' | 'prediction' | 'trending' | 'security';
+  type: 'whale' | 'price' | 'prediction' | 'trending' | 'security' | 'welcome' | 'wallet_created' | 'wallet_imported' | 'swap' | 'send' | 'system';
   title: string;
   message: string;
   time: string;
@@ -16,6 +17,17 @@ interface Notification {
 }
 
 const defaultNotifications: Notification[] = [];
+
+function formatTimeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -49,11 +61,27 @@ export default function ProfileTab() {
             ...n,
             read: readIds.includes(n.id),
           }));
-          setNotifList(mapped);
+          const localNotifs = getLocalNotifications().map(ln => ({
+            id: ln.id,
+            type: ln.type as Notification['type'],
+            title: ln.title,
+            message: ln.message,
+            time: formatTimeAgo(ln.timestamp),
+            read: ln.read || readIds.includes(ln.id),
+          }));
+          setNotifList([...localNotifs, ...mapped]);
         }
       } catch {
         if (!cancelled) {
-          setNotifList([]);
+          const localNotifs = getLocalNotifications().map(ln => ({
+            id: ln.id,
+            type: ln.type as Notification['type'],
+            title: ln.title,
+            message: ln.message,
+            time: formatTimeAgo(ln.timestamp),
+            read: ln.read,
+          }));
+          setNotifList(localNotifs);
         }
       } finally {
         if (!cancelled) setNotifLoading(false);
@@ -61,7 +89,11 @@ export default function ProfileTab() {
     }
     loadNotifications();
     const interval = setInterval(loadNotifications, 120000);
-    return () => { cancelled = true; clearInterval(interval); };
+
+    const handleLocalNotif = () => loadNotifications();
+    window.addEventListener('steinz_notification', handleLocalNotif);
+
+    return () => { cancelled = true; clearInterval(interval); window.removeEventListener('steinz_notification', handleLocalNotif); };
   }, []);
 
   const unreadCount = notifList.filter(n => !n.read).length;
@@ -91,6 +123,13 @@ export default function ProfileTab() {
       case 'prediction': return <Target className="w-4 h-4 text-[#F59E0B]" />;
       case 'trending': return <Flame className="w-4 h-4 text-[#EF4444]" />;
       case 'security': return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
+      case 'welcome': return <Award className="w-4 h-4 text-[#0A1EFF]" />;
+      case 'wallet_created': return <Wallet className="w-4 h-4 text-[#10B981]" />;
+      case 'wallet_imported': return <Wallet className="w-4 h-4 text-[#10B981]" />;
+      case 'swap': return <TrendingUp className="w-4 h-4 text-[#0A1EFF]" />;
+      case 'send': return <Send className="w-4 h-4 text-[#F59E0B]" />;
+      case 'system': return <Bell className="w-4 h-4 text-gray-400" />;
+      default: return <Bell className="w-4 h-4 text-gray-400" />;
     }
   };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);

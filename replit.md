@@ -3,7 +3,7 @@
 ## Overview
 Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX Agent, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
-**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo, $190/yr) / Premium ($99/mo, $990/yr). Payment integration coming soon (no Stripe).
+**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($6/mo) / Premium ($15/mo) — both "Coming Soon". Payment integration coming soon (no Stripe).
 
 ## Tech Stack
 - **Framework**: Next.js 15.0.8 (App Router)
@@ -34,8 +34,9 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Security Center**: Contract addresses only — rejects wallet addresses with clear error
 - **Wallet Intelligence**: Wallet addresses only — rejects contract addresses with eth_getCode check
 - **View Proof**: Full page at /dashboard/proof (not a modal popup). Shows AI analysis, bubble visualization, trust score, blockchain verification, buy/swap buttons to internal swap page.
-- **Swap Page**: /dashboard/swap — Raydium-style professional UI with token selector modal, real-time quote API (/api/swap), chain selector, slippage settings panel, route visualization, price impact display. Supports Jupiter (Solana) and 1inch (EVM) backends.
-- **Swap API**: /api/swap — Quote endpoint returning rate, price impact, min received, gas estimate, route info. Token address resolution for all major chains.
+- **Swap Page**: /dashboard/swap — Raydium-style professional UI with token selector modal, real-time quote API (/api/swap), chain selector, slippage settings panel, route visualization, price impact display. Wallet-integrated: checks balance, shows errors, tracks swap history. Supports NAKA, DOGE, SHIB, XRP, ADA and DexScreener fallback for any token. Supports Jupiter (Solana) and 1inch (EVM) backends.
+- **Swap API**: /api/swap — Quote endpoint returning rate, price impact, min received, gas estimate, route info. Token address resolution for all major chains. DexScreener fallback for unknown tokens. CoinGecko live prices with 30s cache.
+- **Notifications**: lib/notifications.ts — Local notification system (localStorage) for wallet creation, imports, swaps, sends. ProfileTab merges local notifications with API market notifications. Custom event dispatch for real-time updates.
 - **Profile Security**: Opens account security settings subpage (not Security Center scanner)
 - **Sidebar**: Trading category with STEINZ Terminal (PRO badge), Swap, Exchanges. No Market item. No NEW badges on Exchanges.
 - **Smart Money**: Professional tracker UI with summary stats, recent moves feed, search/filter, expandable wallet cards with chain tags, analytics, and wallet intelligence deep-link.
