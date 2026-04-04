@@ -9,8 +9,8 @@ let _supabase: SupabaseClient | null = null;
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim() || SUPABASE_URL;
-  const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim() || SUPABASE_ANON_KEY;
+  const url = SUPABASE_URL;
+  const key = SUPABASE_ANON_KEY;
 
   _supabase = createClient(url, key, {
     auth: {
