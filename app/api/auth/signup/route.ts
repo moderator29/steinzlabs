@@ -12,12 +12,17 @@ export async function POST(request: Request) {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
       }
-      const { data: existingProfile } = await admin
+      const { data: existingProfile, error: profileError } = await admin
         .from('profiles')
         .select('id')
         .eq('username', cleanUsername)
         .maybeSingle();
-      return NextResponse.json({ available: !existingProfile });
+      if (!profileError) {
+        return NextResponse.json({ available: !existingProfile });
+      }
+      const { data: { users } } = await admin.auth.admin.listUsers();
+      const taken = users?.some((u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername);
+      return NextResponse.json({ available: !taken });
     }
 
     const { email, password, firstName, lastName, username } = body;
@@ -42,11 +47,18 @@ export async function POST(request: Request) {
     }
 
     const { data: existingUsers } = await admin.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some(
+    const allUsers = existingUsers?.users || [];
+    const emailExists = allUsers.some(
       (u: any) => u.email?.toLowerCase() === cleanEmail
     );
     if (emailExists) {
       return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+    }
+    const usernameTaken = allUsers.some(
+      (u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername
+    );
+    if (usernameTaken) {
+      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
     }
 
     const { data: newUser, error: createError } = await admin.auth.admin.createUser({
@@ -81,7 +93,9 @@ export async function POST(request: Request) {
         email: cleanEmail,
         created_at: new Date().toISOString(),
       }, { onConflict: 'id' });
-    } catch {}
+    } catch (profileErr: any) {
+      console.error('[Signup] Profile upsert error:', profileErr?.message);
+    }
 
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'signup',
@@ -105,7 +119,7 @@ export async function POST(request: Request) {
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
     if (!emailSent) {
-      console.warn('[Signup] Email sending failed, auto-confirming user');
+      console.error('[Signup] Email send failed, auto-confirming user');
       await admin.auth.admin.updateUserById(newUser.user.id, { email_confirm: true });
       return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
     }
