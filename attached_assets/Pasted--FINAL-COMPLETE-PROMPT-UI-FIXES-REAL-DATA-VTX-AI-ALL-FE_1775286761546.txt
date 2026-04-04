@@ -1,0 +1,1270 @@
+🔥 FINAL COMPLETE PROMPT - UI FIXES + REAL DATA + VTX AI + ALL FEATURES
+Copy this ENTIRE prompt into Replit. This is the COMPLETE, PRODUCTION-READY final prompt:
+
+# STEINZ LABS - FINAL POLISH: REAL DATA + UI FIXES + DEEP VTX AI + ALL FEATURES
+
+This is the FINAL prompt that makes STEINZ Labs 100% production-ready. This fixes ALL UI issues, integrates REAL data everywhere, removes ALL mocks, completes ALL 19 features, and makes VTX AI incredibly powerful.
+
+## 🎯 CRITICAL FIXES & IMPLEMENTATIONS
+
+### **MUST FIX - PRIORITY:**
+
+1. ✅ **REMOVE ALL MOCK DATA** - Every coin, logo, price must be REAL
+2. ✅ **AUTO-WALLET CONNECTION** - No "Connect Wallet" prompts if wallet exists
+3. ✅ **BIOMETRIC AUTH** - Face ID/Passcode instead of "Open Wallet"
+4. ✅ **NAVIGATION CLEANUP** - Remove "Market" from sidebar, fix double back buttons
+5. ✅ **REAL LOGOS EVERYWHERE** - CoinGecko/DEXScreener/Raydium for ALL tokens
+6. ✅ **DEEP VTX AI** - Make it actually intelligent with Arkham context
+7. ✅ **COMPLETE ALL 19 FEATURES** - Full backend + frontend for everything
+8. ✅ **REAL-TIME DATA** - Live prices, real Raydium data, actual Pump.fun feeds
+
+---
+
+## PART 1: REAL LOGO & DATA INTEGRATION
+
+### File: `lib/data/tokenMetadata.ts`
+
+Universal token metadata fetcher with REAL logos:
+
+```typescript
+import axios from 'axios';
+
+export interface TokenMetadata {
+  address: string;
+  symbol: string;
+  name: string;
+  logo: string | null;
+  decimals: number;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  marketCap: number;
+  chain: string;
+}
+
+// =====================================================================
+// Get REAL token metadata with logo (multi-source)
+// =====================================================================
+export async function getTokenMetadata(
+  address: string,
+  chain: string = 'solana'
+): Promise<TokenMetadata> {
+  try {
+    // Try CoinGecko first (best logos)
+    const cgData = await fetchFromCoinGecko(address, chain);
+    if (cgData) return cgData;
+
+    // Try DEXScreener (good for new tokens)
+    const dexData = await fetchFromDEXScreener(address, chain);
+    if (dexData) return dexData;
+
+    // Try Helius (Solana specific)
+    if (chain === 'solana') {
+      const heliusData = await fetchFromHelius(address);
+      if (heliusData) return heliusData;
+    }
+
+    // Fallback - return basic data
+    return {
+      address,
+      symbol: 'UNKNOWN',
+      name: 'Unknown Token',
+      logo: null,
+      decimals: chain === 'solana' ? 9 : 18,
+      price: 0,
+      priceChange24h: 0,
+      volume24h: 0,
+      marketCap: 0,
+      chain,
+    };
+  } catch (error) {
+    console.error('Token metadata fetch failed:', error);
+    return createFallbackMetadata(address, chain);
+  }
+}
+
+// =====================================================================
+// CoinGecko (BEST logos, most reliable)
+// =====================================================================
+async function fetchFromCoinGecko(
+  address: string,
+  chain: string
+): Promise<TokenMetadata | null> {
+  try {
+    // Map chain names to CoinGecko platform IDs
+    const platformMap: Record<string, string> = {
+      solana: 'solana',
+      ethereum: 'ethereum',
+      polygon: 'polygon-pos',
+      arbitrum: 'arbitrum-one',
+      optimism: 'optimistic-ethereum',
+      base: 'base',
+      bsc: 'binance-smart-chain',
+    };
+
+    const platform = platformMap[chain];
+    if (!platform) return null;
+
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/coins/${platform}/contract/${address}`,
+      {
+        timeout: 3000,
+      }
+    );
+
+    const data = response.data;
+
+    return {
+      address,
+      symbol: data.symbol?.toUpperCase() || 'UNKNOWN',
+      name: data.name || 'Unknown Token',
+      logo: data.image?.large || data.image?.small || data.image?.thumb,
+      decimals: data.detail_platforms?.[platform]?.decimal_place || 18,
+      price: data.market_data?.current_price?.usd || 0,
+      priceChange24h: data.market_data?.price_change_percentage_24h || 0,
+      volume24h: data.market_data?.total_volume?.usd || 0,
+      marketCap: data.market_data?.market_cap?.usd || 0,
+      chain,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// DEXScreener (Good for new/small tokens)
+// =====================================================================
+async function fetchFromDEXScreener(
+  address: string,
+  chain: string
+): Promise<TokenMetadata | null> {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      {
+        timeout: 3000,
+      }
+    );
+
+    const pairs = response.data.pairs || [];
+    if (pairs.length === 0) return null;
+
+    // Get the pair with highest liquidity
+    const bestPair = pairs.reduce((best: any, current: any) => {
+      const currentLiq = parseFloat(current.liquidity?.usd || '0');
+      const bestLiq = parseFloat(best.liquidity?.usd || '0');
+      return currentLiq > bestLiq ? current : best;
+    }, pairs[0]);
+
+    const token = bestPair.baseToken;
+
+    return {
+      address,
+      symbol: token.symbol || 'UNKNOWN',
+      name: token.name || 'Unknown Token',
+      logo: bestPair.info?.imageUrl || null,
+      decimals: 9, // DEXScreener doesn't provide decimals
+      price: parseFloat(bestPair.priceUsd || '0'),
+      priceChange24h: parseFloat(bestPair.priceChange?.h24 || '0'),
+      volume24h: parseFloat(bestPair.volume?.h24 || '0'),
+      marketCap: parseFloat(bestPair.marketCap || '0'),
+      chain: bestPair.chainId || chain,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// Helius (Solana specific)
+// =====================================================================
+async function fetchFromHelius(address: string): Promise<TokenMetadata | null> {
+  try {
+    const response = await axios.get(
+      `https://api.helius.xyz/v0/token-metadata`,
+      {
+        params: {
+          'api-key': process.env.HELIUS_API_KEY,
+          mintAddress: address,
+        },
+        timeout: 3000,
+      }
+    );
+
+    const data = response.data;
+
+    return {
+      address,
+      symbol: data.symbol || 'UNKNOWN',
+      name: data.name || 'Unknown Token',
+      logo: data.logoURI || null,
+      decimals: data.decimals || 9,
+      price: 0, // Helius doesn't provide price
+      priceChange24h: 0,
+      volume24h: 0,
+      marketCap: 0,
+      chain: 'solana',
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// Batch fetch metadata (for multiple tokens)
+// =====================================================================
+export async function batchGetTokenMetadata(
+  tokens: Array<{ address: string; chain: string }>
+): Promise<Map<string, TokenMetadata>> {
+  const results = new Map<string, TokenMetadata>();
+
+  // Fetch in parallel with rate limiting
+  const batchSize = 10;
+  for (let i = 0; i < tokens.length; i += batchSize) {
+    const batch = tokens.slice(i, i + batchSize);
+    
+    const promises = batch.map(async (token) => {
+      const metadata = await getTokenMetadata(token.address, token.chain);
+      results.set(token.address, metadata);
+    });
+
+    await Promise.all(promises);
+    
+    // Small delay to avoid rate limits
+    if (i + batchSize < tokens.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  return results;
+}
+
+// =====================================================================
+// Cache token metadata (60 minute TTL)
+// =====================================================================
+const metadataCache = new Map<string, { data: TokenMetadata; expires: number }>();
+
+export async function getCachedTokenMetadata(
+  address: string,
+  chain: string
+): Promise<TokenMetadata> {
+  const cacheKey = `${chain}:${address}`;
+  const cached = metadataCache.get(cacheKey);
+
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
+  const metadata = await getTokenMetadata(address, chain);
+  
+  metadataCache.set(cacheKey, {
+    data: metadata,
+    expires: Date.now() + 60 * 60 * 1000, // 60 minutes
+  });
+
+  return metadata;
+}
+
+// =====================================================================
+// Fallback metadata
+// =====================================================================
+function createFallbackMetadata(address: string, chain: string): TokenMetadata {
+  return {
+    address,
+    symbol: address.slice(0, 6).toUpperCase(),
+    name: `Token ${address.slice(0, 8)}`,
+    logo: null,
+    decimals: chain === 'solana' ? 9 : 18,
+    price: 0,
+    priceChange24h: 0,
+    volume24h: 0,
+    marketCap: 0,
+    chain,
+  };
+}
+
+
+File: lib/data/realTimePrices.ts
+REAL-TIME price feeds from multiple sources:
+
+import axios from 'axios';
+
+export interface PriceData {
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  lastUpdate: Date;
+}
+
+// =====================================================================
+// Get REAL-TIME price (multi-source with fallbacks)
+// =====================================================================
+export async function getRealTimePrice(
+  address: string,
+  chain: string = 'solana'
+): Promise<PriceData> {
+  try {
+    // Try Jupiter first (best for Solana)
+    if (chain === 'solana') {
+      const jupiterPrice = await fetchFromJupiter(address);
+      if (jupiterPrice) return jupiterPrice;
+    }
+
+    // Try DEXScreener (works for all chains)
+    const dexPrice = await fetchPriceFromDEXScreener(address);
+    if (dexPrice) return dexPrice;
+
+    // Try CoinGecko
+    const cgPrice = await fetchPriceFromCoinGecko(address, chain);
+    if (cgPrice) return cgPrice;
+
+    // Fallback
+    return {
+      price: 0,
+      priceChange24h: 0,
+      volume24h: 0,
+      lastUpdate: new Date(),
+    };
+  } catch (error) {
+    console.error('Real-time price fetch failed:', error);
+    return {
+      price: 0,
+      priceChange24h: 0,
+      volume24h: 0,
+      lastUpdate: new Date(),
+    };
+  }
+}
+
+// =====================================================================
+// Jupiter price API (Solana)
+// =====================================================================
+async function fetchFromJupiter(address: string): Promise<PriceData | null> {
+  try {
+    const response = await axios.get(
+      `https://price.jup.ag/v4/price?ids=${address}`,
+      { timeout: 2000 }
+    );
+
+    const data = response.data.data?.[address];
+    if (!data) return null;
+
+    return {
+      price: data.price,
+      priceChange24h: 0, // Jupiter doesn't provide 24h change
+      volume24h: 0,
+      lastUpdate: new Date(),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// DEXScreener price (all chains)
+// =====================================================================
+async function fetchPriceFromDEXScreener(address: string): Promise<PriceData | null> {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      { timeout: 2000 }
+    );
+
+    const pairs = response.data.pairs || [];
+    if (pairs.length === 0) return null;
+
+    const bestPair = pairs.reduce((best: any, current: any) => {
+      const currentLiq = parseFloat(current.liquidity?.usd || '0');
+      const bestLiq = parseFloat(best.liquidity?.usd || '0');
+      return currentLiq > bestLiq ? current : best;
+    }, pairs[0]);
+
+    return {
+      price: parseFloat(bestPair.priceUsd || '0'),
+      priceChange24h: parseFloat(bestPair.priceChange?.h24 || '0'),
+      volume24h: parseFloat(bestPair.volume?.h24 || '0'),
+      lastUpdate: new Date(),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// CoinGecko price
+// =====================================================================
+async function fetchPriceFromCoinGecko(
+  address: string,
+  chain: string
+): Promise<PriceData | null> {
+  try {
+    const platformMap: Record<string, string> = {
+      solana: 'solana',
+      ethereum: 'ethereum',
+      polygon: 'polygon-pos',
+      arbitrum: 'arbitrum-one',
+      optimism: 'optimistic-ethereum',
+      base: 'base',
+    };
+
+    const platform = platformMap[chain];
+    if (!platform) return null;
+
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/token_price/${platform}`,
+      {
+        params: {
+          contract_addresses: address,
+          vs_currencies: 'usd',
+          include_24hr_vol: true,
+          include_24hr_change: true,
+        },
+        timeout: 2000,
+      }
+    );
+
+    const data = response.data[address.toLowerCase()];
+    if (!data) return null;
+
+    return {
+      price: data.usd || 0,
+      priceChange24h: data.usd_24h_change || 0,
+      volume24h: data.usd_24h_vol || 0,
+      lastUpdate: new Date(),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// Subscribe to real-time updates (WebSocket)
+// =====================================================================
+export class PriceSubscription {
+  private ws: WebSocket | null = null;
+  private subscribers = new Map<string, Set<(price: PriceData) => void>>();
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+
+  connect() {
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+
+    try {
+      // DEXScreener WebSocket
+      this.ws = new WebSocket('wss://io.dexscreener.com/dex/screener/pairs/h24/1');
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handlePriceUpdate(data);
+        } catch (error) {
+          console.error('Failed to parse price update:', error);
+        }
+      };
+
+      this.ws.onerror = () => {
+        console.error('Price WebSocket error');
+      };
+
+      this.ws.onclose = () => {
+        console.log('Price WebSocket closed, reconnecting...');
+        this.scheduleReconnect();
+      };
+    } catch (error) {
+      console.error('Failed to connect to price feed:', error);
+      this.scheduleReconnect();
+    }
+  }
+
+  private handlePriceUpdate(data: any) {
+    const update: PriceData = {
+      price: parseFloat(data.priceUsd || '0'),
+      priceChange24h: parseFloat(data.priceChange?.h24 || '0'),
+      volume24h: parseFloat(data.volume?.h24 || '0'),
+      lastUpdate: new Date(),
+    };
+
+    const address = data.baseToken?.address;
+    if (!address) return;
+
+    const subs = this.subscribers.get(address);
+    if (subs) {
+      subs.forEach(callback => callback(update));
+    }
+  }
+
+  subscribe(address: string, callback: (price: PriceData) => void) {
+    if (!this.subscribers.has(address)) {
+      this.subscribers.set(address, new Set());
+    }
+    this.subscribers.get(address)!.add(callback);
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.connect();
+    }
+
+    return () => {
+      const subs = this.subscribers.get(address);
+      if (subs) {
+        subs.delete(callback);
+        if (subs.size === 0) {
+          this.subscribers.delete(address);
+        }
+      }
+    };
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    this.reconnectTimeout = setTimeout(() => this.connect(), 5000);
+  }
+
+  disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    if (this.ws) {
+      this.ws.close();
+    }
+    this.subscribers.clear();
+  }
+}
+
+export const priceSubscription = new PriceSubscription();
+
+
+PART 2: AUTO-WALLET CONNECTION & BIOMETRIC AUTH
+File: lib/wallet/autoConnect.ts
+Automatic wallet connection (no prompts):
+
+import { supabaseAdmin } from '../database/supabase';
+
+export interface WalletSession {
+  userId: string;
+  walletAddress: string;
+  chain: string;
+  authenticated: boolean;
+  biometricEnabled: boolean;
+  lastAuth: Date;
+}
+
+// =====================================================================
+// Check if wallet session exists
+// =====================================================================
+export async function checkWalletSession(): Promise<WalletSession | null> {
+  try {
+    // Check localStorage for session
+    const sessionData = localStorage.getItem('steinz_wallet_session');
+    if (!sessionData) return null;
+
+    const session = JSON.parse(sessionData);
+
+    // Verify session is still valid (24 hour expiry)
+    const lastAuth = new Date(session.lastAuth);
+    const hoursSinceAuth = (Date.now() - lastAuth.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceAuth > 24) {
+      localStorage.removeItem('steinz_wallet_session');
+      return null;
+    }
+
+    return session;
+  } catch (error) {
+    console.error('Failed to check wallet session:', error);
+    return null;
+  }
+}
+
+// =====================================================================
+// Create wallet session (after first connection)
+// =====================================================================
+export async function createWalletSession(
+  userId: string,
+  walletAddress: string,
+  chain: string
+): Promise<WalletSession> {
+  const session: WalletSession = {
+    userId,
+    walletAddress,
+    chain,
+    authenticated: true,
+    biometricEnabled: await checkBiometricSupport(),
+    lastAuth: new Date(),
+  };
+
+  localStorage.setItem('steinz_wallet_session', JSON.stringify(session));
+
+  return session;
+}
+
+// =====================================================================
+// Refresh session (re-authenticate)
+// =====================================================================
+export async function refreshWalletSession(): Promise<WalletSession | null> {
+  const session = await checkWalletSession();
+  if (!session) return null;
+
+  // If biometric enabled, require biometric auth
+  if (session.biometricEnabled) {
+    const authenticated = await requestBiometricAuth();
+    if (!authenticated) {
+      return null;
+    }
+  }
+
+  // Update last auth time
+  session.lastAuth = new Date();
+  localStorage.setItem('steinz_wallet_session', JSON.stringify(session));
+
+  return session;
+}
+
+// =====================================================================
+// Destroy session (logout)
+// =====================================================================
+export function destroyWalletSession(): void {
+  localStorage.removeItem('steinz_wallet_session');
+}
+
+// =====================================================================
+// Check if biometric is supported
+// =====================================================================
+async function checkBiometricSupport(): Promise<boolean> {
+  // Check if Web Authentication API is available
+  if (!window.PublicKeyCredential) {
+    return false;
+  }
+
+  try {
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return available;
+  } catch (error) {
+    return false;
+  }
+}
+
+// =====================================================================
+// Request biometric authentication
+// =====================================================================
+async function requestBiometricAuth(): Promise<boolean> {
+  try {
+    // For mobile apps, you'd use native biometric APIs
+    // For web, use WebAuthn
+    
+    if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+      // Mobile app - use native biometric
+      return await requestNativeBiometric();
+    } else {
+      // Web - use WebAuthn or fallback to passcode
+      return await requestWebAuthn();
+    }
+  } catch (error) {
+    console.error('Biometric auth failed:', error);
+    return false;
+  }
+}
+
+// =====================================================================
+// Native biometric (mobile app)
+// =====================================================================
+async function requestNativeBiometric(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Send message to React Native
+    (window as any).ReactNativeWebView?.postMessage(
+      JSON.stringify({
+        type: 'REQUEST_BIOMETRIC',
+      })
+    );
+
+    // Listen for response
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'BIOMETRIC_RESULT') {
+          window.removeEventListener('message', handleMessage);
+          resolve(data.success);
+        }
+      } catch (error) {
+        // Ignore
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Timeout after 30 seconds
+    setTimeout(() => {
+      window.removeEventListener('message', handleMessage);
+      resolve(false);
+    }, 30000);
+  });
+}
+
+// =====================================================================
+// WebAuthn (web browsers)
+// =====================================================================
+async function requestWebAuthn(): Promise<boolean> {
+  try {
+    if (!window.PublicKeyCredential) {
+      // Fallback to passcode
+      return await requestPasscode();
+    }
+
+    // Get stored credential ID
+    const credentialId = localStorage.getItem('steinz_webauthn_id');
+    if (!credentialId) {
+      // No credential registered, fallback to passcode
+      return await requestPasscode();
+    }
+
+    // Request authentication
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{
+          id: Uint8Array.from(atob(credentialId), c => c.charCodeAt(0)),
+          type: 'public-key',
+        }],
+        timeout: 60000,
+        userVerification: 'required',
+      },
+    });
+
+    return assertion !== null;
+  } catch (error) {
+    console.error('WebAuthn failed:', error);
+    return await requestPasscode();
+  }
+}
+
+// =====================================================================
+// Passcode fallback
+// =====================================================================
+async function requestPasscode(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const passcode = prompt('Enter your 6-digit passcode:');
+    
+    if (!passcode) {
+      resolve(false);
+      return;
+    }
+
+    // Verify passcode
+    const storedPasscode = localStorage.getItem('steinz_passcode');
+    resolve(passcode === storedPasscode);
+  });
+}
+
+// =====================================================================
+// Set up biometric auth (first time)
+// =====================================================================
+export async function setupBiometricAuth(): Promise<boolean> {
+  try {
+    if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+      // Mobile - request native biometric setup
+      return await setupNativeBiometric();
+    } else {
+      // Web - set up WebAuthn
+      return await setupWebAuthn();
+    }
+  } catch (error) {
+    console.error('Biometric setup failed:', error);
+    return false;
+  }
+}
+
+async function setupNativeBiometric(): Promise<boolean> {
+  return new Promise((resolve) => {
+    (window as any).ReactNativeWebView?.postMessage(
+      JSON.stringify({
+        type: 'SETUP_BIOMETRIC',
+      })
+    );
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'BIOMETRIC_SETUP_RESULT') {
+          window.removeEventListener('message', handleMessage);
+          resolve(data.success);
+        }
+      } catch (error) {
+        // Ignore
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      window.removeEventListener('message', handleMessage);
+      resolve(false);
+    }, 30000);
+  });
+}
+
+async function setupWebAuthn(): Promise<boolean> {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    const userId = new Uint8Array(16);
+    window.crypto.getRandomValues(userId);
+
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'STEINZ Labs',
+          id: window.location.hostname,
+        },
+        user: {
+          id: userId,
+          name: 'user@steinzlabs.com',
+          displayName: 'STEINZ User',
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: 'public-key' },
+          { alg: -257, type: 'public-key' },
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+        },
+        timeout: 60000,
+      },
+    });
+
+    if (credential) {
+      // Store credential ID
+      const credentialId = btoa(String.fromCharCode(...new Uint8Array((credential as any).rawId)));
+      localStorage.setItem('steinz_webauthn_id', credentialId);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('WebAuthn setup failed:', error);
+    return false;
+  }
+}
+
+// =====================================================================
+// Setup passcode (fallback)
+// =====================================================================
+export function setupPasscode(): boolean {
+  const passcode = prompt('Create a 6-digit passcode:');
+  
+  if (!passcode || passcode.length !== 6 || !/^\d+$/.test(passcode)) {
+    alert('Please enter a valid 6-digit passcode');
+    return false;
+  }
+
+  const confirm = prompt('Confirm your passcode:');
+  
+  if (passcode !== confirm) {
+    alert('Passcodes do not match');
+    return false;
+  }
+
+  localStorage.setItem('steinz_passcode', passcode);
+  return true;
+}
+
+
+File: components/wallet/BiometricAuth.tsx
+Biometric authentication UI component:
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Fingerprint, Lock, Check } from 'lucide-react';
+import {
+  checkWalletSession,
+  refreshWalletSession,
+  setupBiometricAuth,
+  setupPasscode,
+} from '@/lib/wallet/autoConnect';
+
+interface BiometricAuthProps {
+  onAuthenticated: (session: any) => void;
+  onSetupRequired: () => void;
+}
+
+export function BiometricAuth({ onAuthenticated, onSetupRequired }: BiometricAuthProps) {
+  const [authenticating, setAuthenticating] = useState(false);
+  const [setupMode, setSetupMode] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  useEffect(() => {
+    checkBiometric();
+  }, []);
+
+  async function checkBiometric() {
+    const available = await window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable();
+    setBiometricAvailable(available || false);
+  }
+
+  async function handleAuthenticate() {
+    try {
+      setAuthenticating(true);
+      
+      const session = await refreshWalletSession();
+      
+      if (session) {
+        onAuthenticated(session);
+      } else {
+        onSetupRequired();
+      }
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      alert('Authentication failed. Please try again.');
+    } finally {
+      setAuthenticating(false);
+    }
+  }
+
+  async function handleSetup() {
+    try {
+      setSetupMode(true);
+
+      if (biometricAvailable) {
+        const success = await setupBiometricAuth();
+        if (success) {
+          alert('Biometric authentication set up successfully!');
+          handleAuthenticate();
+        } else {
+          // Fallback to passcode
+          const passcodeSuccess = setupPasscode();
+          if (passcodeSuccess) {
+            handleAuthenticate();
+          }
+        }
+      } else {
+        // Only passcode available
+        const passcodeSuccess = setupPasscode();
+        if (passcodeSuccess) {
+          handleAuthenticate();
+        }
+      }
+    } catch (error) {
+      console.error('Setup failed:', error);
+    } finally {
+      setSetupMode(false);
+    }
+  }
+
+  if (setupMode) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-6">
+        <div className="bg-[#141824] rounded-lg p-8 max-w-md w-full text-center">
+          <Fingerprint className="mx-auto mb-4 text-[#0A1EFF]" size={64} />
+          <h2 className="text-2xl font-bold text-white mb-2">
+            Set Up Security
+          </h2>
+          <p className="text-gray-400 mb-6">
+            {biometricAvailable
+              ? 'Use Face ID or Touch ID to secure your wallet'
+              : 'Create a 6-digit passcode to secure your wallet'}
+          </p>
+          
+          <div className="space-y-3">
+            {biometricAvailable && (
+              <button
+                onClick={handleSetup}
+                className="w-full bg-[#0A1EFF] hover:bg-[#0916CC] text-white font-bold py-3 rounded-lg transition-colors"
+              >
+                Use Biometric
+              </button>
+            )}
+            
+            <button
+              onClick={() => {
+                const success = setupPasscode();
+                if (success) handleAuthenticate();
+              }}
+              className="w-full bg-[#141824] hover:bg-[#1E2433] border border-[#1E2433] text-white font-bold py-3 rounded-lg transition-colors"
+            >
+              Use Passcode
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-6">
+      <div className="bg-[#141824] rounded-lg p-8 max-w-md w-full text-center">
+        <div className="bg-[#0A1EFF]/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+          {biometricAvailable ? (
+            <Fingerprint className="text-[#0A1EFF]" size={40} />
+          ) : (
+            <Lock className="text-[#0A1EFF]" size={40} />
+          )}
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Welcome Back
+        </h2>
+        <p className="text-gray-400 mb-6">
+          {biometricAvailable
+            ? 'Authenticate with your biometric'
+            : 'Enter your passcode to continue'}
+        </p>
+
+        <button
+          onClick={handleAuthenticate}
+          disabled={authenticating}
+          className="w-full bg-[#0A1EFF] hover:bg-[#0916CC] disabled:bg-gray-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          {authenticating ? (
+            <>
+              <div className="animate-spin border-2 border-white border-t-transparent rounded-full w-5 h-5" />
+              Authenticating...
+            </>
+          ) : (
+            <>
+              {biometricAvailable ? <Fingerprint size={20} /> : <Lock size={20} />}
+              Authenticate
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+PART 3: NAVIGATION CLEANUP
+File: components/layout/Sidebar.tsx (UPDATED - Remove Market)
+
+'use client';
+
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Wallet,
+  TrendingUp,
+  Shield,
+  Activity,
+  Users,
+  AlertCircle,
+  Search,
+  Settings,
+  DollarSign,
+} from 'lucide-react';
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const navigation = [
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    { name: 'Portfolio', icon: Wallet, href: '/portfolio' },
+    { name: 'Trading', icon: TrendingUp, href: '/trading' },
+    { name: 'Swap', icon: DollarSign, href: '/swap' },
+    { name: 'DNA Analyzer', icon: Search, href: '/dna-analyzer' },
+    { name: 'Wallet Tracer', icon: Activity, href: '/wallet-tracer' },
+    { name: 'Smart Money', icon: Users, href: '/smart-money' },
+    { name: 'Security Center', icon: Shield, href: '/security-center' },
+    { name: 'Alerts', icon: AlertCircle, href: '/alerts' },
+    { name: 'Settings', icon: Settings, href: '/settings' },
+  ];
+
+  return (
+    <div className="fixed left-0 top-0 h-full w-64 bg-[#0A0E1A] border-r border-[#1E2433] flex flex-col">
+      {/* Logo */}
+      <div className="p-6 border-b border-[#1E2433]">
+        <h1 className="text-2xl font-bold text-white">
+          STEINZ <span className="text-[#0A1EFF]">Labs</span>
+        </h1>
+        <p className="text-xs text-gray-500 mt-1">Powered by Arkham</p>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href;
+          
+          return (
+            <button
+              key={item.name}
+              onClick={() => router.push(item.href)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-[#0A1EFF] text-white'
+                  : 'text-gray-400 hover:bg-[#141824] hover:text-white'
+              }`}
+            >
+              <item.icon size={20} />
+              <span className="font-medium">{item.name}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-[#1E2433]">
+        <div className="bg-[#141824] rounded-lg p-3 text-xs text-gray-400">
+          <div className="flex items-center justify-between mb-1">
+            <span>Status</span>
+            <span className="text-green-500 flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full" />
+              Online
+            </span>
+          </div>
+          <div className="text-gray-600">Protected by Shadow Guardian</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+File: components/layout/MobileNav.tsx (UPDATED - Bottom navigation)
+
+'use client';
+
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Wallet,
+  TrendingUp,
+  Shield,
+  User,
+} from 'lucide-react';
+
+export function MobileNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const navigation = [
+    { name: 'Home', icon: LayoutDashboard, href: '/dashboard' },
+    { name: 'Portfolio', icon: Wallet, href: '/portfolio' },
+    { name: 'Trade', icon: TrendingUp, href: '/trading' },
+    { name: 'Security', icon: Shield, href: '/security-center' },
+    { name: 'Account', icon: User, href: '/settings' },
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-[#0A0E1A] border-t border-[#1E2433] md:hidden">
+      <div className="grid grid-cols-5 gap-1 p-2">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href;
+          
+          return (
+            <button
+              key={item.name}
+              onClick={() => router.push(item.href)}
+              className={`flex flex-col items-center gap-1 py-2 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]'
+                  : 'text-gray-400'
+              }`}
+            >
+              <item.icon size={20} />
+              <span className="text-xs font-medium">{item.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+PART 4: REMOVE DOUBLE BACK BUTTONS
+File: components/common/PageHeader.tsx
+Single, consistent back button component:
+
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+
+interface PageHeaderProps {
+  title: string;
+  description?: string;
+  showBack?: boolean;
+  backTo?: string;
+  actions?: React.ReactNode;
+}
+
+export function PageHeader({
+  title,
+  description,
+  showBack = false,
+  backTo,
+  actions,
+}: PageHeaderProps) {
+  const router = useRouter();
+
+  function handleBack() {
+    if (backTo) {
+      router.push(backTo);
+    } else {
+      router.back();
+    }
+  }
+
+  return (
+    <div className="mb-6">
+      {showBack && (
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
+        >
+          <ArrowLeft size={20} />
+          <span>Back</span>
+        </button>
+      )}
+
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          {description && (
+            <p className="text-gray-400">{description}</p>
+          )}
+        </div>
+
+        {actions && (
+          <div className="flex items-center gap-3">
+            {actions}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+Usage in pages:
+
+// In any page.tsx file
+import { PageHeader } from '@/components/common/PageHeader';
+
+export default function SomePage() {
+  return (
+    <div className="p-6">
+      <PageHeader
+        title="Page Title"
+        description="Page description"
+        showBack
+        backTo="/dashboard"
+      />
+      
+      {/* Page content */}
+    </div>
+  );
+}
+
+
+CONTINUING IN NEXT MESSAGE WITH:
+	∙	Deep VTX AI training (make it actually intelligent)
+	∙	All 19 features completion
+	∙	Real Raydium/Pump.fun integration
+	∙	Token logo display everywhere
+This is getting MASSIVE! Should I continue? 🔥​​​​​​​​​​​​​​​​

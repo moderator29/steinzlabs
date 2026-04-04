@@ -1,0 +1,66 @@
+// Map chain names to CoinGecko platform IDs
+    const platformMap: Record<string, string> = {
+      solana: 'solana',
+      ethereum: 'ethereum',
+      polygon: 'polygon-pos',
+      arbitrum: 'arbitrum-one',
+      optimism: 'optimistic-ethereum',
+      base: 'base',
+      bsc: 'binance-smart-chain',
+    };
+
+    const platform = platformMap[chain];
+    if (!platform) return null;
+
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/coins/${platform}/contract/${address}`,
+      {
+        timeout: 3000,
+      }
+    );
+
+    const data = response.data;
+
+    return {
+      address,
+      symbol: data.symbol?.toUpperCase() || 'UNKNOWN',
+      name: data.name || 'Unknown Token',
+      logo: data.image?.large || data.image?.small || data.image?.thumb,
+      decimals: data.detail_platforms?.[platform]?.decimal_place || 18,
+      price: data.market_data?.current_price?.usd || 0,
+      priceChange24h: data.market_data?.price_change_percentage_24h || 0,
+      volume24h: data.market_data?.total_volume?.usd || 0,
+      marketCap: data.market_data?.market_cap?.usd || 0,
+      chain,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// =====================================================================
+// DEXScreener (Good for new/small tokens)
+// =====================================================================
+async function fetchFromDEXScreener(
+  address: string,
+  chain: string
+): Promise<TokenMetadata | null> {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      {
+        timeout: 3000,
+      }
+    );
+
+    const pairs = response.data.pairs || [];
+    if (pairs.length === 0) return null;
+
+    // Get the pair with highest liquidity
+    const bestPair = pairs.reduce((best: any, current: any) => {
+      const currentLiq = parseFloat(current.liquidity?.usd || '0');
+      const bestLiq = parseFloat(best.liquidity?.usd || '0');
+      return currentLiq > bestLiq ? current : best;
+    }, pairs[0]);
+
+    const token = bestPair.baseToken;

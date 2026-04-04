@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Zap, Wallet, CandlestickChart, Archive, Globe
+  Zap, Wallet, CandlestickChart, Archive, Globe, Circle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -51,6 +51,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Trophy, label: 'Smart Money', path: '/dashboard/smart-money' },
       { icon: Radio, label: 'Network Metrics', path: '/dashboard/network-metrics' },
       { icon: Fish, label: 'Whale Tracker', path: '/dashboard/whale-tracker' },
+      { icon: Circle, label: 'Bubble Map', path: '/dashboard/bubble-map', badge: 'NEW' },
     ],
   },
   {
