@@ -3,7 +3,7 @@
 ## Overview
 Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX Agent, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
-**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo, $190/yr) / Premium ($99/mo, $990/yr). Stripe integration built (checkout, portal, webhooks).
+**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo, $190/yr) / Premium ($99/mo, $990/yr). Payment integration coming soon (no Stripe).
 
 ## Tech Stack
 - **Framework**: Next.js 15.0.8 (App Router)
@@ -51,18 +51,14 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Login**: Email OR username + password → username resolves to email via profiles table → `supabase.auth.signInWithPassword()`
 - **Session**: Supabase manages JWT tokens in localStorage, cookies set by Supabase client (sb-*-auth-token)
 - **Middleware**: Checks for `steinz_session` or `sb-*-auth-token` cookies to protect /dashboard/** routes
-- **Logout**: `supabase.auth.signOut()` + `firebaseSignOut()` → redirect to /login
+- **Logout**: `supabase.auth.signOut()` → redirect to /login
 - **Important**: Email confirmation should be DISABLED in Supabase Dashboard for immediate login after signup
-- **No social auth**: Google/Apple OAuth removed — email/password only
 - **Cookie/localStorage keys**: `steinz_session`, `steinz_has_session`, `steinz_remember_me`, `steinz-auth-token`
 
 ## Auth Flow
-- **Nav**: "Log In" (text link → opens LoginModal overlay) + "Sign Up" (white button → /signup page)
-- **LoginModal** (`components/LoginModal.tsx`): Dark card overlay on landing page, email/password, ESC/click-outside to close
+- **Nav**: "Log In" (text link → /login) + "Sign Up" (white button → /signup page)
 - `/login` — full-page sign-in (email OR username + password), form renders immediately (no auth spinner blocking)
 - `/signup` — full-page registration with live password requirements checklist (8–100 chars, lowercase, uppercase, number, special char), rate limiting (5 attempts/60s cooldown), full-width name fields
-- `/auth/callback` — handles OAuth redirects, auto-creates profiles for Google users
-- **Google OAuth**: Requires enabling Google provider in Supabase Dashboard (Auth → Providers → Google)
 - **LaunchAppButton**: Routes new users to /signup, returning users (localStorage `steinz_has_session`) to /login
 - Dashboard header shows user info when authenticated
 - After login → redirected to `/dashboard`
@@ -106,7 +102,7 @@ components/
 ├── SteinzLogo.tsx           # STEINZ LABS logo component (wraps steinz-logo-128.png)
 ├── SidebarMenu.tsx          # Left sidebar (260px, categories: Overview, Market, Intelligence, Tools, Account)
 ├── ThemeToggle.tsx          # Dropdown theme toggle (Dark/Light/Bingo), returns null until mounted
-├── LoginModal.tsx           # Login modal overlay (email/password + Google OAuth)
+├── ContextFeed.tsx          # Context feed with engagement stats, chain filters, bookmarks, archive
 ├── LaunchAppButton.tsx      # Smart CTA (new users → /signup, returning → /login)
 ├── ProfileTab.tsx           # User profile tab with sign out
 ├── TradingViewChart.tsx     # TradingView candlestick chart widget
@@ -151,9 +147,6 @@ lib/
 │   └── feeSystem.ts         # Revenue fee system (0.5% swaps, 1% copy trades), treasury recording
 ├── subscriptions/
 │   └── tiers.ts             # FREE/PRO/PREMIUM tier definitions, feature gating, pricing
-├── stripe/
-│   ├── client.ts            # Stripe client initialization
-│   └── subscriptions.ts     # Checkout sessions, portal, webhook handlers
 ├── security/
 │   ├── types.ts             # Security type definitions (ScanResult, WalletReputation, PortfolioThreat)
 │   ├── shadowGuardian.ts    # Shadow Guardian pre-trade scanner (scam detection + AI risk analysis)
@@ -165,7 +158,6 @@ lib/
 ├── hooks/
 │   ├── useAuth.ts           # Supabase auth hook (AuthContext, useAuthProvider)
 │   └── useWallet.ts         # Wallet connection hook
-└── firebase.ts              # Firebase Auth (Google/Apple OAuth)
 
 middleware.ts                # Security headers + auth cookie check for /dashboard/**
 ```
@@ -197,9 +189,6 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `/api/bubble-map?token=&chain=` | GET | Bubble map nodes/links with DEXScreener+Arkham data |
 | `/api/revenue/stats` | GET | Revenue statistics (total, by type, trade count) |
 | `/api/subscription?userId=` | GET | User subscription tier, features, pricing |
-| `/api/stripe/checkout` | POST | Create Stripe checkout session (tier, interval) |
-| `/api/stripe/portal` | POST | Create Stripe billing portal session |
-| `/api/stripe/webhook` | POST | Stripe webhook handler (subscription events) |
 
 ## Environment Variables
 | Variable | Location | Purpose |

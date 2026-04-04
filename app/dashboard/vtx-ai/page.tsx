@@ -1,14 +1,27 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check, Trash2, Globe, Crown, Lock, Settings, Wrench, Search, Target, Eye, Radio, Cpu, ChevronDown, X, Wallet, AlertTriangle, Network } from 'lucide-react';
+import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, Cpu, ChevronDown, X, Wallet, Network } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
+
+interface TokenCardData {
+  symbol: string;
+  name: string;
+  price: string;
+  change24h: number;
+  volume: string;
+  marketCap: string;
+  chain: string;
+  trustScore?: number;
+  riskLevel?: string;
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: number;
+  tokenCards?: TokenCardData[];
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
@@ -53,6 +66,49 @@ function getDailyUsage(): { used: number; limit: number; remaining: number } {
 
 function saveDailyUsage(u: { used: number; limit: number; remaining: number }) {
   try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch {}
+}
+
+function parseTokenCards(content: string): TokenCardData[] {
+  const cards: TokenCardData[] = [];
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const match = line.match(/^([A-Z]{2,10}):\s*\$([0-9,.]+)\s*\(24h:\s*([+-]?[0-9.]+)%.*?MCap:\s*\$([0-9.]+[BMK]?).*?Vol:\s*\$([0-9.]+[BMK]?)/);
+    if (match) {
+      cards.push({
+        symbol: match[1],
+        name: match[1],
+        price: `$${match[2]}`,
+        change24h: parseFloat(match[3]),
+        marketCap: `$${match[4]}`,
+        volume: `$${match[5]}`,
+        chain: 'multi',
+      });
+    }
+  }
+  return cards.slice(0, 6);
+}
+
+function TokenCard({ token }: { token: TokenCardData }) {
+  const isPositive = token.change24h >= 0;
+  return (
+    <div className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/20 transition-all">
+      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 flex items-center justify-center flex-shrink-0 border border-[#0A1EFF]/10">
+        <span className="text-[10px] font-bold text-[#0A1EFF]">{token.symbol.slice(0, 3)}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-white truncate">{token.symbol}</span>
+          <span className="text-xs font-mono text-white">{token.price}</span>
+        </div>
+        <div className="flex items-center justify-between mt-0.5">
+          <span className="text-[10px] text-gray-500">MCap {token.marketCap}</span>
+          <span className={`text-[10px] font-semibold ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? '+' : ''}{token.change24h.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function loadSettings(): AgentSettings {
@@ -150,7 +206,8 @@ export default function VtxAiPage() {
       } else if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, timestamp: Date.now() }]);
+        const tokenCards = parseTokenCards(data.reply);
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, timestamp: Date.now(), tokenCards: tokenCards.length > 0 ? tokenCards : undefined }]);
         if (data.dailyUsage) { setDailyUsage(data.dailyUsage); saveDailyUsage(data.dailyUsage); if (data.dailyUsage.remaining <= 0) setRateLimited(true); }
       }
     } catch {
@@ -315,6 +372,13 @@ export default function VtxAiPage() {
                   </div>
                 )}
                 <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.tokenCards && msg.tokenCards.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {msg.tokenCards.map((token, ti) => (
+                      <TokenCard key={ti} token={token} />
+                    ))}
+                  </div>
+                )}
                 {msg.role === 'user' && msg.timestamp && (
                   <div className="text-[9px] text-gray-600 mt-1 text-right">{formatTime(msg.timestamp)}</div>
                 )}
