@@ -270,11 +270,21 @@ export default function BubbleMapPage() {
         const s = link.source as BubbleNode;
         const t = link.target as BubbleNode;
         if (!s.x || !t.x || !s.y || !t.y) continue;
+        const isHighlighted = hoveredNode && (hoveredNode.id === s.id || hoveredNode.id === t.id);
+
+        const lineGrad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
+        if (isHighlighted) {
+          lineGrad.addColorStop(0, (s.color || '#0A1EFF') + '80');
+          lineGrad.addColorStop(1, (t.color || '#0A1EFF') + '80');
+        } else {
+          lineGrad.addColorStop(0, (s.color || '#FFFFFF') + '18');
+          lineGrad.addColorStop(1, (t.color || '#FFFFFF') + '10');
+        }
+
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(t.x, t.y);
-        const isHighlighted = hoveredNode && (hoveredNode.id === s.id || hoveredNode.id === t.id);
-        ctx.strokeStyle = isHighlighted ? 'rgba(10, 30, 255, 0.5)' : 'rgba(255, 255, 255, 0.06)';
+        ctx.strokeStyle = lineGrad;
         ctx.lineWidth = isHighlighted ? 2 : 1;
         ctx.stroke();
       }
@@ -285,23 +295,44 @@ export default function BubbleMapPage() {
         const isHovered = hoveredNode?.id === node.id;
         const isSelected = selectedNode?.id === node.id;
 
-        if (isHovered || isSelected) {
+        if (node.id === 'center') {
+          const glowGrad = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, r * 2.5);
+          glowGrad.addColorStop(0, '#0A1EFF30');
+          glowGrad.addColorStop(1, '#0A1EFF00');
           ctx.beginPath();
-          ctx.arc(node.x, node.y, r + 4, 0, Math.PI * 2);
-          ctx.fillStyle = `${node.color}20`;
+          ctx.arc(node.x, node.y, r * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = glowGrad;
           ctx.fill();
-          ctx.strokeStyle = node.color;
-          ctx.lineWidth = 2;
+        }
+
+        if (isHovered || isSelected) {
+          const outerGlow = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, r + 12);
+          outerGlow.addColorStop(0, node.color + '40');
+          outerGlow.addColorStop(1, node.color + '00');
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, r + 12, 0, Math.PI * 2);
+          ctx.fillStyle = outerGlow;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, r + 2, 0, Math.PI * 2);
+          ctx.strokeStyle = node.color + 'AA';
+          ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        const grad = ctx.createRadialGradient(node.x - r * 0.3, node.y - r * 0.3, 0, node.x, node.y, r);
-        grad.addColorStop(0, node.color + 'CC');
-        grad.addColorStop(1, node.color + '88');
+        const grad = ctx.createRadialGradient(node.x - r * 0.25, node.y - r * 0.25, 0, node.x, node.y, r);
+        grad.addColorStop(0, node.color + 'DD');
+        grad.addColorStop(0.7, node.color + '99');
+        grad.addColorStop(1, node.color + '55');
         ctx.fillStyle = grad;
         ctx.fill();
+
+        ctx.strokeStyle = node.color + '88';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
         if (node.type === 'scammer') {
           ctx.strokeStyle = '#EF4444';
@@ -313,17 +344,27 @@ export default function BubbleMapPage() {
 
         if (r > 12 || isHovered) {
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = `${Math.max(8, Math.min(11, r * 0.7))}px Inter, system-ui, sans-serif`;
+          ctx.font = `bold ${Math.max(8, Math.min(11, r * 0.65))}px Inter, system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          const text = node.id === 'center' ? node.label : `${node.percentage.toFixed(1)}%`;
-          ctx.fillText(text, node.x, node.y);
+          if (node.id === 'center') {
+            ctx.fillText(node.label, node.x, node.y);
+          } else {
+            const shortLabel = (node.entity || node.label);
+            const displayLabel = shortLabel.length > 12 ? shortLabel.slice(0, 12) + '..' : shortLabel;
+            ctx.fillText(displayLabel, node.x, node.y - (r > 18 ? 5 : 0));
+            if (r > 18) {
+              ctx.fillStyle = '#FFFFFFAA';
+              ctx.font = `${Math.max(7, r * 0.45)}px Inter, system-ui, sans-serif`;
+              ctx.fillText(`${node.percentage.toFixed(1)}%`, node.x, node.y + 7);
+            }
+          }
         }
 
         if (isHovered && node.id !== 'center') {
-          const labelY = node.y - r - 10;
+          const labelY = node.y - r - 14;
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = '11px Inter, system-ui, sans-serif';
+          ctx.font = 'bold 11px Inter, system-ui, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(node.label, node.x, labelY);
         }
@@ -600,6 +641,39 @@ export default function BubbleMapPage() {
         </div>
 
         <div className={`flex flex-col ${isFullscreen ? 'hidden' : 'h-[400px] lg:h-auto lg:w-[380px] xl:w-[420px]'}`}>
+          {mapData && mapData.nodes.length > 1 && (
+            <div className="border-b border-white/[0.04] max-h-[200px] overflow-y-auto flex-shrink-0">
+              <div className="px-3 py-2 text-[10px] text-gray-500 font-semibold uppercase tracking-wider bg-[#060A12]/50 sticky top-0">
+                <div className="grid grid-cols-[24px_1fr_60px_60px] gap-2">
+                  <span>#</span>
+                  <span>Holder</span>
+                  <span className="text-right">%</span>
+                  <span className="text-right">Type</span>
+                </div>
+              </div>
+              {mapData.nodes.filter(n => n.id !== 'center').sort((a, b) => b.percentage - a.percentage).map((node, idx) => (
+                <div
+                  key={node.id}
+                  onClick={() => setSelectedNode(node.id === selectedNode?.id ? null : node)}
+                  className={`px-3 py-1.5 text-[10px] cursor-pointer transition-colors hover:bg-white/[0.03] ${selectedNode?.id === node.id ? 'bg-[#0A1EFF]/[0.06]' : ''}`}
+                >
+                  <div className="grid grid-cols-[24px_1fr_60px_60px] gap-2 items-center">
+                    <span className="text-gray-600 font-mono">{idx + 1}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: node.color }} />
+                      <span className="text-gray-300 truncate">{node.entity || node.label}</span>
+                      {node.verified && <span className="text-[#10B981] text-[8px] flex-shrink-0">V</span>}
+                    </div>
+                    <span className="text-right text-white font-mono">{node.percentage.toFixed(2)}%</span>
+                    <span className="text-right font-medium" style={{ color: node.color }}>
+                      {TYPE_LABELS[node.type] || node.type}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2 flex-shrink-0">
             <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center shadow-sm shadow-[#0A1EFF]/10">
               <Bot className="w-3.5 h-3.5" />

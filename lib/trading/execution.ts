@@ -3,6 +3,7 @@ import { oneInchAPI } from './oneinch';
 import { TradeQuote, TradeExecution } from './types';
 import { shadowGuardian } from '../security/shadowGuardian';
 import { savePosition, getUserByWallet } from '../database/supabase';
+import { calculateFee, recordRevenue } from '../revenue/feeSystem';
 
 export async function getOptimalQuote(params: {
   fromToken: string;
@@ -77,6 +78,9 @@ export async function executeTrade(params: {
     if (execution.success && userWallet) {
       const user = await getUserByWallet(userWallet);
       if (user) {
+        const tradeType = followingEntity ? 'COPY_TRADE' as const : 'SWAP' as const;
+        const fee = calculateFee(parseFloat(quote.fromAmount), tradeType, chain);
+
         await savePosition({
           userId: user.id,
           tokenAddress: quote.toToken,
@@ -89,7 +93,19 @@ export async function executeTrade(params: {
           followingEntity,
         });
 
-        console.log('Position saved to database');
+        await recordRevenue({
+          userId: user.id,
+          tradeType,
+          tokenAddress: quote.toToken,
+          tokenSymbol: 'UNKNOWN',
+          chain,
+          tradeAmount: quote.fromAmount,
+          feeAmount: fee.feeAmount,
+          feeBps: fee.feeBps,
+          txHash: execution.txHash || '',
+        });
+
+        console.log(`Position saved. Fee: ${fee.feeAmount} (${fee.feeBps}bps) to treasury`);
       }
     }
 
