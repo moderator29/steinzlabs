@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserSubscription } from '@/lib/stripe/subscriptions';
 import { TIER_FEATURES, TIER_PRICING } from '@/lib/subscriptions/tiers';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,11 +10,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const subscription = await getUserSubscription(user.id);
-    const features = TIER_FEATURES[subscription.tier];
+    const supabase = getSupabaseAdmin();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    const tier = profile?.subscription_tier || 'FREE';
+    const features = TIER_FEATURES[tier as keyof typeof TIER_FEATURES] || TIER_FEATURES.FREE;
 
     return NextResponse.json({
-      ...subscription,
+      tier,
+      status: profile?.subscription_status || 'active',
       features,
       pricing: TIER_PRICING,
     });
@@ -23,8 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       tier: 'FREE',
       status: 'active',
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
       features: TIER_FEATURES.FREE,
       pricing: TIER_PRICING,
     });
