@@ -166,13 +166,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="fixed top-0 w-full z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
-            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-6 h-6 flex-shrink-0" style={{ objectFit: 'contain' }} />
+            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7 flex-shrink-0 rounded-lg" style={{ objectFit: 'contain' }} />
+            <div className="flex flex-col leading-none">
+              <span className="text-[11px] font-bold tracking-wide text-white">STEINZ</span>
+              <span className="text-[9px] font-medium tracking-wider text-gray-500">TERMINAL</span>
+            </div>
           </div>
-          <span className="text-[11px] font-heading font-semibold tracking-wider text-gray-400">STEINZ Terminal</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04]">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              <span className="text-[9px] text-gray-400 font-semibold">LIVE</span>
+            </div>
+          </div>
         </div>
       </div>
 

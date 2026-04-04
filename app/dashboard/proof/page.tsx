@@ -35,13 +35,15 @@ interface ProofEvent {
 }
 
 function BubbleVisualization({ event }: { event: ProofEvent }) {
+  const seed = (event.txHash || event.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const s = (i: number) => ((seed * (i + 1) * 17 + 31) % 100) / 100;
   const holders = [
-    { label: 'Top Holder', pct: 12 + Math.random() * 15, color: '#0A1EFF' },
-    { label: 'Holder 2', pct: 8 + Math.random() * 10, color: '#7C3AED' },
-    { label: 'Holder 3', pct: 5 + Math.random() * 8, color: '#10B981' },
-    { label: 'Holder 4', pct: 3 + Math.random() * 6, color: '#F59E0B' },
-    { label: 'Holder 5', pct: 2 + Math.random() * 5, color: '#EF4444' },
-    { label: 'Others', pct: 40 + Math.random() * 20, color: '#6B7280' },
+    { label: 'Top Holder', pct: 12 + s(1) * 15, color: '#0A1EFF' },
+    { label: 'Holder 2', pct: 8 + s(2) * 10, color: '#7C3AED' },
+    { label: 'Holder 3', pct: 5 + s(3) * 8, color: '#10B981' },
+    { label: 'Holder 4', pct: 3 + s(4) * 6, color: '#F59E0B' },
+    { label: 'Holder 5', pct: 2 + s(5) * 5, color: '#EF4444' },
+    { label: 'Others', pct: 40 + s(6) * 20, color: '#6B7280' },
   ];
 
   const total = holders.reduce((s, h) => s + h.pct, 0);
@@ -218,6 +220,49 @@ export default function ViewProofPage() {
                 {event.trustScore >= 70 ? ' On-chain indicators support the reliability of this signal.' : event.trustScore >= 40 ? ' Exercise standard due diligence before acting on this signal.' : ' Multiple risk factors detected. Proceed with extreme caution.'}
               </p>
               <p className="text-[10px] text-gray-500">Analysis powered by Arkham Intelligence, Alchemy, and on-chain verification.</p>
+            </div>
+          </div>
+        )}
+
+        {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
+          <div className="glass rounded-xl p-4 border border-white/10">
+            <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#10B981]" />
+              Market Data
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {event.tokenPrice && (
+                <div className="bg-[#111827] rounded-lg p-3">
+                  <div className="text-[10px] text-gray-500 mb-1">Price</div>
+                  <div className="text-sm font-bold font-mono text-white">{event.tokenPrice}</div>
+                  {event.tokenPriceChange24h !== undefined && (
+                    <div className={`text-[10px] font-semibold mt-0.5 ${event.tokenPriceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                      {event.tokenPriceChange24h >= 0 ? '+' : ''}{event.tokenPriceChange24h.toFixed(2)}% (24h)
+                    </div>
+                  )}
+                </div>
+              )}
+              {event.tokenMarketCap && event.tokenMarketCap > 0 && (
+                <div className="bg-[#111827] rounded-lg p-3">
+                  <div className="text-[10px] text-gray-500 mb-1">Market Cap</div>
+                  <div className="text-sm font-bold font-mono text-white">${event.tokenMarketCap >= 1000000000 ? `${(event.tokenMarketCap / 1000000000).toFixed(2)}B` : event.tokenMarketCap >= 1000000 ? `${(event.tokenMarketCap / 1000000).toFixed(1)}M` : event.tokenMarketCap.toLocaleString()}</div>
+                </div>
+              )}
+              {event.tokenVolume24h && event.tokenVolume24h > 0 && (
+                <div className="bg-[#111827] rounded-lg p-3">
+                  <div className="text-[10px] text-gray-500 mb-1">24h Volume</div>
+                  <div className="text-sm font-bold font-mono text-white">${event.tokenVolume24h >= 1000000 ? `${(event.tokenVolume24h / 1000000).toFixed(1)}M` : event.tokenVolume24h >= 1000 ? `${(event.tokenVolume24h / 1000).toFixed(0)}K` : event.tokenVolume24h.toLocaleString()}</div>
+                </div>
+              )}
+              {event.tokenLiquidity && event.tokenLiquidity > 0 && (
+                <div className="bg-[#111827] rounded-lg p-3">
+                  <div className="text-[10px] text-gray-500 mb-1">Liquidity</div>
+                  <div className="text-sm font-bold font-mono text-white">${event.tokenLiquidity >= 1000000 ? `${(event.tokenLiquidity / 1000000).toFixed(1)}M` : event.tokenLiquidity >= 1000 ? `${(event.tokenLiquidity / 1000).toFixed(0)}K` : event.tokenLiquidity.toLocaleString()}</div>
+                  <div className={`text-[10px] font-semibold mt-0.5 ${event.tokenLiquidity > 500000 ? 'text-[#10B981]' : 'text-[#F59E0B]'}`}>
+                    {event.tokenLiquidity > 500000 ? 'Deep liquidity' : 'Low liquidity'}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

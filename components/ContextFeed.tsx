@@ -510,12 +510,9 @@ export default function ContextFeed() {
                 {event.summary}
               </p>
 
-              <div className="flex items-center gap-3 mb-4 text-xs text-gray-400 overflow-hidden flex-wrap">
+              <div className="flex items-center gap-3 mb-2 text-xs text-gray-400 overflow-hidden flex-wrap">
                 {event.tokenPrice && (
-                  <span className="flex-shrink-0 font-mono">{event.tokenPrice}</span>
-                )}
-                {event.valueUsd > 0 && (
-                  <span className="flex-shrink-0">${event.valueUsd.toLocaleString()}</span>
+                  <span className="flex-shrink-0 font-mono font-semibold text-white">{event.tokenPrice}</span>
                 )}
                 {event.tokenPriceChange24h !== undefined && event.tokenPriceChange24h !== 0 && (
                   <span
@@ -525,10 +522,33 @@ export default function ContextFeed() {
                     {event.tokenPriceChange24h > 0 ? '+' : ''}{event.tokenPriceChange24h.toFixed(1)}%
                   </span>
                 )}
-                {event.tokenLiquidity && event.tokenLiquidity > 0 && (
-                  <span className="flex-shrink-0">Liq: ${event.tokenLiquidity.toLocaleString()}</span>
+                {event.valueUsd > 0 && (
+                  <span className="flex-shrink-0">TX: ${event.valueUsd.toLocaleString()}</span>
                 )}
               </div>
+
+              {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {event.tokenVolume24h && event.tokenVolume24h > 0 && (
+                    <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+                      <div className="text-[9px] text-gray-500 uppercase">Vol 24h</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenVolume24h >= 1000000 ? `${(event.tokenVolume24h / 1000000).toFixed(1)}M` : event.tokenVolume24h >= 1000 ? `${(event.tokenVolume24h / 1000).toFixed(0)}K` : event.tokenVolume24h.toLocaleString()}</div>
+                    </div>
+                  )}
+                  {event.tokenLiquidity && event.tokenLiquidity > 0 && (
+                    <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+                      <div className="text-[9px] text-gray-500 uppercase">Liquidity</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenLiquidity >= 1000000 ? `${(event.tokenLiquidity / 1000000).toFixed(1)}M` : event.tokenLiquidity >= 1000 ? `${(event.tokenLiquidity / 1000).toFixed(0)}K` : event.tokenLiquidity.toLocaleString()}</div>
+                    </div>
+                  )}
+                  {event.tokenMarketCap && event.tokenMarketCap > 0 && (
+                    <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+                      <div className="text-[9px] text-gray-500 uppercase">MCap</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenMarketCap >= 1000000000 ? `${(event.tokenMarketCap / 1000000000).toFixed(1)}B` : event.tokenMarketCap >= 1000000 ? `${(event.tokenMarketCap / 1000000).toFixed(0)}M` : event.tokenMarketCap >= 1000 ? `${(event.tokenMarketCap / 1000).toFixed(0)}K` : event.tokenMarketCap.toLocaleString()}</div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
