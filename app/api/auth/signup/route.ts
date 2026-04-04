@@ -46,17 +46,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
     }
 
-    const { data: existingUsers } = await admin.auth.admin.listUsers();
-    const allUsers = existingUsers?.users || [];
-    const emailExists = allUsers.some(
-      (u: any) => u.email?.toLowerCase() === cleanEmail
-    );
+    const { data: emailProfile } = await admin
+      .from('profiles')
+      .select('id')
+      .ilike('email', cleanEmail)
+      .maybeSingle();
+    if (emailProfile) {
+      return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+    }
+
+    const { data: usernameProfile } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('username', cleanUsername)
+      .maybeSingle();
+    if (usernameProfile) {
+      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+    }
+
+    let page = 0;
+    const perPage = 100;
+    let emailExists = false;
+    let usernameTaken = false;
+    while (true) {
+      const { data: usersData } = await admin.auth.admin.listUsers({ page: page + 1, perPage });
+      if (!usersData?.users || usersData.users.length === 0) break;
+      if (usersData.users.some((u: any) => u.email?.toLowerCase() === cleanEmail)) emailExists = true;
+      if (usersData.users.some((u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername)) usernameTaken = true;
+      if (emailExists || usernameTaken) break;
+      if (usersData.users.length < perPage) break;
+      page++;
+      if (page > 10) break;
+    }
     if (emailExists) {
       return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
     }
-    const usernameTaken = allUsers.some(
-      (u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername
-    );
     if (usernameTaken) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
     }
