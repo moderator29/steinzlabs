@@ -45,8 +45,13 @@ export default function SignUpPage() {
     const timer = setTimeout(async () => {
       setCheckingUsername(true);
       try {
-        const { data } = await supabase.from('profiles').select('id').eq('username', form.username.toLowerCase()).maybeSingle();
-        setUsernameAvailable(!data);
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: form.username.trim().toLowerCase() }),
+        });
+        const data = await res.json();
+        setUsernameAvailable(data.available === true);
       } catch { setUsernameAvailable(null); }
       finally { setCheckingUsername(false); }
     }, 500);
