@@ -310,8 +310,8 @@ export default function VtxAiPage() {
             <ArrowLeft className="w-5 h-5 text-gray-400" />
           </button>
 
-          <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
-            <Bot className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
+            <img src="/steinz-logo-128.png" alt="VTX" className="w-6 h-6" style={{ objectFit: 'contain' }} />
           </div>
 
           <div className="flex-1">
@@ -323,7 +323,7 @@ export default function VtxAiPage() {
                 <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}
             </div>
-            <span className="text-[10px] text-gray-600">Arkham + CoinGecko + DEXScreener + Claude</span>
+            <span className="text-[10px] text-gray-600">On-chain intelligence agent</span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -390,11 +390,11 @@ export default function VtxAiPage() {
         {messages.length <= 1 && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10">
-                <Bot className="w-8 h-8 text-[#0A1EFF]" />
+              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10 overflow-hidden">
+                <img src="/steinz-logo-128.png" alt="VTX Agent" className="w-10 h-10" style={{ objectFit: 'contain' }} />
               </div>
               <h2 className="text-lg font-bold mb-1">Ask me about crypto</h2>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis powered by Arkham + Claude.</p>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis. Powered by STEINZ LABS.</p>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
@@ -439,8 +439,8 @@ export default function VtxAiPage() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 shadow-sm shadow-[#0A1EFF]/10">
-                  <Bot className="w-3.5 h-3.5" />
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                  <img src="/steinz-logo-128.png" alt="" className="w-4.5 h-4.5" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                 </div>
               )}
               <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${
@@ -493,7 +493,9 @@ export default function VtxAiPage() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 flex-shrink-0 mt-1 mr-2" />
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                <img src="/steinz-logo-128.png" alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+              </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
                 <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Searching web & live data...' : 'Analyzing live data...'} />
               </div>

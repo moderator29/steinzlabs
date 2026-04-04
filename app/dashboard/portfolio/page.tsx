@@ -13,6 +13,7 @@ interface Token {
   valueUsd: number;
   change24h: number;
   contractAddress: string;
+  logo?: string;
 }
 
 type TabId = 'balance' | 'history' | 'unrealized' | 'pnl';
@@ -20,6 +21,56 @@ type PnlRange = '1W' | '2W' | '3W' | '1M' | '3M' | 'All';
 type HistoryRange = '1D' | '1W' | '1M' | '3M' | '1Y' | 'All';
 
 const COLORS = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#EC4899'];
+
+const KNOWN_LOGOS: Record<string, string> = {
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  WETH: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
+  AAVE: 'https://assets.coingecko.com/coins/images/12645/small/aave-token-round.png',
+  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
+  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
+  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
+  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
+  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
+  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
+  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
+  CRV: 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
+  MKR: 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png',
+  ATOM: 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',
+};
+
+function TokenLogo({ symbol, logo, fallbackColor }: { symbol: string; logo?: string; fallbackColor: string }) {
+  const [imgError, setImgError] = useState(false);
+  const src = logo || KNOWN_LOGOS[symbol.toUpperCase()];
+
+  if (src && !imgError) {
+    return (
+      <img
+        src={src}
+        alt={symbol}
+        className="w-9 h-9 rounded-full flex-shrink-0 bg-[#111827]"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: `${fallbackColor}20`, color: fallbackColor }}>
+      {symbol.slice(0, 2)}
+    </div>
+  );
+}
 
 function fmtUsd(v: number, decimals = 2) {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
@@ -264,9 +315,7 @@ export default function PortfolioPage() {
                     <div className="divide-y divide-white/[0.04]">
                       {portfolio.map((token, i) => (
                         <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: `${COLORS[i % COLORS.length]}20`, color: COLORS[i % COLORS.length] }}>
-                            {token.symbol.slice(0, 2)}
-                          </div>
+                          <TokenLogo symbol={token.symbol} logo={token.logo} fallbackColor={COLORS[i % COLORS.length]} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold">{token.symbol}</div>
                             <div className="text-[10px] text-gray-500 truncate">{token.name}</div>
@@ -406,9 +455,7 @@ export default function PortfolioPage() {
                     <div className="divide-y divide-white/[0.04]">
                       {pnlData.sort((a, b) => Math.abs(b.unrealized) - Math.abs(a.unrealized)).map((t, i) => (
                         <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: `${t.color}20`, color: t.color }}>
-                            {t.symbol.slice(0, 2)}
-                          </div>
+                          <TokenLogo symbol={t.symbol} fallbackColor={t.color} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold">{t.symbol}</div>
                             <div className="text-[10px] text-gray-500">{fmtUsd(t.valueUsd)} position</div>
@@ -477,9 +524,7 @@ export default function PortfolioPage() {
                     <div className="divide-y divide-white/[0.04]">
                       {pnlData.sort((a, b) => Math.abs(b.realized) - Math.abs(a.realized)).map((t, i) => (
                         <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: `${t.color}20`, color: t.color }}>
-                            {t.symbol.slice(0, 2)}
-                          </div>
+                          <TokenLogo symbol={t.symbol} fallbackColor={t.color} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold">{t.symbol}</div>
                             <div className="flex items-center gap-1 mt-0.5">

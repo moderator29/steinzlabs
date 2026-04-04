@@ -640,9 +640,9 @@ export default function BubbleMapPage() {
           <div ref={containerRef} className="absolute inset-0 pointer-events-none" />
         </div>
 
-        <div className={`flex flex-col ${isFullscreen ? 'hidden' : 'h-[400px] lg:h-auto lg:w-[380px] xl:w-[420px]'}`}>
+        <div className={`flex flex-col ${isFullscreen ? 'hidden' : 'min-h-[400px] max-h-[500px] lg:max-h-none lg:h-auto lg:w-[380px] xl:w-[420px]'}`}>
           {mapData && mapData.nodes.length > 1 && (
-            <div className="border-b border-white/[0.04] max-h-[200px] overflow-y-auto flex-shrink-0">
+            <div className="border-b border-white/[0.04] max-h-[120px] lg:max-h-[200px] overflow-y-auto flex-shrink-0">
               <div className="px-3 py-2 text-[10px] text-gray-500 font-semibold uppercase tracking-wider bg-[#060A12]/50 sticky top-0">
                 <div className="grid grid-cols-[24px_1fr_60px_60px] gap-2">
                   <span>#</span>
@@ -675,8 +675,8 @@ export default function BubbleMapPage() {
           )}
 
           <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center shadow-sm shadow-[#0A1EFF]/10">
-              <Bot className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+              <img src="/steinz-logo-128.png" alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -691,8 +691,8 @@ export default function BubbleMapPage() {
             {chatMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-md flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                    <Bot className="w-3 h-3" />
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-1 mr-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                    <img src="/steinz-logo-128.png" alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} />
                   </div>
                 )}
                 <div className={`max-w-[85%] rounded-xl px-3 py-2.5 text-[11px] leading-relaxed relative ${
@@ -727,8 +727,8 @@ export default function BubbleMapPage() {
 
             {chatLoading && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-md flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                  <Bot className="w-3 h-3" />
+                <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-1 mr-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                  <img src="/steinz-logo-128.png" alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} />
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-3">
                   <SteinzLogoSpinner size={28} message="Analyzing..." />
@@ -739,7 +739,7 @@ export default function BubbleMapPage() {
           </div>
 
           {mapData && (
-            <div className="px-3 pb-1.5 flex gap-1.5 flex-wrap">
+            <div className="px-3 pb-1.5 flex gap-1.5 flex-wrap flex-shrink-0">
               {[
                 { label: 'Risk Assessment', q: `What is the risk level for ${mapData.tokenInfo.symbol} based on the holder distribution?` },
                 { label: 'Whale Activity', q: `Analyze whale concentration for ${mapData.tokenInfo.symbol}. Are there any dangerous holder patterns?` },

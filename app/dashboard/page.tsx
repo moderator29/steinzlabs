@@ -69,10 +69,10 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent' },
-    { id: 'wallet', icon: Wallet, label: 'Wallet' },
-    { id: 'profile', icon: User, label: 'Profile' },
+    { id: 'home', icon: Home, label: 'Home', href: null },
+    { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent', href: '/dashboard/vtx-ai' },
+    { id: 'wallet', icon: Wallet, label: 'Wallet', href: null },
+    { id: 'profile', icon: User, label: 'Profile', href: null },
   ];
 
   return (
@@ -84,7 +84,13 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
           return (
             <button
               key={item.id}
-              onClick={() => onNavChange(item.id)}
+              onClick={() => {
+                if (item.href) {
+                  window.location.href = item.href;
+                } else {
+                  onNavChange(item.id);
+                }
+              }}
               className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all ${
                 isActive ? 'text-[#0A1EFF]' : 'text-gray-500 hover:text-gray-300'
               }`}
@@ -171,17 +177,12 @@ export default function Dashboard() {
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
             <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7 flex-shrink-0 rounded-lg" style={{ objectFit: 'contain' }} />
-            <div className="flex flex-col leading-none">
-              <span className="text-[11px] font-bold tracking-wide text-white">STEINZ</span>
-              <span className="text-[9px] font-medium tracking-wider text-gray-500">TERMINAL</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04]">
+            <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-[9px] text-gray-400 font-semibold">LIVE</span>
+              <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
+          <div className="flex items-center gap-2" />
         </div>
       </div>
 
