@@ -87,6 +87,9 @@ export async function POST(request: Request) {
       type: 'signup',
       email: cleanEmail,
       password: password,
+      options: {
+        redirectTo: 'https://steinzlabs.com/auth/callback',
+      },
     });
 
     if (linkError || !linkData?.properties?.action_link) {
@@ -95,7 +98,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
     }
 
-    const confirmUrl = linkData.properties.action_link;
+    let confirmUrl = linkData.properties.action_link;
+    confirmUrl = confirmUrl.replace(/redirect_to=http[^&]*/g, 'redirect_to=https://steinzlabs.com/auth/callback');
+    confirmUrl = confirmUrl.replace('http://localhost:3000', 'https://steinzlabs.com');
+    confirmUrl = confirmUrl.replace('http://localhost:5000', 'https://steinzlabs.com');
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
     if (!emailSent) {
