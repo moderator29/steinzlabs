@@ -471,7 +471,7 @@ BRANDING:
 
 export async function POST(request: Request) {
   try {
-    const { message, history, tier } = await request.json();
+    const { message, history, tier, responseStyle, autoContext } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -544,7 +544,18 @@ export async function POST(request: Request) {
 
     const liveDataSection = results.filter(Boolean).join('\n\n');
 
+    const styleInstruction = responseStyle === 'concise'
+      ? 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.'
+      : 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
+
+    const contextInstruction = autoContext === false
+      ? ''
+      : 'AUTO-CONTEXT: Proactively include relevant market context (prices, trends, sentiment) even if the user did not explicitly ask.';
+
     const systemPrompt = `${STEINZ_PLATFORM_CONTEXT}
+
+${styleInstruction}
+${contextInstruction}
 
 ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.

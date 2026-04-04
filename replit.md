@@ -3,7 +3,7 @@
 ## Overview
 Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX Agent, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
-**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free / Pro / Enterprise.
+**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo) / Premium ($99/mo). Pro and Premium show "Coming Soon" — no Stripe integration yet.
 
 ## Tech Stack
 - **Framework**: Next.js 15.0.8 (App Router)
@@ -27,7 +27,7 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Real-time**: WebSocket price feeds via DEXScreener
 - **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis
 - **Bubblemaps**: Custom bubble visualization built into View Proof page (no external links to bubblemaps.io)
-- **VTX Agent**: Renamed from "VTX AI" — plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener). Server-side strips markdown. ChatGPT-style UI with New Chat button.
+- **VTX Agent**: Next-gen UI with dark #060A12 background, tools panel (8 tools grid), agent settings panel (web search toggle, response style concise/detailed, auto-context toggle), animated typing indicator, timestamps on messages, persistent settings via localStorage. Plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener). Server-side strips markdown. Settings (responseStyle, autoContext) sent to API and applied to system prompt.
 - **Wallet**: Non-custodial, max 5 wallets per user. No "Connect Wallet" anywhere — use STEINZ built-in wallet only.
 - **Back Button**: Top-left, no circle, plain arrow (FloatingBackButton.tsx)
 - **Security Center**: Contract addresses only — rejects wallet addresses with clear error
@@ -36,6 +36,8 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Swap Page**: /dashboard/swap — Raydium-style professional UI with token selector modal, real-time quote API (/api/swap), chain selector, slippage settings panel, route visualization, price impact display. Supports Jupiter (Solana) and 1inch (EVM) backends.
 - **Swap API**: /api/swap — Quote endpoint returning rate, price impact, min received, gas estimate, route info. Token address resolution for all major chains.
 - **Profile Security**: Opens account security settings subpage (not Security Center scanner)
+- **Sidebar**: Trading category with STEINZ Terminal (PRO badge), Swap, Exchanges. No Market item. No NEW badges on Exchanges.
+- **Smart Money**: Professional tracker UI with summary stats, recent moves feed, search/filter, expandable wallet cards with chain tags, analytics, and wallet intelligence deep-link.
 - **Dashboard Header**: STEINZ logo left, "STEINZ Terminal" text small on right side. Price ticker removed.
 - **Context Feed**: No ARKHAM badge (uses "INTEL" label instead). No external Bubblemaps links. Initial fetch 50 events, merges up to 200. Archive tab for events >24hrs old.
 - **Exchange APIs**: Jupiter Aggregator (Solana), 1inch (EVM chains), unified execution router in lib/trading/. Shadow Guardian pre-trade scanning. Exchange hub page (/dashboard/exchanges) with live Binance ticker data, CEX/DEX directory, and API status monitoring.

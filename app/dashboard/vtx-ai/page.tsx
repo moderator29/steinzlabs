@@ -1,17 +1,25 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check, Trash2, Globe, Crown, Lock } from 'lucide-react';
+import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check, Trash2, Globe, Crown, Lock, Settings, Wrench, Search, Target, Eye, Radio, Cpu, ChevronDown, X, Wallet, AlertTriangle, Network } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: number;
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
 const TIER_KEY = 'steinz_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
+const SETTINGS_KEY = 'vtx-ai-settings';
+
+interface AgentSettings {
+  webSearch: boolean;
+  responseStyle: 'concise' | 'detailed';
+  autoContext: boolean;
+}
 
 function loadHistory(): Message[] {
   try {
@@ -22,40 +30,52 @@ function loadHistory(): Message[] {
     }
   } catch {}
   return [
-    { role: 'assistant', content: 'VTX Agent online. I pull live market data, on-chain intelligence, and security analysis before every response. What do you need?' },
+    { role: 'assistant', content: 'VTX Agent online. I pull live market data, on-chain intelligence, and security analysis before every response. What do you need?', timestamp: Date.now() },
   ];
 }
 
 function saveHistory(messages: Message[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)));
-  } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50))); } catch {}
 }
 
 function getUserTier(): string {
-  try {
-    return localStorage.getItem(TIER_KEY) || 'free';
-  } catch {
-    return 'free';
-  }
+  try { return localStorage.getItem(TIER_KEY) || 'free'; } catch { return 'free'; }
 }
 
 function getDailyUsage(): { used: number; limit: number; remaining: number } {
   try {
     const stored = localStorage.getItem(USAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed && typeof parsed.used === 'number') return parsed;
-    }
+    if (stored) { const p = JSON.parse(stored); if (p && typeof p.used === 'number') return p; }
   } catch {}
   return { used: 0, limit: 15, remaining: 15 };
 }
 
-function saveDailyUsage(usage: { used: number; limit: number; remaining: number }) {
-  try {
-    localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
-  } catch {}
+function saveDailyUsage(u: { used: number; limit: number; remaining: number }) {
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch {}
 }
+
+function loadSettings(): AgentSettings {
+  try {
+    const s = localStorage.getItem(SETTINGS_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { webSearch: false, responseStyle: 'detailed', autoContext: true };
+}
+
+function saveSettings(s: AgentSettings) {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {}
+}
+
+const TOOLS = [
+  { icon: TrendingUp, label: 'Market Analysis', desc: 'Real-time prices, trends, fear & greed', query: 'Give me a comprehensive market overview for today including BTC, ETH, SOL trends, DeFi activity, and any notable on-chain signals.' },
+  { icon: Shield, label: 'Security Scan', desc: 'Contract audit & honeypot detection', query: 'What are the biggest security risks in the crypto market right now? Flag any red flags, scams, or potential rug pulls.' },
+  { icon: Search, label: 'Token Research', desc: 'Deep dive into any token or project', query: 'What are the most promising tokens to research right now based on on-chain activity and smart money flows?' },
+  { icon: Wallet, label: 'Wallet Analysis', desc: 'Analyze any wallet address', query: 'How should I analyze a wallet address to determine if it belongs to smart money or a potential scammer?' },
+  { icon: Eye, label: 'Whale Tracking', desc: 'Monitor large wallet movements', query: 'What on-chain signals are showing the most bullish or bearish activity right now? Include whale movements and smart money flows.' },
+  { icon: Target, label: 'Risk Assessment', desc: 'Portfolio risk & exposure analysis', query: 'What are the best strategies for managing risk in a crypto portfolio right now? Include position sizing and diversification.' },
+  { icon: BarChart3, label: 'Trading Signals', desc: 'Entry/exit points & technical analysis', query: 'What trading setups look the strongest right now based on technical and on-chain analysis?' },
+  { icon: Network, label: 'Network Intel', desc: 'Chain activity & gas analysis', query: 'Compare the current activity across Ethereum, Solana, Base, and other L2s. Which chains show the most growth?' },
+];
 
 export default function VtxAiPage() {
   const router = useRouter();
@@ -63,11 +83,14 @@ export default function VtxAiPage() {
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [tier, setTier] = useState('free');
   const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 15, remaining: 15 });
   const [rateLimited, setRateLimited] = useState(false);
+  const [showTools, setShowTools] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<AgentSettings>({ webSearch: false, responseStyle: 'detailed', autoContext: true });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -76,34 +99,23 @@ export default function VtxAiPage() {
       setMessages(loadHistory());
       setTier(getUserTier());
       setDailyUsage(getDailyUsage());
+      setSettings(loadSettings());
     }
   }, []);
 
-  useEffect(() => {
-    if (initialized.current && messages.length > 0) {
-      saveHistory(messages);
-    }
-  }, [messages]);
+  useEffect(() => { if (initialized.current && messages.length > 0) saveHistory(messages); }, [messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const isPro = tier === 'pro';
+
+  const updateSettings = (partial: Partial<AgentSettings>) => {
+    const updated = { ...settings, ...partial };
+    setSettings(updated);
+    saveSettings(updated);
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const quickActions = [
-    { icon: TrendingUp, label: 'Market Overview', query: 'Give me a comprehensive market overview for today including BTC, ETH, SOL trends, DeFi activity, and any notable on-chain signals.' },
-    { icon: BarChart3, label: 'Portfolio Analysis', query: 'What are the best strategies for building a diversified crypto portfolio right now? Include risk management and sector allocation.' },
-    { icon: Shield, label: 'Risk Assessment', query: 'What are the biggest risks in the crypto market right now? Flag any red flags, potential rug pulls, or macro concerns.' },
-    { icon: Zap, label: 'Trading Signals', query: 'What on-chain signals are showing the most bullish or bearish activity right now? Include whale movements and smart money flows.' },
-  ];
-
   const clearChat = () => {
-    const fresh = [
-      { role: 'assistant' as const, content: 'Chat cleared. VTX Agent ready. What do you need?' },
-    ];
+    const fresh: Message[] = [{ role: 'assistant', content: 'Chat cleared. VTX Agent ready. What do you need?', timestamp: Date.now() }];
     setMessages(fresh);
     saveHistory(fresh);
   };
@@ -111,208 +123,272 @@ export default function VtxAiPage() {
   const handleSend = async (text?: string) => {
     const msg = text || input;
     if (!msg.trim() || loading) return;
-
     if (tier !== 'pro' && rateLimited) return;
 
     let finalMessage = msg.trim();
-    if (webSearchEnabled) {
-      finalMessage = finalMessage + ' [WEB_SEARCH]';
-    }
+    if (settings.webSearch) finalMessage += ' [WEB_SEARCH]';
 
-    const userMessage: Message = { role: 'user', content: msg.trim() };
+    const userMessage: Message = { role: 'user', content: msg.trim(), timestamp: Date.now() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
+    setShowTools(false);
 
     try {
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: finalMessage,
-          history: messages.slice(-10),
-          tier,
-        }),
+        body: JSON.stringify({ message: finalMessage, history: messages.slice(-10), tier, responseStyle: settings.responseStyle, autoContext: settings.autoContext }),
       });
-
       const data = await response.json();
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access and web search.' }]);
-        if (data.usage) {
-          const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
-          setDailyUsage(usage);
-          saveDailyUsage(usage);
-        }
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access.', timestamp: Date.now() }]);
+        if (data.usage) { const u = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining }; setDailyUsage(u); saveDailyUsage(u); }
       } else if (data.error) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-        if (data.dailyUsage) {
-          setDailyUsage(data.dailyUsage);
-          saveDailyUsage(data.dailyUsage);
-          if (data.dailyUsage.remaining <= 0) setRateLimited(true);
-        }
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, timestamp: Date.now() }]);
+        if (data.dailyUsage) { setDailyUsage(data.dailyUsage); saveDailyUsage(data.dailyUsage); if (data.dailyUsage.remaining <= 0) setRateLimited(true); }
       }
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please check your connection and try again.' }]);
-    } finally {
-      setLoading(false);
-    }
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please check your connection and try again.', timestamp: Date.now() }]);
+    } finally { setLoading(false); }
   };
 
   const copyMessage = (idx: number) => {
     const msg = messages[idx];
-    if (msg) {
-      navigator.clipboard.writeText(msg.content);
-      setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx(null), 2000);
-    }
+    if (msg) { navigator.clipboard.writeText(msg.content); setCopiedIdx(idx); setTimeout(() => setCopiedIdx(null), 2000); }
   };
 
-  const isPro = tier === 'pro';
+  const formatTime = (ts?: number) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex flex-col">
-      <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
+    <div className="min-h-screen bg-[#060A12] text-white flex flex-col">
+      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+          <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5 text-gray-400" />
           </button>
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center">
-            <Bot className="w-4 h-4" />
+
+          <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
+            <Bot className="w-5 h-5" />
           </div>
+
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-heading font-bold">VTX Agent</h1>
+              <span className="text-sm font-bold tracking-tight">VTX Agent</span>
+              <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
+              <span className="text-[9px] text-[#10B981] font-medium">LIVE</span>
               {isPro && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded text-[9px] text-amber-400 font-bold">
-                  <Crown className="w-2.5 h-2.5" /> PRO
-                </span>
+                <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"></div>
-              <span className="text-[10px] text-[#10B981]">Live market data</span>
-            </div>
+            <span className="text-[10px] text-gray-600">On-chain intelligence + live data</span>
           </div>
-          {!isPro && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#111827] rounded-lg border border-white/10">
-              <span className="text-[10px] text-gray-400">{dailyUsage.used}/{dailyUsage.limit}</span>
-              <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0A1EFF]'}`}
-                  style={{ width: `${(dailyUsage.used / dailyUsage.limit) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-          {messages.length > 1 && (
-            <button onClick={clearChat} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Clear chat">
-              <Trash2 className="w-4 h-4 text-gray-500" />
-            </button>
-          )}
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
-            {msg.role === 'assistant' && (
-              <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                <Bot className="w-3.5 h-3.5" />
-              </div>
-            )}
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${msg.role === 'user' ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20 text-white' : 'glass border border-white/10 text-gray-300'}`}>
-              {msg.role === 'assistant' && (
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="w-3 h-3 text-[#0A1EFF]" />
-                  <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX Agent</span>
+          <div className="flex items-center gap-1">
+            {!isPro && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+                <span className="text-[10px] text-gray-500 font-mono">{dailyUsage.remaining}</span>
+                <div className="w-8 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0A1EFF]'}`} style={{ width: `${((dailyUsage.limit - dailyUsage.used) / dailyUsage.limit) * 100}%` }} />
                 </div>
-              )}
-              <div className="whitespace-pre-wrap">{msg.content}</div>
-              {msg.role === 'assistant' && i > 0 && (
-                <button
-                  onClick={() => copyMessage(i)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
-                >
-                  {copiedIdx === i ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-gray-500" />}
-                </button>
-              )}
-            </div>
-            {msg.role === 'user' && (
-              <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ml-2">
-                <User className="w-3.5 h-3.5 text-gray-400" />
               </div>
             )}
+            <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
+              <Settings className="w-4 h-4 text-gray-500" />
+            </button>
+            {messages.length > 1 && (
+              <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Clear chat">
+                <Trash2 className="w-4 h-4 text-gray-600" />
+              </button>
+            )}
           </div>
-        ))}
+        </div>
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-              <Bot className="w-3.5 h-3.5" />
+        {showSettings && (
+          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-gray-300">Agent Settings</span>
+              <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
             </div>
-            <div className="glass border border-white/10 rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin text-[#0A1EFF]" />
-                {webSearchEnabled ? 'Searching the web & live data...' : 'Searching live data...'}
+            <div className="space-y-2.5">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs text-gray-400">Web Search</span>
+                </div>
+                <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
+                </button>
+              </label>
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs text-gray-400">Auto Market Context</span>
+                </div>
+                <button onClick={() => updateSettings({ autoContext: !settings.autoContext })} className={`w-9 h-5 rounded-full transition-colors relative ${settings.autoContext ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoContext ? 'right-[3px]' : 'left-[3px]'}`} />
+                </button>
+              </label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs text-gray-400">Response Style</span>
+                </div>
+                <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
+                  <button onClick={() => updateSettings({ responseStyle: 'concise' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'concise' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Concise</button>
+                  <button onClick={() => updateSettings({ responseStyle: 'detailed' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'detailed' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Detailed</button>
+                </div>
               </div>
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-white/10 space-y-3 bg-[#0A0E1A]/80 backdrop-blur-sm">
-        {rateLimited && !isPro && (
-          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl">
-            <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-[11px] text-amber-300 font-semibold">Daily limit reached</p>
-              <p className="text-[10px] text-gray-400">Upgrade to STEINZ Pro for unlimited messages</p>
+      <div className="flex-1 overflow-y-auto">
+        {messages.length <= 1 && (
+          <div className="px-4 pt-6 pb-2">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10">
+                <Bot className="w-8 h-8 text-[#0A1EFF]" />
+              </div>
+              <h2 className="text-lg font-bold mb-1">What can I help you with?</h2>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">I analyze markets, scan contracts, track whales, and provide real-time on-chain intelligence.</p>
             </div>
-            <button
-              onClick={() => router.push('/dashboard/pricing')}
-              className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-[10px] font-bold text-black hover:scale-105 transition-transform"
-            >
+
+            <div className="grid grid-cols-2 gap-2">
+              {TOOLS.slice(0, 4).map((tool) => (
+                <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-left p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
+                  <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
+                  <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
+                  <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <button onClick={() => setShowTools(!showTools)} className="w-full mt-3 py-2 text-[10px] text-gray-500 hover:text-gray-300 flex items-center justify-center gap-1 transition-colors">
+              <Wrench className="w-3 h-3" />
+              {showTools ? 'Hide tools' : 'Show all tools'}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showTools ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showTools && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {TOOLS.slice(4).map((tool) => (
+                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-left p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
+                    <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
+                    <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
+                    <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="p-4 space-y-3">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 shadow-sm shadow-[#0A1EFF]/10">
+                  <Bot className="w-3.5 h-3.5" />
+                </div>
+              )}
+              <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${
+                msg.role === 'user'
+                  ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/15 text-white'
+                  : 'bg-white/[0.02] border border-white/[0.06] text-gray-300'
+              }`}>
+                {msg.role === 'assistant' && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-3 h-3 text-[#0A1EFF]" />
+                    <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX Agent</span>
+                    {msg.timestamp && <span className="text-[9px] text-gray-700 ml-auto">{formatTime(msg.timestamp)}</span>}
+                  </div>
+                )}
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.role === 'user' && msg.timestamp && (
+                  <div className="text-[9px] text-gray-600 mt-1 text-right">{formatTime(msg.timestamp)}</div>
+                )}
+                {msg.role === 'assistant' && i > 0 && (
+                  <button onClick={() => copyMessage(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-white/[0.06] rounded-lg">
+                    {copiedIdx === i ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-gray-600" />}
+                  </button>
+                )}
+              </div>
+              {msg.role === 'user' && (
+                <div className="w-7 h-7 bg-[#111827] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ml-2 border border-white/[0.06]">
+                  <User className="w-3.5 h-3.5 text-gray-500" />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex justify-start">
+              <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
+                <Bot className="w-3.5 h-3.5" />
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span>{settings.webSearch ? 'Searching web & live data...' : 'Analyzing live data...'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 bg-[#060A12]/95 backdrop-blur-xl border-t border-white/[0.04] p-3 space-y-2">
+        {rateLimited && !isPro && (
+          <div className="flex items-center gap-3 p-3 bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/15 rounded-xl">
+            <Lock className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-[11px] text-white font-semibold">Daily limit reached</p>
+              <p className="text-[10px] text-gray-500">Upgrade to Pro for unlimited messages</p>
+            </div>
+            <button onClick={() => router.push('/dashboard/pricing')} className="px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[10px] font-bold hover:bg-[#0918D0] transition-colors">
               Upgrade
             </button>
           </div>
         )}
-        {messages.length <= 1 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {quickActions.map((action) => (
-              <button key={action.label} onClick={() => handleSend(action.query)} className="flex items-center gap-1.5 px-3 py-2 bg-[#111827] border border-white/10 rounded-lg text-[10px] font-semibold whitespace-nowrap hover:border-[#0A1EFF]/30 transition-colors">
-                <action.icon className="w-3 h-3 text-[#0A1EFF]" />
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
+
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[#111827] border border-white/10 rounded-xl px-3">
-            <button
-              onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${webSearchEnabled ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
-              title={webSearchEnabled ? 'Web search enabled' : 'Enable web search'}
-            >
-              <Globe className="w-3 h-3" />
-              Web
-            </button>
+          <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/20 text-[#0A1EFF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
+            <Wrench className="w-4 h-4" />
+          </button>
+          <div className="flex-1 flex items-center bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 focus-within:border-[#0A1EFF]/30 transition-colors">
+            {settings.webSearch && (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold mr-2 flex-shrink-0">
+                <Globe className="w-2.5 h-2.5" /> WEB
+              </div>
+            )}
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask VTX Agent anything..."
+              placeholder="Ask VTX anything..."
               className="flex-1 bg-transparent py-3 text-xs placeholder-gray-600 focus:outline-none"
               disabled={loading || (rateLimited && !isPro)}
             />
           </div>
-          <button onClick={() => handleSend()} disabled={loading || !input.trim() || (rateLimited && !isPro)} className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] p-3 rounded-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
+          <button onClick={() => handleSend()} disabled={loading || !input.trim() || (rateLimited && !isPro)} className="bg-[#0A1EFF] hover:bg-[#0918D0] p-3 rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-[#0A1EFF] flex-shrink-0">
             <Send className="w-4 h-4" />
           </button>
         </div>
