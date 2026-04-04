@@ -208,7 +208,7 @@ export default function ViewProofPage() {
                 <p>24-hour trading volume stands at ${event.tokenVolume24h.toLocaleString()}, {event.tokenVolume24h > 1000000 ? 'indicating strong market activity' : 'suggesting moderate trading interest'}.</p>
               )}
               {event.tokenLiquidity && event.tokenLiquidity > 0 && (
-                <p>Liquidity pool depth: ${event.tokenLiquidity.toLocaleString()}. {event.tokenLiquidity > 500000 ? 'Sufficient liquidity for larger trades.' : 'Lower liquidity — larger orders may face slippage.'}</p>
+                <p>Liquidity pool depth: ${event.tokenLiquidity.toLocaleString()}. {event.tokenLiquidity > 500000 ? 'Sufficient liquidity for larger trades.' : 'Lower liquidity, larger orders may face slippage.'}</p>
               )}
               {event.tokenMarketCap && event.tokenMarketCap > 0 && (
                 <p>Market capitalization: ${event.tokenMarketCap.toLocaleString()}.</p>

@@ -47,7 +47,7 @@ const STEPS = [
   { title: 'Builder Applies', desc: 'Goes through STEINZ verification. Only verified, credible builders get through.' },
   { title: 'Builder Pitches', desc: 'Submits full project details visible to the community and investor network.' },
   { title: 'Funding Portal Opens', desc: 'Dedicated portal opens with transparent terms visible to all participants.' },
-  { title: 'Funds Are Held', desc: 'Funds held in audited smart contracts — not released to builder immediately.' },
+  { title: 'Funds Are Held', desc: 'Funds held in audited smart contracts, not released to builder immediately.' },
   { title: 'Milestone Release', desc: 'Builder hits milestones, submits proof. STEINZ releases corresponding tranches.' },
 ];
 

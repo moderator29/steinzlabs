@@ -525,7 +525,7 @@ function PredictionCard({
             : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20'
         }`}>
           <div className="font-bold text-[10px] uppercase tracking-wider mb-0.5">Your Prediction</div>
-          {userPrediction.side.toUpperCase()} — ${userPrediction.amount.toFixed(2)}
+          {userPrediction.side.toUpperCase()} ${userPrediction.amount.toFixed(2)}
           <span className="text-gray-400 ml-1">(Payout: ${userPrediction.potentialPayout.toFixed(2)})</span>
         </div>
       ) : (

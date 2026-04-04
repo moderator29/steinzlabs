@@ -231,7 +231,7 @@ export default function DNAAnalyzerPage() {
               <h2 className="text-2xl font-heading font-bold mb-2 text-[#F59E0B]">This is a Smart Contract Address</h2>
               <p className="text-gray-400 text-sm max-w-md mx-auto">
                 The address you entered is a smart contract, not a wallet. The DNA Analyzer is designed to analyze 
-                <span className="text-white font-semibold"> wallet addresses only</span> — it examines personal trading patterns, risk profiles, and portfolio behavior.
+                <span className="text-white font-semibold"> wallet addresses only</span>. It examines personal trading patterns, risk profiles, and portfolio behavior.
               </p>
             </div>
 
