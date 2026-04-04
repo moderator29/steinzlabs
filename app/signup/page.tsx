@@ -129,8 +129,33 @@ export default function SignUpPage() {
         return;
       }
 
-      showToast('Account created! Check your email to verify your account.', 'success');
-      router.push('/login');
+      if (data.needsConfirmation) {
+        showToast('Account created! Check your email to verify your account.', 'success');
+        router.push('/login');
+      } else {
+        const signInPromise = supabase.auth.signInWithPassword({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000));
+        const { data: signInData, error: signInError } = await Promise.race([signInPromise, timeoutPromise]) as any;
+
+        if (signInError) {
+          showToast('Account created! Sign in to continue.', 'success');
+          router.push('/login');
+          return;
+        }
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('steinz_has_session', 'true');
+          if (signInData?.session?.access_token) {
+            document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax; max-age=${60 * 60 * 48}`;
+          }
+        }
+
+        showToast('Welcome to STEINZ LABS!', 'success');
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {

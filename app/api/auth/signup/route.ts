@@ -1,22 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodmV3cmxkY2R4dXBzbmFrZGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDA0NjMsImV4cCI6MjA5MDc3NjQ2M30.xHGPMphDjMsPN566gRcGle5Mp8mEBxGiI1HXDX9M7ZU';
+import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const admin = getSupabaseAdmin();
 
     if (body.username && !body.email) {
       const cleanUsername = body.username.trim().toLowerCase();
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
-      }
-      let admin;
-      try { admin = getSupabaseAdmin(); } catch {
-        return NextResponse.json({ available: true });
       }
       const { data: existingProfile } = await admin
         .from('profiles')
@@ -47,62 +41,67 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
     }
 
-    let admin;
-    try { admin = getSupabaseAdmin(); } catch {}
-
-    if (admin) {
-      const { data: existingUsers } = await admin.auth.admin.listUsers();
-      const emailExists = existingUsers?.users?.some(
-        (u: any) => u.email?.toLowerCase() === cleanEmail
-      );
-      if (emailExists) {
-        return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
-      }
-    }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password: password,
-      options: {
-        data: {
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          username: cleanUsername,
-        },
-        emailRedirectTo: 'https://steinzlabs.com/login',
-      },
-    });
-
-    if (signUpError) {
-      console.error('[Signup] error:', signUpError.message);
-      if (signUpError.message.toLowerCase().includes('already') || signUpError.message.toLowerCase().includes('exists')) {
-        return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
-      }
-      if (signUpError.message.toLowerCase().includes('rate') || signUpError.message.toLowerCase().includes('limit')) {
-        return NextResponse.json({ error: 'Too many signup attempts. Please wait a moment.' }, { status: 429 });
-      }
-      return NextResponse.json({ error: signUpError.message }, { status: 500 });
-    }
-
-    if (!signUpData?.user || signUpData.user.identities?.length === 0) {
+    const { data: existingUsers } = await admin.auth.admin.listUsers();
+    const emailExists = existingUsers?.users?.some(
+      (u: any) => u.email?.toLowerCase() === cleanEmail
+    );
+    if (emailExists) {
       return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
     }
 
-    if (admin && signUpData.user) {
-      try {
-        await admin.from('profiles').upsert({
-          id: signUpData.user.id,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          username: cleanUsername,
-          email: cleanEmail,
-          created_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      } catch {}
+    const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+      email: cleanEmail,
+      password: password,
+      email_confirm: false,
+      user_metadata: {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        username: cleanUsername,
+      },
+    });
+
+    if (createError) {
+      console.error('[Signup] createUser error:', createError.message);
+      if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
+        return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+      }
+      return NextResponse.json({ error: createError.message }, { status: 500 });
+    }
+
+    if (!newUser?.user) {
+      return NextResponse.json({ error: 'Failed to create account.' }, { status: 500 });
+    }
+
+    try {
+      await admin.from('profiles').upsert({
+        id: newUser.user.id,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        username: cleanUsername,
+        email: cleanEmail,
+        created_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+    } catch {}
+
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'signup',
+      email: cleanEmail,
+      password: password,
+    });
+
+    if (linkError || !linkData?.properties?.action_link) {
+      console.error('[Signup] generateLink error:', linkError?.message);
+      await admin.auth.admin.updateUserById(newUser.user.id, { email_confirm: true });
+      return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
+    }
+
+    const confirmUrl = linkData.properties.action_link;
+    const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
+
+    if (!emailSent) {
+      console.warn('[Signup] Email sending failed, auto-confirming user');
+      await admin.auth.admin.updateUserById(newUser.user.id, { email_confirm: true });
+      return NextResponse.json({ success: true, email: cleanEmail, autoConfirmed: true });
     }
 
     return NextResponse.json({ success: true, email: cleanEmail, needsConfirmation: true });
