@@ -3,6 +3,7 @@
 import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, Zap, Loader2, User, Copy, Check, Trash2, Globe, Crown, Lock, Settings, Wrench, Search, Target, Eye, Radio, Cpu, ChevronDown, X, Wallet, AlertTriangle, Network } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -333,18 +334,9 @@ export default function VtxAiPage() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                <Bot className="w-3.5 h-3.5" />
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                  <span>{settings.webSearch ? 'Searching web & live data...' : 'Analyzing live data...'}</span>
-                </div>
+              <div className="w-7 h-7 flex-shrink-0 mt-1 mr-2" />
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
+                <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Searching web & live data...' : 'Analyzing live data...'} />
               </div>
             </div>
           )}

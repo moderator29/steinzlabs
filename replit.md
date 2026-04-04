@@ -3,7 +3,7 @@
 ## Overview
 Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue #0A1EFF — NEVER cyan #00E5FF). Supabase email/password auth (signup with first/last name, username, email, password; login with email OR username + password; persistent sessions). Full auth wall (middleware blocks all /dashboard/** without session cookie), 4-item bottom nav (Home, VTX Agent, Wallet, Profile), 2-tab home (Context Feed + Market), searchable all-coins market list, single-coin trading view (TradingView chart + key stats + buy/sell modal), context feed "Trade This" integration. AI-powered analytics across 12+ blockchains.
 
-**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo) / Premium ($99/mo). Pro and Premium show "Coming Soon" — no Stripe integration yet.
+**Brand**: STEINZ LABS — NO token, no $STEINZ, no $NAKA. Just "STEINZ LABS" as the platform name. Tiers: Free ($0) / Pro ($19/mo, $190/yr) / Premium ($99/mo, $990/yr). Stripe integration built (checkout, portal, webhooks).
 
 ## Tech Stack
 - **Framework**: Next.js 15.0.8 (App Router)
@@ -142,7 +142,18 @@ lib/
 │   ├── monitor.ts           # Entity monitoring engine (60s polling, trade detection, auto-exit)
 │   └── copyTrade.ts         # Copy trade execution (follows entity buys/sells)
 ├── intelligence/
-│   └── holderAnalysis.ts    # Deep holder intelligence (Arkham enrichment, composition, safety, smart money, scammer analysis, Bubblemaps data)
+│   ├── holderAnalysis.ts    # Deep holder intelligence (Arkham enrichment, composition, safety, smart money, scammer analysis, Bubblemaps data)
+│   └── historicalTracking.ts # Historical snapshots, DEXScreener liquidity analysis, pattern matching
+├── data/
+│   ├── tokenMetadata.ts     # Multi-source token metadata (CoinGecko→DEXScreener fallback chain)
+│   └── realTimePrices.ts    # Real-time price feeds (Jupiter→DEXScreener→CoinGecko)
+├── revenue/
+│   └── feeSystem.ts         # Revenue fee system (0.5% swaps, 1% copy trades), treasury recording
+├── subscriptions/
+│   └── tiers.ts             # FREE/PRO/PREMIUM tier definitions, feature gating, pricing
+├── stripe/
+│   ├── client.ts            # Stripe client initialization
+│   └── subscriptions.ts     # Checkout sessions, portal, webhook handlers
 ├── security/
 │   ├── types.ts             # Security type definitions (ScanResult, WalletReputation, PortfolioThreat)
 │   ├── shadowGuardian.ts    # Shadow Guardian pre-trade scanner (scam detection + AI risk analysis)
@@ -183,6 +194,12 @@ middleware.ts                # Security headers + auth cookie check for /dashboa
 | `/api/portfolio/holdings?wallet=&chain=` | GET | Get Solana/EVM token holdings for wallet |
 | `/api/intelligence/holders?token=&chain=&limit=` | GET | Deep holder intelligence with Arkham enrichment |
 | `/api/intelligence/bubblemaps?token=&chain=` | GET | Bubblemaps visualization data (nodes, links, metadata) |
+| `/api/bubble-map?token=&chain=` | GET | Bubble map nodes/links with DEXScreener+Arkham data |
+| `/api/revenue/stats` | GET | Revenue statistics (total, by type, trade count) |
+| `/api/subscription?userId=` | GET | User subscription tier, features, pricing |
+| `/api/stripe/checkout` | POST | Create Stripe checkout session (tier, interval) |
+| `/api/stripe/portal` | POST | Create Stripe billing portal session |
+| `/api/stripe/webhook` | POST | Stripe webhook handler (subscription events) |
 
 ## Environment Variables
 | Variable | Location | Purpose |
