@@ -54,7 +54,8 @@ const COINGECKO_IDS: Record<string, string> = {
   DAI: 'dai', LINK: 'chainlink', UNI: 'uniswap', ARB: 'arbitrum',
   OP: 'optimism', AAVE: 'aave', MKR: 'maker', CRV: 'curve-dao-token',
   PEPE: 'pepe', WIF: 'dogwifcoin', BONK: 'bonk', JUP: 'jupiter-exchange-solana',
-  RAY: 'raydium',
+  RAY: 'raydium', NAKA: 'nakamoto-games', DOGE: 'dogecoin', SHIB: 'shiba-inu',
+  XRP: 'ripple', ADA: 'cardano',
 };
 
 const FALLBACK_PRICES: Record<string, number> = {
@@ -62,7 +63,8 @@ const FALLBACK_PRICES: Record<string, number> = {
   WBTC: 65200, USDC: 1, USDT: 1, DAI: 1, LINK: 14.5,
   UNI: 7.2, ARB: 1.15, OP: 2.1, AAVE: 95, MKR: 1580,
   CRV: 0.52, PEPE: 0.0000085, WIF: 2.4, BONK: 0.000023,
-  JUP: 0.85, RAY: 1.92,
+  JUP: 0.85, RAY: 1.92, NAKA: 0.08, DOGE: 0.12, SHIB: 0.000018,
+  XRP: 0.52, ADA: 0.45,
 };
 
 let priceCache: { prices: Record<string, number>; ts: number } = { prices: {}, ts: 0 };
@@ -116,6 +118,25 @@ export async function GET(req: NextRequest) {
   try {
     livePrices = await fetchLivePrices([fromToken, toToken]);
   } catch {}
+
+  for (const token of [fromToken, toToken]) {
+    if (!livePrices[token] && !FALLBACK_PRICES[token]) {
+      try {
+        const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${token}`, { next: { revalidate: 60 } });
+        if (dexRes.ok) {
+          const dexData = await dexRes.json();
+          const pair = dexData.pairs?.find((p: any) =>
+            p.baseToken?.symbol?.toUpperCase() === token.toUpperCase() && p.priceUsd
+          ) || dexData.pairs?.find((p: any) =>
+            p.quoteToken?.symbol?.toUpperCase() === token.toUpperCase() && p.priceUsd
+          );
+          if (pair?.priceUsd) {
+            livePrices[token] = parseFloat(pair.priceUsd);
+          }
+        }
+      } catch {}
+    }
+  }
 
   const fromPrice = livePrices[fromToken] || FALLBACK_PRICES[fromToken] || 1;
   const toPrice = livePrices[toToken] || FALLBACK_PRICES[toToken] || 1;

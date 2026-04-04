@@ -5,10 +5,48 @@ import { ArrowLeft, Star, TrendingUp, TrendingDown, ChevronDown, X, Delete, Exte
 import { useRouter, useSearchParams } from 'next/navigation';
 import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 
+const COIN_IMAGE_MAP: Record<string, string> = {
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uni.jpg',
+  AAVE: 'https://assets.coingecko.com/coins/images/12645/small/AAVE.png',
+  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
+  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
+  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
+  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
+  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
+  WIF: 'https://assets.coingecko.com/coins/images/33566/small/dogwifhat.jpg',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
+  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
+  SUI: 'https://assets.coingecko.com/coins/images/26375/small/sui-ocean-square.png',
+  BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
+  JUP: 'https://assets.coingecko.com/coins/images/34188/small/jup.png',
+  MKR: 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png',
+  CRV: 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  NAKA: 'https://assets.coingecko.com/coins/images/18041/small/naka.png',
+  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+  RAY: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg',
+  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
+  FTM: 'https://assets.coingecko.com/coins/images/4001/small/Fantom_round.png',
+  NEAR: 'https://assets.coingecko.com/coins/images/10365/small/near.jpg',
+  APT: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png',
+  INJ: 'https://assets.coingecko.com/coins/images/12882/small/Secondary_Symbol.png',
+  TIA: 'https://assets.coingecko.com/coins/images/31967/small/tia.jpg',
+};
+
 interface CoinData {
   id: string;
   symbol: string;
   name: string;
+  image?: string;
   price: number;
   change1h: number;
   change4h: number;
@@ -156,8 +194,16 @@ function BuyModal({ coin, onClose, isBuy }: { coin: CoinData; onClose: () => voi
             <button
               className="flex-1 py-4 rounded-xl font-bold text-base transition-all"
               style={{ backgroundColor: labelColor, color: labelColor === '#10B981' ? '#000' : '#fff' }}
+              onClick={() => {
+                const hasWallet = typeof window !== 'undefined' && localStorage.getItem('steinz_wallets');
+                if (!hasWallet || JSON.parse(hasWallet).length === 0) {
+                  alert('Create a wallet first in the Wallet tab to trade.');
+                } else {
+                  alert(`${isBuy ? 'Buy' : 'Sell'} order for $${amount || '0'} of ${coin.symbol} submitted. DEX routing in progress.`);
+                }
+              }}
             >
-              Connect Wallet to {isBuy ? 'Buy' : 'Sell'}
+              {isBuy ? 'Buy' : 'Sell'} {coin.symbol}
             </button>
           </div>
         </div>
@@ -317,7 +363,18 @@ function MarketPageContent() {
         </button>
 
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0A1EFF]/30 to-[#7C3AED]/30 flex items-center justify-center text-xs font-bold">
+          {COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image ? (
+            <img
+              src={COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image || ''}
+              alt={symbol}
+              className="w-7 h-7 rounded-full"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <div className={`w-7 h-7 rounded-full bg-gradient-to-br from-[#0A1EFF]/30 to-[#7C3AED]/30 flex items-center justify-center text-xs font-bold ${COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image ? 'hidden' : ''}`}>
             {symbol.slice(0, 2)}
           </div>
           <span className="font-bold">{symbol.toUpperCase()}</span>

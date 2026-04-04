@@ -1,8 +1,10 @@
 'use client';
 
-import { ArrowDownUp, ArrowLeft, ChevronDown, Settings, Zap, Search, X, AlertTriangle, Loader2, RefreshCw, ExternalLink, Info } from 'lucide-react';
+import { ArrowDownUp, ArrowLeft, ChevronDown, Settings, Zap, Search, X, AlertTriangle, Loader2, RefreshCw, ExternalLink, Info, Wallet, CheckCircle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useWallet } from '@/lib/hooks/useWallet';
+import { notifySwapCompleted } from '@/lib/notifications';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -46,6 +48,11 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'BONK', name: 'Bonk', color: '#F2A900', decimals: 5, coingeckoId: 'bonk', logo: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg' },
   { symbol: 'JUP', name: 'Jupiter', color: '#52D5B7', decimals: 6, coingeckoId: 'jupiter-exchange-solana', logo: 'https://assets.coingecko.com/coins/images/34188/small/jup.png' },
   { symbol: 'RAY', name: 'Raydium', color: '#4F67E4', decimals: 6, coingeckoId: 'raydium', logo: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg' },
+  { symbol: 'NAKA', name: 'Nakamoto Games', color: '#00D4AA', decimals: 18, coingeckoId: 'nakamoto-games', logo: 'https://assets.coingecko.com/coins/images/18041/small/naka.png' },
+  { symbol: 'DOGE', name: 'Dogecoin', color: '#C2A633', decimals: 8, popular: true, coingeckoId: 'dogecoin', logo: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png' },
+  { symbol: 'SHIB', name: 'Shiba Inu', color: '#FFA409', decimals: 18, coingeckoId: 'shiba-inu', logo: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png' },
+  { symbol: 'XRP', name: 'XRP', color: '#346AA9', decimals: 6, coingeckoId: 'ripple', logo: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
+  { symbol: 'ADA', name: 'Cardano', color: '#0033AD', decimals: 6, coingeckoId: 'cardano', logo: 'https://assets.coingecko.com/coins/images/975/small/cardano.png' },
 ];
 
 function getTokenInfo(symbol: string): TokenInfo {
@@ -231,6 +238,7 @@ function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
 export default function SwapPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { address: walletAddress } = useWallet();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [fromToken, setFromToken] = useState('ETH');
@@ -243,7 +251,35 @@ export default function SwapPage() {
   const [fetchingQuote, setFetchingQuote] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
+  const [swapSuccess, setSwapSuccess] = useState(false);
+  const [swapError, setSwapError] = useState('');
+  const [walletBalance, setWalletBalance] = useState<Record<string, number>>({});
   const quoteTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const connectedAddress = walletAddress || (typeof window !== 'undefined' ? localStorage.getItem('steinz_active_wallet_address') : null);
+
+  useEffect(() => {
+    if (!connectedAddress) return;
+    const fetchBalance = async () => {
+      try {
+        const res = await fetch(`/api/wallet-intelligence?address=${connectedAddress}`);
+        if (res.ok) {
+          const data = await res.json();
+          const balances: Record<string, number> = {};
+          if (data.holdings) {
+            data.holdings.forEach((h: any) => {
+              balances[h.symbol?.toUpperCase()] = h.balance || 0;
+            });
+          }
+          if (data.totalBalanceUsd) {
+            balances['_totalUsd'] = data.totalBalanceUsd;
+          }
+          setWalletBalance(balances);
+        }
+      } catch {}
+    };
+    fetchBalance();
+  }, [connectedAddress]);
 
   useEffect(() => {
     const symbol = searchParams.get('symbol');
@@ -303,12 +339,48 @@ export default function SwapPage() {
 
   const handleSwap = async () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) return;
+    setSwapError('');
+    setSwapSuccess(false);
+
+    if (!connectedAddress) {
+      setSwapError('No wallet connected. Create or import a wallet first.');
+      return;
+    }
+
+    const balance = walletBalance[fromToken];
+    if (balance !== undefined && parseFloat(fromAmount) > balance) {
+      setSwapError(`Insufficient ${fromToken} balance. You have ${balance.toFixed(6)} ${fromToken}.`);
+      return;
+    }
+
     setSwapping(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      notifySwapCompleted(fromToken, toToken, fromAmount);
+      setSwapSuccess(true);
+      setTimeout(() => setSwapSuccess(false), 4000);
+      setFromAmount('');
+      setToAmount('');
+      setQuoteData(null);
+
+      const txRecord = {
+        id: `swap-${Date.now()}`,
+        type: 'swap',
+        from: fromToken,
+        to: toToken,
+        fromAmount: parseFloat(fromAmount),
+        toAmount: parseFloat(toAmount),
+        chain,
+        timestamp: Date.now(),
+        address: connectedAddress,
+      };
+      const existing = JSON.parse(localStorage.getItem('steinz_swap_history') || '[]');
+      existing.unshift(txRecord);
+      localStorage.setItem('steinz_swap_history', JSON.stringify(existing.slice(0, 50)));
+    } catch (err: any) {
+      setSwapError(err?.message || 'Swap failed. Please try again.');
+    }
     setSwapping(false);
-    setFromAmount('');
-    setToAmount('');
-    setQuoteData(null);
   };
 
   const estimatedGas = quoteData ? `$${quoteData.gasEstimateUsd.toFixed(2)}` : chain === 'solana' ? '$0.001' : chain === 'base' ? '$0.02' : '$2.40';
@@ -362,9 +434,13 @@ export default function SwapPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-600">Balance: 0.00</span>
-                  <button className="text-[10px] text-[#0A1EFF] font-bold hover:text-[#0A1EFF]/80 transition-colors px-1.5 py-0.5 rounded bg-[#0A1EFF]/10">MAX</button>
-                  <button className="text-[10px] text-gray-500 font-bold hover:text-gray-400 transition-colors px-1.5 py-0.5 rounded bg-white/5">HALF</button>
+                  <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[fromToken]?.toFixed(4) || '0.00') : '--'}</span>
+                  {connectedAddress && walletBalance[fromToken] > 0 && (
+                    <>
+                      <button onClick={() => handleFromAmountChange(walletBalance[fromToken].toString())} className="text-[10px] text-[#0A1EFF] font-bold hover:text-[#0A1EFF]/80 transition-colors px-1.5 py-0.5 rounded bg-[#0A1EFF]/10">MAX</button>
+                      <button onClick={() => handleFromAmountChange((walletBalance[fromToken] / 2).toString())} className="text-[10px] text-gray-500 font-bold hover:text-gray-400 transition-colors px-1.5 py-0.5 rounded bg-white/5">HALF</button>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -507,6 +583,11 @@ export default function SwapPage() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Finding route...
                 </>
+              ) : !connectedAddress ? (
+                <>
+                  <Wallet className="w-4 h-4" />
+                  Connect Wallet to Swap
+                </>
               ) : !fromAmount || parseFloat(fromAmount) <= 0 ? (
                 'Enter an amount'
               ) : (
@@ -516,6 +597,20 @@ export default function SwapPage() {
                 </>
               )}
             </button>
+
+            {swapError && (
+              <div className="mt-2 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span className="text-xs text-red-400">{swapError}</span>
+              </div>
+            )}
+
+            {swapSuccess && (
+              <div className="mt-2 flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2.5">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                <span className="text-xs text-green-400">Swap executed successfully</span>
+              </div>
+            )}
           </div>
 
           {hasQuote && (
