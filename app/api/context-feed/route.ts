@@ -558,7 +558,7 @@ function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const rawLimit = parseInt(searchParams.get('limit') || '50');
+    const rawLimit = parseInt(searchParams.get('limit') || '150');
     const limit = Math.min(Math.max(rawLimit, 1), 200);
     const chain = searchParams.get('chain') || 'all';
     const archived = searchParams.get('archived') === 'true';

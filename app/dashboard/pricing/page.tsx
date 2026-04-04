@@ -28,7 +28,7 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: '$19',
+      price: '$6',
       period: '/month',
       description: 'For serious traders & analysts',
       accent: '#0A1EFF',
@@ -54,7 +54,7 @@ export default function PricingPage() {
     },
     {
       name: 'Premium',
-      price: '$99',
+      price: '$15',
       period: '/month',
       description: 'Maximum intelligence & power',
       accent: '#F59E0B',

@@ -213,7 +213,7 @@ export default function TradingSuitePage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-base font-heading font-bold tracking-tight">STEINZ Terminal</h1>
+                  <h1 className="text-sm font-heading font-bold tracking-tight">Trading Suite</h1>
                   <span className="px-2 py-0.5 rounded-md text-[8px] font-bold bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 text-[#0A1EFF] border border-[#0A1EFF]/20">PRO</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-[9px] mt-0.5">

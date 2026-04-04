@@ -81,10 +81,13 @@ function LoginPageInner() {
 
       const signInPromise = supabase.auth.signInWithPassword({ email, password });
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 15000));
-      const { data: signInData, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
+      let { data: signInData, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
 
       if (error) {
-        if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
+        if (error.message.toLowerCase().includes('email not confirmed') || error.message.toLowerCase().includes('not confirmed')) {
+          showToast('Please verify your email first. Check your inbox for the verification link.', 'error');
+          setErrors({ identifier: 'Email not verified' });
+        } else if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
           showToast('Incorrect email/username or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
         } else if (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('network')) {

@@ -318,7 +318,7 @@ export default function VtxAiPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold tracking-tight">VTX Agent</span>
               <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
-              <span className="text-[9px] text-[#10B981] font-medium">LIVE</span>
+              <span className="text-[10px] text-[#10B981] font-bold tracking-wide">LIVE</span>
               {isPro && (
                 <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}

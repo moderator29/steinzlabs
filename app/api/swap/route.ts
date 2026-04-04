@@ -48,13 +48,56 @@ const COMMON_TOKENS: Record<string, Record<string, string>> = {
   },
 };
 
-const MOCK_PRICES: Record<string, number> = {
+const COINGECKO_IDS: Record<string, string> = {
+  ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin', MATIC: 'matic-network',
+  AVAX: 'avalanche-2', WBTC: 'wrapped-bitcoin', USDC: 'usd-coin', USDT: 'tether',
+  DAI: 'dai', LINK: 'chainlink', UNI: 'uniswap', ARB: 'arbitrum',
+  OP: 'optimism', AAVE: 'aave', MKR: 'maker', CRV: 'curve-dao-token',
+  PEPE: 'pepe', WIF: 'dogwifcoin', BONK: 'bonk', JUP: 'jupiter-exchange-solana',
+  RAY: 'raydium',
+};
+
+const FALLBACK_PRICES: Record<string, number> = {
   ETH: 3450, SOL: 178, BNB: 620, MATIC: 0.72, AVAX: 38,
   WBTC: 65200, USDC: 1, USDT: 1, DAI: 1, LINK: 14.5,
   UNI: 7.2, ARB: 1.15, OP: 2.1, AAVE: 95, MKR: 1580,
   CRV: 0.52, PEPE: 0.0000085, WIF: 2.4, BONK: 0.000023,
   JUP: 0.85, RAY: 1.92,
 };
+
+let priceCache: { prices: Record<string, number>; ts: number } = { prices: {}, ts: 0 };
+const CACHE_TTL = 30000;
+
+async function fetchLivePrices(tokens: string[]): Promise<Record<string, number>> {
+  const now = Date.now();
+  if (now - priceCache.ts < CACHE_TTL && tokens.every(t => priceCache.prices[t] !== undefined)) {
+    return priceCache.prices;
+  }
+
+  const ids = tokens.map(t => COINGECKO_IDS[t]).filter(Boolean);
+  if (ids.length === 0) return {};
+
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`,
+      { next: { revalidate: 30 } }
+    );
+    if (!res.ok) throw new Error('CoinGecko API error');
+    const data = await res.json();
+
+    const prices: Record<string, number> = {};
+    for (const [symbol, geckoId] of Object.entries(COINGECKO_IDS)) {
+      if (data[geckoId]?.usd) {
+        prices[symbol] = data[geckoId].usd;
+      }
+    }
+
+    priceCache = { prices: { ...priceCache.prices, ...prices }, ts: now };
+    return priceCache.prices;
+  } catch {
+    return priceCache.prices;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -64,13 +107,18 @@ export async function GET(req: NextRequest) {
   const chain = searchParams.get('chain') || 'ethereum';
   const slippage = parseFloat(searchParams.get('slippage') || '0.5');
 
-  const fromPrice = MOCK_PRICES[fromToken] || 1;
-  const toPrice = MOCK_PRICES[toToken] || 1;
-
   const amountNum = parseFloat(amount);
   if (!amountNum || amountNum <= 0) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
+
+  let livePrices: Record<string, number> = {};
+  try {
+    livePrices = await fetchLivePrices([fromToken, toToken]);
+  } catch {}
+
+  const fromPrice = livePrices[fromToken] || FALLBACK_PRICES[fromToken] || 1;
+  const toPrice = livePrices[toToken] || FALLBACK_PRICES[toToken] || 1;
 
   const fromUsd = amountNum * fromPrice;
   const toAmount = fromUsd / toPrice;
@@ -104,5 +152,6 @@ export async function GET(req: NextRequest) {
       hops: 1,
     },
     validUntil: Date.now() + 30000,
+    priceSource: Object.keys(livePrices).length > 0 ? 'coingecko' : 'fallback',
   });
 }

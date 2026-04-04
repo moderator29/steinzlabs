@@ -41,6 +41,19 @@ const EXCHANGE_COLORS: Record<string, string> = {
   pancakeswap: '#D1884F',
 };
 
+const EXCHANGE_LOGOS: Record<string, string> = {
+  binance: 'https://assets.coingecko.com/markets/images/52/small/binance.jpg',
+  coinbase: 'https://assets.coingecko.com/markets/images/23/small/Coinbase_Coin_Primary.png',
+  kraken: 'https://assets.coingecko.com/markets/images/29/small/kraken.jpg',
+  okx: 'https://assets.coingecko.com/markets/images/96/small/WeChat_Image_20220117220452.png',
+  bybit: 'https://assets.coingecko.com/markets/images/698/small/bybit_spot.png',
+  jupiter: 'https://assets.coingecko.com/coins/images/34188/small/jup.png',
+  uniswap: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
+  '1inch': 'https://assets.coingecko.com/coins/images/13469/small/1inch-token.png',
+  raydium: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg',
+  pancakeswap: 'https://assets.coingecko.com/coins/images/12632/small/pancakeswap-cake-logo_%281%29.png',
+};
+
 export default function ExchangesPage() {
   const router = useRouter();
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
@@ -205,8 +218,12 @@ export default function ExchangesPage() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm" style={{ backgroundColor: `${color}20`, color }}>
-                        {exchange.name.charAt(0)}
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{ backgroundColor: `${color}20` }}>
+                        {EXCHANGE_LOGOS[exchange.id] ? (
+                          <img src={EXCHANGE_LOGOS[exchange.id]} alt={exchange.name} className="w-6 h-6 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = `<span style="color:${color};font-weight:700;font-size:14px">${exchange.name.charAt(0)}</span>`; }} />
+                        ) : (
+                          <span className="font-bold text-sm" style={{ color }}>{exchange.name.charAt(0)}</span>
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-bold text-white">{exchange.name}</div>
