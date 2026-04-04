@@ -60,17 +60,23 @@ function LoginPageInner() {
       let email = identifier.trim();
 
       if (!email.includes('@')) {
-        const { data: profile, error: lookupError } = await supabase.from('profiles').select('email').eq('username', email.toLowerCase()).maybeSingle();
-        if (lookupError) {
-          showToast('Unable to connect. Check your internet connection.', 'error');
+        try {
+          const res = await fetch('/api/auth/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: email.toLowerCase() }),
+          });
+          const result = await res.json();
+          if (!res.ok || !result.email) {
+            showToast(result.error || 'No account found with that username.', 'error');
+            setErrors({ identifier: 'Username not found' });
+            return;
+          }
+          email = result.email;
+        } catch {
+          showToast('Unable to look up username. Try using your email instead.', 'error');
           return;
         }
-        if (!profile?.email) {
-          showToast('No account found with that username.', 'error');
-          setErrors({ identifier: 'Username not found' });
-          return;
-        }
-        email = profile.email;
       }
 
       const signInPromise = supabase.auth.signInWithPassword({ email, password });
