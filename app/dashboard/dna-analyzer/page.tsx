@@ -172,9 +172,9 @@ export default function DNAAnalyzerPage() {
 
             {walletAddress ? (
               <div className="space-y-3">
-                <div className="glass rounded-xl p-4 border border-white/10">
+                <div className="glass rounded-xl p-4 border border-white/10 overflow-hidden">
                   <div className="text-[10px] text-gray-500 mb-1">Connected Wallet</div>
-                  <div className="text-sm font-mono text-gray-300">{walletAddress}</div>
+                  <div className="text-sm font-mono text-gray-300 truncate">{walletAddress}</div>
                 </div>
                 <button
                   onClick={() => runAnalysis(walletAddress)}
@@ -203,7 +203,7 @@ export default function DNAAnalyzerPage() {
                 value={manualAddress}
                 onChange={(e) => setManualAddress(e.target.value)}
                 placeholder="Enter wallet address (0x...)"
-                className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+                className="flex-1 min-w-0 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50 truncate"
               />
               <button
                 onClick={() => manualAddress && runAnalysis(manualAddress)}

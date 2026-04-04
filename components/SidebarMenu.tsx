@@ -36,7 +36,7 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Trading',
     items: [
-      { icon: Zap, label: 'STEINZ Terminal', path: '/dashboard/trading-suite', badge: 'PRO' },
+      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite', badge: 'PRO' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
       { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges' },
     ],
@@ -153,7 +153,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
     <button
       onClick={onClick}
       onMouseEnter={onHover}
-      className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[13px] group relative ${
+      className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[12px] group relative ${
         isActive
           ? 'bg-[#0A1EFF]/[0.08] text-white font-medium'
           : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
@@ -162,7 +162,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
       {isActive && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#0A1EFF]" />
       )}
-      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
+      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
       <span className="truncate">{label}</span>
       {badge && (
         <span className={`ml-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
