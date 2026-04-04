@@ -303,7 +303,7 @@ export default function TradingSuitePage() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1f2e]">
             <div className="flex items-center gap-3">
               <button onClick={() => setShowChart(false)} className="p-1.5 hover:bg-white/5 rounded-lg"><ArrowLeft className="w-4 h-4"/></button>
-              {selectedToken.image ? <img src={selectedToken.image} alt="" className="w-6 h-6 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none' }}/> : <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold text-gray-400">{selectedToken.symbol?.charAt(0)}</div>}
+              {selectedToken.image && <img src={selectedToken.image} alt="" className="w-6 h-6 rounded-full"/>}
               <div>
                 <span className="text-sm font-bold">{selectedToken.symbol}/USDT</span>
                 <div className="flex items-center gap-2 text-[10px]">
@@ -386,7 +386,7 @@ export default function TradingSuitePage() {
                     <div key={t.id} className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-white/[0.02] ${selectedToken?.id === t.id ? 'bg-[#0A1EFF]/[0.03]' : ''}`}
                       onClick={() => setSelectedToken(selectedToken?.id === t.id ? null : t)}>
                       <span className="text-[9px] text-gray-700 w-5 text-center font-mono">{t.rank||i+1}</span>
-                      {t.image ? <img src={t.image} alt="" className="w-7 h-7 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none' }}/> : <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400">{t.symbol?.charAt(0)}</div>}
+                      {t.image && <img src={t.image} alt="" className="w-7 h-7 rounded-full"/>}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-bold">{t.symbol}</span>
@@ -413,7 +413,7 @@ export default function TradingSuitePage() {
             {selectedToken && (
               <div className="bg-[#0f1320] rounded-2xl border border-[#0A1EFF]/20 p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  {selectedToken.image ? <img src={selectedToken.image} alt="" className="w-8 h-8 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none' }}/> : <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-gray-400">{selectedToken.symbol?.charAt(0)}</div>}
+                  {selectedToken.image && <img src={selectedToken.image} alt="" className="w-8 h-8 rounded-full"/>}
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold">{selectedToken.symbol}</span>
@@ -981,7 +981,7 @@ export default function TradingSuitePage() {
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-5">
               <div className="text-xs font-bold mb-4 flex items-center gap-2"><BookOpen className="w-4 h-4 text-[#0A1EFF]"/>How Live Trading Works</div>
               {[
-                {s:'1',t:'Set Up Your Stream',d:'Connect your Trading Suite, choose which data to show on screen (chart, positions, PnL). Set stream title and tags.',c:'text-[#EF4444]',icon:Camera},
+                {s:'1',t:'Set Up Your Stream',d:'Connect your STEINZ Terminal, choose which data to show on screen (chart, positions, PnL). Set stream title and tags.',c:'text-[#EF4444]',icon:Camera},
                 {s:'2',t:'Go Live',d:'Hit the Go Live button. Your screen is broadcast in HD to all your followers. Audio supported for live commentary.',c:'text-[#F59E0B]',icon:Play},
                 {s:'3',t:'Trade Transparently',d:'Every trade you execute is shown in real-time on stream. Viewers see your entries, exits, position sizes, and PnL. Full transparency.',c:'text-[#0A1EFF]',icon:Eye},
                 {s:'4',t:'Interact with Viewers',d:'Live chat lets your audience ask questions, debate your thesis, and learn from your strategy in real-time. Build a community.',c:'text-[#7C3AED]',icon:MessageCircle},
