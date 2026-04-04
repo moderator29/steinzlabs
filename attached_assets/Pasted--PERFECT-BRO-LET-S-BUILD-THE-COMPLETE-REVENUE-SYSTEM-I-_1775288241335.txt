@@ -1,0 +1,686 @@
+🔥 PERFECT BRO! LET’S BUILD THE COMPLETE REVENUE SYSTEM!
+I got your wallets and I understand EXACTLY what you want. Let me break this down:
+
+🎯 WHAT WE’RE BUILDING:
+	1.	Transaction Fees → Go to your treasury wallets (DONE ✅)
+	2.	Stripe Subscriptions → Monthly recurring revenue
+	3.	Feature Gates → Free/Pro/Premium access control
+	4.	Landing Page Updates → Show all new features with upgrade prompts
+	5.	Deep Platform Training → Complete onboarding system
+
+💳 STRIPE INTEGRATION + SUBSCRIPTION SYSTEM
+This will be PROMPT #4 (Monetization & Access Control)
+Let me write the COMPLETE system:
+
+# STEINZ LABS - PROMPT #4: STRIPE SUBSCRIPTIONS + FEATURE GATING + REVENUE
+
+This prompt builds the complete monetization infrastructure for STEINZ Labs.
+
+## ENVIRONMENT VARIABLES
+
+Add these to your `.env.local`:
+
+```bash
+# Treasury Wallets (Transaction Fees)
+TREASURY_WALLET_EVM=0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4
+TREASURY_WALLET_SOLANA=Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy
+
+# Stripe (Subscriptions)
+STRIPE_SECRET_KEY=sk_test_your_key_here
+STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Stripe Price IDs (Create these in Stripe Dashboard)
+STRIPE_PRICE_PRO_MONTHLY=price_pro_monthly_id
+STRIPE_PRICE_PREMIUM_MONTHLY=price_premium_monthly_id
+STRIPE_PRICE_PRO_YEARLY=price_pro_yearly_id
+STRIPE_PRICE_PREMIUM_YEARLY=price_premium_yearly_id
+
+
+PART 1: SUBSCRIPTION TIERS & FEATURES
+File: lib/subscriptions/tiers.ts
+Define subscription tiers and features:
+
+export type SubscriptionTier = 'FREE' | 'PRO' | 'PREMIUM';
+
+export interface TierFeatures {
+  // Core Features
+  basicTrading: boolean;
+  shadowGuardian: boolean;
+  contextFeed: boolean;
+  
+  // Intelligence Features
+  viewProofAccess: boolean;
+  bubblemapsAccess: boolean;
+  smartMoneyPanel: boolean;
+  holderAnalysis: 'basic' | 'deep' | 'elite';
+  historicalData: boolean;
+  patternMatching: boolean;
+  
+  // Trading Features
+  advancedOrders: boolean;           // Limit, stop loss, take profit
+  dcaBots: boolean;
+  moneyRadar: boolean;                // Follow entities
+  copyTrading: boolean;
+  autoExit: boolean;
+  
+  // Limits
+  maxWallets: number;
+  maxFollowedEntities: number;
+  maxAlerts: number;
+  maxDCABots: number;
+  
+  // API & Data
+  apiAccess: boolean;
+  realtimeData: boolean;
+  historicalSnapshots: number;        // Days of history
+  
+  // Support
+  prioritySupport: boolean;
+  customAlerts: boolean;
+}
+
+export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
+  FREE: {
+    // Core
+    basicTrading: true,
+    shadowGuardian: true,
+    contextFeed: true,
+    
+    // Intelligence
+    viewProofAccess: false,            // Can't see full intelligence
+    bubblemapsAccess: false,
+    smartMoneyPanel: false,
+    holderAnalysis: 'basic',           // Only see top 5 holders
+    historicalData: false,
+    patternMatching: false,
+    
+    // Trading
+    advancedOrders: false,
+    dcaBots: false,
+    moneyRadar: false,
+    copyTrading: false,
+    autoExit: false,
+    
+    // Limits
+    maxWallets: 1,
+    maxFollowedEntities: 0,
+    maxAlerts: 3,
+    maxDCABots: 0,
+    
+    // API
+    apiAccess: false,
+    realtimeData: false,
+    historicalSnapshots: 0,
+    
+    // Support
+    prioritySupport: false,
+    customAlerts: false,
+  },
+  
+  PRO: {
+    // Core
+    basicTrading: true,
+    shadowGuardian: true,
+    contextFeed: true,
+    
+    // Intelligence
+    viewProofAccess: true,             // ✅ Full intelligence reports
+    bubblemapsAccess: true,            // ✅ Visualizations
+    smartMoneyPanel: true,             // ✅ See smart money
+    holderAnalysis: 'deep',            // Top 20 holders + enrichment
+    historicalData: true,              // ✅ 30 days history
+    patternMatching: true,             // ✅ AI predictions
+    
+    // Trading
+    advancedOrders: true,              // ✅ Limit/Stop Loss
+    dcaBots: true,                     // ✅ Automated buys
+    moneyRadar: true,                  // ✅ Follow 5 entities
+    copyTrading: true,                 // ✅ Copy trades
+    autoExit: true,                    // ✅ Auto-exit
+    
+    // Limits
+    maxWallets: 3,
+    maxFollowedEntities: 5,
+    maxAlerts: 20,
+    maxDCABots: 3,
+    
+    // API
+    apiAccess: false,
+    realtimeData: true,                // ✅ Real-time prices
+    historicalSnapshots: 30,
+    
+    // Support
+    prioritySupport: false,
+    customAlerts: false,
+  },
+  
+  PREMIUM: {
+    // Core
+    basicTrading: true,
+    shadowGuardian: true,
+    contextFeed: true,
+    
+    // Intelligence
+    viewProofAccess: true,
+    bubblemapsAccess: true,
+    smartMoneyPanel: true,
+    holderAnalysis: 'elite',           // ✅ Top 50 holders + network analysis
+    historicalData: true,              // ✅ 365 days history
+    patternMatching: true,
+    
+    // Trading
+    advancedOrders: true,
+    dcaBots: true,
+    moneyRadar: true,                  // ✅ Follow UNLIMITED entities
+    copyTrading: true,
+    autoExit: true,
+    
+    // Limits
+    maxWallets: 10,                    // ✅ Multi-wallet pro
+    maxFollowedEntities: 999,          // ✅ Unlimited
+    maxAlerts: 100,
+    maxDCABots: 10,
+    
+    // API
+    apiAccess: true,                   // ✅ API access
+    realtimeData: true,
+    historicalSnapshots: 365,
+    
+    // Support
+    prioritySupport: true,             // ✅ Priority support
+    customAlerts: true,                // ✅ Custom webhooks
+  },
+};
+
+export const TIER_PRICING = {
+  PRO: {
+    monthly: 19,
+    yearly: 190,                       // 2 months free
+  },
+  PREMIUM: {
+    monthly: 99,
+    yearly: 990,                       // 2 months free
+  },
+};
+
+// =====================================================================
+// Check if user has access to feature
+// =====================================================================
+export function hasFeatureAccess(
+  userTier: SubscriptionTier,
+  feature: keyof TierFeatures
+): boolean {
+  return TIER_FEATURES[userTier][feature] as boolean;
+}
+
+// =====================================================================
+// Get user's feature limit
+// =====================================================================
+export function getFeatureLimit(
+  userTier: SubscriptionTier,
+  feature: keyof TierFeatures
+): number | string | boolean {
+  return TIER_FEATURES[userTier][feature];
+}
+
+// =====================================================================
+// Check if upgrade required
+// =====================================================================
+export function requiresUpgrade(
+  userTier: SubscriptionTier,
+  requiredTier: SubscriptionTier
+): boolean {
+  const tierOrder = { FREE: 0, PRO: 1, PREMIUM: 2 };
+  return tierOrder[userTier] < tierOrder[requiredTier];
+}
+
+
+PART 2: STRIPE INTEGRATION
+File: lib/stripe/client.ts
+
+import Stripe from 'stripe';
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-11-20.acacia',
+});
+
+export const STRIPE_PRICE_IDS = {
+  PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY!,
+  PREMIUM_MONTHLY: process.env.STRIPE_PRICE_PREMIUM_MONTHLY!,
+  PRO_YEARLY: process.env.STRIPE_PRICE_PRO_YEARLY!,
+  PREMIUM_YEARLY: process.env.STRIPE_PRICE_PREMIUM_YEARLY!,
+};
+
+
+File: lib/stripe/subscriptions.ts
+
+import { stripe, STRIPE_PRICE_IDS } from './client';
+import { supabaseAdmin } from '../database/supabase';
+import { SubscriptionTier } from '../subscriptions/tiers';
+
+export interface CreateCheckoutParams {
+  userId: string;
+  tier: 'PRO' | 'PREMIUM';
+  interval: 'monthly' | 'yearly';
+  successUrl: string;
+  cancelUrl: string;
+}
+
+// =====================================================================
+// Create Stripe checkout session
+// =====================================================================
+export async function createCheckoutSession(
+  params: CreateCheckoutParams
+): Promise<string> {
+  const { userId, tier, interval, successUrl, cancelUrl } = params;
+
+  // Get price ID
+  const priceKey = `${tier}\_${interval.toUpperCase()}` as keyof typeof STRIPE_PRICE_IDS;
+  const priceId = STRIPE_PRICE_IDS[priceKey];
+
+  if (!priceId) {
+    throw new Error(`Invalid price configuration: ${tier} ${interval}`);
+  }
+
+  // Create checkout session
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      userId,
+      tier,
+      interval,
+    },
+    subscription_data: {
+      metadata: {
+        userId,
+        tier,
+      },
+    },
+  });
+
+  return session.url!;
+}
+
+// =====================================================================
+// Create customer portal session (manage subscription)
+// =====================================================================
+export async function createPortalSession(
+  customerId: string,
+  returnUrl: string
+): Promise<string> {
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+  });
+
+  return session.url;
+}
+
+// =====================================================================
+// Handle successful subscription
+// =====================================================================
+export async function handleSubscriptionSuccess(
+  subscription: Stripe.Subscription
+): Promise<void> {
+  const userId = subscription.metadata.userId;
+  const tier = subscription.metadata.tier as SubscriptionTier;
+
+  if (!userId || !tier) {
+    console.error('Missing metadata in subscription');
+    return;
+  }
+
+  // Update user subscription in database
+  await supabaseAdmin
+    .from('users')
+    .update({
+      subscription_tier: tier,
+      subscription_status: subscription.status,
+      stripe_customer_id: subscription.customer as string,
+      stripe_subscription_id: subscription.id,
+      subscription_current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+      subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+    })
+    .eq('id', userId);
+
+  console.log(`✅ Subscription activated: User ${userId} → ${tier}`);
+}
+
+// =====================================================================
+// Handle subscription cancellation
+// =====================================================================
+export async function handleSubscriptionCancellation(
+  subscription: Stripe.Subscription
+): Promise<void> {
+  const userId = subscription.metadata.userId;
+
+  if (!userId) return;
+
+  // Downgrade to FREE at period end
+  await supabaseAdmin
+    .from('users')
+    .update({
+      subscription_tier: 'FREE',
+      subscription_status: 'canceled',
+      subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+    })
+    .eq('id', userId);
+
+  console.log(`❌ Subscription canceled: User ${userId} → FREE at period end`);
+}
+
+// =====================================================================
+// Get user's subscription status
+// =====================================================================
+export async function getUserSubscription(userId: string): Promise<{
+  tier: SubscriptionTier;
+  status: string;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+}> {
+  const { data: user } = await supabaseAdmin
+    .from('users')
+    .select('subscription_tier, subscription_status, subscription_current_period_end, stripe_subscription_id')
+    .eq('id', userId)
+    .single();
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  let cancelAtPeriodEnd = false;
+
+  // If has active Stripe subscription, check cancel status
+  if (user.stripe_subscription_id) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+      cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    } catch (error) {
+      console.error('Failed to get Stripe subscription:', error);
+    }
+  }
+
+  return {
+    tier: user.subscription_tier || 'FREE',
+    status: user.subscription_status || 'active',
+    currentPeriodEnd: user.subscription_current_period_end 
+      ? new Date(user.subscription_current_period_end)
+      : null,
+    cancelAtPeriodEnd,
+  };
+}
+
+
+PART 3: DATABASE SCHEMA UPDATES
+File: lib/database/schema-subscriptions.sql
+
+-- =====================================================
+-- UPDATE USERS TABLE (Add subscription fields)
+-- =====================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'FREE';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_start TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON users(subscription_tier);
+CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users(stripe_customer_id);
+
+-- =====================================================
+-- SUBSCRIPTION EVENTS TABLE (Audit log)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS subscription_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL, -- SUBSCRIBED, UPGRADED, DOWNGRADED, CANCELED, RENEWED
+  from_tier TEXT,
+  to_tier TEXT,
+  stripe_event_id TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_subscription_events_user ON subscription_events(user_id);
+CREATE INDEX idx_subscription_events_type ON subscription_events(event_type);
+CREATE INDEX idx_subscription_events_created ON subscription_events(created_at);
+
+
+PART 4: API ROUTES
+File: app/api/stripe/create-checkout/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createCheckoutSession } from '@/lib/stripe/subscriptions';
+import { getUserByWallet } from '@/lib/database/supabase';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { wallet, tier, interval } = await request.json();
+
+    if (!wallet || !tier || !interval) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Get user
+    const user = await getUserByWallet(wallet);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Create checkout session
+    const checkoutUrl = await createCheckoutSession({
+      userId: user.id,
+      tier,
+      interval,
+      successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?subscription=success`,
+      cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pricing?subscription=canceled`,
+    });
+
+    return NextResponse.json({ url: checkoutUrl });
+  } catch (error: any) {
+    console.error('Checkout creation failed:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to create checkout' },
+      { status: 500 }
+    );
+  }
+}
+
+
+File: app/api/stripe/webhook/route.ts
+Handle Stripe webhooks:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { stripe } from '@/lib/stripe/client';
+import { 
+  handleSubscriptionSuccess, 
+  handleSubscriptionCancellation 
+} from '@/lib/stripe/subscriptions';
+import { headers } from 'next/headers';
+
+export async function POST(request: NextRequest) {
+  const body = await request.text();
+  const signature = headers().get('stripe-signature')!;
+
+  let event: any;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch (error: any) {
+    console.error('Webhook signature verification failed:', error.message);
+    return NextResponse.json(
+      { error: 'Invalid signature' },
+      { status: 400 }
+    );
+  }
+
+  // Handle events
+  switch (event.type) {
+    case 'checkout.session.completed':
+      console.log('✅ Checkout completed');
+      break;
+
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+      await handleSubscriptionSuccess(event.data.object);
+      break;
+
+    case 'customer.subscription.deleted':
+      await handleSubscriptionCancellation(event.data.object);
+      break;
+
+    case 'invoice.payment_succeeded':
+      console.log('💰 Payment succeeded');
+      break;
+
+    case 'invoice.payment_failed':
+      console.log('❌ Payment failed');
+      // TODO: Send email to user
+      break;
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+
+File: app/api/stripe/portal/route.ts
+Customer portal for managing subscription:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createPortalSession } from '@/lib/stripe/subscriptions';
+import { getUserByWallet } from '@/lib/database/supabase';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { wallet } = await request.json();
+
+    const user = await getUserByWallet(wallet);
+    if (!user || !user.stripe_customer_id) {
+      return NextResponse.json(
+        { error: 'No subscription found' },
+        { status: 404 }
+      );
+    }
+
+    const portalUrl = await createPortalSession(
+      user.stripe_customer_id,
+      `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`
+    );
+
+    return NextResponse.json({ url: portalUrl });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Failed to create portal session' },
+      { status: 500 }
+    );
+  }
+}
+
+
+File: app/api/user/subscription/route.ts
+Get user subscription status:
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserSubscription } from '@/lib/stripe/subscriptions';
+import { getUserByWallet } from '@/lib/database/supabase';
+
+export async function GET(request: NextRequest) {
+  try {
+    const wallet = request.nextUrl.searchParams.get('wallet');
+
+    if (!wallet) {
+      return NextResponse.json(
+        { error: 'wallet parameter required' },
+        { status: 400 }
+      );
+    }
+
+    const user = await getUserByWallet(wallet);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const subscription = await getUserSubscription(user.id);
+
+    return NextResponse.json(subscription);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Failed to get subscription' },
+      { status: 500 }
+    );
+  }
+}
+
+
+PART 5: FEATURE GATING MIDDLEWARE
+File: lib/middleware/featureGate.ts
+Protect features based on tier:
+
+import { hasFeatureAccess, requiresUpgrade, SubscriptionTier } from '../subscriptions/tiers';
+
+export class FeatureGateError extends Error {
+  requiredTier: SubscriptionTier;
+  
+  constructor(message: string, requiredTier: SubscriptionTier) {
+    super(message);
+    this.requiredTier = requiredTier;
+  }
+}
+
+// =====================================================================
+// Check feature access (throw error if no access)
+// =====================================================================
+export function requireFeature(
+  userTier: SubscriptionTier,
+  feature: string,
+  requiredTier: SubscriptionTier = 'PRO'
+): void {
+  if (requiresUpgrade(userTier, requiredTier)) {
+    throw new FeatureGateError(
+      `This feature requires ${requiredTier} subscription`,
+      requiredTier
+    );
+  }
+}
+
+// =====================================================================
+// Check usage limit
+// =====================================================================
+export function checkLimit(
+  userTier: SubscriptionTier,
+  limitType: string,
+  currentUsage: number,
+  maxLimit: number
+): boolean {
+  return currentUsage < maxLimit;
+}
+
+
+[CONTINUING IN NEXT MESSAGE - Landing Page Updates + Onboarding System]
+Should I continue with the Landing Page pricing section and Deep Training/Onboarding system? 🚀​​​​​​​​​​​​​​​​
