@@ -175,7 +175,5 @@ CREATE INDEX IF NOT EXISTS idx_treasury_chain ON treasury_balance(chain);
 -- SUBSCRIPTION FIELDS ON USERS TABLE
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'FREE';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active';
-ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_start TIMESTAMP;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMP;
