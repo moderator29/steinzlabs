@@ -383,7 +383,7 @@ export default function ContextFeed() {
             />
           </div>
           <span className="text-xs text-gray-400">
-            {isArchive ? 'Archive' : 'Live'} — {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}{isArchive ? ' (>24hrs old)' : ''}
+            {isArchive ? 'Archive' : 'Live'} | {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}{isArchive ? ' (>24hrs old)' : ''}
           </span>
         </div>
         <button

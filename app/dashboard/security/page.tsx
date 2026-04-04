@@ -145,7 +145,7 @@ export default function SecurityPage() {
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-            placeholder="Contract address only (0x...) — no wallet addresses"
+            placeholder="Contract address only (0x...), not wallet addresses"
             className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
           />
           <button
@@ -242,9 +242,9 @@ export default function SecurityPage() {
               <div className="text-sm font-bold" style={{ color: result.safetyColor }}>{result.safetyLevel}</div>
               <p className="text-[10px] text-gray-500 mt-1">
                 {result.safetyLevel === 'SAFE' && 'Token passed most security checks'}
-                {result.safetyLevel === 'CAUTION' && 'Some risks detected — proceed with care'}
-                {result.safetyLevel === 'WARNING' && 'Significant risks found — high caution advised'}
-                {result.safetyLevel === 'DANGER' && 'Critical risks detected — avoid this token'}
+                {result.safetyLevel === 'CAUTION' && 'Some risks detected, proceed with care'}
+                {result.safetyLevel === 'WARNING' && 'Significant risks found, high caution advised'}
+                {result.safetyLevel === 'DANGER' && 'Critical risks detected, avoid this token'}
               </p>
             </div>
 

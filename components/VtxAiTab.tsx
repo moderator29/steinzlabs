@@ -209,7 +209,7 @@ export default function VtxAiTab() {
       {messages.length === 0 ? (
         <>
           <p className="text-sm text-gray-300 text-center mb-6 leading-relaxed px-2">
-            Ask me anything — I search for real-time prices, trends, and on-chain data before answering. Try asking about current BTC price or market trends.
+            Ask me anything. I search for real-time prices, trends, and on-chain data before answering. Try asking about current BTC price or market trends.
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-6">

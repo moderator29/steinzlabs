@@ -28,7 +28,8 @@ Next.js 15 on-chain intelligence platform. Dune.com-inspired dark UI (neon blue 
 - **Holder Intelligence**: Deep Arkham-powered holder analysis, composition breakdown, smart money detection, scammer analysis
 - **Bubblemaps**: Custom bubble visualization built into View Proof page (no external links to bubblemaps.io)
 - **VTX Agent**: Next-gen UI with dark #060A12 background, tools panel (8 tools grid), agent settings panel (web search toggle, response style concise/detailed, auto-context toggle), animated typing indicator, timestamps on messages, persistent settings via localStorage. Plain-text responses only (no ** or -- markdown), uses all APIs (Arkham, Alchemy, CoinGecko, DexScreener). Server-side strips markdown. Settings (responseStyle, autoContext) sent to API and applied to system prompt.
-- **Wallet**: Non-custodial, max 5 wallets per user. No "Connect Wallet" anywhere — use STEINZ built-in wallet only.
+- **Wallet**: Non-custodial, max 5 wallets per user. No "Connect Wallet" anywhere, use STEINZ built-in wallet only. Auto-reconnect (lib/wallet/autoConnect.ts) persists wallet connections across sessions (48hr expiry). Biometric auth (components/wallet/BiometricAuth.tsx) for transaction confirmation via WebAuthn.
+- **Admin Panel**: /dashboard/admin. Password-protected (195656). Dashboard overview (user stats, platform metrics, recent signups), user management (search, paginated list, tier badges), email broadcast (Resend-powered, tier targeting), system health (service status, API endpoint directory). API routes: /api/admin/stats, /api/admin/users, /api/admin/broadcast.
 - **Back Button**: Top-left, no circle, plain arrow (FloatingBackButton.tsx)
 - **Security Center**: Contract addresses only — rejects wallet addresses with clear error
 - **Wallet Intelligence**: Wallet addresses only — rejects contract addresses with eth_getCode check
@@ -235,6 +236,7 @@ npm run dev   # starts on port 5000
 - Token Scanner: **CONTRACT addresses only** — shows clear rejection + redirect for wallets
 - **NO** tokenomics/token sale data, prediction markets, forex/stocks
 - **NO** cyan #00E5FF — use #0A1EFF neon-blue only
-- **Auth is fully client-side** — Supabase JS client runs in the browser, NOT via API routes (Replit server can't reach external APIs)
+- **Auth is fully client-side**: Supabase JS client runs in the browser, NOT via API routes (Replit server can't reach external APIs)
+- **NO markdown artifacts**: No em-dashes, double-dashes, asterisks, or hash marks in any user-facing text. Use commas, periods, or pipes instead.
 - `reactStrictMode: false` in next.config.js
 - `eslint.ignoreDuringBuilds: true` in next.config.js

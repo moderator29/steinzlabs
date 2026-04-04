@@ -523,13 +523,17 @@ function MarketPageContent() {
             </div>
             <div className="divide-y divide-white/[0.04]">
               {Array.from({ length: 10 }).map((_, i) => {
-                const isBuy = Math.random() > 0.5;
-                const price = (coin?.price ?? 100) * (0.998 + Math.random() * 0.004);
+                const seed = ((i + 7) * 13 + 31) % 100;
+                const isBuy = seed > 45;
+                const variance = 1 + ((seed - 50) * 0.00004);
+                const price = (coin?.price ?? 100) * variance;
+                const size = (((seed * 7 + 3) % 900) / 100 + 0.1);
+                const seconds = ((i * 7 + 3) % 55) + 2;
                 return (
                   <div key={i} className="grid grid-cols-3 gap-2 py-2 text-xs">
                     <span className={isBuy ? 'text-emerald-400' : 'text-red-400'}>{fmtPrice(price)}</span>
-                    <span className="text-center text-gray-400">{(Math.random() * 10).toFixed(3)}</span>
-                    <span className="text-right text-gray-500">{Math.floor(Math.random() * 59)}s ago</span>
+                    <span className="text-center text-gray-400">{size.toFixed(3)}</span>
+                    <span className="text-right text-gray-500">{seconds}s ago</span>
                   </div>
                 );
               })}

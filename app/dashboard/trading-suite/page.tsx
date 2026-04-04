@@ -543,7 +543,7 @@ export default function TradingSuitePage() {
           <div className="space-y-4">
             <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] p-5">
               <div className="text-xs font-bold mb-2 flex items-center gap-2"><ScanLine className="w-4 h-4 text-[#0A1EFF]"/>Token Scanner</div>
-              <p className="text-[10px] text-gray-500 mb-4">Paste any contract address to fetch real token data — price, liquidity, holders, security audit</p>
+              <p className="text-[10px] text-gray-500 mb-4">Paste any contract address to fetch real token data: price, liquidity, holders, security audit</p>
               <div className="flex gap-2 mb-3">
                 <input type="text" value={pasteCA} onChange={e=>setPasteCA(e.target.value)} placeholder="Paste contract address (0x... or So1...)" className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-4 py-2.5 text-[11px] font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40"/>
                 <button onClick={() => { if (pasteCA) lookupCA(pasteCA, selectedChain); }} disabled={caLoading}
@@ -983,7 +983,7 @@ export default function TradingSuitePage() {
               {[
                 {s:'1',t:'Set Up Your Stream',d:'Connect your STEINZ Terminal, choose which data to show on screen (chart, positions, PnL). Set stream title and tags.',c:'text-[#EF4444]',icon:Camera},
                 {s:'2',t:'Go Live',d:'Hit the Go Live button. Your screen is broadcast in HD to all your followers. Audio supported for live commentary.',c:'text-[#F59E0B]',icon:Play},
-                {s:'3',t:'Trade Transparently',d:'Every trade you execute is shown in real-time on stream. Viewers see your entries, exits, position sizes, and PnL — full transparency.',c:'text-[#0A1EFF]',icon:Eye},
+                {s:'3',t:'Trade Transparently',d:'Every trade you execute is shown in real-time on stream. Viewers see your entries, exits, position sizes, and PnL. Full transparency.',c:'text-[#0A1EFF]',icon:Eye},
                 {s:'4',t:'Interact with Viewers',d:'Live chat lets your audience ask questions, debate your thesis, and learn from your strategy in real-time. Build a community.',c:'text-[#7C3AED]',icon:MessageCircle},
                 {s:'5',t:'Viewers Copy Your Trades',d:'Followers can enable 1-click copy trading with customizable risk controls (max per trade, stop loss, position sizing). They mirror your moves automatically.',c:'text-[#10B981]',icon:Copy},
                 {s:'6',t:'Earn Revenue',d:'Monetize through subscriber tiers, viewer tips, and copy-trade performance fees. Top streamers earn passive income from their audience.',c:'text-[#F59E0B]',icon:DollarSign},
@@ -1073,7 +1073,7 @@ export default function TradingSuitePage() {
       <div className="px-4 mt-4 mb-2">
         <div className="bg-[#0f1320] rounded-xl p-3 border border-[#F59E0B]/10 flex items-center gap-2.5">
           <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0"/>
-          <span className="text-[8px] text-gray-500"><span className="text-[#F59E0B] font-bold">PREVIEW</span> — Real data displayed. Trading features require wallet connection.</span>
+          <span className="text-[8px] text-gray-500"><span className="text-[#F59E0B] font-bold">PREVIEW</span> Real data displayed. Trading features require wallet connection.</span>
         </div>
       </div>
     </div>

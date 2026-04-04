@@ -20,30 +20,32 @@ interface TokenInfo {
   color: string;
   decimals: number;
   popular?: boolean;
+  logo?: string;
+  coingeckoId?: string;
 }
 
 const TOKEN_LIST: TokenInfo[] = [
-  { symbol: 'ETH', name: 'Ethereum', color: '#627EEA', decimals: 18, popular: true },
-  { symbol: 'SOL', name: 'Solana', color: '#9945FF', decimals: 9, popular: true },
-  { symbol: 'USDC', name: 'USD Coin', color: '#2775CA', decimals: 6, popular: true },
-  { symbol: 'USDT', name: 'Tether', color: '#26A17B', decimals: 6, popular: true },
-  { symbol: 'BNB', name: 'BNB', color: '#F0B90B', decimals: 18, popular: true },
-  { symbol: 'MATIC', name: 'Polygon', color: '#8247E5', decimals: 18 },
-  { symbol: 'AVAX', name: 'Avalanche', color: '#E84142', decimals: 18 },
-  { symbol: 'WBTC', name: 'Wrapped Bitcoin', color: '#F7931A', decimals: 8, popular: true },
-  { symbol: 'LINK', name: 'Chainlink', color: '#2A5ADA', decimals: 18 },
-  { symbol: 'UNI', name: 'Uniswap', color: '#FF007A', decimals: 18 },
-  { symbol: 'ARB', name: 'Arbitrum', color: '#28A0F0', decimals: 18 },
-  { symbol: 'OP', name: 'Optimism', color: '#FF0420', decimals: 18 },
-  { symbol: 'AAVE', name: 'Aave', color: '#B6509E', decimals: 18 },
-  { symbol: 'DAI', name: 'Dai', color: '#F5AC37', decimals: 18 },
-  { symbol: 'CRV', name: 'Curve', color: '#F4E532', decimals: 18 },
-  { symbol: 'MKR', name: 'Maker', color: '#1AAB9B', decimals: 18 },
-  { symbol: 'PEPE', name: 'Pepe', color: '#479C47', decimals: 18 },
-  { symbol: 'WIF', name: 'dogwifhat', color: '#B7844F', decimals: 6 },
-  { symbol: 'BONK', name: 'Bonk', color: '#F2A900', decimals: 5 },
-  { symbol: 'JUP', name: 'Jupiter', color: '#52D5B7', decimals: 6 },
-  { symbol: 'RAY', name: 'Raydium', color: '#4F67E4', decimals: 6 },
+  { symbol: 'ETH', name: 'Ethereum', color: '#627EEA', decimals: 18, popular: true, coingeckoId: 'ethereum', logo: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
+  { symbol: 'SOL', name: 'Solana', color: '#9945FF', decimals: 9, popular: true, coingeckoId: 'solana', logo: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
+  { symbol: 'USDC', name: 'USD Coin', color: '#2775CA', decimals: 6, popular: true, coingeckoId: 'usd-coin', logo: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png' },
+  { symbol: 'USDT', name: 'Tether', color: '#26A17B', decimals: 6, popular: true, coingeckoId: 'tether', logo: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
+  { symbol: 'BNB', name: 'BNB', color: '#F0B90B', decimals: 18, popular: true, coingeckoId: 'binancecoin', logo: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+  { symbol: 'MATIC', name: 'Polygon', color: '#8247E5', decimals: 18, coingeckoId: 'matic-network', logo: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png' },
+  { symbol: 'AVAX', name: 'Avalanche', color: '#E84142', decimals: 18, coingeckoId: 'avalanche-2', logo: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png' },
+  { symbol: 'WBTC', name: 'Wrapped Bitcoin', color: '#F7931A', decimals: 8, popular: true, coingeckoId: 'wrapped-bitcoin', logo: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
+  { symbol: 'LINK', name: 'Chainlink', color: '#2A5ADA', decimals: 18, coingeckoId: 'chainlink', logo: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' },
+  { symbol: 'UNI', name: 'Uniswap', color: '#FF007A', decimals: 18, coingeckoId: 'uniswap', logo: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png' },
+  { symbol: 'ARB', name: 'Arbitrum', color: '#28A0F0', decimals: 18, coingeckoId: 'arbitrum', logo: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg' },
+  { symbol: 'OP', name: 'Optimism', color: '#FF0420', decimals: 18, coingeckoId: 'optimism', logo: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png' },
+  { symbol: 'AAVE', name: 'Aave', color: '#B6509E', decimals: 18, coingeckoId: 'aave', logo: 'https://assets.coingecko.com/coins/images/12645/small/aave-token-round.png' },
+  { symbol: 'DAI', name: 'Dai', color: '#F5AC37', decimals: 18, coingeckoId: 'dai', logo: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png' },
+  { symbol: 'CRV', name: 'Curve', color: '#F4E532', decimals: 18, coingeckoId: 'curve-dao-token', logo: 'https://assets.coingecko.com/coins/images/12124/small/Curve.png' },
+  { symbol: 'MKR', name: 'Maker', color: '#1AAB9B', decimals: 18, coingeckoId: 'maker', logo: 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png' },
+  { symbol: 'PEPE', name: 'Pepe', color: '#479C47', decimals: 18, coingeckoId: 'pepe', logo: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg' },
+  { symbol: 'WIF', name: 'dogwifhat', color: '#B7844F', decimals: 6, coingeckoId: 'dogwifcoin', logo: 'https://assets.coingecko.com/coins/images/33566/small/dogwifhat.jpg' },
+  { symbol: 'BONK', name: 'Bonk', color: '#F2A900', decimals: 5, coingeckoId: 'bonk', logo: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg' },
+  { symbol: 'JUP', name: 'Jupiter', color: '#52D5B7', decimals: 6, coingeckoId: 'jupiter-exchange-solana', logo: 'https://assets.coingecko.com/coins/images/34188/small/jup.png' },
+  { symbol: 'RAY', name: 'Raydium', color: '#4F67E4', decimals: 6, coingeckoId: 'raydium', logo: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg' },
 ];
 
 function getTokenInfo(symbol: string): TokenInfo {
@@ -52,6 +54,20 @@ function getTokenInfo(symbol: string): TokenInfo {
 
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   const token = getTokenInfo(symbol);
+  const [imgError, setImgError] = useState(false);
+
+  if (token.logo && !imgError) {
+    return (
+      <img
+        src={token.logo}
+        alt={symbol}
+        className="rounded-full"
+        style={{ width: size, height: size, minWidth: size }}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
   return (
     <div
       className="rounded-full flex items-center justify-center font-bold text-white shadow-lg"

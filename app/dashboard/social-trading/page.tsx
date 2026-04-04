@@ -18,7 +18,7 @@ const PLANNED_FEATURES = [
   {
     icon: UserCheck,
     title: 'Trader Profiles',
-    description: 'Build your on-chain trading reputation. Verified performance stats, win rates, PnL history, and strategy breakdowns — all backed by real blockchain data.',
+    description: 'Build your on-chain trading reputation. Verified performance stats, win rates, PnL history, and strategy breakdowns, all backed by real blockchain data.',
     color: '#10B981',
   },
   {
@@ -30,13 +30,13 @@ const PLANNED_FEATURES = [
   {
     icon: Shield,
     title: 'Risk Management',
-    description: 'Built-in risk controls for copy trading — set max allocation per trade, daily loss limits, and auto-pause when drawdown thresholds are hit.',
+    description: 'Built-in risk controls for copy trading. Set max allocation per trade, daily loss limits, and auto-pause when drawdown thresholds are hit.',
     color: '#EF4444',
   },
   {
     icon: BarChart3,
     title: 'Performance Analytics',
-    description: 'Deep analytics on every trader — Sharpe ratio, max drawdown, average hold time, best/worst trades, and strategy consistency scores.',
+    description: 'Deep analytics on every trader. Sharpe ratio, max drawdown, average hold time, best/worst trades, and strategy consistency scores.',
     color: '#06B6D4',
   },
 ];

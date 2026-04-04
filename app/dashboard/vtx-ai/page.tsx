@@ -13,8 +13,11 @@ interface TokenCardData {
   volume: string;
   marketCap: string;
   chain: string;
-  trustScore?: number;
-  riskLevel?: string;
+  logo?: string;
+  rank?: number;
+  liquidity?: string;
+  fdv?: string;
+  holders?: string;
 }
 
 interface Message {
@@ -22,6 +25,7 @@ interface Message {
   content: string;
   timestamp?: number;
   tokenCards?: TokenCardData[];
+  suggestions?: string[];
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
@@ -74,38 +78,92 @@ function parseTokenCards(content: string): TokenCardData[] {
   for (const line of lines) {
     const match = line.match(/^([A-Z]{2,10}):\s*\$([0-9,.]+)\s*\(24h:\s*([+-]?[0-9.]+)%.*?MCap:\s*\$([0-9.]+[BMK]?).*?Vol:\s*\$([0-9.]+[BMK]?)/);
     if (match) {
+      const sym = match[1];
       cards.push({
-        symbol: match[1],
-        name: match[1],
+        symbol: sym,
+        name: sym,
         price: `$${match[2]}`,
         change24h: parseFloat(match[3]),
         marketCap: `$${match[4]}`,
         volume: `$${match[5]}`,
         chain: 'multi',
+        logo: `https://assets.coingecko.com/coins/images/1/small/bitcoin.png`,
       });
     }
   }
-  return cards.slice(0, 6);
+  return cards.slice(0, 8);
+}
+
+function generateSuggestions(content: string): string[] {
+  const lower = content.toLowerCase();
+  if (lower.includes('bitcoin') || lower.includes('btc')) {
+    return ['Show me ETH analysis', 'What about SOL?', 'Compare BTC vs ETH'];
+  }
+  if (lower.includes('ethereum') || lower.includes('eth')) {
+    return ['Show me SOL analysis', 'Top DeFi tokens', 'ETH gas tracker'];
+  }
+  if (lower.includes('solana') || lower.includes('sol')) {
+    return ['Trending Solana tokens', 'SOL whale activity', 'Compare SOL vs ETH'];
+  }
+  if (lower.includes('market') || lower.includes('overview')) {
+    return ['Trending tokens now', 'Fear & Greed breakdown', 'Top gainers today'];
+  }
+  if (lower.includes('scam') || lower.includes('risk') || lower.includes('danger')) {
+    return ['How to spot rug pulls', 'Check another address', 'Security best practices'];
+  }
+  if (lower.includes('whale') || lower.includes('smart money')) {
+    return ['Biggest moves today', 'Track specific whale', 'Smart money flows'];
+  }
+  return ['Market overview', 'Trending tokens', 'Check a wallet'];
 }
 
 function TokenCard({ token }: { token: TokenCardData }) {
   const isPositive = token.change24h >= 0;
+  const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
+
   return (
-    <div className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/20 transition-all">
-      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 flex items-center justify-center flex-shrink-0 border border-[#0A1EFF]/10">
-        <span className="text-[10px] font-bold text-[#0A1EFF]">{token.symbol.slice(0, 3)}</span>
+    <div className="p-3 bg-[#0D1117] border border-white/[0.08] rounded-xl hover:border-[#0A1EFF]/30 transition-all">
+      <div className="flex items-center gap-3 mb-3">
+        <img src={logoUrl} alt={token.symbol} className="w-8 h-8 rounded-full bg-[#1a1f2e]" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true`; }} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white">{token.symbol}</span>
+            {token.name !== token.symbol && <span className="text-[10px] text-gray-500 truncate">{token.name}</span>}
+            {token.rank && <span className="text-[9px] text-gray-600">#{token.rank}</span>}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs font-bold text-white font-mono">{token.price}</div>
+          <div className={`text-[10px] font-semibold ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? '+' : ''}{token.change24h.toFixed(2)}%
+          </div>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-white truncate">{token.symbol}</span>
-          <span className="text-xs font-mono text-white">{token.price}</span>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
+          <div className="text-[8px] text-gray-600 uppercase">MCap</div>
+          <div className="text-[10px] font-semibold text-white">{token.marketCap}</div>
         </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <span className="text-[10px] text-gray-500">MCap {token.marketCap}</span>
-          <span className={`text-[10px] font-semibold ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '+' : ''}{token.change24h.toFixed(1)}%
-          </span>
+        <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
+          <div className="text-[8px] text-gray-600 uppercase">Volume</div>
+          <div className="text-[10px] font-semibold text-white">{token.volume}</div>
         </div>
+        {token.liquidity ? (
+          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
+            <div className="text-[8px] text-gray-600 uppercase">Liquidity</div>
+            <div className="text-[10px] font-semibold text-white">{token.liquidity}</div>
+          </div>
+        ) : token.fdv ? (
+          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
+            <div className="text-[8px] text-gray-600 uppercase">FDV</div>
+            <div className="text-[10px] font-semibold text-white">{token.fdv}</div>
+          </div>
+        ) : (
+          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
+            <div className="text-[8px] text-gray-600 uppercase">Chain</div>
+            <div className="text-[10px] font-semibold text-white capitalize">{token.chain}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -122,6 +180,13 @@ function loadSettings(): AgentSettings {
 function saveSettings(s: AgentSettings) {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {}
 }
+
+const QUICK_ACTIONS = [
+  { label: 'Trending Tokens', query: 'Show me the top trending tokens right now with prices, volume, and 24h changes.' },
+  { label: 'Token Deep Dive', query: 'Give me a deep analysis of SOL including price action, volume trends, holders, and market sentiment.' },
+  { label: 'Network Status', query: 'What is the current network status across Ethereum, Solana, and other major chains? Include gas prices and activity.' },
+  { label: 'Market Overview', query: 'Give me a comprehensive market overview with BTC, ETH, SOL prices, fear & greed, and top movers.' },
+];
 
 const TOOLS = [
   { icon: TrendingUp, label: 'Market Analysis', desc: 'Real-time prices, trends, fear & greed', query: 'Give me a comprehensive market overview for today including BTC, ETH, SOL trends, DeFi activity, and any notable on-chain signals.' },
@@ -206,8 +271,15 @@ export default function VtxAiPage() {
       } else if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
       } else {
-        const tokenCards = parseTokenCards(data.reply);
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, timestamp: Date.now(), tokenCards: tokenCards.length > 0 ? tokenCards : undefined }]);
+        const tokenCards = data.tokenCards || parseTokenCards(data.reply);
+        const suggestions = generateSuggestions(data.reply);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.reply,
+          timestamp: Date.now(),
+          tokenCards: tokenCards.length > 0 ? tokenCards : undefined,
+          suggestions,
+        }]);
         if (data.dailyUsage) { setDailyUsage(data.dailyUsage); saveDailyUsage(data.dailyUsage); if (data.dailyUsage.remaining <= 0) setRateLimited(true); }
       }
     } catch {
@@ -224,6 +296,10 @@ export default function VtxAiPage() {
     if (!ts) return '';
     const d = new Date(ts);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const cleanContent = (text: string) => {
+    return text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]\s/gm, '').replace(/^[•]\s/gm, '').replace(/\s*---\s*/g, '\n\n').replace(/\s*--\s*/g, ' ');
   };
 
   return (
@@ -247,7 +323,7 @@ export default function VtxAiPage() {
                 <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}
             </div>
-            <span className="text-[10px] text-gray-600">On-chain intelligence + live data</span>
+            <span className="text-[10px] text-gray-600">Arkham + CoinGecko + DEXScreener + Claude</span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -317,8 +393,16 @@ export default function VtxAiPage() {
               <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10">
                 <Bot className="w-8 h-8 text-[#0A1EFF]" />
               </div>
-              <h2 className="text-lg font-bold mb-1">What can I help you with?</h2>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">I analyze markets, scan contracts, track whales, and provide real-time on-chain intelligence.</p>
+              <h2 className="text-lg font-bold mb-1">Ask me about crypto</h2>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis powered by Arkham + Claude.</p>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
+              {QUICK_ACTIONS.map((action) => (
+                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
+                  {action.label}
+                </button>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -371,12 +455,23 @@ export default function VtxAiPage() {
                     {msg.timestamp && <span className="text-[9px] text-gray-700 ml-auto">{formatTime(msg.timestamp)}</span>}
                   </div>
                 )}
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap">{cleanContent(msg.content)}</div>
                 {msg.tokenCards && msg.tokenCards.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
+                  <div className="mt-3 space-y-2">
                     {msg.tokenCards.map((token, ti) => (
                       <TokenCard key={ti} token={token} />
                     ))}
+                  </div>
+                )}
+                {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
+                  <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.suggestions.map((s, si) => (
+                        <button key={si} onClick={() => handleSend(s)} className="px-2.5 py-1.5 bg-[#0A1EFF]/[0.06] border border-[#0A1EFF]/15 rounded-lg text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/10 transition-all">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {msg.role === 'user' && msg.timestamp && (
