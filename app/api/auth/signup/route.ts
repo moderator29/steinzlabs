@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+
+const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodmV3cmxkY2R4dXBzbmFrZGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDA0NjMsImV4cCI6MjA5MDc3NjQ2M30.xHGPMphDjMsPN566gRcGle5Mp8mEBxGiI1HXDX9M7ZU';
 
 export async function POST(request: Request) {
   try {
@@ -43,39 +47,55 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
     }
 
-    const admin = getSupabaseAdmin();
+    let admin;
+    try { admin = getSupabaseAdmin(); } catch {}
 
-    const { data: existingUsers } = await admin.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some(
-      (u: any) => u.email?.toLowerCase() === cleanEmail
-    );
-    if (emailExists) {
-      return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+    if (admin) {
+      const { data: existingUsers } = await admin.auth.admin.listUsers();
+      const emailExists = existingUsers?.users?.some(
+        (u: any) => u.email?.toLowerCase() === cleanEmail
+      );
+      if (emailExists) {
+        return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+      }
     }
 
-    const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: cleanEmail,
       password: password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        username: cleanUsername,
+      options: {
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          username: cleanUsername,
+        },
+        emailRedirectTo: 'https://steinzlabs.com/login',
       },
     });
 
-    if (createError) {
-      console.error('[Signup] createUser error:', createError.message);
-      if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
+    if (signUpError) {
+      console.error('[Signup] error:', signUpError.message);
+      if (signUpError.message.toLowerCase().includes('already') || signUpError.message.toLowerCase().includes('exists')) {
         return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
       }
-      return NextResponse.json({ error: createError.message }, { status: 500 });
+      if (signUpError.message.toLowerCase().includes('rate') || signUpError.message.toLowerCase().includes('limit')) {
+        return NextResponse.json({ error: 'Too many signup attempts. Please wait a moment.' }, { status: 429 });
+      }
+      return NextResponse.json({ error: signUpError.message }, { status: 500 });
     }
 
-    if (newUser?.user) {
+    if (!signUpData?.user || signUpData.user.identities?.length === 0) {
+      return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+    }
+
+    if (admin && signUpData.user) {
       try {
         await admin.from('profiles').upsert({
-          id: newUser.user.id,
+          id: signUpData.user.id,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           username: cleanUsername,
@@ -85,7 +105,7 @@ export async function POST(request: Request) {
       } catch {}
     }
 
-    return NextResponse.json({ success: true, email: cleanEmail });
+    return NextResponse.json({ success: true, email: cleanEmail, needsConfirmation: true });
 
   } catch (err: any) {
     console.error('[Signup] error:', err.message);
