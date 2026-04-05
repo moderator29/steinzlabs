@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { validateResetToken } from '@/app/api/auth/forgot-password/route';
+import { validateResetToken } from '@/lib/authTokens';
 
 export async function POST(request: Request) {
   try {

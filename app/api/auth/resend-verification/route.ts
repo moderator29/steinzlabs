@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
-import { generateToken } from '@/app/api/auth/verify-email/route';
+import { generateVerifyToken } from '@/lib/authTokens';
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is already verified. You can sign in.' }, { status: 400 });
     }
 
-    const token = generateToken(user.id, cleanEmail);
+    const token = generateVerifyToken(user.id, cleanEmail);
     const confirmUrl = `https://steinzlabs.com/api/auth/verify-email?token=${token}&uid=${user.id}`;
 
     const firstName = user.user_metadata?.first_name || 'there';
