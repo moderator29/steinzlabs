@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       console.log(`[VerifyEmail] Email confirmed for ${user.email}`);
     }
 
-    return NextResponse.redirect('https://steinzlabs.com/login?confirmed=pending');
+    return NextResponse.redirect('https://steinzlabs.com/login?verified=true');
   } catch (err: any) {
     console.error('[VerifyEmail] error:', err.message);
     return NextResponse.redirect('https://steinzlabs.com/login?error=verification_failed');
