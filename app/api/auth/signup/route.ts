@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
-import { generateToken } from '@/app/api/auth/verify-email/route';
+import { generateVerifyToken } from '@/lib/authTokens';
 
 export async function POST(request: Request) {
   try {
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       console.error('[Signup] Profile upsert error:', profileErr?.message);
     }
 
-    const token = generateToken(newUser.user.id, cleanEmail);
+    const token = generateVerifyToken(newUser.user.id, cleanEmail);
     const confirmUrl = `https://steinzlabs.com/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
 
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());

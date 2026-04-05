@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { generateVerifyToken } from '@/lib/authTokens';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect('https://steinzlabs.com/login?error=user_not_found');
     }
 
-    const expectedToken = generateToken(userId, user.email || '');
+    const expectedToken = generateVerifyToken(userId, user.email || '');
     if (token !== expectedToken) {
       console.error('[VerifyEmail] Token mismatch for user:', userId);
       return NextResponse.redirect('https://steinzlabs.com/login?error=invalid_token');
@@ -35,18 +36,4 @@ export async function GET(request: Request) {
     console.error('[VerifyEmail] error:', err.message);
     return NextResponse.redirect('https://steinzlabs.com/login?error=verification_failed');
   }
-}
-
-export function generateToken(userId: string, email: string): string {
-  const secret = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || 'steinz-verify-secret';
-  const data = `${userId}:${email}:${secret}`;
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  const hex = Math.abs(hash).toString(16).padStart(8, '0');
-  const b64 = Buffer.from(`${userId.slice(0, 8)}${hex}${email.slice(0, 4)}`).toString('base64url');
-  return b64;
 }
