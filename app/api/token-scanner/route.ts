@@ -122,7 +122,7 @@ function buildChecks(tokenData: any) {
   ];
 }
 
-function buildResponse(contractAddress: string, chainId: string, tokenData: any) {
+function buildResponse(contractAddress: string, chainId: string, tokenData: any): any {
   const { score, level, color } = calculateTrustScore(tokenData);
   const checks = buildChecks(tokenData);
 
@@ -334,6 +334,27 @@ export async function POST(request: Request) {
 
     const tokenData = data.result[contractAddress];
     const response = buildResponse(contractAddress, chainId, tokenData);
+
+    try {
+      const dexData = await fetchDexScreenerData(contractAddress);
+      const topPair = dexData.pairs?.[0];
+      if (topPair) {
+        response.dexData = {
+          price: parseFloat(topPair.priceUsd || '0'),
+          priceChange24h: topPair.priceChange?.h24 || 0,
+          volume24h: topPair.volume?.h24 || 0,
+          liquidity: topPair.liquidity?.usd || 0,
+          fdv: topPair.fdv || 0,
+          marketCap: topPair.marketCap || topPair.fdv || 0,
+          dexId: topPair.dexId,
+          pairAddress: topPair.pairAddress,
+          url: topPair.url,
+          image: topPair.info?.imageUrl || null,
+          socials: topPair.info?.socials || [],
+          websites: topPair.info?.websites || [],
+        };
+      }
+    } catch {}
 
     return NextResponse.json(response, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },

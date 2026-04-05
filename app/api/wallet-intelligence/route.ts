@@ -194,57 +194,114 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
   };
 }
 
-async function getSolData(address: string) {
-  const balanceRes = await fetch(SOLANA_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getBalance',
-      params: [address],
-    }),
-  });
-  const balanceData = await balanceRes.json();
-  const solBalance = (balanceData.result?.value || 0) / 1e9;
-
-  let txCount = 0;
+async function getSolTokenPrice(mint: string): Promise<{ price: number; symbol: string; name: string } | null> {
   try {
-    const sigRes = await fetch(SOLANA_RPC, {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pair = data.pairs?.[0];
+    if (!pair) return null;
+    return {
+      price: parseFloat(pair.priceUsd || '0'),
+      symbol: pair.baseToken?.symbol || 'UNKNOWN',
+      name: pair.baseToken?.name || 'Unknown Token',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function getSolData(address: string) {
+  const [balanceRes, tokenRes, sigRes, priceRes] = await Promise.all([
+    fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [address] }),
+    }),
+    fetch(SOLANA_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'getSignaturesForAddress',
-        params: [address, { limit: 1000 }],
+        jsonrpc: '2.0', id: 2, method: 'getTokenAccountsByOwner',
+        params: [address, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }],
       }),
-    });
+    }),
+    fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'getSignaturesForAddress', params: [address, { limit: 1000 }] }),
+    }),
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
+      headers: { 'Accept': 'application/json' },
+    }).catch(() => null),
+  ]);
+
+  const balanceData = await balanceRes.json();
+  const solBalance = (balanceData.result?.value || 0) / 1e9;
+
+  const tokenData = await tokenRes.json();
+  const tokenAccounts = tokenData.result?.value || [];
+
+  let txCount = 0;
+  try {
     const sigData = await sigRes.json();
     txCount = sigData.result?.length || 0;
-  } catch {
-    txCount = 0;
-  }
+  } catch { txCount = 0; }
 
-  let solPrice = 0;
+  let solPrice = 170;
   try {
-    const priceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
-      headers: { 'Accept': 'application/json' },
-    });
-    const priceData = await priceRes.json();
-    solPrice = priceData.solana?.usd || 0;
-  } catch {
-    solPrice = 170;
-  }
+    if (priceRes) {
+      const priceData = await priceRes.json();
+      solPrice = priceData.solana?.usd || 170;
+    }
+  } catch { solPrice = 170; }
 
   const solValueUsd = solBalance * solPrice;
+
+  const splTokens: Array<{ mint: string; balance: number; decimals: number }> = [];
+  for (const account of tokenAccounts) {
+    const info = account.account?.data?.parsed?.info;
+    if (!info) continue;
+    const uiAmount = info.tokenAmount?.uiAmount || 0;
+    if (uiAmount <= 0) continue;
+    splTokens.push({
+      mint: info.mint,
+      balance: uiAmount,
+      decimals: info.tokenAmount?.decimals || 0,
+    });
+  }
+
+  const tokenPricePromises = splTokens.slice(0, 20).map(async (token) => {
+    const priceInfo = await getSolTokenPrice(token.mint);
+    return { ...token, priceInfo };
+  });
+  const tokensWithPrices = await Promise.all(tokenPricePromises);
+
+  let totalTokenValueUsd = 0;
+  const tokenHoldings = tokensWithPrices
+    .map((t) => {
+      const valueUsd = t.priceInfo ? t.balance * t.priceInfo.price : 0;
+      totalTokenValueUsd += valueUsd;
+      return {
+        symbol: t.priceInfo?.symbol || t.mint.slice(0, 6),
+        name: t.priceInfo?.name || `SPL Token`,
+        balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
+        valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
+        contractAddress: t.mint,
+      };
+    })
+    .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+
+  const totalBalanceUsd = solValueUsd + totalTokenValueUsd;
 
   return {
     chain: 'Solana',
     address,
     solBalance: solBalance.toFixed(4),
     solValueUsd: solValueUsd.toFixed(2),
-    totalBalanceUsd: solValueUsd.toFixed(2),
+    totalBalanceUsd: totalBalanceUsd.toFixed(2),
     txCount,
     holdings: [
       {
@@ -254,8 +311,9 @@ async function getSolData(address: string) {
         valueUsd: solValueUsd.toFixed(2),
         contractAddress: null,
       },
+      ...tokenHoldings,
     ],
-    tokenCount: 0,
+    tokenCount: tokenHoldings.length,
     explorerUrl: 'https://solscan.io',
   };
 }
