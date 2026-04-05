@@ -65,6 +65,21 @@ interface ContractResult {
   lpTotalSupply: string;
   checks: { label: string; status: string }[];
   timestamp: string;
+  dexData?: {
+    price: number;
+    priceChange24h: number;
+    volume24h: number;
+    liquidity: number;
+    fdv: number;
+    marketCap: number;
+    dexId?: string;
+    pairAddress?: string;
+    url?: string;
+    image?: string;
+    socials?: any[];
+    websites?: any[];
+  };
+  solanaNote?: string;
 }
 
 const CHAIN_OPTIONS = [
@@ -456,7 +471,8 @@ export default function WalletIntelligencePage() {
                   </div>
                   <div className="space-y-1.5">
                     {walletData.holdings.slice(0, 5).map((h, i) => {
-                      const pct = Math.max(5, Math.round(100 / (i + 1.5)));
+                      const holdingVal = h.valueUsd ? parseFloat(h.valueUsd) : 0;
+                      const pct = totalUsd > 0 && holdingVal > 0 ? Math.max(3, Math.round((holdingVal / totalUsd) * 100)) : Math.max(3, Math.round(100 / walletData!.holdings.length));
                       return (
                         <div key={`portfolio-${i}`} className="flex items-center gap-2">
                           <span className="text-[9px] text-gray-500 w-4 text-right">{i + 1}</span>
@@ -648,11 +664,11 @@ export default function WalletIntelligencePage() {
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Buy Tax</div>
-                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.buyTax}%</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.buyTax}</div>
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Sell Tax</div>
-                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.sellTax}%</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.sellTax}</div>
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Honeypot</div>
@@ -670,14 +686,85 @@ export default function WalletIntelligencePage() {
                   )}
                 </div>
 
+                {contractResult.dexData && (
+                  <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-[#0A1EFF]" />
+                      <h3 className="font-bold text-sm">Market Data</h3>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">Price</div>
+                        <div className="text-sm font-bold font-mono text-white">
+                          ${contractResult.dexData.price < 0.01
+                            ? contractResult.dexData.price.toFixed(8)
+                            : contractResult.dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">24h Change</div>
+                        <div className="text-sm font-bold" style={{ color: contractResult.dexData.priceChange24h >= 0 ? '#10B981' : '#EF4444' }}>
+                          {contractResult.dexData.priceChange24h >= 0 ? '+' : ''}{contractResult.dexData.priceChange24h.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">Market Cap</div>
+                        <div className="text-sm font-bold font-mono text-white">
+                          ${contractResult.dexData.marketCap > 1000000
+                            ? (contractResult.dexData.marketCap / 1000000).toFixed(2) + 'M'
+                            : contractResult.dexData.marketCap > 1000
+                            ? (contractResult.dexData.marketCap / 1000).toFixed(1) + 'K'
+                            : contractResult.dexData.marketCap.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">24h Volume</div>
+                        <div className="text-sm font-bold font-mono text-white">
+                          ${contractResult.dexData.volume24h > 1000000
+                            ? (contractResult.dexData.volume24h / 1000000).toFixed(2) + 'M'
+                            : contractResult.dexData.volume24h > 1000
+                            ? (contractResult.dexData.volume24h / 1000).toFixed(1) + 'K'
+                            : contractResult.dexData.volume24h.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">Liquidity</div>
+                        <div className="text-sm font-bold font-mono text-white">
+                          ${contractResult.dexData.liquidity > 1000000
+                            ? (contractResult.dexData.liquidity / 1000000).toFixed(2) + 'M'
+                            : contractResult.dexData.liquidity > 1000
+                            ? (contractResult.dexData.liquidity / 1000).toFixed(1) + 'K'
+                            : contractResult.dexData.liquidity.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                        <div className="text-[9px] text-gray-500">FDV</div>
+                        <div className="text-sm font-bold font-mono text-white">
+                          ${contractResult.dexData.fdv > 1000000
+                            ? (contractResult.dexData.fdv / 1000000).toFixed(2) + 'M'
+                            : contractResult.dexData.fdv > 1000
+                            ? (contractResult.dexData.fdv / 1000).toFixed(1) + 'K'
+                            : contractResult.dexData.fdv.toFixed(0)}
+                        </div>
+                      </div>
+                    </div>
+                    {contractResult.dexData.url && (
+                      <a href={contractResult.dexData.url} target="_blank" rel="noopener noreferrer"
+                        className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-[#0A1EFF] hover:underline">
+                        View on DexScreener <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
+
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                   <h3 className="font-bold text-sm mb-3">Security Checks</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {contractResult.checks.map((check, i) => (
                       <div key={i} className="flex items-center gap-2 bg-[#0f1320] rounded-lg p-2.5">
-                        {check.status === 'safe' ? (
+                        {check.status === 'pass' || check.status === 'safe' ? (
                           <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                        ) : check.status === 'danger' ? (
+                        ) : check.status === 'fail' || check.status === 'danger' ? (
                           <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                         ) : (
                           <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
