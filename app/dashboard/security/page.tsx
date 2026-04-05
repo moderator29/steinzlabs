@@ -29,6 +29,16 @@ interface ScanResult {
   lpTotalSupply: string;
   checks: { label: string; status: string }[];
   timestamp: string;
+  dexData?: {
+    price: number;
+    priceChange24h: number;
+    volume24h: number;
+    liquidity: number;
+    fdv: number;
+    marketCap: number;
+    url?: string;
+  };
+  solanaNote?: string;
 }
 
 const CHAINS = [
@@ -268,6 +278,55 @@ export default function SecurityPage() {
                 <p className="text-sm font-bold">{result.sellTax}</p>
               </div>
             </div>
+
+            {result.dexData && (
+              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                <h3 className="font-bold text-sm mb-3">Market Data</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Price</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${result.dexData.price < 0.01 ? result.dexData.price.toFixed(8) : result.dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">24h</p>
+                    <p className={`text-xs font-bold ${result.dexData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {result.dexData.priceChange24h >= 0 ? '+' : ''}{result.dexData.priceChange24h.toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">MCap</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${result.dexData.marketCap > 1e6 ? (result.dexData.marketCap / 1e6).toFixed(2) + 'M' : result.dexData.marketCap > 1000 ? (result.dexData.marketCap / 1000).toFixed(1) + 'K' : result.dexData.marketCap.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Volume</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${result.dexData.volume24h > 1e6 ? (result.dexData.volume24h / 1e6).toFixed(2) + 'M' : result.dexData.volume24h > 1000 ? (result.dexData.volume24h / 1000).toFixed(1) + 'K' : result.dexData.volume24h.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Liquidity</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${result.dexData.liquidity > 1e6 ? (result.dexData.liquidity / 1e6).toFixed(2) + 'M' : result.dexData.liquidity > 1000 ? (result.dexData.liquidity / 1000).toFixed(1) + 'K' : result.dexData.liquidity.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">FDV</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${result.dexData.fdv > 1e6 ? (result.dexData.fdv / 1e6).toFixed(2) + 'M' : result.dexData.fdv > 1000 ? (result.dexData.fdv / 1000).toFixed(1) + 'K' : result.dexData.fdv.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+                {result.dexData.url && (
+                  <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center justify-center gap-1 text-[10px] text-[#0A1EFF] hover:underline">
+                    View on DexScreener <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
 
             <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
               <h3 className="font-bold text-sm mb-3">Security Checks</h3>
