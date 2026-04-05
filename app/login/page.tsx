@@ -9,7 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 
-const SESSION_HOURS = 48;
+const SESSION_HOURS = 4;
 
 function LoginPageInner() {
   const router = useRouter();
