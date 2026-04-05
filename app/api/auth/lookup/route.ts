@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     const admin = getSupabaseAdmin();
 
-    const { data: profile, error: profileError } = await admin
+    const { data: profile } = await admin
       .from('profiles')
       .select('email')
       .ilike('username', username)
@@ -22,27 +22,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ email: profile.email });
     }
 
-    let page = 0;
-    const perPage = 100;
-    while (true) {
-      const { data: usersData } = await admin.auth.admin.listUsers({
-        page: page + 1,
-        perPage,
-      });
-
-      if (!usersData?.users || usersData.users.length === 0) break;
-
+    const { data: usersData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (usersData?.users) {
       const match = usersData.users.find(
         (u: any) => u.user_metadata?.username?.toLowerCase() === username.toLowerCase()
       );
-
       if (match?.email) {
+        try {
+          await admin.from('profiles').upsert({
+            id: match.id,
+            username: match.user_metadata?.username,
+            email: match.email,
+            first_name: match.user_metadata?.first_name || '',
+            last_name: match.user_metadata?.last_name || '',
+          }, { onConflict: 'id' });
+        } catch {}
         return NextResponse.json({ email: match.email });
       }
-
-      if (usersData.users.length < perPage) break;
-      page++;
-      if (page > 10) break;
     }
 
     return NextResponse.json({ error: 'No account found with that username.' }, { status: 404 });

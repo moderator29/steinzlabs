@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
@@ -21,6 +21,9 @@ function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [resending, setResending] = useState(false);
   const submitting = useRef(false);
 
   useEffect(() => {
@@ -29,7 +32,7 @@ function LoginPageInner() {
 
   useEffect(() => {
     const confirmed = searchParams.get('confirmed');
-    if (confirmed === 'pending') showToast('Account created! Sign in below.', 'success');
+    if (confirmed === 'pending') showToast('Account created! Check your email to verify, then sign in.', 'success');
     if (confirmed === 'reset') showToast('Password updated! Sign in with your new password.', 'success');
   }, [searchParams, showToast]);
 
@@ -41,12 +44,35 @@ function LoginPageInner() {
     return Object.keys(e).length === 0;
   };
 
+  const handleResendVerification = async () => {
+    if (resending || !verificationEmail) return;
+    setResending(true);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('Verification email sent! Check your inbox and spam folder.', 'success');
+      } else {
+        showToast(data.error || 'Failed to resend. Try again.', 'error');
+      }
+    } catch {
+      showToast('Failed to resend. Check your connection.', 'error');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate() || submitting.current) return;
 
     submitting.current = true;
     setLoading(true);
+    setNeedsVerification(false);
     setRememberMe(true);
 
     if (!isSupabaseReady()) {
@@ -60,12 +86,16 @@ function LoginPageInner() {
       let email = identifier.trim();
 
       if (!email.includes('@')) {
+        const controller = new AbortController();
+        const lookupTimeout = setTimeout(() => controller.abort(), 8000);
         try {
           const res = await fetch('/api/auth/lookup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: email.toLowerCase() }),
+            signal: controller.signal,
           });
+          clearTimeout(lookupTimeout);
           const result = await res.json();
           if (!res.ok || !result.email) {
             showToast(result.error || 'No account found with that username.', 'error');
@@ -73,50 +103,31 @@ function LoginPageInner() {
             return;
           }
           email = result.email;
-        } catch {
-          showToast('Unable to look up username. Try using your email instead.', 'error');
+        } catch (lookupErr: any) {
+          clearTimeout(lookupTimeout);
+          if (lookupErr?.name === 'AbortError') {
+            showToast('Username lookup timed out. Try using your email address instead.', 'error');
+          } else {
+            showToast('Unable to look up username. Try using your email instead.', 'error');
+          }
           return;
         }
       }
 
-      let signInData: any = null;
-      let error: any = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (attempts < maxAttempts) {
-        attempts++;
-        try {
-          const result = await Promise.race([
-            supabase.auth.signInWithPassword({ email, password }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 20000)),
-          ]);
-          signInData = result.data;
-          error = result.error;
-          break;
-        } catch (attemptErr: any) {
-          if (attempts >= maxAttempts) {
-            error = attemptErr;
-            break;
-          }
-          await new Promise(r => setTimeout(r, 500 * attempts));
-        }
-      }
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         const errMsg = error.message?.toLowerCase() || '';
         if (errMsg.includes('email not confirmed') || errMsg.includes('not confirmed')) {
-          showToast('Please verify your email first. Check your inbox for the verification link.', 'error');
+          setNeedsVerification(true);
+          setVerificationEmail(email);
+          showToast('Please verify your email first.', 'error');
           setErrors({ identifier: 'Email not verified' });
         } else if (errMsg.includes('invalid') || errMsg.includes('credentials')) {
           showToast('Incorrect email/username or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
-        } else if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('timed out') || errMsg.includes('failed to fetch')) {
-          showToast('Connection issue. Please check your internet and try again.', 'error');
-        } else if (errMsg.includes('rate') || errMsg.includes('limit') || errMsg.includes('too many')) {
-          showToast('Too many attempts. Please wait a moment and try again.', 'error');
         } else {
-          showToast(error.message || 'Sign in failed. Please try again.', 'error');
+          showToast(error.message || 'Sign in failed.', 'error');
         }
         return;
       }
@@ -139,15 +150,7 @@ function LoginPageInner() {
       const from = searchParams.get('from');
       router.push(from || '/dashboard');
     } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('timed out')) {
-        showToast('Connection timed out. Please check your internet and try again.', 'error');
-      } else if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network') || msg.includes('CORS')) {
-        showToast('Unable to connect to auth server. Check your connection.', 'error');
-      } else {
-        showToast('Sign in failed. Please try again.', 'error');
-        console.error('[Login] Unexpected error:', msg);
-      }
+      showToast('Sign in failed. Please try again.', 'error');
     } finally {
       setLoading(false);
       submitting.current = false;
@@ -196,6 +199,20 @@ function LoginPageInner() {
             <p className="text-gray-500 text-sm">Access your intelligence dashboard</p>
           </div>
 
+          {needsVerification && (
+            <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+              <p className="text-amber-300 text-sm mb-3">Your email is not verified yet. Check your inbox and spam folder for the verification link.</p>
+              <button
+                onClick={handleResendVerification}
+                disabled={resending}
+                className="flex items-center gap-2 text-sm font-medium text-[#0A1EFF] hover:text-white transition-colors disabled:opacity-50"
+              >
+                {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {resending ? 'Sending...' : 'Resend verification email'}
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Email or Username</label>
@@ -204,14 +221,14 @@ function LoginPageInner() {
                 <input
                   type="text"
                   value={identifier}
-                  onChange={e => { setIdentifier(e.target.value); setErrors({}); }}
+                  onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
                   className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                   placeholder="john@example.com or johndoe"
                   autoComplete="username"
                   autoFocus
                 />
               </div>
-              {errors.identifier && <p className="text-red-400 text-xs mt-1.5">{errors.identifier}</p>}
+              {errors.identifier && !needsVerification && <p className="text-red-400 text-xs mt-1.5">{errors.identifier}</p>}
             </div>
 
             <div>

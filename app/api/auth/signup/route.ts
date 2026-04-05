@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
+import { generateToken } from '@/app/api/auth/verify-email/route';
 
 export async function POST(request: Request) {
   try {
@@ -97,25 +98,8 @@ export async function POST(request: Request) {
       console.error('[Signup] Profile upsert error:', profileErr?.message);
     }
 
-    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: 'signup',
-      email: cleanEmail,
-      password: password,
-      options: {
-        redirectTo: 'https://steinzlabs.com/auth/callback',
-      },
-    });
-
-    if (linkError || !linkData?.properties?.action_link) {
-      console.error('[Signup] generateLink error:', linkError?.message);
-      await admin.auth.admin.deleteUser(newUser.user.id);
-      return NextResponse.json({ error: 'Failed to generate verification link. Please try again.' }, { status: 500 });
-    }
-
-    let confirmUrl = linkData.properties.action_link;
-    confirmUrl = confirmUrl.replace(/redirect_to=http[^&]*/g, 'redirect_to=https://steinzlabs.com/auth/callback');
-    confirmUrl = confirmUrl.replace('http://localhost:3000', 'https://steinzlabs.com');
-    confirmUrl = confirmUrl.replace('http://localhost:5000', 'https://steinzlabs.com');
+    const token = generateToken(newUser.user.id, cleanEmail);
+    const confirmUrl = `https://steinzlabs.com/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
 
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
