@@ -114,7 +114,21 @@ function LoginPageInner() {
         }
       }
 
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+      const signInPromise = supabase.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000));
+      let signInData: any = null;
+      let error: any = null;
+      try {
+        const result: any = await Promise.race([signInPromise, timeoutPromise]);
+        signInData = result.data;
+        error = result.error;
+      } catch (raceErr: any) {
+        if (raceErr?.message === 'TIMEOUT') {
+          showToast('Connection timed out. Please try again.', 'error');
+          return;
+        }
+        throw raceErr;
+      }
 
       if (error) {
         const errMsg = error.message?.toLowerCase() || '';
