@@ -79,30 +79,60 @@ function LoginPageInner() {
         }
       }
 
-      const signInPromise = supabase.auth.signInWithPassword({ email, password });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 15000));
-      let { data: signInData, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
+      let signInData: any = null;
+      let error: any = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          const result = await Promise.race([
+            supabase.auth.signInWithPassword({ email, password }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 20000)),
+          ]);
+          signInData = result.data;
+          error = result.error;
+          break;
+        } catch (attemptErr: any) {
+          if (attempts >= maxAttempts) {
+            error = attemptErr;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 500 * attempts));
+        }
+      }
 
       if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed') || error.message.toLowerCase().includes('not confirmed')) {
+        const errMsg = error.message?.toLowerCase() || '';
+        if (errMsg.includes('email not confirmed') || errMsg.includes('not confirmed')) {
           showToast('Please verify your email first. Check your inbox for the verification link.', 'error');
           setErrors({ identifier: 'Email not verified' });
-        } else if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
+        } else if (errMsg.includes('invalid') || errMsg.includes('credentials')) {
           showToast('Incorrect email/username or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
-        } else if (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('network')) {
-          showToast('Unable to connect. Check your internet connection.', 'error');
+        } else if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('timed out') || errMsg.includes('failed to fetch')) {
+          showToast('Connection issue. Please check your internet and try again.', 'error');
+        } else if (errMsg.includes('rate') || errMsg.includes('limit') || errMsg.includes('too many')) {
+          showToast('Too many attempts. Please wait a moment and try again.', 'error');
         } else {
-          showToast(error.message || 'Sign in failed.', 'error');
+          showToast(error.message || 'Sign in failed. Please try again.', 'error');
         }
+        return;
+      }
+
+      if (!signInData?.session) {
+        showToast('Sign in did not return a session. Please try again.', 'error');
         return;
       }
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('steinz_has_session', 'true');
-        if (signInData?.session?.access_token) {
+        if (signInData.session.access_token) {
           const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
-          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}`;
+          const isSecure = window.location.protocol === 'https:';
+          const securePart = isSecure ? '; Secure' : '';
+          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}${securePart}`;
         }
       }
       showToast('Welcome back!', 'success');
@@ -110,10 +140,13 @@ function LoginPageInner() {
       router.push(from || '/dashboard');
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network') || msg.includes('CORS')) {
+      if (msg.includes('timed out')) {
+        showToast('Connection timed out. Please check your internet and try again.', 'error');
+      } else if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network') || msg.includes('CORS')) {
         showToast('Unable to connect to auth server. Check your connection.', 'error');
       } else {
         showToast('Sign in failed. Please try again.', 'error');
+        console.error('[Login] Unexpected error:', msg);
       }
     } finally {
       setLoading(false);
