@@ -7,7 +7,7 @@ import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { supabase, setRememberMe, isSupabaseReady } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 const SESSION_HOURS = 48;
 
@@ -32,8 +32,12 @@ function LoginPageInner() {
 
   useEffect(() => {
     const confirmed = searchParams.get('confirmed');
+    const verified = searchParams.get('verified');
+    const err = searchParams.get('error');
     if (confirmed === 'pending') showToast('Account created! Check your email to verify, then sign in.', 'success');
     if (confirmed === 'reset') showToast('Password updated! Sign in with your new password.', 'success');
+    if (verified === 'true') showToast('Email verified! Sign in below.', 'success');
+    if (err) showToast('Verification link issue. Try resending below.', 'error');
   }, [searchParams, showToast]);
 
   const validate = () => {
@@ -69,102 +73,70 @@ function LoginPageInner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate() || submitting.current) return;
-
     submitting.current = true;
     setLoading(true);
     setNeedsVerification(false);
-    setRememberMe(true);
-
-    if (!isSupabaseReady()) {
-      showToast('Auth service is not configured. Please contact support.', 'error');
-      setLoading(false);
-      submitting.current = false;
-      return;
-    }
 
     try {
       let email = identifier.trim();
 
       if (!email.includes('@')) {
-        const controller = new AbortController();
-        const lookupTimeout = setTimeout(() => controller.abort(), 8000);
-        try {
-          const res = await fetch('/api/auth/lookup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: email.toLowerCase() }),
-            signal: controller.signal,
-          });
-          clearTimeout(lookupTimeout);
-          const result = await res.json();
-          if (!res.ok || !result.email) {
-            showToast(result.error || 'No account found with that username.', 'error');
-            setErrors({ identifier: 'Username not found' });
-            return;
-          }
-          email = result.email;
-        } catch (lookupErr: any) {
-          clearTimeout(lookupTimeout);
-          if (lookupErr?.name === 'AbortError') {
-            showToast('Username lookup timed out. Try using your email address instead.', 'error');
-          } else {
-            showToast('Unable to look up username. Try using your email instead.', 'error');
-          }
+        const res = await fetch('/api/auth/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: email.toLowerCase() }),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.email) {
+          showToast(result.error || 'No account found with that username.', 'error');
+          setErrors({ identifier: 'Username not found' });
           return;
         }
+        email = result.email;
       }
 
-      const signInPromise = supabase.auth.signInWithPassword({ email, password });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000));
-      let signInData: any = null;
-      let error: any = null;
-      try {
-        const result: any = await Promise.race([signInPromise, timeoutPromise]);
-        signInData = result.data;
-        error = result.error;
-      } catch (raceErr: any) {
-        if (raceErr?.message === 'TIMEOUT') {
-          showToast('Connection timed out. Please try again.', 'error');
-          return;
-        }
-        throw raceErr;
-      }
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (error) {
-        const errMsg = error.message?.toLowerCase() || '';
-        if (errMsg.includes('email not confirmed') || errMsg.includes('not confirmed')) {
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === 'EMAIL_NOT_CONFIRMED') {
           setNeedsVerification(true);
           setVerificationEmail(email);
           showToast('Please verify your email first.', 'error');
           setErrors({ identifier: 'Email not verified' });
-        } else if (errMsg.includes('invalid') || errMsg.includes('credentials')) {
-          showToast('Incorrect email/username or password.', 'error');
-          setErrors({ password: 'Incorrect credentials' });
-        } else {
-          showToast(error.message || 'Sign in failed.', 'error');
+          return;
         }
+        showToast(data.error || 'Sign in failed.', 'error');
+        if (res.status === 401) setErrors({ password: 'Incorrect credentials' });
         return;
       }
 
-      if (!signInData?.session) {
-        showToast('Sign in did not return a session. Please try again.', 'error');
+      if (!data.access_token) {
+        showToast('Sign in failed. Please try again.', 'error');
         return;
       }
+
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('steinz_has_session', 'true');
-        if (signInData.session.access_token) {
-          const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
-          const isSecure = window.location.protocol === 'https:';
-          const securePart = isSecure ? '; Secure' : '';
-          document.cookie = `steinz_session=${signInData.session.access_token}; path=/; SameSite=Lax${maxAge}${securePart}`;
-        }
+        const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
+        const isSecure = window.location.protocol === 'https:';
+        document.cookie = `steinz_session=${data.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
       }
+
       showToast('Welcome back!', 'success');
-      const from = searchParams.get('from');
-      router.push(from || '/dashboard');
-    } catch (err: any) {
-      showToast('Sign in failed. Please try again.', 'error');
+      router.push(searchParams.get('from') || '/dashboard');
+    } catch {
+      showToast('Sign in failed. Check your connection and try again.', 'error');
     } finally {
       setLoading(false);
       submitting.current = false;
@@ -215,7 +187,7 @@ function LoginPageInner() {
 
           {needsVerification && (
             <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-              <p className="text-amber-300 text-sm mb-3">Your email is not verified yet. Check your inbox and spam folder for the verification link.</p>
+              <p className="text-amber-300 text-sm mb-3">Your email is not verified. Check your inbox and spam folder for the verification link.</p>
               <button
                 onClick={handleResendVerification}
                 disabled={resending}
@@ -237,7 +209,7 @@ function LoginPageInner() {
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
                   className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
-                  placeholder="john@example.com or johndoe"
+                  placeholder="john@example.com or username"
                   autoComplete="username"
                   autoFocus
                 />
