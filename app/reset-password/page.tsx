@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Eye, EyeOff, Lock, Loader2, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
-import { supabase } from '@/lib/supabase';
 
 function getPasswordChecks(pw: string) {
   return [
@@ -20,41 +19,33 @@ function getPasswordChecks(pw: string) {
 
 function ResetPasswordInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const token = searchParams.get('token');
+  const uid = searchParams.get('uid');
 
-    async function checkSession() {
-      try {
-        const hash = window.location.hash;
-        if (hash && hash.includes('access_token')) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.user) {
-          setReady(true);
-        }
-      } catch {}
-    }
-
-    checkSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        setReady(true);
-      }
-    });
-
-    return () => { try { listener?.subscription?.unsubscribe(); } catch {} };
-  }, []);
+  if (!token || !uid) {
+    return (
+      <div className="min-h-screen bg-[#0A0E1A] text-white flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
+            <Shield className="w-8 h-8 text-[#0A1EFF]" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Invalid or expired link</h2>
+          <p className="text-gray-500 text-sm mb-6">This password reset link is no longer valid. Please request a new one.</p>
+          <Link href="/forgot-password" className="inline-block bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all">
+            Request New Link
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,42 +63,32 @@ function ResetPasswordInner() {
 
     setLoading(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, uid, password }),
+      });
 
-      if (updateError) {
-        if (updateError.message.toLowerCase().includes('same')) {
-          showToast('New password must be different from current password.', 'error');
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update password.', 'error');
+        if (data.error?.includes('expired')) {
+          setError('Link expired. Please request a new reset link.');
         } else {
-          showToast(updateError.message, 'error');
+          setError(data.error || 'Failed to update password');
         }
         return;
       }
 
       showToast('Password updated successfully!', 'success');
       router.push('/login?confirmed=reset');
-    } catch (err: any) {
+    } catch {
       showToast('Failed to update password. Try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
-
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-[#0A0E1A] text-white flex items-center justify-center">
-        <div className="text-center max-w-md px-6">
-          <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-            <Shield className="w-8 h-8 text-[#0A1EFF]" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Invalid or expired link</h2>
-          <p className="text-gray-500 text-sm mb-6">This password reset link is no longer valid. Please request a new one.</p>
-          <Link href="/forgot-password" className="inline-block bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all">
-            Request New Link
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white flex">
@@ -123,7 +104,7 @@ function ResetPasswordInner() {
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Set your new<br /><span className="text-[#0A1EFF]">password</span></h1>
-          <p className="text-gray-400 text-sm leading-relaxed">Choose a strong password to secure your account. You'll be signed in immediately after.</p>
+          <p className="text-gray-400 text-sm leading-relaxed">Choose a strong password to secure your account.</p>
         </div>
         <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
       </div>

@@ -5,7 +5,6 @@ import { Shield, Mail, ArrowLeft, Loader2, Check } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
-import { supabase, isSupabaseReady } from '@/lib/supabase';
 
 export default function ForgotPasswordPage() {
   const { showToast } = useToast();
@@ -27,37 +26,26 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (!isSupabaseReady()) {
-      showToast('Auth service is not configured.', 'error');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${origin}/reset-password`,
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
       });
 
-      if (resetError) {
-        if (resetError.message.toLowerCase().includes('rate') || resetError.message.toLowerCase().includes('limit')) {
-          showToast('Too many requests. Please wait a moment.', 'error');
-        } else {
-          showToast(resetError.message, 'error');
-        }
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.error || 'Failed to send reset email.', 'error');
         return;
       }
 
       setSent(true);
-    } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('fetch') || msg.includes('network')) {
-        showToast('Unable to connect. Check your internet connection.', 'error');
-      } else {
-        showToast('Failed to send reset email. Try again.', 'error');
-      }
+    } catch {
+      showToast('Unable to connect. Check your internet connection.', 'error');
     } finally {
       setLoading(false);
     }
@@ -77,7 +65,7 @@ export default function ForgotPasswordPage() {
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Reset your<br /><span className="text-[#0A1EFF]">password</span></h1>
-          <p className="text-gray-400 text-sm leading-relaxed mb-8">Enter your email and we'll send you a link to reset your password and get back into your account.</p>
+          <p className="text-gray-400 text-sm leading-relaxed mb-8">Enter your email and we will send you a link to reset your password and get back into your account.</p>
           <div className="space-y-3">
             {['Secure password reset', 'Link expires in 1 hour', 'Check spam folder if not received'].map(t => (
               <div key={t} className="flex items-center gap-3">
@@ -111,7 +99,7 @@ export default function ForgotPasswordPage() {
                 <Mail className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3" />
                 <p className="text-sm text-gray-300 mb-1">Reset link sent to</p>
                 <p className="text-white font-medium">{email}</p>
-                <p className="text-xs text-gray-500 mt-3">Didn't receive it? Check your spam folder or try again.</p>
+                <p className="text-xs text-gray-500 mt-3">Check your inbox and spam folder for the email from STEINZ LABS.</p>
               </div>
               <button
                 onClick={() => { setSent(false); setEmail(''); }}
