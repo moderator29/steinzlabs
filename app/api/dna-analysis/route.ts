@@ -275,23 +275,25 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Fetch holdings from wallet-intelligence
+    // Fetch holdings directly (no self-referential HTTP call)
     let holdings: any[] = [];
     let totalBalance = 0;
     let txCount = 0;
 
     try {
-      const wiRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/wallet-intelligence?address=${encodeURIComponent(address)}`, {
-        signal: AbortSignal.timeout(15000),
-      });
-      if (wiRes.ok) {
-        const wiData = await wiRes.json();
-        holdings = wiData.holdings || [];
-        totalBalance = parseFloat(wiData.totalBalanceUsd || '0');
-        txCount = wiData.txCount || 0;
+      if (chain === 'SOL') {
+        const walletData = await fetchSolWalletData(address);
+        holdings = walletData.holdings;
+        totalBalance = parseFloat(walletData.totalBalanceUsd || '0');
+        txCount = walletData.txCount || 0;
+      } else {
+        const walletData = await fetchEvmWalletData(address);
+        holdings = walletData.holdings;
+        totalBalance = parseFloat(walletData.totalBalanceUsd || '0');
+        txCount = walletData.txCount || 0;
       }
     } catch (e) {
-      console.error('wallet-intelligence fetch failed:', e);
+      console.error('wallet data fetch failed:', e);
     }
 
     // Fetch transactions for stats

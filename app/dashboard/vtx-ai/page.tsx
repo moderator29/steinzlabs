@@ -407,6 +407,12 @@ export default function VtxAiPage() {
 
   return (
     <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col overflow-hidden">
+      {/* Settings Toast */}
+      {settingsToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0A1EFF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none">
+          Settings saved
+        </div>
+      )}
       <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04] flex-shrink-0">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
@@ -487,69 +493,160 @@ export default function VtxAiPage() {
         )}
 
         {showSettings && (
-          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16]">
+          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-300">Agent Settings</span>
               <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
             </div>
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Personality</label>
-                <select
-                  value={settings.personality}
-                  onChange={(e) => updateSettings({ personality: e.target.value as AgentSettings['personality'] })}
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
-                >
-                  <option value="professional">Professional Analyst</option>
-                  <option value="degen">Degen Trader</option>
-                  <option value="conservative">Conservative Advisor</option>
-                  <option value="neutral">Neutral</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Default Chain</label>
-                <select
-                  value={settings.defaultChain}
-                  onChange={(e) => updateSettings({ defaultChain: e.target.value as AgentSettings['defaultChain'] })}
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
-                >
-                  <option value="solana">Solana</option>
-                  <option value="ethereum">Ethereum</option>
-                  <option value="bsc">BSC</option>
-                  <option value="base">Base</option>
-                  <option value="polygon">Polygon</option>
-                </select>
-              </div>
-              <label className="flex items-center justify-between cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs text-gray-400">Web Search</span>
+
+            {/* Section: Response Style */}
+            <div className="mb-3">
+              <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Response Style</p>
+              <div className="space-y-2.5">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Personality</label>
+                  <select
+                    value={settings.personality}
+                    onChange={(e) => updateSettings({ personality: e.target.value as AgentSettings['personality'] })}
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  >
+                    <option value="professional">Professional Analyst</option>
+                    <option value="degen">Degen Trader</option>
+                    <option value="conservative">Conservative Advisor</option>
+                    <option value="neutral">Neutral</option>
+                  </select>
                 </div>
-                <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
-                </button>
-              </label>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs text-gray-400">Response Style</span>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Analysis Depth</label>
+                  <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
+                    {(['Quick', 'Standard', 'Deep'] as const).map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => updateSettings({ depth: d })}
+                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.depth === d ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
-                  <button onClick={() => updateSettings({ responseStyle: 'concise' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'concise' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Concise</button>
-                  <button onClick={() => updateSettings({ responseStyle: 'detailed' })} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${settings.responseStyle === 'detailed' ? 'bg-[#0A1EFF] text-white' : 'text-gray-500'}`}>Detailed</button>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Response Language</label>
+                  <select
+                    value={settings.language}
+                    onChange={(e) => updateSettings({ language: e.target.value })}
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  >
+                    <option value="English">English</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="Portuguese">Portuguese</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Japanese">Japanese</option>
+                    <option value="Korean">Korean</option>
+                    <option value="Arabic">Arabic</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Risk Appetite</label>
+                  <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
+                    {([
+                      { value: 'Conservative', icon: '🛡️' },
+                      { value: 'Balanced', icon: '⚖️' },
+                      { value: 'Aggressive', icon: '🚀' },
+                    ] as const).map(({ value, icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => updateSettings({ riskAppetite: value })}
+                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-1 ${settings.riskAppetite === value ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                      >
+                        <span>{icon}</span>
+                        <span className="hidden sm:inline">{value}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-gray-600 mt-1">
+                    {settings.riskAppetite === 'Conservative' && 'Emphasizes downside risks and safer alternatives'}
+                    {settings.riskAppetite === 'Balanced' && 'Balanced view of risks and opportunities'}
+                    {settings.riskAppetite === 'Aggressive' && 'Focus on high-risk/high-reward opportunities'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Default Chain</label>
+                  <select
+                    value={settings.defaultChain}
+                    onChange={(e) => updateSettings({ defaultChain: e.target.value as AgentSettings['defaultChain'] })}
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  >
+                    <option value="solana">Solana</option>
+                    <option value="ethereum">Ethereum</option>
+                    <option value="bsc">BSC</option>
+                    <option value="base">Base</option>
+                    <option value="polygon">Polygon</option>
+                  </select>
                 </div>
               </div>
-              <div className="pt-2 border-t border-white/[0.04]">
-                <button onClick={clearChat} className="flex items-center gap-2 text-xs text-red-400/70 hover:text-red-400 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" /> Clear current chat
-                </button>
+            </div>
+
+            {/* Section: Features */}
+            <div className="border-t border-white/[0.04] pt-3 mb-3">
+              <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Features</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300">Web Search</p>
+                    <p className="text-[9px] text-gray-500">Include live web results in context</p>
+                  </div>
+                  <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300">Auto-show Charts</p>
+                    <p className="text-[9px] text-gray-500">Render inline charts when AI signals them</p>
+                  </div>
+                  <button onClick={() => updateSettings({ autoCharts: !settings.autoCharts })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300">Focus Mode</p>
+                    <p className="text-[9px] text-gray-500">Expand chat view while messaging</p>
+                  </div>
+                  <button onClick={() => updateSettings({ focusMode: !settings.focusMode })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300">Message Sound</p>
+                    <p className="text-[9px] text-gray-500">Chime when VTX replies</p>
+                  </div>
+                  <button onClick={() => updateSettings({ messageSound: !settings.messageSound })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
+                  </button>
+                </div>
               </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/[0.04]">
+              <button onClick={clearChat} className="flex items-center gap-2 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+                <Trash2 className="w-3.5 h-3.5" /> Clear current chat
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0" style={settings.focusMode ? { minHeight: '80vh' } : undefined}>
         {messages.length <= 1 && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
