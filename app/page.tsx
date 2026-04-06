@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -518,7 +518,7 @@ export default function LandingPage() {
       >
         <div className="max-w-5xl mx-auto">
           <div className={`text-center mb-16 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Platform</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>Platform</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Built for serious analysts
             </h2>
@@ -632,7 +632,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('pricing') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Plans</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#06b6d4' }}>Plans</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Unlock the full intelligence layer
             </h2>
@@ -679,7 +679,10 @@ export default function LandingPage() {
                 style={plan.featured ? { boxShadow: '0 0 40px rgba(124,58,237,0.15), 0 0 0 1px rgba(124,58,237,0.1)' } as React.CSSProperties : {}}
               >
                 {plan.featured && (
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-neon-blue mb-3">Most Popular</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest mb-3"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    Most Popular
+                  </div>
                 )}
                 <h3 className="text-lg font-heading font-bold mb-1" style={{ color: plan.accent }}>{plan.tier}</h3>
                 <div className="text-xl font-bold mb-1">{plan.price}</div>
@@ -695,13 +698,13 @@ export default function LandingPage() {
                 <Link href={plan.link}>
                   <button
                     className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.featured ? { backgroundColor: plan.accent, color: 'white' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                    style={plan.featured ? { background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white', boxShadow: '0 0 20px rgba(124,58,237,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
                     disabled={plan.cta === 'Coming Soon'}
                   >
                     {plan.cta}
                   </button>
                 </Link>
-              </div>
+              </Card3D>
             ))}
           </div>
         </div>
@@ -716,7 +719,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">FAQ</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>FAQ</p>
             <h2 className="text-2xl md:text-3xl font-heading font-bold">
               Frequently asked questions
             </h2>
@@ -728,9 +731,10 @@ export default function LandingPage() {
                 key={index}
                 className={`rounded-xl border transition-all duration-300 ${
                   openFAQ === index
-                    ? 'border-neon-blue/20 bg-neon-blue/[0.02]'
-                    : 'border-white/[0.06] hover:border-white/[0.1]'
+                    ? 'border-purple-500/25 bg-purple-500/[0.04]'
+                    : 'border-white/[0.06] hover:border-purple-500/15'
                 }`}
+                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(124,58,237,0.08)' } : {}}
               >
                 <button
                   onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
@@ -760,31 +764,53 @@ export default function LandingPage() {
 
       <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
 
-      <section className="py-24 px-4 sm:px-6 relative">
+      <section className="py-24 px-4 sm:px-6 relative overflow-hidden">
+        {/* Animated gradient background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-blue/[0.03] rounded-full blur-[150px]"></div>
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12), rgba(6,182,212,0.06), transparent 70%)' }}
+          />
+          <div
+            className="absolute top-0 left-0 w-full h-full"
+            style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.03) 0%, transparent 50%, rgba(6,182,212,0.03) 100%)' }}
+          />
         </div>
         <div className="max-w-2xl mx-auto text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Start your intelligence journey
-          </h2>
-          <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-            Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-            <Link href="/login" className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
-              Launch App <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link href="/whitepaper" className="flex-1">
-              <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
-                Learn More
-              </button>
-            </Link>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+              Start your intelligence journey
+            </h2>
+            <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+              Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
+              <Link
+                href="/login"
+                className="flex-1 w-full px-8 py-4 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                  boxShadow: '0 0 40px rgba(124,58,237,0.4)',
+                }}
+              >
+                Launch App <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link href="/whitepaper" className="flex-1">
+                <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all flex items-center justify-center gap-2">
+                  Learn More
+                </button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.06] py-12 px-4 sm:px-6">
+      <footer className="border-t border-purple-500/10 py-12 px-4 sm:px-6" style={{ boxShadow: 'inset 0 1px 0 rgba(124,58,237,0.08)' }}>
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-1">

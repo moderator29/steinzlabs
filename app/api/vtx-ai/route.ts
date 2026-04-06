@@ -567,7 +567,7 @@ BRANDING:
 
 export async function POST(request: Request) {
   try {
-    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite } = await request.json();
+    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite, skipRateLimit } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -577,7 +577,7 @@ export async function POST(request: Request) {
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || 'unknown';
     const isPro = tier === 'pro';
 
-    if (!isPro) {
+    if (!isPro && !skipRateLimit) {
       const rateInfo = getRateLimitInfo(ip);
       if (rateInfo.remaining <= 0) {
         return NextResponse.json({
@@ -813,7 +813,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
 
     reply = reply.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
-    if (!isPro) {
+    if (!isPro && !skipRateLimit) {
       incrementUsage(ip);
     }
 

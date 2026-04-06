@@ -40,6 +40,12 @@ interface AgentSettings {
   autoContext: boolean;
   personality: 'professional' | 'degen' | 'conservative' | 'neutral';
   defaultChain: 'solana' | 'ethereum' | 'bsc' | 'base' | 'polygon';
+  language: string;
+  depth: 'Quick' | 'Standard' | 'Deep';
+  riskAppetite: 'Conservative' | 'Balanced' | 'Aggressive';
+  autoCharts: boolean;
+  focusMode: boolean;
+  messageSound: boolean;
 }
 
 interface ChatHistoryEntry {
@@ -179,15 +185,47 @@ function TokenCard({ token }: { token: TokenCardData }) {
   );
 }
 
+const DEFAULT_PAGE_SETTINGS: AgentSettings = {
+  webSearch: false,
+  responseStyle: 'detailed',
+  autoContext: true,
+  personality: 'neutral',
+  defaultChain: 'solana',
+  language: 'English',
+  depth: 'Standard',
+  riskAppetite: 'Balanced',
+  autoCharts: true,
+  focusMode: false,
+  messageSound: false,
+};
+
 function loadSettings(): AgentSettings {
   try {
     const s = localStorage.getItem(SETTINGS_KEY);
     if (s) {
       const parsed = JSON.parse(s);
-      return { webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana', ...parsed };
+      return { ...DEFAULT_PAGE_SETTINGS, ...parsed };
     }
   } catch {}
-  return { webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana' };
+  return { ...DEFAULT_PAGE_SETTINGS };
+}
+
+function playPageChime() {
+  try {
+    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch {}
 }
 
 function saveSettings(s: AgentSettings) {
@@ -225,10 +263,12 @@ export default function VtxAiPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatHistoryEntry[]>([]);
-  const [settings, setSettings] = useState<AgentSettings>({ webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana' });
+  const [settings, setSettings] = useState<AgentSettings>({ ...DEFAULT_PAGE_SETTINGS });
+  const [settingsToast, setSettingsToast] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -257,6 +297,9 @@ export default function VtxAiPage() {
     const updated = { ...settings, ...partial };
     setSettings(updated);
     saveSettings(updated);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setSettingsToast(true);
+    toastTimerRef.current = setTimeout(() => setSettingsToast(false), 1800);
   };
 
   const saveChatSession = () => {
@@ -309,7 +352,17 @@ export default function VtxAiPage() {
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: finalMessage, history: messages.slice(-10), tier, responseStyle: settings.responseStyle, autoContext: settings.autoContext, personality: settings.personality }),
+        body: JSON.stringify({
+          message: finalMessage,
+          history: messages.slice(-10),
+          tier,
+          responseStyle: settings.responseStyle,
+          autoContext: settings.autoContext,
+          personality: settings.personality,
+          language: settings.language,
+          depth: settings.depth,
+          riskAppetite: settings.riskAppetite,
+        }),
       });
       const data = await response.json();
 
@@ -329,6 +382,7 @@ export default function VtxAiPage() {
           tokenCards: tokenCards.length > 0 ? tokenCards : undefined,
           suggestions,
         }]);
+        if (settings.messageSound) playPageChime();
         if (data.dailyUsage) { setDailyUsage(data.dailyUsage); saveDailyUsage(data.dailyUsage); if (data.dailyUsage.remaining <= 0) setRateLimited(true); }
       }
     } catch {
