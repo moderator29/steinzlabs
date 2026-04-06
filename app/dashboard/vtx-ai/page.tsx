@@ -606,7 +606,7 @@ export default function VtxAiPage() {
                 <img src="/steinz-logo-128.png" alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
               </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
-                <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Searching web & live data...' : 'Analyzing live data...'} />
+                <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Steinz Intelligence...'} />
               </div>
             </div>
           )}
