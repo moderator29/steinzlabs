@@ -121,10 +121,14 @@ function LoginPageInner() {
         return;
       }
 
-      await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
+      try {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+      } catch (sessionErr: any) {
+        console.error('[Login] setSession failed:', sessionErr?.message);
+      }
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('steinz_has_session', 'true');
@@ -135,8 +139,14 @@ function LoginPageInner() {
 
       showToast('Welcome back!', 'success');
       router.push(searchParams.get('from') || '/dashboard');
-    } catch {
-      showToast('Sign in failed. Check your connection and try again.', 'error');
+    } catch (err: any) {
+      console.error('[Login] unexpected error:', err?.message);
+      const msg = err?.message || '';
+      if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
+        showToast('Connection error. Check your internet and try again.', 'error');
+      } else {
+        showToast(`Sign in failed: ${msg || 'Please try again.'}`, 'error');
+      }
     } finally {
       setLoading(false);
       submitting.current = false;

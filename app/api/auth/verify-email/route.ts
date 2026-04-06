@@ -31,21 +31,15 @@ export async function GET(request: Request) {
     if (!user.email_confirmed_at) {
       await admin.auth.admin.updateUserById(userId, { email_confirm: true });
       console.log(`[VerifyEmail] Email confirmed for ${user.email}`);
+    } else {
+      console.log(`[VerifyEmail] Email already confirmed for ${user.email}`);
     }
 
-    const { data: linkData } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: user.email!,
-      options: { redirectTo: `${getSiteUrl()}/auth/callback` },
-    });
-
-    if (linkData?.properties?.action_link) {
-      return NextResponse.redirect(linkData.properties.action_link);
-    }
-
+    // Redirect directly to login — skip magic link to avoid Supabase
+    // redirect-URL allowlist issues across different deployments.
     return NextResponse.redirect(`${getSiteUrl()}/login?verified=true`);
   } catch (err: any) {
     console.error('[VerifyEmail] error:', err.message);
-    return NextResponse.redirect(`${getSiteUrl()}/login?verified=true`);
+    return NextResponse.redirect(`${getSiteUrl()}/login?error=verify_failed`);
   }
 }
