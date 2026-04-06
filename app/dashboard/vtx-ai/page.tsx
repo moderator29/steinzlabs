@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, Cpu, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight } from 'lucide-react';
+import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
@@ -29,15 +29,24 @@ interface Message {
 }
 
 const STORAGE_KEY = 'vtx-ai-page-history';
-const HISTORY_INDEX_KEY = 'vtx-ai-chat-sessions';
+const HISTORY_INDEX_KEY = 'vtx_chat_history';
 const TIER_KEY = 'steinz_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
-const SETTINGS_KEY = 'vtx-ai-settings';
+const SETTINGS_KEY = 'vtx_settings';
 
 interface AgentSettings {
   webSearch: boolean;
   responseStyle: 'concise' | 'detailed';
   autoContext: boolean;
+  personality: 'professional' | 'degen' | 'conservative' | 'neutral';
+  defaultChain: 'solana' | 'ethereum' | 'bsc' | 'base' | 'polygon';
+}
+
+interface ChatHistoryEntry {
+  id: string;
+  date: string;
+  messages: Message[];
+  preview: string;
 }
 
 function loadHistory(): Message[] {
@@ -173,9 +182,12 @@ function TokenCard({ token }: { token: TokenCardData }) {
 function loadSettings(): AgentSettings {
   try {
     const s = localStorage.getItem(SETTINGS_KEY);
-    if (s) return JSON.parse(s);
+    if (s) {
+      const parsed = JSON.parse(s);
+      return { webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana', ...parsed };
+    }
   } catch {}
-  return { webSearch: false, responseStyle: 'detailed', autoContext: true };
+  return { webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana' };
 }
 
 function saveSettings(s: AgentSettings) {
@@ -212,8 +224,8 @@ export default function VtxAiPage() {
   const [showTools, setShowTools] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [chatSessions, setChatSessions] = useState<{ id: string; title: string; date: string; preview: string }[]>([]);
-  const [settings, setSettings] = useState<AgentSettings>({ webSearch: false, responseStyle: 'detailed', autoContext: true });
+  const [chatSessions, setChatSessions] = useState<ChatHistoryEntry[]>([]);
+  const [settings, setSettings] = useState<AgentSettings>({ webSearch: false, responseStyle: 'detailed', autoContext: true, personality: 'neutral', defaultChain: 'solana' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
@@ -227,7 +239,11 @@ export default function VtxAiPage() {
       setSettings(loadSettings());
       try {
         const sessions = localStorage.getItem(HISTORY_INDEX_KEY);
-        if (sessions) setChatSessions(JSON.parse(sessions));
+        if (sessions) {
+          const parsed = JSON.parse(sessions);
+          // support both old format (title/preview only) and new format (with messages)
+          if (Array.isArray(parsed)) setChatSessions(parsed);
+        }
       } catch {}
     }
   }, []);
@@ -247,29 +263,25 @@ export default function VtxAiPage() {
     if (messages.length <= 1) return;
     const userMsgs = messages.filter(m => m.role === 'user');
     if (userMsgs.length === 0) return;
-    const title = userMsgs[0].content.slice(0, 50) + (userMsgs[0].content.length > 50 ? '...' : '');
-    const session = {
+    const session: ChatHistoryEntry = {
       id: Date.now().toString(),
-      title,
       date: new Date().toISOString(),
-      preview: messages[messages.length - 1].content.slice(0, 80),
+      messages,
+      preview: userMsgs[0].content.slice(0, 40),
     };
     try {
-      localStorage.setItem(`vtx-chat-${session.id}`, JSON.stringify(messages));
-      const updated = [session, ...chatSessions].slice(0, 20);
+      const updated = [session, ...chatSessions].slice(0, 30);
       setChatSessions(updated);
       localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(updated));
     } catch {}
   };
 
-  const loadChatSession = (sessionId: string) => {
-    try {
-      const stored = localStorage.getItem(`vtx-chat-${sessionId}`);
-      if (stored) {
-        setMessages(JSON.parse(stored));
-        setShowHistory(false);
-      }
-    } catch {}
+  const loadChatSession = (entry: ChatHistoryEntry) => {
+    if (entry.messages && entry.messages.length > 0) {
+      setMessages(entry.messages);
+      saveHistory(entry.messages);
+    }
+    setShowHistory(false);
   };
 
   const clearChat = () => {
@@ -297,7 +309,7 @@ export default function VtxAiPage() {
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: finalMessage, history: messages.slice(-10), tier, responseStyle: settings.responseStyle, autoContext: settings.autoContext }),
+        body: JSON.stringify({ message: finalMessage, history: messages.slice(-10), tier, responseStyle: settings.responseStyle, autoContext: settings.autoContext, personality: settings.personality }),
       });
       const data = await response.json();
 
@@ -340,8 +352,8 @@ export default function VtxAiPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white flex flex-col">
-      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
+    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col overflow-hidden">
+      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04] flex-shrink-0">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-400" />
@@ -357,11 +369,6 @@ export default function VtxAiPage() {
               {isPro && (
                 <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}
-            </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />
-              <span className="text-[11px] text-[#10B981] font-semibold">LIVE</span>
-              <span className="text-[10px] text-gray-600">· On-chain intelligence</span>
             </div>
           </div>
 
@@ -390,7 +397,15 @@ export default function VtxAiPage() {
           <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-60 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-300">Chat History</span>
-              <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={clearChat}
+                  className="px-2 py-1 bg-[#0A1EFF]/20 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-semibold hover:bg-[#0A1EFF]/30 transition-colors"
+                >
+                  + New Chat
+                </button>
+                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded ml-1"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+              </div>
             </div>
             {chatSessions.length === 0 ? (
               <p className="text-[10px] text-gray-600 text-center py-3">No previous chats</p>
@@ -399,12 +414,15 @@ export default function VtxAiPage() {
                 {chatSessions.map(session => (
                   <button
                     key={session.id}
-                    onClick={() => loadChatSession(session.id)}
+                    onClick={() => loadChatSession(session)}
                     className="w-full text-left p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all flex items-center gap-2"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-medium text-gray-300 truncate">{session.title}</div>
-                      <div className="text-[9px] text-gray-600 truncate">{session.preview}</div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Clock className="w-2.5 h-2.5 text-gray-600 flex-shrink-0" />
+                        <span className="text-[9px] text-gray-600">{new Date(session.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="text-[11px] font-medium text-gray-300 truncate">{session.preview}</div>
                     </div>
                     <ChevronRight className="w-3 h-3 text-gray-600 flex-shrink-0" />
                   </button>
@@ -421,6 +439,33 @@ export default function VtxAiPage() {
               <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
             </div>
             <div className="space-y-2.5">
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Personality</label>
+                <select
+                  value={settings.personality}
+                  onChange={(e) => updateSettings({ personality: e.target.value as AgentSettings['personality'] })}
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                >
+                  <option value="professional">Professional Analyst</option>
+                  <option value="degen">Degen Trader</option>
+                  <option value="conservative">Conservative Advisor</option>
+                  <option value="neutral">Neutral</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Default Chain</label>
+                <select
+                  value={settings.defaultChain}
+                  onChange={(e) => updateSettings({ defaultChain: e.target.value as AgentSettings['defaultChain'] })}
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                >
+                  <option value="solana">Solana</option>
+                  <option value="ethereum">Ethereum</option>
+                  <option value="bsc">BSC</option>
+                  <option value="base">Base</option>
+                  <option value="polygon">Polygon</option>
+                </select>
+              </div>
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2">
                   <Globe className="w-3.5 h-3.5 text-gray-500" />
@@ -428,24 +473,6 @@ export default function VtxAiPage() {
                 </div>
                 <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
-                </button>
-              </label>
-              <label className="flex items-center justify-between cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs text-gray-400">Auto Market Context</span>
-                </div>
-                <button onClick={() => updateSettings({ autoContext: !settings.autoContext })} className={`w-9 h-5 rounded-full transition-colors relative ${settings.autoContext ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoContext ? 'right-[3px]' : 'left-[3px]'}`} />
-                </button>
-              </label>
-              <label className="flex items-center justify-between cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs text-gray-400">Security Warnings</span>
-                </div>
-                <button className="w-9 h-5 rounded-full transition-colors relative bg-[#0A1EFF]">
-                  <div className="w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] right-[3px]" />
                 </button>
               </label>
               <div className="flex items-center justify-between">
@@ -468,7 +495,7 @@ export default function VtxAiPage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {messages.length <= 1 && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
