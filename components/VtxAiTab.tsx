@@ -682,6 +682,14 @@ export default function VtxAiTab() {
                   : 'glass border border-white/10'
               }`}>
                 <div className="whitespace-pre-wrap">{msg.role === 'assistant' ? msg.content.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]+\s/gm, '').replace(/^—\s/gm, '') : msg.content}</div>
+                {msg.role === 'assistant' && msg.chart && (
+                  <InlineChart
+                    type={msg.chart.type}
+                    token={msg.chart.token}
+                    address={msg.chart.address}
+                    data={msg.chart.data}
+                  />
+                )}
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
