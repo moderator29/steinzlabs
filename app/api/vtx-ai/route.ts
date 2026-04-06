@@ -309,6 +309,22 @@ async function fetchArkhamWalletConnections(address: string): Promise<string> {
   }
 }
 
+async function fetchArkhamTokenHoldersRaw(tokenAddress: string): Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> {
+  try {
+    const holders = await arkhamAPI.getTokenHolders(tokenAddress, 10);
+    if (!holders || holders.length === 0) return [];
+    return holders.map((h: any) => ({
+      address: h.address,
+      label: h.entity?.name || undefined,
+      percentage: h.percentage || 0,
+      balanceUSD: h.balanceUSD,
+      entity: h.entity,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 async function fetchArkhamTokenHolders(tokenAddress: string): Promise<string> {
   try {
     const holders = await arkhamAPI.getTokenHolders(tokenAddress, 15);
@@ -385,6 +401,37 @@ async function fetchArkhamScamCheck(address: string): Promise<string> {
     console.error('Arkham scam check failed:', error);
     return '';
   }
+}
+
+function detectChartSignal(message: string): {
+  chartType: 'price' | 'bubble' | 'portfolio' | 'holders' | null;
+  chartToken: string | null;
+} {
+  const lower = message.toLowerCase();
+
+  // Check for explicit chart request tags in the AI response (not the user message)
+  // We expose this for the reply processing step
+  const chartTagMatch = message.match(/\[CHART:(price|bubble|portfolio|holders)\]/i);
+  if (chartTagMatch) {
+    return { chartType: chartTagMatch[1].toLowerCase() as 'price' | 'bubble' | 'portfolio' | 'holders', chartToken: null };
+  }
+
+  // Heuristic detection from user message
+  if (/\bportfolio\b.*\b(breakdown|allocation|pie|chart|show|visual)\b|\b(show|visual|chart).*\bportfolio\b/.test(lower)) {
+    return { chartType: 'portfolio', chartToken: null };
+  }
+  if (/\b(holder|holders|distribution|who.*hold|bubble\s*map)\b.*\b(chart|show|visual|map)\b|\b(show|visual|chart|map).*\b(holder|distribution|bubble)\b/.test(lower)) {
+    const isBubble = /bubble/.test(lower);
+    return { chartType: isBubble ? 'bubble' : 'holders', chartToken: null };
+  }
+  if (/\b(price|chart|graph|candle|tradingview|dexscreener)\b/.test(lower)) {
+    // Try to find a token name/symbol
+    const tokenMatch = lower.match(/(?:price|chart|graph)\s+(?:of\s+|for\s+)?([a-z]+)/);
+    const token = tokenMatch ? tokenMatch[1] : null;
+    return { chartType: 'price', chartToken: token };
+  }
+
+  return { chartType: null, chartToken: null };
 }
 
 function detectArkhamIntent(message: string): {
@@ -503,6 +550,7 @@ export async function POST(request: Request) {
     const walletDetected = detectWalletAddress(cleanMessage);
     const tokenDetected = detectTokenAddress(cleanMessage);
     const arkhamIntent = detectArkhamIntent(cleanMessage);
+    const userChartSignal = detectChartSignal(cleanMessage);
 
     const fetchTasks: Promise<string>[] = [
       fetchLiveMarketData(),
@@ -526,10 +574,24 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
     }
 
+    let holderChartPromise: Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> | null = null;
+
     if (tokenDetected && !walletDetected) {
       fetchTasks.push(fetchArkhamAddressIntel(tokenDetected));
       fetchTasks.push(fetchArkhamScamCheck(tokenDetected));
       fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
+      // Also fetch raw holder data for chart rendering
+      if (
+        userChartSignal.chartType === 'holders' ||
+        userChartSignal.chartType === 'bubble' ||
+        arkhamIntent.wantsHolders
+      ) {
+        holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
+      }
+    }
+
+    if (tokenDetected && arkhamIntent.wantsHolders && !holderChartPromise) {
+      holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
     }
 
     if (arkhamIntent.wantsEntitySearch && arkhamIntent.entityQuery) {
@@ -540,7 +602,10 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchWebSearch(cleanMessage));
     }
 
-    const results = await Promise.all(fetchTasks);
+    const [results, holderChartData] = await Promise.all([
+      Promise.all(fetchTasks),
+      holderChartPromise || Promise.resolve([]),
+    ]);
 
     const liveDataSection = results.filter(Boolean).join('\n\n');
 
@@ -611,6 +676,12 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
 
     const data = await response.json();
     let reply = data.content?.[0]?.text || 'No response generated';
+
+    // Detect [CHART:type] tags in the AI reply before stripping them
+    const replyChartSignal = detectChartSignal(reply);
+    // Strip chart tags from displayed text
+    reply = reply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+
     reply = reply.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
     if (!isPro) {
@@ -618,6 +689,21 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
     }
 
     const currentUsage = isPro ? null : getRateLimitInfo(ip);
+
+    // Determine what chart (if any) to send back
+    const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
+    const finalChartToken = replyChartSignal.chartToken || userChartSignal.chartToken || undefined;
+    const finalChartAddress = tokenDetected || undefined;
+
+    let chartPayload: { type: string; token?: string; address?: string; data?: any } | null = null;
+    if (finalChartType) {
+      chartPayload = {
+        type: finalChartType,
+        ...(finalChartToken ? { token: finalChartToken } : {}),
+        ...(finalChartAddress ? { address: finalChartAddress } : {}),
+        ...(holderChartData.length > 0 ? { data: holderChartData } : {}),
+      };
+    }
 
     return NextResponse.json({
       reply,
@@ -631,6 +717,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       },
       webSearchUsed: webSearchEnabled,
       arkhamDataUsed: !!(walletDetected || tokenDetected || arkhamIntent.wantsEntitySearch),
+      ...(chartPayload ? { chart: chartPayload.type, chartToken: chartPayload.token, chartAddress: chartPayload.address, chartData: chartPayload.data } : {}),
     });
   } catch (error) {
     console.error('VTX AI error:', error);

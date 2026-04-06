@@ -18,6 +18,11 @@ interface BubbleNode {
   entity?: string;
   verified?: boolean;
   color: string;
+  // Entity label fields
+  entityLabel?: string | null;
+  entityName?: string | null;
+  entityBadge?: string | null;
+  // Physics
   x?: number;
   y?: number;
   vx?: number;
@@ -30,6 +35,14 @@ interface BubbleLink {
   source: string | BubbleNode;
   target: string | BubbleNode;
   value: number;
+  direction?: 'in' | 'out' | 'both';
+}
+
+interface RiskInfo {
+  riskScore: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+  riskColor: string;
+  topHoldersConcentration: number;
 }
 
 interface TokenInfo {
@@ -49,6 +62,7 @@ interface BubbleMapData {
   nodes: BubbleNode[];
   links: BubbleLink[];
   tokenInfo: TokenInfo;
+  risk?: RiskInfo;
 }
 
 interface ChatMessage {
@@ -262,15 +276,50 @@ export default function BubbleMapPage() {
       tickCount++;
     };
 
+    // Helper: draw arrowhead pointing at (tx, ty) coming from (sx, sy), stopping at target radius
+    const drawArrow = (sx: number, sy: number, tx: number, ty: number, targetR: number, color: string, thickness: number) => {
+      const dx = tx - sx;
+      const dy = ty - sy;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+
+      // Arrow tip stops at the edge of target bubble
+      const tipX = tx - ux * (targetR + 2);
+      const tipY = ty - uy * (targetR + 2);
+
+      const arrowSize = Math.max(5, Math.min(9, thickness * 3));
+      const angle = Math.atan2(uy, ux);
+
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(
+        tipX - arrowSize * Math.cos(angle - Math.PI / 6),
+        tipY - arrowSize * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        tipX - arrowSize * Math.cos(angle + Math.PI / 6),
+        tipY - arrowSize * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    };
+
     const draw = () => {
       simulate();
       ctx.clearRect(0, 0, W, H);
 
+      // --- Draw edges with directional arrows ---
       for (const link of links) {
         const s = link.source as BubbleNode;
         const t = link.target as BubbleNode;
         if (!s.x || !t.x || !s.y || !t.y) continue;
         const isHighlighted = hoveredNode && (hoveredNode.id === s.id || hoveredNode.id === t.id);
+
+        const lineThickness = isHighlighted
+          ? Math.max(1.5, Math.min(4, (link.value / 20) * 3))
+          : Math.max(0.5, Math.min(2, (link.value / 30) * 1.5));
 
         const lineGrad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
         if (isHighlighted) {
@@ -285,8 +334,15 @@ export default function BubbleMapPage() {
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(t.x, t.y);
         ctx.strokeStyle = lineGrad;
-        ctx.lineWidth = isHighlighted ? 2 : 1;
+        ctx.lineWidth = lineThickness;
         ctx.stroke();
+
+        // Draw directional arrowhead from source → target (token center → holder)
+        const arrowColor = isHighlighted
+          ? (t.color || '#FFFFFF') + 'CC'
+          : (t.color || '#FFFFFF') + '44';
+        const tR = getRadius(t);
+        drawArrow(s.x, s.y, t.x, t.y, tR, arrowColor, lineThickness);
       }
 
       for (const node of nodes) {
@@ -350,8 +406,8 @@ export default function BubbleMapPage() {
           if (node.id === 'center') {
             ctx.fillText(node.label, node.x, node.y);
           } else {
-            const shortLabel = (node.entity || node.label);
-            const displayLabel = shortLabel.length > 12 ? shortLabel.slice(0, 12) + '..' : shortLabel;
+            const rawLabel = node.entityName || node.entity || node.label;
+            const displayLabel = rawLabel.length > 12 ? rawLabel.slice(0, 12) + '..' : rawLabel;
             ctx.fillText(displayLabel, node.x, node.y - (r > 18 ? 5 : 0));
             if (r > 18) {
               ctx.fillStyle = '#FFFFFFAA';
@@ -361,12 +417,27 @@ export default function BubbleMapPage() {
           }
         }
 
+        // Entity badge on bubble (top-right corner)
+        if (node.entityBadge && r > 14 && node.id !== 'center') {
+          const badgeSize = Math.max(10, Math.min(14, r * 0.5));
+          const bx = node.x + r * 0.6;
+          const by = node.y - r * 0.6;
+          ctx.beginPath();
+          ctx.arc(bx, by, badgeSize / 2 + 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#0A0E1A';
+          ctx.fill();
+          ctx.font = `${badgeSize}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(node.entityBadge, bx, by);
+        }
+
         if (isHovered && node.id !== 'center') {
           const labelY = node.y - r - 14;
           ctx.fillStyle = '#FFFFFF';
           ctx.font = 'bold 11px Inter, system-ui, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(node.label, node.x, labelY);
+          ctx.fillText(node.entityName || node.entity || node.label, node.x, labelY);
         }
       }
 
@@ -557,6 +628,31 @@ export default function BubbleMapPage() {
               <span>Top Conc: <span className={`font-mono ${info.topHolderConcentration > 50 ? 'text-[#EF4444]' : info.topHolderConcentration > 30 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}>{info.topHolderConcentration.toFixed(1)}%</span></span>
             </div>
           </div>
+          {mapData?.risk && (
+            <div
+              className="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg border text-xs"
+              style={{
+                backgroundColor: mapData.risk.riskColor + '14',
+                borderColor: mapData.risk.riskColor + '44',
+              }}
+            >
+              <Shield className="w-3.5 h-3.5 flex-shrink-0" style={{ color: mapData.risk.riskColor }} />
+              <span className="font-bold" style={{ color: mapData.risk.riskColor }}>
+                Risk: {mapData.risk.riskLevel}
+              </span>
+              <span className="text-gray-400">—</span>
+              <span className="text-gray-300">
+                Top 5 wallets hold{' '}
+                <span className="font-mono font-bold" style={{ color: mapData.risk.riskColor }}>
+                  {mapData.risk.topHoldersConcentration.toFixed(1)}%
+                </span>{' '}
+                of supply
+              </span>
+              <span className="ml-auto text-gray-500 font-mono">
+                Score: {mapData.risk.riskScore}/10
+              </span>
+            </div>
+          )}
         </div>
       )}
 
