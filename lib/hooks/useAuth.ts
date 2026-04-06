@@ -106,22 +106,35 @@ export function useAuthProvider(): AuthContextType {
     let subscription: any = null;
     try {
       const { data } = supabase.auth.onAuthStateChange(
-        async (event: string, session: any) => {
+        (event: string, session: any) => {
           if (!mounted) return;
 
-          if (session?.user) {
-            setSupabaseUser(session.user);
-            await fetchProfile(session.user);
-          } else {
-            setUser(null);
-            setSupabaseUser(null);
-          }
-
+          // Clear safety timer and unblock loading immediately —
+          // do NOT await fetchProfile here because Supabase awaits all
+          // onAuthStateChange listeners before resolving signInWithPassword /
+          // verifyOtp, so any async work here delays those calls by the same
+          // amount (10-15s DB query = 10-15s sign-in hang).
           if (!initialized) {
             initialized = true;
             clearTimeout(safetyTimer);
           }
-          setLoading(false);
+
+          if (session?.user) {
+            setSupabaseUser(session.user);
+            // Set basic user immediately so auth guards pass right away
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              created_at: session.user.created_at,
+            });
+            setLoading(false);
+            // Fetch full profile (name, username) in background — non-blocking
+            fetchProfile(session.user);
+          } else {
+            setUser(null);
+            setSupabaseUser(null);
+            setLoading(false);
+          }
         }
       );
       subscription = data?.subscription;
