@@ -176,7 +176,7 @@ function evmApiBase(chain: AlertChain): string {
 async function checkEVMWallet(alert: WhaleAlert | WalletActivityAlert): Promise<void> {
   const threshold = alert.type === 'whale' ? alert.threshold : 0;
   const base = evmApiBase(alert.chain);
-  const ETHERSCAN_KEY = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || '';
+  const ETHERSCAN_KEY = (process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY as string) || '';
   const url = `${base}?module=account&action=txlist&address=${alert.walletAddress}&sort=desc&page=1&offset=5${ETHERSCAN_KEY ? `&apikey=${ETHERSCAN_KEY}` : ''}`;
 
   try {
