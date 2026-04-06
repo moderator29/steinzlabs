@@ -535,8 +535,10 @@ export default function LandingPage() {
                 animate={visibleSections.has('features') ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <Card3D className="rounded-xl border border-purple-500/10 bg-gray-900/60 p-6 sm:p-8 hover:border-purple-500/25 transition-colors duration-300 group h-full"
-                  style={{ boxShadow: `0 0 30px ${category.accent}08` } as React.CSSProperties}>
+                <Card3D
+                  className="rounded-xl border border-purple-500/10 bg-gray-900/60 p-6 sm:p-8 hover:border-purple-500/25 transition-colors duration-300 group h-full"
+                  glowColor={category.accent}
+                >
                   <div
                     className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
                     style={{ color: category.accent, background: `${category.accent}15` }}
@@ -571,7 +573,8 @@ export default function LandingPage() {
         className="py-24 px-4 sm:px-6"
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 sm:p-12">
+          <div className="rounded-xl border border-purple-500/15 bg-gray-900/50 p-8 sm:p-12"
+            style={{ boxShadow: '0 0 60px rgba(124,58,237,0.08), inset 0 0 60px rgba(124,58,237,0.02)' }}>
             <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
               <div className="flex-1">
                 <p className="text-success text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Security First</p>
@@ -607,8 +610,9 @@ export default function LandingPage() {
                     { value: "12+", label: "Chains secured" },
                     { value: "24/7", label: "Monitoring" },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-center min-w-[120px]">
-                      <div className="text-lg font-heading font-bold text-white">{s.value}</div>
+                    <div key={s.label} className="rounded-lg border border-cyan-500/15 bg-cyan-500/5 p-4 text-center min-w-[120px] hover:border-cyan-500/30 transition-all duration-300"
+                      style={{ boxShadow: '0 0 20px rgba(6,182,212,0.05)' }}>
+                      <div className="text-lg font-heading font-bold text-cyan-300">{s.value}</div>
                       <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">{s.label}</div>
                     </div>
                   ))}

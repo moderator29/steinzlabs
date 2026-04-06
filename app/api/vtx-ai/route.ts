@@ -698,9 +698,34 @@ export async function POST(request: Request) {
 
     const market_context = `BTC: ${btcChange} | ETH: ${ethChange} | SOL: ${solChange} | Fear&Greed: ${fngStr} | Gas: ${gasStr} | Top mover: ${topMoverStr}`;
 
-    const styleInstruction = responseStyle === 'concise'
-      ? 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.'
-      : 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
+    // Analysis depth (new `depth` param supersedes old `responseStyle` if both present)
+    let styleInstruction: string;
+    if (depth === 'Quick') {
+      styleInstruction = 'RESPONSE STYLE: Keep responses concise (1-2 paragraphs). Hit the key data points only. No lengthy explanations.';
+    } else if (depth === 'Deep') {
+      styleInstruction = 'RESPONSE STYLE: Give comprehensive analysis with bullet points and sections. Be thorough, cover all angles, include detailed context.';
+    } else if (responseStyle === 'concise') {
+      styleInstruction = 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.';
+    } else {
+      styleInstruction = 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
+    }
+
+    // Risk appetite framing
+    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite.trim() : 'Balanced';
+    let riskInstruction: string;
+    if (resolvedRisk === 'Conservative') {
+      riskInstruction = 'RISK FRAMING: Emphasize downside risks and suggest safer alternatives. Highlight all risk factors prominently. Prioritize capital preservation.';
+    } else if (resolvedRisk === 'Aggressive') {
+      riskInstruction = 'RISK FRAMING: Focus on high-risk/high-reward opportunities. Identify asymmetric upside. The user understands and accepts high risk.';
+    } else {
+      riskInstruction = 'RISK FRAMING: Present a balanced view of risks and rewards. Note both opportunities and dangers.';
+    }
+
+    // Language instruction
+    const resolvedLanguage = (language && typeof language === 'string') ? language.trim() : 'English';
+    const languageInstruction = resolvedLanguage !== 'English'
+      ? `LANGUAGE: Respond entirely in ${resolvedLanguage}.`
+      : '';
 
     const contextInstruction = autoContext === false
       ? ''
@@ -713,7 +738,8 @@ export async function POST(request: Request) {
     const systemPrompt = `${basePrompt}
 
 ${styleInstruction}
-${contextInstruction}
+${riskInstruction}
+${languageInstruction ? languageInstruction + '\n' : ''}${contextInstruction}
 
 ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.
