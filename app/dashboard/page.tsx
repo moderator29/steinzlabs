@@ -5,6 +5,8 @@ import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, Bar
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
+import NotificationBell from '@/components/NotificationBell';
+import { maybeNotifyWelcome } from '@/lib/notifications';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
 const Markets = lazy(() => import('@/components/Markets'));
@@ -121,6 +123,13 @@ export default function Dashboard() {
     }
   }, [user, authLoading, router]);
 
+  // Welcome notification on first login
+  useEffect(() => {
+    if (user) {
+      maybeNotifyWelcome(user.email);
+    }
+  }, [user]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
@@ -202,7 +211,9 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
-          <div className="flex items-center gap-2" />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
         </div>
       </div>
 
