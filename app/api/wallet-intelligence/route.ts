@@ -240,6 +240,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
       balance: nativeBalance.toFixed(4),
       valueUsd: nativeValueUsd.toFixed(2),
       contractAddress: null,
+      logoUrl: KNOWN_TOKEN_LOGOS[nativeSymbol] || null,
     },
     ...tokenDetails.map((t) => ({
       symbol: t.symbol,
@@ -247,8 +248,19 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
       balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
       valueUsd: null,
       contractAddress: t.contractAddress,
+      logoUrl: t.logoUrl || KNOWN_TOKEN_LOGOS[t.symbol.toUpperCase()] || null,
     })),
   ];
+
+  // Resolve logos from DexScreener for tokens without logos
+  const tokenLogos = await resolveTokenLogos(holdings, chainName);
+  holdings.forEach((h) => {
+    if (!h.logoUrl) {
+      h.logoUrl = tokenLogos[h.contractAddress || h.symbol] || null;
+    }
+  });
+
+  const aiAnalysisContext = buildAiAnalysisContext(address, chainName, holdings, nativeValueUsd.toFixed(2), txCount);
 
   return {
     chain: chainName,
@@ -262,6 +274,8 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
     explorerUrl,
     ethBalance: nativeSymbol === 'ETH' ? nativeBalance.toFixed(4) : undefined,
     ethValueUsd: nativeSymbol === 'ETH' ? nativeValueUsd.toFixed(2) : undefined,
+    tokenLogos,
+    aiAnalysisContext,
   };
 }
 
