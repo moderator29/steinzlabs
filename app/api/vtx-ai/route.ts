@@ -567,7 +567,7 @@ BRANDING:
 
 export async function POST(request: Request) {
   try {
-    const { message, history, tier, responseStyle, autoContext, personality } = await request.json();
+    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
