@@ -163,30 +163,44 @@ function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
   );
 }
 
+const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_CHAINS[0];
+
 export default function WalletPage() {
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
-  const [activeChain, setActiveChain] = useState<ChainInfo>(SUPPORTED_CHAINS[0]);
+  const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'crypto' | 'nfts' | 'activity'>('crypto');
   const [hideBalance, setHideBalance] = useState(false);
+  const [hideSmallBalances, setHideSmallBalances] = useState(false);
+  const [tokenSort, setTokenSort] = useState<'value' | 'name' | 'balance'>('value');
   const [prices, setPrices] = useState<Record<string, { usd: number; usd_24h_change: number }>>({});
   const [pricesLoading, setPricesLoading] = useState(false);
+  const [defaultWalletAddress, setDefaultWalletAddress] = useState<string>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [walletToDelete, setWalletToDelete] = useState<string>('');
 
   useEffect(() => {
     const stored = localStorage.getItem('steinz_wallets');
     if (stored) {
       const parsed = JSON.parse(stored);
       setWallets(parsed);
-      if (parsed.length > 0) setActiveWallet(parsed[0]);
+      const defAddr = localStorage.getItem('steinz_default_wallet') || '';
+      setDefaultWalletAddress(defAddr);
+      const def = parsed.find((w: StoredWallet) => w.address === defAddr) || parsed[0];
+      if (def) setActiveWallet(def);
     }
     const tokens = localStorage.getItem('steinz_custom_tokens');
     if (tokens) setCustomTokens(JSON.parse(tokens));
+    const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
+    if (savedSort) setTokenSort(savedSort);
+    const savedHideSmall = localStorage.getItem('steinz_hide_small');
+    if (savedHideSmall) setHideSmallBalances(savedHideSmall === 'true');
     fetchPrices();
   }, []);
 
@@ -283,6 +297,26 @@ export default function WalletPage() {
       setWalletData(null);
       setMultiChainBalances({});
     }
+    if (defaultWalletAddress === addr) {
+      const newDef = updated[0]?.address || '';
+      setDefaultWalletAddress(newDef);
+      localStorage.setItem('steinz_default_wallet', newDef);
+    }
+    setShowDeleteConfirm(false);
+    setWalletToDelete('');
+  };
+
+  const setAsDefault = (addr: string) => {
+    setDefaultWalletAddress(addr);
+    localStorage.setItem('steinz_default_wallet', addr);
+    const wallet = wallets.find(w => w.address === addr);
+    if (wallet) setActiveWallet(wallet);
+  };
+
+  const renameWallet = (addr: string, newName: string) => {
+    const updated = wallets.map(w => w.address === addr ? { ...w, name: newName } : w);
+    saveWallets(updated);
+    if (activeWallet?.address === addr) setActiveWallet(prev => prev ? { ...prev, name: newName } : null);
   };
 
   const totalMultiChainUsd = Object.values(multiChainBalances).reduce((sum, data) => {
@@ -294,11 +328,21 @@ export default function WalletPage() {
   const currentPrice = prices[activeChain.id];
   const priceChange = currentPrice?.usd_24h_change || 0;
 
-  if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
+  if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} walletCount={wallets.length} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletImported} />;
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
   if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
+  if (view === 'wallet-settings' && activeWallet) return (
+    <WalletSettingsView
+      onBack={() => setView('main')}
+      wallet={activeWallet}
+      isDefault={defaultWalletAddress === activeWallet.address}
+      onSetDefault={() => setAsDefault(activeWallet.address)}
+      onRename={(name) => renameWallet(activeWallet.address, name)}
+      onDelete={() => { setWalletToDelete(activeWallet.address); setShowDeleteConfirm(true); setView('main'); }}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
