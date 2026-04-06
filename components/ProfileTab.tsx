@@ -790,16 +790,26 @@ export default function ProfileTab() {
 
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          <div className="text-lg font-bold">0</div>
-          <div className="text-[10px] text-gray-400">Predictions</div>
+          {(() => {
+            const pts = (() => { try { return parseInt(localStorage.getItem('steinz_points') || '0'); } catch { return 0; } })();
+            const rank = pts >= 5000 ? { label: 'Legend', color: 'text-red-400' } : pts >= 1500 ? { label: 'Whale', color: 'text-yellow-400' } : pts >= 500 ? { label: 'Analyst', color: 'text-purple-400' } : pts >= 100 ? { label: 'Trader', color: 'text-blue-400' } : { label: 'Rookie', color: 'text-gray-400' };
+            return (<><div className={`text-sm font-bold ${rank.color}`}>{rank.label}</div><div className="text-[10px] text-gray-400">Rank</div></>);
+          })()}
         </div>
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          <div className="text-lg font-bold">0%</div>
-          <div className="text-[10px] text-gray-400">Win Rate</div>
+          {(() => {
+            const results = (() => { try { const r = JSON.parse(localStorage.getItem('steinz_alert_results') || '[]'); return r; } catch { return []; } })();
+            const total = results.length;
+            const wins = results.filter((r: {success?: boolean}) => r.success).length;
+            const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
+            return (<><div className="text-lg font-bold">{rate}%</div><div className="text-[10px] text-gray-400">Win Rate</div></>);
+          })()}
         </div>
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          <div className="text-lg font-bold">0</div>
-          <div className="text-[10px] text-gray-400">Points</div>
+          {(() => {
+            const pts = (() => { try { return parseInt(localStorage.getItem('steinz_points') || '0'); } catch { return 0; } })();
+            return (<><div className="text-lg font-bold">{pts}</div><div className="text-[10px] text-gray-400">Points</div></>);
+          })()}
         </div>
       </div>
 
