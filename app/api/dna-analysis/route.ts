@@ -261,6 +261,197 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
   }
 }
 
+// ─── Inline wallet data fetchers (avoids self-referential HTTP calls) ─────────
+
+async function fetchSolWalletData(address: string): Promise<{ holdings: any[]; totalBalanceUsd: string; txCount: number }> {
+  try {
+    const [balanceRes, tokenRes, sigRes, solPriceRes] = await Promise.all([
+      fetch(SOLANA_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [address] }),
+        signal: AbortSignal.timeout(10000),
+      }),
+      fetch(SOLANA_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 2, method: 'getTokenAccountsByOwner',
+          params: [address, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }],
+        }),
+        signal: AbortSignal.timeout(10000),
+      }),
+      fetch(SOLANA_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'getSignaturesForAddress', params: [address, { limit: 50 }] }),
+        signal: AbortSignal.timeout(10000),
+      }),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => null),
+    ]);
+
+    const balanceData = await balanceRes.json();
+    const solBalance = (balanceData.result?.value || 0) / 1e9;
+
+    const tokenData = await tokenRes.json();
+    const tokenAccounts = tokenData.result?.value || [];
+
+    let txCount = 0;
+    try { const sigData = await sigRes.json(); txCount = sigData.result?.length || 0; } catch {}
+
+    let solPrice = 170;
+    try {
+      if (solPriceRes) { const pd = await solPriceRes.json(); solPrice = pd.solana?.usd || 170; }
+    } catch {}
+
+    const solValueUsd = solBalance * solPrice;
+
+    // Get SPL token prices
+    const splTokens: Array<{ mint: string; balance: number }> = [];
+    for (const account of tokenAccounts) {
+      const info = account.account?.data?.parsed?.info;
+      if (!info) continue;
+      const uiAmount = info.tokenAmount?.uiAmount || 0;
+      if (uiAmount <= 0) continue;
+      splTokens.push({ mint: info.mint, balance: uiAmount });
+    }
+
+    const tokenPricePromises = splTokens.slice(0, 15).map(async (token) => {
+      try {
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.mint}`, { signal: AbortSignal.timeout(4000) });
+        if (!res.ok) return { ...token, symbol: token.mint.slice(0, 6), name: 'SPL Token', priceUsd: 0 };
+        const data = await res.json();
+        const pair = data.pairs?.[0];
+        return {
+          ...token,
+          symbol: pair?.baseToken?.symbol || token.mint.slice(0, 6),
+          name: pair?.baseToken?.name || 'SPL Token',
+          priceUsd: parseFloat(pair?.priceUsd || '0'),
+        };
+      } catch {
+        return { ...token, symbol: token.mint.slice(0, 6), name: 'SPL Token', priceUsd: 0 };
+      }
+    });
+    const tokensWithPrices = await Promise.all(tokenPricePromises);
+
+    let totalTokenValue = 0;
+    const tokenHoldings = tokensWithPrices.map((t) => {
+      const valueUsd = t.balance * t.priceUsd;
+      totalTokenValue += valueUsd;
+      return {
+        symbol: t.symbol,
+        name: t.name,
+        balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
+        valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
+        contractAddress: t.mint,
+      };
+    }).sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+
+    return {
+      holdings: [
+        { symbol: 'SOL', name: 'Solana', balance: solBalance.toFixed(4), valueUsd: solValueUsd.toFixed(2), contractAddress: null },
+        ...tokenHoldings,
+      ],
+      totalBalanceUsd: (solValueUsd + totalTokenValue).toFixed(2),
+      txCount,
+    };
+  } catch (e) {
+    console.error('fetchSolWalletData error:', e);
+    return { holdings: [], totalBalanceUsd: '0', txCount: 0 };
+  }
+}
+
+async function fetchEvmWalletData(address: string): Promise<{ holdings: any[]; totalBalanceUsd: string; txCount: number }> {
+  try {
+    const rpcUrl = ALCHEMY_API_KEY
+      ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+      : 'https://eth.llamarpc.com';
+
+    const [balRes, txCountRes] = await Promise.all([
+      fetch(rpcUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [address, 'latest'] }),
+        signal: AbortSignal.timeout(8000),
+      }),
+      fetch(rpcUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_getTransactionCount', params: [address, 'latest'] }),
+        signal: AbortSignal.timeout(8000),
+      }),
+    ]);
+
+    const balData = await balRes.json();
+    const ethBalance = parseInt(balData.result || '0', 16) / 1e18;
+    const txCountData = await txCountRes.json();
+    const txCount = parseInt(txCountData.result || '0', 16);
+
+    // Get ETH price
+    let ethPrice = 3500;
+    try {
+      const priceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', { signal: AbortSignal.timeout(5000) });
+      if (priceRes.ok) { const pd = await priceRes.json(); ethPrice = pd.ethereum?.usd || 3500; }
+    } catch {}
+
+    const ethValueUsd = ethBalance * ethPrice;
+
+    // Get ERC-20 token balances via Alchemy if available
+    let tokenHoldings: any[] = [];
+    if (ALCHEMY_API_KEY) {
+      try {
+        const tokenRes = await fetch(rpcUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'alchemy_getTokenBalances', params: [address] }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const tokenData = await tokenRes.json();
+        const rawBalances = (tokenData.result?.tokenBalances || [])
+          .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
+          .slice(0, 15);
+
+        const metaPromises = rawBalances.map(async (token: any) => {
+          try {
+            const metaRes = await fetch(rpcUrl, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'alchemy_getTokenMetadata', params: [token.contractAddress] }),
+              signal: AbortSignal.timeout(5000),
+            });
+            const metaData = await metaRes.json();
+            const decimals = metaData.result?.decimals || 18;
+            const balance = Number(BigInt(token.tokenBalance)) / Math.pow(10, decimals);
+            if (balance <= 0) return null;
+            return {
+              symbol: metaData.result?.symbol || 'UNKNOWN',
+              name: metaData.result?.name || 'Unknown Token',
+              balance: balance > 1000 ? balance.toFixed(0) : balance.toFixed(4),
+              valueUsd: null,
+              contractAddress: token.contractAddress,
+            };
+          } catch { return null; }
+        });
+        const results = await Promise.all(metaPromises);
+        tokenHoldings = results.filter(Boolean);
+      } catch (e) {
+        console.error('EVM token fetch error:', e);
+      }
+    }
+
+    return {
+      holdings: [
+        { symbol: 'ETH', name: 'Ethereum', balance: ethBalance.toFixed(4), valueUsd: ethValueUsd.toFixed(2), contractAddress: null },
+        ...tokenHoldings,
+      ],
+      totalBalanceUsd: ethValueUsd.toFixed(2),
+      txCount,
+    };
+  } catch (e) {
+    console.error('fetchEvmWalletData error:', e);
+    return { holdings: [], totalBalanceUsd: '0', txCount: 0 };
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
