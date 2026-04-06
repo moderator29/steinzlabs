@@ -486,6 +486,9 @@ export default function VtxAiTab() {
           language: settings.language,
           depth: settings.depth,
           riskAppetite: settings.riskAppetite,
+          autoCharts: settings.autoCharts,
+          focusMode: settings.focusMode,
+          defaultChain: settings.defaultChain,
         }),
       });
 
@@ -847,7 +850,7 @@ export default function VtxAiTab() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide" style={{ maxHeight: settings.focusMode ? '80vh' : '50vh' }}>
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide min-h-0" style={{ maxHeight: settings.focusMode ? '70vh' : '45vh' }}>
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
@@ -886,7 +889,7 @@ export default function VtxAiTab() {
               <div className="glass border border-white/10 rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {settings.webSearch ? 'Searching Sargon Data Archive...' : 'Querying Steinz Intelligence...'}
+                  Searching Sargon Data Archive...
                 </div>
               </div>
             </div>

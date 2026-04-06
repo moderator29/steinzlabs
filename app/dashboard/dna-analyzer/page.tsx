@@ -421,9 +421,10 @@ export default function DNAAnalyzerPage() {
               <button
                 onClick={() => runAnalysis(inputAddress)}
                 disabled={!inputAddress.trim()}
-                className="bg-[#111827] border border-white/10 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+                className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5 font-semibold text-sm whitespace-nowrap"
               >
-                <Zap className="w-4 h-4 text-[#0A1EFF]" />
+                <Zap className="w-4 h-4" />
+                Analyze DNA
               </button>
             </div>
 
