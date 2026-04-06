@@ -35,8 +35,30 @@ export async function GET(request: Request) {
       console.log(`[VerifyEmail] Email already confirmed for ${user.email}`);
     }
 
-    // Redirect directly to login — skip magic link to avoid Supabase
-    // redirect-URL allowlist issues across different deployments.
+    // Generate a magic link, extract its token, then redirect the user to
+    // OUR callback page — we never let Supabase do the redirect so we avoid
+    // the redirect-URL allowlist issue entirely.
+    try {
+      const { data: linkData } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: user.email!,
+      });
+
+      const actionLink = linkData?.properties?.action_link;
+      if (actionLink) {
+        const supabaseUrl = new URL(actionLink);
+        const tokenHash = supabaseUrl.searchParams.get('token');
+        if (tokenHash) {
+          return NextResponse.redirect(
+            `${getSiteUrl()}/auth/callback?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink`
+          );
+        }
+      }
+    } catch (linkErr: any) {
+      console.error('[VerifyEmail] magic link generation failed:', linkErr.message);
+    }
+
+    // Fallback — user verifies but signs in manually
     return NextResponse.redirect(`${getSiteUrl()}/login?verified=true`);
   } catch (err: any) {
     console.error('[VerifyEmail] error:', err.message);
