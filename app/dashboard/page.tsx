@@ -2,6 +2,8 @@
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
@@ -107,9 +109,27 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
 });
 
 export default function Dashboard() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login?from=/dashboard');
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   const [marketStats, setMarketStats] = useState<{ totalMarketCap: string; totalVolume: string; btcDominance: string; marketCapChange: string; volumeChange: string; dominanceChange: string } | null>(null);
   const showHomeTabs = activeNav === 'home';
