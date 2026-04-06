@@ -5,7 +5,7 @@ import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, Che
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
-import { getLocalNotifications } from '@/lib/notifications';
+import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 
 interface Notification {
   id: string;
@@ -190,6 +190,12 @@ export default function ProfileTab() {
     newsletter: false,
   });
 
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>({
+    emailWhaleAlerts: true,
+    emailPriceAlerts: true,
+    browserPush: false,
+  });
+
   const [privacySettings, setPrivacySettings] = useState({
     showWallet: true,
     showActivity: true,
@@ -220,11 +226,16 @@ export default function ProfileTab() {
     if (savedPrefs) {
       try { setPreferences(JSON.parse(savedPrefs)); } catch {}
     }
+    setNotifPrefs(getNotificationPrefs());
   }, []);
 
   useEffect(() => {
     localStorage.setItem('steinz_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    saveNotificationPrefs(notifPrefs);
+  }, [notifPrefs]);
 
   useEffect(() => {
     localStorage.setItem('steinz_privacy', JSON.stringify(privacySettings));
@@ -347,36 +358,26 @@ export default function ProfileTab() {
         <p className="text-xs text-gray-500 mb-4">Control what others can see about you.</p>
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden">
-          {Object.entries(privacySettings).map(([key, value]) => (
+          {([
+            { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,      label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
+            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,   label: 'Show Trading Activity', desc: 'Let others see your trading history' },
+            { key: 'showPredictions',icon: <Award className="w-4 h-4 text-[#F59E0B]" />,       label: 'Show Predictions',      desc: 'Share your prediction win rate' },
+            { key: 'allowDMs',       icon: <MessageCircle className="w-4 h-4 text-[#10B981]" />, label: 'Allow Direct Messages', desc: 'Allow other users to message you' },
+            { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,        label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
+          ] as const).map(({ key, icon, label, desc }) => (
             <div key={key} className="flex items-center justify-between px-3 py-3 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-3">
-                {key === 'showWallet' ? <Wallet className="w-4 h-4 text-[#7C3AED]" /> :
-                 key === 'showActivity' ? <BarChart3 className="w-4 h-4 text-[#0A1EFF]" /> :
-                 key === 'showPredictions' ? <Award className="w-4 h-4 text-[#F59E0B]" /> :
-                 key === 'allowDMs' ? <MessageCircle className="w-4 h-4 text-[#10B981]" /> :
-                 <Globe className="w-4 h-4 text-[#EF4444]" />}
+                {icon}
                 <div>
-                  <div className="text-sm font-semibold">
-                    {key === 'showWallet' ? 'Show Wallet Address' :
-                     key === 'showActivity' ? 'Show Trading Activity' :
-                     key === 'showPredictions' ? 'Show Predictions' :
-                     key === 'allowDMs' ? 'Allow Direct Messages' :
-                     'Public Profile'}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    {key === 'showWallet' ? 'Display your wallet address on profile' :
-                     key === 'showActivity' ? 'Let others see your trading history' :
-                     key === 'showPredictions' ? 'Share your prediction win rate' :
-                     key === 'allowDMs' ? 'Allow other users to message you' :
-                     'Make your profile discoverable'}
-                  </div>
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="text-[10px] text-gray-500">{desc}</div>
                 </div>
               </div>
               <button
-                onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !value }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                className={`w-10 h-5 rounded-full transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}
@@ -786,6 +787,50 @@ export default function ProfileTab() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Notification Preferences */}
+      <SectionLabel>Notification Preferences</SectionLabel>
+      <div className="glass rounded-lg border border-white/10 mb-2 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+          <div>
+            <div className="text-sm font-semibold">Email alerts for whale moves</div>
+            <div className="text-[10px] text-gray-500">Receive email on large on-chain transfers</div>
+          </div>
+          <button
+            onClick={() => setNotifPrefs(prev => ({ ...prev, emailWhaleAlerts: !prev.emailWhaleAlerts }))}
+            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+          <div>
+            <div className="text-sm font-semibold">Email alerts for price targets</div>
+            <div className="text-[10px] text-gray-500">Receive email when price targets are hit</div>
+          </div>
+          <button
+            onClick={() => setNotifPrefs(prev => ({ ...prev, emailPriceAlerts: !prev.emailPriceAlerts }))}
+            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between px-3 py-3">
+          <div>
+            <div className="text-sm font-semibold flex items-center gap-2">
+              Browser push notifications
+              <span className="px-1.5 py-0.5 bg-[#F59E0B]/10 text-[#F59E0B] text-[8px] font-bold rounded">COMING SOON</span>
+            </div>
+            <div className="text-[10px] text-gray-500">Push alerts directly to your browser</div>
+          </div>
+          <button
+            disabled
+            className="w-10 h-5 rounded-full transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
+          >
+            <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5" />
+          </button>
+        </div>
       </div>
 
       <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />

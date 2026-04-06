@@ -67,6 +67,16 @@ const FALLBACK_PRICES: Record<string, number> = {
   XRP: 0.52, ADA: 0.45,
 };
 
+// Chain ID mapping for EVM chains
+const CHAIN_IDS: Record<string, number> = {
+  ethereum: 1,
+  base: 8453,
+  polygon: 137,
+  bsc: 56,
+  avalanche: 43114,
+  arbitrum: 42161,
+};
+
 let priceCache: { prices: Record<string, number>; ts: number } = { prices: {}, ts: 0 };
 const CACHE_TTL = 30000;
 
@@ -175,4 +185,82 @@ export async function GET(req: NextRequest) {
     validUntil: Date.now() + 30000,
     priceSource: Object.keys(livePrices).length > 0 ? 'coingecko' : 'fallback',
   });
+}
+
+// POST endpoint: proxy DEX APIs for swap execution to avoid CORS
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { action, fromToken, toToken, amount, chain, walletAddress, slippage = 0.5 } = body;
+
+    if (!action) {
+      return NextResponse.json({ error: 'Missing action' }, { status: 400 });
+    }
+
+    // --- Solana: proxy Raydium compute swap ---
+    if (action === 'raydium-compute') {
+      const { inputMint, outputMint, amountLamports } = body;
+      const url = `https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${Math.round(slippage * 100)}&txVersion=V0`;
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      if (!res.ok) {
+        return NextResponse.json({ error: data?.message || 'Raydium compute error' }, { status: res.status });
+      }
+      return NextResponse.json(data);
+    }
+
+    // --- Solana: proxy Raydium build transaction ---
+    if (action === 'raydium-build-tx') {
+      const { computeData, walletAddress: wallet } = body;
+      const res = await fetch('https://transaction-v1.raydium.io/transaction/swap-base-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          computeSwapResponse: computeData,
+          txVersion: 'V0',
+          wallet,
+          wrapSol: true,
+          unwrapSol: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return NextResponse.json({ error: data?.message || 'Raydium transaction build error' }, { status: res.status });
+      }
+      return NextResponse.json(data);
+    }
+
+    // --- EVM: proxy 1inch swap quote + tx data ---
+    if (action === '1inch-swap') {
+      const chainId = CHAIN_IDS[chain] || 1;
+      const fromAddress = COMMON_TOKENS[chain]?.[fromToken] || fromToken;
+      const toAddress = COMMON_TOKENS[chain]?.[toToken] || toToken;
+
+      // Convert human amount to wei (assuming 18 decimals for most tokens, 6 for USDC/USDT)
+      const DECIMALS: Record<string, number> = {
+        USDC: 6, USDT: 6, WBTC: 8, BONK: 5, WIF: 6, JUP: 6, RAY: 6,
+      };
+      const decimals = DECIMALS[fromToken] ?? 18;
+      const amountInWei = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+
+      const apiKey = process.env.ONEINCH_API_KEY || '';
+      const url = `https://api.1inch.dev/swap/v6.0/${chainId}/swap?src=${fromAddress}&dst=${toAddress}&amount=${amountInWei}&from=${walletAddress}&slippage=${slippage}&disableEstimate=true`;
+
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return NextResponse.json({ error: data?.description || data?.error || '1inch API error' }, { status: res.status });
+      }
+      return NextResponse.json({ tx: data.tx, toAmount: data.toAmount });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
+  }
 }

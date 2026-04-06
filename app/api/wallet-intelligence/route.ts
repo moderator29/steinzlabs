@@ -2,6 +2,76 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
 
+const KNOWN_TOKEN_LOGOS: Record<string, string> = {
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  WETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/tether.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+};
+
+const DEXSCREENER_CHAIN_MAP: Record<string, string> = {
+  Ethereum: 'ethereum',
+  Base: 'base',
+  Polygon: 'polygon',
+  Avalanche: 'avalanche',
+  Solana: 'solana',
+};
+
+async function fetchTokenLogoFromDexScreener(chain: string, tokenAddress: string): Promise<string | null> {
+  try {
+    const dexChain = DEXSCREENER_CHAIN_MAP[chain] || chain.toLowerCase();
+    const res = await fetch(`https://api.dexscreener.com/tokens/v1/${dexChain}/${tokenAddress}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.pairs?.[0]?.info?.imageUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveTokenLogos(
+  holdings: Array<{ symbol: string; contractAddress: string | null }>,
+  chain: string
+): Promise<Record<string, string>> {
+  const logos: Record<string, string> = {};
+  const fetchPromises = holdings.map(async (h) => {
+    if (KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()]) {
+      logos[h.symbol] = KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()];
+      if (h.contractAddress) logos[h.contractAddress] = KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()];
+      return;
+    }
+    if (h.contractAddress) {
+      const url = await fetchTokenLogoFromDexScreener(chain, h.contractAddress);
+      if (url) {
+        logos[h.contractAddress] = url;
+        logos[h.symbol] = url;
+      }
+    }
+  });
+  await Promise.all(fetchPromises);
+  return logos;
+}
+
+function buildAiAnalysisContext(
+  address: string,
+  chain: string,
+  holdings: Array<{ symbol: string; balance: string; valueUsd: string | null }>,
+  totalBalanceUsd: string,
+  txCount: number
+): string {
+  const tokenList = holdings
+    .map((h) => `${h.symbol}: ${h.balance}${h.valueUsd ? ` ($${h.valueUsd})` : ''}`)
+    .join(', ');
+  return `Analyze this wallet: ${address} on ${chain}. Holdings: ${tokenList}. Total value: $${totalBalanceUsd}. Transaction count: ${txCount}. Give me: risk assessment, notable patterns, is this wallet suspicious or legitimate, and what actions should the wallet owner take.`;
+}
+
 interface EvmChainConfig {
   rpcUrl: string;
   nativeSymbol: string;
@@ -140,6 +210,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
           decimals,
           balance: balance,
           logo: metaData.result?.logo || null,
+          logoUrl: metaData.result?.logo || null,
         };
       } catch {
         return null;
@@ -169,6 +240,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
       balance: nativeBalance.toFixed(4),
       valueUsd: nativeValueUsd.toFixed(2),
       contractAddress: null,
+      logoUrl: KNOWN_TOKEN_LOGOS[nativeSymbol] || null,
     },
     ...tokenDetails.map((t) => ({
       symbol: t.symbol,
@@ -176,8 +248,19 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
       balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
       valueUsd: null,
       contractAddress: t.contractAddress,
+      logoUrl: t.logoUrl || KNOWN_TOKEN_LOGOS[t.symbol.toUpperCase()] || null,
     })),
   ];
+
+  // Resolve logos from DexScreener for tokens without logos
+  const tokenLogos = await resolveTokenLogos(holdings, chainName);
+  holdings.forEach((h) => {
+    if (!h.logoUrl) {
+      h.logoUrl = tokenLogos[h.contractAddress || h.symbol] || null;
+    }
+  });
+
+  const aiAnalysisContext = buildAiAnalysisContext(address, chainName, holdings, nativeValueUsd.toFixed(2), txCount);
 
   return {
     chain: chainName,
@@ -191,6 +274,8 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
     explorerUrl,
     ethBalance: nativeSymbol === 'ETH' ? nativeBalance.toFixed(4) : undefined,
     ethValueUsd: nativeSymbol === 'ETH' ? nativeValueUsd.toFixed(2) : undefined,
+    tokenLogos,
+    aiAnalysisContext,
   };
 }
 
@@ -284,17 +369,41 @@ async function getSolData(address: string) {
     .map((t) => {
       const valueUsd = t.priceInfo ? t.balance * t.priceInfo.price : 0;
       totalTokenValueUsd += valueUsd;
+      const symbol = t.priceInfo?.symbol || t.mint.slice(0, 6);
       return {
-        symbol: t.priceInfo?.symbol || t.mint.slice(0, 6),
+        symbol,
         name: t.priceInfo?.name || `SPL Token`,
         balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
         valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
         contractAddress: t.mint,
+        logoUrl: KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] || null,
       };
     })
     .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
 
   const totalBalanceUsd = solValueUsd + totalTokenValueUsd;
+
+  const allHoldings = [
+    {
+      symbol: 'SOL',
+      name: 'Solana',
+      balance: solBalance.toFixed(4),
+      valueUsd: solValueUsd.toFixed(2),
+      contractAddress: null,
+      logoUrl: KNOWN_TOKEN_LOGOS['SOL'],
+    },
+    ...tokenHoldings,
+  ];
+
+  // Fetch DexScreener logos for tokens that don't have one yet
+  const tokenLogos = await resolveTokenLogos(allHoldings, 'Solana');
+  allHoldings.forEach((h) => {
+    if (!h.logoUrl) {
+      h.logoUrl = tokenLogos[h.contractAddress || h.symbol] || null;
+    }
+  });
+
+  const aiAnalysisContext = buildAiAnalysisContext(address, 'Solana', allHoldings, totalBalanceUsd.toFixed(2), txCount);
 
   return {
     chain: 'Solana',
@@ -303,18 +412,11 @@ async function getSolData(address: string) {
     solValueUsd: solValueUsd.toFixed(2),
     totalBalanceUsd: totalBalanceUsd.toFixed(2),
     txCount,
-    holdings: [
-      {
-        symbol: 'SOL',
-        name: 'Solana',
-        balance: solBalance.toFixed(4),
-        valueUsd: solValueUsd.toFixed(2),
-        contractAddress: null,
-      },
-      ...tokenHoldings,
-    ],
+    holdings: allHoldings,
     tokenCount: tokenHoldings.length,
     explorerUrl: 'https://solscan.io',
+    tokenLogos,
+    aiAnalysisContext,
   };
 }
 

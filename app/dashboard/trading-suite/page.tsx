@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp, TrendingDown, Activity, Zap, Eye, Search, Copy, Star,
   ArrowUpRight, ArrowDownRight, ExternalLink, Shield, Target, Radio,
@@ -62,6 +63,7 @@ const TABS = [
 ];
 
 export default function TradingSuitePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('terminal');
   const [trending, setTrending] = useState<TrendingToken[]>([]);
   const [topTokens, setTopTokens] = useState<TopToken[]>([]);
@@ -204,19 +206,22 @@ export default function TradingSuitePage() {
       <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="px-4 pt-3 pb-2">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button onClick={() => router.back()} className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors flex-shrink-0">
+                <ArrowLeft className="w-4 h-4 text-gray-400" />
+              </button>
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] via-[#7C3AED] to-[#EF4444] rounded-xl flex items-center justify-center">
-                  <Crosshair className="w-4.5 h-4.5" />
+                <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] via-[#7C3AED] to-[#EF4444] rounded-xl flex items-center justify-center">
+                  <Crosshair className="w-4 h-4" />
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#10B981] rounded-full border-2 border-[#060A12]" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-sm font-heading font-bold tracking-tight">Trading Suite</h1>
-                  <span className="px-2 py-0.5 rounded-md text-[8px] font-bold bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 text-[#0A1EFF] border border-[#0A1EFF]/20">PRO</span>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-xs font-bold tracking-tight">STEINZ Terminal</h1>
+                  <span className="px-1.5 py-0.5 rounded text-[7px] font-bold bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 text-[#0A1EFF] border border-[#0A1EFF]/20">PRO</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-[9px] mt-0.5">
+                <div className="flex items-center gap-2 text-[9px] mt-0.5">
                   <span className="flex items-center gap-1 text-[#10B981]"><span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse"/>LIVE</span>
                   <span className="text-gray-700">|</span>
                   <span style={{color: fgC}}>F&G {fearGreed.value}</span>
