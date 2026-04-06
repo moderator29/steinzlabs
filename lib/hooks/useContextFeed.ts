@@ -74,10 +74,10 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
         seenIds.current.clear();
         setEvents(newEvents.slice(0, 200));
       } else {
-        setEvents(prev => {
+        setEvents((prev: ContextEvent[]) => {
           const mergedMap = new Map<string, ContextEvent>();
-          newEvents.forEach(e => mergedMap.set(e.id, e));
-          prev.forEach(e => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
+          newEvents.forEach((e: ContextEvent) => mergedMap.set(e.id, e));
+          prev.forEach((e: ContextEvent) => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
           const merged = Array.from(mergedMap.values());
           merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           return merged.slice(0, 200);

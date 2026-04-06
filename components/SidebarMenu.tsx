@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Zap, Wallet, CandlestickChart, Archive, Globe, Circle, Layers
+  Wallet, CandlestickChart, Archive, Globe, Circle, Layers, FileCode,
+  FlaskConical, BookOpen
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -36,7 +37,7 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Trading',
     items: [
-      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite', badge: 'PRO' },
+      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite', badge: 'BETA' },
       { icon: Layers, label: 'DEX', path: '/dashboard/dex', badge: 'NEW' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
       { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges' },
@@ -56,13 +57,21 @@ const NAV_CATEGORIES: NavCategory[] = [
     ],
   },
   {
+    title: 'Security',
+    items: [
+      { icon: Shield, label: 'Security Center', path: '/dashboard/security' },
+      { icon: Globe, label: 'Domain Shield', path: '/dashboard/domain-shield' },
+      { icon: FileCode, label: 'Signature Insight', path: '/dashboard/signature-insight' },
+      { icon: Target, label: 'Risk Scanner', path: '/dashboard/risk-scanner' },
+    ],
+  },
+  {
     title: 'Tools',
     items: [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
-      { icon: Shield, label: 'Security Center', path: '/dashboard/security' },
-      { icon: Target, label: 'Risk Scanner', path: '/dashboard/risk-scanner' },
+      { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },
@@ -168,7 +177,8 @@ const SidebarNavItem = memo(function SidebarNavItem({
       {badge && (
         <span className={`ml-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
           badge === 'AI' ? 'bg-purple-500/15 text-purple-400' :
-          badge === 'NEW' ? 'bg-[#0A1EFF]/15 text-blue-300' :
+          badge === 'BETA' ? 'bg-[#10B981]/15 text-[#10B981]' :
+          badge === 'PRO' ? 'bg-amber-500/15 text-amber-400' :
           'bg-[#0A1EFF]/15 text-blue-300'
         }`}>{badge}</span>
       )}
