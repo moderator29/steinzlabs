@@ -132,7 +132,7 @@ export default function SecurityPage() {
             <Shield className="w-4 h-4" />
           </div>
           <h1 className="text-sm font-heading font-bold">Security Center</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">GOPLUS</span>
+          <span className="ml-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">VERIFIED</span>
         </div>
       </div>
 
@@ -175,7 +175,7 @@ export default function SecurityPage() {
               <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0A1EFF] animate-spin"></div>
               <Shield className="w-6 h-6 text-[#0A1EFF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
-            <p className="text-sm text-gray-400">Scanning contract with GoPlus Security...</p>
+            <p className="text-sm text-gray-400">Scanning contract security...</p>
             <p className="text-[10px] text-gray-600 mt-1">Analyzing honeypot risk, ownership, taxes, and more</p>
           </div>
         )}
@@ -386,7 +386,7 @@ export default function SecurityPage() {
             </div>
 
             <p className="text-[10px] text-gray-600 text-center">
-              Powered by GoPlus Security API • Scanned at {new Date(result.timestamp).toLocaleTimeString()}
+              Security analysis verified • Scanned at {new Date(result.timestamp).toLocaleTimeString()}
             </p>
           </>
         )}
@@ -395,7 +395,7 @@ export default function SecurityPage() {
           <div className="text-center py-8">
             <Shield className="w-12 h-12 text-gray-700 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-gray-500">Enter a contract address to scan</h3>
-            <p className="text-xs text-gray-600 mt-1">Real-time security analysis powered by GoPlus</p>
+            <p className="text-xs text-gray-600 mt-1">Real-time security analysis and threat detection</p>
             <div className="mt-4 space-y-1">
               <p className="text-[10px] text-gray-600">Try these examples:</p>
               <button

@@ -2,6 +2,137 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
 
+// GoPlus chain ID map for EVM chains
+const GOPLUS_CHAIN_ID: Record<string, string> = {
+  Ethereum: '1',
+  Base: '8453',
+  Polygon: '137',
+  Avalanche: '43114',
+  BSC: '56',
+  Arbitrum: '42161',
+};
+
+export interface SecurityFlag {
+  name: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  explanation: string;
+}
+
+export interface ContractSecurity {
+  isHoneypot: boolean;
+  buyTax: number;
+  sellTax: number;
+  isOpenSource: boolean;
+  isProxy: boolean;
+  isMintable: boolean;
+  ownershipRenounced: boolean;
+  hasBlacklist: boolean;
+  holderCount: number;
+  trustScore: number;
+  trustLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+  flags: SecurityFlag[];
+}
+
+async function fetchGoPlusContractSecurity(
+  contractAddress: string,
+  chainName: string
+): Promise<ContractSecurity | null> {
+  const chainId = GOPLUS_CHAIN_ID[chainName];
+  if (!chainId || !contractAddress || contractAddress === 'null') return null;
+
+  try {
+    const res = await fetch(
+      `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${contractAddress.toLowerCase()}`,
+      { signal: AbortSignal.timeout(6000), next: { revalidate: 60 } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const info = data?.result?.[contractAddress.toLowerCase()];
+    if (!info) return null;
+
+    const flags: SecurityFlag[] = [];
+
+    if (info.is_honeypot === '1') {
+      flags.push({ name: 'Honeypot', severity: 'critical', explanation: 'This token cannot be sold — it is a honeypot trap.' });
+    }
+    if (info.is_open_source !== '1') {
+      flags.push({ name: 'Unverified Source', severity: 'high', explanation: 'Contract source code is not verified on-chain.' });
+    }
+    if (info.is_mintable === '1') {
+      flags.push({ name: 'Mintable', severity: 'high', explanation: 'Owner can mint unlimited tokens, diluting supply.' });
+    }
+    if (info.can_take_back_ownership === '1') {
+      flags.push({ name: 'Ownership Reclaimable', severity: 'high', explanation: 'Owner can reclaim ownership even after renouncing.' });
+    }
+    if (info.owner_change_balance === '1') {
+      flags.push({ name: 'Balance Manipulation', severity: 'critical', explanation: 'Owner can modify token balances arbitrarily.' });
+    }
+    if (info.hidden_owner === '1') {
+      flags.push({ name: 'Hidden Owner', severity: 'high', explanation: 'Contract has a concealed owner address.' });
+    }
+    if (info.is_proxy === '1') {
+      flags.push({ name: 'Proxy Contract', severity: 'medium', explanation: 'Contract logic can be upgraded by the owner.' });
+    }
+    if (info.selfdestruct === '1') {
+      flags.push({ name: 'Self-Destruct', severity: 'high', explanation: 'Contract can be destroyed, wiping all balances.' });
+    }
+    if (info.is_blacklisted === '1') {
+      flags.push({ name: 'Blacklist Function', severity: 'medium', explanation: 'Owner can blacklist wallets from trading.' });
+    }
+    if (info.cannot_buy === '1') {
+      flags.push({ name: 'Cannot Buy', severity: 'critical', explanation: 'Token buying is disabled.' });
+    }
+    if (info.cannot_sell_all === '1') {
+      flags.push({ name: 'Cannot Sell All', severity: 'high', explanation: 'Holders cannot sell their entire balance.' });
+    }
+
+    const buyTax = parseFloat(info.buy_tax || '0') * 100;
+    const sellTax = parseFloat(info.sell_tax || '0') * 100;
+    if (buyTax > 10) {
+      flags.push({ name: 'High Buy Tax', severity: 'high', explanation: `Buy tax is ${buyTax.toFixed(1)}% — abnormally high.` });
+    } else if (buyTax > 5) {
+      flags.push({ name: 'Elevated Buy Tax', severity: 'medium', explanation: `Buy tax is ${buyTax.toFixed(1)}%.` });
+    }
+    if (sellTax > 10) {
+      flags.push({ name: 'High Sell Tax', severity: 'high', explanation: `Sell tax is ${sellTax.toFixed(1)}% — abnormally high.` });
+    } else if (sellTax > 5) {
+      flags.push({ name: 'Elevated Sell Tax', severity: 'medium', explanation: `Sell tax is ${sellTax.toFixed(1)}%.` });
+    }
+
+    // Compute trust score
+    let trustScore = 100;
+    for (const flag of flags) {
+      if (flag.severity === 'critical') trustScore -= 35;
+      else if (flag.severity === 'high') trustScore -= 15;
+      else if (flag.severity === 'medium') trustScore -= 8;
+      else if (flag.severity === 'low') trustScore -= 3;
+    }
+    trustScore = Math.max(0, Math.min(100, trustScore));
+
+    let trustLevel: ContractSecurity['trustLevel'] = 'SAFE';
+    if (trustScore < 30) trustLevel = 'DANGER';
+    else if (trustScore < 50) trustLevel = 'WARNING';
+    else if (trustScore < 70) trustLevel = 'CAUTION';
+
+    return {
+      isHoneypot: info.is_honeypot === '1',
+      buyTax,
+      sellTax,
+      isOpenSource: info.is_open_source === '1',
+      isProxy: info.is_proxy === '1',
+      isMintable: info.is_mintable === '1',
+      ownershipRenounced: info.can_take_back_ownership !== '1',
+      hasBlacklist: info.is_blacklisted === '1',
+      holderCount: parseInt(info.holder_count || '0'),
+      trustScore,
+      trustLevel,
+      flags,
+    };
+  } catch {
+    return null;
+  }
+}
+
 const KNOWN_TOKEN_LOGOS: Record<string, string> = {
   ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
   WETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
@@ -436,12 +567,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid wallet address. Supports EVM (0x...) and SOL (base58) addresses.' }, { status: 400 });
     }
 
-    let walletData;
+    let walletData: any;
+    let chainName = 'Ethereum';
+
     if (detectedType === 'SOL') {
       walletData = await getSolData(address);
+      chainName = 'Solana';
     } else {
       const evmChainKey = chainParam !== 'auto' && EVM_CHAINS[chainParam] ? chainParam : 'ethereum';
       const config = EVM_CHAINS[evmChainKey];
+      chainName = config.chainName;
       walletData = await getEvmData(
         address,
         config.rpcUrl,
@@ -453,7 +588,25 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json(walletData, {
+    // GoPlus security scan for top EVM token holdings (non-native, non-SOL)
+    let contractSecurityMap: Record<string, ContractSecurity | null> = {};
+    if (detectedType === 'EVM' && walletData.holdings) {
+      const evmTokens: Array<{ contractAddress: string }> = (walletData.holdings as Array<{ contractAddress: string | null }>)
+        .filter((h) => h.contractAddress && h.contractAddress !== 'null')
+        .slice(0, 5) as Array<{ contractAddress: string }>;
+
+      if (evmTokens.length > 0) {
+        const securityResults = await Promise.allSettled(
+          evmTokens.map((h) => fetchGoPlusContractSecurity(h.contractAddress, chainName))
+        );
+        evmTokens.forEach((h, i) => {
+          const result = securityResults[i];
+          contractSecurityMap[h.contractAddress] = result.status === 'fulfilled' ? result.value : null;
+        });
+      }
+    }
+
+    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap }, {
       headers: {
         'Cache-Control': 'public, max-age=30',
       },

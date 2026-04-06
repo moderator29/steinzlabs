@@ -4,10 +4,13 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import Script from 'next/script';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
 const SESSION_HOURS = 4;
 
@@ -24,6 +27,7 @@ function LoginPageInner() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [resending, setResending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
   const submitting = useRef(false);
 
   useEffect(() => {
@@ -44,6 +48,7 @@ function LoginPageInner() {
     const e: Record<string, string> = {};
     if (!identifier.trim()) e.identifier = 'Email or username is required';
     if (!password) e.password = 'Password is required';
+    if (TURNSTILE_SITE_KEY && !captchaToken) e.captcha = 'Please complete the security check';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -265,6 +270,26 @@ function LoginPageInner() {
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
             </div>
+
+            {TURNSTILE_SITE_KEY && (
+              <div>
+                <div
+                  className="cf-turnstile"
+                  data-sitekey={TURNSTILE_SITE_KEY}
+                  data-callback="onTurnstileSuccess"
+                  data-theme="dark"
+                  data-size="flexible"
+                />
+                <Script
+                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                  strategy="lazyOnload"
+                  onLoad={() => {
+                    (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token);
+                  }}
+                />
+                {errors.captcha && <p className="text-red-400 text-xs mt-1.5">{errors.captcha}</p>}
+              </div>
+            )}
 
             <button
               type="submit"

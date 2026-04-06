@@ -156,6 +156,58 @@ export function Bubblemaps({ nodes, width = 800, height = 500, risk }: Bubblemap
       ctx.fillText(concText, badgeX + badgeW + 10, bannerY + RISK_BANNER_HEIGHT / 2);
     }
 
+    // --- Directional arrows between top holder and neighbors ---
+    if (positionedNodes.length > 1) {
+      const top = positionedNodes[0]; // largest holder (sorted by percentage desc)
+      const neighbors = positionedNodes.slice(1, Math.min(4, positionedNodes.length));
+
+      for (const neighbor of neighbors) {
+        const dx = neighbor.x - top.x;
+        const dy = neighbor.y - top.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist === 0) continue;
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+
+        // Start point (edge of top bubble)
+        const sx = top.x + ux * (top.radius + 4);
+        const sy = top.y + uy * (top.radius + 4);
+
+        // End point (edge of neighbor bubble)
+        const ex = neighbor.x - ux * (neighbor.radius + 4);
+        const ey = neighbor.y - uy * (neighbor.radius + 4);
+
+        // Arrow line
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = top.color + '44';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Arrowhead at end
+        const headLen = 8;
+        const angle = Math.atan2(ey - sy, ex - sx);
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(
+          ex - headLen * Math.cos(angle - Math.PI / 6),
+          ey - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(
+          ex - headLen * Math.cos(angle + Math.PI / 6),
+          ey - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.strokeStyle = top.color + '66';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
     // --- Bubbles ---
     for (const node of positionedNodes) {
       const isHovered = hoveredNode?.id === node.id;

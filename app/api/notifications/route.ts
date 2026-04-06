@@ -173,10 +173,62 @@ async function fetchWhaleAlerts(): Promise<NotificationItem[]> {
   }
 }
 
-export async function GET() {
+async function fetchSupabaseNotifications(userId?: string): Promise<NotificationItem[]> {
   try {
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!serviceKey) return [];
+    const { createClient } = await import('@supabase/supabase-js');
+    const adminClient = createClient(
+      'https://phvewrldcdxupsnakddx.supabase.co',
+      serviceKey,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    let query = adminClient
+      .from('notifications')
+      .select('id, type, title, message, read, created_at, metadata')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    return data.map((row: any) => ({
+      id: `sb-${row.id}`,
+      type: row.type,
+      title: row.title,
+      message: row.message,
+      time: timeAgo(new Date(row.created_at || Date.now())),
+      read: row.read ?? false,
+      createdAt: row.created_at,
+      metadata: row.metadata || {},
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId') || undefined;
+
+    // Try Supabase first for user-specific notifications
+    let supabaseNotifications: NotificationItem[] = [];
+    if (userId) {
+      supabaseNotifications = await fetchSupabaseNotifications(userId);
+    }
+
+    // Return cached market notifications if fresh
     if (Date.now() - cache.ts < CACHE_TTL && cache.data.length > 0) {
-      return NextResponse.json({ notifications: cache.data }, {
+      const merged = supabaseNotifications.length > 0
+        ? [...supabaseNotifications, ...cache.data].slice(0, 50)
+        : cache.data;
+      return NextResponse.json({ notifications: merged, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'cache' }, {
         headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
       });
     }
@@ -188,19 +240,24 @@ export async function GET() {
       fetchWhaleAlerts(),
     ]);
 
-    const notifications: NotificationItem[] = [];
+    const marketNotifications: NotificationItem[] = [];
 
     const interleaved = [priceAlerts, securityAlerts, whaleAlerts, trending];
     const maxLen = Math.max(...interleaved.map(a => a.length));
     for (let i = 0; i < maxLen; i++) {
       for (const arr of interleaved) {
-        if (i < arr.length) notifications.push(arr[i]);
+        if (i < arr.length) marketNotifications.push(arr[i]);
       }
     }
 
-    cache = { data: notifications, ts: Date.now() };
+    cache = { data: marketNotifications, ts: Date.now() };
 
-    return NextResponse.json({ notifications }, {
+    // Merge Supabase user notifications on top of market notifications
+    const notifications = supabaseNotifications.length > 0
+      ? [...supabaseNotifications, ...marketNotifications].slice(0, 50)
+      : marketNotifications;
+
+    return NextResponse.json({ notifications, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'market' }, {
       headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
     });
   } catch (error) {

@@ -266,9 +266,9 @@ async function fetchAll(chain: string): Promise<MarketToken[]> {
   // Deduplicate by symbol+source
   const seen = new Set<string>();
   const deduped = all.filter(t => {
-    const key = `${t.symbol}__${t.source}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const dedupeKey = `${t.symbol}__${t.source}`;
+    if (seen.has(dedupeKey)) return false;
+    seen.add(dedupeKey);
     return true;
   });
 
