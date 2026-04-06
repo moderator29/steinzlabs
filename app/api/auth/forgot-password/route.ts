@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { generateResetToken } from '@/lib/authTokens';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const token = generateResetToken(user.id, cleanEmail);
-    const resetUrl = `https://steinzlabs.com/reset-password?token=${token}&uid=${user.id}`;
+    const resetUrl = `${getSiteUrl()}/reset-password?token=${token}&uid=${user.id}`;
 
     const firstName = user.user_metadata?.first_name || 'there';
     const emailSent = await sendPasswordResetEmail(cleanEmail, resetUrl, firstName);
