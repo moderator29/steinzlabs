@@ -95,60 +95,44 @@ function LoginPageInner() {
         email = result.email;
       }
 
-      const res = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      // Sign in directly via Supabase client — it handles all session
+      // storage (localStorage + cookie listener in supabase.ts) automatically.
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.error === 'EMAIL_NOT_CONFIRMED') {
+      if (error) {
+        const msg = error.message || '';
+        const lower = msg.toLowerCase();
+        if (lower.includes('not confirmed') || lower.includes('email not confirmed')) {
           setNeedsVerification(true);
           setVerificationEmail(email);
           showToast('Please verify your email first.', 'error');
           setErrors({ identifier: 'Email not verified' });
           return;
         }
-        showToast(data.error || 'Sign in failed.', 'error');
-        if (res.status === 401) setErrors({ password: 'Incorrect credentials' });
+        if (lower.includes('invalid') || lower.includes('credentials') || lower.includes('wrong')) {
+          showToast('Incorrect email or password.', 'error');
+          setErrors({ password: 'Incorrect credentials' });
+          return;
+        }
+        showToast(msg || 'Sign in failed.', 'error');
         return;
       }
 
-      if (!data.access_token) {
+      if (!data.session) {
         showToast('Sign in failed. Please try again.', 'error');
         return;
       }
 
-      // Write session to localStorage BEFORE navigating so Supabase
-      // picks it up immediately on the next page load via INITIAL_SESSION
+      // Set cookie for middleware (Supabase writes localStorage, we write the cookie)
       if (typeof window !== 'undefined') {
-        try {
-          const sessionData = {
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            token_type: 'bearer',
-            expires_in: data.expires_in || 14400,
-            expires_at: Math.floor(Date.now() / 1000) + (data.expires_in || 14400),
-            user: data.user,
-          };
-          localStorage.setItem('steinz-auth-token', JSON.stringify(sessionData));
-          localStorage.setItem('steinz_has_session', 'true');
-        } catch {}
-
         const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
         const isSecure = window.location.protocol === 'https:';
-        document.cookie = `steinz_session=${data.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
+        document.cookie = `steinz_session=${data.session.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
       }
 
-      // Also call setSession best-effort (no await — don't block navigation)
-      supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      }).catch(() => {});
+      showToast('Welcome back!', 'success');
 
-      // Hard redirect so fresh page load reads localStorage cleanly
+      // Hard redirect — fresh page load reads the localStorage Supabase just wrote
       const destination = searchParams.get('from') || '/dashboard';
       window.location.href = destination;
     } catch (err: any) {
