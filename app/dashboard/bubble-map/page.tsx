@@ -504,7 +504,7 @@ export default function BubbleMapPage() {
 
     try {
       const contextInfo = mapData
-        ? `\n\n[BUBBLE MAP CONTEXT]\nToken: ${mapData.tokenInfo.name} (${mapData.tokenInfo.symbol})\nChain: ${mapData.tokenInfo.chain}\nPrice: $${mapData.tokenInfo.price}\n24h Change: ${mapData.tokenInfo.priceChange24h}%\nVolume: $${mapData.tokenInfo.volume24h}\nMarket Cap: $${mapData.tokenInfo.marketCap}\nLiquidity: $${mapData.tokenInfo.liquidity}\nTop Holder Concentration: ${mapData.tokenInfo.topHolderConcentration}%\nHolders shown: ${mapData.nodes.length - 1}\nHolder breakdown:\n${mapData.nodes.filter(n => n.id !== 'center').map(n => `${n.label}: ${n.percentage}% (${n.type})`).join('\n')}`
+        ? `\n\n[BUBBLE MAP CONTEXT]\nToken: ${mapData.tokenInfo.name} (${mapData.tokenInfo.symbol})\nChain: ${mapData.tokenInfo.chain}\nPrice: $${mapData.tokenInfo.price}\n24h Change: ${mapData.tokenInfo.priceChange24h}%\nVolume: $${mapData.tokenInfo.volume24h}\nMarket Cap: $${mapData.tokenInfo.marketCap}\nLiquidity: $${mapData.tokenInfo.liquidity}\nTop Holder Concentration: ${mapData.tokenInfo.topHolderConcentration}%\n${mapData.risk ? `Risk Level: ${mapData.risk.riskLevel} (score ${mapData.risk.riskScore}/10)\nTop 5 wallets hold: ${mapData.risk.topHoldersConcentration.toFixed(1)}%\n` : ''}Holders shown: ${mapData.nodes.length - 1}\nHolder breakdown:\n${mapData.nodes.filter(n => n.id !== 'center').map(n => `${n.entityName || n.entity || n.label}: ${n.percentage}% (${n.type}${n.entityLabel ? ', ' + n.entityLabel : ''})`).join('\n')}`
         : '';
 
       const res = await fetch('/api/vtx-ai', {
@@ -701,10 +701,17 @@ export default function BubbleMapPage() {
               </div>
 
               {selectedNode && selectedNode.id !== 'center' && (
-                <div className="absolute top-3 left-3 w-56 bg-[#0f1320]/95 border border-white/[0.08] rounded-xl p-3 backdrop-blur-xl shadow-xl">
+                <div className="absolute top-3 left-3 w-60 bg-[#0f1320]/95 border border-white/[0.08] rounded-xl p-3 backdrop-blur-xl shadow-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-white truncate flex-1 mr-2">{selectedNode.label}</span>
-                    <button onClick={() => setSelectedNode(null)} className="p-0.5 hover:bg-white/[0.06] rounded">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0 mr-2">
+                      {selectedNode.entityBadge && (
+                        <span className="text-base leading-none flex-shrink-0">{selectedNode.entityBadge}</span>
+                      )}
+                      <span className="text-xs font-bold text-white truncate">
+                        {selectedNode.entityName || selectedNode.label}
+                      </span>
+                    </div>
+                    <button onClick={() => setSelectedNode(null)} className="p-0.5 hover:bg-white/[0.06] rounded flex-shrink-0">
                       <X className="w-3 h-3 text-gray-500" />
                     </button>
                   </div>
@@ -713,9 +720,15 @@ export default function BubbleMapPage() {
                       <span className="text-gray-500">Type</span>
                       <span className="font-medium" style={{ color: selectedNode.color }}>{TYPE_LABELS[selectedNode.type]}</span>
                     </div>
+                    {selectedNode.entityLabel && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-gray-500">Entity</span>
+                        <span className="text-gray-200">{selectedNode.entityLabel}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-[10px]">
                       <span className="text-gray-500">Holdings</span>
-                      <span className="text-gray-200 font-mono">{selectedNode.percentage.toFixed(2)}%</span>
+                      <span className="text-gray-200 font-mono font-bold">{selectedNode.percentage.toFixed(2)}%</span>
                     </div>
                     {selectedNode.verified && (
                       <div className="flex justify-between text-[10px]">
@@ -755,9 +768,12 @@ export default function BubbleMapPage() {
                 >
                   <div className="grid grid-cols-[24px_1fr_60px_60px] gap-2 items-center">
                     <span className="text-gray-600 font-mono">{idx + 1}</span>
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: node.color }} />
-                      <span className="text-gray-300 truncate">{node.entity || node.label}</span>
+                      {node.entityBadge && (
+                        <span className="text-[10px] leading-none flex-shrink-0">{node.entityBadge}</span>
+                      )}
+                      <span className="text-gray-300 truncate">{node.entityName || node.entity || node.label}</span>
                       {node.verified && <span className="text-[#10B981] text-[8px] flex-shrink-0">V</span>}
                     </div>
                     <span className="text-right text-white font-mono">{node.percentage.toFixed(2)}%</span>
