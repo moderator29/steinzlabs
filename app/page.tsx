@@ -123,7 +123,7 @@ function ParticleField() {
 }
 
 // --- 3D Tilt Card ---
-function Card3D({ children, className = '', glowColor = '#7c3aed' }: { children: React.ReactNode; className?: string; glowColor?: string }) {
+function Card3D({ children, className = '', glowColor = '#7c3aed', style }: { children: React.ReactNode; className?: string; glowColor?: string; style?: React.CSSProperties }) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -151,7 +151,7 @@ function Card3D({ children, className = '', glowColor = '#7c3aed' }: { children:
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ transition: 'transform 0.15s ease, box-shadow 0.15s ease', transformStyle: 'preserve-3d', willChange: 'transform' }}
+      style={{ transition: 'transform 0.15s ease, box-shadow 0.15s ease', transformStyle: 'preserve-3d', willChange: 'transform', ...style }}
       className={className}
     >
       {children}
@@ -657,7 +657,7 @@ export default function LandingPage() {
                 price: "$19/mo",
                 desc: "Full intelligence suite unlocked",
                 perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
-                accent: "#0A1EFF",
+                accent: "#7c3aed",
                 cta: "Coming Soon",
                 featured: true,
                 link: "#",
@@ -672,9 +672,11 @@ export default function LandingPage() {
                 link: "#",
               },
             ].map((plan) => (
-              <div
+              <Card3D
                 key={plan.tier}
-                className={`rounded-xl border p-6 ${plan.featured ? 'border-neon-blue/30 bg-neon-blue/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}
+                glowColor={plan.accent}
+                className={`rounded-xl border p-6 ${plan.featured ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
+                style={plan.featured ? { boxShadow: '0 0 40px rgba(124,58,237,0.15), 0 0 0 1px rgba(124,58,237,0.1)' } as React.CSSProperties : {}}
               >
                 {plan.featured && (
                   <div className="text-[10px] font-bold uppercase tracking-widest text-neon-blue mb-3">Most Popular</div>

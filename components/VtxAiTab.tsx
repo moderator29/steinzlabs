@@ -27,6 +27,13 @@ interface ChatHistoryEntry {
 interface VtxSettings {
   personality: 'professional' | 'degen' | 'conservative' | 'neutral';
   defaultChain: 'solana' | 'ethereum' | 'bsc' | 'base' | 'polygon';
+  language: string;
+  depth: 'Quick' | 'Standard' | 'Deep';
+  riskAppetite: 'Conservative' | 'Balanced' | 'Aggressive';
+  autoCharts: boolean;
+  webSearch: boolean;
+  focusMode: boolean;
+  messageSound: boolean;
 }
 
 const STORAGE_KEY = 'vtx-ai-chat-history';
@@ -69,15 +76,45 @@ function saveAllHistory(entries: ChatHistoryEntry[]) {
   } catch {}
 }
 
+const DEFAULT_SETTINGS: VtxSettings = {
+  personality: 'neutral',
+  defaultChain: 'solana',
+  language: 'English',
+  depth: 'Standard',
+  riskAppetite: 'Balanced',
+  autoCharts: true,
+  webSearch: false,
+  focusMode: false,
+  messageSound: false,
+};
+
 function loadSettings(): VtxSettings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed && parsed.personality) return parsed;
+      if (parsed && parsed.personality) return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch {}
-  return { personality: 'neutral', defaultChain: 'solana' };
+  return { ...DEFAULT_SETTINGS };
+}
+
+function playChime() {
+  try {
+    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch {}
 }
 
 function saveSettings(s: VtxSettings) {
@@ -327,16 +364,17 @@ export default function VtxAiTab() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [tier, setTier] = useState('free');
   const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 15, remaining: 15 });
   const [rateLimited, setRateLimited] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [settings, setSettings] = useState<VtxSettings>({ personality: 'neutral', defaultChain: 'solana' });
+  const [settings, setSettings] = useState<VtxSettings>({ ...DEFAULT_SETTINGS });
   const [allHistory, setAllHistory] = useState<ChatHistoryEntry[]>([]);
+  const [settingsToast, setSettingsToast] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -399,6 +437,10 @@ export default function VtxAiTab() {
     const updated = { ...settings, ...partial };
     setSettings(updated);
     saveSettings(updated);
+    // Show "Settings saved" toast
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setSettingsToast(true);
+    toastTimerRef.current = setTimeout(() => setSettingsToast(false), 1800);
   };
 
   const isPro = tier === 'pro';
@@ -423,7 +465,7 @@ export default function VtxAiTab() {
     if (!isPro && rateLimited) return;
 
     let finalMessage = text.trim();
-    if (webSearchEnabled) {
+    if (settings.webSearch) {
       finalMessage = finalMessage + ' [WEB_SEARCH]';
     }
 
@@ -441,6 +483,9 @@ export default function VtxAiTab() {
           history: messages.slice(-10),
           tier,
           personality: settings.personality,
+          language: settings.language,
+          depth: settings.depth,
+          riskAppetite: settings.riskAppetite,
         }),
       });
 
@@ -487,9 +532,10 @@ export default function VtxAiTab() {
         const cleanReply = (data.reply || '').replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
 
         const assistantMsg: Message = { role: 'assistant', content: cleanReply };
-        if (chartInfo) assistantMsg.chart = chartInfo;
+        if (chartInfo && settings.autoCharts) assistantMsg.chart = chartInfo;
 
         setMessages(prev => [...prev, assistantMsg]);
+        if (settings.messageSound) playChime();
         if (data.dailyUsage) {
           setDailyUsage(data.dailyUsage);
           saveDailyUsage(data.dailyUsage);
