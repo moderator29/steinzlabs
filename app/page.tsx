@@ -1,10 +1,163 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, Send, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import ThemeToggle from '@/components/ThemeToggle';
+
+// --- Particle Field Canvas ---
+function ParticleField() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const isMobile = window.innerWidth < 768;
+    const PARTICLE_COUNT = isMobile ? 60 : 120;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles: Array<{
+      x: number; y: number; vx: number; vy: number;
+      size: number; opacity: number; color: string;
+    }> = [];
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 2 + 0.5,
+        opacity: Math.random() * 0.6 + 0.1,
+        color: Math.random() > 0.5 ? '#7c3aed' : '#06b6d4',
+      });
+    }
+
+    let mouseX = canvas.width / 2;
+    let mouseY = canvas.height / 2;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    };
+    canvas.addEventListener('mousemove', handleMouseMove);
+
+    let animId: number;
+    function animate() {
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((p) => {
+        const dx = mouseX - p.x;
+        const dy = mouseY - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 200) {
+          p.vx += dx * 0.00005;
+          p.vy += dy * 0.00005;
+        }
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.opacity;
+        ctx.fill();
+      });
+
+      ctx.lineWidth = 0.5;
+      particles.forEach((p1, i) => {
+        particles.slice(i + 1).forEach((p2) => {
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.globalAlpha = (1 - dist / 120) * 0.15;
+            ctx.strokeStyle = '#7c3aed';
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        });
+      });
+
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    const handleResize = () => {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{ background: 'transparent' }}
+    />
+  );
+}
+
+// --- 3D Tilt Card ---
+function Card3D({ children, className = '', glowColor = '#7c3aed', style }: { children: React.ReactNode; className?: string; glowColor?: string; style?: React.CSSProperties }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const rotateY = (x / rect.width) * 15;
+    const rotateX = -(y / rect.height) * 15;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+    card.style.boxShadow = `0 20px 60px ${glowColor}20, 0 0 0 1px ${glowColor}25`;
+  };
+
+  const handleMouseLeave = () => {
+    if (cardRef.current) {
+      cardRef.current.style.transform =
+        'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+      cardRef.current.style.boxShadow = '';
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ transition: 'transform 0.15s ease, box-shadow 0.15s ease', transformStyle: 'preserve-3d', willChange: 'transform', ...style }}
+      className={className}
+    >
+      {children}
+    </div>
+  );
+}
 
 function AnimatedCounter({ value, label }: { value: string; label: string }) {
   const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
@@ -52,8 +205,9 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
   }, [value, isAnimatable, numericStr, target, prefix, suffix]);
 
   return (
-    <div ref={ref} className="text-center">
-      <div className="text-2xl md:text-3xl font-heading font-bold text-white">
+    <div ref={ref} className="text-center p-4 rounded-xl border border-purple-500/10 bg-purple-500/5 hover:border-purple-500/30 transition-all duration-300 group"
+      style={{ boxShadow: '0 0 20px rgba(124,58,237,0.05)' }}>
+      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-purple-300 transition-colors">
         {display}
       </div>
       <div className="text-[11px] text-gray-500 uppercase tracking-wider mt-1">{label}</div>
@@ -209,42 +363,149 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 relative">
+      <section className="pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden min-h-screen flex flex-col justify-center">
+        {/* Particle canvas */}
+        <ParticleField />
+
+        {/* Floating orbs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[20%] left-[15%] w-[500px] h-[500px] bg-neon-blue/[0.04] rounded-full blur-[150px]"></div>
-          <div className="absolute bottom-[10%] right-[10%] w-[400px] h-[400px] bg-purple/[0.03] rounded-full blur-[150px]"></div>
+          <div
+            className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl animate-pulse"
+            style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }}
+          />
+          <div
+            className="absolute bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse"
+            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.08, animationDelay: '1s' }}
+          />
+          <div
+            className="absolute top-1/2 right-10 w-48 h-48 rounded-full blur-2xl"
+            style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', opacity: 0.05 }}
+          />
+          <div
+            className="absolute top-[30%] left-[5%] w-64 h-64 rounded-full blur-3xl animate-pulse"
+            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.06, animationDelay: '2s' }}
+          />
         </div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full mb-8 animate-fade-slide-in">
-            <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-purple-500/20 rounded-full mb-8"
+          >
+            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
             <span className="text-[12px] text-gray-400 font-medium">Professional on-chain intelligence platform</span>
-          </div>
+          </motion.div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold mb-6 leading-[1.08] tracking-tight animate-fade-slide-in" style={{ animationDelay: '0.1s' }}>
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold mb-6 leading-[1.08] tracking-tight"
+          >
             The intelligence layer
             <br />
-            <span className="gradient-text-blue">for on-chain alpha</span>
-          </h1>
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)' }}
+            >
+              for on-chain alpha
+            </span>
+          </motion.h1>
 
-          <p className="text-base sm:text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed animate-fade-slide-in" style={{ animationDelay: '0.2s' }}>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-base sm:text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed"
+          >
             Track whales. Analyze wallets. Scan contracts. Act on real-time blockchain data before the crowd.
-          </p>
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-20 animate-fade-slide-in" style={{ animationDelay: '0.3s' }}>
-            <Link href="/login" className="flex-1 w-full bg-neon-blue px-6 py-3.5 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-16"
+          >
+            <Link
+              href="/login"
+              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                boxShadow: '0 0 30px rgba(124,58,237,0.4)',
+              }}
+            >
               Launch App <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/whitepaper" className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all text-center">
+            <Link
+              href="/whitepaper"
+              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all text-center"
+            >
               Read Docs
             </Link>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 max-w-2xl mx-auto animate-fade-slide-in" style={{ animationDelay: '0.4s' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto mb-16"
+          >
             {stats.map((stat) => (
               <AnimatedCounter key={stat.label} value={stat.value} label={stat.label} />
             ))}
-          </div>
+          </motion.div>
+
+          {/* 3D Platform Preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="relative mx-auto max-w-4xl"
+            style={{ perspective: '1000px' }}
+          >
+            <div
+              className="rounded-2xl overflow-hidden border border-purple-500/30"
+              style={{
+                transform: 'rotateX(12deg) rotateY(-4deg)',
+                boxShadow: '0 40px 80px rgba(124,58,237,0.3), 0 0 0 1px rgba(124,58,237,0.1)',
+                willChange: 'transform',
+              }}
+            >
+              <div className="bg-gray-950 p-4">
+                <div className="flex gap-2 mb-4 items-center">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  <span className="text-xs text-gray-500 ml-2 font-mono">steinz.app/dashboard</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 h-32 bg-purple-900/40 rounded-lg border border-purple-500/20 flex items-center justify-center">
+                    <span className="text-purple-400 text-sm font-mono">VTX Intelligence</span>
+                  </div>
+                  <div className="h-32 bg-cyan-900/30 rounded-lg border border-cyan-500/20 flex items-center justify-center">
+                    <span className="text-cyan-400 text-xs font-mono">Live Feed</span>
+                  </div>
+                  <div className="h-20 bg-gray-800/60 rounded-lg border border-gray-700/40 flex items-center justify-center">
+                    <span className="text-gray-500 text-xs font-mono">Whale Tracker</span>
+                  </div>
+                  <div className="h-20 bg-gray-800/60 rounded-lg border border-purple-700/40 flex items-center justify-center">
+                    <span className="text-purple-500 text-xs font-mono">DNA Analyzer</span>
+                  </div>
+                  <div className="h-20 bg-gray-800/60 rounded-lg border border-cyan-700/40 flex items-center justify-center">
+                    <span className="text-cyan-500 text-xs font-mono">Risk Score</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Glow reflection under the preview */}
+            <div
+              className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-12 blur-2xl rounded-full opacity-30"
+              style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }}
+            />
+          </motion.div>
         </div>
       </section>
 
@@ -257,7 +518,7 @@ export default function LandingPage() {
       >
         <div className="max-w-5xl mx-auto">
           <div className={`text-center mb-16 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Platform</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>Platform</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Built for serious analysts
             </h2>
@@ -268,31 +529,37 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {featureCategories.map((category, i) => (
-              <div
+              <motion.div
                 key={category.tag}
-                className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-300 group ${visibleSections.has('features') ? 'animate-fade-slide-in' : 'opacity-0'}`}
-                style={{ animationDelay: `${i * 0.1}s` }}
+                initial={{ opacity: 0, y: 30 }}
+                animate={visibleSections.has('features') ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <div
-                  className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
-                  style={{ color: category.accent, background: `${category.accent}10` }}
+                <Card3D
+                  className="rounded-xl border border-purple-500/10 bg-gray-900/60 p-6 sm:p-8 hover:border-purple-500/25 transition-colors duration-300 group h-full"
+                  glowColor={category.accent}
                 >
-                  {category.tag}
-                </div>
-                <h3 className="text-lg font-heading font-bold mb-2 group-hover:text-white transition-colors">{category.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-6">{category.description}</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {category.features.map((f) => {
-                    const Icon = f.icon;
-                    return (
-                      <div key={f.label} className="flex items-center gap-2.5 text-[13px] text-gray-400">
-                        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: category.accent }} />
-                        <span>{f.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                  <div
+                    className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
+                    style={{ color: category.accent, background: `${category.accent}15` }}
+                  >
+                    {category.tag}
+                  </div>
+                  <h3 className="text-lg font-heading font-bold mb-2 group-hover:text-white transition-colors">{category.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6">{category.description}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {category.features.map((f) => {
+                      const Icon = f.icon;
+                      return (
+                        <div key={f.label} className="flex items-center gap-2.5 text-[13px] text-gray-400">
+                          <Icon className="w-4 h-4 flex-shrink-0" style={{ color: category.accent }} />
+                          <span>{f.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card3D>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -306,7 +573,8 @@ export default function LandingPage() {
         className="py-24 px-4 sm:px-6"
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 sm:p-12">
+          <div className="rounded-xl border border-purple-500/15 bg-gray-900/50 p-8 sm:p-12"
+            style={{ boxShadow: '0 0 60px rgba(124,58,237,0.08), inset 0 0 60px rgba(124,58,237,0.02)' }}>
             <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
               <div className="flex-1">
                 <p className="text-success text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Security First</p>
@@ -342,8 +610,9 @@ export default function LandingPage() {
                     { value: "12+", label: "Chains secured" },
                     { value: "24/7", label: "Monitoring" },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-center min-w-[120px]">
-                      <div className="text-lg font-heading font-bold text-white">{s.value}</div>
+                    <div key={s.label} className="rounded-lg border border-cyan-500/15 bg-cyan-500/5 p-4 text-center min-w-[120px] hover:border-cyan-500/30 transition-all duration-300"
+                      style={{ boxShadow: '0 0 20px rgba(6,182,212,0.05)' }}>
+                      <div className="text-lg font-heading font-bold text-cyan-300">{s.value}</div>
                       <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">{s.label}</div>
                     </div>
                   ))}
@@ -363,7 +632,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('pricing') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Plans</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#06b6d4' }}>Plans</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Unlock the full intelligence layer
             </h2>
@@ -388,7 +657,7 @@ export default function LandingPage() {
                 price: "$19/mo",
                 desc: "Full intelligence suite unlocked",
                 perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
-                accent: "#0A1EFF",
+                accent: "#7c3aed",
                 cta: "Coming Soon",
                 featured: true,
                 link: "#",
@@ -403,12 +672,17 @@ export default function LandingPage() {
                 link: "#",
               },
             ].map((plan) => (
-              <div
+              <Card3D
                 key={plan.tier}
-                className={`rounded-xl border p-6 ${plan.featured ? 'border-neon-blue/30 bg-neon-blue/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}
+                glowColor={plan.accent}
+                className={`rounded-xl border p-6 ${plan.featured ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
+                style={plan.featured ? { boxShadow: '0 0 40px rgba(124,58,237,0.15), 0 0 0 1px rgba(124,58,237,0.1)' } as React.CSSProperties : {}}
               >
                 {plan.featured && (
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-neon-blue mb-3">Most Popular</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest mb-3"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    Most Popular
+                  </div>
                 )}
                 <h3 className="text-lg font-heading font-bold mb-1" style={{ color: plan.accent }}>{plan.tier}</h3>
                 <div className="text-xl font-bold mb-1">{plan.price}</div>
@@ -424,13 +698,13 @@ export default function LandingPage() {
                 <Link href={plan.link}>
                   <button
                     className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.featured ? { backgroundColor: plan.accent, color: 'white' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                    style={plan.featured ? { background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white', boxShadow: '0 0 20px rgba(124,58,237,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
                     disabled={plan.cta === 'Coming Soon'}
                   >
                     {plan.cta}
                   </button>
                 </Link>
-              </div>
+              </Card3D>
             ))}
           </div>
         </div>
@@ -445,7 +719,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-neon-blue text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">FAQ</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>FAQ</p>
             <h2 className="text-2xl md:text-3xl font-heading font-bold">
               Frequently asked questions
             </h2>
@@ -457,9 +731,10 @@ export default function LandingPage() {
                 key={index}
                 className={`rounded-xl border transition-all duration-300 ${
                   openFAQ === index
-                    ? 'border-neon-blue/20 bg-neon-blue/[0.02]'
-                    : 'border-white/[0.06] hover:border-white/[0.1]'
+                    ? 'border-purple-500/25 bg-purple-500/[0.04]'
+                    : 'border-white/[0.06] hover:border-purple-500/15'
                 }`}
+                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(124,58,237,0.08)' } : {}}
               >
                 <button
                   onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
@@ -489,31 +764,53 @@ export default function LandingPage() {
 
       <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
 
-      <section className="py-24 px-4 sm:px-6 relative">
+      <section className="py-24 px-4 sm:px-6 relative overflow-hidden">
+        {/* Animated gradient background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-blue/[0.03] rounded-full blur-[150px]"></div>
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12), rgba(6,182,212,0.06), transparent 70%)' }}
+          />
+          <div
+            className="absolute top-0 left-0 w-full h-full"
+            style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.03) 0%, transparent 50%, rgba(6,182,212,0.03) 100%)' }}
+          />
         </div>
         <div className="max-w-2xl mx-auto text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Start your intelligence journey
-          </h2>
-          <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-            Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-            <Link href="/login" className="flex-1 w-full bg-neon-blue px-8 py-4 rounded-xl font-semibold text-sm text-white hover:bg-neon-blue-400 transition-all shadow-neon flex items-center justify-center gap-2">
-              Launch App <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link href="/whitepaper" className="flex-1">
-              <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2">
-                Learn More
-              </button>
-            </Link>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+              Start your intelligence journey
+            </h2>
+            <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+              Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
+              <Link
+                href="/login"
+                className="flex-1 w-full px-8 py-4 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                  boxShadow: '0 0 40px rgba(124,58,237,0.4)',
+                }}
+              >
+                Launch App <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link href="/whitepaper" className="flex-1">
+                <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all flex items-center justify-center gap-2">
+                  Learn More
+                </button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.06] py-12 px-4 sm:px-6">
+      <footer className="border-t border-purple-500/10 py-12 px-4 sm:px-6" style={{ boxShadow: 'inset 0 1px 0 rgba(124,58,237,0.08)' }}>
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-1">

@@ -81,6 +81,7 @@ export default function RiskScannerPage() {
   const [riskScore, setRiskScore] = useState(0);
   const [manualAddress, setManualAddress] = useState('');
   const [scannedAddress, setScannedAddress] = useState('');
+  const [hasData, setHasData] = useState(false);
 
   const doScan = async (address: string) => {
     setScanning(true);
@@ -89,15 +90,25 @@ export default function RiskScannerPage() {
       const res = await fetch(`/api/wallet-intelligence?address=${encodeURIComponent(address)}`);
       if (res.ok) {
         const data = await res.json();
+        const holdings = data.holdings || [];
         const totalUsd = parseFloat(data.totalBalanceUsd || '0');
-        const { score, risks: analyzedRisks } = analyzeWalletRisks(data.holdings || [], totalUsd);
-        setRiskScore(score);
-        setRisks(analyzedRisks);
+        if (holdings.length === 0) {
+          setHasData(false);
+          setRiskScore(0);
+          setRisks([]);
+        } else {
+          const { score, risks: analyzedRisks } = analyzeWalletRisks(holdings, totalUsd);
+          setHasData(true);
+          setRiskScore(score);
+          setRisks(analyzedRisks);
+        }
       } else {
+        setHasData(false);
         setRiskScore(0);
         setRisks([]);
       }
     } catch {
+      setHasData(false);
       setRiskScore(0);
       setRisks([]);
     } finally {
@@ -174,11 +185,13 @@ export default function RiskScannerPage() {
 
         {scanned && !scanning && (
           <>
-            {risks.length === 0 ? (
+            {!hasData ? (
               <div className="glass rounded-xl p-6 border border-white/10 text-center">
-                <Wallet className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                <p className="text-sm font-semibold mb-1">No holdings found</p>
-                <p className="text-xs text-gray-500">This wallet has no token balances to analyze</p>
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-gray-500" />
+                </div>
+                <p className="text-sm font-semibold mb-1">No transaction data found</p>
+                <p className="text-xs text-gray-500">Enter a wallet address with transaction history to run analysis.</p>
               </div>
             ) : (
               <>
@@ -225,7 +238,7 @@ export default function RiskScannerPage() {
               </>
             )}
 
-            <button onClick={() => { setScanned(false); setRisks([]); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0A1EFF] border border-white/10 hover:bg-white/5 transition-colors">
+            <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0A1EFF] border border-white/10 hover:bg-white/5 transition-colors">
               Scan Again
             </button>
           </>

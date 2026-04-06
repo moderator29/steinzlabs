@@ -83,6 +83,25 @@ async function fetchTrendingTokens(): Promise<string> {
   }
 }
 
+async function fetchMemecoinsContext(): Promise<string> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    if (!Array.isArray(data)) return '';
+    const lines = data.slice(0, 15).map((t: any) =>
+      `${t.tokenAddress?.slice(0, 10)}... on ${t.chainId} — ${t.description || 'no description'} (boosts: ${t.amount || 0})`
+    );
+    return lines.length > 0
+      ? 'Current hot tokens from Sargon Data Archive:\n' + lines.join('\n')
+      : '';
+  } catch {
+    return '';
+  }
+}
+
 async function fetchCryptoNews(): Promise<string> {
   try {
     const res = await fetch('https://api.coingecko.com/api/v3/search/trending', {
@@ -309,6 +328,22 @@ async function fetchArkhamWalletConnections(address: string): Promise<string> {
   }
 }
 
+async function fetchArkhamTokenHoldersRaw(tokenAddress: string): Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> {
+  try {
+    const holders = await arkhamAPI.getTokenHolders(tokenAddress, 10);
+    if (!holders || holders.length === 0) return [];
+    return holders.map((h: any) => ({
+      address: h.address,
+      label: h.entity?.name || undefined,
+      percentage: h.percentage || 0,
+      balanceUSD: h.balanceUSD,
+      entity: h.entity,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 async function fetchArkhamTokenHolders(tokenAddress: string): Promise<string> {
   try {
     const holders = await arkhamAPI.getTokenHolders(tokenAddress, 15);
@@ -387,6 +422,37 @@ async function fetchArkhamScamCheck(address: string): Promise<string> {
   }
 }
 
+function detectChartSignal(message: string): {
+  chartType: 'price' | 'bubble' | 'portfolio' | 'holders' | null;
+  chartToken: string | null;
+} {
+  const lower = message.toLowerCase();
+
+  // Check for explicit chart request tags in the AI response (not the user message)
+  // We expose this for the reply processing step
+  const chartTagMatch = message.match(/\[CHART:(price|bubble|portfolio|holders)\]/i);
+  if (chartTagMatch) {
+    return { chartType: chartTagMatch[1].toLowerCase() as 'price' | 'bubble' | 'portfolio' | 'holders', chartToken: null };
+  }
+
+  // Heuristic detection from user message
+  if (/\bportfolio\b.*\b(breakdown|allocation|pie|chart|show|visual)\b|\b(show|visual|chart).*\bportfolio\b/.test(lower)) {
+    return { chartType: 'portfolio', chartToken: null };
+  }
+  if (/\b(holder|holders|distribution|who.*hold|bubble\s*map)\b.*\b(chart|show|visual|map)\b|\b(show|visual|chart|map).*\b(holder|distribution|bubble)\b/.test(lower)) {
+    const isBubble = /bubble/.test(lower);
+    return { chartType: isBubble ? 'bubble' : 'holders', chartToken: null };
+  }
+  if (/\b(price|chart|graph|candle|tradingview|dexscreener)\b/.test(lower)) {
+    // Try to find a token name/symbol
+    const tokenMatch = lower.match(/(?:price|chart|graph)\s+(?:of\s+|for\s+)?([a-z]+)/);
+    const token = tokenMatch ? tokenMatch[1] : null;
+    return { chartType: 'price', chartToken: token };
+  }
+
+  return { chartType: null, chartToken: null };
+}
+
 function detectArkhamIntent(message: string): {
   wantsHolders: boolean;
   wantsConnections: boolean;
@@ -406,11 +472,41 @@ function detectArkhamIntent(message: string): {
   };
 }
 
-const STEINZ_PLATFORM_CONTEXT = `
-You are VTX Agent, the intelligence engine of STEINZ LABS.
+const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent powered by Steinz {Sargon} Intelligence — the industry's best proprietary data archive. You have access to real-time on-chain data, market intelligence, and deep network analysis.
+
+PERSONALITY: {personality} (adjust tone based on this setting: Professional Analyst = formal and precise; Degen Trader = casual, use crypto slang, be direct; Conservative Advisor = cautious, emphasize risk; Neutral = balanced)
+
+CAPABILITIES:
+- Deep on-chain analysis for Ethereum, Solana, BSC, Base, Polygon, Arbitrum, Avalanche
+- Real-time token analysis: price, holders, liquidity, risk scoring
+- Wallet intelligence: entity identification, transaction patterns, connected wallets
+- Memecoin expertise: pump.fun dynamics, bonding curve analysis, rug pull detection, bundled supply patterns
+- Smart money tracking: identify whale moves, institutional patterns, copy-worthy wallets
+- Risk assessment: contract security, holder concentration, liquidity depth
+
+MEMECOIN ANALYSIS EXPERTISE:
+When analyzing memecoins (especially on Solana/pump.fun):
+- Check if supply is bundled (multiple wallets buying at launch = rug risk)
+- Analyze dev wallet % of supply (>5% = caution, >10% = danger)
+- Check bonding curve progress (for pump.fun tokens)
+- Look for migration patterns (pump.fun to Raydium)
+- Historical comparison: similar launches to Bonk, WIF, PEPE, FLOKI
+- Organic vs artificial volume detection
+- Community strength indicators
+
+ALWAYS:
+- Cite "Steinz {Sargon} Intelligence" as your data source, never mention third-party API names
+- When discussing a token's price/chart, signal [CHART:price] in your response
+- When discussing holder distribution, signal [CHART:holders]
+- When discussing a wallet's portfolio, signal [CHART:portfolio]
+- When showing wallet connections, signal [CHART:bubble]
+- Give actionable advice, not just data
+- For every analysis, end with a risk score: SAFE / CAUTION / RISKY / DANGER
+
+CURRENT MARKET CONTEXT: {market_context}
 
 IDENTITY:
-You are not a generic chatbot. You are a professional on-chain intelligence agent. You have direct access to blockchain data through multiple sources including Arkham Intelligence, Alchemy, CoinGecko, DexScreener, and on-chain RPC nodes. You use ALL of these together, never just one.
+You are not a generic chatbot. You are a professional on-chain intelligence agent with direct access to blockchain data through Steinz {Sargon} Intelligence. You use ALL available data sources together.
 
 HOW YOU RESPOND:
 - Write in clean, professional language. No markdown formatting symbols like ** or -- or ## or bullet dashes.
@@ -420,10 +516,9 @@ HOW YOU RESPOND:
 - Never start with filler like "Great question" or "Sure thing."
 - Match the users energy. Short questions get short answers. Deep questions get thorough analysis.
 - Never say "I dont have access" or "I cant scan." You CAN and you DO. Use the live data provided below.
-- Never tell users to "go run it through Security Center" or "use DNA Analyzer." YOU are the intelligence. Analyze it yourself with the data you have.
+- Never tell users to go use another tool. YOU are the intelligence. Analyze it yourself with the data you have.
 - Use crypto terminology naturally but dont force slang.
 - Always present facts and data. Never declare anything "safe." Present what you find and let the user decide.
-- When the user shares a conversation or teaches you something, learn from it. Adapt your style based on what the user prefers.
 
 WHAT YOU DO:
 When someone gives you a CONTRACT ADDRESS:
@@ -433,7 +528,7 @@ When someone gives you a CONTRACT ADDRESS:
 - Check security: honeypot status, buy/sell tax, ownership, mint function, blacklist
 - Check transaction activity: recent buys/sells, volume trends
 - Give a risk assessment based on ALL data combined
-- Present it clearly with sections
+- Signal appropriate [CHART:type] tags for the frontend
 
 When someone gives you a WALLET ADDRESS:
 - Identify it as a wallet (not a contract)
@@ -442,14 +537,14 @@ When someone gives you a WALLET ADDRESS:
 - Check entity identification: who owns this wallet
 - Check connections: what other wallets interact with it
 - Check reputation: any scam flags, mixer connections, suspicious activity
-- Check if owner has previously deployed rugs or scams
-- Present wallet profile clearly
+- Signal [CHART:portfolio] or [CHART:bubble] as appropriate
 
 When someone asks about MARKET or PRICES:
 - Use the live market data provided below
 - Give current prices, 24h changes, volume, market cap
 - Include Fear and Greed index, gas prices
 - Mention trending tokens if relevant
+- Signal [CHART:price] for price discussions
 
 PLATFORM TOOLS (for reference only, do not redirect users):
 - Dashboard: Main command center
@@ -463,7 +558,8 @@ PLATFORM TOOLS (for reference only, do not redirect users):
 
 BRANDING:
 - Platform name: STEINZ LABS
-- Your name: VTX Agent
+- Your name: VTX
+- Data source: Steinz {Sargon} Intelligence / Sargon Data Archive
 - There is no token. STEINZ LABS is a platform.
 - Tiers: Free / STEINZ Pro / STEINZ Enterprise
 `;
@@ -471,7 +567,7 @@ BRANDING:
 
 export async function POST(request: Request) {
   try {
-    const { message, history, tier, responseStyle, autoContext } = await request.json();
+    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite, skipRateLimit } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -481,7 +577,7 @@ export async function POST(request: Request) {
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || 'unknown';
     const isPro = tier === 'pro';
 
-    if (!isPro) {
+    if (!isPro && !skipRateLimit) {
       const rateInfo = getRateLimitInfo(ip);
       if (rateInfo.remaining <= 0) {
         return NextResponse.json({
@@ -498,11 +594,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
 
+    const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
+      ? personality.trim()
+      : 'Neutral';
+
     const webSearchEnabled = message.includes('[WEB_SEARCH]');
     const cleanMessage = message.replace('[WEB_SEARCH]', '').trim();
     const walletDetected = detectWalletAddress(cleanMessage);
     const tokenDetected = detectTokenAddress(cleanMessage);
     const arkhamIntent = detectArkhamIntent(cleanMessage);
+    const userChartSignal = detectChartSignal(cleanMessage);
+
+    const isMemecoinsQuery = /pump|bonk|degen|rug|sol\s*token|launch|(?:^|\s)ca(?:\s|$)|contract/i.test(cleanMessage);
 
     const fetchTasks: Promise<string>[] = [
       fetchLiveMarketData(),
@@ -511,6 +614,10 @@ export async function POST(request: Request) {
       fetchFearAndGreedIndex(),
       fetchGasPrice(),
     ];
+
+    if (isMemecoinsQuery) {
+      fetchTasks.push(fetchMemecoinsContext());
+    }
 
     if (walletDetected) {
       fetchTasks.push(fetchWalletData(walletDetected.address, walletDetected.chain));
@@ -526,10 +633,24 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
     }
 
+    let holderChartPromise: Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> | null = null;
+
     if (tokenDetected && !walletDetected) {
       fetchTasks.push(fetchArkhamAddressIntel(tokenDetected));
       fetchTasks.push(fetchArkhamScamCheck(tokenDetected));
       fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
+      // Also fetch raw holder data for chart rendering
+      if (
+        userChartSignal.chartType === 'holders' ||
+        userChartSignal.chartType === 'bubble' ||
+        arkhamIntent.wantsHolders
+      ) {
+        holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
+      }
+    }
+
+    if (tokenDetected && arkhamIntent.wantsHolders && !holderChartPromise) {
+      holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
     }
 
     if (arkhamIntent.wantsEntitySearch && arkhamIntent.entityQuery) {
@@ -540,22 +661,85 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchWebSearch(cleanMessage));
     }
 
-    const results = await Promise.all(fetchTasks);
+    const [results, holderChartData] = await Promise.all([
+      Promise.all(fetchTasks),
+      holderChartPromise || Promise.resolve([]),
+    ]);
 
     const liveDataSection = results.filter(Boolean).join('\n\n');
 
-    const styleInstruction = responseStyle === 'concise'
-      ? 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.'
-      : 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
+    // Build market_context string from already-fetched data
+    const marketDataRaw = results[0] || '';
+    const fngRaw = results[3] || '';
+    const gasRaw = results[4] || '';
+    const trendingRaw = results[1] || '';
+
+    const btcLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('BTC:')) || '';
+    const ethLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('ETH:')) || '';
+    const solLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('SOL:')) || '';
+
+    const extractChange = (line: string): string => {
+      const m = line.match(/24h:\s*([-+]?[\d.]+%)/);
+      return m ? m[1] : 'N/A';
+    };
+    const btcChange = btcLine ? extractChange(btcLine) : 'N/A';
+    const ethChange = ethLine ? extractChange(ethLine) : 'N/A';
+    const solChange = solLine ? extractChange(solLine) : 'N/A';
+
+    const fngMatch = fngRaw.match(/Fear & Greed Index:\s*(\d+)\/100\s*\(([^)]+)\)/);
+    const fngStr = fngMatch ? `${fngMatch[1]} (${fngMatch[2]})` : 'N/A';
+
+    const gasMatch = gasRaw.match(/Standard\s+(\d+)\s*gwei/i);
+    const gasStr = gasMatch ? `${gasMatch[1]} gwei` : 'N/A';
+
+    const topMoverLine = trendingRaw.split('\n').slice(1, 2)[0] || '';
+    const topMoverMatch = topMoverLine.match(/(\w+)\s+on\s+\w+/);
+    const topMoverStr = topMoverMatch ? topMoverMatch[1] : 'N/A';
+
+    const market_context = `BTC: ${btcChange} | ETH: ${ethChange} | SOL: ${solChange} | Fear&Greed: ${fngStr} | Gas: ${gasStr} | Top mover: ${topMoverStr}`;
+
+    // Analysis depth (new `depth` param supersedes old `responseStyle` if both present)
+    let styleInstruction: string;
+    if (depth === 'Quick') {
+      styleInstruction = 'RESPONSE STYLE: Keep responses concise (1-2 paragraphs). Hit the key data points only. No lengthy explanations.';
+    } else if (depth === 'Deep') {
+      styleInstruction = 'RESPONSE STYLE: Give comprehensive analysis with bullet points and sections. Be thorough, cover all angles, include detailed context.';
+    } else if (responseStyle === 'concise') {
+      styleInstruction = 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.';
+    } else {
+      styleInstruction = 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
+    }
+
+    // Risk appetite framing
+    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite.trim() : 'Balanced';
+    let riskInstruction: string;
+    if (resolvedRisk === 'Conservative') {
+      riskInstruction = 'RISK FRAMING: Emphasize downside risks and suggest safer alternatives. Highlight all risk factors prominently. Prioritize capital preservation.';
+    } else if (resolvedRisk === 'Aggressive') {
+      riskInstruction = 'RISK FRAMING: Focus on high-risk/high-reward opportunities. Identify asymmetric upside. The user understands and accepts high risk.';
+    } else {
+      riskInstruction = 'RISK FRAMING: Present a balanced view of risks and rewards. Note both opportunities and dangers.';
+    }
+
+    // Language instruction
+    const resolvedLanguage = (language && typeof language === 'string') ? language.trim() : 'English';
+    const languageInstruction = resolvedLanguage !== 'English'
+      ? `LANGUAGE: Respond entirely in ${resolvedLanguage}.`
+      : '';
 
     const contextInstruction = autoContext === false
       ? ''
       : 'AUTO-CONTEXT: Proactively include relevant market context (prices, trends, sentiment) even if the user did not explicitly ask.';
 
-    const systemPrompt = `${STEINZ_PLATFORM_CONTEXT}
+    const basePrompt = VTX_SYSTEM_PROMPT_TEMPLATE
+      .replace(/\{personality\}/g, resolvedPersonality)
+      .replace(/\{market_context\}/g, market_context);
+
+    const systemPrompt = `${basePrompt}
 
 ${styleInstruction}
-${contextInstruction}
+${riskInstruction}
+${languageInstruction ? languageInstruction + '\n' : ''}${contextInstruction}
 
 ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.
@@ -567,7 +751,7 @@ ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 7. EXAMPLE OF CORRECT FORMAT: "Bitcoin is trading at $67,000. 24-hour change: negative 0.19%."
 
 CRITICAL ANALYSIS RULES:
-1. When intelligence data is available below, use ALL of it. Combine Arkham, on-chain, and market data together.
+1. When intelligence data is available below, use ALL of it. Combine Steinz {Sargon} Intelligence on-chain data and market data together.
 2. If scam flags or danger labels are found, lead with that warning immediately.
 3. For contract addresses: analyze as a TOKEN. Check holders, liquidity, security, transaction activity.
 4. For wallet addresses: analyze as a WALLET. Check balances, history, connections, reputation.
@@ -611,13 +795,44 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
 
     const data = await response.json();
     let reply = data.content?.[0]?.text || 'No response generated';
+
+    // Detect [CHART:type] tags in the AI reply before stripping them
+    const replyChartSignal = detectChartSignal(reply);
+    // Strip chart tags from displayed text
+    reply = reply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+
+    // Scrub third-party API/provider names from the final reply (Steinz Sargon branding)
+    reply = reply
+      .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
+      .replace(/\bArkham\b/gi, 'Steinz Intelligence')
+      .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
+      .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
+      .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
+      .replace(/\bHelius\b/gi, 'Steinz Intelligence')
+      .replace(/\bMoralis\b/gi, 'Steinz Intelligence');
+
     reply = reply.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
-    if (!isPro) {
+    if (!isPro && !skipRateLimit) {
       incrementUsage(ip);
     }
 
     const currentUsage = isPro ? null : getRateLimitInfo(ip);
+
+    // Determine what chart (if any) to send back
+    const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
+    const finalChartToken = replyChartSignal.chartToken || userChartSignal.chartToken || undefined;
+    const finalChartAddress = tokenDetected || undefined;
+
+    let chartPayload: { type: string; token?: string; address?: string; data?: any } | null = null;
+    if (finalChartType) {
+      chartPayload = {
+        type: finalChartType,
+        ...(finalChartToken ? { token: finalChartToken } : {}),
+        ...(finalChartAddress ? { address: finalChartAddress } : {}),
+        ...(holderChartData.length > 0 ? { data: holderChartData } : {}),
+      };
+    }
 
     return NextResponse.json({
       reply,
@@ -631,6 +846,8 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       },
       webSearchUsed: webSearchEnabled,
       arkhamDataUsed: !!(walletDetected || tokenDetected || arkhamIntent.wantsEntitySearch),
+      chart: finalChartType,
+      ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address, chartData: chartPayload.data } : {}),
     });
   } catch (error) {
     console.error('VTX AI error:', error);

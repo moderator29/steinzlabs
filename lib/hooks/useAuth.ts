@@ -59,7 +59,8 @@ export function useAuthProvider(): AuthContextType {
           first_name: profile.first_name,
           last_name: profile.last_name,
           username: profile.username,
-          created_at: profile.created_at,
+          // Always prefer auth user created_at (profile row may be blank)
+          created_at: supaUser.created_at || profile.created_at,
         });
       } else {
         const meta = supaUser.user_metadata || {};

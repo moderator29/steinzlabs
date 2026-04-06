@@ -1,100 +1,56 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { ArrowLeft, Star, TrendingUp, TrendingDown, ChevronDown, X, Delete, ExternalLink, BarChart3, Activity, Loader2, Search, Info } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
+import {
+  Search, X, Copy, ExternalLink, TrendingUp, TrendingDown,
+  Flame, Zap, BarChart2, Layers, ChevronDown, Loader2,
+  ArrowLeft, CheckCheck,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-const COIN_IMAGE_MAP: Record<string, string> = {
-  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
-  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
-  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
-  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
-  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uni.jpg',
-  AAVE: 'https://assets.coingecko.com/coins/images/12645/small/AAVE.png',
-  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
-  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
-  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
-  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
-  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
-  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
-  WIF: 'https://assets.coingecko.com/coins/images/33566/small/dogwifhat.jpg',
-  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
-  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
-  SUI: 'https://assets.coingecko.com/coins/images/26375/small/sui-ocean-square.png',
-  BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
-  JUP: 'https://assets.coingecko.com/coins/images/34188/small/jup.png',
-  MKR: 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png',
-  CRV: 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
-  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
-  NAKA: 'https://assets.coingecko.com/coins/images/18041/small/naka.png',
-  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
-  RAY: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg',
-  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
-  FTM: 'https://assets.coingecko.com/coins/images/4001/small/Fantom_round.png',
-  NEAR: 'https://assets.coingecko.com/coins/images/10365/small/near.jpg',
-  APT: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png',
-  INJ: 'https://assets.coingecko.com/coins/images/12882/small/Secondary_Symbol.png',
-  TIA: 'https://assets.coingecko.com/coins/images/31967/small/tia.jpg',
-};
-
-interface CoinData {
-  id: string;
-  symbol: string;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface MarketToken {
   name: string;
-  image?: string;
+  symbol: string;
   price: number;
-  change1h: number;
-  change4h: number;
   change24h: number;
   volume24h: number;
-  vol5m: number;
   marketCap: number;
-  fdv: number;
-  rank: number;
-  ath: number;
-  athChange: number;
-  circulatingSupply: number;
-  maxSupply: number;
-  fundingRate: number;
-  openInterest: number;
-  perpVolume24h: number;
-  liquidity: number;
-  source: 'coingecko' | 'dex';
-  chain?: string;
+  logo: string;
+  chain: string;
+  source: 'coingecko' | 'dexscreener' | 'pumpfun' | 'pumpswap' | 'binance' | 'okx';
+  address?: string;
   pairAddress?: string;
-  dexUrl?: string;
+  dexChain?: string;
+  liquidity?: number;
 }
 
-type Interval = '1H' | '6H' | '1D' | '1W' | '1M' | '1Y' | 'ALL';
-type BottomTab = 'Portfolio' | 'Trade History' | 'Trades' | 'Stats';
-type PerpExchange = 'All' | 'Binance' | 'OKX' | 'Bybit' | 'Coinbase' | 'Hyperliquid';
+type TabId = 'trending' | 'launches' | 'cex' | 'all';
 
-const INTERVALS: { label: Interval; tv: string }[] = [
-  { label: '1H', tv: '60' },
-  { label: '6H', tv: '360' },
-  { label: '1D', tv: 'D' },
-  { label: '1W', tv: 'W' },
-  { label: '1M', tv: 'M' },
-  { label: '1Y', tv: '12M' },
-  { label: 'ALL', tv: 'M' },
+const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'trending', label: 'Trending', icon: Flame },
+  { id: 'launches', label: 'New Launches', icon: Zap },
+  { id: 'cex', label: 'CEX', icon: BarChart2 },
+  { id: 'all', label: 'All Tokens', icon: Layers },
 ];
 
-const PERP_EXCHANGES: PerpExchange[] = ['All', 'Binance', 'OKX', 'Bybit', 'Coinbase', 'Hyperliquid'];
+const CHAIN_FILTERS = ['all', 'eth', 'sol', 'bsc', 'base', 'arb'];
 
-function fmtPrice(p: number) {
+// ---------------------------------------------------------------------------
+// Formatters
+// ---------------------------------------------------------------------------
+function fmtPrice(p: number): string {
   if (!p && p !== 0) return '--';
   if (p >= 1) return `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (p >= 0.01) return `$${p.toFixed(4)}`;
-  if (p >= 0.000001) return `$${p.toFixed(6)}`;
-  return `$${p.toFixed(8)}`;
+  if (p >= 0.0001) return `$${p.toFixed(6)}`;
+  if (p >= 0.000001) return `$${p.toFixed(8)}`;
+  return `$${p.toFixed(10)}`;
 }
 
-function fmtNum(n: number) {
+function fmtVol(n: number): string {
   if (!n && n !== 0) return '--';
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
@@ -103,519 +59,477 @@ function fmtNum(n: number) {
   return `$${n.toFixed(2)}`;
 }
 
-function fmtSupply(n: number) {
-  if (!n) return '--';
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
-  return n.toLocaleString();
+function fmtChange(v: number): string {
+  if (!v && v !== 0) return '0.00%';
+  return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 }
 
-function StatCard({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) {
+// ---------------------------------------------------------------------------
+// Source Badge
+// ---------------------------------------------------------------------------
+const SOURCE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  binance: { bg: '#F0B90B22', text: '#F0B90B', label: 'Binance' },
+  okx: { bg: '#FFFFFF15', text: '#CCCCCC', label: 'OKX' },
+  coingecko: { bg: '#8DC63F22', text: '#8DC63F', label: 'CoinGecko' },
+  dexscreener: { bg: '#0A1EFF22', text: '#6B8AFF', label: 'DexScreener' },
+  pumpfun: { bg: '#A855F722', text: '#A855F7', label: 'pump.fun' },
+  pumpswap: { bg: '#EC489922', text: '#EC4899', label: 'PumpSwap' },
+};
+
+function SourceBadge({ source }: { source: MarketToken['source'] }) {
+  const cfg = SOURCE_COLORS[source] || { bg: '#ffffff15', text: '#aaa', label: source };
   return (
-    <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.06]">
-      <div className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</div>
-      <div className="text-sm font-bold text-white">{value}</div>
-      {sub && (
-        <div className={`text-[10px] mt-0.5 ${positive === true ? 'text-emerald-400' : positive === false ? 'text-red-400' : 'text-gray-400'}`}>
-          {sub}
-        </div>
-      )}
-    </div>
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap"
+      style={{ backgroundColor: cfg.bg, color: cfg.text }}
+    >
+      {cfg.label}
+    </span>
   );
 }
 
-function BuyModal({ coin, onClose, isBuy }: { coin: CoinData; onClose: () => void; isBuy: boolean }) {
-  const [amount, setAmount] = useState('');
-  const [pct, setPct] = useState(0);
+// ---------------------------------------------------------------------------
+// Chain Badge
+// ---------------------------------------------------------------------------
+const CHAIN_LABELS: Record<string, string> = {
+  sol: 'SOL', eth: 'ETH', bsc: 'BSC', base: 'Base',
+  arb: 'ARB', polygon: 'MATIC', avax: 'AVAX', multi: '', cex: '',
+};
 
-  const handleNum = (v: string) => {
-    if (v === 'DEL') {
-      setAmount(prev => prev.slice(0, -1));
-    } else if (v === '.' && amount.includes('.')) {
-    } else {
-      setAmount(prev => prev + v);
-    }
-  };
-
-  const label = `${isBuy ? 'Buy' : 'Sell'} ${coin.symbol}`;
-  const labelColor = isBuy ? '#10B981' : '#EF4444';
-
+function ChainBadge({ chain }: { chain: string }) {
+  const label = CHAIN_LABELS[chain.toLowerCase()] ?? chain.toUpperCase().slice(0, 4);
+  if (!label) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-end">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full bg-[#0D1117] rounded-t-2xl border-t border-white/[0.06] z-10 pb-8">
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-white/20 rounded-full" />
-        </div>
-
-        <div className="px-5 pb-4">
-          <h3 className="text-lg font-bold mt-2 mb-4" style={{ color: labelColor }}>{label}</h3>
-
-          <div className="text-center mb-4">
-            <div className="text-4xl font-bold font-mono text-white/90">
-              ${amount || '0'}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={pct}
-              onChange={e => setPct(Number(e.target.value))}
-              className="w-full accent-emerald-400"
-            />
-            <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-              <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>MAX</span>
-            </div>
-          </div>
-
-          <div className="flex justify-between text-xs text-gray-400 mb-4">
-            <span>Available</span>
-            <span>$0.00</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'DEL'].map((k) => (
-              <button
-                key={k}
-                onClick={() => handleNum(k)}
-                className="py-4 text-lg font-semibold bg-white/[0.06] hover:bg-white/10 rounded-xl transition-colors text-white"
-              >
-                {k === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : k}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-center text-[11px] text-gray-500 mb-3">0.1% fee</div>
-
-          <div className="flex gap-2">
-            <button
-              className="flex-1 py-4 rounded-xl font-bold text-base transition-all"
-              style={{ backgroundColor: labelColor, color: labelColor === '#10B981' ? '#000' : '#fff' }}
-              onClick={() => {
-                const hasWallet = typeof window !== 'undefined' && localStorage.getItem('steinz_wallets');
-                if (!hasWallet || JSON.parse(hasWallet).length === 0) {
-                  alert('Create a wallet first in the Wallet tab to trade.');
-                } else {
-                  alert(`${isBuy ? 'Buy' : 'Sell'} order for $${amount || '0'} of ${coin.symbol} submitted. DEX routing in progress.`);
-                }
-              }}
-            >
-              {isBuy ? 'Buy' : 'Sell'} {coin.symbol}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-gray-400 font-mono whitespace-nowrap">
+      {label}
+    </span>
   );
 }
 
-function MarketPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [coin, setCoin] = useState<CoinData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [interval, setInterval] = useState<Interval>('1D');
-  const [activeTab, setActiveTab] = useState<BottomTab>('Stats');
-  const [perpExchange, setPerpExchange] = useState<PerpExchange>('All');
-  const [showBuyModal, setShowBuyModal] = useState(false);
-  const [isBuy, setIsBuy] = useState(true);
-  const [starred, setStarred] = useState(false);
+// ---------------------------------------------------------------------------
+// Token Logo
+// ---------------------------------------------------------------------------
+function TokenLogo({ token, size = 36 }: { token: MarketToken; size?: number }) {
+  const [error, setError] = useState(false);
 
-  const coinId = searchParams.get('coin');
-  const symbol = searchParams.get('symbol') || '';
-  const name = searchParams.get('name') || symbol;
-  const pairAddress = searchParams.get('pair');
-  const chain = searchParams.get('chain');
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (coinId) {
-        const res = await fetch(`/api/prices?ids=${coinId}`);
-        const data = await res.json();
-        const p = data.prices?.[coinId];
-        if (p) {
-          const priceUsd = p.usd || 0;
-          setCoin({
-            id: coinId,
-            symbol: symbol.toUpperCase(),
-            name,
-            price: priceUsd,
-            change1h: p.usd_1h_change ?? 0,
-            change4h: 0,
-            change24h: p.usd_24h_change ?? 0,
-            volume24h: p.usd_24h_vol ?? 0,
-            vol5m: (p.usd_24h_vol ?? 0) / 288,
-            marketCap: p.usd_market_cap ?? 0,
-            fdv: p.usd_market_cap ?? 0,
-            rank: 0,
-            ath: priceUsd * 1.8,
-            athChange: -44.5,
-            circulatingSupply: 0,
-            maxSupply: 0,
-            fundingRate: -0.0101,
-            openInterest: 5.768e10,
-            perpVolume24h: 2.4281e11,
-            liquidity: 0,
-            source: 'coingecko',
-          });
-        }
-      } else if (pairAddress) {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(pairAddress)}`);
-        const data = await res.json();
-        const result = data.results?.[0];
-        if (result) {
-          setCoin({
-            id: pairAddress,
-            symbol: result.symbol,
-            name: result.name,
-            price: result.priceUsd,
-            change1h: 0,
-            change4h: 0,
-            change24h: result.change24h,
-            volume24h: result.volume24h,
-            vol5m: result.volume24h / 288,
-            marketCap: 0,
-            fdv: result.fdv,
-            rank: 0,
-            ath: result.priceUsd * 2,
-            athChange: 0,
-            circulatingSupply: 0,
-            maxSupply: 0,
-            fundingRate: 0,
-            openInterest: 0,
-            perpVolume24h: 0,
-            liquidity: result.liquidity,
-            source: 'dex',
-            chain: result.chain,
-            pairAddress: result.pairAddress,
-            dexUrl: result.dexUrl,
-          });
-        }
-      } else {
-        setCoin({
-          id: symbol.toLowerCase(),
-          symbol: symbol.toUpperCase(),
-          name,
-          price: 0,
-          change1h: 0,
-          change4h: 0,
-          change24h: 0,
-          volume24h: 0,
-          vol5m: 0,
-          marketCap: 0,
-          fdv: 0,
-          rank: 0,
-          ath: 0,
-          athChange: 0,
-          circulatingSupply: 0,
-          maxSupply: 0,
-          fundingRate: 0,
-          openInterest: 0,
-          perpVolume24h: 0,
-          liquidity: 0,
-          source: 'coingecko',
-        });
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, [coinId, symbol, name, pairAddress]);
-
-  useEffect(() => {
-    fetchData();
-    const timer = globalThis.setInterval(fetchData, 30000);
-    return () => globalThis.clearInterval(timer);
-  }, [fetchData]);
-
-  const tvSymbol = symbol
-    ? (getTradingViewSymbol(symbol.toUpperCase()) || `BINANCE:${symbol.toUpperCase()}USDT`)
-    : 'BINANCE:BTCUSDT';
-
-  const tvInterval = INTERVALS.find(i => i.label === interval)?.tv || 'D';
-
-  const isPositive = (coin?.change24h ?? 0) >= 0;
-  const changeColor = isPositive ? '#10B981' : '#EF4444';
-
-  if (!symbol && !coinId) {
+  if (!error && token.logo) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] text-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400">No coin selected.</p>
-          <button onClick={() => router.back()} className="mt-4 text-[#0A1EFF] text-sm">Go back</button>
-        </div>
-      </div>
+      <img
+        src={token.logo}
+        alt={token.symbol}
+        width={size}
+        height={size}
+        className="rounded-full object-cover flex-shrink-0"
+        style={{ width: size, height: size }}
+        onError={() => setError(true)}
+      />
     );
   }
 
+  // Fallback: colored initial circle
+  const colors = ['#0A1EFF', '#7C3AED', '#0891B2', '#059669', '#D97706'];
+  const color = colors[token.symbol.charCodeAt(0) % colors.length];
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex flex-col">
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+    <div
+      className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+      style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.36 }}
+    >
+      {token.symbol.slice(0, 2)}
+    </div>
+  );
+}
 
+// ---------------------------------------------------------------------------
+// Coin Row
+// ---------------------------------------------------------------------------
+function CoinRow({ token, onClick }: { token: MarketToken; onClick: () => void }) {
+  const isUp = token.change24h >= 0;
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] active:bg-white/[0.06] transition-colors border-b border-white/[0.04] text-left"
+    >
+      <TokenLogo token={token} size={38} />
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span className="font-semibold text-white text-sm truncate">{token.symbol}</span>
+          <ChainBadge chain={token.chain} />
+        </div>
+        <span className="text-gray-500 text-xs truncate block">{token.name}</span>
+      </div>
+
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className="font-mono font-semibold text-white text-sm">{fmtPrice(token.price)}</span>
         <div className="flex items-center gap-2">
-          {COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image ? (
-            <img
-              src={COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image || ''}
-              alt={symbol}
-              className="w-7 h-7 rounded-full"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <div className={`w-7 h-7 rounded-full bg-gradient-to-br from-[#0A1EFF]/30 to-[#7C3AED]/30 flex items-center justify-center text-xs font-bold ${COIN_IMAGE_MAP[symbol.toUpperCase()] || coin?.image ? 'hidden' : ''}`}>
-            {symbol.slice(0, 2)}
-          </div>
-          <span className="font-bold">{symbol.toUpperCase()}</span>
-          {coin?.chain && (
-            <span className="text-[10px] px-1.5 py-0.5 bg-[#0A1EFF]/20 text-[#0A1EFF] rounded font-medium">
-              {coin.chain.toUpperCase().slice(0, 4)}
-            </span>
-          )}
-          <span className="text-gray-400 text-sm">/ USD</span>
+          <span className={`text-xs font-semibold ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isUp ? <span className="inline-block">&#9650;</span> : <span className="inline-block">&#9660;</span>}
+            {' '}{Math.abs(token.change24h).toFixed(2)}%
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[70px]">
+        <span className="text-xs text-gray-400">{fmtVol(token.volume24h)}</span>
+        <SourceBadge source={token.source} />
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Coin Detail Modal (bottom sheet / right slide-over)
+// ---------------------------------------------------------------------------
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={copy}
+      className="text-gray-400 hover:text-white transition-colors"
+      title="Copy"
+    >
+      {copied ? <CheckCheck className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+    </button>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-white/[0.04]">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-xs font-semibold text-white font-mono">{value}</span>
+    </div>
+  );
+}
+
+function CoinDetailModal({ token, onClose }: { token: MarketToken; onClose: () => void }) {
+  const router = useRouter();
+  const isUp = token.change24h >= 0;
+  const hasDex = token.source === 'dexscreener' || token.source === 'pumpfun' || token.source === 'pumpswap';
+  const dexChain = token.dexChain || token.chain;
+  const dexAddress = token.pairAddress || token.address;
+  const dexUrl = hasDex && dexAddress
+    ? `https://dexscreener.com/${dexChain}/${dexAddress}?embed=1&theme=dark&trades=0&info=0`
+    : null;
+
+  // TradingView symbol for CEX/CoinGecko
+  const tvSymbol = `BINANCE:${token.symbol}USDT`;
+
+  const handleBuy = () => {
+    onClose();
+    router.push(`/dashboard/swap?buy=${encodeURIComponent(token.symbol)}`);
+  };
+
+  const handleTrack = () => {
+    onClose();
+    router.push(`/dashboard/alerts?token=${encodeURIComponent(token.symbol)}`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="relative w-full sm:w-[420px] sm:h-full bg-[#0D1117] rounded-t-2xl sm:rounded-none sm:rounded-l-2xl border-t sm:border-t-0 sm:border-l border-white/[0.08] z-10 flex flex-col max-h-[90vh] sm:max-h-full overflow-hidden">
+        {/* Drag handle (mobile) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-white/20 rounded-full" />
         </div>
 
-        <button onClick={() => setStarred(!starred)} className="text-gray-400 hover:text-yellow-400 transition-colors">
-          <Star className={`w-5 h-5 ${starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-        </button>
-      </div>
-
-      <div className="px-4 pb-3 flex-shrink-0">
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 text-[#0A1EFF] animate-spin" />
-            <span className="text-gray-500 text-sm">Loading...</span>
-          </div>
-        ) : (
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold font-mono">{fmtPrice(coin?.price ?? 0)}</span>
-            <div className="flex items-center gap-1" style={{ color: changeColor }}>
-              {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span className="text-sm font-semibold">
-                {isPositive ? '▲' : '▼'} {Math.abs(coin?.change24h ?? 0).toFixed(2)}%
-              </span>
+            <TokenLogo token={token} size={40} />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-lg">{token.symbol}</span>
+                <ChainBadge chain={token.chain} />
+                <SourceBadge source={token.source} />
+              </div>
+              <span className="text-gray-400 text-xs">{token.name}</span>
             </div>
           </div>
-        )}
-      </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-      <div className="flex-1 min-h-0" style={{ minHeight: '320px', maxHeight: '420px' }}>
-        <TradingViewChart
-          symbol={tvSymbol}
-          height={360}
-          interval={tvInterval}
-          showTools={false}
-        />
-      </div>
+        {/* Price Hero */}
+        <div className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-bold font-mono text-white">{fmtPrice(token.price)}</span>
+            <span className={`text-sm font-semibold ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+              {fmtChange(token.change24h)}
+            </span>
+          </div>
+          {token.marketCap > 0 && (
+            <span className="text-xs text-gray-500 mt-1 block">MCap: {fmtVol(token.marketCap)}</span>
+          )}
+        </div>
 
-      <div className="flex items-center gap-1 px-4 py-3 overflow-x-auto scrollbar-hide flex-shrink-0 border-b border-white/[0.04]">
-        {INTERVALS.map(({ label }) => (
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Chart */}
+          <div className="mx-5 mt-4 rounded-xl overflow-hidden border border-white/[0.06]" style={{ height: 220 }}>
+            {dexUrl ? (
+              <iframe
+                src={dexUrl}
+                width="100%"
+                height="220"
+                style={{ border: 'none', display: 'block' }}
+                title={`${token.symbol} DexScreener chart`}
+              />
+            ) : (
+              <iframe
+                src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}&interval=D&theme=dark&style=1&locale=en&enable_publishing=false&hide_top_toolbar=true&hide_legend=true&save_image=false`}
+                width="100%"
+                height="220"
+                style={{ border: 'none', display: 'block' }}
+                title={`${token.symbol} TradingView chart`}
+              />
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="px-5 py-4">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Stats</div>
+            {token.volume24h > 0 && <StatRow label="24h Volume" value={fmtVol(token.volume24h)} />}
+            {token.marketCap > 0 && <StatRow label="Market Cap" value={fmtVol(token.marketCap)} />}
+            {token.liquidity != null && token.liquidity > 0 && (
+              <StatRow label="Liquidity" value={fmtVol(token.liquidity)} />
+            )}
+            <StatRow label="Price" value={fmtPrice(token.price)} />
+            <StatRow label="24h Change" value={fmtChange(token.change24h)} />
+          </div>
+
+          {/* Contract address */}
+          {token.address && (
+            <div className="px-5 pb-4">
+              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                {hasDex ? 'Contract Address' : 'Ticker / ID'}
+              </div>
+              <div className="flex items-center gap-2 bg-white/[0.04] rounded-xl px-3 py-2.5 border border-white/[0.06]">
+                <span className="text-xs text-gray-300 font-mono truncate flex-1">{token.address}</span>
+                <CopyButton text={token.address} />
+                {hasDex && (
+                  <a
+                    href={`https://dexscreener.com/${dexChain}/${token.address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-3 px-5 py-4 border-t border-white/[0.06] flex-shrink-0 bg-[#0D1117]">
           <button
-            key={label}
-            onClick={() => setInterval(label)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              interval === label
-                ? 'bg-white/10 text-white'
-                : 'text-gray-500 hover:text-gray-300'
+            onClick={handleBuy}
+            className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition-all"
+          >
+            Buy {token.symbol}
+          </button>
+          <button
+            onClick={handleTrack}
+            className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-white/[0.08] hover:bg-white/[0.12] text-white border border-white/[0.10] transition-all"
+          >
+            Track
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Market Page
+// ---------------------------------------------------------------------------
+function MarketPageContent() {
+  const [activeTab, setActiveTab] = useState<TabId>('trending');
+  const [chainFilter, setChainFilter] = useState('all');
+  const [tokens, setTokens] = useState<MarketToken[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<MarketToken | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const loadTokens = useCallback(async (tab: TabId, chain: string) => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ tab, chain });
+      const res = await fetch(`/api/market?${params}`, { signal: ctrl.signal });
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      if (!ctrl.signal.aborted) {
+        setTokens(data.tokens || []);
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setError('Failed to load market data.');
+      }
+    } finally {
+      if (!ctrl.signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTokens(activeTab, chainFilter);
+    const interval = setInterval(() => loadTokens(activeTab, chainFilter), 30_000);
+    return () => {
+      clearInterval(interval);
+      abortRef.current?.abort();
+    };
+  }, [activeTab, chainFilter, loadTokens]);
+
+  const filtered = tokens.filter(t => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      t.symbol.toLowerCase().includes(q) ||
+      t.name.toLowerCase().includes(q) ||
+      (t.address?.toLowerCase().includes(q) ?? false)
+    );
+  });
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white flex flex-col">
+      {/* Header */}
+      <div className="px-4 pt-5 pb-2 flex-shrink-0">
+        <h1 className="text-xl font-bold text-white mb-1">Markets</h1>
+        <p className="text-xs text-gray-500">Live prices across DEX, CEX &amp; new launches</p>
+      </div>
+
+      {/* Search bar */}
+      <div className="px-4 py-2 flex-shrink-0">
+        <div className="flex items-center gap-2 bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5">
+          <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search tokens, symbols, addresses…"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-600 outline-none"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-gray-500 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-white/[0.06] flex-shrink-0 px-1">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => { setActiveTab(id); setSearch(''); }}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold relative transition-colors ${
+              activeTab === id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {label}
+            <Icon className="w-4 h-4" />
+            <span className="hidden sm:inline">{label}</span>
+            <span className="sm:hidden">{label.split(' ')[0]}</span>
+            {activeTab === id && (
+              <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#0A1EFF] rounded-full" />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="flex border-b border-white/[0.06] flex-shrink-0">
-        {(['Portfolio', 'Trade History', 'Trades', 'Stats'] as BottomTab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-2.5 text-xs font-medium transition-colors relative whitespace-nowrap flex-1 ${
-              activeTab === tab ? 'text-white' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {tab}
-            {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0A1EFF]" />}
-          </button>
+      {/* Chain filter (only for All Tokens and Trending) */}
+      {(activeTab === 'all' || activeTab === 'trending') && (
+        <div className="flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide flex-shrink-0 border-b border-white/[0.04]">
+          {CHAIN_FILTERS.map(c => (
+            <button
+              key={c}
+              onClick={() => setChainFilter(c)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                chainFilter === c
+                  ? 'border-[#0A1EFF]/60 bg-[#0A1EFF]/20 text-white'
+                  : 'border-white/[0.06] text-gray-500 hover:text-white'
+              }`}
+            >
+              {c === 'all' ? 'All Chains' : c.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Token list */}
+      <div className="flex-1 overflow-y-auto">
+        {loading && tokens.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-7 h-7 text-[#0A1EFF] animate-spin" />
+            <span className="text-gray-500 text-sm">Loading market data…</span>
+          </div>
+        )}
+
+        {error && tokens.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 px-6 text-center">
+            <span className="text-red-400 text-sm">{error}</span>
+            <button
+              onClick={() => loadTokens(activeTab, chainFilter)}
+              className="text-xs text-[#0A1EFF] hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && tokens.length > 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <span className="text-gray-500 text-sm">No tokens match your search.</span>
+            <button onClick={() => setSearch('')} className="text-xs text-[#0A1EFF] hover:underline">
+              Clear search
+            </button>
+          </div>
+        )}
+
+        {filtered.map((token, idx) => (
+          <CoinRow
+            key={`${token.symbol}__${token.source}__${idx}`}
+            token={token}
+            onClick={() => setSelected(token)}
+          />
         ))}
-      </div>
 
-      <div className="overflow-y-auto flex-1 scrollbar-hide">
-        {activeTab === 'Stats' && (
-          <div className="px-4 py-4 space-y-5">
-            <div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 font-semibold">KEY STATS</div>
-              <div className="grid grid-cols-3 gap-2">
-                {coin?.rank ? <StatCard label="RANK" value={`#${coin.rank}`} /> : null}
-                <StatCard label="MARKET CAP" value={fmtNum(coin?.marketCap ?? 0)} />
-                <StatCard label="FDV" value={fmtNum(coin?.fdv ?? 0)} sub="= Market Cap" />
-                <StatCard
-                  label="VOLUME 24H"
-                  value={fmtNum(coin?.volume24h ?? 0)}
-                  sub={coin?.change24h ? `${coin.change24h >= 0 ? '+' : ''}${coin.change24h.toFixed(1)}%` : undefined}
-                  positive={coin?.change24h ? coin.change24h >= 0 : undefined}
-                />
-                {(coin?.ath ?? 0) > 0 && (
-                  <StatCard
-                    label="ATH"
-                    value={fmtPrice(coin?.ath ?? 0)}
-                    sub={`${(coin?.athChange ?? 0).toFixed(1)}% below ATH`}
-                    positive={false}
-                  />
-                )}
-                {(coin?.circulatingSupply ?? 0) > 0 && (
-                  <StatCard
-                    label="CIRCULATING"
-                    value={fmtSupply(coin?.circulatingSupply ?? 0)}
-                    sub={coin?.maxSupply ? `${((coin.circulatingSupply / coin.maxSupply) * 100).toFixed(1)}% of max` : undefined}
-                  />
-                )}
-                {(coin?.liquidity ?? 0) > 0 && (
-                  <StatCard label="LIQUIDITY" value={fmtNum(coin?.liquidity ?? 0)} />
-                )}
-                <StatCard label="5M VOLUME" value={fmtNum(coin?.vol5m ?? 0)} />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 font-semibold">PRICE CHANGES</div>
-              <div className="bg-[#0D1117] rounded-xl border border-white/[0.06] divide-y divide-white/[0.04]">
-                {[
-                  { label: '1h Change', value: coin?.change1h ?? 0 },
-                  { label: '4h Change', value: coin?.change4h ?? 0 },
-                  { label: '24h Change', value: coin?.change24h ?? 0 },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm text-gray-400">{label}</span>
-                    <span className={`text-sm font-semibold ${value >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {value >= 0 ? '+' : ''}{value.toFixed(2)}%
-                    </span>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-400">5m Volume</span>
-                  <span className="text-sm font-semibold text-white">{fmtNum(coin?.vol5m ?? 0)}</span>
-                </div>
-              </div>
-            </div>
-
-            {coin?.source === 'coingecko' && (coin?.fundingRate !== 0 || coin?.openInterest !== 0) && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">PERPS</div>
-                  <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-                    {PERP_EXCHANGES.map(ex => (
-                      <button
-                        key={ex}
-                        onClick={() => setPerpExchange(ex)}
-                        className={`px-2 py-0.5 text-[10px] rounded-full whitespace-nowrap font-semibold transition-all border ${
-                          perpExchange === ex
-                            ? 'border-white/30 text-white bg-white/10'
-                            : 'border-white/[0.06] text-gray-500 hover:text-white'
-                        }`}
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <StatCard
-                    label="FUNDING RATE"
-                    value={`${(coin.fundingRate * 100).toFixed(4)}%`}
-                    sub="Bearish"
-                    positive={false}
-                  />
-                  <StatCard label="OPEN INTEREST" value={fmtNum(coin.openInterest)} />
-                  <StatCard label="24H VOLUME" value={fmtNum(coin.perpVolume24h)} />
-                </div>
-              </div>
-            )}
-
-            {coin?.dexUrl && (
-              <a
-                href={coin.dexUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 justify-center text-xs text-gray-400 hover:text-white transition-colors py-2"
-              >
-                View on DexScreener <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'Portfolio' && (
-          <div className="px-4 py-8 text-center">
-            <BarChart3 className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm mb-1">No holdings</p>
-            <p className="text-gray-600 text-xs">Connect your wallet to view portfolio</p>
-          </div>
-        )}
-
-        {activeTab === 'Trade History' && (
-          <div className="px-4 py-8 text-center">
-            <Activity className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm mb-1">No trade history</p>
-            <p className="text-gray-600 text-xs">Connect your wallet to view trades</p>
-          </div>
-        )}
-
-        {activeTab === 'Trades' && (
-          <div className="px-4 py-4">
-            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 font-semibold uppercase pb-2 border-b border-white/[0.04]">
-              <span>Price</span>
-              <span className="text-center">Size</span>
-              <span className="text-right">Time</span>
-            </div>
-            <div className="divide-y divide-white/[0.04]">
-              {Array.from({ length: 10 }).map((_, i) => {
-                const seed = ((i + 7) * 13 + 31) % 100;
-                const isBuy = seed > 45;
-                const variance = 1 + ((seed - 50) * 0.00004);
-                const price = (coin?.price ?? 100) * variance;
-                const size = (((seed * 7 + 3) % 900) / 100 + 0.1);
-                const seconds = ((i * 7 + 3) % 55) + 2;
-                return (
-                  <div key={i} className="grid grid-cols-3 gap-2 py-2 text-xs">
-                    <span className={isBuy ? 'text-emerald-400' : 'text-red-400'}>{fmtPrice(price)}</span>
-                    <span className="text-center text-gray-400">{size.toFixed(3)}</span>
-                    <span className="text-right text-gray-500">{seconds}s ago</span>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Refresh indicator */}
+        {tokens.length > 0 && (
+          <div className="py-4 text-center">
+            <span className="text-[10px] text-gray-600">
+              {filtered.length} tokens · refreshes every 30s
+              {loading && <span> · updating…</span>}
+            </span>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 px-4 py-3 border-t border-white/[0.06] bg-[#0A0E1A] flex-shrink-0 pb-safe">
-        <button
-          onClick={() => { setIsBuy(true); setShowBuyModal(true); }}
-          className="flex-1 py-3.5 rounded-xl font-bold text-base bg-emerald-500 hover:bg-emerald-400 text-black transition-all"
-        >
-          Buy
-        </button>
-        <button
-          onClick={() => { setIsBuy(false); setShowBuyModal(true); }}
-          className="flex-1 py-3.5 rounded-xl font-bold text-base bg-red-500 hover:bg-red-400 text-white transition-all"
-        >
-          Sell
-        </button>
-      </div>
-
-      {showBuyModal && coin && (
-        <BuyModal coin={coin} onClose={() => setShowBuyModal(false)} isBuy={isBuy} />
+      {/* Detail modal */}
+      {selected && (
+        <CoinDetailModal token={selected} onClose={() => setSelected(null)} />
       )}
     </div>
   );
@@ -623,11 +537,13 @@ function MarketPageContent() {
 
 export default function MarketPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+        </div>
+      }
+    >
       <MarketPageContent />
     </Suspense>
   );

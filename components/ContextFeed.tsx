@@ -205,7 +205,7 @@ export default function ContextFeed() {
   const isArchive = activeMode === 'archive';
   const activeChain: ChainFilter = isArchive ? 'all' : activeMode as ChainFilter;
   const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
-  const { events, loading, refresh, hasArchive } = useContextFeed(50, feedChain);
+  const { events, loading, refresh, hasArchive } = useContextFeed(200, feedChain);
   const { events: archivedEvents, loading: archiveLoading, refresh: refreshArchive } = useArchivedFeed(feedChain);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
   const [refreshing, setRefreshing] = useState(false);

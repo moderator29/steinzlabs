@@ -58,6 +58,18 @@ export function AvalancheIcon({ className = 'w-4 h-4' }: { className?: string })
   );
 }
 
+export function BaseIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 146 146" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="73" cy="73" r="73" fill="#0052FF"/>
+      <path
+        d="M73.0 19C43.2 19 19 43.2 19 73C19 102.8 43.2 127 73.0 127C101.3 127 124.5 104.9 126.9 77.2H72.9V68.8H126.9C124.5 41.1 101.3 19 73.0 19Z"
+        fill="white"
+      />
+    </svg>
+  );
+}
+
 export function AllChainsIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
