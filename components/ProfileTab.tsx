@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones } from 'lucide-react';
+import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 
 interface Notification {
@@ -245,6 +246,32 @@ export default function ProfileTab() {
     localStorage.setItem('steinz_preferences', JSON.stringify(preferences));
   }, [preferences]);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [pwdOld, setPwdOld] = useState('');
+  const [pwdNew, setPwdNew] = useState('');
+  const [pwdConfirm, setPwdConfirm] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [loginActivity] = useState(() => {
+    // Reconstruct login activity from localStorage
+    const sessions = [];
+    try {
+      const token = localStorage.getItem('steinz-auth-token');
+      if (token) {
+        const parsed = JSON.parse(token);
+        if (parsed?.access_token) {
+          sessions.push({ device: 'Current Session', time: 'Now', location: 'Current Device', current: true });
+        }
+      }
+    } catch {}
+    return sessions;
+  });
+
   const displayName = user?.username
     ? user.username
     : user?.first_name
@@ -268,7 +295,62 @@ export default function ProfileTab() {
   const handleSignOut = async () => {
     await signOut();
     disconnectWallet();
+    // Clear session-related localStorage entries
+    try {
+      ['steinz_privacy', 'steinz_preferences', 'steinz_notifications', 'steinz_read_notifs', 'steinz_support_chat', 'steinz_portfolio_wallet', 'wallet_address', 'wallet_provider'].forEach(k => localStorage.removeItem(k));
+    } catch {}
     window.location.href = '/login';
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      // Delete user data from Supabase
+      if (supabase && user?.id) {
+        // Delete profile record
+        await supabase.from('profiles').delete().eq('id', user.id);
+        // Delete the auth user via admin API (requires service role, so we call our own endpoint)
+        const res = await fetch('/api/delete-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id }) });
+        if (!res.ok) {
+          // Fallback: sign out even if deletion partially fails
+          const data = await res.json().catch(() => ({}));
+          if (!data.ok) throw new Error(data.error || 'Failed to delete account');
+        }
+      }
+      await signOut();
+      disconnectWallet();
+      localStorage.clear();
+      window.location.href = '/';
+    } catch (e: any) {
+      setDeleteError(e.message || 'Failed to delete account. Please contact support.');
+      setDeleteLoading(false);
+    }
+  };
+
+  const savePrivacyToSupabase = async (key: string, value: boolean) => {
+    if (!supabase || !user?.id) return;
+    setPrivacySaving(true);
+    try {
+      await supabase.auth.updateUser({ data: { [`privacy_${key}`]: value } });
+    } catch {} finally { setPrivacySaving(false); }
+  };
+
+  const handlePasswordChange = async () => {
+    if (pwdNew.length < 8) { setPwdError('New password must be at least 8 characters'); return; }
+    if (pwdNew !== pwdConfirm) { setPwdError('Passwords do not match'); return; }
+    if (!supabase) { setPwdError('Authentication not available'); return; }
+    setPwdLoading(true); setPwdError('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pwdNew });
+      if (error) throw error;
+      setPwdSuccess(true);
+      setPwdOld(''); setPwdNew(''); setPwdConfirm('');
+      setTimeout(() => setPwdSuccess(false), 4000);
+    } catch (e: any) {
+      setPwdError(e.message || 'Failed to change password');
+    } finally { setPwdLoading(false); }
   };
 
   const copyAddress = () => {
