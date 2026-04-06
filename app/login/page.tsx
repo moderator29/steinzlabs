@@ -122,10 +122,14 @@ function LoginPageInner() {
       }
 
       try {
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
+        // Race with 5s timeout — setSession can hang indefinitely on slow networks
+        await Promise.race([
+          supabase.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+          }),
+          new Promise<void>(resolve => setTimeout(resolve, 5000)),
+        ]);
       } catch (sessionErr: any) {
         console.error('[Login] setSession failed:', sessionErr?.message);
       }
