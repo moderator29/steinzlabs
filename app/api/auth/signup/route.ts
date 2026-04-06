@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
 import { generateVerifyToken } from '@/lib/authTokens';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 export async function POST(request: Request) {
   try {
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
     }
 
     const token = generateVerifyToken(newUser.user.id, cleanEmail);
-    const confirmUrl = `https://steinzlabs.com/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
+    const confirmUrl = `${getSiteUrl()}/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
 
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
