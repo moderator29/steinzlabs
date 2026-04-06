@@ -370,7 +370,8 @@ export default function ProfileTab() {
         <h2 className="text-lg font-heading font-bold mb-1">Account Security</h2>
         <p className="text-xs text-gray-500 mb-4">Manage your account security settings.</p>
 
-        <div className="glass rounded-lg border border-white/10 overflow-hidden">
+        <div className="glass rounded-lg border border-white/10 overflow-hidden mb-3">
+          {/* Email */}
           <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
             <div className="flex items-center gap-3">
               <Mail className="w-4 h-4 text-[#0A1EFF]" />
@@ -381,16 +382,38 @@ export default function ProfileTab() {
             </div>
             <span className="px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] text-[9px] font-bold rounded">VERIFIED</span>
           </div>
-          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <Key className="w-4 h-4 text-[#F59E0B]" />
-              <div>
-                <div className="text-sm font-semibold">Password</div>
-                <div className="text-[10px] text-gray-500">Last changed: Unknown</div>
+
+          {/* Password Change */}
+          <div className="px-3 py-3 border-b border-white/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Key className="w-4 h-4 text-[#F59E0B]" />
+                <div>
+                  <div className="text-sm font-semibold">Password</div>
+                  <div className="text-[10px] text-gray-500">Change your account password</div>
+                </div>
               </div>
+              <button
+                onClick={() => setPwdOld(prev => prev === '__toggle__' ? '' : '__toggle__')}
+                className="px-3 py-1 bg-white/5 rounded-lg text-[10px] font-semibold hover:bg-white/10 transition-colors"
+              >
+                {pwdOld === '__toggle__' ? 'Cancel' : 'Change'}
+              </button>
             </div>
-            <button className="px-3 py-1 bg-white/5 rounded-lg text-[10px] font-semibold hover:bg-white/10 transition-colors">Change</button>
+            {pwdOld === '__toggle__' && (
+              <div className="space-y-2 mt-3">
+                <input type="password" value={pwdNew} onChange={e => { setPwdNew(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
+                <input type="password" value={pwdConfirm} onChange={e => { setPwdConfirm(e.target.value); setPwdError(''); }} placeholder="Confirm new password" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
+                {pwdError && <p className="text-[10px] text-[#EF4444]">{pwdError}</p>}
+                {pwdSuccess && <p className="text-[10px] text-[#10B981]">Password updated successfully!</p>}
+                <button onClick={handlePasswordChange} disabled={pwdLoading || !pwdNew || !pwdConfirm} className="w-full py-2 bg-[#0A1EFF] rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+                  {pwdLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Updating...</> : 'Update Password'}
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* 2FA */}
           <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
             <div className="flex items-center gap-3">
               <Smartphone className="w-4 h-4 text-[#7C3AED]" />
@@ -399,18 +422,32 @@ export default function ProfileTab() {
                 <div className="text-[10px] text-gray-500">Add an extra layer of security</div>
               </div>
             </div>
-            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-[9px] font-bold rounded">OFF</span>
+            <span className="px-2 py-0.5 bg-[#F59E0B]/10 text-[#F59E0B] text-[9px] font-bold rounded">COMING SOON</span>
           </div>
-          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
-            <div className="flex items-center gap-3">
+
+          {/* Login Activity */}
+          <div className="px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-3 mb-2">
               <Shield className="w-4 h-4 text-[#10B981]" />
               <div>
                 <div className="text-sm font-semibold">Login Activity</div>
-                <div className="text-[10px] text-gray-500">Monitor login sessions</div>
+                <div className="text-[10px] text-gray-500">Recent sessions</div>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-600" />
+            {user ? (
+              <div className="bg-white/5 rounded-lg px-3 py-2 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold text-white">Current Session</p>
+                  <p className="text-[9px] text-gray-500">This device · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+                <span className="text-[9px] text-[#10B981] font-bold bg-[#10B981]/10 px-1.5 py-0.5 rounded">ACTIVE</span>
+              </div>
+            ) : (
+              <p className="text-[10px] text-gray-600">Sign in to see login activity</p>
+            )}
           </div>
+
+          {/* Delete Account */}
           <div className="flex items-center justify-between px-3 py-3">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-4 h-4 text-[#EF4444]" />
@@ -419,9 +456,52 @@ export default function ProfileTab() {
                 <div className="text-[10px] text-gray-500">Permanently delete your account and data</div>
               </div>
             </div>
-            <button className="px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] rounded-lg text-[10px] font-semibold hover:bg-[#EF4444]/20 transition-colors">Delete</button>
+            <button
+              onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); setDeleteError(''); }}
+              className="px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] rounded-lg text-[10px] font-semibold hover:bg-[#EF4444]/20 transition-colors"
+            >
+              Delete
+            </button>
           </div>
         </div>
+
+        {/* Delete Account Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteModal(false)} />
+            <div className="relative w-full max-w-[340px] mx-4 bg-[#111827] border border-white/10 rounded-2xl p-5 shadow-2xl">
+              <button onClick={() => setShowDeleteModal(false)} className="absolute top-3 right-3 p-1 hover:bg-white/10 rounded-lg">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
+                <h3 className="font-bold text-sm text-white">Delete Account?</h3>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">
+                This permanently deletes your account, profile, and all data. This action cannot be undone.
+              </p>
+              <p className="text-[10px] text-gray-500 mb-2">Type <span className="font-bold text-white">DELETE</span> to confirm:</p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2 text-sm font-mono mb-3 focus:outline-none focus:border-[#EF4444]/40 text-white"
+              />
+              {deleteError && <p className="text-[11px] text-[#EF4444] mb-2">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2.5 bg-white/5 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/10">Cancel</button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+                  className="flex-1 py-2.5 bg-[#EF4444]/20 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/30 disabled:opacity-40 border border-[#EF4444]/20 flex items-center justify-center gap-1"
+                >
+                  {deleteLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Deleting...</> : 'Delete Account'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 glass rounded-lg p-3 border border-[#0A1EFF]/20 bg-[#0A1EFF]/5">
           <p className="text-[11px] text-[#0A1EFF]">Your account is protected with industry-standard encryption. Enable two-factor authentication for maximum security.</p>
@@ -441,11 +521,11 @@ export default function ProfileTab() {
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden">
           {([
-            { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,      label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
-            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,   label: 'Show Trading Activity', desc: 'Let others see your trading history' },
-            { key: 'showPredictions',icon: <Award className="w-4 h-4 text-[#F59E0B]" />,       label: 'Show Predictions',      desc: 'Share your prediction win rate' },
+            { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,        label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
+            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,     label: 'Show Trading Activity', desc: 'Let others see your trading history' },
+            { key: 'showPredictions',icon: <Award className="w-4 h-4 text-[#F59E0B]" />,         label: 'Show Predictions',      desc: 'Share your prediction win rate' },
             { key: 'allowDMs',       icon: <MessageCircle className="w-4 h-4 text-[#10B981]" />, label: 'Allow Direct Messages', desc: 'Allow other users to message you' },
-            { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,        label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
+            { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,          label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
           ] as const).map(({ key, icon, label, desc }) => (
             <div key={key} className="flex items-center justify-between px-3 py-3 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-3">
@@ -456,7 +536,12 @@ export default function ProfileTab() {
                 </div>
               </div>
               <button
-                onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                onClick={() => {
+                  const newVal = !privacySettings[key];
+                  setPrivacySettings(prev => ({ ...prev, [key]: newVal }));
+                  // Save to Supabase user_metadata
+                  savePrivacyToSupabase(key, newVal);
+                }}
                 className={`w-10 h-5 rounded-full transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
@@ -465,8 +550,14 @@ export default function ProfileTab() {
           ))}
         </div>
 
+        {privacySaving && (
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-500">
+            <Loader2 className="w-3 h-3 animate-spin" /> Saving to account...
+          </div>
+        )}
+
         <div className="mt-4 glass rounded-lg p-3 border border-[#F59E0B]/20 bg-[#F59E0B]/5">
-          <p className="text-[11px] text-[#F59E0B]">Your privacy settings are stored locally and applied immediately. We never share your personal data with third parties.</p>
+          <p className="text-[11px] text-[#F59E0B]">Privacy settings are synced to your account and applied immediately. We never share your personal data with third parties.</p>
         </div>
       </div>
     );
