@@ -11,7 +11,7 @@ import {
 
 interface DisplayNotification {
   id: string;
-  type: LocalNotification['type'] | 'whale' | 'price' | 'prediction' | 'trending' | 'security';
+  type: LocalNotification['type'] | 'whale' | 'price' | 'prediction' | 'trending';
   title: string;
   message: string;
   time: string;
@@ -32,8 +32,7 @@ function getNotifIcon(type: DisplayNotification['type']) {
   switch (type) {
     case 'welcome':       return <Award className="w-4 h-4 text-[#0A1EFF]" />;
     case 'wallet_created':
-    case 'wallet_imported':
-    case 'wallet':        return <Wallet className="w-4 h-4 text-[#10B981]" />;
+    case 'wallet_imported': return <Wallet className="w-4 h-4 text-[#10B981]" />;
     case 'whale_alert':
     case 'whale':         return <span className="text-sm leading-none">🐳</span>;
     case 'price_target':
