@@ -846,7 +846,9 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       },
       webSearchUsed: webSearchEnabled,
       arkhamDataUsed: !!(walletDetected || tokenDetected || arkhamIntent.wantsEntitySearch),
-      chart: finalChartType,
+      // `chart` is the unified chart descriptor; also spread individual fields for backward compat
+      chart: chartPayload ?? null,
+      chartType: finalChartType,
       ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address, chartData: chartPayload.data } : {}),
     });
   } catch (error) {

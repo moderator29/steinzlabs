@@ -909,7 +909,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
   const [importing, setImporting] = useState(false);
 
   const handleImport = async () => {
-    if (!input.trim() || !password || password.length < 6) return;
+    if (!input.trim() || !password || password.length < 8) return;
     setImporting(true); setError('');
     try {
       const ethers = await import('ethers');
@@ -961,11 +961,11 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
               placeholder={method === 'phrase' ? 'word1 word2 word3 ...' : '0x...'} />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 6 chars)</label>
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 8 chars)</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Encrypt your keys" />
           </div>
           {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 6} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 8} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             {importing ? 'Importing...' : 'Import Wallet'}
           </button>
         </div>
@@ -1153,6 +1153,181 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function WalletSettingsView({
+  onBack,
+  wallet,
+  isDefault,
+  onSetDefault,
+  onRename,
+  onDelete,
+}: {
+  onBack: () => void;
+  wallet: StoredWallet;
+  isDefault: boolean;
+  onSetDefault: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const [editName, setEditName] = useState(wallet.name);
+  const [renamed, setRenamed] = useState(false);
+
+  const handleRename = () => {
+    if (editName.trim() && editName.trim() !== wallet.name) {
+      onRename(editName.trim());
+      setRenamed(true);
+      setTimeout(() => setRenamed(false), 1500);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+      <div className="px-4 pt-6 max-w-lg mx-auto">
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+            <Settings className="w-5 h-5 text-[#0A1EFF]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-heading font-bold">Wallet Settings</h1>
+            <p className="text-gray-400 text-xs font-mono">{wallet.address.slice(0, 10)}...{wallet.address.slice(-6)}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-[#111827] rounded-xl border border-white/10 p-4">
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
+            <div className="flex gap-2">
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                className="flex-1 bg-[#0A0E1A] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+                placeholder="My Wallet"
+              />
+              <button
+                onClick={handleRename}
+                disabled={!editName.trim() || editName.trim() === wallet.name}
+                className="px-4 py-2.5 rounded-xl bg-[#0A1EFF] text-xs font-semibold disabled:opacity-40 transition-opacity"
+              >
+                {renamed ? <Check className="w-4 h-4" /> : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          {!isDefault && (
+            <button
+              onClick={() => { onSetDefault(); onBack(); }}
+              className="w-full flex items-center gap-3 bg-[#111827] rounded-xl border border-white/10 p-4 hover:bg-white/5 transition-colors text-left"
+            >
+              <Shield className="w-5 h-5 text-[#10B981]" />
+              <div>
+                <p className="text-sm font-semibold">Set as Default</p>
+                <p className="text-xs text-gray-500">Use this wallet by default for all actions</p>
+              </div>
+            </button>
+          )}
+
+          {isDefault && (
+            <div className="flex items-center gap-3 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20 p-4">
+              <Shield className="w-5 h-5 text-[#10B981]" />
+              <p className="text-sm font-semibold text-[#10B981]">Default Wallet</p>
+            </div>
+          )}
+
+          <button
+            onClick={() => { onDelete(); onBack(); }}
+            className="w-full flex items-center gap-3 bg-[#EF4444]/10 rounded-xl border border-[#EF4444]/20 p-4 hover:bg-[#EF4444]/15 transition-colors text-left"
+          >
+            <Trash2 className="w-5 h-5 text-[#EF4444]" />
+            <div>
+              <p className="text-sm font-semibold text-[#EF4444]">Remove Wallet</p>
+              <p className="text-xs text-gray-500">Remove this wallet from the app (keys stay on your device)</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) {
+  if (!address) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+          <ArrowUpRight className="w-6 h-6 text-gray-500" />
+        </div>
+        <p className="text-sm text-gray-400">No wallet selected</p>
+      </div>
+    );
+  }
+
+  const swapHistory: any[] = typeof window !== 'undefined'
+    ? (JSON.parse(localStorage.getItem('steinz_swap_history') || '[]') as any[]).filter(t => t.address?.toLowerCase() === address.toLowerCase())
+    : [];
+  const sendHistory: any[] = typeof window !== 'undefined'
+    ? (JSON.parse(localStorage.getItem('steinz_send_history') || '[]') as any[]).filter(t => t.address?.toLowerCase() === address.toLowerCase())
+    : [];
+  const all = [...swapHistory, ...sendHistory].sort((a, b) => b.timestamp - a.timestamp).slice(0, 30);
+
+  if (all.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
+          <TrendingUp className="w-6 h-6 text-gray-500" />
+        </div>
+        <p className="text-sm text-gray-400">No transactions yet</p>
+        <p className="text-xs text-gray-600 mt-1">Your swap & send history will appear here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {all.map((tx, i) => {
+        const isSwap = tx.type === 'swap';
+        const date = new Date(tx.timestamp);
+        const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return (
+          <div key={i} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0A1EFF]/10' : 'bg-[#F59E0B]/10'}`}>
+              {isSwap ? <Repeat className="w-4 h-4 text-[#0A1EFF]" /> : <ArrowUpRight className="w-4 h-4 text-[#F59E0B]" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold">
+                {isSwap ? `Swap ${tx.from} → ${tx.to}` : `Send ${tx.symbol || chain.symbol}`}
+              </p>
+              <p className="text-[10px] text-gray-500">{dateStr} · {timeStr}</p>
+            </div>
+            <div className="text-right shrink-0">
+              {isSwap ? (
+                <>
+                  <p className="text-xs font-mono">-{parseFloat(tx.fromAmount || 0).toFixed(4)} {tx.from}</p>
+                  <p className="text-[10px] text-[#10B981] font-mono">+{parseFloat(tx.toAmount || 0).toFixed(4)} {tx.to}</p>
+                </>
+              ) : (
+                <p className="text-xs font-mono text-[#EF4444]">-{parseFloat(tx.amount || 0).toFixed(4)} {tx.symbol || chain.symbol}</p>
+              )}
+              {tx.txHash && (
+                <a
+                  href={chain.id === 'solana' ? `https://solscan.io/tx/${tx.txHash}` : `${chain.explorerUrl}/tx/${tx.txHash}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-[9px] text-[#0A1EFF] hover:underline"
+                >
+                  View ↗
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
