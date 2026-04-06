@@ -1174,6 +1174,15 @@ function WalletSettingsView({
 }) {
   const [editName, setEditName] = useState(wallet.name);
   const [renamed, setRenamed] = useState(false);
+  const [changePwd, setChangePwd] = useState(false);
+  const [oldPwd, setOldPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(`steinz_wallet_privacy_${wallet.address}`) === 'true';
+  });
 
   const handleRename = () => {
     if (editName.trim() && editName.trim() !== wallet.name) {
@@ -1181,6 +1190,32 @@ function WalletSettingsView({
       setRenamed(true);
       setTimeout(() => setRenamed(false), 1500);
     }
+  };
+
+  const handleChangePassword = () => {
+    if (newPwd.length < 8) { setPwdError('New password must be at least 8 characters'); return; }
+    try {
+      const dec = (encoded: string, pw: string) => {
+        const text = atob(encoded);
+        let r = '';
+        for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pw.charCodeAt(i % pw.length));
+        return r;
+      };
+      const enc = (text: string, pw: string) => {
+        let r = '';
+        for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pw.charCodeAt(i % pw.length));
+        return btoa(r);
+      };
+      const pk = dec(wallet.encryptedKey, oldPwd);
+      if (pk.length < 10) { setPwdError('Incorrect current password'); return; }
+      const newEncrypted = enc(pk, newPwd);
+      const wallets: StoredWallet[] = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
+      const updated = wallets.map(w => w.address === wallet.address ? { ...w, encryptedKey: newEncrypted } : w);
+      localStorage.setItem('steinz_wallets', JSON.stringify(updated));
+      setPwdSuccess(true); setPwdError('');
+      setOldPwd(''); setNewPwd('');
+      setTimeout(() => setPwdSuccess(false), 3000);
+    } catch { setPwdError('Failed to change password. Check your current password.'); }
   };
 
   return (
@@ -1201,6 +1236,7 @@ function WalletSettingsView({
         </div>
 
         <div className="space-y-4">
+          {/* Rename */}
           <div className="bg-[#111827] rounded-xl border border-white/10 p-4">
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
             <div className="flex gap-2">
@@ -1220,6 +1256,7 @@ function WalletSettingsView({
             </div>
           </div>
 
+          {/* Set as Default */}
           {!isDefault && (
             <button
               onClick={() => { onSetDefault(); onBack(); }}
@@ -1236,10 +1273,53 @@ function WalletSettingsView({
           {isDefault && (
             <div className="flex items-center gap-3 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20 p-4">
               <Shield className="w-5 h-5 text-[#10B981]" />
-              <p className="text-sm font-semibold text-[#10B981]">Default Wallet</p>
+              <p className="text-sm font-semibold text-[#10B981]">This is your Default Wallet</p>
             </div>
           )}
 
+          {/* Privacy Toggle */}
+          <div className="bg-[#111827] rounded-xl border border-white/10 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Privacy Mode</p>
+              <p className="text-xs text-gray-500">Hide this wallet from your public profile</p>
+            </div>
+            <button
+              onClick={() => {
+                const v = !privacyMode;
+                setPrivacyMode(v);
+                localStorage.setItem(`steinz_wallet_privacy_${wallet.address}`, String(v));
+              }}
+              className={`w-10 h-5 rounded-full transition-colors relative ${privacyMode ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacyMode ? 'right-0.5' : 'left-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Change Password */}
+          <div className="bg-[#111827] rounded-xl border border-white/10 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-sm font-semibold">Change Password</p>
+                <p className="text-xs text-gray-500">Update your wallet encryption password</p>
+              </div>
+              <button onClick={() => setChangePwd(!changePwd)} className="px-3 py-1 bg-white/5 rounded-lg text-xs font-semibold hover:bg-white/10 transition-colors">
+                {changePwd ? 'Cancel' : 'Change'}
+              </button>
+            </div>
+            {changePwd && (
+              <div className="space-y-3 mt-3">
+                <input type="password" value={oldPwd} onChange={e => { setOldPwd(e.target.value); setPwdError(''); }} placeholder="Current password" className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
+                <input type="password" value={newPwd} onChange={e => { setNewPwd(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
+                {pwdError && <p className="text-[11px] text-[#EF4444]">{pwdError}</p>}
+                {pwdSuccess && <p className="text-[11px] text-[#10B981]">Password changed successfully!</p>}
+                <button onClick={handleChangePassword} disabled={!oldPwd || !newPwd} className="w-full py-2.5 bg-[#0A1EFF] rounded-xl text-sm font-bold disabled:opacity-50">
+                  Update Password
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Delete */}
           <button
             onClick={() => { onDelete(); onBack(); }}
             className="w-full flex items-center gap-3 bg-[#EF4444]/10 rounded-xl border border-[#EF4444]/20 p-4 hover:bg-[#EF4444]/15 transition-colors text-left"
