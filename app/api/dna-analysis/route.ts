@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic();
+const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
 const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 
@@ -239,7 +239,12 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
 }`;
 
   try {
-    const message = await anthropic.messages.create({
+    const client = anthropic;
+    if (!client) {
+      console.warn('ANTHROPIC_API_KEY not configured — skipping AI analysis');
+      return null;
+    }
+    const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
