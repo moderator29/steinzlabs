@@ -121,28 +121,36 @@ function LoginPageInner() {
         return;
       }
 
-      try {
-        // Race with 5s timeout — setSession can hang indefinitely on slow networks
-        await Promise.race([
-          supabase.auth.setSession({
+      // Write session to localStorage BEFORE navigating so Supabase
+      // picks it up immediately on the next page load via INITIAL_SESSION
+      if (typeof window !== 'undefined') {
+        try {
+          const sessionData = {
             access_token: data.access_token,
             refresh_token: data.refresh_token,
-          }),
-          new Promise<void>(resolve => setTimeout(resolve, 5000)),
-        ]);
-      } catch (sessionErr: any) {
-        console.error('[Login] setSession failed:', sessionErr?.message);
-      }
+            token_type: 'bearer',
+            expires_in: data.expires_in || 14400,
+            expires_at: Math.floor(Date.now() / 1000) + (data.expires_in || 14400),
+            user: data.user,
+          };
+          localStorage.setItem('steinz-auth-token', JSON.stringify(sessionData));
+          localStorage.setItem('steinz_has_session', 'true');
+        } catch {}
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('steinz_has_session', 'true');
         const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
         const isSecure = window.location.protocol === 'https:';
         document.cookie = `steinz_session=${data.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
       }
 
-      showToast('Welcome back!', 'success');
-      router.push(searchParams.get('from') || '/dashboard');
+      // Also call setSession best-effort (no await — don't block navigation)
+      supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      }).catch(() => {});
+
+      // Hard redirect so fresh page load reads localStorage cleanly
+      const destination = searchParams.get('from') || '/dashboard';
+      window.location.href = destination;
     } catch (err: any) {
       console.error('[Login] unexpected error:', err?.message);
       const msg = err?.message || '';
