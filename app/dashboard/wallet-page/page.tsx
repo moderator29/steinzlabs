@@ -396,7 +396,9 @@ export default function WalletPage() {
                 <Link href="/dashboard" className="p-1.5 hover:bg-white/10 rounded-lg">
                   <ArrowLeft className="w-4 h-4 text-gray-400" />
                 </Link>
-                <Settings className="w-4 h-4 text-gray-400 cursor-pointer hover:text-white" />
+                <button onClick={() => setView('wallet-settings')} className="p-1.5 hover:bg-white/10 rounded-lg">
+                  <Settings className="w-4 h-4 text-gray-400 hover:text-white transition-colors" />
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 {wallets.length > 1 ? (
@@ -409,12 +411,18 @@ export default function WalletPage() {
                     }}
                   >
                     {wallets.map(w => (
-                      <option key={w.address} value={w.address} className="bg-[#111827] text-white">{w.name}</option>
+                      <option key={w.address} value={w.address} className="bg-[#111827] text-white">
+                        {w.name}{w.address === defaultWalletAddress ? ' ★' : ''}
+                      </option>
                     ))}
                   </select>
                 ) : (
-                  <span className="text-sm font-bold">{activeWallet?.name || 'Wallet'}</span>
+                  <span className="text-sm font-bold flex items-center gap-1">
+                    {activeWallet?.name || 'Wallet'}
+                    {activeWallet?.address === defaultWalletAddress && <span className="text-[10px] text-[#0A1EFF]">★</span>}
+                  </span>
                 )}
+                <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{wallets.length}/{MAX_WALLETS}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setHideBalance(!hideBalance)} className="p-1.5 hover:bg-white/10 rounded-lg">
@@ -522,15 +530,44 @@ export default function WalletPage() {
                 <div className="space-y-1">
                   {LIVE_CHAINS.includes(activeChain.id) ? (
                     <>
+                      {/* Toolbar: hide small balances + sort */}
+                      <div className="flex items-center justify-between mb-2">
+                        <button
+                          onClick={() => { const v = !hideSmallBalances; setHideSmallBalances(v); localStorage.setItem('steinz_hide_small', String(v)); }}
+                          className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-white transition-colors"
+                        >
+                          <div className={`w-7 h-3.5 rounded-full transition-colors relative ${hideSmallBalances ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}>
+                            <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform ${hideSmallBalances ? 'right-0.5' : 'left-0.5'}`} />
+                          </div>
+                          Hide &lt;$1
+                        </button>
+                        <select
+                          value={tokenSort}
+                          onChange={(e) => { const v = e.target.value as 'value' | 'name' | 'balance'; setTokenSort(v); localStorage.setItem('steinz_token_sort', v); }}
+                          className="bg-[#111827] border border-white/10 rounded-lg px-2 py-0.5 text-[10px] text-gray-400 focus:outline-none focus:border-[#0A1EFF]/30"
+                        >
+                          <option value="value">Sort: Value</option>
+                          <option value="balance">Sort: Balance</option>
+                          <option value="name">Sort: Name</option>
+                        </select>
+                      </div>
+
                       {loading ? (
                         <div className="py-8 text-center">
                           <RotateCcw className="w-6 h-6 text-gray-500 animate-spin mx-auto mb-2" />
                           <p className="text-xs text-gray-500">Loading balances...</p>
                         </div>
                       ) : walletData?.holdings && walletData.holdings.length > 0 ? (
-                        walletData.holdings.map((token, i) => (
-                          <TokenRow key={i} token={token} chainSymbol={activeChain.symbol} chainColor={activeChain.color} hideBalance={hideBalance} />
-                        ))
+                        (() => {
+                          let tokens = [...walletData.holdings];
+                          if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1);
+                          if (tokenSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+                          else if (tokenSort === 'balance') tokens.sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance));
+                          else tokens.sort((a, b) => a.name.localeCompare(b.name));
+                          return tokens.map((token, i) => (
+                            <TokenRow key={i} token={token} chainSymbol={activeChain.symbol} chainColor={activeChain.color} hideBalance={hideBalance} />
+                          ));
+                        })()
                       ) : (
                         <div className="py-8 text-center">
                           <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
@@ -566,12 +603,7 @@ export default function WalletPage() {
               )}
 
               {activeTab === 'activity' && (
-                <div className="py-8 text-center">
-                  <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-gray-500" />
-                  </div>
-                  <p className="text-sm text-gray-400">Transaction history coming soon</p>
-                </div>
+                <ActivityTab address={activeWallet?.address || ''} chain={activeChain} />
               )}
 
               {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
@@ -651,10 +683,34 @@ export default function WalletPage() {
                 <button onClick={() => setView('import')} disabled={wallets.length >= MAX_WALLETS} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                   <Download className="w-3.5 h-3.5" /> Import
                 </button>
-                <button onClick={() => activeWallet && removeWallet(activeWallet.address)} className="py-3 px-4 bg-[#111827] border border-[#EF4444]/10 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/10 transition-all">
+                <button
+                  onClick={() => { if (activeWallet) { setWalletToDelete(activeWallet.address); setShowDeleteConfirm(true); } }}
+                  className="py-3 px-4 bg-[#111827] border border-[#EF4444]/10 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/10 transition-all"
+                >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              {/* Delete confirmation modal */}
+              {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteConfirm(false)} />
+                  <div className="relative w-full max-w-[320px] mx-4 bg-[#111827] border border-white/10 rounded-2xl p-5 shadow-2xl">
+                    <h3 className="text-sm font-bold mb-2 text-white">Delete Wallet?</h3>
+                    <p className="text-xs text-gray-400 mb-4">
+                      This will remove the wallet from this device. Make sure you have your recovery phrase saved before deleting.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-white/5 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/10 transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={() => removeWallet(walletToDelete)} className="flex-1 py-2.5 bg-[#EF4444]/20 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/30 transition-colors border border-[#EF4444]/20">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
                 <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
