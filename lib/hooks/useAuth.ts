@@ -94,37 +94,32 @@ export function useAuthProvider(): AuthContextType {
     }
 
     let mounted = true;
+    let initialized = false;
 
-    async function init() {
-      try {
-        const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
-        const sessionPromise = supabase.auth.getSession();
-        const result = await Promise.race([sessionPromise, timeout]);
-        
-        if (result && 'data' in result && result.data?.session?.user && mounted) {
-          setSupabaseUser(result.data.session.user);
-          await fetchProfile(result.data.session.user);
-        }
-      } catch (err) {
-        console.error('Auth init error:', err);
-      } finally {
-        if (mounted) setLoading(false);
+    // Safety net — if onAuthStateChange never fires, stop loading after 15s
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !initialized) {
+        setLoading(false);
       }
-    }
-
-    init();
+    }, 15000);
 
     let subscription: any = null;
     try {
       const { data } = supabase.auth.onAuthStateChange(
         async (event: string, session: any) => {
           if (!mounted) return;
+
           if (session?.user) {
             setSupabaseUser(session.user);
             await fetchProfile(session.user);
           } else {
             setUser(null);
             setSupabaseUser(null);
+          }
+
+          if (!initialized) {
+            initialized = true;
+            clearTimeout(safetyTimer);
           }
           setLoading(false);
         }
@@ -137,6 +132,7 @@ export function useAuthProvider(): AuthContextType {
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       try { subscription?.unsubscribe(); } catch {}
     };
   }, [fetchProfile]);
