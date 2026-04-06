@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Users, BarChart3, Mail, Shield, Activity, Search, ChevronLeft, ChevronRight, Send, RefreshCw, AlertTriangle, Eye, Server, Database, Cpu, Globe, Clock } from 'lucide-react';
+import { ArrowLeft, Users, BarChart3, Mail, Shield, Activity, Search, ChevronLeft, ChevronRight, Send, RefreshCw, AlertTriangle, Eye, Server, Database, Cpu, Globe, Clock, FlaskConical, Plus, Trash2, Image, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const ADMIN_PASSWORD = '195656';
 
-type AdminTab = 'dashboard' | 'users' | 'broadcast' | 'system';
+type AdminTab = 'dashboard' | 'users' | 'broadcast' | 'research' | 'system';
 
 interface UserData {
   id: string;
@@ -75,6 +75,17 @@ export default function AdminPanel() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  // Research state
+  const [researchTitle, setResearchTitle] = useState('');
+  const [researchSummary, setResearchSummary] = useState('');
+  const [researchContent, setResearchContent] = useState('');
+  const [researchCategory, setResearchCategory] = useState('General');
+  const [researchImageUrl, setResearchImageUrl] = useState('');
+  const [researchTags, setResearchTags] = useState('');
+  const [researchPublished, setResearchPublished] = useState(true);
+  const [researchSaving, setResearchSaving] = useState(false);
+  const [researchResult, setResearchResult] = useState('');
+  const [researchPosts, setResearchPosts] = useState<any[]>([]);
 
   const fetchStats = useCallback(async () => {
     setRefreshing(true);
@@ -188,10 +199,59 @@ export default function AdminPanel() {
     );
   }
 
+  const handleResearchSave = async () => {
+    if (!researchTitle.trim() || !researchContent.trim()) {
+      setResearchResult('Error: Title and content are required');
+      return;
+    }
+    setResearchSaving(true);
+    setResearchResult('');
+    try {
+      const res = await fetch('/api/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: ADMIN_PASSWORD,
+          title: researchTitle,
+          summary: researchSummary,
+          content: researchContent,
+          category: researchCategory,
+          image_url: researchImageUrl || null,
+          tags: researchTags.split(',').map(t => t.trim()).filter(Boolean),
+          published: researchPublished,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResearchResult('Post published successfully');
+        setResearchTitle(''); setResearchSummary(''); setResearchContent('');
+        setResearchImageUrl(''); setResearchTags('');
+        // Refresh posts list
+        const r = await fetch('/api/research?limit=20');
+        const d = await r.json();
+        setResearchPosts(d.posts || []);
+      } else {
+        setResearchResult('Error: ' + (data.error || 'Failed to save'));
+      }
+    } catch {
+      setResearchResult('Error: Network error');
+    } finally {
+      setResearchSaving(false);
+    }
+  };
+
+  const handleResearchDelete = async (id: string) => {
+    try {
+      await fetch(`/api/research?id=${id}&password=${ADMIN_PASSWORD}`, { method: 'DELETE' });
+      setResearchPosts(prev => prev.filter(p => p.id !== id));
+    } catch {}
+  };
+
   const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
     { id: 'dashboard', label: 'Overview', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'broadcast', label: 'Broadcast', icon: Mail },
+    { id: 'research', label: 'Research', icon: FlaskConical },
     { id: 'system', label: 'System', icon: Server },
   ];
 
@@ -221,6 +281,9 @@ export default function AdminPanel() {
               onClick={() => {
                 setActiveTab(tab.id);
                 if (tab.id === 'users') fetchUsers(1, userSearch);
+                if (tab.id === 'research') {
+                  fetch('/api/research?limit=20').then(r => r.json()).then(d => setResearchPosts(d.posts || [])).catch(() => {});
+                }
               }}
               className={`flex items-center gap-1.5 px-4 py-3 text-xs font-medium relative transition-colors ${
                 activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
@@ -430,6 +493,106 @@ export default function AdminPanel() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'research' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-bold mb-4">Create Research Post</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={researchTitle}
+                  onChange={e => setResearchTitle(e.target.value)}
+                  placeholder="Post title"
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+                />
+                <input
+                  type="text"
+                  value={researchSummary}
+                  onChange={e => setResearchSummary(e.target.value)}
+                  placeholder="Short summary (optional)"
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+                />
+                <select
+                  value={researchCategory}
+                  onChange={e => setResearchCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+                >
+                  {['DeFi', 'Security', 'Market Analysis', 'Protocols', 'On-Chain', 'General'].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <input
+                  type="url"
+                  value={researchImageUrl}
+                  onChange={e => setResearchImageUrl(e.target.value)}
+                  placeholder="Image URL (optional)"
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+                />
+                <input
+                  type="text"
+                  value={researchTags}
+                  onChange={e => setResearchTags(e.target.value)}
+                  placeholder="Tags (comma separated: DeFi, Security, Solana)"
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+                />
+                <textarea
+                  value={researchContent}
+                  onChange={e => setResearchContent(e.target.value)}
+                  placeholder="Full content (supports markdown headings with # prefix)"
+                  rows={10}
+                  className="w-full px-4 py-3 bg-[#111827] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-[#0A1EFF]/40 resize-none"
+                />
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={researchPublished}
+                      onChange={e => setResearchPublished(e.target.checked)}
+                      className="w-4 h-4 accent-[#0A1EFF]"
+                    />
+                    <span className="text-sm text-gray-400">Publish immediately</span>
+                  </label>
+                </div>
+                <button
+                  onClick={handleResearchSave}
+                  disabled={researchSaving || !researchTitle.trim() || !researchContent.trim()}
+                  className="flex items-center gap-2 px-6 py-3 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-xl font-bold text-sm transition-colors disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                  {researchSaving ? 'Publishing...' : 'Publish Post'}
+                </button>
+                {researchResult && (
+                  <div className={`p-3 rounded-xl text-xs ${researchResult.startsWith('Error') ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                    {researchResult}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {researchPosts.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold mb-3">Published Posts</h3>
+                <div className="space-y-2">
+                  {researchPosts.map(p => (
+                    <div key={p.id} className="flex items-center justify-between bg-[#111827] border border-white/[0.06] rounded-xl px-4 py-3">
+                      <div>
+                        <p className="text-xs font-semibold text-white">{p.title}</p>
+                        <p className="text-[10px] text-gray-500">{p.category} · {new Date(p.published_at).toLocaleDateString()}</p>
+                      </div>
+                      <button
+                        onClick={() => handleResearchDelete(p.id)}
+                        className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -191,11 +191,60 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, fromToken, toToken, amount, chain, walletAddress, slippage = 0.5 } = body;
+    const { action, fromToken, toToken, amount, chain, walletAddress, slippage = 0.5, contractAddress } = body;
 
     if (!action) {
       return NextResponse.json({ error: 'Missing action' }, { status: 400 });
     }
+
+    // ── GoPlus Token Security Check ───────────────────────────────────────────
+    // Run security check before any swap execution
+    if (action === 'security-check' || action === '1inch-swap' || action === 'raydium-compute') {
+      const tokenToCheck = contractAddress || (toToken && COMMON_TOKENS[chain || 'ethereum']?.[toToken]);
+      if (tokenToCheck && tokenToCheck !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+        try {
+          const { scanTokenSecurity } = await import('@/lib/security/goplusService');
+          const scanResult = await scanTokenSecurity(tokenToCheck, chain || 'ethereum');
+
+          if (action === 'security-check') {
+            return NextResponse.json({
+              trustScore: scanResult.trustScore,
+              safetyLevel: scanResult.safetyLevel,
+              safetyColor: scanResult.safetyColor,
+              isHoneypot: scanResult.isHoneypot,
+              buyTax: (scanResult.buyTax * 100).toFixed(1) + '%',
+              sellTax: (scanResult.sellTax * 100).toFixed(1) + '%',
+              checks: scanResult.checks,
+              blocked: scanResult.isHoneypot || scanResult.buyTax > 0.25 || scanResult.sellTax > 0.25,
+              blockReason: scanResult.isHoneypot
+                ? 'Honeypot detected. This token cannot be sold.'
+                : (scanResult.buyTax > 0.25 || scanResult.sellTax > 0.25)
+                ? `Extremely high tax detected (buy: ${(scanResult.buyTax * 100).toFixed(0)}%, sell: ${(scanResult.sellTax * 100).toFixed(0)}%). Swap blocked.`
+                : null,
+            });
+          }
+
+          // Auto-block for execution actions
+          if (scanResult.isHoneypot) {
+            return NextResponse.json({
+              error: 'Security check failed: Honeypot detected. This token cannot be sold. Swap blocked for your protection.',
+              blocked: true,
+              securityLevel: 'DANGER',
+            }, { status: 403 });
+          }
+          if (scanResult.sellTax > 0.25) {
+            return NextResponse.json({
+              error: `Security check failed: Sell tax is ${(scanResult.sellTax * 100).toFixed(0)}% — extremely high. Swap blocked.`,
+              blocked: true,
+              securityLevel: 'DANGER',
+            }, { status: 403 });
+          }
+        } catch {
+          // Security check failed silently — allow swap to proceed
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // --- Solana: proxy Raydium compute swap ---
     if (action === 'raydium-compute') {
