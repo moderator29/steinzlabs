@@ -2,6 +2,76 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
 
+const KNOWN_TOKEN_LOGOS: Record<string, string> = {
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  WETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/tether.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+};
+
+const DEXSCREENER_CHAIN_MAP: Record<string, string> = {
+  Ethereum: 'ethereum',
+  Base: 'base',
+  Polygon: 'polygon',
+  Avalanche: 'avalanche',
+  Solana: 'solana',
+};
+
+async function fetchTokenLogoFromDexScreener(chain: string, tokenAddress: string): Promise<string | null> {
+  try {
+    const dexChain = DEXSCREENER_CHAIN_MAP[chain] || chain.toLowerCase();
+    const res = await fetch(`https://api.dexscreener.com/tokens/v1/${dexChain}/${tokenAddress}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.pairs?.[0]?.info?.imageUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveTokenLogos(
+  holdings: Array<{ symbol: string; contractAddress: string | null }>,
+  chain: string
+): Promise<Record<string, string>> {
+  const logos: Record<string, string> = {};
+  const fetchPromises = holdings.map(async (h) => {
+    if (KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()]) {
+      logos[h.symbol] = KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()];
+      if (h.contractAddress) logos[h.contractAddress] = KNOWN_TOKEN_LOGOS[h.symbol.toUpperCase()];
+      return;
+    }
+    if (h.contractAddress) {
+      const url = await fetchTokenLogoFromDexScreener(chain, h.contractAddress);
+      if (url) {
+        logos[h.contractAddress] = url;
+        logos[h.symbol] = url;
+      }
+    }
+  });
+  await Promise.all(fetchPromises);
+  return logos;
+}
+
+function buildAiAnalysisContext(
+  address: string,
+  chain: string,
+  holdings: Array<{ symbol: string; balance: string; valueUsd: string | null }>,
+  totalBalanceUsd: string,
+  txCount: number
+): string {
+  const tokenList = holdings
+    .map((h) => `${h.symbol}: ${h.balance}${h.valueUsd ? ` ($${h.valueUsd})` : ''}`)
+    .join(', ');
+  return `Analyze this wallet: ${address} on ${chain}. Holdings: ${tokenList}. Total value: $${totalBalanceUsd}. Transaction count: ${txCount}. Give me: risk assessment, notable patterns, is this wallet suspicious or legitimate, and what actions should the wallet owner take.`;
+}
+
 interface EvmChainConfig {
   rpcUrl: string;
   nativeSymbol: string;
@@ -140,6 +210,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
           decimals,
           balance: balance,
           logo: metaData.result?.logo || null,
+          logoUrl: metaData.result?.logo || null,
         };
       } catch {
         return null;
