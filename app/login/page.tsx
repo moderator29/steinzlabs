@@ -95,9 +95,26 @@ function LoginPageInner() {
         email = result.email;
       }
 
-      // Sign in directly via Supabase client — it handles all session
-      // storage (localStorage + cookie listener in supabase.ts) automatically.
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      // Sign in with a 12-second timeout — signInWithPassword has no built-in
+      // timeout and will hang forever on a bad mobile connection.
+      const TIMEOUT_MS = 12000;
+      const signInPromise = supabase.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
+      );
+
+      let signInResult: Awaited<typeof signInPromise>;
+      try {
+        signInResult = await Promise.race([signInPromise, timeoutPromise]);
+      } catch (raceErr: any) {
+        if (raceErr?.message === 'timeout') {
+          showToast('Sign in timed out. Check your connection and try again.', 'error');
+          return;
+        }
+        throw raceErr;
+      }
+
+      const { data, error } = signInResult;
 
       if (error) {
         const msg = error.message || '';
@@ -109,12 +126,16 @@ function LoginPageInner() {
           setErrors({ identifier: 'Email not verified' });
           return;
         }
-        if (lower.includes('invalid') || lower.includes('credentials') || lower.includes('wrong')) {
+        if (lower.includes('invalid') || lower.includes('credentials') || lower.includes('wrong') || lower.includes('password')) {
           showToast('Incorrect email or password.', 'error');
           setErrors({ password: 'Incorrect credentials' });
           return;
         }
-        showToast(msg || 'Sign in failed.', 'error');
+        if (lower.includes('rate') || lower.includes('too many')) {
+          showToast('Too many attempts. Wait a minute then try again.', 'error');
+          return;
+        }
+        showToast(msg || 'Sign in failed. Please try again.', 'error');
         return;
       }
 

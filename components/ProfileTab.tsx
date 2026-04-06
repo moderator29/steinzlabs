@@ -347,36 +347,26 @@ export default function ProfileTab() {
         <p className="text-xs text-gray-500 mb-4">Control what others can see about you.</p>
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden">
-          {Object.entries(privacySettings).map(([key, value]) => (
+          {([
+            { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,      label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
+            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,   label: 'Show Trading Activity', desc: 'Let others see your trading history' },
+            { key: 'showPredictions',icon: <Award className="w-4 h-4 text-[#F59E0B]" />,       label: 'Show Predictions',      desc: 'Share your prediction win rate' },
+            { key: 'allowDMs',       icon: <MessageCircle className="w-4 h-4 text-[#10B981]" />, label: 'Allow Direct Messages', desc: 'Allow other users to message you' },
+            { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,        label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
+          ] as const).map(({ key, icon, label, desc }) => (
             <div key={key} className="flex items-center justify-between px-3 py-3 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-3">
-                {key === 'showWallet' ? <Wallet className="w-4 h-4 text-[#7C3AED]" /> :
-                 key === 'showActivity' ? <BarChart3 className="w-4 h-4 text-[#0A1EFF]" /> :
-                 key === 'showPredictions' ? <Award className="w-4 h-4 text-[#F59E0B]" /> :
-                 key === 'allowDMs' ? <MessageCircle className="w-4 h-4 text-[#10B981]" /> :
-                 <Globe className="w-4 h-4 text-[#EF4444]" />}
+                {icon}
                 <div>
-                  <div className="text-sm font-semibold">
-                    {key === 'showWallet' ? 'Show Wallet Address' :
-                     key === 'showActivity' ? 'Show Trading Activity' :
-                     key === 'showPredictions' ? 'Show Predictions' :
-                     key === 'allowDMs' ? 'Allow Direct Messages' :
-                     'Public Profile'}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    {key === 'showWallet' ? 'Display your wallet address on profile' :
-                     key === 'showActivity' ? 'Let others see your trading history' :
-                     key === 'showPredictions' ? 'Share your prediction win rate' :
-                     key === 'allowDMs' ? 'Allow other users to message you' :
-                     'Make your profile discoverable'}
-                  </div>
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="text-[10px] text-gray-500">{desc}</div>
                 </div>
               </div>
               <button
-                onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !value }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                onClick={() => setPrivacySettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                className={`w-10 h-5 rounded-full transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}

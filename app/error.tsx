@@ -11,7 +11,11 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error('Application error:', error);
-  }, [error]);
+    // Auto-retry once after 800ms — most reload errors are transient hydration
+    // mismatches that resolve on the second render
+    const t = setTimeout(() => reset(), 800);
+    return () => clearTimeout(t);
+  }, [error, reset]);
 
   return (
     <div style={{
@@ -23,11 +27,16 @@ export default function Error({
       padding: '20px',
     }}>
       <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-        <h2 style={{ color: 'white', fontSize: '20px', marginBottom: '12px' }}>
-          Something went wrong
-        </h2>
+        <div style={{
+          width: '48px', height: '48px', borderRadius: '50%',
+          border: '3px solid #0A1EFF',
+          borderTopColor: 'transparent',
+          margin: '0 auto 20px',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '20px' }}>
-          {error.message || 'An unexpected error occurred'}
+          Loading...
         </p>
         <button
           onClick={reset}
