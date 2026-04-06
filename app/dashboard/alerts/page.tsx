@@ -3,6 +3,7 @@
 import { Bell, ArrowLeft, Plus, Trash2, ToggleLeft, ToggleRight, Zap, TrendingUp, Shield, Fish, X, ChevronDown, DollarSign, Activity, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { notifyAlertFired } from '@/lib/notifications';
 
 interface Alert {
   id: string;
@@ -88,9 +89,10 @@ export default function AlertsPage() {
 
   const createAlert = () => {
     if (!selectedTemplate || !selectedCondition) return;
+    const name = alertName || selectedTemplate.name;
     const newAlert: Alert = {
       id: Date.now().toString(),
-      name: alertName || selectedTemplate.name,
+      name,
       type: selectedTemplate.type,
       condition: selectedCondition,
       active: true,
@@ -100,6 +102,23 @@ export default function AlertsPage() {
       createdAt: new Date().toISOString(),
     };
     setAlerts(prev => [...prev, newAlert]);
+
+    // Fire an in-app notification confirming alert creation
+    const alertTypeMap: Record<string, 'whale_alert' | 'price_target' | 'new_launch' | 'wallet_activity'> = {
+      Whale: 'whale_alert',
+      Price: 'price_target',
+      Volume: 'price_target',
+      Security: 'whale_alert',
+      Network: 'wallet_activity',
+      Portfolio: 'wallet_activity',
+    };
+    const notifType = alertTypeMap[selectedTemplate.type] || 'wallet_activity';
+    notifyAlertFired(
+      notifType,
+      `Alert Created: ${name}`,
+      `Your alert "${name}" is now active. Condition: ${selectedCondition}`
+    );
+
     setShowCreate(false);
     setSelectedTemplate(null);
     setAlertName('');

@@ -5,7 +5,7 @@ import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, Che
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
-import { getLocalNotifications } from '@/lib/notifications';
+import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 
 interface Notification {
   id: string;
@@ -190,6 +190,12 @@ export default function ProfileTab() {
     newsletter: false,
   });
 
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>({
+    emailWhaleAlerts: true,
+    emailPriceAlerts: true,
+    browserPush: false,
+  });
+
   const [privacySettings, setPrivacySettings] = useState({
     showWallet: true,
     showActivity: true,
@@ -220,11 +226,16 @@ export default function ProfileTab() {
     if (savedPrefs) {
       try { setPreferences(JSON.parse(savedPrefs)); } catch {}
     }
+    setNotifPrefs(getNotificationPrefs());
   }, []);
 
   useEffect(() => {
     localStorage.setItem('steinz_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    saveNotificationPrefs(notifPrefs);
+  }, [notifPrefs]);
 
   useEffect(() => {
     localStorage.setItem('steinz_privacy', JSON.stringify(privacySettings));
