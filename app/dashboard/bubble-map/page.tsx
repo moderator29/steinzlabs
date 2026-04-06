@@ -528,9 +528,9 @@ export default function BubbleMapPage() {
           <button
             onClick={fetchBubbleMap}
             disabled={loading || !tokenAddress.trim()}
-            className="h-9 px-3.5 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-xl text-[11px] font-bold transition-colors disabled:opacity-30 flex-shrink-0"
+            className="h-8 px-2.5 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-lg text-[10px] font-bold transition-colors disabled:opacity-30 flex-shrink-0 whitespace-nowrap"
           >
-            {loading ? 'Loading...' : 'Analyze'}
+            {loading ? '...' : 'Analyze'}
           </button>
         </div>
       </div>

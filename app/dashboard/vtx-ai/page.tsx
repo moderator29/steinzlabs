@@ -347,20 +347,22 @@ export default function VtxAiPage() {
             <ArrowLeft className="w-5 h-5 text-gray-400" />
           </button>
 
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
-            <img src="/steinz-logo-128.png" alt="VTX" className="w-6 h-6" style={{ objectFit: 'contain' }} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
+            <Bot className="w-5 h-5 text-[#0A1EFF]" />
           </div>
 
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold tracking-tight">VTX Agent</span>
-              <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
-              <span className="text-[10px] text-[#10B981] font-bold tracking-wide">LIVE</span>
               {isPro && (
                 <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
               )}
             </div>
-            <span className="text-[10px] text-gray-600">On-chain intelligence agent</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />
+              <span className="text-[11px] text-[#10B981] font-semibold">LIVE</span>
+              <span className="text-[10px] text-gray-600">· On-chain intelligence</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
