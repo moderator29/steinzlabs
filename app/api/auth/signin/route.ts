@@ -44,9 +44,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sign in failed. Please try again.' }, { status: 500 });
     }
 
-    const admin = getSupabaseAdmin();
     let profile = null;
     try {
+      const admin = getSupabaseAdmin();
       const { data: profileData } = await admin
         .from('profiles')
         .select('*')
