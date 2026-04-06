@@ -6,24 +6,30 @@ import { generateVerifyToken } from '@/lib/authTokens';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const admin = getSupabaseAdmin();
 
     if (body.username && !body.email) {
       const cleanUsername = body.username.trim().toLowerCase();
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
       }
-      const { data: existingProfile, error: profileError } = await admin
-        .from('profiles')
-        .select('id')
-        .eq('username', cleanUsername)
-        .maybeSingle();
-      if (!profileError) {
-        return NextResponse.json({ available: !existingProfile });
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: existingProfile, error: profileError } = await admin
+          .from('profiles')
+          .select('id')
+          .eq('username', cleanUsername)
+          .maybeSingle();
+        if (!profileError) {
+          return NextResponse.json({ available: !existingProfile });
+        }
+        const { data: { users } } = await admin.auth.admin.listUsers();
+        const taken = users?.some((u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername);
+        return NextResponse.json({ available: !taken });
+      } catch (adminErr: any) {
+        console.error('[Signup] Admin client error during username check:', adminErr.message);
+        // Return unknown so frontend doesn't falsely show "username taken"
+        return NextResponse.json({ available: null, error: 'service_unavailable' }, { status: 503 });
       }
-      const { data: { users } } = await admin.auth.admin.listUsers();
-      const taken = users?.some((u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername);
-      return NextResponse.json({ available: !taken });
     }
 
     const { email, password, firstName, lastName, username } = body;
@@ -45,6 +51,14 @@ export async function POST(request: Request) {
 
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
       return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
+    }
+
+    let admin;
+    try {
+      admin = getSupabaseAdmin();
+    } catch (e: any) {
+      console.error('[Signup] SUPABASE_SERVICE_KEY missing:', e.message);
+      return NextResponse.json({ error: 'Server configuration error. Please contact support.' }, { status: 503 });
     }
 
     const { data: existingUsers } = await admin.auth.admin.listUsers();

@@ -51,7 +51,9 @@ export default function SignUpPage() {
           body: JSON.stringify({ username: form.username.trim().toLowerCase() }),
         });
         const data = await res.json();
-        setUsernameAvailable(data.available === true);
+        if (data.available === true) setUsernameAvailable(true);
+        else if (data.available === false) setUsernameAvailable(false);
+        else setUsernameAvailable(null); // server error — don't show as taken
       } catch { setUsernameAvailable(null); }
       finally { setCheckingUsername(false); }
     }, 500);
