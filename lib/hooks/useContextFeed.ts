@@ -34,10 +34,10 @@ interface ContextEvent {
 
 export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'avalanche' | 'bookmarks';
 
-const POLL_INTERVAL = 8000;
-const POLL_INTERVAL_HIDDEN = 30000;
+const POLL_INTERVAL = 20000;
+const POLL_INTERVAL_HIDDEN = 60000;
 
-export function useContextFeed(limit: number = 150, chain: ChainFilter = 'all') {
+export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasArchive, setHasArchive] = useState(false);
@@ -51,7 +51,9 @@ export function useContextFeed(limit: number = 150, chain: ChainFilter = 'all') 
     abortRef.current = controller;
 
     try {
-      const response = await fetch(`/api/context-feed?limit=${limit}&chain=${chain}`, {
+      // Always fetch all chains from the server to maximise event coverage,
+      // then filter client-side by the selected chain for display.
+      const response = await fetch(`/api/context-feed?limit=200&chain=all`, {
         signal: controller.signal,
       });
       const data = await response.json();
@@ -59,7 +61,13 @@ export function useContextFeed(limit: number = 150, chain: ChainFilter = 'all') 
       if (data.hasArchive !== undefined) setHasArchive(data.hasArchive);
       const dedupMap = new Map<string, ContextEvent>();
       rawEvents.forEach(e => { if (!dedupMap.has(e.id)) dedupMap.set(e.id, e); });
-      const newEvents = Array.from(dedupMap.values());
+      const allEvents = Array.from(dedupMap.values());
+
+      // Apply chain filter client-side (bookmarks filter is handled in the component)
+      const chainFilter = chain === 'bookmarks' ? 'all' : chain;
+      const newEvents = chainFilter === 'all'
+        ? allEvents
+        : allEvents.filter(e => e.chain === chainFilter);
 
       if (currentChain.current !== chain) {
         currentChain.current = chain;
@@ -76,7 +84,7 @@ export function useContextFeed(limit: number = 150, chain: ChainFilter = 'all') 
         });
       }
 
-      newEvents.forEach(e => seenIds.current.add(e.id));
+      allEvents.forEach(e => seenIds.current.add(e.id));
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
         console.error('Failed to fetch context feed:', error);
