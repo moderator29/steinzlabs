@@ -369,17 +369,41 @@ async function getSolData(address: string) {
     .map((t) => {
       const valueUsd = t.priceInfo ? t.balance * t.priceInfo.price : 0;
       totalTokenValueUsd += valueUsd;
+      const symbol = t.priceInfo?.symbol || t.mint.slice(0, 6);
       return {
-        symbol: t.priceInfo?.symbol || t.mint.slice(0, 6),
+        symbol,
         name: t.priceInfo?.name || `SPL Token`,
         balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
         valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
         contractAddress: t.mint,
+        logoUrl: KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] || null,
       };
     })
     .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
 
   const totalBalanceUsd = solValueUsd + totalTokenValueUsd;
+
+  const allHoldings = [
+    {
+      symbol: 'SOL',
+      name: 'Solana',
+      balance: solBalance.toFixed(4),
+      valueUsd: solValueUsd.toFixed(2),
+      contractAddress: null,
+      logoUrl: KNOWN_TOKEN_LOGOS['SOL'],
+    },
+    ...tokenHoldings,
+  ];
+
+  // Fetch DexScreener logos for tokens that don't have one yet
+  const tokenLogos = await resolveTokenLogos(allHoldings, 'Solana');
+  allHoldings.forEach((h) => {
+    if (!h.logoUrl) {
+      h.logoUrl = tokenLogos[h.contractAddress || h.symbol] || null;
+    }
+  });
+
+  const aiAnalysisContext = buildAiAnalysisContext(address, 'Solana', allHoldings, totalBalanceUsd.toFixed(2), txCount);
 
   return {
     chain: 'Solana',
@@ -388,18 +412,11 @@ async function getSolData(address: string) {
     solValueUsd: solValueUsd.toFixed(2),
     totalBalanceUsd: totalBalanceUsd.toFixed(2),
     txCount,
-    holdings: [
-      {
-        symbol: 'SOL',
-        name: 'Solana',
-        balance: solBalance.toFixed(4),
-        valueUsd: solValueUsd.toFixed(2),
-        contractAddress: null,
-      },
-      ...tokenHoldings,
-    ],
+    holdings: allHoldings,
     tokenCount: tokenHoldings.length,
     explorerUrl: 'https://solscan.io',
+    tokenLogos,
+    aiAnalysisContext,
   };
 }
 
