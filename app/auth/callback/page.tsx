@@ -41,20 +41,29 @@ function AuthCallbackInner() {
 
         // Path 1: verify-email flow — we have a token_hash to exchange
         if (tokenHash) {
-          const { data, error } = await supabase.auth.verifyOtp({
+          // Race against an 8-second timeout so we never hang forever
+          const verifyPromise = supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: type || 'magiclink',
           });
+          const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 8000));
+
+          const result = await Promise.race([verifyPromise, timeoutPromise]);
 
           if (!mounted) return;
 
-          if (error || !data.session) {
-            console.error('[Callback] verifyOtp failed:', error?.message);
+          if (!result || result.error || !result.data?.session) {
+            console.error('[Callback] verifyOtp failed or timed out:', result?.error?.message);
             router.replace('/login?verified=true');
             return;
           }
 
-          persistSession(data.session);
+          persistSession(result.data.session);
+          // Set the middleware cookie too
+          if (typeof window !== 'undefined') {
+            const maxAge = 4 * 60 * 60;
+            document.cookie = `steinz_session=${result.data.session.access_token}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
+          }
           setStatus('success');
           setTimeout(() => { if (mounted) window.location.href = '/dashboard'; }, 800);
           return;
