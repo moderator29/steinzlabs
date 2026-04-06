@@ -328,7 +328,7 @@ export default function WalletPage() {
   const currentPrice = prices[activeChain.id];
   const priceChange = currentPrice?.usd_24h_change || 0;
 
-  if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} walletCount={wallets.length} />;
+  if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletImported} />;
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
   if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
@@ -339,7 +339,7 @@ export default function WalletPage() {
       wallet={activeWallet}
       isDefault={defaultWalletAddress === activeWallet.address}
       onSetDefault={() => setAsDefault(activeWallet.address)}
-      onRename={(name) => renameWallet(activeWallet.address, name)}
+      onRename={(name: string) => renameWallet(activeWallet.address, name)}
       onDelete={() => { setWalletToDelete(activeWallet.address); setShowDeleteConfirm(true); setView('main'); }}
     />
   );
@@ -758,16 +758,10 @@ function TokenRow({ token, chainSymbol, chainColor, hideBalance }: { token: Toke
   );
 }
 
-function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated: (w: StoredWallet) => void }) {
+function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () => void; onCreated: (w: StoredWallet) => void; walletCount?: number }) {
   const [step, setStep] = useState<'password' | 'phrase' | 'confirm'>('password');
   const [password, setPassword] = useState('');
-  const [walletName, setWalletName] = useState(() => {
-    try {
-      const stored = localStorage.getItem('steinz_wallets');
-      const count = stored ? JSON.parse(stored).length : 0;
-      return `Wallet ${count + 1}`;
-    } catch { return 'Wallet 1'; }
-  });
+  const [walletName, setWalletName] = useState(`Wallet ${walletCount + 1}`);
   const [mnemonic, setMnemonic] = useState('');
   const [address, setAddress] = useState('');
   const [privateKey, setPrivateKey] = useState('');
@@ -777,7 +771,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
   const [phraseCopied, setPhraseCopied] = useState(false);
 
   const createWallet = async () => {
-    if (!password || password.length < 6) return;
+    if (!password || password.length < 8) return;
     setCreating(true);
     try {
       const ethers = await import('ethers');
@@ -826,8 +820,11 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
               <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-2 block font-medium">Set Password (min 6 chars)</label>
+              <label className="text-sm text-gray-300 mb-2 block font-medium">Set Password (min 8 chars)</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" placeholder="Secure password to encrypt your keys" />
+              {password.length > 0 && password.length < 8 && (
+                <p className="text-[10px] text-[#EF4444] mt-1">Password must be at least 8 characters</p>
+              )}
             </div>
             <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
@@ -836,7 +833,7 @@ function CreateWalletView({ onBack, onCreated }: { onBack: () => void; onCreated
               </div>
               <p className="text-xs text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
             </div>
-            <button onClick={createWallet} disabled={password.length < 6 || creating} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 transition-colors shadow-lg shadow-[#0A1EFF]/20">
+            <button onClick={createWallet} disabled={password.length < 8 || creating} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 transition-colors shadow-lg shadow-[#0A1EFF]/20">
               {creating ? 'Generating...' : 'Generate Wallet'}
             </button>
           </div>
