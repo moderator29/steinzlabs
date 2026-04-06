@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Award, Wallet, TrendingUp, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, Rocket, X, CheckCheck } from 'lucide-react';
+import { Bell, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, X, CheckCheck } from 'lucide-react';
 import {
   getLocalNotifications,
   markNotificationRead,
@@ -30,23 +30,23 @@ function formatTimeAgo(ts: number): string {
 
 function getNotifIcon(type: DisplayNotification['type']) {
   switch (type) {
-    case 'welcome':       return <Award className="w-4 h-4 text-[#0A1EFF]" />;
+    case 'welcome':         return <span className="text-sm leading-none">🎉</span>;
     case 'wallet_created':
-    case 'wallet_imported': return <Wallet className="w-4 h-4 text-[#10B981]" />;
+    case 'wallet_imported': return <span className="text-sm leading-none">💼</span>;
     case 'whale_alert':
-    case 'whale':         return <span className="text-sm leading-none">🐳</span>;
+    case 'whale':           return <span className="text-sm leading-none">🐳</span>;
     case 'price_target':
-    case 'price':         return <TrendingUp className="w-4 h-4 text-[#10B981]" />;
-    case 'new_launch':    return <Rocket className="w-4 h-4 text-[#7C3AED]" />;
-    case 'wallet_activity': return <Bell className="w-4 h-4 text-[#F59E0B]" />;
-    case 'swap':          return <ArrowLeftRight className="w-4 h-4 text-[#0A1EFF]" />;
-    case 'send':          return <Send className="w-4 h-4 text-[#F59E0B]" />;
-    case 'security':      return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
-    case 'trending':      return <Flame className="w-4 h-4 text-[#EF4444]" />;
-    case 'prediction':    return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
-    case 'alert':         return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
-    case 'system':        return <Info className="w-4 h-4 text-gray-400" />;
-    default:              return <Bell className="w-4 h-4 text-gray-400" />;
+    case 'price':           return <span className="text-sm leading-none">📊</span>;
+    case 'new_launch':      return <span className="text-sm leading-none">🚀</span>;
+    case 'wallet_activity': return <span className="text-sm leading-none">🔔</span>;
+    case 'swap':            return <ArrowLeftRight className="w-4 h-4 text-[#0A1EFF]" />;
+    case 'send':            return <Send className="w-4 h-4 text-[#F59E0B]" />;
+    case 'security':        return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
+    case 'trending':        return <Flame className="w-4 h-4 text-[#EF4444]" />;
+    case 'prediction':      return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
+    case 'alert':           return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
+    case 'system':          return <Info className="w-4 h-4 text-gray-400" />;
+    default:                return <Bell className="w-4 h-4 text-gray-400" />;
   }
 }
 

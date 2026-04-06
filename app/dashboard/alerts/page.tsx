@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   loadSmartAlerts, saveSmartAlerts, loadAlertHistory,
-  addAlertHistory,
+  addAlertHistory, useAlertMonitor,
   type SmartAlert, type WhaleAlert, type PriceAlert,
   type NewLaunchAlert, type WalletActivityAlert, type AlertChain,
 } from '@/lib/hooks/useAlertMonitor';
@@ -737,6 +737,9 @@ export default function AlertsPage() {
   const [initialized, setInitialized] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('alerts');
+
+  // Start polling all alert conditions (price, whale, wallet activity, launches)
+  useAlertMonitor();
 
   useEffect(() => {
     setAlerts(loadSmartAlerts());
