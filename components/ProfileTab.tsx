@@ -789,6 +789,50 @@ export default function ProfileTab() {
         ))}
       </div>
 
+      {/* Notification Preferences */}
+      <SectionLabel>Notification Preferences</SectionLabel>
+      <div className="glass rounded-lg border border-white/10 mb-2 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+          <div>
+            <div className="text-sm font-semibold">Email alerts for whale moves</div>
+            <div className="text-[10px] text-gray-500">Receive email on large on-chain transfers</div>
+          </div>
+          <button
+            onClick={() => setNotifPrefs(prev => ({ ...prev, emailWhaleAlerts: !prev.emailWhaleAlerts }))}
+            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+          <div>
+            <div className="text-sm font-semibold">Email alerts for price targets</div>
+            <div className="text-[10px] text-gray-500">Receive email when price targets are hit</div>
+          </div>
+          <button
+            onClick={() => setNotifPrefs(prev => ({ ...prev, emailPriceAlerts: !prev.emailPriceAlerts }))}
+            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between px-3 py-3">
+          <div>
+            <div className="text-sm font-semibold flex items-center gap-2">
+              Browser push notifications
+              <span className="px-1.5 py-0.5 bg-[#F59E0B]/10 text-[#F59E0B] text-[8px] font-bold rounded">COMING SOON</span>
+            </div>
+            <div className="text-[10px] text-gray-500">Push alerts directly to your browser</div>
+          </div>
+          <button
+            disabled
+            className="w-10 h-5 rounded-full transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
+          >
+            <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5" />
+          </button>
+        </div>
+      </div>
+
       <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />
       <ProfileRow icon={Shield} label="Privacy" sub="Manage data & visibility" onClick={() => setSubPage('privacy')} />
       <ProfileRow icon={Settings} label="Preferences" sub="Customize your experience" onClick={() => setSubPage('preferences')} />
