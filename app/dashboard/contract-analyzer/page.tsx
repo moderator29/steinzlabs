@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Code, Search, AlertTriangle, CheckCircle, XCircle,
-  Shield, Loader2, Info, ChevronDown, ChevronUp
+  Shield, Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
+  TrendingUp, TrendingDown, ShieldAlert, ExternalLink
 } from 'lucide-react';
 
 interface AnalysisResult {
@@ -55,6 +56,19 @@ const CHAINS = [
   { id: 'solana', label: 'Solana' },
 ];
 
+interface DexTokenData {
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  liquidity: number;
+  fdv: number;
+  marketCap: number;
+  imageUrl?: string;
+  symbol?: string;
+  name?: string;
+  url?: string;
+}
+
 export default function ContractAnalyzerPage() {
   const router = useRouter();
   const [input, setInput] = useState('');
@@ -63,6 +77,35 @@ export default function ContractAnalyzerPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showChecks, setShowChecks] = useState(false);
+  const [dexData, setDexData] = useState<DexTokenData | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
+
+  useEffect(() => {
+    if (!result) return;
+    setDexData(null);
+    // Fetch token data from DexScreener
+    fetch(`https://api.dexscreener.com/latest/dex/tokens/${result.address}`)
+      .then(r => r.json())
+      .then(d => {
+        const pairs = d.pairs || [];
+        if (pairs.length > 0) {
+          const p = pairs[0];
+          setDexData({
+            price: parseFloat(p.priceUsd || '0'),
+            priceChange24h: p.priceChange?.h24 || 0,
+            volume24h: p.volume?.h24 || 0,
+            liquidity: p.liquidity?.usd || 0,
+            fdv: p.fdv || 0,
+            marketCap: p.marketCap || 0,
+            imageUrl: p.info?.imageUrl,
+            symbol: p.baseToken?.symbol,
+            name: p.baseToken?.name,
+            url: p.url,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [result]);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -163,6 +206,61 @@ export default function ContractAnalyzerPage() {
 
         {result && !analyzing && (
           <>
+            {/* Token Header with DexScreener data */}
+            {dexData && (
+              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                <div className="flex items-center gap-3 mb-3">
+                  {dexData.imageUrl ? (
+                    <img src={dexData.imageUrl} alt={dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  ) : (
+                    <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Code className="w-5 h-5 text-[#0A1EFF]" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">{dexData.name || dexData.symbol || 'Token'}</span>
+                      {dexData.symbol && <span className="text-[10px] text-gray-500 font-mono">{dexData.symbol}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-mono font-bold">
+                        ${dexData.price < 0.01 ? dexData.price.toFixed(8) : dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </span>
+                      <span className={`flex items-center gap-0.5 text-[10px] font-semibold ${dexData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {dexData.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        {dexData.priceChange24h >= 0 ? '+' : ''}{dexData.priceChange24h.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                  {dexData.url && (
+                    <a href={dexData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#0A1EFF] flex items-center gap-1 hover:underline flex-shrink-0">
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-[#060A12] rounded-xl p-2">
+                    <p className="text-[9px] text-gray-500">MCap</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${dexData.marketCap > 1e6 ? (dexData.marketCap / 1e6).toFixed(2) + 'M' : dexData.marketCap > 1000 ? (dexData.marketCap / 1000).toFixed(1) + 'K' : dexData.marketCap.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2">
+                    <p className="text-[9px] text-gray-500">Volume 24h</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${dexData.volume24h > 1e6 ? (dexData.volume24h / 1e6).toFixed(2) + 'M' : dexData.volume24h > 1000 ? (dexData.volume24h / 1000).toFixed(1) + 'K' : dexData.volume24h.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="bg-[#060A12] rounded-xl p-2">
+                    <p className="text-[9px] text-gray-500">Liquidity</p>
+                    <p className="text-xs font-bold font-mono">
+                      ${dexData.liquidity > 1e6 ? (dexData.liquidity / 1e6).toFixed(2) + 'M' : dexData.liquidity > 1000 ? (dexData.liquidity / 1000).toFixed(1) + 'K' : dexData.liquidity.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Score Card */}
             <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
               <div className="flex items-center gap-4">
@@ -180,10 +278,26 @@ export default function ContractAnalyzerPage() {
                     <span className="text-lg font-bold" style={{ color: result.verdictColor }}>{result.overallScore}</span>
                   </div>
                 </div>
-                <div>
+                <div className="flex-1">
                   <div className="text-lg font-bold mb-0.5" style={{ color: result.verdictColor }}>{result.verdict}</div>
                   <p className="text-[11px] text-gray-400 font-mono">{result.address.slice(0, 8)}...{result.address.slice(-6)}</p>
                   <p className="text-[10px] text-gray-600 mt-1 capitalize">{result.chain} Network</p>
+                  {/* Color-coded score bar */}
+                  <div className="mt-2">
+                    <div className="w-full h-2 rounded-full bg-[#1a2235] overflow-hidden">
+                      <div
+                        className="h-2 rounded-full transition-all duration-700"
+                        style={{
+                          width: `${result.overallScore}%`,
+                          background: `linear-gradient(to right, #EF4444, #F59E0B, #10B981)`,
+                          clipPath: `inset(0 ${100 - result.overallScore}% 0 0)`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                      <span>0</span><span>50</span><span>100</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -282,6 +396,85 @@ export default function ContractAnalyzerPage() {
                 </div>
               </div>
             )}
+
+            {/* Security Assessment Summary */}
+            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                </div>
+                <span className="font-bold text-sm">Security Assessment Summary</span>
+                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                  result.overallScore >= 80
+                    ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
+                    : result.overallScore >= 55
+                    ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30'
+                    : result.overallScore >= 35
+                    ? 'bg-[#F97316]/15 text-[#F97316] border-[#F97316]/30'
+                    : 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
+                }`}>
+                  {result.overallScore >= 80 ? 'LOW RISK' : result.overallScore >= 55 ? 'MEDIUM RISK' : result.overallScore >= 35 ? 'HIGH RISK' : 'CRITICAL'}
+                </span>
+              </div>
+
+              {/* Written summary paragraph */}
+              <div className="bg-white/5 rounded-xl p-3 mb-3">
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {result.overallScore >= 80
+                    ? `This contract scored ${result.overallScore}/100 and passed all critical security checks. ${result.riskFlags.length === 0 ? 'No risk flags were detected.' : `${result.riskFlags.length} minor flag(s) were noted.`} ${result.addressIntel ? `Address intelligence returned a ${result.addressIntel.riskLevel.toLowerCase()} risk level.` : ''} The contract appears to be safe for interaction, though on-chain due diligence is always recommended before committing funds.`
+                    : result.overallScore >= 55
+                    ? `This contract scored ${result.overallScore}/100 with ${result.riskFlags.length} risk flag(s) detected. ${result.tokenSecurity?.isHoneypot ? 'A honeypot pattern was identified. ' : ''}${result.tokenSecurity?.isMintable ? 'The token supply is mintable. ' : ''}${result.addressIntel?.riskLevel && result.addressIntel.riskLevel !== 'SAFE' ? `Address intelligence shows a ${result.addressIntel.riskLevel.toLowerCase()} risk classification. ` : ''}Exercise caution and verify all flags before interacting with this contract.`
+                    : result.overallScore >= 35
+                    ? `Significant issues found — this contract scored only ${result.overallScore}/100 with ${result.riskFlags.length} risk flags. ${result.tokenSecurity?.isHoneypot ? 'HONEYPOT LIKELY DETECTED. ' : ''}${result.tokenSecurity?.hasHiddenOwner ? 'A hidden owner was identified. ' : ''}${result.tokenSecurity?.ownerCanChangeBalance ? 'The owner can alter token balances. ' : ''}${result.addressIntel?.isMalicious ? 'This address is flagged as malicious. ' : ''}High caution is strongly advised — this contract poses substantial risk.`
+                    : `CRITICAL RISK: This contract scored ${result.overallScore}/100 and failed multiple security checks. ${result.riskFlags.slice(0, 3).join('. ')}. ${result.addressIntel?.isBlacklisted ? 'This address is blacklisted.' : result.addressIntel?.isPhishing ? 'This address is associated with phishing.' : ''} Do not interact with this contract under any circumstances.`
+                  }
+                </p>
+              </div>
+
+              {/* Risk breakdown bars */}
+              {result.tokenSecurity && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Risk Breakdown</p>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Honeypot Risk', value: result.tokenSecurity.isHoneypot ? 100 : 0, color: result.tokenSecurity.isHoneypot ? '#EF4444' : '#10B981' },
+                      { label: 'Ownership Risk', value: (result.tokenSecurity.hasHiddenOwner ? 40 : 0) + (result.tokenSecurity.canTakeBackOwnership ? 35 : 0) + (result.tokenSecurity.ownerCanChangeBalance ? 25 : 0), color: (result.tokenSecurity.hasHiddenOwner || result.tokenSecurity.canTakeBackOwnership || result.tokenSecurity.ownerCanChangeBalance) ? '#F59E0B' : '#10B981' },
+                      { label: 'Contract Security', value: Math.max(0, 100 - result.overallScore), color: result.overallScore >= 70 ? '#10B981' : result.overallScore >= 45 ? '#F59E0B' : '#EF4444' },
+                      { label: 'Tax Exposure', value: Math.min(100, (parseFloat(result.tokenSecurity.buyTax) || 0) + (parseFloat(result.tokenSecurity.sellTax) || 0)), color: ((parseFloat(result.tokenSecurity.buyTax) || 0) + (parseFloat(result.tokenSecurity.sellTax) || 0)) > 15 ? '#EF4444' : ((parseFloat(result.tokenSecurity.buyTax) || 0) + (parseFloat(result.tokenSecurity.sellTax) || 0)) > 5 ? '#F59E0B' : '#10B981' },
+                    ].map((bar) => (
+                      <div key={bar.label}>
+                        <div className="flex justify-between text-[10px] mb-1">
+                          <span className="text-gray-400">{bar.label}</span>
+                          <span className="font-semibold" style={{ color: bar.color }}>{bar.value}%</span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-1.5">
+                          <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${bar.value}%`, backgroundColor: bar.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback */}
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <p className="text-[10px] text-gray-600">Was this assessment helpful?</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'up' ? null : 'up')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'up' ? 'text-[#10B981] bg-[#10B981]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'down' ? null : 'down')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'down' ? 'text-[#EF4444] bg-[#EF4444]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
 
             <button onClick={() => { setResult(null); setInput(''); }}
               className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0A1EFF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">

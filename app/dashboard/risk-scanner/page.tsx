@@ -1,6 +1,6 @@
 'use client';
 
-import { Target, ArrowLeft, AlertTriangle, CheckCircle, Shield, Zap, Loader2, Wallet, Search } from 'lucide-react';
+import { Target, ArrowLeft, AlertTriangle, CheckCircle, Shield, Zap, Loader2, Wallet, Search, Brain, ThumbsUp, ThumbsDown, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
@@ -82,6 +82,7 @@ export default function RiskScannerPage() {
   const [manualAddress, setManualAddress] = useState('');
   const [scannedAddress, setScannedAddress] = useState('');
   const [hasData, setHasData] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
 
   const doScan = async (address: string) => {
     setScanning(true);
@@ -236,6 +237,136 @@ export default function RiskScannerPage() {
                   ))}
                 </div>
               </>
+            )}
+
+            {/* Intelligence Report */}
+            {hasData && (
+              <div className="bg-[#0A0E1A] rounded-xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                  </div>
+                  <span className="font-bold text-sm">Intelligence Report</span>
+                  <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                    riskScore >= 75
+                      ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
+                      : riskScore >= 50
+                      ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30'
+                      : 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
+                  }`}>
+                    {scoreLabel}
+                  </span>
+                </div>
+
+                {/* AI written assessment */}
+                <div className="bg-white/5 rounded-xl p-3 mb-3">
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    {riskScore >= 75
+                      ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a healthy risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'Low').length} risk categories are within safe parameters. ${risks.filter(r => r.level === 'Medium').length > 0 ? `${risks.filter(r => r.level === 'Medium').length} medium-priority item(s) are worth monitoring. ` : ''}Portfolio diversification and on-chain behavior suggest a measured investment approach with manageable exposure levels.`
+                      : riskScore >= 50
+                      ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a moderate risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'High').length > 0 ? `${risks.filter(r => r.level === 'High').length} high-priority risk(s) were detected: ${risks.filter(r => r.level === 'High').map(r => r.name).join(', ')}. ` : ''}${risks.filter(r => r.level === 'Medium').length} medium-risk factor(s) require attention. Consider rebalancing your portfolio to improve the overall security posture.`
+                      : `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} has a high-risk profile with a score of only ${riskScore}/100. ${risks.filter(r => r.level === 'High').length} critical risk(s) detected: ${risks.filter(r => r.level === 'High').map(r => r.desc).join('; ')}. Immediate portfolio restructuring is recommended to reduce exposure and protect assets from potential losses.`
+                    }
+                  </p>
+                </div>
+
+                {/* Risk breakdown chart */}
+                <div className="mb-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Risk Category Breakdown</p>
+                  <div className="space-y-2">
+                    {risks.map((risk) => (
+                      <div key={risk.name}>
+                        <div className="flex justify-between text-[10px] mb-1">
+                          <span className="text-gray-400">{risk.name}</span>
+                          <span className="font-semibold" style={{ color: risk.color }}>{risk.level}</span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-1.5">
+                          <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${risk.pct}%`, backgroundColor: risk.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recommendations list */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Recommendations</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {riskScore >= 75 ? (
+                      <>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                          Maintain current diversification strategy
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                          Consider adding stablecoin buffer for volatility protection
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                          Review contract approvals periodically
+                        </div>
+                      </>
+                    ) : riskScore >= 50 ? (
+                      <>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                          Reduce concentration in single assets above 50%
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                          Diversify across 5+ tokens for better risk distribution
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-gray-300">
+                          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                          Add stablecoins to create a portfolio safety buffer
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-start gap-2 text-xs text-red-400">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          Urgently rebalance — current concentration levels are dangerous
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-red-400">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          Review and revoke unnecessary token approvals immediately
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-red-400">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          Consider hardware wallet for assets above $10K
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-red-400">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          Investigate unknown tokens with no market value
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Feedback */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <p className="text-[10px] text-gray-600">Was this report helpful?</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAiFeedback(prev => prev === 'up' ? null : 'up')}
+                      className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'up' ? 'text-[#10B981] bg-[#10B981]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setAiFeedback(prev => prev === 'down' ? null : 'down')}
+                      className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'down' ? 'text-[#EF4444] bg-[#EF4444]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0A1EFF] border border-white/10 hover:bg-white/5 transition-colors">
