@@ -181,7 +181,6 @@ export default function SniperPage() {
         <div className="flex items-center gap-2 flex-1">
           <Crosshair className="w-4 h-4 text-[#0A1EFF]" />
           <span className="font-heading font-bold text-sm">Sniper Bot</span>
-          <span className="px-1.5 py-0.5 bg-[#10B981]/15 text-[#10B981] text-[9px] font-bold rounded">BETA</span>
         </div>
         <button
           onClick={() => setActive(!active)}

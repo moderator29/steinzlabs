@@ -651,7 +651,7 @@ export default function AdminPanel() {
               <h3 className="text-sm font-bold mb-3">Technology Partners</h3>
               <div className="bg-[#111827] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
                 {[
-                  { name: 'Anthropic', role: 'AI Intelligence Engine (Claude)', type: 'Core' },
+                  { name: 'VTX Intelligence', role: 'AI Intelligence Engine', type: 'Core' },
                   { name: 'Alchemy', role: 'EVM Blockchain Data', type: 'Infrastructure' },
                   { name: 'Helius', role: 'Solana Blockchain Data', type: 'Infrastructure' },
                   { name: 'Arkham Intelligence', role: 'Entity Intelligence + On-Chain Tracking', type: 'Intelligence' },
@@ -683,7 +683,7 @@ export default function AdminPanel() {
             <div className="space-y-3">
               {[
                 { name: 'Founder', role: 'CEO and Product Vision', desc: 'Building the next-generation crypto intelligence OS', initials: 'SL' },
-                { name: 'AI Systems', role: 'VTX Intelligence Engine', desc: 'Powered by Anthropic Claude — the core reasoning engine', initials: 'AI' },
+                { name: 'AI Systems', role: 'VTX Intelligence Engine', desc: 'Proprietary reasoning engine — the core intelligence layer', initials: 'AI' },
               ].map(({ name, role, desc, initials }) => (
                 <div key={name} className="bg-[#111827] border border-white/[0.06] rounded-xl p-4 flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
@@ -726,7 +726,7 @@ export default function AdminPanel() {
                   { name: 'CoinGecko API', status: 'operational', desc: 'Market data & pricing' },
                   { name: 'DEXScreener API', status: 'operational', desc: 'DEX pairs & trending' },
                   { name: 'Arkham Intelligence', status: 'operational', desc: 'Wallet & entity intelligence' },
-                  { name: 'Claude AI (VTX Agent)', status: 'operational', desc: 'AI analysis engine' },
+                  { name: 'VTX AI Agent', status: 'operational', desc: 'AI analysis engine' },
                   { name: 'Resend Email', status: 'operational', desc: 'Email delivery service' },
                   { name: 'Alchemy RPC', status: 'operational', desc: 'EVM chain data' },
                   { name: 'Helius RPC', status: 'operational', desc: 'Solana chain data' },

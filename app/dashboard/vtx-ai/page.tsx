@@ -81,7 +81,7 @@ function getDailyUsage(): { used: number; limit: number; remaining: number } {
     const stored = localStorage.getItem(USAGE_KEY);
     if (stored) { const p = JSON.parse(stored); if (p && typeof p.used === 'number') return p; }
   } catch {}
-  return { used: 0, limit: 15, remaining: 15 };
+  return { used: 0, limit: 25, remaining: 25 };
 }
 
 function saveDailyUsage(u: { used: number; limit: number; remaining: number }) {
@@ -257,7 +257,7 @@ export default function VtxAiPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [tier, setTier] = useState('free');
-  const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 15, remaining: 15 });
+  const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 25, remaining: 25 });
   const [rateLimited, setRateLimited] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -368,7 +368,7 @@ export default function VtxAiPage() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access.', timestamp: Date.now() }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 25 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access.', timestamp: Date.now() }]);
         if (data.usage) { const u = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining }; setDailyUsage(u); saveDailyUsage(u); }
       } else if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
@@ -553,17 +553,16 @@ export default function VtxAiPage() {
                   <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Risk Appetite</label>
                   <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
                     {([
-                      { value: 'Conservative', icon: '🛡️' },
-                      { value: 'Balanced', icon: '⚖️' },
-                      { value: 'Aggressive', icon: '🚀' },
-                    ] as const).map(({ value, icon }) => (
+                      { value: 'Conservative', label: 'Safe' },
+                      { value: 'Balanced', label: 'Balanced' },
+                      { value: 'Aggressive', label: 'Degen' },
+                    ] as const).map(({ value, label }) => (
                       <button
                         key={value}
                         onClick={() => updateSettings({ riskAppetite: value })}
-                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-1 ${settings.riskAppetite === value ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.riskAppetite === value ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                       >
-                        <span>{icon}</span>
-                        <span className="hidden sm:inline">{value}</span>
+                        {label}
                       </button>
                     ))}
                   </div>

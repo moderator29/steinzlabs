@@ -563,6 +563,37 @@ export default function DNAAnalyzerPage() {
                 <span className="font-bold text-sm">Trading DNA Profile</span>
               </div>
 
+              {/* Behavioral Archetype */}
+              {(() => {
+                const style = (dna.aiAnalysis?.tradingStyle || dna.tradingStyle || '').toLowerCase();
+                const score = dna.aiAnalysis?.overallScore || 0;
+                const sector = dna.aiAnalysis?.sectorBreakdown;
+                let archetype = { label: 'Analyst', icon: '🔬', color: '#0A1EFF', desc: 'Methodical and data-driven trading approach' };
+                if (style.includes('hodl') || style.includes('long') || (dna.aiAnalysis?.metrics?.conviction || 0) >= 80) {
+                  archetype = { label: 'Diamond Hands', icon: '💎', color: '#7C3AED', desc: 'Long-term conviction holder, rarely sells under pressure' };
+                } else if (style.includes('scalp') || style.includes('day') || (dna.txCount || 0) > 200) {
+                  archetype = { label: 'Scalper', icon: '⚡', color: '#F59E0B', desc: 'High-frequency short-term trader, fast in and out' };
+                } else if (style.includes('whale') || style.includes('copy') || score < 40) {
+                  archetype = { label: 'Whale Follower', icon: '🐋', color: '#10B981', desc: 'Tracks and mirrors large wallet movements' };
+                } else if (style.includes('degen') || (sector?.memecoins || 0) > 50) {
+                  archetype = { label: 'Degen', icon: '🔥', color: '#EF4444', desc: 'High-risk memecoin and speculative plays' };
+                } else if (style.includes('defi') || (sector?.defi || 0) > 40) {
+                  archetype = { label: 'DeFi Native', icon: '⚙️', color: '#10B981', desc: 'Protocol farmer and liquidity provider' };
+                }
+                return (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border mb-2" style={{ backgroundColor: `${archetype.color}08`, borderColor: `${archetype.color}25` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style={{ backgroundColor: `${archetype.color}20` }}>
+                      {archetype.icon}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[9px] text-gray-500 uppercase tracking-wider">Behavioral Archetype</div>
+                      <div className="text-base font-bold" style={{ color: archetype.color }}>{archetype.label}</div>
+                      <div className="text-[10px] text-gray-500">{archetype.desc}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white/5 rounded-lg p-3">
                   <div className="text-[10px] text-gray-500 mb-0.5">Primary Chain</div>
