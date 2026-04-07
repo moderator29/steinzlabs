@@ -36,7 +36,7 @@ function ParticleField() {
         vy: (Math.random() - 0.5) * 0.5,
         size: Math.random() * 2 + 0.5,
         opacity: Math.random() * 0.6 + 0.1,
-        color: Math.random() > 0.5 ? '#7c3aed' : '#06b6d4',
+        color: Math.random() > 0.5 ? '#0A1EFF' : '#1a35ff',
       });
     }
 
@@ -84,7 +84,7 @@ function ParticleField() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 120) {
             ctx.globalAlpha = (1 - dist / 120) * 0.15;
-            ctx.strokeStyle = '#7c3aed';
+            ctx.strokeStyle = '#0A1EFF';
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
@@ -205,9 +205,9 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
   }, [value, isAnimatable, numericStr, target, prefix, suffix]);
 
   return (
-    <div ref={ref} className="text-center p-4 rounded-xl border border-purple-500/10 bg-purple-500/5 hover:border-purple-500/30 transition-all duration-300 group"
-      style={{ boxShadow: '0 0 20px rgba(124,58,237,0.05)' }}>
-      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-purple-300 transition-colors">
+    <div ref={ref} className="text-center p-4 rounded-xl border border-[#0A1EFF]/10 bg-[#0A1EFF]/5 hover:border-[#0A1EFF]/30 transition-all duration-300 group"
+      style={{ boxShadow: '0 0 20px rgba(10,30,255,0.05)' }}>
+      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-[#4d6aff] transition-colors">
         {display}
       </div>
       <div className="text-[11px] text-gray-500 uppercase tracking-wider mt-1">{label}</div>
@@ -340,8 +340,8 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20' : 'bg-transparent border-b border-transparent'}`}>
+    <div className="min-h-screen bg-[#060A12] text-white overflow-x-hidden">
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20' : 'bg-transparent border-b border-transparent'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <SteinzLogo size={28} />
@@ -377,63 +377,24 @@ export default function LandingPage() {
         {/* Particle canvas */}
         <ParticleField />
 
-        {/* Floating orbs */}
+        {/* Gradient orb background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
-            className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }}
+            className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.12] blur-[100px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)' }}
           />
           <div
-            className="absolute bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.08, animationDelay: '1s' }}
+            className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #1a35ff, transparent 70%)', opacity: 0.08, animationDelay: '1.5s' }}
           />
           <div
-            className="absolute top-1/2 right-10 w-48 h-48 rounded-full blur-2xl"
-            style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', opacity: 0.05 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[140px]"
+            style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.06), transparent 65%)', opacity: 1 }}
           />
           <div
-            className="absolute top-[30%] left-[5%] w-64 h-64 rounded-full blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.06, animationDelay: '2s' }}
+            className="absolute top-[15%] right-[8%] w-[300px] h-[300px] rounded-full blur-[80px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)', opacity: 0.05, animationDelay: '3s' }}
           />
-        </div>
-
-        {/* 3D floating card behind headline */}
-        <div
-          className="absolute top-1/4 left-1/2 pointer-events-none"
-          style={{
-            perspective: '1000px',
-            transformStyle: 'preserve-3d',
-            transform: 'translateX(-50%)',
-            width: '560px',
-            maxWidth: '90vw',
-            zIndex: 1,
-          }}
-        >
-          <div
-            style={{
-              transform: 'rotateX(8deg) rotateY(-6deg)',
-              transformStyle: 'preserve-3d',
-              background: 'linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(6,182,212,0.04) 100%)',
-              border: '1px solid rgba(124,58,237,0.18)',
-              borderRadius: '20px',
-              padding: '48px 40px',
-              boxShadow: '0 0 80px rgba(124,58,237,0.12), 0 0 0 1px rgba(6,182,212,0.08), inset 0 0 60px rgba(124,58,237,0.04)',
-              backdropFilter: 'blur(2px)',
-              animation: 'heroFloat 6s ease-in-out infinite',
-            }}
-          >
-            {/* Circuit dot grid pattern */}
-            <div style={{ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden', opacity: 0.4 }}>
-              <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
-                <defs>
-                  <pattern id="dotgrid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-                    <circle cx="12" cy="12" r="1" fill="#7c3aed" opacity="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#dotgrid)" />
-              </svg>
-            </div>
-          </div>
         </div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -441,9 +402,9 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-purple-500/20 rounded-full mb-8"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-[#0A1EFF]/25 rounded-full mb-8"
           >
-            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+            <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-pulse"></div>
             <span className="text-[12px] text-gray-400 font-medium">Professional on-chain intelligence platform</span>
           </motion.div>
 
@@ -457,7 +418,7 @@ export default function LandingPage() {
             <br />
             <span
               className="bg-clip-text text-transparent"
-              style={{ backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)' }}
+              style={{ backgroundImage: 'linear-gradient(135deg, #0A1EFF 0%, #4d6aff 100%)' }}
             >
               for on-chain alpha
             </span>
@@ -482,15 +443,15 @@ export default function LandingPage() {
               href="/login"
               className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
               style={{
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                boxShadow: '0 0 30px rgba(124,58,237,0.4)',
+                background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
+                boxShadow: '0 0 30px rgba(10,30,255,0.4)',
               }}
             >
               Launch App <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               href="/whitepaper"
-              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all text-center"
+              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-[#0A1EFF]/20 hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all text-center"
             >
               Read Docs
             </Link>
@@ -507,54 +468,6 @@ export default function LandingPage() {
             ))}
           </motion.div>
 
-          {/* 3D Platform Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="relative mx-auto max-w-4xl"
-            style={{ perspective: '1000px' }}
-          >
-            <div
-              className="rounded-2xl overflow-hidden border border-purple-500/30"
-              style={{
-                transform: 'rotateX(12deg) rotateY(-4deg)',
-                boxShadow: '0 40px 80px rgba(124,58,237,0.3), 0 0 0 1px rgba(124,58,237,0.1)',
-                willChange: 'transform',
-              }}
-            >
-              <div className="bg-gray-950 p-4">
-                <div className="flex gap-2 mb-4 items-center">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  <span className="text-xs text-gray-500 ml-2 font-mono">steinz.app/dashboard</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2 h-32 bg-purple-900/40 rounded-lg border border-purple-500/20 flex items-center justify-center">
-                    <span className="text-purple-400 text-sm font-mono">VTX Intelligence</span>
-                  </div>
-                  <div className="h-32 bg-cyan-900/30 rounded-lg border border-cyan-500/20 flex items-center justify-center">
-                    <span className="text-cyan-400 text-xs font-mono">Live Feed</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-gray-700/40 flex items-center justify-center">
-                    <span className="text-gray-500 text-xs font-mono">Whale Tracker</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-purple-700/40 flex items-center justify-center">
-                    <span className="text-purple-500 text-xs font-mono">DNA Analyzer</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-cyan-700/40 flex items-center justify-center">
-                    <span className="text-cyan-500 text-xs font-mono">Risk Score</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Glow reflection under the preview */}
-            <div
-              className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-12 blur-2xl rounded-full opacity-30"
-              style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }}
-            />
-          </motion.div>
         </div>
       </section>
 
@@ -567,7 +480,7 @@ export default function LandingPage() {
       >
         <div className="max-w-5xl mx-auto">
           <div className={`text-center mb-16 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>Platform</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Platform</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Built for serious analysts
             </h2>
@@ -584,9 +497,9 @@ export default function LandingPage() {
                 animate={visibleSections.has('features') ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <Card3D
-                  className="rounded-xl border border-purple-500/10 bg-gray-900/60 p-6 sm:p-8 hover:border-purple-500/25 transition-colors duration-300 group h-full"
-                  glowColor={category.accent}
+                <div
+                  className="rounded-xl border border-[#0A1EFF]/10 bg-gray-900/60 p-6 sm:p-8 hover:border-[#0A1EFF]/25 transition-colors duration-300 group h-full"
+                  style={{ boxShadow: '0 4px 24px rgba(10,30,255,0.04)' }}
                 >
                   <div
                     className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
@@ -619,7 +532,7 @@ export default function LandingPage() {
                       );
                     })}
                   </div>
-                </Card3D>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -693,7 +606,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('pricing') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#06b6d4' }}>Plans</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Plans</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Unlock the full intelligence layer
             </h2>
@@ -708,7 +621,7 @@ export default function LandingPage() {
                 tier: "Free",
                 price: "$0",
                 desc: "Get started with core features",
-                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (15 msgs/day)"],
+                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (25 msgs/day)"],
                 accent: "#6B7280",
                 cta: "Start Free",
                 link: "/signup",
@@ -718,7 +631,7 @@ export default function LandingPage() {
                 price: "$19/mo",
                 desc: "Full intelligence suite unlocked",
                 perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
-                accent: "#7c3aed",
+                accent: "#0A1EFF",
                 cta: "Coming Soon",
                 featured: true,
                 link: "#",
@@ -733,15 +646,14 @@ export default function LandingPage() {
                 link: "#",
               },
             ].map((plan) => (
-              <Card3D
+              <div
                 key={plan.tier}
-                glowColor={plan.accent}
-                className={`rounded-xl border p-6 ${plan.featured ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
-                style={plan.featured ? { boxShadow: '0 0 40px rgba(124,58,237,0.15), 0 0 0 1px rgba(124,58,237,0.1)' } as React.CSSProperties : {}}
+                className={`rounded-xl border p-6 ${plan.featured ? 'border-[#0A1EFF]/30 bg-[#0A1EFF]/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
+                style={plan.featured ? { boxShadow: '0 0 40px rgba(10,30,255,0.15), 0 0 0 1px rgba(10,30,255,0.1)' } : {}}
               >
                 {plan.featured && (
                   <div className="text-[10px] font-bold uppercase tracking-widest mb-3"
-                    style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    style={{ background: 'linear-gradient(135deg, #0A1EFF, #4d6aff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Most Popular
                   </div>
                 )}
@@ -759,13 +671,13 @@ export default function LandingPage() {
                 <Link href={plan.link}>
                   <button
                     className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.featured ? { background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white', boxShadow: '0 0 20px rgba(124,58,237,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                    style={plan.featured ? { background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', color: 'white', boxShadow: '0 0 20px rgba(10,30,255,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
                     disabled={plan.cta === 'Coming Soon'}
                   >
                     {plan.cta}
                   </button>
                 </Link>
-              </Card3D>
+              </div>
             ))}
           </div>
         </div>
@@ -780,7 +692,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>FAQ</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>FAQ</p>
             <h2 className="text-2xl md:text-3xl font-heading font-bold">
               Frequently asked questions
             </h2>
@@ -792,10 +704,10 @@ export default function LandingPage() {
                 key={index}
                 className={`rounded-xl border transition-all duration-300 ${
                   openFAQ === index
-                    ? 'border-purple-500/25 bg-purple-500/[0.04]'
-                    : 'border-white/[0.06] hover:border-purple-500/15'
+                    ? 'border-[#0A1EFF]/25 bg-[#0A1EFF]/[0.04]'
+                    : 'border-white/[0.06] hover:border-[#0A1EFF]/15'
                 }`}
-                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(124,58,237,0.08)' } : {}}
+                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(10,30,255,0.08)' } : {}}
               >
                 <button
                   onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
@@ -830,11 +742,11 @@ export default function LandingPage() {
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] animate-pulse"
-            style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12), rgba(6,182,212,0.06), transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.12), rgba(10,30,255,0.04), transparent 70%)' }}
           />
           <div
             className="absolute top-0 left-0 w-full h-full"
-            style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.03) 0%, transparent 50%, rgba(6,182,212,0.03) 100%)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(10,30,255,0.03) 0%, transparent 50%, rgba(10,30,255,0.02) 100%)' }}
           />
         </div>
         <div className="max-w-2xl mx-auto text-center relative z-10">
@@ -855,14 +767,14 @@ export default function LandingPage() {
                 href="/login"
                 className="flex-1 w-full px-8 py-4 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                  boxShadow: '0 0 40px rgba(124,58,237,0.4)',
+                  background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
+                  boxShadow: '0 0 40px rgba(10,30,255,0.4)',
                 }}
               >
                 Launch App <ArrowRight className="w-4 h-4" />
               </Link>
               <Link href="/whitepaper" className="flex-1">
-                <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all flex items-center justify-center gap-2">
+                <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-[#0A1EFF]/20 hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all flex items-center justify-center gap-2">
                   Learn More
                 </button>
               </Link>
@@ -871,7 +783,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-purple-500/10 py-12 px-4 sm:px-6" style={{ boxShadow: 'inset 0 1px 0 rgba(124,58,237,0.08)' }}>
+      <footer className="border-t border-[#0A1EFF]/10 py-12 px-4 sm:px-6" style={{ boxShadow: 'inset 0 1px 0 rgba(10,30,255,0.08)' }}>
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-1">

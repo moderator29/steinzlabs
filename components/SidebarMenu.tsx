@@ -37,7 +37,7 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Trading',
     items: [
-      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite', badge: 'BETA' },
+      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite' },
       { icon: Layers, label: 'DEX', path: '/dashboard/dex', badge: 'NEW' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
       { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges' },
@@ -72,7 +72,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
-      { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper', badge: 'BETA' },
+      { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper' },
       { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },

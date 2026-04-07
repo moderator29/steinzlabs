@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RotateCcw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3, Download, Clock, DollarSign } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RotateCcw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3, Download, Clock, DollarSign, ShieldAlert, ShieldCheck, ShieldX, ShieldQuestion, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 
@@ -15,6 +15,52 @@ interface Token {
   contractAddress: string;
   logo?: string;
 }
+
+interface TokenRisk {
+  contractAddress: string;
+  symbol: string;
+  riskLevel: 'safe' | 'warning' | 'danger' | 'unknown';
+  score: number;
+  flags: string[];
+  details: {
+    isHoneypot: boolean;
+    isMintable: boolean;
+    isProxy: boolean;
+    isBlacklisted: boolean;
+    selfDestruct: boolean;
+    hiddenOwner: boolean;
+    buyTax: number | null;
+    sellTax: number | null;
+    holderCount: number | null;
+    top10HolderPercent: number | null;
+    lpLockedPercent: number | null;
+    creatorPercent: number | null;
+  };
+}
+
+interface RiskSummary {
+  scanned: number;
+  safe: number;
+  warning: number;
+  danger: number;
+  unknown: number;
+  avgScore: number;
+  portfolioRisk: 'safe' | 'moderate' | 'high' | 'critical';
+}
+
+const RISK_CONFIG = {
+  safe:    { color: '#10B981', bg: '#10B98115', label: 'Safe',    Icon: ShieldCheck },
+  warning: { color: '#F59E0B', bg: '#F59E0B15', label: 'Warning', Icon: ShieldAlert },
+  danger:  { color: '#EF4444', bg: '#EF444415', label: 'Danger',  Icon: ShieldX },
+  unknown: { color: '#6B7280', bg: '#6B728015', label: 'Unknown', Icon: ShieldQuestion },
+} as const;
+
+const PORTFOLIO_RISK_CONFIG = {
+  safe:     { color: '#10B981', label: 'Low Risk',      Icon: ShieldCheck },
+  moderate: { color: '#F59E0B', label: 'Moderate Risk', Icon: ShieldAlert },
+  high:     { color: '#F97316', label: 'High Risk',     Icon: ShieldAlert },
+  critical: { color: '#EF4444', label: 'Critical Risk', Icon: ShieldX },
+} as const;
 
 type TabId = 'balance' | 'history' | 'unrealized' | 'pnl';
 type PnlRange = '1W' | '2W' | '3W' | '1M' | '3M' | 'All';
@@ -102,6 +148,153 @@ function MiniBar({ data }: { data: number[] }) {
   );
 }
 
+function RiskBadge({ risk }: { risk: TokenRisk | undefined }) {
+  if (!risk) return null;
+  const cfg = RISK_CONFIG[risk.riskLevel];
+  const Icon = cfg.Icon;
+  return (
+    <div
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+      style={{ backgroundColor: cfg.bg, color: cfg.color }}
+      title={risk.flags.join(', ') || 'No issues detected'}
+    >
+      <Icon className="w-3 h-3" />
+      {cfg.label}
+    </div>
+  );
+}
+
+function RiskBanner({
+  summary,
+  riskResults,
+  portfolio,
+  loading,
+  expanded,
+  onToggle,
+  onDismiss,
+  onRescan,
+}: {
+  summary: RiskSummary | null;
+  riskResults: Record<string, TokenRisk>;
+  portfolio: Token[];
+  loading: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  onDismiss: () => void;
+  onRescan: () => void;
+}) {
+  if (!summary && !loading) return null;
+
+  if (loading) {
+    return (
+      <div className="rounded-xl p-3 border border-white/[0.06] bg-white/[0.02] flex items-center gap-2 text-xs text-gray-400">
+        <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin flex-shrink-0" />
+        Scanning portfolio for security risks...
+      </div>
+    );
+  }
+
+  if (!summary) return null;
+
+  const pRisk = PORTFOLIO_RISK_CONFIG[summary.portfolioRisk];
+  const PRIcon = pRisk.Icon;
+  const flaggedTokens = portfolio.filter(t => {
+    const r = riskResults[t.contractAddress?.toLowerCase()];
+    return r && (r.riskLevel === 'danger' || r.riskLevel === 'warning');
+  });
+
+  return (
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{ borderColor: `${pRisk.color}30`, backgroundColor: `${pRisk.color}08` }}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-2 p-3">
+        <PRIcon className="w-4 h-4 flex-shrink-0" style={{ color: pRisk.color }} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold" style={{ color: pRisk.color }}>{pRisk.label}</span>
+            <span className="text-xs text-gray-500">•</span>
+            <span className="text-xs text-gray-400">Score {summary.avgScore}/100</span>
+          </div>
+          <div className="text-[10px] text-gray-500 mt-0.5">
+            {summary.scanned} scanned · {summary.safe} safe · {summary.warning} warnings · {summary.danger} critical
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onRescan}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+            title="Re-scan"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          {flaggedTokens.length > 0 && (
+            <button
+              onClick={onToggle}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          <button
+            onClick={onDismiss}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Score bar */}
+      <div className="px-3 pb-2">
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${summary.avgScore}%`,
+              backgroundColor: pRisk.color,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Expanded flagged token list */}
+      {expanded && flaggedTokens.length > 0 && (
+        <div className="border-t border-white/[0.06] divide-y divide-white/[0.04]">
+          {flaggedTokens.map((t, i) => {
+            const r = riskResults[t.contractAddress?.toLowerCase()];
+            if (!r) return null;
+            const cfg = RISK_CONFIG[r.riskLevel];
+            const CfgIcon = cfg.Icon;
+            return (
+              <div key={i} className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <CfgIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: cfg.color }} />
+                  <span className="text-sm font-semibold">{t.symbol}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                    {cfg.label}
+                  </span>
+                  <span className="ml-auto text-xs text-gray-500">Score {r.score}/100</span>
+                </div>
+                {r.flags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {r.flags.map((flag, fi) => (
+                      <span key={fi} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-400 border border-white/[0.06]">
+                        {flag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PortfolioPage() {
   const router = useRouter();
   const { address: walletAddress, provider, isConnected, connectAuto, connecting } = useWallet();
@@ -113,6 +306,11 @@ export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<TabId>('balance');
   const [pnlRange, setPnlRange] = useState<PnlRange>('1M');
   const [historyRange, setHistoryRange] = useState<HistoryRange>('1M');
+  const [riskResults, setRiskResults] = useState<Record<string, TokenRisk>>({});
+  const [riskSummary, setRiskSummary] = useState<RiskSummary | null>(null);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskExpanded, setRiskExpanded] = useState(false);
+  const [riskDismissed, setRiskDismissed] = useState(false);
 
   const historyData = [
     { label: 'Jan', value: 8200 },
@@ -141,6 +339,27 @@ export default function PortfolioPage() {
     if (walletAddress) fetchPortfolio(walletAddress);
   }, [walletAddress]);
 
+  const runRiskScan = async (tokens: Token[]) => {
+    const scannable = tokens.filter(t => t.contractAddress && t.contractAddress !== 'native');
+    if (scannable.length === 0) return;
+    setRiskLoading(true);
+    setRiskDismissed(false);
+    try {
+      const res = await fetch('/api/portfolio-risk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokens: scannable, chainId: '1' }),
+      });
+      const data = await res.json();
+      if (data.results) setRiskResults(data.results);
+      if (data.summary) setRiskSummary(data.summary);
+    } catch {
+      // silent fail
+    } finally {
+      setRiskLoading(false);
+    }
+  };
+
   const fetchPortfolio = async (address: string) => {
     setLoading(true);
     try {
@@ -151,6 +370,8 @@ export default function PortfolioPage() {
         setTotalValue(data.totalValue || 0);
         setTotalChange(data.totalChange || 0);
         setTokenCount(data.tokenCount || 0);
+        // Auto-run security scan after portfolio loads
+        runRiskScan(data.portfolio);
       }
     } catch {
     } finally {
