@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { arkhamAPI } from '@/lib/arkham/api';
 
-const FREE_TIER_LIMIT = 15;
+const FREE_TIER_LIMIT = 25;
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function getRateLimitInfo(ip: string): { remaining: number; total: number; resetAt: number } {
@@ -634,7 +634,7 @@ PLATFORM CONTEXT:
 - Domain Shield: phishing detection tool
 - Signature Insight: transaction decoder
 - Security Center: contract security scanner
-- Trading Suite (BETA): advanced trading tools
+- Trading Suite: advanced trading tools
 - DNA Analyzer: wallet behavior profiling
 - Bubble Map: visual wallet cluster analysis
 - Research Lab: intelligence reports
@@ -986,7 +986,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         system: systemPrompt,
         messages,

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Copy, Check, ExternalLink, RefreshCw, X, TrendingUp, TrendingDown,
-  Layers, Zap, ChevronRight, BarChart2,
+  Layers, Zap, ChevronRight, BarChart2, ArrowLeft,
 } from 'lucide-react';
 import type { DexToken } from '@/app/api/dex-feed/route';
 
@@ -92,7 +93,7 @@ function TokenCard({ token, isNew, onClick }: TokenCardProps) {
     <button
       onClick={() => onClick(token)}
       className={`w-full text-left rounded-xl border transition-all duration-200 p-3
-        bg-[#0D1120] border-white/[0.06] hover:border-purple-500/30 hover:bg-[#111827]
+        bg-[#0D1120] border-white/[0.06] hover:border-[#0A1EFF]/30 hover:bg-[#111827]
         ${isNew ? 'animate-new-token' : ''}
       `}
     >
@@ -106,7 +107,7 @@ function TokenCard({ token, isNew, onClick }: TokenCardProps) {
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
+          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-[#0A1EFF] to-[#3d57ff] flex items-center justify-center text-[10px] font-bold text-white">
             {token.symbol.slice(0, 2).toUpperCase()}
           </div>
         )}
@@ -205,7 +206,7 @@ function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }
           {token.imageUri ? (
             <img src={token.imageUri} alt={token.symbol} className="w-10 h-10 rounded-full object-cover bg-[#1a2035]" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold text-white">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A1EFF] to-[#3d57ff] flex items-center justify-center text-sm font-bold text-white">
               {token.symbol.slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -271,7 +272,7 @@ function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }
         <div className="flex items-center gap-3 px-5 py-4 border-t border-white/[0.06]">
           <a
             href={swapHref}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0A1EFF] hover:bg-[#0818CC] text-white font-semibold text-sm transition-colors"
           >
             <Zap className="w-4 h-4" />
             Buy on Swap
@@ -317,6 +318,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; subtitle: strin
 ];
 
 export default function DexDiscoveryPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('pumpfun');
   const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');
   const [tokens, setTokens] = useState<DexToken[]>([]);
@@ -393,9 +395,18 @@ export default function DexDiscoveryPage() {
       {/* Page header */}
       <div className="px-4 sm:px-6 pt-6 pb-4">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">DEX Discovery</h1>
-            <p className="text-gray-400 text-sm mt-0.5">Live token launches &amp; trending pairs</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="p-2 rounded-lg border border-white/[0.06] hover:bg-white/[0.04] text-gray-400 hover:text-white transition-colors flex-shrink-0"
+              title="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">DEX Discovery</h1>
+              <p className="text-gray-400 text-sm mt-0.5">Live token launches &amp; trending pairs</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-1">
             {lastFetch && (
@@ -481,7 +492,7 @@ export default function DexDiscoveryPage() {
             <div className="text-gray-500 text-sm">{error}</div>
             <button
               onClick={() => fetchTokens(activeTab, false)}
-              className="mt-2 px-4 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-sm transition-colors"
+              className="mt-2 px-4 py-2 rounded-lg bg-[#0A1EFF]/20 hover:bg-[#0A1EFF]/30 text-[#6b7fff] text-sm transition-colors"
             >
               Try again
             </button>

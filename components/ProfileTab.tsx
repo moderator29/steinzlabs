@@ -349,14 +349,40 @@ export default function ProfileTab() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Load saved avatar/cover from user metadata or localStorage
+  // Load saved avatar/cover: Supabase user_metadata takes priority over localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('steinz_avatar_url');
-      if (saved) setAvatarUrl(saved);
-      const savedCover = localStorage.getItem('steinz_cover_url');
-      if (savedCover) setCoverUrl(savedCover);
-    } catch {}
+    const loadPhotos = async () => {
+      try {
+        // Try Supabase user_metadata first (persists across devices)
+        if (supabase) {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const meta = authUser?.user_metadata || {};
+          if (meta.avatar_url) {
+            setAvatarUrl(meta.avatar_url);
+            try { localStorage.setItem('steinz_avatar_url', meta.avatar_url); } catch {}
+          } else {
+            const saved = localStorage.getItem('steinz_avatar_url');
+            if (saved) setAvatarUrl(saved);
+          }
+          if (meta.cover_url) {
+            setCoverUrl(meta.cover_url);
+            try { localStorage.setItem('steinz_cover_url', meta.cover_url); } catch {}
+          } else {
+            const savedCover = localStorage.getItem('steinz_cover_url');
+            if (savedCover) setCoverUrl(savedCover);
+          }
+          return;
+        }
+      } catch {}
+      // Fallback to localStorage only
+      try {
+        const saved = localStorage.getItem('steinz_avatar_url');
+        if (saved) setAvatarUrl(saved);
+        const savedCover = localStorage.getItem('steinz_cover_url');
+        if (savedCover) setCoverUrl(savedCover);
+      } catch {}
+    };
+    loadPhotos();
   }, []);
 
   useEffect(() => {
@@ -372,10 +398,16 @@ export default function ProfileTab() {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { setEditError('Image must be under 2MB'); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const url = ev.target?.result as string;
       setAvatarUrl(url);
       try { localStorage.setItem('steinz_avatar_url', url); } catch {}
+      // Persist to Supabase user_metadata so it works across all devices/URLs
+      try {
+        if (supabase) {
+          await supabase.auth.updateUser({ data: { avatar_url: url } });
+        }
+      } catch {}
     };
     reader.readAsDataURL(file);
   };
@@ -385,10 +417,16 @@ export default function ProfileTab() {
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) { setEditError('Cover image must be under 4MB'); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const url = ev.target?.result as string;
       setCoverUrl(url);
       try { localStorage.setItem('steinz_cover_url', url); } catch {}
+      // Persist to Supabase user_metadata so it works across all devices/URLs
+      try {
+        if (supabase) {
+          await supabase.auth.updateUser({ data: { cover_url: url } });
+        }
+      } catch {}
     };
     reader.readAsDataURL(file);
   };
@@ -672,7 +710,7 @@ export default function ProfileTab() {
               </button>
               {avatarUrl && (
                 <button
-                  onClick={() => { setAvatarUrl(''); try { localStorage.removeItem('steinz_avatar_url'); } catch {} }}
+                  onClick={async () => { setAvatarUrl(''); try { localStorage.removeItem('steinz_avatar_url'); } catch {} try { if (supabase) await supabase.auth.updateUser({ data: { avatar_url: '' } }); } catch {} }}
                   className="text-[10px] text-[#EF4444] hover:text-[#EF4444]/80 transition-colors"
                 >
                   Remove photo
