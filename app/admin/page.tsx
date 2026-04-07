@@ -195,7 +195,7 @@ export default function AdminPanel() {
     const apis = [
       { name: 'Supabase Auth', url: `${process.env.NEXT_PUBLIC_SUPABASE_URL || ''}/rest/v1/` },
       { name: 'CoinGecko', url: 'https://api.coingecko.com/api/v3/ping' },
-      { name: 'VTX AI (Claude)', url: '/api/vtx-ai' },
+      { name: 'VTX Intelligence Engine', url: '/api/vtx-ai' },
       { name: 'Context Feed', url: '/api/context-feed' },
       { name: 'Search Engine', url: '/api/search/coins?q=btc' },
       { name: 'Price Feed', url: '/api/prices' },
@@ -878,7 +878,7 @@ export default function AdminPanel() {
                       { label: '1inch Router (EVM)', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Arkham Intelligence', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Money Radar (Copy Trade)', status: 'Live', color: 'text-[#10B981]' },
-                      { label: 'VTX AI (Claude)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'VTX Intelligence Engine', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Multi-Chain Search', status: 'Live', color: 'text-[#10B981]' },
                     ].map((f, i) => (
                       <div key={i} className="flex items-center justify-between text-[11px] py-1.5 border-b border-white/[0.03] last:border-0">
@@ -963,7 +963,7 @@ export default function AdminPanel() {
                     { label: 'Market Data', value: 'CoinGecko API', status: 'Connected' },
                     { label: 'DEX Data', value: 'DexScreener API', status: 'Connected' },
                     { label: 'On-chain Intel', value: 'Arkham Intelligence', status: 'Connected' },
-                    { label: 'AI Engine', value: 'Anthropic Claude', status: 'Connected' },
+                    { label: 'AI Engine', value: 'VTX Intelligence Engine', status: 'Connected' },
                     { label: 'Solana Trading', value: 'Jupiter Aggregator', status: 'Connected' },
                     { label: 'EVM Trading', value: '1inch Router', status: 'Connected' },
                     { label: 'Token Security', value: 'GoPlus Labs', status: 'Connected' },

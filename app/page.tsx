@@ -36,7 +36,7 @@ function ParticleField() {
         vy: (Math.random() - 0.5) * 0.5,
         size: Math.random() * 2 + 0.5,
         opacity: Math.random() * 0.6 + 0.1,
-        color: Math.random() > 0.5 ? '#7c3aed' : '#06b6d4',
+        color: Math.random() > 0.5 ? '#0A1EFF' : '#1a35ff',
       });
     }
 
@@ -84,7 +84,7 @@ function ParticleField() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 120) {
             ctx.globalAlpha = (1 - dist / 120) * 0.15;
-            ctx.strokeStyle = '#7c3aed';
+            ctx.strokeStyle = '#0A1EFF';
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
@@ -377,63 +377,24 @@ export default function LandingPage() {
         {/* Particle canvas */}
         <ParticleField />
 
-        {/* Floating orbs */}
+        {/* Gradient orb background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
-            className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }}
+            className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.12] blur-[100px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)' }}
           />
           <div
-            className="absolute bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.08, animationDelay: '1s' }}
+            className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #1a35ff, transparent 70%)', opacity: 0.08, animationDelay: '1.5s' }}
           />
           <div
-            className="absolute top-1/2 right-10 w-48 h-48 rounded-full blur-2xl"
-            style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', opacity: 0.05 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[140px]"
+            style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.06), transparent 65%)', opacity: 1 }}
           />
           <div
-            className="absolute top-[30%] left-[5%] w-64 h-64 rounded-full blur-3xl animate-pulse"
-            style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.06, animationDelay: '2s' }}
+            className="absolute top-[15%] right-[8%] w-[300px] h-[300px] rounded-full blur-[80px] animate-pulse"
+            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)', opacity: 0.05, animationDelay: '3s' }}
           />
-        </div>
-
-        {/* 3D floating card behind headline */}
-        <div
-          className="absolute top-1/4 left-1/2 pointer-events-none"
-          style={{
-            perspective: '1000px',
-            transformStyle: 'preserve-3d',
-            transform: 'translateX(-50%)',
-            width: '560px',
-            maxWidth: '90vw',
-            zIndex: 1,
-          }}
-        >
-          <div
-            style={{
-              transform: 'rotateX(8deg) rotateY(-6deg)',
-              transformStyle: 'preserve-3d',
-              background: 'linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(6,182,212,0.04) 100%)',
-              border: '1px solid rgba(124,58,237,0.18)',
-              borderRadius: '20px',
-              padding: '48px 40px',
-              boxShadow: '0 0 80px rgba(124,58,237,0.12), 0 0 0 1px rgba(6,182,212,0.08), inset 0 0 60px rgba(124,58,237,0.04)',
-              backdropFilter: 'blur(2px)',
-              animation: 'heroFloat 6s ease-in-out infinite',
-            }}
-          >
-            {/* Circuit dot grid pattern */}
-            <div style={{ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden', opacity: 0.4 }}>
-              <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
-                <defs>
-                  <pattern id="dotgrid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-                    <circle cx="12" cy="12" r="1" fill="#7c3aed" opacity="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#dotgrid)" />
-              </svg>
-            </div>
-          </div>
         </div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -441,9 +402,9 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-purple-500/20 rounded-full mb-8"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-[#0A1EFF]/25 rounded-full mb-8"
           >
-            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+            <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-pulse"></div>
             <span className="text-[12px] text-gray-400 font-medium">Professional on-chain intelligence platform</span>
           </motion.div>
 
@@ -457,7 +418,7 @@ export default function LandingPage() {
             <br />
             <span
               className="bg-clip-text text-transparent"
-              style={{ backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)' }}
+              style={{ backgroundImage: 'linear-gradient(135deg, #0A1EFF 0%, #4d6aff 100%)' }}
             >
               for on-chain alpha
             </span>
@@ -482,15 +443,15 @@ export default function LandingPage() {
               href="/login"
               className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
               style={{
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                boxShadow: '0 0 30px rgba(124,58,237,0.4)',
+                background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
+                boxShadow: '0 0 30px rgba(10,30,255,0.4)',
               }}
             >
               Launch App <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               href="/whitepaper"
-              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all text-center"
+              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-[#0A1EFF]/20 hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all text-center"
             >
               Read Docs
             </Link>
@@ -507,54 +468,6 @@ export default function LandingPage() {
             ))}
           </motion.div>
 
-          {/* 3D Platform Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="relative mx-auto max-w-4xl"
-            style={{ perspective: '1000px' }}
-          >
-            <div
-              className="rounded-2xl overflow-hidden border border-purple-500/30"
-              style={{
-                transform: 'rotateX(12deg) rotateY(-4deg)',
-                boxShadow: '0 40px 80px rgba(124,58,237,0.3), 0 0 0 1px rgba(124,58,237,0.1)',
-                willChange: 'transform',
-              }}
-            >
-              <div className="bg-gray-950 p-4">
-                <div className="flex gap-2 mb-4 items-center">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  <span className="text-xs text-gray-500 ml-2 font-mono">steinz.app/dashboard</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2 h-32 bg-purple-900/40 rounded-lg border border-purple-500/20 flex items-center justify-center">
-                    <span className="text-purple-400 text-sm font-mono">VTX Intelligence</span>
-                  </div>
-                  <div className="h-32 bg-cyan-900/30 rounded-lg border border-cyan-500/20 flex items-center justify-center">
-                    <span className="text-cyan-400 text-xs font-mono">Live Feed</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-gray-700/40 flex items-center justify-center">
-                    <span className="text-gray-500 text-xs font-mono">Whale Tracker</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-purple-700/40 flex items-center justify-center">
-                    <span className="text-purple-500 text-xs font-mono">DNA Analyzer</span>
-                  </div>
-                  <div className="h-20 bg-gray-800/60 rounded-lg border border-cyan-700/40 flex items-center justify-center">
-                    <span className="text-cyan-500 text-xs font-mono">Risk Score</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Glow reflection under the preview */}
-            <div
-              className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-12 blur-2xl rounded-full opacity-30"
-              style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }}
-            />
-          </motion.div>
         </div>
       </section>
 

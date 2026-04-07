@@ -789,7 +789,7 @@ export default function ProfileTab() {
     const faqs = [
       { q: 'How do I connect my wallet?', a: 'Go to the Wallet tab in the bottom navigation and click "Connect Wallet". We support MetaMask, WalletConnect, and Phantom for Solana.' },
       { q: 'What is a Trust Score?', a: 'Trust Score is a 0-100 rating STEINZ assigns to every on-chain event, token, and wallet. It considers contract verification, liquidity, holder distribution, developer history, and more.' },
-      { q: 'How does VTX AI work?', a: 'VTX AI is powered by Anthropic Claude. It analyzes real-time on-chain data, market trends, and your portfolio to give you actionable intelligence in plain English.' },
+      { q: 'How does VTX AI work?', a: 'VTX AI uses a proprietary AI engine to analyze real-time on-chain data, market trends, and your portfolio to give you actionable intelligence in plain English.' },
       { q: 'Is my wallet data safe?', a: 'Yes. STEINZ is 100% non-custodial. We only READ public blockchain data. Your private keys never leave your wallet. We cannot move your funds.' },
       { q: 'How do I cancel my subscription?', a: 'Go to Profile > Settings and click "Manage Subscription". You can cancel anytime with one click. No hidden fees or contracts.' },
       { q: 'What chains are supported?', a: 'Ethereum, Solana, BNB Chain, Polygon, Arbitrum, Optimism, Avalanche, Base, Fantom, Bitcoin, and Tron. More coming based on demand.' },
