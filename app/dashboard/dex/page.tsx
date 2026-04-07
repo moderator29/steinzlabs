@@ -294,17 +294,31 @@ function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-type TabId = 'pumpfun' | 'pumpswap' | 'bonk' | 'new';
+type TabId = 'pumpfun' | 'pumpswap' | 'bonk' | 'fourmeme' | 'raydium' | 'new';
+type AgeFilter = 'all' | '2m' | '5m' | '20m' | '1h' | '5h' | '12h';
+
+const AGE_FILTERS: { id: AgeFilter; label: string; ms: number }[] = [
+  { id: 'all', label: 'All', ms: Infinity },
+  { id: '2m', label: '2m', ms: 2 * 60_000 },
+  { id: '5m', label: '5m', ms: 5 * 60_000 },
+  { id: '20m', label: '20m', ms: 20 * 60_000 },
+  { id: '1h', label: '1h', ms: 60 * 60_000 },
+  { id: '5h', label: '5h', ms: 5 * 60 * 60_000 },
+  { id: '12h', label: '12h', ms: 12 * 60 * 60_000 },
+];
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; subtitle: string }[] = [
-  { id: 'pumpfun', label: 'pump.fun', icon: Zap, subtitle: 'Live launches' },
+  { id: 'pumpfun', label: 'pump.fun', icon: Zap, subtitle: 'SOL launches' },
   { id: 'pumpswap', label: 'PumpSwap', icon: ChevronRight, subtitle: 'Graduated' },
-  { id: 'bonk', label: 'BONK', icon: BarChart2, subtitle: 'SOL memecoins' },
+  { id: 'bonk', label: 'BONK', icon: BarChart2, subtitle: 'SOL memes' },
+  { id: 'fourmeme', label: 'FourMeme', icon: Layers, subtitle: 'BSC launches' },
+  { id: 'raydium', label: 'Raydium', icon: TrendingUp, subtitle: 'SOL DEX' },
   { id: 'new', label: 'New Pairs', icon: Layers, subtitle: 'All chains' },
 ];
 
 export default function DexDiscoveryPage() {
   const [activeTab, setActiveTab] = useState<TabId>('pumpfun');
+  const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');
   const [tokens, setTokens] = useState<DexToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +328,15 @@ export default function DexDiscoveryPage() {
   const [lastFetch, setLastFetch] = useState<number | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Client-side age filter
+  const displayTokens = ageFilter === 'all'
+    ? tokens
+    : tokens.filter(t => {
+        if (!t.createdAt) return true; // keep tokens without timestamp
+        const filterMs = AGE_FILTERS.find(f => f.id === ageFilter)?.ms ?? Infinity;
+        return (Date.now() - t.createdAt) <= filterMs;
+      });
 
   const fetchTokens = useCallback(async (tab: TabId, isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -412,17 +435,35 @@ export default function DexDiscoveryPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-150 ${
                   isActive
-                    ? 'border-purple-500 text-white'
+                    ? 'border-[#0A1EFF] text-white'
                     : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-white/20'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-purple-400' : 'text-gray-600'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#0A1EFF]' : 'text-gray-600'}`} />
                 {tab.label}
                 <span className="hidden sm:inline text-[11px] text-gray-600">· {tab.subtitle}</span>
               </button>
             );
           })}
         </div>
+      </div>
+
+      {/* Age filter bar */}
+      <div className="px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide border-b border-white/[0.04]">
+        <span className="text-[10px] text-gray-600 uppercase tracking-widest flex-shrink-0 mr-1">Age</span>
+        {AGE_FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setAgeFilter(f.id)}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
+              ageFilter === f.id
+                ? 'bg-[#0A1EFF] text-white'
+                : 'text-gray-500 hover:text-white bg-white/[0.03] border border-white/[0.06]'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
@@ -447,15 +488,15 @@ export default function DexDiscoveryPage() {
           </div>
         )}
 
-        {!loading && !error && tokens.length === 0 && (
+        {!loading && !error && displayTokens.length === 0 && (
           <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
-            No tokens found.
+            {tokens.length > 0 ? 'No tokens match the selected age filter.' : 'No tokens found.'}
           </div>
         )}
 
-        {tokens.length > 0 && (
+        {displayTokens.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {tokens.map((token) => (
+            {displayTokens.map((token) => (
               <TokenCard
                 key={token.id}
                 token={token}

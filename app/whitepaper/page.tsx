@@ -179,7 +179,7 @@ export default function WhitepaperPage() {
         <div className="flex-1 min-w-0">
           <Section id="executive-summary" number="01" title="Executive Summary">
             <p>STEINZ Labs is building the most comprehensive intelligence infrastructure layer ever created for the on-chain economy. Not just another analytics dashboard or trading tool &mdash; the complete operating system for Web3 participants: traders, builders, investors, and communities.</p>
-            <p>The platform combines real-time on-chain data aggregation, AI-powered analysis, comprehensive security scanning, multi-chain trading, builder reputation systems, milestone-gated funding, native social coordination, prediction markets, project discovery, and a built-in non-custodial wallet &mdash; all unified into a single seamless experience that no other platform in the ecosystem matches.</p>
+            <p>The platform combines real-time on-chain data aggregation, AI-powered analysis (VTX AI &mdash; 25 free daily messages), comprehensive security scanning powered by GoPlus Security API, multi-chain trading with a transparent 0.2% platform fee, Sniper Bot, Network Graph relationship mapping, Contract Analyzer, Approval Manager, Trading DNA Analyzer, Wallet Intelligence, builder reputation systems, milestone-gated funding, prediction markets, project discovery, and a built-in non-custodial wallet &mdash; all unified into a single seamless experience that no other platform in the ecosystem matches.</p>
             <div className="glass rounded-xl p-5 border border-[#0A1EFF]/10 bg-gradient-to-b from-[#0A1EFF]/[0.03] to-transparent mt-4">
               <p className="text-sm text-gray-300 font-medium">The STEINZ Difference</p>
               <p className="text-xs text-gray-400 mt-2">While other platforms give you data, STEINZ gives you <strong className="text-white">context</strong>. While others show you transactions, STEINZ shows you <strong className="text-white">intent</strong>. While others alert you to risks, STEINZ <strong className="text-white">protects you before you get hurt</strong>. While others charge institutions thousands per month, STEINZ makes that intelligence accessible to every level of participant.</p>
@@ -286,15 +286,18 @@ export default function WhitepaperPage() {
             <h3 className="text-base font-heading font-bold text-white mt-6 mb-3">Live on the Platform</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <FeatureBox icon={Zap} title="Real-Time Context Feed" desc="AI-curated on-chain intelligence stream. Every event tagged BULLISH, HYPE, BEAR, or NEUTRAL with Trust Score. Bookmarks, history, and multi-chain filters." />
-              <FeatureBox icon={Brain} title="VTX AI Engine" desc="Ask anything. Get live data-backed answers in seconds. Your personal on-chain analyst powered by a proprietary AI engine. Free and Pro tiers with web search." />
+              <FeatureBox icon={Brain} title="VTX AI Engine" desc="Ask anything. Get live data-backed answers in seconds. Your personal on-chain analyst powered by Anthropic Claude. 25 free daily messages; unlimited on Pro with web search." />
               <FeatureBox icon={TrendingUp} title="Trading DNA Analyzer" desc="Drop any wallet and decode its complete behavioral and performance profile. Full Alpha Intelligence Report with win rates, P&L, and behavioral archetype." />
               <FeatureBox icon={Globe} title="Wallet Intelligence" desc="Every active wallet classified: Whales, Smart Money, Retail, Bots, Dormant. Follow any cluster in real time. Deep wallet relationship mapping." />
+              <FeatureBox icon={Network} title="Network Graph" desc="Interactive on-chain relationship mapper. Visualize wallet clusters, fund flows, and entity connections across any address. Identify coordinated wallets and insider networks." />
               <FeatureBox icon={Users} title="Smart Money Watchlist" desc="Curated feed of the consistently highest-performing on-chain wallets. Full transaction fingerprints and copy trading capability." />
-              <FeatureBox icon={Shield} title="Token Safety Scanner" desc="0-100 Trust Score on any contract. Verification, liquidity lock, holder concentration, tax, dev history, honeypot simulation." />
+              <FeatureBox icon={Shield} title="Token Safety Scanner" desc="0-100 Trust Score on any contract. Powered by GoPlus Security API. Verification, liquidity lock, holder concentration, tax, dev history, honeypot simulation." />
               <FeatureBox icon={Search} title="Contract Analyzer" desc="Paste any contract. VTX AI reads it and tells you exactly what it does in plain English. Flags dangerous functions, owner privileges, and hidden traps." />
               <FeatureBox icon={AlertTriangle} title="Rug Pull Detector" desc="Full deployer history. Serial rugger flagging. Liquidity removal patterns. Honeypot simulation. Community-powered scam reporting." />
               <FeatureBox icon={Lock} title="Phishing Detector" desc="Every link checked in real time. Domain age, scam database cross reference, community reports. SAFE/SUSPICIOUS/PHISHING verdict." />
-              <FeatureBox icon={Compass} title="Multi-Chain Swap" desc="Trade across 12+ chains inside the intelligence layer. Safety check runs before every swap. Best price routing across all DEXs." />
+              <FeatureBox icon={Eye} title="Approval Manager" desc="See every token approval ever granted from your wallet. Risk-rated by amount and contract trust score. One-click revoke and bulk revoke dangerous approvals instantly." />
+              <FeatureBox icon={Zap} title="Sniper Bot" desc="Automated token sniping on launch events. Set parameters, monitor deployer wallets, and execute buys at the earliest possible block. MEV-protected execution." />
+              <FeatureBox icon={Compass} title="Multi-Chain Swap" desc="Trade across 12+ chains inside the intelligence layer. Safety check runs before every swap. Best price routing across all DEXs. Transparent 0.2% platform fee." />
               <FeatureBox icon={BarChart3} title="Portfolio Tracker" desc="Connect wallet. Auto-sync all holdings, USD values, P&L, 24h change, historical chart. Zero manual input required." />
               <FeatureBox icon={Target} title="Prediction Markets" desc="Create and participate in on-chain predictions. Stake positions, earn rewards, build your win rate. Polymarket-style experience." />
               <FeatureBox icon={Compass} title="Project Discovery" desc="Find verified Web3 projects with real CoinGecko data. Chain filters, market cap sorting, verified badge system, and token listing form." />
@@ -387,7 +390,7 @@ export default function WhitepaperPage() {
                 <div className="space-y-2">
                   <div className="glass rounded-lg p-2 border border-white/[0.04]">
                     <p className="text-[10px] font-bold text-gray-300">Free Tier</p>
-                    <p className="text-[10px] text-gray-500">15 messages per day. Basic analysis and market questions. No web search.</p>
+                    <p className="text-[10px] text-gray-500">25 messages per day. Basic analysis and market questions. No web search.</p>
                   </div>
                   <div className="glass rounded-lg p-2 border border-[#0A1EFF]/10">
                     <p className="text-[10px] font-bold text-[#0A1EFF]">Pro Tier ($4/mo)</p>
@@ -462,14 +465,14 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="security" number="10" title="Security Center">
-            <p>The Security Center is the fortress of STEINZ &mdash; a comprehensive suite of AI-powered protection tools that scan, analyze, and alert on every potential threat before it can harm your funds. Security is not a feature. It is the foundation.</p>
+            <p>The Security Center is the fortress of STEINZ &mdash; a comprehensive suite of AI-powered protection tools that scan, analyze, and alert on every potential threat before it can harm your funds. Security is not a feature. It is the foundation. Token safety data is powered by the GoPlus Security API, the industry&apos;s leading on-chain security data provider.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               {[
-                { title: 'Token Safety Scanner', desc: 'Enter any contract address. Receive instant Trust Score (0-100): contract verification, liquidity lock, holder distribution, buy/sell tax, developer history, honeypot simulation. Cross-references multiple databases for comprehensive coverage.', icon: Shield },
+                { title: 'Token Safety Scanner', desc: 'Enter any contract address. Receive instant Trust Score (0-100) powered by GoPlus Security API: contract verification, liquidity lock, holder distribution, buy/sell tax, developer history, honeypot simulation. Cross-references multiple databases for comprehensive coverage.', icon: Shield },
                 { title: 'Contract Analyzer', desc: 'Paste any contract. VTX AI analyzes the ABI and bytecode, explains what the contract does in plain English. Flags owner functions, pause mechanisms, mint authority, blacklist functions, and hidden fee structures.', icon: Code },
                 { title: 'Rug Detector', desc: 'Full deployer timeline, serial rugger identification with pattern matching, liquidity removal behavior analysis, historical success/failure rates, honeypot simulation. Community-powered reporting system.', icon: AlertTriangle },
                 { title: 'Phishing Detector', desc: 'Domain age verification, registration info, cross-reference against known scam databases, community reports, SSL certificate analysis. Clear SAFE/SUSPICIOUS/PHISHING verdict with confidence score.', icon: Lock },
-                { title: 'Wallet Approval Manager', desc: 'See every token approval ever granted. Risk-rated by amount and contract trust score. One-click revoke. Bulk revoke dangerous approvals instantly. Automatic alerts for unlimited approvals.', icon: Eye },
+                { title: 'Approval Manager', desc: 'See every token approval ever granted from your wallet. Risk-rated by amount and contract trust score. One-click revoke. Bulk revoke dangerous approvals instantly. Automatic alerts for unlimited approvals.', icon: Eye },
                 { title: 'MEV Protection', desc: 'Toggle ON to block sandwich attacks. Shows attacks blocked and USD saved in real time. Private RPC routing and gas optimization. Frontrunning detection and prevention.', icon: Shield },
               ].map(item => (
                 <div key={item.title} className="glass rounded-xl p-4 border border-white/[0.06]">
@@ -508,7 +511,7 @@ export default function WhitepaperPage() {
                   <p className="text-xs font-heading font-bold text-white mb-3">Supported Chains</p>
                   <p className="text-[11px] text-gray-400">Solana, Ethereum, BNB Chain, Polygon, Avalanche, Base, Arbitrum, Optimism, Fantom, Bitcoin, Tron, and all EVM-compatible chains.</p>
                   <div className="mt-3 space-y-1">
-                    {['Best price routing across all DEXs', 'Token Safety Scanner before every swap', 'Smart slippage based on volatility', 'Gas cost estimation & optimization', 'Price impact warnings', 'Transparent 0.1-0.3% fee', 'MEV protection toggle', 'Transaction history'].map(f => (
+                    {['Best price routing across all DEXs', 'Token Safety Scanner before every swap', 'Smart slippage based on volatility', 'Gas cost estimation & optimization', 'Price impact warnings', 'Transparent 0.2% platform fee', 'MEV protection toggle', 'Transaction history'].map(f => (
                       <div key={f} className="flex items-center gap-2 text-[11px] text-gray-400">
                         <CheckCircle className="w-3 h-3 text-[#10B981] flex-shrink-0" />
                         {f}
@@ -768,7 +771,7 @@ export default function WhitepaperPage() {
               {[
                 { title: 'Premium Subscriptions', desc: 'Free tier covers basic access. Pro ($4/mo) unlocks full wallet intelligence, all security tools, unlimited alerts, advanced VTX AI with web search, and Trading DNA Analyzer. Premium ($15/mo) adds API access and institutional features.', revenue: '~60% of revenue' },
                 { title: 'Project Listing Fees', desc: 'Verified projects pay to be discovered. Every submission goes through automated rug check first — only approved projects get listed. Includes featured placement and verified badge.', revenue: '~10% of revenue' },
-                { title: 'Swap Fees', desc: 'Transparent 0.1–0.3% fee on every swap. Volume-based revenue that scales with platform adoption. Best price routing ensures users still get optimal execution.', revenue: '~15% of revenue' },
+                { title: 'Swap Fees', desc: 'Transparent 0.2% platform fee on every swap. Volume-based revenue that scales with platform adoption. Best price routing ensures users still get optimal execution.', revenue: '~15% of revenue' },
                 { title: 'Launchpad Fees', desc: '2–3% platform fee on capital raised through the milestone-gated launchpad. Only charged on funded raises. Aligned with builder success.', revenue: '~10% of revenue' },
                 { title: 'API Access', desc: 'Enterprise-grade data access for funds, protocols, and institutions. Custom feeds and white-label intelligence. Usage-based pricing.', revenue: '~5% of revenue' },
               ].map(item => (
@@ -817,7 +820,7 @@ export default function WhitepaperPage() {
                 {
                   phase: 'Phase 1 &mdash; Foundation (Complete)',
                   color: '#10B981',
-                  items: ['Context Feed with multi-chain support', 'VTX AI Engine integration', 'Security Center (6 tools)', 'Portfolio Tracker', 'Multi-Chain Swap', 'Trading DNA Analyzer', 'Wallet Intelligence', 'Builder Network & Funding Portal', 'Prediction Markets', 'Project Discovery with real data'],
+                  items: ['Context Feed with multi-chain support', 'VTX AI Engine (25 free msgs/day)', 'Security Center with GoPlus Security API', 'Portfolio Tracker', 'Multi-Chain Swap (0.2% fee)', 'Trading DNA Analyzer', 'Wallet Intelligence', 'Sniper Bot', 'Network Graph', 'Contract Analyzer', 'Approval Manager', 'Builder Network & Funding Portal', 'Prediction Markets', 'Project Discovery with real data'],
                 },
                 {
                   phase: 'Phase 2 &mdash; Growth (In Progress)',
