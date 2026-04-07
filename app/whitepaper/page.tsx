@@ -286,7 +286,7 @@ export default function WhitepaperPage() {
             <h3 className="text-base font-heading font-bold text-white mt-6 mb-3">Live on the Platform</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <FeatureBox icon={Zap} title="Real-Time Context Feed" desc="AI-curated on-chain intelligence stream. Every event tagged BULLISH, HYPE, BEAR, or NEUTRAL with Trust Score. Bookmarks, history, and multi-chain filters." />
-              <FeatureBox icon={Brain} title="VTX AI Engine" desc="Ask anything. Get live data-backed answers in seconds. Your personal on-chain analyst powered by Anthropic Claude. Free and Pro tiers with web search." />
+              <FeatureBox icon={Brain} title="VTX AI Engine" desc="Ask anything. Get live data-backed answers in seconds. Your personal on-chain analyst powered by a proprietary AI engine. Free and Pro tiers with web search." />
               <FeatureBox icon={TrendingUp} title="Trading DNA Analyzer" desc="Drop any wallet and decode its complete behavioral and performance profile. Full Alpha Intelligence Report with win rates, P&L, and behavioral archetype." />
               <FeatureBox icon={Globe} title="Wallet Intelligence" desc="Every active wallet classified: Whales, Smart Money, Retail, Bots, Dormant. Follow any cluster in real time. Deep wallet relationship mapping." />
               <FeatureBox icon={Users} title="Smart Money Watchlist" desc="Curated feed of the consistently highest-performing on-chain wallets. Full transaction fingerprints and copy trading capability." />
@@ -365,7 +365,7 @@ export default function WhitepaperPage() {
           </Section>
 
           <Section id="vtx-ai" number="07" title="VTX AI Engine">
-            <p>VTX AI is the brain of STEINZ &mdash; a proprietary intelligence engine powered by Anthropic Claude for deep reasoning that continuously scans, classifies, and narrativizes on-chain events. This is not a chatbot bolted onto a dashboard. It is the core reasoning layer running everything.</p>
+            <p>VTX AI is the brain of STEINZ &mdash; a proprietary intelligence engine built for deep reasoning that continuously scans, classifies, and narrativizes on-chain events. This is not a chatbot bolted onto a dashboard. It is the core reasoning layer running everything.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               <div className="glass rounded-xl p-4 border border-white/[0.06]">

@@ -184,7 +184,7 @@ function classifyWallet(holdings: any[], totalBalance: number, txCount: number):
   return 'CONSERVATIVE';
 }
 
-async function callClaudeForAnalysis(walletAddress: string, chain: string, holdings: any[], stats: any, totalBalance: number): Promise<any> {
+async function callAIForAnalysis(walletAddress: string, chain: string, holdings: any[], stats: any, totalBalance: number): Promise<any> {
   const holdingsText = holdings && holdings.length > 0
     ? holdings.slice(0, 15).map((h: any) => `${h.symbol}: ${h.balance} ($${h.valueUsd || '?'})`).join(', ')
     : 'No holdings detected';
@@ -261,7 +261,7 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
     }
     return parsed;
   } catch (err) {
-    console.error('Claude AI error:', err);
+    console.error('AI analysis error:', err);
     return null;
   }
 }
@@ -507,8 +507,8 @@ export async function GET(request: Request) {
     // Risk classification from holdings+stats
     const riskClass = classifyWallet(holdings, totalBalance, stats.txCount);
 
-    // Call Claude for AI analysis
-    const aiAnalysis = await callClaudeForAnalysis(
+    // Call AI for analysis
+    const aiAnalysis = await callAIForAnalysis(
       address,
       chain === 'EVM' ? 'Ethereum' : 'Solana',
       holdings,
