@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap,
   BarChart3, AlertTriangle, CheckCircle, RotateCcw, FileCode2, ArrowRight,
-  Copy, Bell, Map, Search, Users, Activity
+  Copy, Bell, Map, Search, Users, Activity, ThumbsUp, ThumbsDown, ExternalLink,
+  Award, TrendingDown, Clock, Hash
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
@@ -57,6 +58,27 @@ interface AIAnalysis {
   };
 }
 
+interface RecentTx {
+  hash: string;
+  type: string;
+  asset: string;
+  amount: string;
+  from: string;
+  to: string;
+  blockTime: string | null;
+}
+
+interface TrendingCoin {
+  symbol: string;
+  name: string;
+  address: string;
+  price: string;
+  change24h: number;
+  chain: string;
+  imageUri?: string;
+  dexUrl?: string;
+}
+
 interface DNAData {
   address: string;
   chain: string;
@@ -71,6 +93,7 @@ interface DNAData {
   partnerWallets: PartnerWallet[];
   riskClassification: string;
   aiAnalysis: AIAnalysis | null;
+  recentTransactions: RecentTx[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -275,6 +298,34 @@ export default function DNAAnalyzerPage() {
   const [dna, setDna] = useState<DNAData | null>(null);
   const [isContractAddress, setIsContractAddress] = useState(false);
   const [contractAddress, setContractAddress] = useState('');
+  const [trendingCoins, setTrendingCoins] = useState<TrendingCoin[]>([]);
+  const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
+  const [copiedCA, setCopiedCA] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dna) return;
+    // Fetch trending coins from DexScreener for coin recommendations
+    const chain = dna.chain.toLowerCase().includes('sol') ? 'solana' : 'ethereum';
+    fetch(`https://api.dexscreener.com/latest/dex/search?q=${chain}`)
+      .then(r => r.json())
+      .then(d => {
+        const pairs = (d.pairs || [])
+          .filter((p: any) => p.chainId === chain && p.priceUsd && p.volume?.h24 > 10000)
+          .slice(0, 6)
+          .map((p: any): TrendingCoin => ({
+            symbol: p.baseToken?.symbol || '???',
+            name: p.baseToken?.name || 'Unknown',
+            address: p.baseToken?.address || '',
+            price: p.priceUsd || '0',
+            change24h: p.priceChange?.h24 || 0,
+            chain: p.chainId,
+            imageUri: p.info?.imageUrl,
+            dexUrl: p.url,
+          }));
+        setTrendingCoins(pairs);
+      })
+      .catch(() => {});
+  }, [dna]);
 
   // ── contract check
   const checkIfContract = async (address: string): Promise<boolean> => {
@@ -777,23 +828,137 @@ export default function DNAAnalyzerPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
-                    <span className="font-bold text-sm">Recommendations</span>
+                    <span className="font-bold text-sm">AI Recommendations</span>
                   </div>
                   <div className="space-y-2">
                     {dna.aiAnalysis.recommendations.map((r, i) => (
-                      <div key={i} className="flex items-start gap-3 text-sm text-gray-300 py-2 border-b border-white/5 last:border-0">
+                      <div key={i} className="flex items-start gap-3 text-sm text-gray-300 py-2.5 border-b border-white/5 last:border-0">
                         <span className="w-5 h-5 bg-[#7C3AED]/20 rounded flex items-center justify-center text-[10px] font-bold text-[#7C3AED] flex-shrink-0 mt-0.5">{i + 1}</span>
-                        {r}
+                        <span className="flex-1">{r}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => setFeedback(prev => ({ ...prev, [i]: prev[i] === 'up' ? undefined as any : 'up' }))}
+                            className={`p-1 rounded transition-colors ${feedback[i] === 'up' ? 'text-[#10B981]' : 'text-gray-600 hover:text-gray-400'}`}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => setFeedback(prev => ({ ...prev, [i]: prev[i] === 'down' ? undefined as any : 'down' }))}
+                            className={`p-1 rounded transition-colors ${feedback[i] === 'down' ? 'text-[#EF4444]' : 'text-gray-600 hover:text-gray-400'}`}
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* coins worth watching */}
+                {trendingCoins.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Award className="w-4 h-4 text-[#F59E0B]" />
+                      <span className="font-bold text-sm">Coins Worth Watching</span>
+                      <span className="text-[10px] text-gray-600 ml-auto">Based on your chain activity</span>
+                    </div>
+                    <div className="space-y-2">
+                      {trendingCoins.map((coin, i) => {
+                        const isPos = coin.change24h >= 0;
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#0A1EFF]/30 transition-all">
+                            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+                              {coin.imageUri
+                                ? <img src={coin.imageUri} alt={coin.symbol} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0, 2)}</span>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-white">{coin.name}</div>
+                              <div className="text-[10px] text-gray-500">${parseFloat(coin.price) < 0.001 ? parseFloat(coin.price).toFixed(8) : parseFloat(coin.price).toFixed(4)}</div>
+                            </div>
+                            <div className={`text-xs font-bold flex items-center gap-0.5 flex-shrink-0 ${isPos ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                              {isPos ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                              {isPos ? '+' : ''}{coin.change24h.toFixed(2)}%
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(coin.address).catch(() => {}); setCopiedCA(coin.address); setTimeout(() => setCopiedCA(null), 1500); }}
+                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                                title="Copy CA"
+                              >
+                                {copiedCA === coin.address
+                                  ? <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
+                                  : <Copy className="w-3.5 h-3.5 text-gray-400" />
+                                }
+                              </button>
+                              {coin.dexUrl && (
+                                <a href={coin.dexUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                                  <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-gray-600 mt-2 text-center">DYOR / NFA — Always verify before investing</p>
+                  </div>
+                )}
 
                 {/* market outlook */}
                 {dna.aiAnalysis.marketOutlook && (
                   <div className="bg-white/5 rounded-lg p-3">
                     <div className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Market Outlook</div>
                     <p className="text-sm text-gray-300">{dna.aiAnalysis.marketOutlook}</p>
+                  </div>
+                )}
+
+                {/* recent transactions */}
+                {dna.recentTransactions && dna.recentTransactions.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-[#0A1EFF]" />
+                      <span className="font-bold text-sm">Recent Transactions</span>
+                      <span className="ml-auto text-[10px] text-gray-600">{dna.recentTransactions.length} shown</span>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+                      {dna.recentTransactions.slice(0, 20).map((tx, i) => {
+                        const isOut = tx.from?.toLowerCase() === dna.address.toLowerCase();
+                        const timeStr = tx.blockTime ? new Date(tx.blockTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+                        const typeColor = tx.type === 'erc20' || tx.type === 'transfer' ? '#0A1EFF' : tx.type === 'external' ? '#F59E0B' : '#6B7280';
+                        return (
+                          <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
+                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOut ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-white">{isOut ? 'Sent' : 'Received'}</span>
+                                <span className="text-[10px] px-1 py-0.5 rounded" style={{ backgroundColor: `${typeColor}20`, color: typeColor }}>
+                                  {tx.asset || 'SOL'}
+                                </span>
+                              </div>
+                              <div className="text-[9px] text-gray-600 font-mono truncate">
+                                {isOut ? `→ ${tx.to?.slice(0, 8)}...${tx.to?.slice(-4)}` : `← ${tx.from?.slice(0, 8)}...${tx.from?.slice(-4)}`}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-[11px] font-mono font-semibold text-white">{tx.amount !== '—' ? tx.amount : ''}</div>
+                              <div className="text-[9px] text-gray-600">{timeStr}</div>
+                            </div>
+                            {tx.hash && (
+                              <a
+                                href={dna.chain === 'Solana' ? `https://solscan.io/tx/${tx.hash}` : `https://etherscan.io/tx/${tx.hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+                              >
+                                <Hash className="w-3 h-3 text-gray-600 hover:text-gray-400" />
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
