@@ -137,6 +137,45 @@ async function fetchBonk(): Promise<DexToken[]> {
   }
 }
 
+async function fetchFourMeme(): Promise<DexToken[]> {
+  // FourMeme is BSC-native. Use DexScreener to find new BSC token pairs.
+  try {
+    const res = await fetch(
+      'https://api.dexscreener.com/latest/dex/search?q=bsc new',
+      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
+    );
+    if (!res.ok) throw new Error(`DexScreener BSC ${res.status}`);
+    const data = await res.json();
+    return (data.pairs ?? [])
+      .filter((p: any) => p.chainId === 'bsc')
+      .slice(0, 50)
+      .map(normaliseDexPair);
+  } catch {
+    // Fallback: get latest from BSC chain
+    const all = await fetchDexScreenerLatest();
+    return all.filter(t => t.chain === 'bsc').slice(0, 30);
+  }
+}
+
+async function fetchRaydium(): Promise<DexToken[]> {
+  // Raydium = Solana DEX. Search for Raydium pairs on DexScreener.
+  try {
+    const res = await fetch(
+      'https://api.dexscreener.com/latest/dex/search?q=raydium',
+      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
+    );
+    if (!res.ok) throw new Error(`DexScreener Raydium ${res.status}`);
+    const data = await res.json();
+    return (data.pairs ?? [])
+      .filter((p: any) => p.chainId === 'solana' && p.dexId === 'raydium')
+      .slice(0, 50)
+      .map(normaliseDexPair);
+  } catch {
+    const all = await fetchDexScreenerLatest();
+    return all.filter(t => t.chain === 'solana').slice(0, 30);
+  }
+}
+
 async function fetchNewPairs(): Promise<DexToken[]> {
   return fetchDexScreenerLatest();
 }
@@ -153,6 +192,12 @@ export async function GET(req: NextRequest) {
         break;
       case 'bonk':
         tokens = await fetchBonk();
+        break;
+      case 'fourmeme':
+        tokens = await fetchFourMeme();
+        break;
+      case 'raydium':
+        tokens = await fetchRaydium();
         break;
       case 'new':
         tokens = await fetchNewPairs();
