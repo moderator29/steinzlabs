@@ -205,9 +205,9 @@ function AnimatedCounter({ value, label }: { value: string; label: string }) {
   }, [value, isAnimatable, numericStr, target, prefix, suffix]);
 
   return (
-    <div ref={ref} className="text-center p-4 rounded-xl border border-purple-500/10 bg-purple-500/5 hover:border-purple-500/30 transition-all duration-300 group"
-      style={{ boxShadow: '0 0 20px rgba(124,58,237,0.05)' }}>
-      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-purple-300 transition-colors">
+    <div ref={ref} className="text-center p-4 rounded-xl border border-[#0A1EFF]/10 bg-[#0A1EFF]/5 hover:border-[#0A1EFF]/30 transition-all duration-300 group"
+      style={{ boxShadow: '0 0 20px rgba(10,30,255,0.05)' }}>
+      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-[#4d6aff] transition-colors">
         {display}
       </div>
       <div className="text-[11px] text-gray-500 uppercase tracking-wider mt-1">{label}</div>
@@ -480,7 +480,7 @@ export default function LandingPage() {
       >
         <div className="max-w-5xl mx-auto">
           <div className={`text-center mb-16 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>Platform</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Platform</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Built for serious analysts
             </h2>
@@ -497,9 +497,9 @@ export default function LandingPage() {
                 animate={visibleSections.has('features') ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <Card3D
-                  className="rounded-xl border border-purple-500/10 bg-gray-900/60 p-6 sm:p-8 hover:border-purple-500/25 transition-colors duration-300 group h-full"
-                  glowColor={category.accent}
+                <div
+                  className="rounded-xl border border-[#0A1EFF]/10 bg-gray-900/60 p-6 sm:p-8 hover:border-[#0A1EFF]/25 transition-colors duration-300 group h-full"
+                  style={{ boxShadow: '0 4px 24px rgba(10,30,255,0.04)' }}
                 >
                   <div
                     className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
@@ -532,7 +532,7 @@ export default function LandingPage() {
                       );
                     })}
                   </div>
-                </Card3D>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -606,7 +606,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('pricing') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#06b6d4' }}>Plans</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Plans</p>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
               Unlock the full intelligence layer
             </h2>
@@ -621,7 +621,7 @@ export default function LandingPage() {
                 tier: "Free",
                 price: "$0",
                 desc: "Get started with core features",
-                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (15 msgs/day)"],
+                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (25 msgs/day)"],
                 accent: "#6B7280",
                 cta: "Start Free",
                 link: "/signup",
@@ -631,7 +631,7 @@ export default function LandingPage() {
                 price: "$19/mo",
                 desc: "Full intelligence suite unlocked",
                 perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
-                accent: "#7c3aed",
+                accent: "#0A1EFF",
                 cta: "Coming Soon",
                 featured: true,
                 link: "#",
@@ -646,15 +646,14 @@ export default function LandingPage() {
                 link: "#",
               },
             ].map((plan) => (
-              <Card3D
+              <div
                 key={plan.tier}
-                glowColor={plan.accent}
-                className={`rounded-xl border p-6 ${plan.featured ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
-                style={plan.featured ? { boxShadow: '0 0 40px rgba(124,58,237,0.15), 0 0 0 1px rgba(124,58,237,0.1)' } as React.CSSProperties : {}}
+                className={`rounded-xl border p-6 ${plan.featured ? 'border-[#0A1EFF]/30 bg-[#0A1EFF]/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
+                style={plan.featured ? { boxShadow: '0 0 40px rgba(10,30,255,0.15), 0 0 0 1px rgba(10,30,255,0.1)' } : {}}
               >
                 {plan.featured && (
                   <div className="text-[10px] font-bold uppercase tracking-widest mb-3"
-                    style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    style={{ background: 'linear-gradient(135deg, #0A1EFF, #4d6aff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Most Popular
                   </div>
                 )}
@@ -672,13 +671,13 @@ export default function LandingPage() {
                 <Link href={plan.link}>
                   <button
                     className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.featured ? { background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white', boxShadow: '0 0 20px rgba(124,58,237,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
+                    style={plan.featured ? { background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', color: 'white', boxShadow: '0 0 20px rgba(10,30,255,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
                     disabled={plan.cta === 'Coming Soon'}
                   >
                     {plan.cta}
                   </button>
                 </Link>
-              </Card3D>
+              </div>
             ))}
           </div>
         </div>
@@ -693,7 +692,7 @@ export default function LandingPage() {
       >
         <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#7c3aed' }}>FAQ</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>FAQ</p>
             <h2 className="text-2xl md:text-3xl font-heading font-bold">
               Frequently asked questions
             </h2>
@@ -705,10 +704,10 @@ export default function LandingPage() {
                 key={index}
                 className={`rounded-xl border transition-all duration-300 ${
                   openFAQ === index
-                    ? 'border-purple-500/25 bg-purple-500/[0.04]'
-                    : 'border-white/[0.06] hover:border-purple-500/15'
+                    ? 'border-[#0A1EFF]/25 bg-[#0A1EFF]/[0.04]'
+                    : 'border-white/[0.06] hover:border-[#0A1EFF]/15'
                 }`}
-                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(124,58,237,0.08)' } : {}}
+                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(10,30,255,0.08)' } : {}}
               >
                 <button
                   onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
