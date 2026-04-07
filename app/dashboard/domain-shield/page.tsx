@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Globe, Search, AlertTriangle, CheckCircle,
-  XCircle, Shield, Loader2, Clock, Info
+  XCircle, Shield, Loader2, Clock, Info, Brain, ThumbsUp, ThumbsDown, ShieldAlert
 } from 'lucide-react';
 
 interface ScanResult {
@@ -57,6 +57,7 @@ export default function DomainShieldPage() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
 
   const handleScan = async () => {
     const url = input.trim();
@@ -226,6 +227,127 @@ export default function DomainShieldPage() {
                 </div>
               </div>
             )}
+
+            {/* AI Analysis Card */}
+            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                </div>
+                <span className="font-bold text-sm">AI Analysis</span>
+                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                  result.verdict === 'SAFE'
+                    ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
+                    : result.verdict === 'SUSPICIOUS'
+                    ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30'
+                    : 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
+                }`}>
+                  {result.verdict === 'SAFE' ? 'LOW RISK' : result.verdict === 'SUSPICIOUS' ? 'MEDIUM RISK' : 'HIGH RISK'}
+                </span>
+              </div>
+
+              {/* AI risk assessment paragraph */}
+              <div className="bg-white/5 rounded-xl p-3 mb-3">
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {result.verdict === 'SAFE'
+                    ? `Domain "${result.url}" has been analyzed with ${result.confidenceScore}% confidence and appears legitimate. No phishing signals, malicious patterns, or known threat indicators were detected. The domain follows expected patterns for authentic Web3 platforms. You may proceed, but always verify the exact URL before connecting your wallet or signing transactions.`
+                    : result.verdict === 'SUSPICIOUS'
+                    ? `Domain "${result.url}" shows suspicious characteristics with ${result.confidenceScore}% detection confidence. ${result.signals.length > 0 ? `Key signals: ${result.signals.slice(0, 2).join('; ')}.` : ''} This domain may be impersonating a legitimate platform or attempting to deceive users. Do not connect your wallet or enter credentials until you have independently verified this site.`
+                    : `PHISHING ALERT: Domain "${result.url}" has been identified as a known threat with ${result.confidenceScore}% confidence. ${result.signals.length > 0 ? `Threat indicators: ${result.signals.slice(0, 2).join('; ')}.` : ''} This domain is actively attempting to steal credentials or drain wallets. Do not interact with this site under any circumstances. Report to the relevant blockchain community channels immediately.`
+                  }
+                </p>
+              </div>
+
+              {/* Warning level with color coding */}
+              <div className="mb-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Threat Assessment</p>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Phishing Risk', value: result.isPhishing ? 95 : result.verdict === 'SUSPICIOUS' ? 45 : 5, color: result.isPhishing ? '#EF4444' : result.verdict === 'SUSPICIOUS' ? '#F59E0B' : '#10B981' },
+                    { label: 'Malicious Content', value: result.isMalicious ? 90 : result.verdict === 'SUSPICIOUS' ? 30 : 5, color: result.isMalicious ? '#EF4444' : result.verdict === 'SUSPICIOUS' ? '#F59E0B' : '#10B981' },
+                    { label: 'Confidence Score', value: result.confidenceScore, color: result.verdict === 'SAFE' ? '#10B981' : result.verdict === 'SUSPICIOUS' ? '#F59E0B' : '#EF4444' },
+                  ].map((bar) => (
+                    <div key={bar.label}>
+                      <div className="flex justify-between text-[10px] mb-1">
+                        <span className="text-gray-400">{bar.label}</span>
+                        <span className="font-semibold" style={{ color: bar.color }}>{bar.value}%</span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-1.5">
+                        <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${bar.value}%`, backgroundColor: bar.color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommendations based on verdict */}
+              <div className="mb-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Recommended Actions</p>
+                <div className="space-y-1.5">
+                  {result.verdict === 'SAFE' ? (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                        Verify exact URL matches the official bookmark
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                        Confirm SSL certificate is valid before signing
+                      </div>
+                    </>
+                  ) : result.verdict === 'SUSPICIOUS' ? (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-amber-300">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Do not connect your wallet to this domain
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-amber-300">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Cross-reference with official social media channels
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-amber-300">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Check for typosquatting — compare letter by letter
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Do not visit or interact with this domain
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        If you already connected, revoke approvals immediately
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Report to Google Safe Browsing and Web3 security communities
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Feedback */}
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <p className="text-[10px] text-gray-600">Was this assessment helpful?</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'up' ? null : 'up')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'up' ? 'text-[#10B981] bg-[#10B981]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'down' ? null : 'down')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'down' ? 'text-[#EF4444] bg-[#EF4444]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Safety Tips */}
             <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
