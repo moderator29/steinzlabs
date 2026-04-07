@@ -206,9 +206,11 @@ export default function NetworkGraphPage() {
         <div className="text-[10px] text-gray-500">Edges {filteredEdges.length}</div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel */}
-        <div className="w-52 flex-shrink-0 border-r border-white/[0.06] p-3 flex flex-col gap-3 overflow-y-auto bg-[#060A12]">
+      {/* Mobile: stack vertically, Desktop: side-by-side */}
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* Left panel - hidden on mobile unless toggled */}
+        <div className="lg:w-52 w-full flex-shrink-0 lg:border-r border-b lg:border-b-0 border-white/[0.06] p-3 flex flex-col lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto bg-[#060A12] lg:max-h-none max-h-32">
+          <div className="flex lg:flex-col flex-row gap-3 min-w-max lg:min-w-0">
           <div>
             <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Network Overview</p>
             {[
@@ -250,10 +252,11 @@ export default function NetworkGraphPage() {
               ))}
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Graph area */}
-        <div className="flex-1 relative overflow-hidden">
+        {/* Graph area - full width on mobile, flex-1 on desktop */}
+        <div className="flex-1 relative overflow-hidden" style={{ minHeight: '60vh' }}>
           <svg
             ref={svgRef}
             className="w-full h-full"
@@ -368,8 +371,8 @@ export default function NetworkGraphPage() {
           </svg>
         </div>
 
-        {/* Right legend */}
-        <div className="w-40 flex-shrink-0 border-l border-white/[0.06] p-3 flex flex-col gap-2 bg-[#060A12]">
+        {/* Right legend - hidden on mobile */}
+        <div className="hidden lg:flex w-40 flex-shrink-0 border-l border-white/[0.06] p-3 flex-col gap-2 bg-[#060A12]">
           <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Legend</p>
           {LEGEND_ITEMS.map(({ type, label, color }) => (
             <div key={type} className="flex items-center gap-2">

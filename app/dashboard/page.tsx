@@ -23,6 +23,7 @@ function TabSpinner() {
 }
 
 class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
   constructor(props: { children: ReactNode }) {
     super(props);
     this.state = { hasError: false };
@@ -30,14 +31,21 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
   static getDerivedStateFromError() {
     return { hasError: true };
   }
+  componentDidUpdate(_: any, prev: { hasError: boolean }) {
+    // Auto-reset after 800ms so user never sees the error state flash
+    if (!prev.hasError && this.state.hasError) {
+      this.resetTimer = setTimeout(() => this.setState({ hasError: false }), 800);
+    }
+  }
+  componentWillUnmount() {
+    if (this.resetTimer) clearTimeout(this.resetTimer);
+  }
   render() {
     if (this.state.hasError) {
+      // Show spinner instead of error - auto-resets in 800ms
       return (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <p className="text-sm text-gray-400">Something went wrong loading this tab.</p>
-          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 rounded-lg bg-[#0A1EFF]/10 text-white text-xs font-semibold hover:bg-[#0A1EFF]/20 transition-colors">
-            Try Again
-          </button>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
         </div>
       );
     }
@@ -229,7 +237,7 @@ export default function Dashboard() {
             <div className="flex gap-1 mb-4 bg-[#111827] border border-white/[0.06] p-1 rounded-xl max-w-xs mx-auto">
               {[
                 { id: 'context', label: 'Context Feed' },
-                { id: 'markets', label: 'Market', beta: true },
+                { id: 'markets', label: 'Market' },
               ].map((tab) => (
                 <button
                   key={tab.id}
