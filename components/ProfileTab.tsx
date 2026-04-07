@@ -36,7 +36,7 @@ interface ChatMessage {
   timestamp: number;
 }
 
-type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security';
+type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security' | 'edit-profile';
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
@@ -337,6 +337,100 @@ export default function ProfileTab() {
     } catch {} finally { setPrivacySaving(false); }
   };
 
+  // Profile photo + cover photo + username edit state
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // Load saved avatar/cover from user metadata or localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('steinz_avatar_url');
+      if (saved) setAvatarUrl(saved);
+      const savedCover = localStorage.getItem('steinz_cover_url');
+      if (savedCover) setCoverUrl(savedCover);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setEditUsername(user.username || '');
+      setEditFirstName(user.first_name || '');
+      setEditLastName(user.last_name || '');
+    }
+  }, [user]);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setEditError('Image must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setAvatarUrl(url);
+      try { localStorage.setItem('steinz_avatar_url', url); } catch {}
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { setEditError('Cover image must be under 4MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setCoverUrl(url);
+      try { localStorage.setItem('steinz_cover_url', url); } catch {}
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!supabase || !user?.id) { setEditError('You must be signed in to update profile'); return; }
+    if (!editUsername.trim()) { setEditError('Username cannot be empty'); return; }
+    if (editUsername.trim().length < 3) { setEditError('Username must be at least 3 characters'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(editUsername.trim())) { setEditError('Username can only contain letters, numbers and underscores'); return; }
+    setEditLoading(true);
+    setEditError('');
+    setEditSuccess('');
+    try {
+      // Check if username is taken by someone else
+      if (editUsername.trim() !== user.username) {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', editUsername.trim())
+          .neq('id', user.id)
+          .single();
+        if (existing) { setEditError('Username already taken'); setEditLoading(false); return; }
+      }
+      // Update profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: editUsername.trim(),
+          first_name: editFirstName.trim(),
+          last_name: editLastName.trim(),
+        })
+        .eq('id', user.id);
+      if (error) throw error;
+      setEditSuccess('Profile updated successfully!');
+      setTimeout(() => { setEditSuccess(''); setSubPage(null); }, 1500);
+    } catch (e: any) {
+      setEditError(e.message || 'Failed to update profile');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const handlePasswordChange = async () => {
     if (pwdNew.length < 8) { setPwdError('New password must be at least 8 characters'); return; }
     if (pwdNew !== pwdConfirm) { setPwdError('Passwords do not match'); return; }
@@ -506,6 +600,134 @@ export default function ProfileTab() {
         <div className="mt-4 glass rounded-lg p-3 border border-[#0A1EFF]/20 bg-[#0A1EFF]/5">
           <p className="text-[11px] text-[#0A1EFF]">Your account is protected with industry-standard encryption. Enable two-factor authentication for maximum security.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (subPage === 'edit-profile') {
+    return (
+      <div>
+        <button onClick={() => setSubPage(null)} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Profile
+        </button>
+        <h2 className="text-lg font-heading font-bold mb-1">Edit Profile</h2>
+        <p className="text-xs text-gray-500 mb-4">Update your profile information and photos.</p>
+
+        {/* Cover Photo */}
+        <div className="mb-4">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Cover Photo</p>
+          <div
+            className="relative h-28 w-full rounded-xl overflow-hidden cursor-pointer group border border-white/10"
+            style={{
+              background: coverUrl
+                ? `url(${coverUrl}) center/cover no-repeat`
+                : 'linear-gradient(135deg, #0A1EFF15 0%, #7C3AED20 100%)',
+            }}
+            onClick={() => coverInputRef.current?.click()}
+          >
+            <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+              <div className="flex items-center gap-2 bg-black/60 px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <Eye className="w-3.5 h-3.5 text-white" />
+                <span className="text-xs text-white font-semibold">{coverUrl ? 'Change Cover' : 'Upload Cover'}</span>
+              </div>
+            </div>
+          </div>
+          {coverUrl && (
+            <button
+              onClick={() => { setCoverUrl(''); try { localStorage.removeItem('steinz_cover_url'); } catch {} }}
+              className="mt-1.5 text-[10px] text-[#EF4444] hover:text-[#EF4444]/80 transition-colors"
+            >
+              Remove cover photo
+            </button>
+          )}
+        </div>
+
+        {/* Avatar */}
+        <div className="mb-5">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Profile Photo</p>
+          <div className="flex items-center gap-4">
+            <div
+              className="relative w-20 h-20 rounded-full border-2 border-white/10 cursor-pointer group flex-shrink-0"
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                  <User className="w-9 h-9 text-[#0A1EFF]" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-full transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <Eye className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="block mb-1.5 px-3 py-1.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded-lg text-[11px] font-semibold text-[#0A1EFF] hover:bg-[#0A1EFF]/25 transition-colors"
+              >
+                Upload Photo
+              </button>
+              {avatarUrl && (
+                <button
+                  onClick={() => { setAvatarUrl(''); try { localStorage.removeItem('steinz_avatar_url'); } catch {} }}
+                  className="text-[10px] text-[#EF4444] hover:text-[#EF4444]/80 transition-colors"
+                >
+                  Remove photo
+                </button>
+              )}
+              <p className="text-[9px] text-gray-600 mt-1">JPG, PNG or GIF. Max 2MB</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Edit Fields */}
+        <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
+          <div className="px-3 py-3 border-b border-white/5">
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
+            <input
+              type="text"
+              value={editUsername}
+              onChange={(e) => { setEditUsername(e.target.value); setEditError(''); }}
+              placeholder="username"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+            />
+            <p className="text-[9px] text-gray-600 mt-1">Letters, numbers and underscores only</p>
+          </div>
+          <div className="px-3 py-3 border-b border-white/5">
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">First Name</label>
+            <input
+              type="text"
+              value={editFirstName}
+              onChange={(e) => setEditFirstName(e.target.value)}
+              placeholder="First name"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+            />
+          </div>
+          <div className="px-3 py-3">
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Last Name</label>
+            <input
+              type="text"
+              value={editLastName}
+              onChange={(e) => setEditLastName(e.target.value)}
+              placeholder="Last name"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+            />
+          </div>
+        </div>
+
+        {editError && <p className="text-[11px] text-[#EF4444] mb-3">{editError}</p>}
+        {editSuccess && <p className="text-[11px] text-[#10B981] mb-3">{editSuccess}</p>}
+
+        <button
+          onClick={handleSaveProfile}
+          disabled={editLoading}
+          className="w-full py-3 bg-[#0A1EFF] rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#0A1EFF]/90 transition-colors"
+        >
+          {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Changes'}
+        </button>
       </div>
     );
   }
@@ -858,25 +1080,85 @@ export default function ProfileTab() {
         )}
       </div>
 
-      <div className="flex flex-col items-center mb-6">
-        <div className="w-20 h-20 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border-2 border-white/10">
-          <User className="w-10 h-10 text-[#0A1EFF]" />
+      {/* Profile Card with Cover + Avatar */}
+      <div className="glass rounded-xl border border-white/10 mb-5 overflow-hidden">
+        {/* Cover Photo */}
+        <div
+          className="relative h-24 w-full flex-shrink-0 cursor-pointer group"
+          style={{
+            background: coverUrl
+              ? `url(${coverUrl}) center/cover no-repeat`
+              : 'linear-gradient(135deg, #0A1EFF15 0%, #7C3AED15 50%, #0A1EFF08 100%)',
+          }}
+          onClick={() => isConnected && coverInputRef.current?.click()}
+        >
+          <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+          {isConnected && (
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full">
+                <Eye className="w-3 h-3 text-white" />
+                <span className="text-[10px] text-white font-semibold">Change Cover</span>
+              </div>
+            </div>
+          )}
+          {!coverUrl && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-20">
+              <div className="w-6 h-[1px] bg-white mx-1" />
+              <span className="text-[9px] text-white uppercase tracking-widest">STEINZ LABS</span>
+              <div className="w-6 h-[1px] bg-white mx-1" />
+            </div>
+          )}
         </div>
-        <h2 className="text-lg font-heading font-bold">{displayName}</h2>
-        {user?.first_name && user?.username && (
-          <p className="text-xs text-gray-500 mt-0.5">{fullName}</p>
-        )}
-        <p className="text-xs text-gray-400">
-          {isConnected ? 'Free Tier' : 'Sign in to unlock features'}
-        </p>
-        {isConnected && (
-          <button
-            onClick={() => router.push('/dashboard/pricing')}
-            className="mt-2 px-4 py-1.5 bg-gradient-to-r from-[#FFD700]/20 to-[#FFA500]/20 border border-[#FFD700]/30 rounded-full text-xs text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1.5"
-          >
-            <Crown className="w-3 h-3" /> Upgrade to Pro
-          </button>
-        )}
+
+        {/* Avatar + Info */}
+        <div className="px-4 pb-4">
+          <div className="flex items-end justify-between -mt-8 mb-3">
+            {/* Avatar */}
+            <div
+              className="relative w-16 h-16 rounded-full border-2 border-[#0A0E1A] cursor-pointer group flex-shrink-0"
+              onClick={() => isConnected && avatarInputRef.current?.click()}
+            >
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                  <User className="w-7 h-7 text-[#0A1EFF]" />
+                </div>
+              )}
+              {isConnected && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-full transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <Eye className="w-3.5 h-3.5 text-white" />
+                </div>
+              )}
+            </div>
+            {/* Edit button */}
+            {isConnected && (
+              <button
+                onClick={() => setSubPage('edit-profile')}
+                className="px-3 py-1.5 border border-white/20 rounded-full text-[10px] font-semibold text-gray-300 hover:border-[#0A1EFF]/40 hover:text-white transition-all flex items-center gap-1.5"
+              >
+                <Settings className="w-3 h-3" /> Edit Profile
+              </button>
+            )}
+          </div>
+
+          <h2 className="text-base font-heading font-bold leading-tight">{displayName}</h2>
+          {user?.first_name && user?.username && (
+            <p className="text-[11px] text-gray-500 mt-0.5">{fullName}</p>
+          )}
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-[10px] text-gray-500">{isConnected ? 'Free Tier' : 'Sign in to unlock features'}</span>
+            {isConnected && (
+              <button
+                onClick={() => router.push('/dashboard/pricing')}
+                className="px-2 py-0.5 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/25 rounded-full text-[9px] text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1"
+              >
+                <Crown className="w-2.5 h-2.5" /> Upgrade
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-6">

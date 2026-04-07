@@ -6,7 +6,7 @@ import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
   Wallet, CandlestickChart, Archive, Globe, Circle, Layers, FileCode,
-  FlaskConical, BookOpen
+  FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -62,6 +62,8 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Shield, label: 'Security Center', path: '/dashboard/security' },
       { icon: Globe, label: 'Domain Shield', path: '/dashboard/domain-shield' },
       { icon: FileCode, label: 'Signature Insight', path: '/dashboard/signature-insight' },
+      { icon: FileSearch, label: 'Contract Analyzer', path: '/dashboard/contract-analyzer' },
+      { icon: CheckSquare, label: 'Approval Manager', path: '/dashboard/approval-manager' },
       { icon: Target, label: 'Risk Scanner', path: '/dashboard/risk-scanner' },
     ],
   },
@@ -70,6 +72,8 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
+      { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper', badge: 'BETA' },
+      { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },

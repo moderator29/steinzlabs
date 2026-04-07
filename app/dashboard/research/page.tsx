@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, FlaskConical, BookOpen, Tag, Calendar,
-  ChevronRight, Search, Loader2, ExternalLink
-} from 'lucide-react';
+import { Search, Tag, Calendar, ChevronRight, Loader2, BookOpen, ArrowLeft, Clock, TrendingUp, Shield, BarChart3, Layers, Globe, Zap } from 'lucide-react';
 
 interface ResearchPost {
   id: string;
@@ -21,6 +18,141 @@ interface ResearchPost {
 
 const CATEGORIES = ['All', 'DeFi', 'Security', 'Market Analysis', 'Protocols', 'On-Chain', 'General'];
 
+const CATEGORY_COLORS: Record<string, string> = {
+  DeFi: 'bg-[#0A1EFF]/15 text-[#6B7FFF]',
+  Security: 'bg-[#EF4444]/15 text-[#EF4444]',
+  'Market Analysis': 'bg-[#10B981]/15 text-[#10B981]',
+  Protocols: 'bg-[#7C3AED]/15 text-[#7C3AED]',
+  'On-Chain': 'bg-[#F59E0B]/15 text-[#F59E0B]',
+  General: 'bg-white/10 text-gray-400',
+};
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function estimateReadTime(content: string) {
+  const words = content?.split(' ')?.length || 300;
+  return Math.max(1, Math.ceil(words / 200));
+}
+
+function CategoryBadge({ category }: { category: string }) {
+  const cls = CATEGORY_COLORS[category] || 'bg-white/10 text-gray-400';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${cls}`}>
+      {category}
+    </span>
+  );
+}
+
+function ArticleCard({ post, onClick, featured }: { post: ResearchPost; onClick: () => void; featured?: boolean }) {
+  const readTime = estimateReadTime(post.content);
+
+  if (featured) {
+    return (
+      <button
+        onClick={onClick}
+        className="w-full text-left glass rounded-2xl border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-200 group"
+      >
+        {post.image_url ? (
+          <div className="h-48 w-full overflow-hidden">
+            <img src={post.image_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          </div>
+        ) : (
+          <div className="h-48 w-full bg-gradient-to-br from-[#0A1EFF]/10 to-[#7C3AED]/10 flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#0A1EFF10_0%,_transparent_70%)]" />
+            <BookOpen className="w-12 h-12 text-[#0A1EFF]/30" />
+          </div>
+        )}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[9px] font-bold text-[#0A1EFF] uppercase tracking-widest">Featured</span>
+            <span className="text-gray-600">·</span>
+            <CategoryBadge category={post.category} />
+          </div>
+          <h2 className="text-lg font-heading font-bold text-white mb-2 leading-snug group-hover:text-[#6B7FFF] transition-colors">
+            {post.title}
+          </h2>
+          <p className="text-[12px] text-gray-400 leading-relaxed mb-4 line-clamp-2">{post.summary}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[10px] text-gray-600">
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(post.published_at || post.created_at)}</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{readTime} min read</span>
+            </div>
+            <span className="text-[11px] font-semibold text-[#0A1EFF] flex items-center gap-1 group-hover:gap-2 transition-all">
+              Read <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left glass rounded-xl border border-white/[0.07] overflow-hidden hover:border-white/15 transition-all duration-200 group flex"
+    >
+      {post.image_url ? (
+        <div className="w-24 flex-shrink-0 overflow-hidden" style={{ minHeight: '90px' }}>
+          <img src={post.image_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        </div>
+      ) : (
+        <div className="w-24 flex-shrink-0 bg-gradient-to-br from-[#0A1EFF]/08 to-[#7C3AED]/08 flex items-center justify-center" style={{ minHeight: '90px' }}>
+          <BookOpen className="w-5 h-5 text-[#0A1EFF]/30" />
+        </div>
+      )}
+      <div className="flex-1 p-3.5 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <CategoryBadge category={post.category} />
+        </div>
+        <h3 className="text-[13px] font-semibold text-white leading-snug mb-1 line-clamp-2 group-hover:text-[#6B7FFF] transition-colors">
+          {post.title}
+        </h3>
+        <p className="text-[11px] text-gray-500 line-clamp-1 mb-2">{post.summary}</p>
+        <div className="flex items-center gap-3 text-[9px] text-gray-600">
+          <span className="flex items-center gap-0.5"><Calendar className="w-2.5 h-2.5" />{formatDate(post.published_at || post.created_at)}</span>
+          <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{readTime} min read</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void }) {
+  const readTime = estimateReadTime(post.content);
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back to Research
+      </button>
+      {post.image_url && (
+        <div className="h-52 w-full rounded-xl overflow-hidden mb-5 border border-white/10">
+          <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="flex items-center gap-2 mb-3">
+        <CategoryBadge category={post.category} />
+        <span className="text-[10px] text-gray-600 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(post.published_at || post.created_at)}</span>
+        <span className="text-[10px] text-gray-600 flex items-center gap-1"><Clock className="w-3 h-3" />{readTime} min read</span>
+      </div>
+      <h1 className="text-xl font-heading font-bold text-white mb-3 leading-tight">{post.title}</h1>
+      <p className="text-[13px] text-gray-400 leading-relaxed mb-5 pb-5 border-b border-white/[0.06]">{post.summary}</p>
+      <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+      {post.tags && post.tags.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Tag className="w-3 h-3 text-gray-600 flex-shrink-0" />
+            {post.tags.map(tag => (
+              <span key={tag} className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-gray-500">{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ResearchPage() {
   const router = useRouter();
   const [posts, setPosts] = useState<ResearchPost[]>([]);
@@ -34,7 +166,7 @@ export default function ResearchPage() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: '12' });
+      const params = new URLSearchParams({ page: String(page), limit: '20' });
       if (category !== 'All') params.set('category', category);
       const res = await fetch(`/api/research?${params}`);
       const data = await res.json();
@@ -51,207 +183,110 @@ export default function ResearchPage() {
 
   const filtered = posts.filter(p =>
     !search || p.title.toLowerCase().includes(search.toLowerCase()) ||
-    p.summary.toLowerCase().includes(search.toLowerCase())
+    p.summary.toLowerCase().includes(search.toLowerCase()) ||
+    (p.tags || []).some(t => t.toLowerCase().includes(search.toLowerCase()))
   );
-
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
-  });
 
   if (selected) {
     return (
-      <div className="min-h-screen bg-[#060A12] text-white pb-20">
-        <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
-          <div className="flex items-center gap-3 px-4 h-14">
-            <button onClick={() => setSelected(null)} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <span className="text-xs text-gray-500 font-mono">{selected.category}</span>
-          </div>
-        </div>
-        <div className="p-4 space-y-4 max-w-2xl mx-auto">
-          {selected.image_url && (
-            <img
-              src={selected.image_url}
-              alt={selected.title}
-              className="w-full rounded-2xl object-cover max-h-48"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          )}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-[#0A1EFF]/10 text-blue-300 border border-[#0A1EFF]/20">
-                {selected.category}
-              </span>
-              <span className="text-[10px] text-gray-600 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {formatDate(selected.published_at)}
-              </span>
-            </div>
-            <h1 className="text-xl font-bold font-heading leading-tight mb-3">{selected.title}</h1>
-            {selected.summary && (
-              <p className="text-sm text-gray-400 leading-relaxed border-l-2 border-[#0A1EFF]/30 pl-3 mb-4">{selected.summary}</p>
-            )}
-            <div className="prose prose-invert prose-sm max-w-none">
-              {selected.content.split('\n').map((line, i) => (
-                <p key={i} className={`text-sm leading-relaxed mb-2 ${line.startsWith('#') ? 'text-base font-bold text-white' : 'text-gray-400'}`}>
-                  {line.replace(/^#+\s/, '')}
-                </p>
-              ))}
-            </div>
-          </div>
-          {selected.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#1a1f2e]">
-              {selected.tags.map((tag) => (
-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-gray-500 border border-white/[0.06]">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+      <div className="min-h-screen bg-[#060A12] text-white">
+        <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
+          <ArticleView post={selected} onBack={() => setSelected(null)} />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
-        <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
-            <FlaskConical className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-heading font-bold">Research Lab</h1>
-            <p className="text-[10px] text-gray-500">Intelligence reports and analysis</p>
-          </div>
-          <span className="ml-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">NEW</span>
-        </div>
-      </div>
+  const featured = filtered[0];
+  const rest = filtered.slice(1);
 
-      <div className="p-4 space-y-4">
+  return (
+    <div className="min-h-screen bg-[#060A12] text-white">
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <ArrowLeft className="w-4 h-4 text-gray-400" />
+          </button>
+          <div>
+            <h1 className="text-xl font-heading font-bold text-white">Research Lab</h1>
+            <p className="text-[11px] text-gray-500">Intelligence reports and on-chain analysis</p>
+          </div>
+        </div>
+
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+        <div className="relative mb-5">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search research..."
-            className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl pl-9 pr-4 py-2.5 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search reports..."
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30 transition-colors"
           />
         </div>
 
-        {/* Category Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {CATEGORIES.map((cat) => (
+        {/* Category Tabs */}
+        <div className="flex gap-1.5 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+          {CATEGORIES.map(label => (
             <button
-              key={cat}
-              onClick={() => { setCategory(cat); setPage(1); }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                category === cat
-                  ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/30 text-blue-300'
-                  : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'
+              key={label}
+              onClick={() => { setCategory(label); setPage(1); }}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+                category === label
+                  ? 'bg-[#0A1EFF] text-white'
+                  : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
               }`}
             >
-              {cat}
+              {label}
             </button>
           ))}
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 text-[#0A1EFF] animate-spin" />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 text-[#0A1EFF] animate-spin mb-3" />
+            <p className="text-xs text-gray-500">Loading research...</p>
           </div>
-        )}
-
-        {/* Posts Grid */}
-        {!loading && filtered.length > 0 && (
-          <div className="space-y-3">
-            {filtered.map((post) => (
-              <button
-                key={post.id}
-                onClick={() => setSelected(post)}
-                className="w-full text-left bg-[#0f1320] rounded-2xl border border-[#1a1f2e] hover:border-[#0A1EFF]/20 transition-all overflow-hidden"
-              >
-                {post.image_url && (
-                  <img
-                    src={post.image_url}
-                    alt={post.title}
-                    className="w-full h-32 object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                )}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-[#0A1EFF]/10 text-blue-300 border border-[#0A1EFF]/20">
-                      {post.category}
-                    </span>
-                    <span className="text-[10px] text-gray-600 flex items-center gap-1 ml-auto">
-                      <Calendar className="w-3 h-3" />
-                      {formatDate(post.published_at)}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-white mb-1.5 leading-snug">{post.title}</h3>
-                  {post.summary && (
-                    <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{post.summary}</p>
-                  )}
-                  {post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {post.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-600">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 mt-2 text-[10px] text-[#0A1EFF]">
-                    <BookOpen className="w-3 h-3" />
-                    Read report
-                    <ChevronRight className="w-3 h-3" />
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#0A1EFF]/10 flex items-center justify-center">
-              <FlaskConical className="w-8 h-8 text-[#0A1EFF]/40" />
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-14 h-14 bg-white/[0.04] rounded-2xl flex items-center justify-center mb-4">
+              <BookOpen className="w-7 h-7 text-gray-600" />
             </div>
-            <h3 className="text-sm font-semibold text-gray-500">No research posts yet</h3>
-            <p className="text-[11px] text-gray-600 mt-1.5">
-              Intelligence reports and analysis will appear here
+            <p className="text-sm font-semibold text-gray-300 mb-1">No research found</p>
+            <p className="text-xs text-gray-600">
+              {search ? `No results for "${search}"` : 'Check back soon for new intelligence reports'}
             </p>
           </div>
-        )}
-
-        {/* Pagination */}
-        {total > 12 && (
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg bg-[#0f1320] border border-[#1a1f2e] text-xs text-gray-400 disabled:opacity-30 hover:border-[#0A1EFF]/30"
-            >
-              Previous
-            </button>
-            <span className="text-xs text-gray-600">Page {page}</span>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={filtered.length < 12}
-              className="px-3 py-1.5 rounded-lg bg-[#0f1320] border border-[#1a1f2e] text-xs text-gray-400 disabled:opacity-30 hover:border-[#0A1EFF]/30"
-            >
-              Next
-            </button>
+        ) : (
+          <div className="space-y-3">
+            {featured && !search && (
+              <div className="mb-5">
+                <ArticleCard post={featured} onClick={() => setSelected(featured)} featured />
+              </div>
+            )}
+            {(search ? filtered : rest).map(post => (
+              <ArticleCard key={post.id} post={post} onClick={() => setSelected(post)} />
+            ))}
+            {total > 20 && (
+              <div className="flex items-center justify-center gap-3 pt-4">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 text-xs font-semibold bg-white/[0.04] border border-white/[0.08] rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-gray-500">Page {page}</span>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page * 20 >= total}
+                  className="px-4 py-2 text-xs font-semibold bg-white/[0.04] border border-white/[0.08] rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
