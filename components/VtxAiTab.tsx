@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Globe, Crown, Lock, Plus, Settings, History, X, Clock } from 'lucide-react';
+import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Globe, Crown, Lock, Plus, Settings, History, X, Clock, TrendingUp, TrendingDown, Shield, ExternalLink, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface ChartInfo {
@@ -175,33 +175,214 @@ function toTvSymbol(token?: string): string {
   return map[token.toLowerCase()] || token.toUpperCase() + 'USDT';
 }
 
+// Token card data fetcher + renderer
+interface TokenCardData {
+  name: string;
+  symbol: string;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  liquidity: number;
+  marketCap: number;
+  fdv: number;
+  pairAddress?: string;
+  chain?: string;
+  trustScore?: number;
+  imageUrl?: string;
+  dexUrl?: string;
+}
+
+function formatCompact(n: number): string {
+  if (!n || isNaN(n)) return 'N/A';
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
+  return `$${n.toFixed(4)}`;
+}
+
+function formatPrice(n: number): string {
+  if (!n || isNaN(n)) return '$0';
+  if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  if (n >= 1) return `$${n.toFixed(4)}`;
+  if (n >= 0.0001) return `$${n.toFixed(6)}`;
+  return `$${n.toExponential(4)}`;
+}
+
+function TokenStatsCard({ token, address }: { token?: string; address?: string }) {
+  const [cardData, setCardData] = useState<TokenCardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      let pairs: any[] = [];
+
+      if (address) {
+        // Search by contract address
+        const isSolana = !address.startsWith('0x') && address.length >= 32;
+        const chain = isSolana ? 'solana' : 'ethereum';
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+        if (res.ok) {
+          const data = await res.json();
+          pairs = data.pairs || [];
+        }
+      } else if (token) {
+        // Search by symbol
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${encodeURIComponent(token)}`);
+        if (res.ok) {
+          const data = await res.json();
+          pairs = (data.pairs || []).filter((p: any) =>
+            p.baseToken?.symbol?.toLowerCase() === token.toLowerCase()
+          );
+          if (pairs.length === 0) pairs = data.pairs?.slice(0, 1) || [];
+        }
+      }
+
+      // Pick best pair by liquidity
+      const best = pairs.sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+      if (!best) { setError(true); setLoading(false); return; }
+
+      const priceChange = parseFloat(best.priceChange?.h24 || '0');
+      const trustScore = Math.min(100, Math.max(0, 100
+        - (Math.abs(priceChange) > 50 ? 20 : 0)
+        - (best.liquidity?.usd < 50000 ? 30 : 0)
+        - (best.liquidity?.usd < 10000 ? 20 : 0)
+      ));
+
+      setCardData({
+        name: best.baseToken?.name || token || 'Unknown',
+        symbol: best.baseToken?.symbol || '',
+        price: parseFloat(best.priceUsd || '0'),
+        priceChange24h: priceChange,
+        volume24h: best.volume?.h24 || 0,
+        liquidity: best.liquidity?.usd || 0,
+        marketCap: best.marketCap || 0,
+        fdv: best.fdv || 0,
+        pairAddress: best.pairAddress,
+        chain: best.chainId,
+        trustScore,
+        dexUrl: best.url,
+      });
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, [token, address]);
+
+  if (loading) {
+    return (
+      <div className="mt-2 p-3 bg-[#0d1117] rounded-xl border border-white/10 flex items-center gap-2">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0A1EFF]" />
+        <span className="text-[11px] text-gray-500">Fetching live token data...</span>
+      </div>
+    );
+  }
+
+  if (error || !cardData) return null;
+
+  const isPositive = cardData.priceChange24h >= 0;
+  const trustColor = cardData.trustScore! >= 70 ? 'text-[#10B981] bg-[#10B981]/10' : cardData.trustScore! >= 40 ? 'text-[#F59E0B] bg-[#F59E0B]/10' : 'text-[#EF4444] bg-[#EF4444]/10';
+  const trustLabel = cardData.trustScore! >= 70 ? 'Trusted' : cardData.trustScore! >= 40 ? 'Caution' : 'Risky';
+
+  return (
+    <div className="mt-2 bg-[#0d1117] rounded-xl border border-white/[0.08] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
+            <span className="text-[10px] font-bold text-[#0A1EFF]">{cardData.symbol.slice(0, 2)}</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-white">{cardData.symbol}</span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${trustColor}`}>
+                {trustLabel}
+              </span>
+            </div>
+            <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{cardData.name}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-base font-bold text-white">{formatPrice(cardData.price)}</div>
+          <div className={`flex items-center gap-0.5 text-[11px] font-semibold justify-end ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {isPositive ? '+' : ''}{cardData.priceChange24h.toFixed(2)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-px bg-white/[0.04] border-t border-white/[0.06]">
+        {[
+          { label: '24h Volume', value: formatCompact(cardData.volume24h) },
+          { label: 'Liquidity', value: formatCompact(cardData.liquidity) },
+          { label: 'Market Cap', value: formatCompact(cardData.marketCap) },
+          { label: 'FDV', value: formatCompact(cardData.fdv) },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-[#0d1117] px-3.5 py-2.5">
+            <div className="text-[9px] text-gray-600 mb-0.5">{label}</div>
+            <div className="text-[12px] font-semibold text-white">{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      {cardData.chain && (
+        <div className="flex items-center justify-between px-3.5 py-2 border-t border-white/[0.06]">
+          <span className="text-[9px] text-gray-600 capitalize">{cardData.chain} network</span>
+          {cardData.dexUrl && (
+            <a
+              href={cardData.dexUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[9px] text-[#0A1EFF] hover:text-[#6B7FFF] transition-colors font-semibold"
+            >
+              See on DEX <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InlineChart({ type, token, address, data }: ChartInfo) {
   // Price chart — DexScreener embed if address, else TradingView mini widget
   if (type === 'price') {
     if (address) {
-      // Detect chain prefix from address length/format
       const isSolana = !address.startsWith('0x') && address.length >= 32;
       const chain = isSolana ? 'solana' : 'ethereum';
       return (
-        <div className="w-full h-48 rounded-lg overflow-hidden mt-2 border border-white/10">
-          <iframe
-            src={`https://dexscreener.com/${chain}/${address}?embed=1&theme=dark&trades=0&info=0&chart=1`}
-            className="w-full h-full border-0"
-            loading="lazy"
-            title="Price chart"
-          />
+        <div className="mt-2 space-y-2">
+          <TokenStatsCard address={address} token={token} />
+          <div className="w-full h-44 rounded-lg overflow-hidden border border-white/10">
+            <iframe
+              src={`https://dexscreener.com/${chain}/${address}?embed=1&theme=dark&trades=0&info=0&chart=1`}
+              className="w-full h-full border-0"
+              loading="lazy"
+              title="Price chart"
+            />
+          </div>
         </div>
       );
     }
     const tvSymbol = toTvSymbol(token);
     return (
-      <div className="w-full h-48 rounded-lg overflow-hidden mt-2 border border-white/10">
-        <iframe
-          src={`https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=${tvSymbol}&theme=dark&locale=en&dateRange=1D&colorTheme=dark`}
-          className="w-full h-full border-0"
-          loading="lazy"
-          title="Price chart"
-        />
+      <div className="mt-2 space-y-2">
+        <TokenStatsCard token={token} />
+        <div className="w-full h-44 rounded-lg overflow-hidden border border-white/10">
+          <iframe
+            src={`https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=${tvSymbol}&theme=dark&locale=en&dateRange=1D&colorTheme=dark`}
+            className="w-full h-full border-0"
+            loading="lazy"
+            title="Price chart"
+          />
+        </div>
       </div>
     );
   }

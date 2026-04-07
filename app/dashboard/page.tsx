@@ -229,18 +229,21 @@ export default function Dashboard() {
             <div className="flex gap-1 mb-4 bg-[#111827] border border-white/[0.06] p-1 rounded-xl max-w-xs mx-auto">
               {[
                 { id: 'context', label: 'Context Feed' },
-                { id: 'markets', label: 'Market' },
+                { id: 'markets', label: 'Market', beta: true },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-1.5 ${
                     activeTab === tab.id
                       ? 'bg-[#0A1EFF] text-white'
                       : 'text-gray-500 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
                   {tab.label}
+                  {(tab as any).beta && (
+                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#10B981]/15 text-[#10B981]'}`}>BETA</span>
+                  )}
                 </button>
               ))}
             </div>

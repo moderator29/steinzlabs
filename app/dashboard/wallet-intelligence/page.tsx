@@ -281,6 +281,31 @@ export default function WalletIntelligencePage() {
 
   const totalUsd = walletData ? parseFloat(walletData.totalBalanceUsd) : 0;
 
+  // Wallet Type Classification
+  function classifyWallet(data: WalletData | null, analysis: AiAnalysis | null): { type: string; color: string; desc: string } {
+    if (!data) return { type: 'Unknown', color: '#6B7280', desc: 'No data' };
+    const usd = parseFloat(data.totalBalanceUsd);
+    const txCount = data.txCount;
+    const tradingStyle = analysis?.tradingStyle?.toLowerCase() || '';
+
+    // Bot/MEV detection (high tx count, small balance)
+    if (txCount > 500 && usd < 50000) return { type: 'Bot / MEV', color: '#EF4444', desc: 'High-frequency automated activity detected' };
+    // Dormant (very few txns)
+    if (txCount < 3) return { type: 'Dormant', color: '#6B7280', desc: 'Low activity wallet, possibly inactive' };
+    // Institutional (very large balance)
+    if (usd > 10000000) return { type: 'Institutional', color: '#7C3AED', desc: 'Large institutional-grade wallet' };
+    // Whale
+    if (usd > 1000000) return { type: 'Whale', color: '#F59E0B', desc: 'High-net-worth crypto holder' };
+    // Smart Money
+    if ((analysis?.overallScore || 0) >= 75 || tradingStyle.includes('degen') || tradingStyle.includes('defi')) {
+      return { type: 'Smart Money', color: '#10B981', desc: 'Sophisticated trader with strong on-chain track record' };
+    }
+    // Retail
+    return { type: 'Retail', color: '#0A1EFF', desc: 'Individual retail trader' };
+  }
+
+  const walletClassification = classifyWallet(walletData, aiAnalysis);
+
   return (
     <div className="min-h-screen bg-[#060A12] text-white pb-20">
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
@@ -507,6 +532,18 @@ export default function WalletIntelligencePage() {
                           {scoreLabel(aiAnalysis.overallScore)}
                         </span>
                       </div>
+                      {/* Wallet Type Classification */}
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl mb-3 border" style={{ backgroundColor: `${walletClassification.color}08`, borderColor: `${walletClassification.color}25` }}>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${walletClassification.color}20` }}>
+                          <Users className="w-3.5 h-3.5" style={{ color: walletClassification.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] text-gray-500">Wallet Classification</div>
+                          <div className="text-sm font-bold" style={{ color: walletClassification.color }}>{walletClassification.type}</div>
+                        </div>
+                        <div className="text-[9px] text-gray-500 text-right max-w-[100px] leading-tight">{walletClassification.desc}</div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-[#0f1320] rounded-lg p-2">
                           <span className="text-[10px] text-gray-500">Style</span>

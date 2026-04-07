@@ -225,6 +225,8 @@ const featureCategories = [
       { icon: Activity, label: "Real-time event feeds" },
       { icon: Eye, label: "Whale movement tracking" },
       { icon: Globe, label: "Cross-chain analytics" },
+      { icon: Globe, label: "Network Graph", badge: "NEW" },
+      { icon: Brain, label: "Research Lab", badge: "LIVE" },
     ],
     accent: "#0A1EFF",
   },
@@ -237,6 +239,8 @@ const featureCategories = [
       { icon: BarChart3, label: "Trading DNA profiling" },
       { icon: Layers, label: "Multi-chain swaps" },
       { icon: Search, label: "Token discovery" },
+      { icon: Zap, label: "Sniper Bot", badge: "LIVE" },
+      { icon: Lock, label: "Approval Manager" },
     ],
     accent: "#7C3AED",
   },
@@ -246,9 +250,11 @@ const featureCategories = [
     description: "AI-powered contract analysis, rug detection, and risk scoring. Every token scanned, every wallet profiled, every risk surfaced before you commit.",
     features: [
       { icon: Shield, label: "AI risk scoring (0–100)" },
-      { icon: Lock, label: "Contract audit verification" },
+      { icon: Lock, label: "Contract Analyzer" },
       { icon: Zap, label: "Rug pull detection" },
       { icon: Eye, label: "MEV protection alerts" },
+      { icon: Globe, label: "Domain Shield", badge: "LIVE" },
+      { icon: Search, label: "Signature Insight" },
     ],
     accent: "#10B981",
   },
@@ -290,6 +296,10 @@ const faqs = [
   {
     q: "What's included in the free tier?",
     a: "Free tier includes real-time feeds and basic analytics. Upgrade to STEINZ Pro for unlimited whale tracking, DNA Analyzer, advanced portfolio analytics, and priority signals.",
+  },
+  {
+    q: "Are there any trading fees?",
+    a: "STEINZ LABS charges a 0.2% platform fee on swaps executed through the platform. This fee is applied on top of the underlying DEX or aggregator fees and goes toward platform development and infrastructure. Analysis, scanning, and intelligence features have no per-use fees.",
   },
 ];
 
@@ -385,6 +395,45 @@ export default function LandingPage() {
             className="absolute top-[30%] left-[5%] w-64 h-64 rounded-full blur-3xl animate-pulse"
             style={{ background: 'radial-gradient(circle, #06b6d4, transparent)', opacity: 0.06, animationDelay: '2s' }}
           />
+        </div>
+
+        {/* 3D floating card behind headline */}
+        <div
+          className="absolute top-1/4 left-1/2 pointer-events-none"
+          style={{
+            perspective: '1000px',
+            transformStyle: 'preserve-3d',
+            transform: 'translateX(-50%)',
+            width: '560px',
+            maxWidth: '90vw',
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              transform: 'rotateX(8deg) rotateY(-6deg)',
+              transformStyle: 'preserve-3d',
+              background: 'linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(6,182,212,0.04) 100%)',
+              border: '1px solid rgba(124,58,237,0.18)',
+              borderRadius: '20px',
+              padding: '48px 40px',
+              boxShadow: '0 0 80px rgba(124,58,237,0.12), 0 0 0 1px rgba(6,182,212,0.08), inset 0 0 60px rgba(124,58,237,0.04)',
+              backdropFilter: 'blur(2px)',
+              animation: 'heroFloat 6s ease-in-out infinite',
+            }}
+          >
+            {/* Circuit dot grid pattern */}
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden', opacity: 0.4 }}>
+              <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
+                <defs>
+                  <pattern id="dotgrid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+                    <circle cx="12" cy="12" r="1" fill="#7c3aed" opacity="0.5" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#dotgrid)" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -554,6 +603,18 @@ export default function LandingPage() {
                         <div key={f.label} className="flex items-center gap-2.5 text-[13px] text-gray-400">
                           <Icon className="w-4 h-4 flex-shrink-0" style={{ color: category.accent }} />
                           <span>{f.label}</span>
+                          {f.badge && (
+                            <span
+                              className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider leading-none"
+                              style={{
+                                background: f.badge === 'LIVE' ? 'rgba(16,185,129,0.15)' : 'rgba(124,58,237,0.15)',
+                                color: f.badge === 'LIVE' ? '#10B981' : '#a78bfa',
+                                border: `1px solid ${f.badge === 'LIVE' ? 'rgba(16,185,129,0.3)' : 'rgba(124,58,237,0.3)'}`,
+                              }}
+                            >
+                              {f.badge}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
