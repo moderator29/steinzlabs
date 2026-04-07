@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Users, BarChart3, Mail, Shield, Activity, Search, ChevronLeft, ChevronRight, Send, RefreshCw, AlertTriangle, Eye, Server, Database, Cpu, Globe, Clock, FlaskConical, Plus, Trash2, Image, Tag } from 'lucide-react';
+import { ArrowLeft, Users, BarChart3, Mail, Shield, Activity, Search, ChevronLeft, ChevronRight, Send, RefreshCw, AlertTriangle, Eye, Server, Database, Cpu, Globe, Clock, FlaskConical, Plus, Trash2, Image, Tag, DollarSign, Heart, Briefcase, TrendingUp, TrendingDown, Award, Building } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const ADMIN_PASSWORD = '195656';
 
-type AdminTab = 'dashboard' | 'users' | 'broadcast' | 'research' | 'system';
+type AdminTab = 'dashboard' | 'users' | 'broadcast' | 'research' | 'system' | 'revenue' | 'team';
 
 interface UserData {
   id: string;
@@ -252,6 +252,8 @@ export default function AdminPanel() {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'broadcast', label: 'Broadcast', icon: Mail },
     { id: 'research', label: 'Research', icon: FlaskConical },
+    { id: 'revenue', label: 'Revenue', icon: DollarSign },
+    { id: 'team', label: 'Team', icon: Heart },
     { id: 'system', label: 'System', icon: Server },
   ];
 
@@ -593,6 +595,118 @@ export default function AdminPanel() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'revenue' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-bold mb-1">Revenue Overview</h3>
+              <p className="text-[11px] text-gray-500 mb-4">Platform earnings from swap fees and subscriptions</p>
+            </div>
+
+            {/* Revenue Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Total Revenue', value: '$0.00', change: '+0%', icon: DollarSign, color: '#10B981' },
+                { label: 'Swap Fees (0.2%)', value: '$0.00', change: '+0%', icon: TrendingUp, color: '#0A1EFF' },
+                { label: 'Pro Subscribers', value: '0', change: '+0', icon: Award, color: '#7C3AED' },
+                { label: 'Premium Subscribers', value: '0', change: '+0', icon: Award, color: '#F59E0B' },
+              ].map(({ label, value, change, icon: Icon, color }) => (
+                <div key={label} className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
+                    <span className="text-[10px] text-gray-500">{label}</span>
+                  </div>
+                  <div className="text-lg font-bold">{value}</div>
+                  <div className="text-[10px] text-gray-600">{change} this month</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Business Model */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Business Model</h3>
+              <div className="bg-[#111827] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+                {[
+                  { stream: 'Swap Fees', desc: '0.2% per swap transaction routed to treasury', status: 'Active', color: '#10B981' },
+                  { stream: 'Pro Subscription', desc: '$6/month - Enhanced features access', status: 'Coming Soon', color: '#F59E0B' },
+                  { stream: 'Premium Subscription', desc: '$15/month - Full platform access', status: 'Coming Soon', color: '#F59E0B' },
+                  { stream: 'API Access', desc: 'Developer API access for institutional users', status: 'Planned', color: '#6B7280' },
+                  { stream: 'White Label', desc: 'Branded deployments for enterprise clients', status: 'Planned', color: '#6B7280' },
+                ].map(({ stream, desc, status, color }) => (
+                  <div key={stream} className="flex items-start justify-between px-4 py-3">
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">{stream}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
+                    </div>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded ml-3 flex-shrink-0" style={{ color, background: `${color}18` }}>{status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Partners */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Technology Partners</h3>
+              <div className="bg-[#111827] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+                {[
+                  { name: 'Anthropic', role: 'AI Intelligence Engine (Claude)', type: 'Core' },
+                  { name: 'Alchemy', role: 'EVM Blockchain Data', type: 'Infrastructure' },
+                  { name: 'Helius', role: 'Solana Blockchain Data', type: 'Infrastructure' },
+                  { name: 'Arkham Intelligence', role: 'Entity Intelligence + On-Chain Tracking', type: 'Intelligence' },
+                  { name: 'GoPlus Security', role: 'Token Security + Phishing Detection', type: 'Security' },
+                  { name: 'Jupiter Aggregator', role: 'Solana DEX Routing', type: 'Trading' },
+                  { name: '1inch', role: 'EVM DEX Aggregation', type: 'Trading' },
+                  { name: 'Supabase', role: 'Database + Auth', type: 'Infrastructure' },
+                ].map(({ name, role, type }) => (
+                  <div key={name} className="flex items-center justify-between px-4 py-2.5">
+                    <div>
+                      <div className="text-sm font-semibold">{name}</div>
+                      <div className="text-[10px] text-gray-500">{role}</div>
+                    </div>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#0A1EFF]/10 text-[#6B7FFF]">{type}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'team' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-bold mb-1">Core Team</h3>
+              <p className="text-[11px] text-gray-500 mb-4">The people building STEINZ LABS</p>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { name: 'Founder', role: 'CEO and Product Vision', desc: 'Building the next-generation crypto intelligence OS', initials: 'SL' },
+                { name: 'AI Systems', role: 'VTX Intelligence Engine', desc: 'Powered by Anthropic Claude — the core reasoning engine', initials: 'AI' },
+              ].map(({ name, role, desc, initials }) => (
+                <div key={name} className="bg-[#111827] border border-white/[0.06] rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
+                    <span className="text-sm font-bold text-[#0A1EFF]">{initials}</span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm">{name}</div>
+                    <div className="text-[11px] text-[#0A1EFF] font-semibold mb-0.5">{role}</div>
+                    <div className="text-[10px] text-gray-500">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-[#111827] border border-[#0A1EFF]/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Building className="w-4 h-4 text-[#0A1EFF]" />
+                <span className="text-sm font-bold">About STEINZ LABS</span>
+              </div>
+              <p className="text-[12px] text-gray-400 leading-relaxed">
+                STEINZ LABS is a next-generation crypto intelligence platform combining AI reasoning, real-time on-chain data, and advanced security scanning into a unified trading intelligence OS. Our mission: give every trader institutional-grade intelligence.
+              </p>
+            </div>
           </div>
         )}
 

@@ -152,7 +152,13 @@ export async function GET(req: NextRequest) {
   const toPrice = livePrices[toToken] || FALLBACK_PRICES[toToken] || 1;
 
   const fromUsd = amountNum * fromPrice;
-  const toAmount = fromUsd / toPrice;
+
+  // ── STEINZ Platform Fee (0.2%) ─────────────────────────────────────────────
+  const PLATFORM_FEE_RATE = 0.002; // 0.2%
+  const platformFeeUsd = fromUsd * PLATFORM_FEE_RATE;
+  const amountAfterFee = fromUsd - platformFeeUsd;
+
+  const toAmount = amountAfterFee / toPrice;
   const priceImpact = amountNum > 1000 ? 0.15 : amountNum > 100 ? 0.05 : 0.01;
   const minReceived = toAmount * (1 - slippage / 100);
 
@@ -162,6 +168,17 @@ export async function GET(req: NextRequest) {
   const toAddress = COMMON_TOKENS[chain]?.[toToken] || '0x0';
 
   const dexName = chain === 'solana' ? 'Raydium' : chain === 'bsc' ? 'PancakeSwap' : chain === 'polygon' ? 'QuickSwap' : chain === 'avalanche' ? 'TraderJoe' : chain === 'arbitrum' ? 'Camelot' : chain === 'base' ? 'Aerodrome' : 'Uniswap V3';
+
+  // Treasury wallets (fees routed here per chain)
+  const TREASURY_WALLETS: Record<string, string> = {
+    ethereum: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    solana: 'steinz1aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890',
+    bsc: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    base: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    polygon: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    arbitrum: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    avalanche: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+  };
 
   return NextResponse.json({
     fromToken,
@@ -175,6 +192,12 @@ export async function GET(req: NextRequest) {
     minReceived: parseFloat(minReceived.toFixed(6)),
     slippage,
     gasEstimateUsd: gasEstimate,
+    platformFee: {
+      rate: PLATFORM_FEE_RATE,
+      ratePercent: `${(PLATFORM_FEE_RATE * 100).toFixed(1)}%`,
+      amountUsd: parseFloat(platformFeeUsd.toFixed(4)),
+      treasuryWallet: TREASURY_WALLETS[chain] || TREASURY_WALLETS.ethereum,
+    },
     route: {
       dex: dexName,
       chain,
