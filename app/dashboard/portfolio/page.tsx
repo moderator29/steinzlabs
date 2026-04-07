@@ -487,6 +487,20 @@ export default function PortfolioPage() {
 
             {activeTab === 'balance' && (
               <div className="space-y-4">
+                {/* Security Risk Banner */}
+                {!riskDismissed && (
+                  <RiskBanner
+                    summary={riskSummary}
+                    riskResults={riskResults}
+                    portfolio={portfolio}
+                    loading={riskLoading}
+                    expanded={riskExpanded}
+                    onToggle={() => setRiskExpanded(p => !p)}
+                    onDismiss={() => setRiskDismissed(true)}
+                    onRescan={() => runRiskScan(portfolio)}
+                  />
+                )}
+
                 {portfolio.length > 0 && totalValue > 0 && (
                   <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
                     <div className="flex items-center gap-2 mb-3">
@@ -538,7 +552,10 @@ export default function PortfolioPage() {
                         <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
                           <TokenLogo symbol={token.symbol} logo={token.logo} fallbackColor={COLORS[i % COLORS.length]} />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold">{token.symbol}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold">{token.symbol}</span>
+                              <RiskBadge risk={riskResults[token.contractAddress?.toLowerCase()]} />
+                            </div>
                             <div className="text-[10px] text-gray-500 truncate">{token.name}</div>
                           </div>
                           <div className="text-right">
