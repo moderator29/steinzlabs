@@ -309,7 +309,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
       if (tokenData.result?.tokenBalances) {
         tokenBalances = tokenData.result.tokenBalances
           .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
-          .slice(0, 20);
+          .slice(0, 100);
       }
     } catch (e) {
       console.error('Token balance fetch error:', e);
@@ -318,7 +318,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
 
   let tokenDetails: any[] = [];
   if (tokenBalances.length > 0 && isAlchemy) {
-    const metadataPromises = tokenBalances.slice(0, 10).map(async (token: any) => {
+    const metadataPromises = tokenBalances.slice(0, 50).map(async (token: any) => {
       try {
         const metaRes = await fetch(rpcUrl, {
           method: 'POST',
@@ -489,7 +489,7 @@ async function getSolData(address: string) {
     });
   }
 
-  const tokenPricePromises = splTokens.slice(0, 20).map(async (token) => {
+  const tokenPricePromises = splTokens.slice(0, 50).map(async (token) => {
     const priceInfo = await getSolTokenPrice(token.mint);
     return { ...token, priceInfo };
   });
