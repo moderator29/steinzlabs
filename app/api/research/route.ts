@@ -128,7 +128,8 @@ async function fetchCoinGeckoTrending(): Promise<ResearchPost[]> {
     const score = Number(c.score ?? 0);
     const marketCapRank = Number(c.market_cap_rank || 0);
     const desc = String((c.data as Record<string, string> | undefined)?.content || '');
-    const priceChange = Number((c.data as Record<string, unknown> | undefined)?.price_change_percentage_24h?.usd ?? 0);
+    const priceChangeRaw = (c.data as Record<string, unknown> | undefined)?.price_change_percentage_24h;
+    const priceChange = Number((priceChangeRaw as Record<string, unknown> | undefined)?.usd ?? 0);
     const thumb = String(c.large || c.thumb || '');
     const title = `${name} (${symbol}) — Trending #${score + 1} on CoinGecko`;
     const cat = mapCategory(name + ' ' + symbol + ' ' + desc);

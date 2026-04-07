@@ -530,6 +530,15 @@ export async function GET(request: Request) {
       partnerWallets: stats.partnerWallets,
       riskClassification: aiAnalysis?.riskClassification || riskClass,
       aiAnalysis,
+      recentTransactions: txs.slice(0, 25).map((tx: any) => ({
+        hash: tx.hash || tx.signature || '',
+        type: tx.category || (tx.err ? 'failed' : 'transfer'),
+        asset: tx.asset || tx.tokenSymbol || 'SOL',
+        amount: tx.value ? parseFloat(tx.value).toFixed(4) : '—',
+        from: tx.from || address,
+        to: tx.to || '',
+        blockTime: tx.metadata?.blockTimestamp || (tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : null),
+      })),
     });
   } catch (error: any) {
     console.error('DNA analysis error:', error);
