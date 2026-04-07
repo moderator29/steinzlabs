@@ -738,7 +738,7 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
 
 export async function POST(request: Request) {
   try {
-    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite, skipRateLimit } = await request.json();
+    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite, skipRateLimit, context } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -924,12 +924,25 @@ export async function POST(request: Request) {
       .replace(/\{personality\}/g, resolvedPersonality)
       .replace(/\{market_context\}/g, market_context);
 
+    // Build platform context string if provided by the client
+    let platformContextSection = '';
+    if (context && typeof context === 'object') {
+      const { currentPage, currentToken, walletAddress } = context as { currentPage?: string; currentToken?: string; walletAddress?: string };
+      if (currentPage || currentToken || walletAddress) {
+        platformContextSection = `\nPLATFORM CONTEXT (use this to enhance your responses):
+Current Page: ${currentPage || 'Unknown'}
+Token in View: ${currentToken || 'None'}
+User Wallet: ${walletAddress ? walletAddress.slice(0, 8) + '...' : 'Not connected'}
+`;
+      }
+    }
+
     const systemPrompt = `${basePrompt}
 
 ${styleInstruction}
 ${riskInstruction}
 ${languageInstruction ? languageInstruction + '\n' : ''}${contextInstruction}
-
+${platformContextSection}
 ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.
 2. Write ONLY clean plain text. Use line breaks and spacing to organize content.
