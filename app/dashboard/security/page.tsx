@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight } from 'lucide-react';
+import { Shield, ArrowLeft, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -59,6 +59,7 @@ export default function SecurityPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [walletRejection, setWalletRejection] = useState<{ error: string; message: string; suggestion: string; redirectUrl: string } | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
 
   const handleScan = async () => {
     const address = scanInput.trim();
@@ -381,6 +382,152 @@ export default function SecurityPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Owner</span>
                   <span className="font-mono text-gray-400">{shortenAddress(result.ownerAddress)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Security Assessment */}
+            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                </div>
+                <span className="font-bold text-sm">AI Security Assessment</span>
+                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                  result.safetyLevel === 'SAFE'
+                    ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
+                    : result.safetyLevel === 'CAUTION'
+                    ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30'
+                    : result.safetyLevel === 'WARNING'
+                    ? 'bg-[#F97316]/15 text-[#F97316] border-[#F97316]/30'
+                    : 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
+                }`}>
+                  {result.safetyLevel === 'SAFE' ? 'LOW' : result.safetyLevel === 'CAUTION' ? 'MEDIUM' : result.safetyLevel === 'WARNING' ? 'HIGH' : 'CRITICAL'}
+                </span>
+              </div>
+
+              {/* Risk summary paragraph */}
+              <div className="bg-white/5 rounded-xl p-3 mb-3">
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {result.safetyLevel === 'SAFE' && `This token (${result.symbol}) has passed all critical security checks with a trust score of ${result.trustScore}/100. The contract is ${result.isOpenSource ? 'open-source and verifiable' : 'not open-source'}, with ${result.holderCount.toLocaleString()} holders on-chain. Buy tax is ${result.buyTax} and sell tax is ${result.sellTax}. No honeypot behavior was detected. This token appears to be a relatively safe asset, though market risks always apply.`}
+                  {result.safetyLevel === 'CAUTION' && `Token ${result.symbol} shows a trust score of ${result.trustScore}/100 and warrants caution. ${result.isHoneypot ? 'A honeypot pattern was detected — you may be unable to sell. ' : ''}${result.isMintable ? 'The contract is mintable, which could allow supply inflation. ' : ''}${result.hasHiddenOwner ? 'A hidden owner was identified, posing a centralization risk. ' : ''}Taxes are ${result.buyTax} buy / ${result.sellTax} sell. Review all flags carefully before investing.`}
+                  {result.safetyLevel === 'WARNING' && `Significant risks have been identified for ${result.symbol} (score: ${result.trustScore}/100). ${result.isHoneypot ? 'HONEYPOT DETECTED — selling may be impossible. ' : ''}${result.ownerCanChangeBalance ? 'The owner can modify token balances, a critical risk. ' : ''}${result.canTakeBackOwnership ? 'Ownership can be reclaimed, enabling rugpull scenarios. ' : ''}${result.isMintable ? 'Unrestricted minting capability. ' : ''}Exercise extreme caution — this token has multiple high-severity flags.`}
+                  {result.safetyLevel === 'DANGER' && `CRITICAL: ${result.symbol} has failed multiple security checks with a score of only ${result.trustScore}/100. ${result.isHoneypot ? 'This is likely a HONEYPOT — funds may be permanently trapped. ' : ''}${result.ownerCanChangeBalance ? 'Owner can drain balances at will. ' : ''}${result.hasHiddenOwner ? 'Hidden owner detected. ' : ''}${result.canTakeBackOwnership ? 'Rugpull mechanism active. ' : ''}Do not interact with this contract. Consider this a high-probability scam.`}
+                </p>
+              </div>
+
+              {/* Specific warnings */}
+              {(result.isHoneypot || result.isMintable || result.hasHiddenOwner || result.canTakeBackOwnership || result.ownerCanChangeBalance || result.isProxy) && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Specific Warnings</p>
+                  <div className="space-y-1.5">
+                    {result.isHoneypot && (
+                      <div className="flex items-center gap-2 text-xs text-red-400">
+                        <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                        Honeypot detected — selling transactions may be blocked
+                      </div>
+                    )}
+                    {result.isMintable && (
+                      <div className="flex items-center gap-2 text-xs text-amber-400">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                        Mintable supply — owner can inflate token supply at any time
+                      </div>
+                    )}
+                    {result.hasHiddenOwner && (
+                      <div className="flex items-center gap-2 text-xs text-red-400">
+                        <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                        Hidden owner present — contract control is concealed
+                      </div>
+                    )}
+                    {result.canTakeBackOwnership && (
+                      <div className="flex items-center gap-2 text-xs text-red-400">
+                        <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                        Ownership can be reclaimed — rugpull vector exists
+                      </div>
+                    )}
+                    {result.ownerCanChangeBalance && (
+                      <div className="flex items-center gap-2 text-xs text-red-400">
+                        <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                        Owner can modify balances — direct theft risk
+                      </div>
+                    )}
+                    {result.isProxy && (
+                      <div className="flex items-center gap-2 text-xs text-amber-400">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                        Proxy contract — underlying logic can be changed by owner
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommendations */}
+              <div className="mb-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Recommendations</p>
+                <div className="space-y-1.5">
+                  {result.safetyLevel === 'SAFE' && (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                        Token passed security checks — suitable for standard research
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                        Still verify liquidity depth and team reputation before investing
+                      </div>
+                    </>
+                  )}
+                  {(result.safetyLevel === 'CAUTION' || result.safetyLevel === 'WARNING') && (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        Limit position size and use stop-loss strategies
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        Verify contract ownership structure and community trust
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-gray-300">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        Monitor for sudden liquidity changes or owner activity
+                      </div>
+                    </>
+                  )}
+                  {result.safetyLevel === 'DANGER' && (
+                    <>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Do not purchase or interact with this contract
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        If already holding, do not attempt additional transactions
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-red-400">
+                        <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        Report to community channels to warn other users
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Feedback */}
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <p className="text-[10px] text-gray-600">Was this assessment helpful?</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'up' ? null : 'up')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'up' ? 'text-[#10B981] bg-[#10B981]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setAiFeedback(prev => prev === 'down' ? null : 'down')}
+                    className={`p-1.5 rounded-lg transition-colors ${aiFeedback === 'down' ? 'text-[#EF4444] bg-[#EF4444]/10' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
