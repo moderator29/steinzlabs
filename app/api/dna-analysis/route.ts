@@ -186,7 +186,7 @@ function classifyWallet(holdings: any[], totalBalance: number, txCount: number):
 
 async function callAIForAnalysis(walletAddress: string, chain: string, holdings: any[], stats: any, totalBalance: number): Promise<any> {
   const holdingsText = holdings && holdings.length > 0
-    ? holdings.slice(0, 15).map((h: any) => `${h.symbol}: ${h.balance} ($${h.valueUsd || '?'})`).join(', ')
+    ? holdings.slice(0, 30).map((h: any) => `${h.symbol}: ${h.balance} ($${h.valueUsd || '?'})`).join(', ')
     : 'No holdings detected';
 
   const prompt = `You are a professional crypto intelligence analyst for the Steinz {Sargon} platform. Analyze this wallet's complete DNA and provide deep intelligence.
@@ -245,7 +245,7 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
       return null;
     }
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -324,7 +324,7 @@ async function fetchSolWalletData(address: string): Promise<{ holdings: any[]; t
       splTokens.push({ mint: info.mint, balance: uiAmount });
     }
 
-    const tokenPricePromises = splTokens.slice(0, 15).map(async (token) => {
+    const tokenPricePromises = splTokens.slice(0, 50).map(async (token) => {
       try {
         const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.mint}`, { signal: AbortSignal.timeout(4000) });
         if (!res.ok) return { ...token, symbol: token.mint.slice(0, 6), name: 'SPL Token', priceUsd: 0 };
@@ -414,7 +414,7 @@ async function fetchEvmWalletData(address: string): Promise<{ holdings: any[]; t
         const tokenData = await tokenRes.json();
         const rawBalances = (tokenData.result?.tokenBalances || [])
           .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
-          .slice(0, 15);
+          .slice(0, 50);
 
         const metaPromises = rawBalances.map(async (token: any) => {
           try {
