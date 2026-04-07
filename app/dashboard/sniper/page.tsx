@@ -38,6 +38,7 @@ interface DetectedToken {
   price?: number;
   marketCap?: number;
   pairAge?: string;
+  logo?: string;
 }
 
 interface SniperTrade {
@@ -86,6 +87,80 @@ function SecurityBadge({ score }: { score: number }) {
   );
 }
 
+// Real token fetching from DexScreener latest profiles
+async function fetchNewTokens(): Promise<DetectedToken[]> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) return [];
+    const profiles: any[] = await res.json();
+    const slice = (Array.isArray(profiles) ? profiles : []).slice(0, 20);
+
+    const results = await Promise.allSettled(
+      slice.map(async (p: any): Promise<DetectedToken | null> => {
+        const address = p.tokenAddress || '';
+        const chain = p.chainId || 'solana';
+        if (!address) return null;
+        try {
+          const pairRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+          if (pairRes.ok) {
+            const pairData = await pairRes.json();
+            const pair = (pairData.pairs || [])[0];
+            if (pair) {
+              const liquidity = pair.liquidity?.usd || 0;
+              const buyTax = pair.txns?.buyTax || 0;
+              const sellTax = pair.txns?.sellTax || 0;
+              const maxTax = Math.max(buyTax, sellTax);
+              const score = Math.max(0, 100 - (maxTax * 3) - (liquidity < 5000 ? 30 : 0) - (liquidity < 1000 ? 30 : 0));
+              const isHoneypot = score < 20;
+              return {
+                id: address,
+                address,
+                symbol: pair.baseToken?.symbol || p.header || '???',
+                name: pair.baseToken?.name || address.slice(0, 8),
+                chain,
+                liquidity,
+                tax: maxTax,
+                honeypot: isHoneypot,
+                securityScore: Math.round(score),
+                detectedAt: pair.pairCreatedAt || Date.now(),
+                status: isHoneypot ? 'blocked' : score >= 60 ? 'safe' : 'risky',
+                price: pair.priceUsd ? parseFloat(pair.priceUsd) : undefined,
+                marketCap: pair.marketCap,
+                logo: pair.info?.imageUrl || p.icon,
+                pairAge: pair.pairCreatedAt
+                  ? `${Math.round((Date.now() - pair.pairCreatedAt) / 60000)}m`
+                  : 'New',
+              } as DetectedToken;
+            }
+          }
+        } catch { /* ignore */ }
+        return {
+          id: address,
+          address,
+          symbol: p.header || '???',
+          name: address.slice(0, 10),
+          chain,
+          liquidity: 0,
+          tax: 0,
+          honeypot: false,
+          securityScore: 50,
+          detectedAt: Date.now(),
+          status: 'scanning',
+          logo: p.icon,
+          pairAge: 'New',
+        } as DetectedToken;
+      })
+    );
+    return results
+      .filter((r): r is PromiseFulfilledResult<DetectedToken | null> => r.status === 'fulfilled' && r.value !== null)
+      .map(r => r.value as DetectedToken);
+  } catch {
+    return [];
+  }
+}
+
 const DEMO_TOKENS: DetectedToken[] = [
   {
     id: '1', address: '0xf28c...3fa1', symbol: 'PEPE2', name: 'Pepe 2.0',
@@ -131,33 +206,47 @@ export default function SniperPage() {
   const router = useRouter();
   const [active, setActive] = useState(false);
   const [config, setConfig] = useState<SniperConfig>(DEFAULT_CONFIG);
-  const [tokens, setTokens] = useState<DetectedToken[]>(DEMO_TOKENS);
+  const [tokens, setTokens] = useState<DetectedToken[]>([]);
   const [trades] = useState<SniperTrade[]>([]);
   const [tab, setTab] = useState<'live' | 'trades' | 'settings'>('live');
   const [scanning, setScanning] = useState(false);
+  const [loadingFeed, setLoadingFeed] = useState(false);
   const scanRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Simulate scanning animation
+  const loadRealTokens = useCallback(async () => {
+    setLoadingFeed(true);
+    try {
+      const fresh = await fetchNewTokens();
+      if (fresh.length > 0) {
+        setTokens(prev => {
+          const existingIds = new Set(prev.map(t => t.id));
+          const newOnes = fresh.filter(t => !existingIds.has(t.id));
+          return [...newOnes, ...prev].slice(0, 50);
+        });
+      }
+    } finally {
+      setLoadingFeed(false);
+    }
+  }, []);
+
+  // Load real data on mount and when activated
+  useEffect(() => {
+    loadRealTokens();
+  }, [loadRealTokens]);
+
+  // Poll every 30s when active for new pairs
   useEffect(() => {
     if (active) {
       setScanning(true);
       scanRef.current = setInterval(() => {
-        setTokens(prev => {
-          // Occasionally update scanning tokens to safe/risky
-          return prev.map(t => {
-            if (t.status === 'scanning' && Math.random() > 0.6) {
-              return { ...t, status: t.securityScore >= 60 ? 'safe' : 'risky' };
-            }
-            return t;
-          });
-        });
-      }, 2000);
+        loadRealTokens();
+      }, 30_000);
     } else {
       setScanning(false);
       if (scanRef.current) clearInterval(scanRef.current);
     }
     return () => { if (scanRef.current) clearInterval(scanRef.current); };
-  }, [active]);
+  }, [active, loadRealTokens]);
 
   const toggleChain = (chainId: string) => {
     setConfig(prev => ({
@@ -252,17 +341,25 @@ export default function SniperPage() {
                 {active ? 'Live' : 'Paused'}
               </div>
             </div>
-            {tokens.length === 0 ? (
+            {loadingFeed && tokens.length === 0 ? (
+              <div className="flex items-center justify-center py-12 gap-2 text-gray-500 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin text-[#0A1EFF]" />
+                Scanning DexScreener for new pairs...
+              </div>
+            ) : tokens.length === 0 ? (
               <div className="text-center py-12 text-gray-600 text-sm">
-                {active ? 'Waiting for new listings...' : 'Start the sniper to detect tokens'}
+                No tokens detected yet
               </div>
             ) : (
               tokens.map(token => (
                 <div key={token.id} className="glass rounded-xl border border-white/[0.07] p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10">
-                        <span className="text-[8px] font-bold text-[#0A1EFF]">{token.symbol.slice(0, 2)}</span>
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-white/10 flex items-center justify-center">
+                        {token.logo
+                          ? <img src={token.logo} alt={token.symbol} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          : <span className="text-[8px] font-bold text-[#0A1EFF]">{token.symbol.slice(0, 2)}</span>
+                        }
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
