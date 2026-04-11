@@ -574,9 +574,9 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               transition: 'all 0.15s',
-              background: tf === t ? '#22C55E' : 'transparent',
-              borderColor: tf === t ? '#22C55E' : 'rgba(255,255,255,0.15)',
-              color: tf === t ? '#000' : '#9CA3AF',
+              background: tf === t ? 'rgba(255,255,255,0.14)' : 'transparent',
+              borderColor: tf === t ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+              color: tf === t ? '#fff' : '#9CA3AF',
             }}
           >
             {t}
@@ -592,11 +592,11 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
             fontWeight: 700,
             color: '#6B7280',
             textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 10,
+            letterSpacing: '0.12em',
+            marginBottom: 14,
           }}
         >
-          Key Stats
+          KEY STATS
         </div>
         <div
           style={{
@@ -612,14 +612,15 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
             <div
               key={i}
               style={{
-                padding: '12px',
-                background: 'rgba(255,255,255,0.03)',
+                padding: '14px 12px',
+                background: 'transparent',
                 borderRight: (i + 1) % 3 !== 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                 borderBottom: i < stats.length - 3 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: s.color || '#FFFFFF' }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>{s.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: s.color || '#FFFFFF' }}>{s.value}</div>
             </div>
           ))}
         </div>
