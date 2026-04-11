@@ -1,148 +1,102 @@
 import { NextResponse } from 'next/server';
+import { scanWallet, normalizeChain, AlchemyChain } from '@/lib/alchemy';
 
-const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
-
-async function getTokenPrices() {
+// Binance real-time prices — no API key, always available
+async function getBinancePrices(symbols: string[]): Promise<Record<string, number>> {
+  const prices: Record<string, number> = {};
+  const stables = new Set(['USDC', 'USDT', 'DAI', 'BUSD', 'FRAX', 'TUSD']);
+  for (const s of symbols) { if (stables.has(s)) prices[s] = 1; }
+  const nonStable = symbols.filter(s => !stables.has(s));
+  if (nonStable.length === 0) return prices;
   try {
-    const headers: Record<string, string> = {};
-    if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana,chainlink,uniswap,aave,polygon-ecosystem-token,arbitrum&vs_currencies=usd&include_24hr_change=true&include_market_cap=true',
-      { headers, next: { revalidate: 30 } }
-    );
-    return await res.json();
-  } catch {
-    return {};
-  }
-}
-
-async function getWalletBalances(address: string) {
-  if (!ALCHEMY_KEY) return [];
-
-  try {
-    const ethRes = await fetch(`https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1, method: 'eth_getBalance',
-        params: [address, 'latest']
-      }),
-    });
-    const ethData = await ethRes.json();
-    const ethBalance = parseInt(ethData.result, 16) / 1e18;
-
-    const tokenRes = await fetch(`https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 2, method: 'alchemy_getTokenBalances',
-        params: [address, 'DEFAULT_TOKENS']
-      }),
-    });
-    const tokenData = await tokenRes.json();
-    const tokenBalances = tokenData.result?.tokenBalances || [];
-
-    const nonZeroTokens = tokenBalances
-      .filter((t: any) => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
-      .slice(0, 20);
-
-    let tokenDetails: any[] = [];
-    if (nonZeroTokens.length > 0) {
-      const metaPromises = nonZeroTokens.map((t: any) =>
-        fetch(`https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0', id: 3, method: 'alchemy_getTokenMetadata',
-            params: [t.contractAddress]
-          }),
-        }).then(r => r.json()).catch(() => null)
-      );
-
-      const metaResults = await Promise.all(metaPromises);
-      tokenDetails = nonZeroTokens.map((t: any, i: number) => {
-        const meta = metaResults[i]?.result;
-        const decimals = meta?.decimals || 18;
-        const rawBalance = parseInt(t.tokenBalance, 16);
-        const balance = rawBalance / Math.pow(10, decimals);
-        return {
-          contractAddress: t.contractAddress,
-          symbol: meta?.symbol || 'UNKNOWN',
-          name: meta?.name || 'Unknown Token',
-          balance: balance.toString(),
-          decimals,
-        };
-      }).filter((t: any) => parseFloat(t.balance) > 0);
+    const syms = nonStable.map(s => `"${s}USDT"`).join(',');
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbols=[${syms}]`, { cache: 'no-store' });
+    if (res.ok) {
+      const data: any[] = await res.json();
+      for (const item of data) {
+        const sym = item.symbol?.replace('USDT', '');
+        if (sym && item.price) prices[sym] = parseFloat(item.price);
+      }
     }
-
-    return [
-      { symbol: 'ETH', name: 'Ethereum', balance: ethBalance.toString(), contractAddress: 'native' },
-      ...tokenDetails
-    ];
-  } catch (error) {
-
-    return [];
-  }
+  } catch {}
+  return prices;
 }
+
+// Native token symbol per chain
+const NATIVE_SYMBOLS: Record<string, string> = {
+  ethereum: 'ETH', base: 'ETH', arbitrum: 'ETH', optimism: 'ETH',
+  polygon: 'MATIC', avalanche: 'AVAX', bnb: 'BNB',
+};
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
+    const chainParam = searchParams.get('chain') || 'ethereum';
 
     if (!address) {
       return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
 
-    const [balances, prices] = await Promise.all([
-      getWalletBalances(address),
-      getTokenPrices(),
-    ]);
+    // Determine chain
+    const chain = normalizeChain(chainParam) as AlchemyChain;
+    const nativeSym = NATIVE_SYMBOLS[chain] || 'ETH';
 
-    const ethPrice = prices?.ethereum?.usd || 3500;
-    const ethChange = prices?.ethereum?.usd_24h_change || 0;
+    // Fetch native price first so we can pass it to scanWallet
+    const nativePrices = await getBinancePrices([nativeSym]);
+    const nativePriceUsd = nativePrices[nativeSym] || 0;
 
-    const portfolio = balances.map((token: any) => {
-      let price = 0;
-      let change24h = 0;
+    // Scan wallet via Alchemy
+    const scan = await scanWallet(address, chain, nativePriceUsd);
 
-      if (token.symbol === 'ETH') {
-        price = ethPrice;
-        change24h = ethChange;
-      } else if (token.symbol === 'WETH') {
-        price = ethPrice;
-        change24h = ethChange;
-      }
+    // Collect all token symbols for price lookup
+    const tokenSymbols = [...new Set(scan.tokens.map(t => t.symbol))];
+    const allPrices = await getBinancePrices([nativeSym, ...tokenSymbols]);
 
-      const balance = parseFloat(token.balance) || 0;
-      const valueUsd = balance * price;
+    // Build portfolio array
+    const portfolio = [
+      {
+        symbol: nativeSym,
+        name: nativeSym === 'ETH' ? 'Ethereum' : nativeSym === 'MATIC' ? 'Polygon' : nativeSym === 'AVAX' ? 'Avalanche' : nativeSym,
+        balance: scan.nativeBalance.toFixed(6),
+        price: nativePriceUsd,
+        valueUsd: scan.nativeUsd,
+        change24h: 0,
+        contractAddress: 'native',
+        logo: null,
+        isNative: true,
+      },
+      ...scan.tokens.map(t => {
+        const price = allPrices[t.symbol] || 0;
+        return {
+          symbol: t.symbol,
+          name: t.name,
+          balance: t.balance.toFixed(6),
+          price,
+          valueUsd: t.balance * price,
+          change24h: 0,
+          contractAddress: t.address,
+          logo: t.logo || null,
+          isNative: false,
+        };
+      }),
+    ];
 
-      return {
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        price,
-        valueUsd,
-        change24h,
-        contractAddress: token.contractAddress,
-      };
-    });
-
-    const totalValue = portfolio.reduce((sum: number, t: any) => sum + t.valueUsd, 0);
-    const totalChange = totalValue > 0
-      ? portfolio.reduce((sum: number, t: any) => sum + (t.valueUsd * t.change24h / 100), 0) / totalValue * 100
-      : 0;
+    const totalValue = portfolio.reduce((sum, t) => sum + t.valueUsd, 0);
 
     return NextResponse.json({
-      portfolio: portfolio.sort((a: any, b: any) => b.valueUsd - a.valueUsd),
+      portfolio: portfolio.sort((a, b) => b.valueUsd - a.valueUsd),
       totalValue,
-      totalChange,
+      totalChange: 0,
       tokenCount: portfolio.length,
+      chain,
+      txCount: scan.txCount,
+      explorerUrl: scan.explorerUrl,
+      recentTransactions: scan.recentTransactions.slice(0, 10),
       timestamp: new Date().toISOString(),
+      priceSource: 'binance',
     });
   } catch (error: any) {
-
-    return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to fetch portfolio' }, { status: 500 });
   }
 }
