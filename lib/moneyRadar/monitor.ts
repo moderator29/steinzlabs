@@ -8,11 +8,11 @@ class MoneyRadarMonitor {
 
   async startMonitoring() {
     if (this.monitoringInterval) {
-      console.log('Money Radar already monitoring');
+
       return;
     }
 
-    console.log('Money Radar: Starting entity monitoring...');
+
 
     this.monitoringInterval = setInterval(async () => {
       await this.checkAllEntities();
@@ -25,7 +25,7 @@ class MoneyRadarMonitor {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log('Money Radar: Monitoring stopped');
+
     }
   }
 
@@ -42,13 +42,13 @@ class MoneyRadarMonitor {
         return;
       }
 
-      console.log(`Checking ${followedEntities.length} followed entities...`);
+
 
       for (const followed of followedEntities) {
         await this.checkEntityActivity(followed);
       }
     } catch (error) {
-      console.error('Failed to check entities:', error);
+
     }
   }
 
@@ -68,7 +68,7 @@ class MoneyRadarMonitor {
         }
       }
     } catch (error) {
-      console.error(`Failed to check entity ${followed.entity_name}:`, error);
+
     }
   }
 
@@ -92,7 +92,7 @@ class MoneyRadarMonitor {
         txHash: tx.hash,
       };
 
-      console.log(`${followed.entity_name} ${action} ${entityTrade.amount} ${entityTrade.token}`);
+
 
       await this.alertFollowers(followed.user_id, entityTrade);
 
@@ -101,12 +101,12 @@ class MoneyRadarMonitor {
       }
 
     } catch (error) {
-      console.error('Failed to process entity trade:', error);
+
     }
   }
 
   private async alertFollowers(userId: string, trade: EntityTrade) {
-    console.log(`Alerting user ${userId} about ${trade.entityName} trade`);
+
 
     const supabaseAdmin = getSupabaseAdmin();
     await supabaseAdmin.from('alerts').insert({
@@ -145,10 +145,10 @@ class MoneyRadarMonitor {
         return;
       }
 
-      console.log(`Auto-exiting ${positions.length} positions following ${trade.entityName}`);
+
 
       for (const position of positions) {
-        console.log(`Auto-exit position: ${position.token_symbol} for user ${position.user_id}`);
+
 
         await supabaseAdmin
           .from('positions')
@@ -158,7 +158,7 @@ class MoneyRadarMonitor {
           .eq('id', position.id);
       }
     } catch (error) {
-      console.error('Failed to trigger auto-exits:', error);
+
     }
   }
 }

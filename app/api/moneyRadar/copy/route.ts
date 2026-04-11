@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Copy trade failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Copy trade failed' },
       { status: 500 }

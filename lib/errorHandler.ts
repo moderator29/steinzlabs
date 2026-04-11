@@ -32,9 +32,9 @@ export function handleApiError(error: unknown): Response {
   const isDev = process.env.NODE_ENV === 'development';
 
   if (error instanceof Error) {
-    console.error('[API Error]', error.message, isDev ? error.stack : '');
+
   } else {
-    console.error('[API Error]', error);
+
   }
 
   return new Response(

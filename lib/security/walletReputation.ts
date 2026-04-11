@@ -108,7 +108,7 @@ export async function getWalletReputation(
       allowAccess: true,
     };
   } catch (error) {
-    console.error('Wallet reputation check failed:', error);
+
 
     return {
       score: 50,

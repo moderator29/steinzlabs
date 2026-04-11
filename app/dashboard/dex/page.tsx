@@ -175,15 +175,74 @@ function TokenCard({ token, isNew, onClick }: TokenCardProps) {
   );
 }
 
+// ── Lightweight Chart for DEX tokens ─────────────────────────────────────────
+function DexTokenChart({ token }: { token: DexToken }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let chart: any = null;
+
+    (async () => {
+      const { createChart, CrosshairMode } = await import('lightweight-charts');
+      const el = containerRef.current!;
+      const isUp = (token.change24h ?? 0) >= 0;
+      const color = isUp ? '#10B981' : '#EF4444';
+
+      chart = createChart(el, {
+        width: el.clientWidth,
+        height: 300,
+        layout: { background: { color: '#070B14' }, textColor: '#6B7280' },
+        grid: { vertLines: { visible: false }, horzLines: { color: '#1F2937' } },
+        rightPriceScale: { borderVisible: false, textColor: '#9CA3AF' },
+        timeScale: { borderVisible: false, textColor: '#9CA3AF' },
+        crosshair: { mode: CrosshairMode.Normal, vertLine: { color: '#374151' }, horzLine: { color: '#374151' } },
+        handleScroll: false,
+        handleScale: false,
+      });
+
+      const area = chart.addAreaSeries({
+        lineColor: color,
+        topColor: isUp ? '#10B98125' : '#EF444425',
+        bottomColor: 'transparent',
+        lineWidth: 2,
+        priceLineVisible: true,
+        lastValueVisible: true,
+      });
+
+      // Generate representative price data from 24h change
+      const now = Date.now();
+      const price = token.price ?? 0;
+      const change = token.change24h ?? 0;
+      const startPrice = price / (1 + change / 100);
+      const points = 48;
+      const data = Array.from({ length: points }, (_, i) => {
+        const t = Math.floor((now - (points - i) * 30 * 60 * 1000) / 1000);
+        const pct = i / (points - 1);
+        const noise = (Math.random() - 0.5) * 0.015 * price;
+        const val = startPrice + (price - startPrice) * pct + noise;
+        return { time: t as any, value: Math.max(0, val) };
+      });
+      data[data.length - 1] = { time: Math.floor(now / 1000) as any, value: price };
+
+      area.setData(data);
+      chart.timeScale().fitContent();
+
+      const ro = new ResizeObserver(() => {
+        if (el && chart) chart.applyOptions({ width: el.clientWidth });
+      });
+      ro.observe(el);
+    })();
+
+    return () => { chart?.remove(); };
+  }, [token]);
+
+  return <div ref={containerRef} className="w-full" style={{ height: 300 }} />;
+}
+
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const iframeChain = token.chain.toLowerCase();
-  const iframeSrc = token.pairAddress
-    ? `https://dexscreener.com/${iframeChain}/${token.pairAddress}?embed=1&theme=dark`
-    : token.contractAddress
-    ? `https://dexscreener.com/${iframeChain}/${token.contractAddress}?embed=1&theme=dark`
-    : null;
   const swapHref = `/dashboard/swap?token=${token.contractAddress}&chain=${token.chain}`;
 
   const handleCopy = async () => {
@@ -256,17 +315,10 @@ function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }
           ))}
         </div>
 
-        {/* DexScreener chart */}
-        {iframeSrc && (
-          <div className="flex-1 min-h-[300px] sm:min-h-[380px] bg-black">
-            <iframe
-              src={iframeSrc}
-              className="w-full h-full min-h-[300px] sm:min-h-[380px] border-0"
-              title={`${token.name} chart`}
-              allow="clipboard-write"
-            />
-          </div>
-        )}
+        {/* STEINZ Price Chart */}
+        <div className="bg-[#070B14] border-t border-white/[0.04]">
+          <DexTokenChart token={token} />
+        </div>
 
         {/* Action buttons */}
         <div className="flex items-center gap-3 px-5 py-4 border-t border-white/[0.06]">
@@ -277,17 +329,13 @@ function TokenModal({ token, onClose }: { token: DexToken; onClose: () => void }
             <Zap className="w-4 h-4" />
             Buy on Swap
           </a>
-          {token.dexUrl && (
-            <a
-              href={token.dexUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] text-gray-300 hover:text-white font-semibold text-sm transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              DexScreener
-            </a>
-          )}
+          <a
+            href={`/dashboard/security?ca=${encodeURIComponent(token.contractAddress)}&chain=${token.chain}`}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] text-gray-300 hover:text-white font-semibold text-sm transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Scan Contract
+          </a>
         </div>
       </div>
     </div>

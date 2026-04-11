@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Execute trade failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Trade execution failed' },
       { status: 500 }

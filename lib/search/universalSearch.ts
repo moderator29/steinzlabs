@@ -5,7 +5,7 @@ import { arkhamAPI } from '../arkham/api';
 import { SearchResult } from './types';
 
 export async function universalSearch(query: string): Promise<SearchResult[]> {
-  console.log(`Universal search for: "${query}"`);
+
 
   try {
     const [dexResults, geckoResults, pumpResults] = await Promise.all([
@@ -69,7 +69,7 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
             scammerPresent,
           };
         } catch (error) {
-          console.error('Arkham enrichment failed for', result.symbol, error);
+
           return result;
         }
       })
@@ -88,11 +88,11 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
       return b.volumeUSD - a.volumeUSD;
     });
 
-    console.log(`Found ${enriched.length} unique results`);
+
     return enriched;
 
   } catch (error) {
-    console.error('Universal search failed:', error);
+
     return [];
   }
 }

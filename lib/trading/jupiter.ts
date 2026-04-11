@@ -56,7 +56,7 @@ class JupiterAPI {
         validUntil: Date.now() + 30000,
       };
     } catch (error) {
-      console.error('Jupiter quote failed:', error);
+
       throw error;
     }
   }
@@ -113,7 +113,7 @@ class JupiterAPI {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('Jupiter swap execution failed:', error);
+
       return {
         success: false,
         error: error.message || 'Swap execution failed',
@@ -132,7 +132,7 @@ class JupiterAPI {
       const data = await response.json();
       return parseFloat(data.data?.[tokenAddress]?.price || '0');
     } catch (error) {
-      console.error('Failed to get token price:', error);
+
       return 0;
     }
   }

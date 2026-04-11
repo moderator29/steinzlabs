@@ -31,14 +31,14 @@ export async function POST(request: Request) {
     });
 
     if (updateError) {
-      console.error('[ResetPassword] Update error:', updateError.message);
+
       return NextResponse.json({ error: 'Failed to update password.' }, { status: 500 });
     }
 
-    console.log(`[ResetPassword] Password reset for ${user.email}`);
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('[ResetPassword] error:', err.message);
+
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
   }
 }

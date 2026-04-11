@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       pricing: TIER_PRICING,
     });
   } catch (error: any) {
-    console.error('Subscription lookup error:', error);
+
     return NextResponse.json({
       tier: 'FREE',
       status: 'active',

@@ -29,7 +29,7 @@ export async function searchPumpFun(query: string): Promise<SearchResult[]> {
       scammerPresent: false,
     }));
   } catch (error) {
-    console.error('Pump.fun search failed:', error);
+
     return [];
   }
 }

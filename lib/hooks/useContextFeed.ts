@@ -87,7 +87,7 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
       allEvents.forEach(e => seenIds.current.add(e.id));
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
-        console.error('Failed to fetch context feed:', error);
+
       }
     } finally {
       setLoading(false);
@@ -148,7 +148,7 @@ export function useArchivedFeed(chain: ChainFilter = 'all') {
       setEvents(data.events || []);
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
-        console.error('Failed to fetch archived feed:', error);
+
       }
     } finally {
       setLoading(false);

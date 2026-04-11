@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ threats });
   } catch (error) {
-    console.error('Failed to fetch threats:', error);
+
     return NextResponse.json(
       { error: 'Failed to fetch threats' },
       { status: 500 }

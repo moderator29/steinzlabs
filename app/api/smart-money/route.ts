@@ -155,7 +155,7 @@ async function getWalletsFromAlchemy(): Promise<SmartWallet[]> {
       };
     });
   } catch (err) {
-    console.error('Alchemy smart-money error:', err);
+
     return [];
   }
 }
@@ -252,7 +252,7 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
 
     return wallets;
   } catch (err) {
-    console.error('DexScreener smart-money error:', err);
+
     return [];
   }
 }
@@ -287,7 +287,7 @@ async function getRecentMovesFromDexScreener(): Promise<SmartTrade[]> {
       };
     });
   } catch (err) {
-    console.error('DexScreener recent moves error:', err);
+
     return [];
   }
 }
@@ -313,7 +313,7 @@ export async function GET() {
       { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' } }
     );
   } catch (error) {
-    console.error('Smart money API error:', error);
+
     return NextResponse.json({ wallets: [], recentMoves: [], timestamp: Date.now(), error: 'Failed to fetch smart money data' }, { status: 500 });
   }
 }

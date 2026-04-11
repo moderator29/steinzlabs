@@ -29,7 +29,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Arkham address intel failed:', error);
+
     return NextResponse.json(
       { error: 'Failed to fetch address intelligence' },
       { status: 500 }

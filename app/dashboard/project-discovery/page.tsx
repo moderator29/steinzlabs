@@ -66,7 +66,7 @@ export default function ProjectDiscoveryPage() {
       const data = await res.json();
       setProjects(data.projects || []);
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
+
     } finally {
       setLoading(false);
     }

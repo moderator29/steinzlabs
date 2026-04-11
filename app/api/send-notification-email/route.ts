@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
     if (!RESEND_API_KEY && !SENDGRID_API_KEY) {
-      console.log('Email API not configured — skipping email notification for:', title);
+
       return NextResponse.json({ skipped: true, reason: 'Email API not configured' });
     }
 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
       if (!resendRes.ok) {
         const errData = await resendRes.json().catch(() => ({}));
-        console.error('Resend email error:', errData);
+
         return NextResponse.json({ error: 'Failed to send email via Resend', details: errData }, { status: 502 });
       }
 
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (!sgRes.ok) {
-        console.error('SendGrid email error:', sgRes.status);
+
         return NextResponse.json({ error: 'Failed to send email via SendGrid' }, { status: 502 });
       }
 
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ skipped: true, reason: 'No email provider configured' });
   } catch (error) {
-    console.error('send-notification-email error:', error);
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -57,7 +57,7 @@ async function fetchPriceAlerts(): Promise<NotificationItem[]> {
     }
     return alerts.slice(0, 5);
   } catch (error) {
-    console.error('Price alerts fetch error:', error);
+
     return [];
   }
 }
@@ -86,7 +86,7 @@ async function fetchTrending(): Promise<NotificationItem[]> {
       };
     });
   } catch (error) {
-    console.error('Trending fetch error:', error);
+
     return [];
   }
 }
@@ -138,7 +138,7 @@ async function fetchSecurityAlerts(): Promise<NotificationItem[]> {
 
     return alerts.slice(0, 3);
   } catch (error) {
-    console.error('Security alerts fetch error:', error);
+
     return [];
   }
 }
@@ -168,7 +168,7 @@ async function fetchWhaleAlerts(): Promise<NotificationItem[]> {
       };
     });
   } catch (error) {
-    console.error('Whale alerts fetch error:', error);
+
     return [];
   }
 }
@@ -261,7 +261,7 @@ export async function GET(req: NextRequest) {
       headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
     });
   } catch (error) {
-    console.error('Notifications API error:', error);
+
     return NextResponse.json({ notifications: [], error: 'Failed to fetch notifications' }, { status: 500 });
   }
 }
@@ -320,7 +320,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (supabaseErr) {
       // Supabase unavailable — fall back to localStorage (handled client-side)
-      console.log('Supabase notification save skipped:', supabaseErr);
+
     }
 
     // Send email for critical alerts
@@ -338,7 +338,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ notification, supabaseId });
   } catch (error) {
-    console.error('POST /api/notifications error:', error);
+
     return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 });
   }
 }

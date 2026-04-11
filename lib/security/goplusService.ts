@@ -4,7 +4,7 @@
  */
 
 const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1';
-const API_KEY = '6qqc3yyg7Q7MA59r2QF0';
+const API_KEY = process.env.GOPLUS_API_KEY || '';
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', eth: '1',

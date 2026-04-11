@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
   } catch (error: any) {
-    console.error('Revenue stats error:', error);
+
     return NextResponse.json({ error: error.message || 'Failed to load revenue stats' }, { status: 500 });
   }
 }

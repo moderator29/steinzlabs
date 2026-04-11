@@ -51,7 +51,7 @@ async function fetchTopCoins() {
         };
       });
   } catch (e) {
-    console.error('CoinGecko fetch error:', e);
+
     return [];
   }
 }
@@ -135,7 +135,7 @@ export async function GET(request: Request) {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
     });
   } catch (error) {
-    console.error('Project discovery error:', error);
+
     return NextResponse.json({ projects: [], error: 'Failed to fetch' }, { status: 500 });
   }
 }

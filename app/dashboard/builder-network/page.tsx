@@ -51,7 +51,7 @@ export default function BuilderNetworkPage() {
       const data = await res.json();
       setBuilders(data.builders || []);
     } catch (err) {
-      console.error('Failed to fetch builders:', err);
+
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function BuilderNetworkPage() {
         setShowApply(false);
       }
     } catch (err) {
-      console.error('Application failed:', err);
+
     } finally {
       setApplying(false);
     }

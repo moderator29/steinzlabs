@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(engagement);
   } catch (error) {
-    console.error('Engagement error:', error);
+
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

@@ -175,7 +175,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Portfolio risk scan error:', error);
+
     return NextResponse.json({ error: 'Risk scan failed' }, { status: 500 });
   }
 }

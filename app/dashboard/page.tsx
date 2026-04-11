@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
+import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -229,8 +230,15 @@ export default function Dashboard() {
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-              {stats.map((stat) => (
-                <StatCard key={stat.label} {...stat} />
+              {stats.map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, delay: i * 0.06 }}
+                >
+                  <StatCard {...stat} />
+                </motion.div>
               ))}
             </div>
 
@@ -260,7 +268,17 @@ export default function Dashboard() {
 
         <TabErrorBoundary>
           <Suspense fallback={<TabSpinner />}>
-            {renderContent()}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeNav + activeTab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
           </Suspense>
         </TabErrorBoundary>
       </div>

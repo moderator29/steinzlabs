@@ -37,10 +37,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to send email. Please try again.' }, { status: 500 });
     }
 
-    console.log(`[ResendVerification] Verification email re-sent to ${cleanEmail}`);
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('[ResendVerification] error:', err.message);
+
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
   }
 }

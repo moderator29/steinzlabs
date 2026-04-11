@@ -47,7 +47,7 @@ export default function TokenPreviewPage() {
           setListing(data.listing);
         }
       } catch (e) {
-        console.error('Failed to fetch listing:', e);
+
       }
       setLoading(false);
     };

@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ results, source: 'dexscreener' });
   } catch (error) {
-    console.error('Search error:', error);
+
     return NextResponse.json(
       { results: [], error: 'Search unavailable' },
       { status: 200 }

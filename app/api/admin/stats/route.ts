@@ -79,7 +79,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Admin stats error:', error);
+
     return NextResponse.json({
       users: { total: 0, profiles: 0, verified: 0, todaySignups: 0, weekSignups: 0, recentUsers: [] },
       platform: { totalScans: 0, totalPositions: 0, activePositions: 0, totalThreats: 0, totalAlerts: 0, followedEntities: 0 },
