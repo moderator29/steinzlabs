@@ -316,9 +316,53 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
     }
   }
 
+  // Fetch recent transactions via Alchemy
+  let recentTransactions: any[] = [];
+  if (isAlchemy) {
+    try {
+      const [sentRes, receivedRes] = await Promise.allSettled([
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 10,
+            method: 'alchemy_getAssetTransfers',
+            params: [{ fromAddress: address, category: ['external', 'erc20', 'erc721', 'internal'], order: 'desc', maxCount: '0x14', withMetadata: true }],
+          }),
+        }),
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 11,
+            method: 'alchemy_getAssetTransfers',
+            params: [{ toAddress: address, category: ['external', 'erc20', 'erc721', 'internal'], order: 'desc', maxCount: '0x14', withMetadata: true }],
+          }),
+        }),
+      ]);
+      const sentData = sentRes.status === 'fulfilled' ? await sentRes.value.json() : null;
+      const rcvdData = receivedRes.status === 'fulfilled' ? await receivedRes.value.json() : null;
+      const sent = (sentData?.result?.transfers || []).map((t: any) => ({
+        hash: t.hash, blockTime: t.metadata?.blockTimestamp || null, status: 'success',
+        type: 'send', asset: t.asset || 'ETH', value: t.value, from: t.from, to: t.to,
+      }));
+      const received = (rcvdData?.result?.transfers || []).map((t: any) => ({
+        hash: t.hash, blockTime: t.metadata?.blockTimestamp || null, status: 'success',
+        type: 'receive', asset: t.asset || 'ETH', value: t.value, from: t.from, to: t.to,
+      }));
+      // Merge, dedupe by hash, sort by time, take 30
+      const allTxns = [...sent, ...received];
+      const seen = new Set<string>();
+      recentTransactions = allTxns
+        .filter(t => { if (seen.has(t.hash)) return false; seen.add(t.hash); return true; })
+        .sort((a, b) => (b.blockTime || '').localeCompare(a.blockTime || ''))
+        .slice(0, 30);
+    } catch { /* non-fatal */ }
+  }
+
   let tokenDetails: any[] = [];
   if (tokenBalances.length > 0 && isAlchemy) {
-    const metadataPromises = tokenBalances.slice(0, 50).map(async (token: any) => {
+    const metadataPromises = tokenBalances.slice(0, 30).map(async (token: any) => {
       try {
         const metaRes = await fetch(rpcUrl, {
           method: 'POST',
@@ -407,6 +451,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
     ethValueUsd: nativeSymbol === 'ETH' ? nativeValueUsd.toFixed(2) : undefined,
     tokenLogos,
     aiAnalysisContext,
+    recentTransactions,
   };
 }
 
@@ -461,9 +506,19 @@ async function getSolData(address: string) {
   const tokenAccounts = tokenData.result?.value || [];
 
   let txCount = 0;
+  let recentTransactions: any[] = [];
   try {
     const sigData = await sigRes.json();
-    txCount = sigData.result?.length || 0;
+    const allSigs = sigData.result || [];
+    txCount = allSigs.length;
+    recentTransactions = allSigs.slice(0, 30).map((sig: any) => ({
+      hash: sig.signature,
+      blockTime: sig.blockTime ? new Date(sig.blockTime * 1000).toISOString() : null,
+      status: sig.err ? 'failed' : 'success',
+      memo: sig.memo || null,
+      slot: sig.slot,
+      type: 'transaction',
+    }));
   } catch { txCount = 0; }
 
   let solPrice = 170;
@@ -481,7 +536,7 @@ async function getSolData(address: string) {
     const info = account.account?.data?.parsed?.info;
     if (!info) continue;
     const uiAmount = info.tokenAmount?.uiAmount || 0;
-    if (uiAmount <= 0) continue;
+    // Include all tokens (even 0-balance) — user wants full wallet picture
     splTokens.push({
       mint: info.mint,
       balance: uiAmount,
@@ -489,7 +544,7 @@ async function getSolData(address: string) {
     });
   }
 
-  const tokenPricePromises = splTokens.slice(0, 50).map(async (token) => {
+  const tokenPricePromises = splTokens.slice(0, 30).map(async (token) => {
     const priceInfo = await getSolTokenPrice(token.mint);
     return { ...token, priceInfo };
   });
@@ -548,6 +603,7 @@ async function getSolData(address: string) {
     explorerUrl: 'https://solscan.io',
     tokenLogos,
     aiAnalysisContext,
+    recentTransactions,
   };
 }
 
