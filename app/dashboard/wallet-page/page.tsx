@@ -781,7 +781,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       setPrivateKey(wallet.privateKey);
       setStep('phrase');
     } catch (e) {
-      console.error('Wallet creation error:', e);
+
     } finally { setCreating(false); }
   };
 

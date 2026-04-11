@@ -162,7 +162,8 @@ export default function AdminPanel() {
         const data = await res.json();
         setStats(data);
       }
-    } catch (e) { console.error('Failed to fetch stats:', e); }
+    } catch (e) { // removed log
+}
     setLoadingStats(false);
   }, []);
 
@@ -178,7 +179,8 @@ export default function AdminPanel() {
         setUserTotal(data.total || 0);
         setUserTotalPages(data.totalPages || 0);
       }
-    } catch (e) { console.error('Failed to fetch users:', e); }
+    } catch (e) { // removed log
+}
     setLoadingUsers(false);
   }, [userSearch, userPage]);
 
@@ -187,7 +189,8 @@ export default function AdminPanel() {
     try {
       const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false');
       if (res.ok) setTokens(await res.json());
-    } catch (e) { console.error('Failed to fetch tokens:', e); }
+    } catch (e) { // removed log
+}
     setLoadingTokens(false);
   }, []);
 
@@ -224,7 +227,8 @@ export default function AdminPanel() {
         const data = await res.json();
         setTokenListings(data.listings || []);
       }
-    } catch (e) { console.error('Failed to fetch listings:', e); }
+    } catch (e) { // removed log
+}
     setLoadingListings(false);
   }, []);
 
@@ -236,7 +240,8 @@ export default function AdminPanel() {
         body: JSON.stringify({ id, action, password: ADMIN_PASSWORD }),
       });
       fetchListings();
-    } catch (e) { console.error('Listing action failed:', e); }
+    } catch (e) { // removed log
+}
   };
 
   const refreshAll = useCallback(async () => {

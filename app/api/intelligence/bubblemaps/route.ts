@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       lastUpdated: intelligence.lastUpdated,
     });
   } catch (error: any) {
-    console.error('Failed to load Bubblemaps data:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to load Bubblemaps data' },
       { status: 500 }

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         const taken = users?.some((u: any) => u.user_metadata?.username?.toLowerCase() === cleanUsername);
         return NextResponse.json({ available: !taken });
       } catch (adminErr: any) {
-        console.error('[Signup] Admin client error during username check:', adminErr.message);
+
         // Return unknown so frontend doesn't falsely show "username taken"
         return NextResponse.json({ available: null, error: 'service_unavailable' }, { status: 503 });
       }
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     try {
       admin = getSupabaseAdmin();
     } catch (e: any) {
-      console.error('[Signup] SUPABASE_SERVICE_KEY missing:', e.message);
+
       return NextResponse.json({ error: 'Server configuration error. Please contact support.' }, { status: 503 });
     }
 
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     });
 
     if (createError) {
-      console.error('[Signup] createUser error:', createError.message);
+
       if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
         return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
       }
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         created_at: new Date().toISOString(),
       }, { onConflict: 'id' });
     } catch (profileErr: any) {
-      console.error('[Signup] Profile upsert error:', profileErr?.message);
+
     }
 
     const token = generateVerifyToken(newUser.user.id, cleanEmail);
@@ -119,16 +119,16 @@ export async function POST(request: Request) {
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
 
     if (!emailSent) {
-      console.error('[Signup] Email send failed, deleting user and asking to retry');
+
       await admin.auth.admin.deleteUser(newUser.user.id);
       return NextResponse.json({ error: 'Failed to send verification email. Please try again.' }, { status: 500 });
     }
 
-    console.log(`[Signup] Verification email sent to ${cleanEmail}`);
+
     return NextResponse.json({ success: true, email: cleanEmail, needsConfirmation: true });
 
   } catch (err: any) {
-    console.error('[Signup] error:', err.message);
+
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

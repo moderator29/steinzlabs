@@ -319,7 +319,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Market API error:', error);
+
     return NextResponse.json({ error: 'Failed to fetch market data', tokens: [] }, { status: 500 });
   }
 }

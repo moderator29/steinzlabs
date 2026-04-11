@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       query,
     });
   } catch (error: any) {
-    console.error('Search failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Search failed' },
       { status: 500 }

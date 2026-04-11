@@ -101,7 +101,7 @@ Respond with valid JSON only. No markdown, no code blocks, just raw JSON:
 
     return NextResponse.json(assessment);
   } catch (err) {
-    console.error('Contract AI assessment error:', err);
+
     return NextResponse.json({ error: 'AI assessment failed' }, { status: 500 });
   }
 }

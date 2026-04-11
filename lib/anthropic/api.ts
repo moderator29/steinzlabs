@@ -29,7 +29,7 @@ class AnthropicAPI {
       const data = await response.json();
       return data.content[0].text;
     } catch (error) {
-      console.error('Anthropic API request failed:', error);
+
       throw error;
     }
   }

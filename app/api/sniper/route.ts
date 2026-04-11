@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GOPLUS_API_KEY = '6qqc3yyg7Q7MA59r2QF0';
+const GOPLUS_API_KEY = process.env.GOPLUS_API_KEY || '';
 const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1/token_security';
 
 // Map our chain identifiers to GoPlus chain IDs
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[sniper/security]', err);
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

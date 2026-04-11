@@ -52,15 +52,9 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
   const trustLabel = event.trustScore >= 70 ? 'TRUSTED' : event.trustScore >= 40 ? 'CAUTION' : 'DANGER';
 
   const chainId = event.chain || 'solana';
-  const hasPair = !!event.pairAddress;
   const tvSymbol = getTradingViewSymbol(event.tokenSymbol || '', event.chain);
   const useTradingView = !!tvSymbol && isKnownTradingViewSymbol(event.tokenSymbol || '');
-  const dexChartUrl = hasPair
-    ? `https://dexscreener.com/${chainId}/${event.pairAddress}?embed=1&theme=dark&trades=0&info=0`
-    : null;
-  const hasChart = useTradingView || !!dexChartUrl;
-
-  const dexPageUrl = event.dexUrl || (hasPair ? `https://dexscreener.com/${chainId}/${event.pairAddress}` : null);
+  const hasChart = useTradingView;
 
   const explorerUrl = chainId === 'ethereum'
     ? `https://etherscan.io/tx/${event.txHash}`
@@ -114,7 +108,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
               <div>
                 <h2 className="text-sm font-bold">{event.tokenName || event.tokenSymbol || 'Chart'}</h2>
                 <p className="text-[10px] text-gray-500">
-                  {event.tokenSymbol ? `$${event.tokenSymbol}` : ''} · {useTradingView ? 'TradingView Advanced' : 'DexScreener'} · Full Screen
+                  {event.tokenSymbol ? `$${event.tokenSymbol}` : ''} · TradingView Advanced · Full Screen
                 </p>
               </div>
             </div>
@@ -134,15 +128,6 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
           <div className="w-full" style={{ height: `${chartHeight}px` }}>
             {useTradingView && tvSymbol ? (
               <TradingViewChart symbol={tvSymbol} height={chartHeight} showTools />
-            ) : dexChartUrl ? (
-              <iframe
-                src={dexChartUrl}
-                className="w-full h-full border-0"
-                title="DexScreener Chart"
-                allow="clipboard-write"
-                loading="lazy"
-                sandbox="allow-scripts allow-same-origin allow-popups"
-              />
             ) : null}
           </div>
           {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
@@ -229,7 +214,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                   <span className="px-1.5 py-0.5 rounded bg-[#10B981]/10 text-[#10B981] text-[9px] font-bold">LIVE</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : chainId} · {useTradingView ? 'TradingView' : 'DexScreener'}</span>
+                  <span className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : chainId} · TradingView</span>
                   <button
                     onClick={() => setIsFullScreen(true)}
                     className="hover:bg-white/10 p-1.5 rounded-lg transition-colors text-gray-400 hover:text-white"
@@ -241,17 +226,6 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
               </div>
               {useTradingView && tvSymbol ? (
                 <TradingViewChart symbol={tvSymbol} height={420} showTools />
-              ) : dexChartUrl ? (
-                <div className="w-full" style={{ height: '380px' }}>
-                  <iframe
-                    src={dexChartUrl}
-                    className="w-full h-full border-0"
-                    title="DexScreener Chart"
-                    allow="clipboard-write"
-                    loading="lazy"
-                    sandbox="allow-scripts allow-same-origin allow-popups"
-                  />
-                </div>
               ) : null}
             </div>
           )}

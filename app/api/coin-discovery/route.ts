@@ -41,7 +41,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Coin discovery error:', error);
+
     return NextResponse.json({ error: 'Failed to fetch coins' }, { status: 500 });
   }
 }

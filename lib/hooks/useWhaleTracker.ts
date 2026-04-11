@@ -25,7 +25,7 @@ export function useWhaleTracker(chain: string = 'ethereum', limit: number = 20) 
       const data = await response.json();
       setWhales(data.whales || []);
     } catch (error) {
-      console.error('Failed to fetch whales:', error);
+
     } finally {
       setLoading(false);
     }

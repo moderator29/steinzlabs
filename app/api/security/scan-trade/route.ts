@@ -44,13 +44,13 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (dbError) {
-        console.error('Failed to persist scan result:', dbError);
+
       }
     }
 
     return NextResponse.json(scanResult);
   } catch (error) {
-    console.error('Shadow Guardian scan failed:', error);
+
     return NextResponse.json(
       { error: 'Trade scan failed' },
       { status: 500 }

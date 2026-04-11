@@ -133,7 +133,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Anthropic API error:', errorText);
+
       return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 502 });
     }
 
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ reply });
   } catch (error) {
-    console.error('Customer service error:', error);
+
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

@@ -126,11 +126,11 @@ export async function monitorLimitOrders(): Promise<void> {
       }
 
       if (shouldExecute) {
-        console.log(`Limit order triggered: ${order.side} ${order.token_symbol} at ${currentPrice}`);
+
         await executeLimitOrder(order);
       }
     } catch (error) {
-      console.error(`Failed to process limit order ${order.id}:`, error);
+
     }
   }
 

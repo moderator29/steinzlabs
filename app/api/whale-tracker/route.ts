@@ -118,7 +118,7 @@ async function getAlchemyTransfers(): Promise<WhaleEvent[]> {
       };
     });
   } catch (err) {
-    console.error('Alchemy whale tracker error:', err);
+
     return [];
   }
 }
@@ -153,7 +153,7 @@ async function getCoinGeckoWhaleActivity(): Promise<WhaleEvent[]> {
         };
       });
   } catch (err) {
-    console.error('CoinGecko whale error:', err);
+
     return [];
   }
 }
@@ -188,7 +188,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Whale tracker API error:', error);
+
     return NextResponse.json({ events: [], timestamp: Date.now(), error: 'Failed to fetch whale data' }, { status: 500 });
   }
 }

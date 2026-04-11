@@ -8,7 +8,7 @@ class ShadowGuardian {
     amount: number,
     userWallet?: string
   ): Promise<ScanResult> {
-    console.log('Shadow Guardian: Starting scan...', { tokenAddress, amount });
+
 
     try {
       const holders = await arkhamAPI.getTokenHolders(tokenAddress, 20);
@@ -120,7 +120,7 @@ class ShadowGuardian {
         message: `SAFE TO TRADE: No threats detected (Risk: ${aiRisk}/10)`,
       };
     } catch (error) {
-      console.error('Shadow Guardian scan failed:', error);
+
 
       return {
         allowed: false,

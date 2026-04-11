@@ -35,7 +35,7 @@ function getClient(): SupabaseClient {
         }
       });
     } catch (err) {
-      console.error('Auth state listener setup failed:', err);
+
     }
   }
 
