@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, LogOut, Eye, CheckCircle, XCircle, AlertTriangle, Clock,
   Users, Activity, Lock, BarChart3, TrendingUp, TrendingDown, Zap,
