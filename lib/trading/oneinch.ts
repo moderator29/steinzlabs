@@ -70,7 +70,7 @@ class OneInchAPI {
         validUntil: Date.now() + 30000,
       };
     } catch (error) {
-      console.error('1inch quote failed:', error);
+
       throw error;
     }
   }
@@ -124,7 +124,7 @@ class OneInchAPI {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('1inch swap execution failed:', error);
+
       return {
         success: false,
         error: error.message || 'Swap execution failed',

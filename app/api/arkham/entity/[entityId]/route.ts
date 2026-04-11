@@ -20,7 +20,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Arkham entity fetch failed:', error);
+
     return NextResponse.json(
       { error: 'Failed to fetch entity' },
       { status: 500 }

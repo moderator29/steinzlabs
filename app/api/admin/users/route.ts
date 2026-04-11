@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     const { data: profiles, count, error } = await query;
 
     if (error) {
-      console.error('Users fetch error:', error);
+
       return NextResponse.json({ users: [], total: 0, page, limit });
     }
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       totalPages: Math.ceil((count || 0) / limit),
     });
   } catch (error) {
-    console.error('Admin users error:', error);
+
     return NextResponse.json({ users: [], total: 0, page: 1, limit: 50, totalPages: 0 });
   }
 }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
-    console.error('Admin user action error:', error);
+
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

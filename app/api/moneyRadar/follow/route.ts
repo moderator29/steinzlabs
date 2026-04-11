@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       entity: data,
     });
   } catch (error: any) {
-    console.error('Follow entity failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to follow entity' },
       { status: 500 }

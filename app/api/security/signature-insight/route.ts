@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       decodedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Signature insight error:', err);
+
     return NextResponse.json({ error: 'Decode failed. Please try again.' }, { status: 500 });
   }
 }

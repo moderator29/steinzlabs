@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       profile,
     });
   } catch (err: any) {
-    console.error('[Signin] error:', err.message);
+
     return NextResponse.json({ error: 'Sign in failed. Please try again.' }, { status: 500 });
   }
 }

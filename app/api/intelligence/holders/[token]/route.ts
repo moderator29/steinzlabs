@@ -10,13 +10,13 @@ export async function GET(
     const chain = request.nextUrl.searchParams.get('chain') || undefined;
     const limit = parseInt(request.nextUrl.searchParams.get('limit') || '20');
 
-    console.log(`Loading holder intelligence for ${token}...`);
+
 
     const intelligence = await loadHolderIntelligence(token, chain, limit);
 
     return NextResponse.json(intelligence);
   } catch (error: any) {
-    console.error('Failed to load holder intelligence:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to load holder intelligence' },
       { status: 500 }

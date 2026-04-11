@@ -21,7 +21,7 @@ export function usePrices() {
       const data = await response.json();
       setAllPrices(data);
     } catch (error) {
-      console.error('Failed to fetch prices:', error);
+
     } finally {
       setLoading(false);
     }

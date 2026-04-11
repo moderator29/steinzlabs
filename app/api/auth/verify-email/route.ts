@@ -30,9 +30,9 @@ export async function GET(request: Request) {
 
     if (!user.email_confirmed_at) {
       await admin.auth.admin.updateUserById(userId, { email_confirm: true });
-      console.log(`[VerifyEmail] Email confirmed for ${user.email}`);
+
     } else {
-      console.log(`[VerifyEmail] Email already confirmed for ${user.email}`);
+
     }
 
     // Generate a magic link, extract its token, then redirect the user to
@@ -55,13 +55,13 @@ export async function GET(request: Request) {
         }
       }
     } catch (linkErr: any) {
-      console.error('[VerifyEmail] magic link generation failed:', linkErr.message);
+
     }
 
     // Fallback — user verifies but signs in manually
     return NextResponse.redirect(`${getSiteUrl()}/login?verified=true`);
   } catch (err: any) {
-    console.error('[VerifyEmail] error:', err.message);
+
     return NextResponse.redirect(`${getSiteUrl()}/login?error=verify_failed`);
   }
 }

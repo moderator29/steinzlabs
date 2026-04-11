@@ -34,7 +34,7 @@ class ArkhamAPI {
 
       return response.json();
     } catch (error) {
-      console.error('Arkham API request failed:', error);
+
       throw error;
     }
   }
@@ -229,7 +229,7 @@ class ArkhamAPI {
       this.setCache(cacheKey, enriched);
       return enriched;
     } catch (error) {
-      console.error('Token holders lookup failed, returning empty:', error);
+
       return [];
     }
   }
@@ -273,7 +273,7 @@ class ArkhamAPI {
       this.setCache(cacheKey, connections);
       return connections;
     } catch (error) {
-      console.error('Wallet connections lookup failed:', error);
+
       return [];
     }
   }

@@ -545,7 +545,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(bubbleData);
   } catch (error) {
-    console.error('Bubble map API error:', error);
+
     return NextResponse.json({ error: 'Failed to generate bubble map data' }, { status: 500 });
   }
 }

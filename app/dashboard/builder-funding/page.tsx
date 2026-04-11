@@ -88,7 +88,7 @@ export default function BuilderFundingPage() {
       setProjects(data.projects || []);
       if (data.stats) setStats(data.stats);
     } catch (err) {
-      console.error('Failed to fetch projects:', err);
+
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export default function BuilderFundingPage() {
         setFundAmount('');
       }
     } catch (err) {
-      console.error('Funding failed:', err);
+
     } finally {
       setFunding(false);
     }
@@ -146,7 +146,7 @@ export default function BuilderFundingPage() {
         fetchProjects();
       }
     } catch (err) {
-      console.error('Submit failed:', err);
+
     } finally {
       setSubmitting(false);
     }

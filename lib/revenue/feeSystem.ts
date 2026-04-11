@@ -90,7 +90,7 @@ export async function recordRevenue(params: {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Failed to record revenue:', error);
+
   }
 }
 
@@ -129,7 +129,7 @@ export async function getTotalRevenue(timeframe?: {
 
     return { totalRevenue, revenueByType, totalTrades: records.length };
   } catch (error) {
-    console.error('Failed to get total revenue:', error);
+
     return { totalRevenue: 0, revenueByType: {}, totalTrades: 0 };
   }
 }

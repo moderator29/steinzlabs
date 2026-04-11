@@ -761,7 +761,7 @@ export async function GET(request: Request) {
       headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' },
     });
   } catch (error) {
-    console.error('Predictions API error:', error);
+
     return NextResponse.json({ error: 'Failed to fetch predictions' }, { status: 500 });
   }
 }
@@ -833,7 +833,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Predictions POST error:', error);
+
     return NextResponse.json({ error: 'Failed to process prediction' }, { status: 500 });
   }
 }

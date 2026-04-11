@@ -53,7 +53,7 @@ function AuthCallbackInner() {
           if (!mounted) return;
 
           if (!result || result.error || !result.data?.session) {
-            console.error('[Callback] verifyOtp failed or timed out:', result?.error?.message);
+
             router.replace('/login?verified=true');
             return;
           }
@@ -102,7 +102,7 @@ function AuthCallbackInner() {
         }, 8000);
 
       } catch (err: any) {
-        console.error('[Callback] error:', err.message);
+
         if (mounted) router.replace('/login?error=callback_failed');
       }
     }

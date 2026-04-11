@@ -208,7 +208,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ tokens, tab, fetchedAt: Date.now() });
   } catch (err: any) {
-    console.error('[dex-feed]', err);
+
     // Return empty array with 200 instead of 502 - UI handles gracefully
     return NextResponse.json({ tokens: [], tab, fetchedAt: Date.now(), error: err?.message });
   }

@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
         blocked: !reputation.allowAccess,
       });
     } catch (dbError) {
-      console.error('Failed to persist wallet reputation:', dbError);
+
     }
 
     return NextResponse.json(reputation);
   } catch (error) {
-    console.error('Wallet reputation check failed:', error);
+
     return NextResponse.json(
       { error: 'Reputation check failed' },
       { status: 500 }

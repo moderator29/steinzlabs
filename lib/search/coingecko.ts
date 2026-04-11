@@ -29,7 +29,7 @@ export async function searchCoinGecko(query: string): Promise<SearchResult[]> {
       scammerPresent: false,
     }));
   } catch (error) {
-    console.error('CoinGecko search failed:', error);
+
     return [];
   }
 }

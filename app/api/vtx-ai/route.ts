@@ -1,6 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { arkhamAPI } from '@/lib/arkham/api';
+
+// Health check — used by admin dashboard to verify VTX is online
+export async function GET() {
+  const configured = !!process.env.ANTHROPIC_API_KEY;
+  return NextResponse.json(
+    { status: configured ? 'online' : 'unconfigured', engine: 'VTX Intelligence', version: '2.0' },
+    { status: configured ? 200 : 503 }
+  );
+}
 
 const FREE_TIER_LIMIT = 25;
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -287,7 +296,7 @@ async function fetchArkhamAddressIntel(address: string): Promise<string> {
 
     return lines.join('\n');
   } catch (error) {
-    console.error('Arkham address intel fetch failed:', error);
+
     return '';
   }
 }
@@ -323,7 +332,7 @@ async function fetchArkhamWalletConnections(address: string): Promise<string> {
 
     return lines.join('\n');
   } catch (error) {
-    console.error('Arkham connections fetch failed:', error);
+
     return '';
   }
 }
@@ -383,7 +392,7 @@ async function fetchArkhamTokenHolders(tokenAddress: string): Promise<string> {
 
     return lines.join('\n');
   } catch (error) {
-    console.error('Arkham holders fetch failed:', error);
+
     return '';
   }
 }
@@ -401,7 +410,7 @@ async function fetchArkhamEntitySearch(query: string): Promise<string> {
     }
     return lines.join('\n');
   } catch (error) {
-    console.error('Arkham entity search failed:', error);
+
     return '';
   }
 }
@@ -417,7 +426,7 @@ async function fetchArkhamScamCheck(address: string): Promise<string> {
 
     return lines.join('\n');
   } catch (error) {
-    console.error('Arkham scam check failed:', error);
+
     return '';
   }
 }
@@ -995,7 +1004,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Anthropic API error:', errorData);
+
       return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 502 });
     }
 
@@ -1058,7 +1067,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address, chartData: chartPayload.data } : {}),
     });
   } catch (error) {
-    console.error('VTX AI error:', error);
+
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

@@ -162,7 +162,7 @@ function LoginPageInner() {
       const destination = searchParams.get('from') || '/dashboard';
       window.location.href = destination;
     } catch (err: any) {
-      console.error('[Login] unexpected error:', err?.message);
+
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
         showToast('Connection error. Check your internet and try again.', 'error');

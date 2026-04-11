@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '195656';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 // ---------- types ----------
 interface ResearchPost {
@@ -253,7 +253,7 @@ export async function GET(req: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Research fetch error:', err);
+
     return NextResponse.json({ posts: [], total: 0, page: 1, limit: 10 });
   }
 }
@@ -264,7 +264,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { password, title, summary, content, category, image_url, tags, published } = body;
 
-    if (password !== ADMIN_PASSWORD) {
+    if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (!title?.trim() || !content?.trim()) {
@@ -294,7 +294,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ success: true, post: data });
   } catch (err) {
-    console.error('Research post error:', err);
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -306,7 +306,7 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get('id');
     const password = searchParams.get('password');
 
-    if (password !== ADMIN_PASSWORD) {
+    if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (!id) {
@@ -319,7 +319,7 @@ export async function DELETE(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Research delete error:', err);
+
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 }

@@ -144,13 +144,13 @@ export async function GET(request: Request) {
     try {
       tokens = await fetchCoinGecko(limit, category);
     } catch (cgErr) {
-      console.error('CoinGecko failed, trying DexScreener:', cgErr);
+
 
       // Try DexScreener fallback
       try {
         tokens = await fetchDexScreenerFallback();
       } catch (dexErr) {
-        console.error('DexScreener fallback failed, using static fallback:', dexErr);
+
 
         // Last resort: top 10 coins with simple price endpoint
         tokens = await fetchTopCoinsFallback();
@@ -164,7 +164,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Market data error:', error);
+
     // Always return 200 with empty array — never 500
     return NextResponse.json({ tokens: [], category: 'top', total: 0, timestamp: new Date().toISOString() });
   }

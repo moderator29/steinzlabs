@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const { data: users, error } = await query;
 
     if (error) {
-      console.error('Broadcast query error:', error);
+
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       message: `Broadcast sent to ${sent} of ${emails.length} users`,
     });
   } catch (error) {
-    console.error('Broadcast error:', error);
+
     return NextResponse.json({ error: 'Broadcast failed' }, { status: 500 });
   }
 }

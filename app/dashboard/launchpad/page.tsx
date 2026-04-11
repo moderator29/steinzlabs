@@ -48,7 +48,7 @@ export default function LaunchpadPage() {
       setProjects(data.projects || []);
       if (data.stats) setStats(data.stats);
     } catch (err) {
-      console.error('Failed to fetch launchpad data:', err);
+
     } finally {
       setLoading(false);
     }

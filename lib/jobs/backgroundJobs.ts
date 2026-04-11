@@ -8,7 +8,7 @@ class BackgroundJobManager {
   private intervals: Map<string, NodeJS.Timeout> = new Map();
 
   startAll() {
-    console.log('Starting all background jobs...');
+
 
     this.startJob('moneyRadar', async () => {
       await moneyRadarMonitor.startMonitoring();
@@ -32,27 +32,28 @@ class BackgroundJobManager {
   }
 
   stopAll() {
-    console.log('Stopping all background jobs...');
+
     for (const [name, interval] of this.intervals) {
       clearInterval(interval);
-      console.log(`Stopped job: ${name}`);
+
     }
     this.intervals.clear();
   }
 
   private startJob(name: string, handler: () => Promise<void>, intervalMs: number) {
-    handler().catch(err => console.error(`Job ${name} failed:`, err));
+    handler().catch(err => // removed log
+
 
     const interval = setInterval(async () => {
       try {
         await handler();
       } catch (error) {
-        console.error(`Job ${name} failed:`, error);
+
       }
     }, intervalMs);
 
     this.intervals.set(name, interval);
-    console.log(`Started job: ${name} (interval: ${intervalMs}ms)`);
+
   }
 
   private async snapshotPopularTokens() {
@@ -70,7 +71,7 @@ class BackgroundJobManager {
           token.liquidity
         );
       } catch (error) {
-        console.error(`Failed to snapshot ${token.address}:`, error);
+
       }
     }
   }
@@ -93,9 +94,9 @@ class BackgroundJobManager {
           updated_at: new Date().toISOString(),
         });
 
-        console.log(`Updated cache for ${entity.name}`);
+
       } catch (error) {
-        console.error(`Failed to update ${entityId}:`, error);
+
       }
     }
   }
@@ -115,7 +116,7 @@ class BackgroundJobManager {
       .delete()
       .lt('created_at', thirtyDaysAgo.toISOString());
 
-    console.log('Cleaned up expired data');
+
   }
 }
 

@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`Loading holder intelligence for ${token}...`);
+
 
     const intelligence = await loadHolderIntelligence(token, chain, limit);
 
     return NextResponse.json(intelligence);
   } catch (error: any) {
-    console.error('Failed to load holder intelligence:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to load holder intelligence' },
       { status: 500 }

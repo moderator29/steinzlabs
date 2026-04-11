@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ quote });
   } catch (error: any) {
-    console.error('Get quote failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to get quote' },
       { status: 500 }

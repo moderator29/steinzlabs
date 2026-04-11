@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ holdings });
   } catch (error: any) {
-    console.error('Failed to get holdings:', error);
+
     return NextResponse.json(
       { error: error.message || 'Failed to get holdings' },
       { status: 500 }

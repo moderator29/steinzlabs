@@ -312,7 +312,7 @@ async function getEvmData(address: string, rpcUrl: string, nativeSymbol: string,
           .slice(0, 100);
       }
     } catch (e) {
-      console.error('Token balance fetch error:', e);
+
     }
   }
 
@@ -612,7 +612,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Wallet intelligence error:', error);
+
     return NextResponse.json({ error: error.message || 'Failed to analyze wallet' }, { status: 500 });
   }
 }

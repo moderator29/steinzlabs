@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       analyzedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Contract analyzer error:', err);
+
     return NextResponse.json({ error: 'Analysis failed. Please try again.' }, { status: 500 });
   }
 }

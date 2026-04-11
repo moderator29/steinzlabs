@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       previewUrl: listing.previewUrl,
     });
   } catch (error) {
-    console.error('Listing submission error:', error);
+
     return NextResponse.json({ error: 'Failed to submit listing' }, { status: 500 });
   }
 }

@@ -58,13 +58,9 @@ const COINGECKO_IDS: Record<string, string> = {
   XRP: 'ripple', ADA: 'cardano',
 };
 
-const FALLBACK_PRICES: Record<string, number> = {
-  ETH: 3450, SOL: 178, BNB: 620, MATIC: 0.72, AVAX: 38,
-  WBTC: 65200, USDC: 1, USDT: 1, DAI: 1, LINK: 14.5,
-  UNI: 7.2, ARB: 1.15, OP: 2.1, AAVE: 95, MKR: 1580,
-  CRV: 0.52, PEPE: 0.0000085, WIF: 2.4, BONK: 0.000023,
-  JUP: 0.85, RAY: 1.92, NAKA: 0.08, DOGE: 0.12, SHIB: 0.000018,
-  XRP: 0.52, ADA: 0.45,
+// Stablecoins only — always $1, never stale
+const STABLECOIN_PRICES: Record<string, number> = {
+  USDC: 1, USDT: 1, DAI: 1, BUSD: 1, TUSD: 1, FRAX: 1,
 };
 
 // Chain ID mapping for EVM chains
@@ -129,32 +125,37 @@ export async function GET(req: NextRequest) {
     livePrices = await fetchLivePrices([fromToken, toToken]);
   } catch {}
 
+  // For tokens not found via CoinGecko, try on-chain price search
   for (const token of [fromToken, toToken]) {
-    if (!livePrices[token] && !FALLBACK_PRICES[token]) {
+    if (!livePrices[token] && !STABLECOIN_PRICES[token]) {
       try {
-        const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${token}`, { next: { revalidate: 60 } });
+        const dexRes = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(token.toLowerCase())}&vs_currencies=usd`,
+          { next: { revalidate: 60 } }
+        );
         if (dexRes.ok) {
-          const dexData = await dexRes.json();
-          const pair = dexData.pairs?.find((p: any) =>
-            p.baseToken?.symbol?.toUpperCase() === token.toUpperCase() && p.priceUsd
-          ) || dexData.pairs?.find((p: any) =>
-            p.quoteToken?.symbol?.toUpperCase() === token.toUpperCase() && p.priceUsd
-          );
-          if (pair?.priceUsd) {
-            livePrices[token] = parseFloat(pair.priceUsd);
-          }
+          const data = await dexRes.json();
+          const price = Object.values(data)[0] as any;
+          if (price?.usd) livePrices[token] = price.usd;
         }
       } catch {}
     }
   }
 
-  const fromPrice = livePrices[fromToken] || FALLBACK_PRICES[fromToken] || 1;
-  const toPrice = livePrices[toToken] || FALLBACK_PRICES[toToken] || 1;
+  const fromPrice = livePrices[fromToken] ?? STABLECOIN_PRICES[fromToken];
+  const toPrice = livePrices[toToken] ?? STABLECOIN_PRICES[toToken];
+
+  if (!fromPrice || !toPrice) {
+    return NextResponse.json(
+      { error: `Live price unavailable for ${!fromPrice ? fromToken : toToken}. Try again.` },
+      { status: 503 }
+    );
+  }
 
   const fromUsd = amountNum * fromPrice;
 
-  // ── STEINZ Platform Fee (0.2%) ─────────────────────────────────────────────
-  const PLATFORM_FEE_RATE = 0.002; // 0.2%
+  // ── STEINZ Platform Fee (0.1%) ─────────────────────────────────────────────
+  const PLATFORM_FEE_RATE = 0.001; // 0.1%
   const platformFeeUsd = fromUsd * PLATFORM_FEE_RATE;
   const amountAfterFee = fromUsd - platformFeeUsd;
 
@@ -169,15 +170,17 @@ export async function GET(req: NextRequest) {
 
   const dexName = chain === 'solana' ? 'Raydium' : chain === 'bsc' ? 'PancakeSwap' : chain === 'polygon' ? 'QuickSwap' : chain === 'avalanche' ? 'TraderJoe' : chain === 'arbitrum' ? 'Camelot' : chain === 'base' ? 'Aerodrome' : 'Uniswap V3';
 
-  // Treasury wallets (fees routed here per chain)
+  // Treasury wallets — fees routed here on every swap
+  const EVM_TREASURY = '0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4';
+  const SOL_TREASURY = 'Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy';
   const TREASURY_WALLETS: Record<string, string> = {
-    ethereum: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    solana: 'steinz1aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890',
-    bsc: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    base: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    polygon: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    arbitrum: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    avalanche: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    ethereum: EVM_TREASURY,
+    solana: SOL_TREASURY,
+    bsc: EVM_TREASURY,
+    base: EVM_TREASURY,
+    polygon: EVM_TREASURY,
+    arbitrum: EVM_TREASURY,
+    avalanche: EVM_TREASURY,
   };
 
   return NextResponse.json({

@@ -192,7 +192,7 @@ export async function loadHolderIntelligence(
   holderLimit: number = 20
 ): Promise<HolderIntelligence> {
 
-  console.log(`Loading holder intelligence for ${tokenAddress}...`);
+
 
   try {
     const holders = await arkhamAPI.getTokenHolders(tokenAddress, holderLimit, chain);
@@ -241,7 +241,7 @@ export async function loadHolderIntelligence(
     };
 
   } catch (error) {
-    console.error('Failed to load holder intelligence:', error);
+
     throw error;
   }
 }
@@ -316,7 +316,7 @@ async function enrichHolder(
     };
 
   } catch (error) {
-    console.error(`Failed to enrich holder ${holder.address}:`, error);
+
 
     return {
       address: holder.address,

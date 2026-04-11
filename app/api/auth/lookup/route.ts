@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'No account found with that username.' }, { status: 404 });
   } catch (err: any) {
-    console.error('[Lookup] error:', err.message);
+
     return NextResponse.json({ error: 'Unable to look up username.' }, { status: 500 });
   }
 }

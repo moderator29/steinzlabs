@@ -52,7 +52,7 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const apiKey = getResendKey();
   if (!apiKey) {
-    console.warn('[Email] RESEND_API_KEY not set');
+
     return false;
   }
 
@@ -74,13 +74,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     const result = await res.json();
 
     if (!res.ok) {
-      console.error('[Email] Resend error:', JSON.stringify(result));
+
       return false;
     }
 
     return true;
   } catch (err: any) {
-    console.error('[Email] send failed:', err.message);
+
     return false;
   }
 }
