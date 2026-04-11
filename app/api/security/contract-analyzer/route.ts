@@ -111,10 +111,8 @@ export async function POST(req: NextRequest) {
     // AI-powered contract analysis
     if (anthropic) {
       try {
-        const tokenName = token.raw?.token_name || token.raw?.name || address.slice(0, 10);
-        const tokenSymbol = token.raw?.token_symbol || token.raw?.symbol || '?';
         const tokenInfo = token ? `
-Token: ${tokenName} (${tokenSymbol}) | Score: ${overallScore}/100 | ${riskFlags.length} risk flags
+Token: ${token.raw?.token_name || token.raw?.name || address.slice(0, 10)} (${token.raw?.token_symbol || token.raw?.symbol || '?'}) | Score: ${overallScore}/100 | ${riskFlags.length} risk flags
 Honeypot: ${token.isHoneypot} | Open Source: ${token.isOpenSource} | Mintable: ${token.isMintable}
 Buy Tax: ${(token.buyTax * 100).toFixed(1)}% | Sell Tax: ${(token.sellTax * 100).toFixed(1)}%
 Holder Count: ${token.holderCount} | Flags: ${riskFlags.slice(0, 5).join('; ') || 'None'}` : '';
