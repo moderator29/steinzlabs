@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
-const SESSION_HOURS = 4;
+const SESSION_HOURS = 1;
 
 function LoginPageInner() {
   const router = useRouter();

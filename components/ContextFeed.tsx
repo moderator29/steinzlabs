@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive } from 'lucide-react';
+import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, SlidersHorizontal, Zap, TrendingUp, BarChart2, Info } from 'lucide-react';
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 
@@ -212,6 +212,16 @@ export default function ContextFeed() {
   const [shareEvent, setShareEvent] = useState<any>(null);
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<'all' | 'new_coins' | 'volume' | 'trending' | 'info'>('all');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  const FEED_FILTERS = [
+    { id: 'all' as const, label: 'All', icon: BarChart2 },
+    { id: 'new_coins' as const, label: 'New Coins', icon: Zap },
+    { id: 'volume' as const, label: 'Volume', icon: TrendingUp },
+    { id: 'trending' as const, label: 'Trending', icon: TrendingUp },
+    { id: 'info' as const, label: 'Info', icon: Info },
+  ];
 
   useEffect(() => {
     try {
@@ -235,9 +245,18 @@ export default function ContextFeed() {
 
   const currentEvents = isArchive ? archivedEvents : events;
   const currentLoading = isArchive ? archiveLoading : loading;
-  const displayEvents = activeChain === 'bookmarks'
+  const baseEvents = activeChain === 'bookmarks'
     ? currentEvents.filter(e => bookmarks.has(e.id))
     : currentEvents;
+  const displayEvents = activeFilter === 'all' ? baseEvents : baseEvents.filter(e => {
+    const t = (e.type || '').toLowerCase();
+    const title = (e.title || '').toLowerCase();
+    if (activeFilter === 'new_coins') return t.includes('launch') || t.includes('new') || t.includes('listing') || title.includes('new') || title.includes('launch');
+    if (activeFilter === 'volume') return t.includes('volume') || t.includes('trade') || title.includes('volume') || title.includes('whale');
+    if (activeFilter === 'trending') return t.includes('trending') || t.includes('bullish') || e.sentiment === 'BULLISH' || e.sentiment === 'HYPE';
+    if (activeFilter === 'info') return t.includes('info') || t.includes('update') || t.includes('news') || e.sentiment === 'NEUTRAL';
+    return true;
+  });
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];
@@ -386,13 +405,42 @@ export default function ContextFeed() {
             {isArchive ? 'Archive' : 'Live'} | {displayEvents.length} events{activeChain === 'bookmarks' ? ' bookmarked' : ''}{isArchive ? ' (>24hrs old)' : ''}
           </span>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#0A1EFF] hover:bg-white/5 transition-all"
-        >
-          <RefreshIcon spinning={refreshing} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              onClick={() => setShowFilterMenu(prev => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all ${activeFilter !== 'all' ? 'text-[#0A1EFF] bg-[#0A1EFF]/10 border border-[#0A1EFF]/30' : 'text-gray-400 hover:text-[#0A1EFF] hover:bg-white/5'}`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Filter{activeFilter !== 'all' ? `: ${FEED_FILTERS.find(f => f.id === activeFilter)?.label}` : ''}</span>
+            </button>
+            {showFilterMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-[#141824] border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[140px]">
+                {FEED_FILTERS.map(f => {
+                  const FIcon = f.icon;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => { setActiveFilter(f.id); setShowFilterMenu(false); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-all hover:bg-white/5 ${activeFilter === f.id ? 'text-[#0A1EFF] font-semibold' : 'text-gray-400'}`}
+                    >
+                      <FIcon className="w-3.5 h-3.5" />
+                      {f.label}
+                      {activeFilter === f.id && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#0A1EFF] hover:bg-white/5 transition-all"
+          >
+            <RefreshIcon spinning={refreshing} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {currentLoading ? (
