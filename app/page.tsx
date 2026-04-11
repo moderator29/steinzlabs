@@ -1,831 +1,616 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronDown, Database, BarChart3, Shield, Brain, Zap, Activity, Globe, Search, TrendingUp, Lock, Eye, Layers, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import SteinzLogo from '@/components/SteinzLogo';
-import ThemeToggle from '@/components/ThemeToggle';
+import {
+  Shield, Brain, Zap, Eye, TrendingUp, BarChart3, Lock, Globe,
+  Activity, Database, Search, ArrowRight, Check, Users, Target,
+  Network, Layers, Bell, ChevronRight
+} from 'lucide-react';
 
-// --- Particle Field Canvas ---
-function ParticleField() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+// ─── 3D Floating Logo ─────────────────────────────────────────────────────────
+function FloatingLogo3D() {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const isMobile = window.innerWidth < 768;
-    const PARTICLE_COUNT = isMobile ? 60 : 120;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const particles: Array<{
-      x: number; y: number; vx: number; vy: number;
-      size: number; opacity: number; color: string;
-    }> = [];
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 0.5,
-        opacity: Math.random() * 0.6 + 0.1,
-        color: Math.random() > 0.5 ? '#0A1EFF' : '#1a35ff',
-      });
+    let t = 0;
+    let id: number;
+    function tick() {
+      t += 0.012;
+      if (ref.current) {
+        const y = Math.sin(t) * 18;
+        const rx = Math.sin(t * 0.7) * 8;
+        const rz = Math.cos(t * 0.5) * 4;
+        ref.current.style.transform = `translateY(${y}px) rotateX(${rx}deg) rotateZ(${rz}deg)`;
+      }
+      id = requestAnimationFrame(tick);
     }
-
-    let mouseX = canvas.width / 2;
-    let mouseY = canvas.height / 2;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    };
-    canvas.addEventListener('mousemove', handleMouseMove);
-
-    let animId: number;
-    function animate() {
-      if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particles.forEach((p) => {
-        const dx = mouseX - p.x;
-        const dy = mouseY - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 200) {
-          p.vx += dx * 0.00005;
-          p.vy += dy * 0.00005;
-        }
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.opacity;
-        ctx.fill();
-      });
-
-      ctx.lineWidth = 0.5;
-      particles.forEach((p1, i) => {
-        particles.slice(i + 1).forEach((p2) => {
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.globalAlpha = (1 - dist / 120) * 0.15;
-            ctx.strokeStyle = '#0A1EFF';
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        });
-      });
-
-      ctx.globalAlpha = 1;
-      animId = requestAnimationFrame(animate);
-    }
-
-    animate();
-
-    const handleResize = () => {
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', handleResize);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-    };
+    tick();
+    return () => cancelAnimationFrame(id);
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ background: 'transparent' }}
-    />
+    <div className="flex justify-center mb-10" style={{ perspective: '800px' }}>
+      <div
+        ref={ref}
+        style={{
+          transformStyle: 'preserve-3d',
+          transition: 'transform 0.05s linear',
+          filter: 'drop-shadow(0 40px 60px rgba(10,30,255,0.6)) drop-shadow(0 0 80px rgba(10,30,255,0.4))',
+        }}
+      >
+        {/* 3D S logo — layered divs for depth */}
+        <div className="relative w-36 h-36 md:w-48 md:h-48">
+          {/* Back glow layer */}
+          <div
+            className="absolute inset-0 rounded-3xl"
+            style={{
+              background: 'linear-gradient(135deg, #0A1EFF 0%, #3d57ff 50%, #0a10cc 100%)',
+              transform: 'translateZ(-20px) scale(1.05)',
+              filter: 'blur(12px)',
+              opacity: 0.8,
+            }}
+          />
+          {/* Main face */}
+          <div
+            className="absolute inset-0 rounded-3xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(145deg, #1a35ff 0%, #0A1EFF 40%, #0610cc 100%)',
+              boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,10,0.4), 0 20px 60px rgba(10,30,255,0.5)',
+              border: '1px solid rgba(100,140,255,0.4)',
+            }}
+          >
+            {/* S letter */}
+            <div
+              className="font-black text-white select-none"
+              style={{
+                fontSize: 'clamp(56px, 10vw, 88px)',
+                letterSpacing: '-4px',
+                textShadow: '0 4px 12px rgba(0,0,60,0.5), 0 0 30px rgba(120,160,255,0.6)',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                lineHeight: 1,
+              }}
+            >
+              S
+            </div>
+          </div>
+          {/* Side depth */}
+          <div
+            className="absolute rounded-r-3xl"
+            style={{
+              top: '4%', right: '-8px', bottom: '4%', width: '12px',
+              background: 'linear-gradient(90deg, #0610a0, #04087a)',
+              transform: 'rotateY(-45deg)',
+              transformOrigin: 'left center',
+            }}
+          />
+          {/* Bottom depth */}
+          <div
+            className="absolute rounded-b-3xl"
+            style={{
+              bottom: '-8px', left: '4%', right: '4%', height: '12px',
+              background: 'linear-gradient(180deg, #04087a, #020450)',
+              transform: 'rotateX(-45deg)',
+              transformOrigin: 'top center',
+            }}
+          />
+          {/* Shine */}
+          <div
+            className="absolute top-3 left-4 w-16 h-8 rounded-full"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 100%)',
+              filter: 'blur(4px)',
+            }}
+          />
+          {/* Floating orb */}
+          <div
+            className="absolute -bottom-6 -right-4 w-10 h-10 rounded-full"
+            style={{
+              background: 'linear-gradient(135deg, #0A1EFF, #6d85ff)',
+              boxShadow: '0 0 20px rgba(10,30,255,0.8)',
+              animation: 'pulse 2s ease-in-out infinite',
+            }}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-// --- 3D Tilt Card ---
-function Card3D({ children, className = '', glowColor = '#7c3aed', style }: { children: React.ReactNode; className?: string; glowColor?: string; style?: React.CSSProperties }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    const rotateY = (x / rect.width) * 15;
-    const rotateX = -(y / rect.height) * 15;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
-    card.style.boxShadow = `0 20px 60px ${glowColor}20, 0 0 0 1px ${glowColor}25`;
-  };
-
-  const handleMouseLeave = () => {
-    if (cardRef.current) {
-      cardRef.current.style.transform =
-        'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
-      cardRef.current.style.boxShadow = '';
-    }
-  };
-
+// ─── Feature Card (GoPlus style) ─────────────────────────────────────────────
+function FeatureCard({
+  tag,
+  title,
+  description,
+  icon: Icon,
+  iconBg,
+  gradient,
+  cta,
+  href,
+}: {
+  tag: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  iconBg: string;
+  gradient: string;
+  cta: string;
+  href: string;
+}) {
   return (
     <div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ transition: 'transform 0.15s ease, box-shadow 0.15s ease', transformStyle: 'preserve-3d', willChange: 'transform', ...style }}
-      className={className}
+      className="relative overflow-hidden rounded-3xl p-8 md:p-10 flex flex-col gap-6"
+      style={{ background: gradient }}
     >
-      {children}
+      {/* Tag pill */}
+      <div className="inline-flex w-fit">
+        <span className="px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-sm font-semibold text-white border border-white/30">
+          {tag}
+        </span>
+      </div>
+
+      {/* 3D Icon */}
+      <div className="flex justify-center py-4">
+        <div
+          className="w-32 h-32 md:w-40 md:h-40 rounded-3xl flex items-center justify-center relative"
+          style={{
+            background: iconBg,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
+            transform: 'perspective(400px) rotateX(8deg)',
+          }}
+        >
+          <Icon className="w-16 h-16 md:w-20 md:h-20 text-white" strokeWidth={1.5} />
+          {/* Shine */}
+          <div
+            className="absolute top-2 left-3 w-20 h-8 rounded-full"
+            style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%)', filter: 'blur(6px)' }}
+          />
+        </div>
+      </div>
+
+      {/* Text */}
+      <div>
+        <h3 className="text-2xl md:text-3xl font-black text-white mb-3 leading-tight">{title}</h3>
+        <p className="text-white/80 text-sm md:text-base leading-relaxed">{description}</p>
+      </div>
+
+      {/* CTA */}
+      <Link
+        href={href}
+        className="w-full py-4 rounded-2xl font-bold text-center text-white/90 bg-white/20 hover:bg-white/30 border border-white/30 transition-all flex items-center justify-center gap-2"
+      >
+        {cta}
+        <ArrowRight className="w-4 h-4" />
+      </Link>
     </div>
   );
 }
 
-function AnimatedCounter({ value, label }: { value: string; label: string }) {
-  const match = value.match(/^([^0-9]*)(\d[\d,.]*)(.*)$/);
-  const hasNumber = !!match;
-  const prefix = match ? match[1] : '';
-  const numericStr = match ? match[2].replace(/,/g, '') : '';
-  const suffix = match ? match[3] : '';
-  const target = hasNumber ? parseFloat(numericStr) : 0;
-  const isAnimatable = hasNumber && !isNaN(target) && target > 0;
-  const [display, setDisplay] = useState(isAnimatable ? `${prefix}0${suffix}` : value);
-  const ref = useRef<HTMLDivElement>(null);
-  const hasAnimated = useRef(false);
+// ─── Stats Bar ────────────────────────────────────────────────────────────────
+function StatItem({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center px-6 py-4">
+      <div className="text-3xl md:text-4xl font-black text-white mb-1">{value}</div>
+      <div className="text-sm text-white/60 font-medium">{label}</div>
+    </div>
+  );
+}
+
+// ─── Security Feature Row ─────────────────────────────────────────────────────
+function SecurityRow({ icon: Icon, title, description, color }: {
+  icon: React.ElementType; title: string; description: string; color: string;
+}) {
+  return (
+    <div className="flex items-start gap-5 p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/8 transition-all">
+      <div
+        className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}22`, border: `1px solid ${color}44` }}
+      >
+        <Icon className="w-6 h-6" style={{ color }} />
+      </div>
+      <div>
+        <div className="font-bold text-white mb-1">{title}</div>
+        <div className="text-sm text-white/50 leading-relaxed">{description}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isAnimatable) {
-      setDisplay(value);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const duration = 1800;
-          const start = performance.now();
-          const animate = (now: number) => {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 4);
-            const current = target * eased;
-            if (numericStr.includes('.')) {
-              setDisplay(`${prefix}${current.toFixed(1)}${suffix}`);
-            } else {
-              setDisplay(`${prefix}${Math.floor(current).toLocaleString()}${suffix}`);
-            }
-            if (progress < 1) requestAnimationFrame(animate);
-            else setDisplay(value);
-          };
-          requestAnimationFrame(animate);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [value, isAnimatable, numericStr, target, prefix, suffix]);
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
 
-  return (
-    <div ref={ref} className="text-center p-4 rounded-xl border border-[#0A1EFF]/10 bg-[#0A1EFF]/5 hover:border-[#0A1EFF]/30 transition-all duration-300 group"
-      style={{ boxShadow: '0 0 20px rgba(10,30,255,0.05)' }}>
-      <div className="text-2xl md:text-3xl font-heading font-bold text-white group-hover:text-[#4d6aff] transition-colors">
-        {display}
-      </div>
-      <div className="text-[11px] text-gray-500 uppercase tracking-wider mt-1">{label}</div>
-    </div>
-  );
-}
-
-const featureCategories = [
-  {
-    tag: "Intelligence",
-    title: "On-chain data, decoded",
-    description: "Real-time blockchain analytics across 12+ chains. Surface whale movements, track smart money flows, and discover alpha before the crowd.",
-    features: [
-      { icon: Database, label: "Multi-chain indexing" },
-      { icon: Activity, label: "Real-time event feeds" },
-      { icon: Eye, label: "Whale movement tracking" },
-      { icon: Globe, label: "Cross-chain analytics" },
-      { icon: Globe, label: "Network Graph", badge: "NEW" },
-      { icon: Brain, label: "Research Lab", badge: "LIVE" },
-    ],
-    accent: "#0A1EFF",
-  },
-  {
-    tag: "Trading",
-    title: "Execute with confidence",
-    description: "Built-in swap aggregation, portfolio tracking, and trading DNA analysis. Understand your patterns, optimize your edge, and trade smarter.",
-    features: [
-      { icon: TrendingUp, label: "Portfolio P&L tracking" },
-      { icon: BarChart3, label: "Trading DNA profiling" },
-      { icon: Layers, label: "Multi-chain swaps" },
-      { icon: Search, label: "Token discovery" },
-      { icon: Zap, label: "Sniper Bot", badge: "LIVE" },
-      { icon: Lock, label: "Approval Manager" },
-    ],
-    accent: "#7C3AED",
-  },
-  {
-    tag: "Security",
-    title: "Never get rugged again",
-    description: "AI-powered contract analysis, rug detection, and risk scoring. Every token scanned, every wallet profiled, every risk surfaced before you commit.",
-    features: [
-      { icon: Shield, label: "AI risk scoring (0–100)" },
-      { icon: Lock, label: "Contract Analyzer" },
-      { icon: Zap, label: "Rug pull detection" },
-      { icon: Eye, label: "MEV protection alerts" },
-      { icon: Globe, label: "Domain Shield", badge: "LIVE" },
-      { icon: Search, label: "Signature Insight" },
-    ],
-    accent: "#10B981",
-  },
-  {
-    tag: "AI Engine",
-    title: "Your on-chain copilot",
-    description: "VTX AI processes millions of signals to deliver actionable insights. Ask questions in plain English, get answers backed by real blockchain data.",
-    features: [
-      { icon: Brain, label: "Natural language queries" },
-      { icon: Activity, label: "Signal aggregation" },
-      { icon: Database, label: "Context-aware feed" },
-      { icon: Zap, label: "Predictive analytics" },
-    ],
-    accent: "#F59E0B",
-  },
-];
-
-const faqs = [
-  {
-    q: "What is STEINZ LABS?",
-    a: "STEINZ LABS is a professional on-chain intelligence platform. We analyze blockchain data across Ethereum, Solana, BSC, Polygon, and 8+ other chains to surface actionable insights — whale moves, risk signals, and trading opportunities.",
-  },
-  {
-    q: "How do I get started?",
-    a: "Create a free account to access real-time feeds, basic analytics, and market overview. Upgrade to STEINZ Pro for unlimited whale tracking, DNA Analyzer, advanced portfolio analytics, and priority signals.",
-  },
-  {
-    q: "Is my wallet data private?",
-    a: "100%. We never store your private keys. When you connect your wallet, we only read public blockchain data. Your funds remain under your control at all times. Fully non-custodial.",
-  },
-  {
-    q: "What chains do you support?",
-    a: "Ethereum, Solana, BSC, Polygon, Arbitrum, Optimism, Avalanche, Base, Fantom, Bitcoin, and Tron. More chains added based on community demand.",
-  },
-  {
-    q: "How accurate is the whale tracking?",
-    a: "We track verified whale wallets (>$1M holdings) in real-time. Every signal links to the actual on-chain transaction — verify it yourself on Etherscan or Solscan.",
-  },
-  {
-    q: "What's included in the free tier?",
-    a: "Free tier includes real-time feeds and basic analytics. Upgrade to STEINZ Pro for unlimited whale tracking, DNA Analyzer, advanced portfolio analytics, and priority signals.",
-  },
-  {
-    q: "Are there any trading fees?",
-    a: "STEINZ LABS charges a 0.2% platform fee on swaps executed through the platform. This fee is applied on top of the underlying DEX or aggregator fees and goes toward platform development and infrastructure. Analysis, scanning, and intelligence features have no per-use fees.",
-  },
-];
-
-export default function LandingPage() {
-  const [openFAQ, setOpenFAQ] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
-
-  const stats = [
-    { value: "12+", label: "Chains" },
-    { value: "1000000+", label: "Datasets Indexed" },
-    { value: "24/7", label: "Live Monitoring" },
-    { value: "100%", label: "Non-Custodial" },
+  const featureCards = [
+    {
+      tag: 'For Traders',
+      title: 'On-Chain Intelligence Engine',
+      description: 'Real-time whale tracking, smart money flows, and wallet DNA analysis across 12+ chains. See what institutions see, before they move.',
+      icon: Brain,
+      iconBg: 'linear-gradient(135deg, #0A1EFF 0%, #3d57ff 100%)',
+      gradient: 'linear-gradient(135deg, #0A1EFF 0%, #0c22e0 50%, #050ea8 100%)',
+      cta: 'Start Analyzing',
+      href: '/signup',
+    },
+    {
+      tag: 'For Security',
+      title: 'Shadow Guardian Protection',
+      description: 'AI-powered scam detection on every transaction. Token safety scanner, rug detector, domain shield, and signature insight built-in.',
+      icon: Shield,
+      iconBg: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+      gradient: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
+      cta: 'Scan Any Token',
+      href: '/signup',
+    },
+    {
+      tag: 'For DeFi',
+      title: 'Multi-Chain Swap Engine',
+      description: 'Best-price routing across Jupiter, Raydium, Uniswap, and 1inch. Safety check runs before every swap. 0.1% platform fee.',
+      icon: Zap,
+      iconBg: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+      gradient: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 50%, #6d28d9 100%)',
+      cta: 'Start Trading',
+      href: '/signup',
+    },
+    {
+      tag: 'For Builders',
+      title: 'VTX Intelligence Agent',
+      description: 'Ask anything in plain English. Get real-time on-chain answers, token analysis, wallet profiles, and market context instantly.',
+      icon: Activity,
+      iconBg: 'linear-gradient(135deg, #b45309 0%, #f59e0b 100%)',
+      gradient: 'linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)',
+      cta: 'Ask VTX',
+      href: '/signup',
+    },
   ];
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const securityFeatures = [
+    { icon: Shield, title: 'Token Safety Scanner', description: '0-100 trust score on any contract. Honeypot simulation, tax analysis, liquidity lock status.', color: '#0A1EFF' },
+    { icon: Eye, title: 'Rug Pull Detector', description: 'Full deployer history, serial rugger flagging, liquidity removal pattern analysis.', color: '#10B981' },
+    { icon: Globe, title: 'Domain Shield', description: 'Every link checked in real time. Domain age, scam database, phishing verdict.', color: '#8B5CF6' },
+    { icon: Search, title: 'Signature Insight', description: 'Decode any transaction signature. Understand exactly what you are signing before you sign.', color: '#F59E0B' },
+    { icon: Lock, title: 'Approval Manager', description: 'See and revoke all token approvals across EVM chains. Kill dangerous permissions instantly.', color: '#EF4444' },
+    { icon: Target, title: 'Contract Analyzer', description: 'AI reads bytecode and explains what a contract does in plain English. Flags hidden traps.', color: '#06B6D4' },
+  ];
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    );
-    Object.values(sectionRefs.current).forEach((el) => {
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
+  const plans = [
+    {
+      name: 'Free',
+      price: '$0',
+      period: 'forever',
+      color: '#6B7280',
+      features: ['Shadow Guardian protection', 'Context feed (live signals)', 'VTX Agent (25 msgs/day)', 'Basic swap', '1 wallet', 'Security scanner'],
+    },
+    {
+      name: 'Pro',
+      price: '$6',
+      period: '/month',
+      color: '#0A1EFF',
+      popular: true,
+      features: ['Everything in Free', 'Smart money panel', 'Deep holder analysis', 'DNA Analyzer', 'Copy trading', '3 wallets', 'Unlimited VTX Agent', '20 alerts'],
+    },
+    {
+      name: 'Premium',
+      price: '$15',
+      period: '/month',
+      color: '#F59E0B',
+      features: ['Everything in Pro', 'Network graph analysis', 'Historical data (365d)', 'Pattern matching & AI predictions', '5 wallets', 'API access', 'Priority support'],
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white overflow-x-hidden">
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20' : 'bg-transparent border-b border-transparent'}`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#07090f' }}>
+
+      {/* ── NAV ── */}
+      <nav
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10' : ''}`}
+        style={{ background: scrolled ? 'rgba(7,9,15,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none' }}
+      >
+        <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <SteinzLogo size={28} />
-            <span className="text-sm font-heading font-bold tracking-tight">STEINZ LABS</span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm"
+              style={{ background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', boxShadow: '0 0 16px rgba(10,30,255,0.4)' }}
+            >
+              S
+            </div>
+            <span className="font-black text-sm tracking-tight">STEINZ LABS</span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-[13px] text-gray-400">
+          <div className="hidden md:flex items-center gap-8 text-[13px] text-white/50">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#security" className="hover:text-white transition-colors">Security</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
             <Link href="/whitepaper" className="hover:text-white transition-colors">Docs</Link>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="hidden sm:block text-[13px] font-medium text-gray-300 hover:text-white px-3 py-2 transition-colors">
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-[13px] text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>
-            <Link href="/signup" className="hidden sm:flex items-center bg-white text-black px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-gray-100 transition-all">
-              Sign Up
+            <Link
+              href="/signup"
+              className="px-5 py-2.5 rounded-xl text-[13px] font-bold text-white transition-all"
+              style={{ background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', boxShadow: '0 0 20px rgba(10,30,255,0.35)' }}
+            >
+              Get Started
             </Link>
-            <div className="flex sm:hidden items-center gap-1">
-              <Link href="/login" className="text-[13px] font-medium text-gray-300 hover:text-white px-2 py-1.5 transition-colors">
-                Log In
-              </Link>
-              <Link href="/signup" className="bg-white text-black px-3 py-1.5 rounded-lg text-[12px] font-semibold hover:bg-gray-100 transition-all">
-                Sign Up
-              </Link>
-            </div>
           </div>
         </div>
       </nav>
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden min-h-screen flex flex-col justify-center">
-        {/* Particle canvas */}
-        <ParticleField />
-
-        {/* Gradient orb background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.12] blur-[100px] animate-pulse"
-            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)' }}
-          />
-          <div
-            className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px] animate-pulse"
-            style={{ background: 'radial-gradient(circle, #1a35ff, transparent 70%)', opacity: 0.08, animationDelay: '1.5s' }}
-          />
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[140px]"
-            style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.06), transparent 65%)', opacity: 1 }}
-          />
-          <div
-            className="absolute top-[15%] right-[8%] w-[300px] h-[300px] rounded-full blur-[80px] animate-pulse"
-            style={{ background: 'radial-gradient(circle, #0A1EFF, transparent 70%)', opacity: 0.05, animationDelay: '3s' }}
-          />
+      {/* ── HERO ── */}
+      <section
+        className="relative min-h-screen flex flex-col items-center justify-center px-5 pt-20 pb-16 overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, #0A1EFF 0%, #050ea8 25%, #07090f 55%)',
+        }}
+      >
+        {/* Stars */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: Math.random() * 2 + 1,
+                height: Math.random() * 2 + 1,
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                opacity: Math.random() * 0.6 + 0.1,
+                animation: `pulse ${2 + Math.random() * 3}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 3}s`,
+              }}
+            />
+          ))}
         </div>
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-[#0A1EFF]/25 rounded-full mb-8"
-          >
-            <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-pulse"></div>
-            <span className="text-[12px] text-gray-400 font-medium">Professional on-chain intelligence platform</span>
-          </motion.div>
+        {/* Glow orbs */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.3) 0%, transparent 70%)', filter: 'blur(40px)' }}
+        />
 
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold mb-6 leading-[1.08] tracking-tight"
+        <div className="relative z-10 text-center max-w-4xl mx-auto">
+          {/* 3D Logo */}
+          <FloatingLogo3D />
+
+          {/* Headline */}
+          <h1
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-[1.05] tracking-tight uppercase"
+            style={{ textShadow: '0 4px 30px rgba(10,30,255,0.3)' }}
           >
-            The intelligence layer
+            ON-CHAIN
             <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{ backgroundImage: 'linear-gradient(135deg, #0A1EFF 0%, #4d6aff 100%)' }}
-            >
-              for on-chain alpha
-            </span>
-          </motion.h1>
+            INTELLIGENCE
+            <br />
+            <span style={{ color: 'rgba(255,255,255,0.7)' }}>FOR WEB3</span>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-base sm:text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed"
-          >
-            Track whales. Analyze wallets. Scan contracts. Act on real-time blockchain data before the crowd.
-          </motion.p>
+          <p className="text-lg md:text-xl text-white/70 mb-10 max-w-xl mx-auto leading-relaxed">
+            Protect every transaction. Track every whale. Trade with institutional intelligence.
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto mb-16"
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/login"
-              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
+              href="/signup"
+              className="px-8 py-4 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all hover:scale-105"
+              style={{ background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)' }}
+            >
+              Launch App
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/dashboard"
+              className="px-8 py-4 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all hover:scale-105"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+            >
+              View Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Wave */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, transparent, #07090f)' }}
+        />
+      </section>
+
+      {/* ── STATS BAR ── */}
+      <section style={{ background: 'linear-gradient(90deg, #0A1EFF08, #0A1EFF12, #0A1EFF08)', borderTop: '1px solid rgba(10,30,255,0.2)', borderBottom: '1px solid rgba(10,30,255,0.2)' }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
+          <StatItem value="12+" label="Chains Supported" />
+          <StatItem value="1M+" label="Datasets Indexed" />
+          <StatItem value="24/7" label="Live Monitoring" />
+          <StatItem value="100%" label="Non-Custodial" />
+        </div>
+      </section>
+
+      {/* ── FEATURE CARDS ── */}
+      <section id="features" className="max-w-7xl mx-auto px-5 py-24">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-sm font-semibold"
+            style={{ background: 'rgba(10,30,255,0.1)', border: '1px solid rgba(10,30,255,0.3)', color: '#6d85ff' }}
+          >
+            Platform Features
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need to win</h2>
+          <p className="text-white/50 max-w-xl mx-auto">One platform. Every on-chain intelligence tool you need.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {featureCards.map((card) => (
+            <FeatureCard key={card.title} {...card} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── SECURITY CENTER ── */}
+      <section id="security" style={{ background: 'linear-gradient(180deg, #07090f 0%, #060810 100%)' }} className="py-24 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-sm font-semibold"
+              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10B981' }}
+            >
+              Security Solutions
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+              Building an All-Scenario Web3<br />Security Network
+            </h2>
+            <p className="text-white/50 max-w-xl mx-auto">From on-chain protocols to user actions, every threat detected before it reaches you.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {securityFeatures.map((f) => (
+              <SecurityRow key={f.title} {...f} />
+            ))}
+          </div>
+
+          {/* Full-width highlight card */}
+          <div
+            className="mt-8 rounded-3xl p-10 md:p-14 flex flex-col md:flex-row items-center gap-8"
+            style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}
+          >
+            <div className="flex-1">
+              <span className="px-4 py-1.5 bg-white/20 rounded-full text-sm font-semibold text-white border border-white/30 inline-block mb-5">For Users</span>
+              <h3 className="text-3xl md:text-4xl font-black text-white mb-4 leading-tight">
+                Proactively Scan Every<br />On-Chain Transaction
+              </h3>
+              <p className="text-white/70 mb-6 text-base leading-relaxed">Shadow Guardian checks every token, every contract, every link in real time. Safeguard your assets before you sign anything.</p>
+              <Link href="/signup" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-white/90 bg-white/15 border border-white/30 hover:bg-white/25 transition-all">
+                Start for Free <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div
+              className="w-48 h-48 rounded-3xl flex items-center justify-center flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
-                boxShadow: '0 0 30px rgba(10,30,255,0.4)',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+                boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2), 0 20px 60px rgba(0,0,0,0.3)',
+                transform: 'perspective(400px) rotateY(-8deg)',
               }}
             >
-              Launch App <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/whitepaper"
-              className="flex-1 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-gray-300 border border-[#0A1EFF]/20 hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all text-center"
-            >
-              Read Docs
-            </Link>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto mb-16"
-          >
-            {stats.map((stat) => (
-              <AnimatedCounter key={stat.label} value={stat.value} label={stat.label} />
-            ))}
-          </motion.div>
-
-        </div>
-      </section>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
-
-      <section
-        id="features"
-        ref={(el) => { sectionRefs.current['features'] = el; }}
-        className="py-24 px-4 sm:px-6"
-      >
-        <div className="max-w-5xl mx-auto">
-          <div className={`text-center mb-16 transition-all duration-700 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Platform</p>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              Built for serious analysts
-            </h2>
-            <p className="text-gray-500 text-sm max-w-lg mx-auto">
-              Four integrated modules working together to give you a complete picture of on-chain activity.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {featureCategories.map((category, i) => (
-              <motion.div
-                key={category.tag}
-                initial={{ opacity: 0, y: 30 }}
-                animate={visibleSections.has('features') ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-              >
-                <div
-                  className="rounded-xl border border-[#0A1EFF]/10 bg-gray-900/60 p-6 sm:p-8 hover:border-[#0A1EFF]/25 transition-colors duration-300 group h-full"
-                  style={{ boxShadow: '0 4px 24px rgba(10,30,255,0.04)' }}
-                >
-                  <div
-                    className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-4 px-2.5 py-1 rounded-md inline-block"
-                    style={{ color: category.accent, background: `${category.accent}15` }}
-                  >
-                    {category.tag}
-                  </div>
-                  <h3 className="text-lg font-heading font-bold mb-2 group-hover:text-white transition-colors">{category.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-6">{category.description}</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {category.features.map((f) => {
-                      const Icon = f.icon;
-                      return (
-                        <div key={f.label} className="flex items-center gap-2.5 text-[13px] text-gray-400">
-                          <Icon className="w-4 h-4 flex-shrink-0" style={{ color: category.accent }} />
-                          <span>{f.label}</span>
-                          {f.badge && (
-                            <span
-                              className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider leading-none"
-                              style={{
-                                background: f.badge === 'LIVE' ? 'rgba(16,185,129,0.15)' : 'rgba(124,58,237,0.15)',
-                                color: f.badge === 'LIVE' ? '#10B981' : '#a78bfa',
-                                border: `1px solid ${f.badge === 'LIVE' ? 'rgba(16,185,129,0.3)' : 'rgba(124,58,237,0.3)'}`,
-                              }}
-                            >
-                              {f.badge}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
-
-      <section
-        id="security"
-        ref={(el) => { sectionRefs.current['security'] = el; }}
-        className="py-24 px-4 sm:px-6"
-      >
-        <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('security') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="rounded-xl border border-purple-500/15 bg-gray-900/50 p-8 sm:p-12"
-            style={{ boxShadow: '0 0 60px rgba(124,58,237,0.08), inset 0 0 60px rgba(124,58,237,0.02)' }}>
-            <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
-              <div className="flex-1">
-                <p className="text-success text-[12px] font-semibold uppercase tracking-[0.2em] mb-3">Security First</p>
-                <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">
-                  Your assets, your control
-                </h2>
-                <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                  Non-custodial by design. We read public blockchain data only — your private keys never leave your wallet. Every analysis runs on verified on-chain transactions.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    { label: "Non-custodial architecture", desc: "We never have access to your funds" },
-                    { label: "Read-only data access", desc: "Public blockchain data only, no write permissions" },
-                    { label: "Verified on-chain sources", desc: "Every data point traceable to its transaction" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{item.label}</p>
-                        <p className="text-[13px] text-gray-500">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-shrink-0 w-full md:w-auto">
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: "0", label: "Private keys stored" },
-                    { value: "100%", label: "Non-custodial" },
-                    { value: "12+", label: "Chains secured" },
-                    { value: "24/7", label: "Monitoring" },
-                  ].map((s) => (
-                    <div key={s.label} className="rounded-lg border border-cyan-500/15 bg-cyan-500/5 p-4 text-center min-w-[120px] hover:border-cyan-500/30 transition-all duration-300"
-                      style={{ boxShadow: '0 0 20px rgba(6,182,212,0.05)' }}>
-                      <div className="text-lg font-heading font-bold text-cyan-300">{s.value}</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <Shield className="w-24 h-24 text-white" strokeWidth={1} />
             </div>
           </div>
         </div>
       </section>
 
-      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
-
-      <section
-        id="pricing"
-        ref={(el) => { sectionRefs.current['pricing'] = el; }}
-        className="py-24 px-4 sm:px-6"
-      >
-        <div className={`max-w-4xl mx-auto transition-all duration-700 ${visibleSections.has('pricing') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>Plans</p>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              Unlock the full intelligence layer
-            </h2>
-            <p className="text-gray-500 text-sm max-w-lg mx-auto">
-              Choose a plan that fits your needs — from free analytics to professional-grade intelligence tools.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                tier: "Free",
-                price: "$0",
-                desc: "Get started with core features",
-                perks: ["Real-time context feed", "Basic token scanner", "Market overview", "VTX Agent (25 msgs/day)"],
-                accent: "#6B7280",
-                cta: "Start Free",
-                link: "/signup",
-              },
-              {
-                tier: "STEINZ Pro",
-                price: "$19/mo",
-                desc: "Full intelligence suite unlocked",
-                perks: ["DNA Wallet Analyzer (AI)", "Unlimited whale tracking", "Advanced portfolio analytics", "Unlimited VTX Agent"],
-                accent: "#0A1EFF",
-                cta: "Coming Soon",
-                featured: true,
-                link: "#",
-              },
-              {
-                tier: "Premium",
-                price: "$99/mo",
-                desc: "Maximum power for professionals",
-                perks: ["Everything in Pro tier", "API access for developers", "Custom webhook alerts", "Priority support"],
-                accent: "#F59E0B",
-                cta: "Coming Soon",
-                link: "#",
-              },
-            ].map((plan) => (
-              <div
-                key={plan.tier}
-                className={`rounded-xl border p-6 ${plan.featured ? 'border-[#0A1EFF]/30 bg-[#0A1EFF]/[0.04]' : 'border-white/[0.06] bg-gray-900/40'}`}
-                style={plan.featured ? { boxShadow: '0 0 40px rgba(10,30,255,0.15), 0 0 0 1px rgba(10,30,255,0.1)' } : {}}
-              >
-                {plan.featured && (
-                  <div className="text-[10px] font-bold uppercase tracking-widest mb-3"
-                    style={{ background: 'linear-gradient(135deg, #0A1EFF, #4d6aff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="text-lg font-heading font-bold mb-1" style={{ color: plan.accent }}>{plan.tier}</h3>
-                <div className="text-xl font-bold mb-1">{plan.price}</div>
-                <p className="text-gray-500 text-xs mb-4">{plan.desc}</p>
-                <div className="space-y-2 mb-6">
-                  {plan.perks.map((perk) => (
-                    <div key={perk} className="flex items-center gap-2 text-[13px] text-gray-300">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: plan.accent }}></div>
-                      {perk}
-                    </div>
-                  ))}
-                </div>
-                <Link href={plan.link}>
-                  <button
-                    className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.featured ? { background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', color: 'white', boxShadow: '0 0 20px rgba(10,30,255,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF' }}
-                    disabled={plan.cta === 'Coming Soon'}
-                  >
-                    {plan.cta}
-                  </button>
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
-
-      <section
-        id="faq"
-        ref={(el) => { sectionRefs.current['faq'] = el; }}
-        className="py-24 px-4 sm:px-6"
-      >
-        <div className={`max-w-2xl mx-auto transition-all duration-700 ${visibleSections.has('faq') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="text-center mb-12">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: '#0A1EFF' }}>FAQ</p>
-            <h2 className="text-2xl md:text-3xl font-heading font-bold">
-              Frequently asked questions
-            </h2>
-          </div>
-
-          <div className="space-y-2">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className={`rounded-xl border transition-all duration-300 ${
-                  openFAQ === index
-                    ? 'border-[#0A1EFF]/25 bg-[#0A1EFF]/[0.04]'
-                    : 'border-white/[0.06] hover:border-[#0A1EFF]/15'
-                }`}
-                style={openFAQ === index ? { boxShadow: '0 0 20px rgba(10,30,255,0.08)' } : {}}
-              >
-                <button
-                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                  className="w-full px-5 py-4 flex justify-between items-center text-left"
-                >
-                  <span className="font-semibold text-sm pr-3">{faq.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-500 transition-transform duration-300 flex-shrink-0 ${
-                      openFAQ === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${
-                    openFAQ === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="px-5 pb-4 text-gray-400 text-sm leading-relaxed">
-                    {faq.a}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent max-w-4xl mx-auto"></div>
-
-      <section className="py-24 px-4 sm:px-6 relative overflow-hidden">
-        {/* Animated gradient background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] animate-pulse"
-            style={{ background: 'radial-gradient(circle, rgba(10,30,255,0.12), rgba(10,30,255,0.04), transparent 70%)' }}
-          />
-          <div
-            className="absolute top-0 left-0 w-full h-full"
-            style={{ background: 'linear-gradient(135deg, rgba(10,30,255,0.03) 0%, transparent 50%, rgba(10,30,255,0.02) 100%)' }}
-          />
-        </div>
-        <div className="max-w-2xl mx-auto text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+      {/* ── PRICING ── */}
+      <section id="pricing" className="py-24 px-5 max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-sm font-semibold"
+            style={{ background: 'rgba(10,30,255,0.1)', border: '1px solid rgba(10,30,255,0.3)', color: '#6d85ff' }}
           >
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              Start your intelligence journey
-            </h2>
-            <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-              Free to start. No credit card required. Sign in with email to unlock STEINZ LABS intelligence.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
+            Pricing
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Simple, Transparent Pricing</h2>
+          <p className="text-white/50">Institutional-grade intelligence. Accessible prices.</p>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
+            style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#F59E0B' }}
+          >
+            <Lock className="w-4 h-4" /> Payment integration launching soon
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className="relative rounded-3xl p-8 border transition-all"
+              style={{
+                background: plan.popular ? `linear-gradient(135deg, ${plan.color}15, ${plan.color}08)` : 'rgba(255,255,255,0.03)',
+                borderColor: plan.popular ? `${plan.color}50` : 'rgba(255,255,255,0.08)',
+                boxShadow: plan.popular ? `0 0 40px ${plan.color}20` : 'none',
+              }}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="px-4 py-1.5 rounded-full text-xs font-bold text-white"
+                    style={{ background: plan.color }}>MOST POPULAR</span>
+                </div>
+              )}
+              <div className="mb-6">
+                <div className="font-bold text-white/60 text-sm mb-2">{plan.name}</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-black text-white">{plan.price}</span>
+                  <span className="text-white/40 text-sm">{plan.period}</span>
+                </div>
+              </div>
+              <div className="space-y-3 mb-8">
+                {plan.features.map((f) => (
+                  <div key={f} className="flex items-center gap-3 text-sm text-white/70">
+                    <Check className="w-4 h-4 flex-shrink-0" style={{ color: plan.color }} />
+                    {f}
+                  </div>
+                ))}
+              </div>
               <Link
-                href="/login"
-                className="flex-1 w-full px-8 py-4 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
-                style={{
-                  background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
-                  boxShadow: '0 0 40px rgba(10,30,255,0.4)',
+                href="/signup"
+                className="w-full py-3.5 rounded-2xl font-bold text-center text-sm block transition-all hover:scale-105"
+                style={plan.popular ? {
+                  background: plan.color,
+                  color: '#fff',
+                  boxShadow: `0 0 20px ${plan.color}50`,
+                } : {
+                  background: 'rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.7)',
+                  border: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
-                Launch App <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link href="/whitepaper" className="flex-1">
-                <button className="w-full px-8 py-4 rounded-xl font-semibold text-sm text-gray-300 border border-[#0A1EFF]/20 hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all flex items-center justify-center gap-2">
-                  Learn More
-                </button>
+                {plan.name === 'Free' ? 'Get Started Free' : 'Coming Soon'}
               </Link>
             </div>
-          </motion.div>
+          ))}
         </div>
       </section>
 
-      <footer className="border-t border-[#0A1EFF]/10 py-12 px-4 sm:px-6" style={{ boxShadow: 'inset 0 1px 0 rgba(10,30,255,0.08)' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
-                <SteinzLogo size={24} />
-                <span className="text-sm font-heading font-bold">STEINZ LABS</span>
-              </div>
-              <p className="text-gray-500 text-xs leading-relaxed">
-                Professional on-chain intelligence platform.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs mb-3 text-gray-300 uppercase tracking-wider">Product</h4>
-              <div className="space-y-2 text-gray-500 text-xs">
-                <div><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></div>
-                <div><Link href="/dashboard/dna-analyzer" className="hover:text-white transition-colors">DNA Analyzer</Link></div>
-                <div><Link href="/dashboard/security" className="hover:text-white transition-colors">Security Scanner</Link></div>
-                <div><Link href="/dashboard/vtx-ai" className="hover:text-white transition-colors">VTX AI</Link></div>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs mb-3 text-gray-300 uppercase tracking-wider">Resources</h4>
-              <div className="space-y-2 text-gray-500 text-xs">
-                <div><Link href="/whitepaper" className="hover:text-white transition-colors">Whitepaper</Link></div>
-                <div><Link href="/whitepaper#architecture" className="hover:text-white transition-colors">Documentation</Link></div>
-                <div><Link href="/dashboard/trading-suite" className="hover:text-white transition-colors">STEINZ Terminal</Link></div>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs mb-3 text-gray-300 uppercase tracking-wider">Community</h4>
-              <div className="space-y-2 text-gray-500 text-xs">
-                <div><a href="https://x.com/steinzlabs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter / X</a></div>
-                <div><span className="hover:text-white transition-colors cursor-pointer">Telegram</span></div>
-                <div><span className="hover:text-white transition-colors cursor-pointer">Discord</span></div>
-              </div>
-            </div>
+      {/* ── BOTTOM CTA ── */}
+      <section className="py-24 px-5">
+        <div
+          className="max-w-4xl mx-auto rounded-3xl p-12 md:p-16 text-center relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #0A1EFF 0%, #0c22e0 50%, #050ea8 100%)' }}
+        >
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.15) 0%, transparent 60%)' }}
+          />
+          <div className="relative z-10">
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+              Start trading smarter today
+            </h2>
+            <p className="text-white/70 mb-10 text-lg max-w-xl mx-auto">
+              Join thousands of traders using STEINZ LABS for real-time on-chain intelligence.
+            </p>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl font-bold text-base transition-all hover:scale-105"
+              style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)', color: '#fff' }}
+            >
+              Create Free Account
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/[0.06] pt-8">
-            <div className="flex items-center gap-3">
-              <p className="text-gray-600 text-[11px]">&copy; 2026 STEINZ LABS. All rights reserved.</p>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} className="py-10 px-5">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-white text-xs"
+              style={{ background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)' }}
+            >
+              S
             </div>
+            <span className="font-black text-sm text-white/80">STEINZ LABS</span>
           </div>
+          <div className="flex items-center gap-6 text-sm text-white/30">
+            <span>Non-Custodial</span>
+            <span>On-Chain Intelligence</span>
+            <span>Web3 Security</span>
+          </div>
+          <div className="text-sm text-white/20">&copy; 2025 STEINZ LABS</div>
         </div>
       </footer>
     </div>
