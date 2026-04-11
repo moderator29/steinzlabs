@@ -129,7 +129,7 @@ function formatCompact(n: number): string {
 }
 
 function changeColor(change: number): string {
-  return change >= 0 ? '#22C55E' : '#EF4444';
+  return change >= 0 ? '#0A1EFF' : '#EF4444';
 }
 
 function truncateCA(ca: string, head = 6, tail = 4): string {
@@ -232,9 +232,9 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
         gap: 4,
         padding: '4px 10px',
         borderRadius: 8,
-        background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-        border: `1px solid ${copied ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.1)'}`,
-        color: copied ? '#22C55E' : '#9CA3AF',
+        background: copied ? 'rgba(10,30,255,0.15)' : 'rgba(255,255,255,0.06)',
+        border: `1px solid ${copied ? 'rgba(10,30,255,0.45)' : 'rgba(255,255,255,0.1)'}`,
+        color: copied ? '#0A1EFF' : '#9CA3AF',
         fontSize: 12,
         fontWeight: 500,
         cursor: 'pointer',
@@ -264,9 +264,9 @@ function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
       const { createChart } = await import('lightweight-charts');
 
       const isGreen = token.change24h >= 0;
-      const lineColor = isGreen ? '#22C55E' : '#EF4444';
-      const topColor = isGreen ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)';
-      const bottomColor = isGreen ? 'rgba(34,197,94,0)' : 'rgba(239,68,68,0)';
+      const lineColor = isGreen ? '#0A1EFF' : '#EF4444';
+      const topColor = isGreen ? 'rgba(10,30,255,0.2)' : 'rgba(239,68,68,0.2)';
+      const bottomColor = isGreen ? 'rgba(10,30,255,0)' : 'rgba(239,68,68,0)';
 
       if (destroyed) return;
 
@@ -678,10 +678,11 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
             width: '100%',
             padding: '16px',
             borderRadius: 14,
-            background: '#22C55E',
+            background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
             border: 'none',
-            color: '#000',
+            color: '#fff',
             fontSize: 16,
+            boxShadow: '0 0 18px rgba(10,30,255,0.45)',
             fontWeight: 800,
             cursor: 'pointer',
             letterSpacing: '0.02em',
@@ -845,9 +846,10 @@ export default function DexPage() {
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s',
-                background: active ? '#22C55E' : 'rgba(255,255,255,0.04)',
-                borderColor: active ? '#22C55E' : 'rgba(255,255,255,0.1)',
-                color: active ? '#000000' : '#9CA3AF',
+                background: active ? 'linear-gradient(135deg, #0A1EFF, #3d57ff)' : 'rgba(255,255,255,0.04)',
+                borderColor: active ? '#0A1EFF' : 'rgba(255,255,255,0.1)',
+                color: active ? '#fff' : '#9CA3AF',
+                boxShadow: active ? '0 0 14px rgba(10,30,255,0.4)' : 'none',
               }}
             >
               {tab.label}
@@ -882,9 +884,9 @@ export default function DexPage() {
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s',
-                background: active ? 'rgba(34,197,94,0.15)' : 'transparent',
-                borderColor: active ? '#22C55E' : 'rgba(255,255,255,0.1)',
-                color: active ? '#22C55E' : '#6B7280',
+                background: active ? 'rgba(10,30,255,0.15)' : 'transparent',
+                borderColor: active ? '#0A1EFF' : 'rgba(255,255,255,0.1)',
+                color: active ? '#0A1EFF' : '#6B7280',
               }}
             >
               {f.label}
@@ -902,7 +904,7 @@ export default function DexPage() {
                 width: 28,
                 height: 28,
                 border: '3px solid rgba(255,255,255,0.1)',
-                borderTopColor: '#22C55E',
+                borderTopColor: '#0A1EFF',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
               }}
@@ -930,15 +932,15 @@ export default function DexPage() {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 30,
-            background: 'rgba(34,197,94,0.15)',
-            border: '1px solid rgba(34,197,94,0.3)',
+            background: 'rgba(10,30,255,0.15)',
+            border: '1px solid rgba(10,30,255,0.3)',
             borderRadius: 99,
             padding: '6px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            color: '#22C55E',
+            color: '#0A1EFF',
             fontWeight: 600,
           }}
         >
@@ -946,8 +948,8 @@ export default function DexPage() {
             style={{
               width: 12,
               height: 12,
-              border: '2px solid rgba(34,197,94,0.3)',
-              borderTopColor: '#22C55E',
+              border: '2px solid rgba(10,30,255,0.3)',
+              borderTopColor: '#0A1EFF',
               borderRadius: '50%',
               animation: 'spin 0.7s linear infinite',
             }}
