@@ -934,6 +934,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // LunarCrush: add social intelligence for mentioned coins
+    if (uniqueCoins.length > 0) {
+      fetchTasks.push(
+        (async () => {
+          try {
+            const { getLunarCrushContextForAI } = await import('@/lib/lunarcrush');
+            return await getLunarCrushContextForAI(uniqueCoins);
+          } catch { return ''; }
+        })()
+      );
+    }
+
     if (tokenDetected && arkhamIntent.wantsHolders) {
       fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
     }
