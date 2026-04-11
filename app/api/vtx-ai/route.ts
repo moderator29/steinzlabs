@@ -1031,11 +1031,21 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
 
     if (!response || !response.ok) {
       console.error('All VTX models failed. Status:', lastStatus, 'Error:', lastError.slice(0, 200));
-      const hint = lastStatus === 401 ? ' (Invalid API key — check ANTHROPIC_API_KEY in Vercel env)'
-        : lastStatus === 429 ? ' (Rate limit exceeded — try again in a moment)'
-        : lastStatus === 403 ? ' (API key does not have access to these models)'
-        : '';
-      return NextResponse.json({ error: `AI service temporarily unavailable.${hint} Please try again shortly.` }, { status: 502 });
+      let userMsg: string;
+      if (lastStatus === 401) {
+        userMsg = 'VTX Error 401: API key is invalid or expired. Go to console.anthropic.com → API Keys and create a new key, then update ANTHROPIC_API_KEY in Vercel.';
+      } else if (lastStatus === 403) {
+        userMsg = 'VTX Error 403: API key found but has no access to AI models. Check your Anthropic account plan and permissions.';
+      } else if (lastStatus === 429) {
+        userMsg = 'VTX Error 429: Anthropic rate limit or usage cap reached. Check your billing at console.anthropic.com.';
+      } else if (lastStatus === 529 || lastStatus === 503) {
+        userMsg = 'VTX Error: Anthropic servers are overloaded right now. Please try again in 30 seconds.';
+      } else if (!lastStatus) {
+        userMsg = 'VTX Error: Network timeout reaching Anthropic. Please try again.';
+      } else {
+        userMsg = `VTX Error ${lastStatus}: AI service temporarily unavailable. Please try again shortly.`;
+      }
+      return NextResponse.json({ error: userMsg }, { status: 502 });
     }
 
     const data = await response.json();
