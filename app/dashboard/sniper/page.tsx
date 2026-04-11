@@ -77,11 +77,11 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
-function SecurityBadge({ score }: { score: number }) {
-  const color = score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444';
-  const label = score >= 70 ? 'SAFE' : score >= 40 ? 'CAUTION' : 'RISKY';
+function SecurityBadge({ score, honeypot }: { score: number; honeypot?: boolean }) {
+  const color = honeypot ? '#EF4444' : score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444';
+  const label = honeypot ? 'BLOCKED' : score >= 70 ? 'SAFE' : score >= 40 ? 'CAUTION' : 'RISKY';
   return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ color, background: `${color}18` }}>
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border" style={{ color, background: `${color}15`, borderColor: `${color}35` }}>
       {label}
     </span>
   );
@@ -234,13 +234,13 @@ export default function SniperPage() {
     loadRealTokens();
   }, [loadRealTokens]);
 
-  // Poll every 30s when active for new pairs
+  // Poll every 5s when active for new pairs
   useEffect(() => {
     if (active) {
       setScanning(true);
       scanRef.current = setInterval(() => {
         loadRealTokens();
-      }, 30_000);
+      }, 5_000);
     } else {
       setScanning(false);
       if (scanRef.current) clearInterval(scanRef.current);
@@ -285,21 +285,39 @@ export default function SniperPage() {
 
       <div className="px-4 pt-4">
         {/* Status Banner */}
-        <div className={`rounded-xl border p-3 mb-4 flex items-center gap-3 transition-all ${
+        <div className={`rounded-xl border p-3 mb-4 transition-all ${
           active
-            ? 'bg-[#10B981]/05 border-[#10B981]/20'
+            ? 'bg-[#10B981]/[0.05] border-[#10B981]/20'
             : 'bg-white/[0.02] border-white/[0.06]'
         }`}>
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${active ? 'bg-[#10B981] animate-pulse' : 'bg-gray-600'}`} />
-          <div className="flex-1">
-            <div className="text-xs font-semibold">{active ? 'Sniper Active' : 'Sniper Offline'}</div>
-            <div className="text-[10px] text-gray-500">
-              {active
-                ? `Scanning ${config.chains.length} chains for new token listings...`
-                : 'Start the sniper to detect and analyze new listings in real-time'}
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${active ? 'bg-[#10B981] animate-pulse' : 'bg-gray-600'}`} />
+            <div className="flex-1">
+              <div className="text-xs font-semibold">{active ? 'Sniper Active' : 'Sniper Offline'}</div>
+              <div className="text-[10px] text-gray-500">
+                {active
+                  ? `Scanning ${config.chains.join(', ').toUpperCase()} · refreshes every 5s`
+                  : 'Start the sniper to detect and analyze new listings in real-time'}
+              </div>
             </div>
+            {active && scanning && <Loader2 className="w-3.5 h-3.5 text-[#10B981] animate-spin flex-shrink-0" />}
           </div>
-          {active && scanning && <Loader2 className="w-3.5 h-3.5 text-[#10B981] animate-spin flex-shrink-0" />}
+          {active && (
+            <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
+              <div className="flex-1 bg-white/[0.03] rounded-lg px-2 py-1 text-center">
+                <div className="text-[9px] text-gray-600">Stop Loss</div>
+                <div className="text-[11px] font-bold text-[#EF4444]">-{config.stopLoss}%</div>
+              </div>
+              <div className="flex-1 bg-white/[0.03] rounded-lg px-2 py-1 text-center">
+                <div className="text-[9px] text-gray-600">Take Profit</div>
+                <div className="text-[11px] font-bold text-[#10B981]">+{parseFloat(config.autoSellMultiplier) * 100 - 100}%</div>
+              </div>
+              <div className="flex-1 bg-white/[0.03] rounded-lg px-2 py-1 text-center">
+                <div className="text-[9px] text-gray-600">Max Buy</div>
+                <div className="text-[11px] font-bold text-white">{config.maxBuyAmount} ETH</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stats */}
@@ -364,7 +382,7 @@ export default function SniperPage() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-bold">{token.symbol}</span>
-                          <SecurityBadge score={token.securityScore} />
+                          <SecurityBadge score={token.securityScore} honeypot={token.honeypot} />
                         </div>
                         <div className="text-[10px] text-gray-500">{token.name}</div>
                       </div>
