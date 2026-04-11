@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   if (!isLunarCrushConfigured()) {
     return NextResponse.json(
-      { error: 'Social intelligence not configured. Add LUNARCRUSH_API_KEY_1 to environment variables.' },
+      { error: 'Social intelligence not configured. Add LUNARCRUSH_API_1 to environment variables.' },
       { status: 503 }
     );
   }
