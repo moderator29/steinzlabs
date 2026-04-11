@@ -88,13 +88,23 @@ Rules:
 - riskScore and overallScore must be actual integers.
 - Return ONLY valid JSON. No markdown, no explanation outside JSON.`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    let aiMessage: Awaited<ReturnType<typeof anthropic.messages.create>> | null = null;
+    for (const model of MODELS) {
+      try {
+        aiMessage = await anthropic.messages.create({
+          model,
+          max_tokens: 2048,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        break;
+      } catch (err: any) {
+        console.error(`DNA analyzer model ${model} failed:`, err?.message || err);
+      }
+    }
+    if (!aiMessage) throw new Error('AI analysis unavailable');
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    const responseText = aiMessage.content[0].type === 'text' ? aiMessage.content[0].text : '';
 
     let analysis;
     try {

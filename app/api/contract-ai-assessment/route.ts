@@ -90,13 +90,23 @@ Respond with valid JSON only. No markdown, no code blocks, just raw JSON:
   "verdict": "<single sentence investor verdict — e.g. 'Approach with extreme caution' or 'Appears safe but always DYOR'>"
 }`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    let aiResponse: Awaited<ReturnType<typeof anthropic.messages.create>> | null = null;
+    for (const model of MODELS) {
+      try {
+        aiResponse = await anthropic.messages.create({
+          model,
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        break;
+      } catch (err: any) {
+        console.error(`Contract AI model ${model} failed:`, err?.message || err);
+      }
+    }
+    if (!aiResponse) throw new Error('AI assessment unavailable');
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
     const assessment = JSON.parse(text);
 
     return NextResponse.json(assessment);
