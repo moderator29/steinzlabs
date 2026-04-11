@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1',
@@ -355,6 +360,40 @@ export async function POST(request: Request) {
         };
       }
     } catch {}
+
+    // AI Security Analysis — runs in parallel-safe fashion
+    if (anthropic) {
+      try {
+        const chainLabel = chainId === '1' ? 'Ethereum' : chainId === '56' ? 'BSC' : chainId === '137' ? 'Polygon' : chainId === '8453' ? 'Base' : chainId === '42161' ? 'Arbitrum' : 'EVM';
+        const flags = response.checks.filter((c: any) => c.status === 'fail').map((c: any) => c.label).join(', ') || 'None';
+        const aiMsg = await anthropic.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{
+            role: 'user',
+            content: `You are a crypto security expert. Analyze this token security scan and give a concise verdict.
+
+Token: ${response.name} (${response.symbol}) on ${chainLabel}
+Trust Score: ${response.trustScore}/100 — ${response.safetyLevel}
+Honeypot: ${response.isHoneypot ? 'YES ⚠️' : 'No'}
+Open Source: ${response.isOpenSource ? 'Yes' : 'NO ⚠️'}
+Mintable: ${response.isMintable ? 'YES ⚠️' : 'No'}
+Hidden Owner: ${response.hasHiddenOwner ? 'YES ⚠️' : 'No'}
+Owner Can Change Balance: ${response.ownerCanChangeBalance ? 'YES ⚠️' : 'No'}
+Buy Tax: ${response.buyTax} | Sell Tax: ${response.sellTax}
+Holders: ${response.holderCount}
+Failed Checks: ${flags}
+
+Respond with 3 sections only:
+SUMMARY: (2 sentences max — plain risk assessment)
+RISKS: (bullet list of top risks, or "No critical risks identified" if clean)
+VERDICT: (one word: SAFE / CAUTION / WARNING / DANGER) — (one sentence why)`,
+          }],
+        });
+        const aiText = aiMsg.content[0].type === 'text' ? aiMsg.content[0].text : null;
+        if (aiText) response.aiAnalysis = aiText;
+      } catch { /* AI analysis non-critical */ }
+    }
 
     return NextResponse.json(response, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },

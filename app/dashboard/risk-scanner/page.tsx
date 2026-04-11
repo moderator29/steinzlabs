@@ -83,10 +83,13 @@ export default function RiskScannerPage() {
   const [scannedAddress, setScannedAddress] = useState('');
   const [hasData, setHasData] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
+  const [aiReport, setAiReport] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const doScan = async (address: string) => {
     setScanning(true);
     setScannedAddress(address);
+    setAiReport(null);
     try {
       const res = await fetch(`/api/wallet-intelligence?address=${encodeURIComponent(address)}`);
       if (res.ok) {
@@ -102,6 +105,26 @@ export default function RiskScannerPage() {
           setHasData(true);
           setRiskScore(score);
           setRisks(analyzedRisks);
+          // Kick off AI analysis in background
+          setAiLoading(true);
+          fetch('/api/dna-analyzer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress: address, holdings, totalBalance: data.totalBalanceUsd, txCount: data.txCount || 0 }),
+          })
+            .then(r => r.json())
+            .then(ai => {
+              if (ai?.analysis?.topInsight) {
+                const summary = [
+                  ai.analysis.topInsight,
+                  ai.analysis.riskAssessment?.summary || '',
+                  ai.analysis.recommendations ? '• ' + (ai.analysis.recommendations as string[]).slice(0, 3).join('\n• ') : '',
+                ].filter(Boolean).join('\n\n');
+                setAiReport(summary);
+              }
+            })
+            .catch(() => {})
+            .finally(() => setAiLoading(false));
         }
       } else {
         setHasData(false);
@@ -260,14 +283,26 @@ export default function RiskScannerPage() {
 
                 {/* AI written assessment */}
                 <div className="bg-white/5 rounded-xl p-3 mb-3">
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    {riskScore >= 75
-                      ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a healthy risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'Low').length} risk categories are within safe parameters. ${risks.filter(r => r.level === 'Medium').length > 0 ? `${risks.filter(r => r.level === 'Medium').length} medium-priority item(s) are worth monitoring. ` : ''}Portfolio diversification and on-chain behavior suggest a measured investment approach with manageable exposure levels.`
-                      : riskScore >= 50
-                      ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a moderate risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'High').length > 0 ? `${risks.filter(r => r.level === 'High').length} high-priority risk(s) were detected: ${risks.filter(r => r.level === 'High').map(r => r.name).join(', ')}. ` : ''}${risks.filter(r => r.level === 'Medium').length} medium-risk factor(s) require attention. Consider rebalancing your portfolio to improve the overall security posture.`
-                      : `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} has a high-risk profile with a score of only ${riskScore}/100. ${risks.filter(r => r.level === 'High').length} critical risk(s) detected: ${risks.filter(r => r.level === 'High').map(r => r.desc).join('; ')}. Immediate portfolio restructuring is recommended to reduce exposure and protect assets from potential losses.`
-                    }
-                  </p>
+                  {aiLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Running AI analysis...
+                    </div>
+                  ) : aiReport ? (
+                    <div className="space-y-1.5">
+                      {aiReport.split('\n').filter(Boolean).map((line, i) => (
+                        <p key={i} className={`text-xs leading-relaxed ${line.startsWith('•') ? 'text-gray-400 pl-2' : 'text-gray-300'}`}>{line}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      {riskScore >= 75
+                        ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a healthy risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'Low').length} risk categories are within safe parameters.`
+                        : riskScore >= 50
+                        ? `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} shows a moderate risk profile with a score of ${riskScore}/100. ${risks.filter(r => r.level === 'High').length} high-priority risk(s) detected.`
+                        : `Wallet ${scannedAddress.slice(0, 8)}...${scannedAddress.slice(-6)} has a high-risk profile (${riskScore}/100). Immediate rebalancing recommended.`
+                      }
+                    </p>
+                  )}
                 </div>
 
                 {/* Risk breakdown chart */}

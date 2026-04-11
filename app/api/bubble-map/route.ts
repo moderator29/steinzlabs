@@ -241,7 +241,7 @@ async function fetchArkhamAddressIntel(address: string): Promise<{
 }
 
 async function fetchSolanaHolders(tokenAddress: string): Promise<Array<{ address: string; percentage: number; uiAmount: number }>> {
-  const apiKey = process.env.HELIUS_API_KEY;
+  const apiKey = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
   if (!apiKey) return [];
 
   try {
