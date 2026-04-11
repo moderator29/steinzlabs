@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { scanTokenSecurity, scanAddress } from '@/lib/security/goplusService';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', bsc: '56', polygon: '137', base: '8453',
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
     else if (overallScore >= 35) { verdict = 'WARNING'; verdictColor = '#F97316'; }
     else { verdict = 'DANGER'; verdictColor = '#EF4444'; }
 
-    return NextResponse.json({
+    const result: Record<string, any> = {
       address,
       chain,
       overallScore,
@@ -101,7 +106,32 @@ export async function POST(req: NextRequest) {
         labels: addr.labels,
       } : null,
       analyzedAt: new Date().toISOString(),
-    });
+    };
+
+    // AI-powered contract analysis
+    if (anthropic) {
+      try {
+        const tokenInfo = token ? `
+Token: ${token.name} (${token.symbol}) | Score: ${overallScore}/100 | ${riskFlags.length} risk flags
+Honeypot: ${token.isHoneypot} | Open Source: ${token.isOpenSource} | Mintable: ${token.isMintable}
+Buy Tax: ${(token.buyTax * 100).toFixed(1)}% | Sell Tax: ${(token.sellTax * 100).toFixed(1)}%
+Holder Count: ${token.holderCount} | Flags: ${riskFlags.slice(0, 5).join('; ') || 'None'}` : '';
+        const addrInfo = addr ? `\nAddress Risk: ${addr.riskLevel} | Blacklisted: ${addr.isBlacklisted} | Malicious: ${addr.isMalicious} | Phishing: ${addr.isPhishing}` : '';
+        const aiMsg = await anthropic.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 280,
+          messages: [{
+            role: 'user',
+            content: `Crypto contract analysis — give a concise expert verdict:\n${tokenInfo}${addrInfo}\n\nReply with:\nASSESSMENT: (2 sentences)\nKEY RISKS: (bullet list or "None detected")\nVERDICT: (SAFE/CAUTION/WARNING/DANGER — one sentence why)`,
+          }],
+        });
+        if (aiMsg.content[0].type === 'text') {
+          result.aiAnalysis = aiMsg.content[0].text;
+        }
+      } catch { /* non-critical */ }
+    }
+
+    return NextResponse.json(result);
   } catch (err) {
 
     return NextResponse.json({ error: 'Analysis failed. Please try again.' }, { status: 500 });
