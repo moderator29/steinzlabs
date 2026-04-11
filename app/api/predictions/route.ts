@@ -84,12 +84,26 @@ async function fetchCoinGeckoCoins(): Promise<any[]> {
 
 async function fetchPumpFunTokens(): Promise<any[]> {
   try {
+    // Use DexScreener instead of unstable Heroku endpoint
     const res = await fetch(
-      'https://client-api-2-74b1891ee9f9.herokuapp.com/coins?offset=0&limit=5&sort=last_trade_timestamp&order=DESC&includeNsfw=false'
+      'https://api.dexscreener.com/latest/dex/search?q=pump.fun',
+      { cache: 'no-store' }
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    const pairs = (data.pairs || [])
+      .filter((p: any) => p.chainId === 'solana')
+      .slice(0, 5);
+    return pairs.map((p: any) => ({
+      mint: p.baseToken?.address,
+      symbol: p.baseToken?.symbol,
+      name: p.baseToken?.name,
+      usd_market_cap: p.fdv || 0,
+      reply_count: 0,
+      creator: '',
+      image_uri: p.info?.imageUrl || '',
+      created_timestamp: null,
+    }));
   } catch {
     return [];
   }

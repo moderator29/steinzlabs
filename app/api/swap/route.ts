@@ -82,28 +82,76 @@ async function fetchLivePrices(tokens: string[]): Promise<Record<string, number>
     return priceCache.prices;
   }
 
-  const ids = tokens.map(t => COINGECKO_IDS[t]).filter(Boolean);
-  if (ids.length === 0) return {};
+  const prices: Record<string, number> = { ...priceCache.prices };
 
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`,
-      { next: { revalidate: 30 } }
-    );
-    if (!res.ok) throw new Error('CoinGecko API error');
-    const data = await res.json();
-
-    const prices: Record<string, number> = {};
-    for (const [symbol, geckoId] of Object.entries(COINGECKO_IDS)) {
-      if (data[geckoId]?.usd) {
-        prices[symbol] = data[geckoId].usd;
+  // PRIMARY: Binance — real-time, free, no key needed
+  const nonStable = tokens.filter(t => !STABLECOIN_PRICES[t]);
+  if (nonStable.length > 0) {
+    try {
+      const syms = nonStable.map(t => `"${t}USDT"`);
+      const url = `https://api.binance.com/api/v3/ticker/price?symbols=[${syms.join(',')}]`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        const data: any[] = await res.json();
+        for (const item of data) {
+          const sym = item.symbol?.replace('USDT', '');
+          if (sym && item.price) prices[sym] = parseFloat(item.price);
+        }
       }
-    }
+    } catch {}
+  }
 
-    priceCache = { prices: { ...priceCache.prices, ...prices }, ts: now };
-    return priceCache.prices;
+  // FALLBACK: DexScreener for tokens not found on Binance
+  const missing = tokens.filter(t => !prices[t] && !STABLECOIN_PRICES[t]);
+  for (const token of missing) {
+    try {
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(token)}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const best = (data.pairs || []).sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+        if (best?.priceUsd) prices[token] = parseFloat(best.priceUsd);
+      }
+    } catch {}
+  }
+
+  priceCache = { prices, ts: now };
+  return prices;
+}
+
+// Alchemy gas price for EVM chains
+async function fetchAlchemyGasPrice(chain: string): Promise<number> {
+  const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY || '';
+  if (!ALCHEMY_KEY || chain === 'solana') return 0;
+  const RPC_URLS: Record<string, string> = {
+    ethereum: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    base:     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    polygon:  `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    arbitrum: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    optimism: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    avalanche:`https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+    bnb:      `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+  };
+  const url = RPC_URLS[chain];
+  if (!url) return 0;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }),
+      cache: 'no-store',
+    });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    const gasPriceGwei = parseInt(data.result || '0x0', 16) / 1e9;
+    // Estimate gas cost for a swap (~200k gas) in USD
+    // Use ETH/AVAX/MATIC price as denominator
+    const nativePrices: Record<string, string> = { ethereum: 'ETH', base: 'ETH', arbitrum: 'ETH', optimism: 'ETH', polygon: 'MATIC', avalanche: 'AVAX', bnb: 'BNB' };
+    const nativeSym = nativePrices[chain] || 'ETH';
+    const nativePrice = priceCache.prices[nativeSym] || 0;
+    const gasCostEth = (gasPriceGwei * 1e9 * 200000) / 1e18;
+    return gasCostEth * nativePrice;
   } catch {
-    return priceCache.prices;
+    return 0;
   }
 }
 
@@ -183,6 +231,15 @@ export async function GET(req: NextRequest) {
     avalanche: EVM_TREASURY,
   };
 
+  // Use Alchemy for accurate real gas price (non-blocking)
+  let realGasUsd = gasEstimate;
+  if (chain !== 'solana') {
+    try {
+      const alchemyGas = await fetchAlchemyGasPrice(chain);
+      if (alchemyGas > 0) realGasUsd = alchemyGas;
+    } catch {}
+  }
+
   return NextResponse.json({
     fromToken,
     toToken,
@@ -194,7 +251,7 @@ export async function GET(req: NextRequest) {
     priceImpact,
     minReceived: parseFloat(minReceived.toFixed(6)),
     slippage,
-    gasEstimateUsd: gasEstimate,
+    gasEstimateUsd: parseFloat(realGasUsd.toFixed(4)),
     platformFee: {
       rate: PLATFORM_FEE_RATE,
       ratePercent: `${(PLATFORM_FEE_RATE * 100).toFixed(1)}%`,
@@ -209,7 +266,7 @@ export async function GET(req: NextRequest) {
       hops: 1,
     },
     validUntil: Date.now() + 30000,
-    priceSource: Object.keys(livePrices).length > 0 ? 'coingecko' : 'fallback',
+    priceSource: 'binance+dexscreener',
   });
 }
 
@@ -222,6 +279,21 @@ export async function POST(req: NextRequest) {
     if (!action) {
       return NextResponse.json({ error: 'Missing action' }, { status: 400 });
     }
+
+    // ── Alchemy Simulation — preview swap outcome before signing ─────────────
+    if (action === 'simulate') {
+      const { txFrom, txTo, txData, txValue, txChain } = body;
+      if (!txFrom || !txTo || !txData) {
+        return NextResponse.json({ error: 'Missing tx fields for simulation' }, { status: 400 });
+      }
+      const { simulateTransaction, normalizeChain } = await import('@/lib/alchemy');
+      const alchemyChain = normalizeChain(txChain || 'ethereum');
+      const result = await simulateTransaction(alchemyChain, {
+        from: txFrom, to: txTo, data: txData, value: txValue || '0x0',
+      });
+      return NextResponse.json(result);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── GoPlus Token Security Check ───────────────────────────────────────────
     // Run security check before any swap execution
