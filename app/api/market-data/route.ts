@@ -1,161 +1,132 @@
 import { NextResponse } from 'next/server';
 
-async function fetchCoinGecko(limit: number, category: string) {
-  const response = await fetch(
-    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=true&price_change_percentage=24h,7d`,
-    {
-      headers: process.env.COINGECKO_API_KEY
-        ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
-        : {},
-      next: { revalidate: 120 },
-    }
-  );
-  if (!response.ok) throw new Error(`CoinGecko ${response.status}`);
-  const coins = await response.json();
+// Static logo map — no API key needed
+const LOGOS: Record<string, string> = {
+  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
+  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
+  TRX: 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
+  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
+  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
+  LTC: 'https://assets.coingecko.com/coins/images/2/small/litecoin.png',
+  NEAR: 'https://assets.coingecko.com/coins/images/10365/small/near.jpg',
+  APT: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
+  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
+  ATOM: 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',
+  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
+  WIF: 'https://assets.coingecko.com/coins/images/33566/small/dogwifhat.jpg',
+  BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
+  SUI: 'https://assets.coingecko.com/coins/images/26375/small/sui-ocean-square.png',
+  TON: 'https://assets.coingecko.com/coins/images/17980/small/ton_symbol.png',
+};
 
-  let filtered = coins;
-  if (category === 'gainers') {
-    filtered = coins.filter((c: any) => c.price_change_percentage_24h > 0)
-      .sort((a: any, b: any) => b.price_change_percentage_24h - a.price_change_percentage_24h);
-  } else if (category === 'losers') {
-    filtered = coins.filter((c: any) => c.price_change_percentage_24h < 0)
-      .sort((a: any, b: any) => a.price_change_percentage_24h - b.price_change_percentage_24h);
-  }
+const NAMES: Record<string, string> = {
+  BTC: 'Bitcoin', ETH: 'Ethereum', BNB: 'BNB', XRP: 'XRP', SOL: 'Solana',
+  USDT: 'Tether', USDC: 'USD Coin', ADA: 'Cardano', DOGE: 'Dogecoin', TRX: 'TRON',
+  TON: 'Toncoin', AVAX: 'Avalanche', MATIC: 'Polygon', LINK: 'Chainlink',
+  DOT: 'Polkadot', SHIB: 'Shiba Inu', UNI: 'Uniswap', LTC: 'Litecoin',
+  NEAR: 'NEAR Protocol', APT: 'Aptos', ARB: 'Arbitrum', OP: 'Optimism',
+  ATOM: 'Cosmos', PEPE: 'Pepe', WIF: 'dogwifhat', BONK: 'Bonk', SUI: 'Sui',
+};
 
-  return filtered.map((coin: any) => ({
-    id: coin.id,
-    symbol: coin.symbol.toUpperCase(),
-    name: coin.name,
-    price: coin.current_price,
-    change24h: coin.price_change_percentage_24h,
-    change7d: coin.price_change_percentage_7d_in_currency,
-    volume24h: coin.total_volume,
-    marketCap: coin.market_cap,
-    rank: coin.market_cap_rank,
-    sparkline: coin.sparkline_in_7d?.price || [],
-    image: coin.image,
-  }));
-}
+// Simple in-memory cache
+let cachedTokens: any[] | null = null;
+let cacheTs = 0;
+const CACHE_TTL = 30_000;
 
-async function fetchDexScreenerFallback() {
-  // Fetch top boosted tokens from DexScreener as fallback
-  const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
-    next: { revalidate: 60 },
+async function fetchFromBinance(limit: number): Promise<any[]> {
+  const res = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+    next: { revalidate: 30 },
   });
-  if (!res.ok) throw new Error('DexScreener fallback failed');
-  const data = await res.json();
-  if (!Array.isArray(data)) throw new Error('Invalid DexScreener response');
+  if (!res.ok) throw new Error(`Binance ${res.status}`);
+  const tickers: any[] = await res.json();
 
-  // Also try trending search for major tokens
-  const trending = await fetch('https://api.dexscreener.com/latest/dex/search?q=ETH', {
-    next: { revalidate: 60 },
-  }).then(r => r.json()).catch(() => ({ pairs: [] }));
-
-  const pairs = trending.pairs || [];
-  const seen = new Set<string>();
-  const tokens = pairs.slice(0, 100).map((p: any, i: number) => {
-    const symbol = p.baseToken?.symbol?.toUpperCase() || '';
-    if (!symbol || seen.has(symbol)) return null;
-    seen.add(symbol);
-    return {
-      id: p.baseToken?.address || symbol.toLowerCase(),
-      symbol,
-      name: p.baseToken?.name || symbol,
-      price: parseFloat(p.priceUsd || '0'),
-      change24h: p.priceChange?.h24 || 0,
-      change7d: 0,
-      volume24h: p.volume?.h24 || 0,
-      marketCap: p.fdv || p.marketCap || 0,
-      rank: i + 1,
-      sparkline: [],
-      image: p.info?.imageUrl || '',
-    };
-  }).filter(Boolean);
-
-  return tokens;
-}
-
-// Hard-coded top coins as last resort (with live price from a free endpoint)
-async function fetchTopCoinsFallback() {
-  const TOP_COINS = [
-    { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', rank: 1 },
-    { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', rank: 2 },
-    { id: 'tether', symbol: 'USDT', name: 'Tether', rank: 3 },
-    { id: 'binancecoin', symbol: 'BNB', name: 'BNB', rank: 4 },
-    { id: 'solana', symbol: 'SOL', name: 'Solana', rank: 5 },
-    { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', rank: 6 },
-    { id: 'xrp', symbol: 'XRP', name: 'XRP', rank: 7 },
-    { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin', rank: 8 },
-    { id: 'cardano', symbol: 'ADA', name: 'Cardano', rank: 9 },
-    { id: 'avalanche-2', symbol: 'AVAX', name: 'Avalanche', rank: 10 },
-  ];
-
-  try {
-    const ids = TOP_COINS.map(c => c.id).join(',');
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`,
-      { next: { revalidate: 60 } }
-    );
-    if (!res.ok) throw new Error('simple/price failed');
-    const prices = await res.json();
-
-    return TOP_COINS.map(c => {
-      const p = prices[c.id] || {};
+  return tickers
+    .filter((t: any) => t.symbol.endsWith('USDT'))
+    .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+    .slice(0, limit)
+    .map((t: any, i: number) => {
+      const sym = t.symbol.replace('USDT', '');
       return {
-        id: c.id,
-        symbol: c.symbol,
-        name: c.name,
-        price: p.usd || 0,
-        change24h: p.usd_24h_change || 0,
+        id: sym.toLowerCase(),
+        symbol: sym,
+        name: NAMES[sym] || sym,
+        price: parseFloat(t.lastPrice) || 0,
+        change24h: parseFloat(t.priceChangePercent) || 0,
         change7d: 0,
-        volume24h: p.usd_24h_vol || 0,
-        marketCap: p.usd_market_cap || 0,
-        rank: c.rank,
+        volume24h: parseFloat(t.quoteVolume) || 0,
+        marketCap: 0,
+        rank: i + 1,
         sparkline: [],
-        image: `https://assets.coingecko.com/coins/images/${c.rank === 1 ? '1/small/bitcoin.png' : c.rank === 2 ? '279/small/ethereum.png' : ''}`,
+        image: LOGOS[sym] || `https://ui-avatars.com/api/?name=${encodeURIComponent(sym)}&background=0A1EFF&color=fff&size=64&bold=true&rounded=true`,
+        source: 'binance',
       };
     });
-  } catch {
-    return TOP_COINS.map((c, i) => ({
-      id: c.id,
-      symbol: c.symbol,
-      name: c.name,
-      price: 0,
-      change24h: 0,
-      change7d: 0,
-      volume24h: 0,
-      marketCap: 0,
-      rank: c.rank,
-      sparkline: [],
-      image: '',
-    }));
-  }
+}
+
+async function enrichWithCoinGecko(tokens: any[]): Promise<any[]> {
+  try {
+    const cgRes = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&sparkline=false',
+      {
+        headers: process.env.COINGECKO_API_KEY
+          ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+          : {},
+        next: { revalidate: 60 },
+      }
+    );
+    if (!cgRes.ok) return tokens;
+    const coins: any[] = await cgRes.json();
+    for (const c of coins) {
+      const t = tokens.find(x => x.symbol === c.symbol.toUpperCase());
+      if (t) {
+        t.marketCap = c.market_cap ?? 0;
+        t.name = c.name;
+        t.image = c.image || t.image;
+        t.id = c.id;
+      }
+    }
+  } catch { /* non-fatal */ }
+  return tokens;
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category') || 'trending';
+    const category = searchParams.get('category') || 'top';
     const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 250);
 
-    let tokens: any[] = [];
-
-    // Try CoinGecko first
-    try {
-      tokens = await fetchCoinGecko(limit, category);
-    } catch (cgErr) {
-
-
-      // Try DexScreener fallback
-      try {
-        tokens = await fetchDexScreenerFallback();
-      } catch (dexErr) {
-
-
-        // Last resort: top 10 coins with simple price endpoint
-        tokens = await fetchTopCoinsFallback();
-      }
+    // Serve from cache if fresh
+    if (cachedTokens && Date.now() - cacheTs < CACHE_TTL) {
+      let tokens = cachedTokens;
+      if (category === 'gainers') tokens = [...tokens].sort((a, b) => b.change24h - a.change24h).slice(0, limit);
+      else if (category === 'losers') tokens = [...tokens].sort((a, b) => a.change24h - b.change24h).slice(0, limit);
+      else tokens = tokens.slice(0, limit);
+      return NextResponse.json({ tokens, category, total: tokens.length, timestamp: new Date().toISOString() });
     }
+
+    // Primary: Binance (always works, no API key)
+    let tokens = await fetchFromBinance(100);
+    // Enrich with CoinGecko market caps (best-effort, non-blocking failure)
+    tokens = await enrichWithCoinGecko(tokens);
+
+    cachedTokens = tokens;
+    cacheTs = Date.now();
+
+    if (category === 'gainers') tokens = [...tokens].sort((a, b) => b.change24h - a.change24h).slice(0, limit);
+    else if (category === 'losers') tokens = [...tokens].sort((a, b) => a.change24h - b.change24h).slice(0, limit);
+    else tokens = tokens.slice(0, limit);
 
     return NextResponse.json({
       tokens,
@@ -164,8 +135,6 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-
-    // Always return 200 with empty array — never 500
     return NextResponse.json({ tokens: [], category: 'top', total: 0, timestamp: new Date().toISOString() });
   }
 }

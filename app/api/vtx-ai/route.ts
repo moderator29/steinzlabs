@@ -987,25 +987,34 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       : cleanMessage;
     messages.push({ role: 'user', content: finalUserMessage });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages,
-      }),
-    });
+    // Try preferred model first, fall back to stable model if unavailable
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    let response: Response | null = null;
+    let lastError = '';
 
-    if (!response.ok) {
-      const errorData = await response.text();
+    for (const model of MODELS) {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages,
+        }),
+      });
+      if (response.ok) break;
+      lastError = await response.text();
+      console.error(`VTX model ${model} failed (${response.status}):`, lastError);
+    }
 
-      return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 502 });
+    if (!response || !response.ok) {
+      console.error('All VTX models failed. Last error:', lastError);
+      return NextResponse.json({ error: 'AI service temporarily unavailable. Please try again shortly.' }, { status: 502 });
     }
 
     const data = await response.json();

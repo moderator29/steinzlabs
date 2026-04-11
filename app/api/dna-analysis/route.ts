@@ -244,11 +244,21 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
 
       return null;
     }
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    let message: Awaited<ReturnType<typeof client.messages.create>> | null = null;
+    for (const model of MODELS) {
+      try {
+        message = await client.messages.create({
+          model,
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        break;
+      } catch (err: any) {
+        console.error(`DNA analysis model ${model} failed:`, err?.message || err);
+      }
+    }
+    if (!message) return null;
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
     let parsed;
