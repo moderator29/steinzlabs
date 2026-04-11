@@ -27,7 +27,7 @@ export async function GET(
 
     return NextResponse.json({ holders: data });
   } catch (error) {
-    console.error('Arkham holders fetch failed:', error);
+
     return NextResponse.json(
       { error: 'Failed to fetch token holders' },
       { status: 500 }

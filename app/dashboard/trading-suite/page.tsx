@@ -97,7 +97,8 @@ export default function TradingSuitePage() {
         setFearGreed(data.fearGreed || { value: '50', classification: 'Neutral' });
         lastUpdate.current = new Date();
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { // removed log
+}
     setLoading(false);
   }, []);
 

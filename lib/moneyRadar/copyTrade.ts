@@ -6,7 +6,7 @@ export async function executeCopyTrade(params: CopyTradeParams): Promise<any> {
   const { userId, entityTrade, copyAmount } = params;
 
   try {
-    console.log(`Copying ${entityTrade.entityName}'s trade: ${entityTrade.action} ${entityTrade.token}`);
+
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: user } = await supabaseAdmin
@@ -35,7 +35,7 @@ export async function executeCopyTrade(params: CopyTradeParams): Promise<any> {
       };
 
     } else {
-      console.log(`${entityTrade.entityName} is selling - checking for user positions`);
+
 
       return {
         success: true,
@@ -44,7 +44,7 @@ export async function executeCopyTrade(params: CopyTradeParams): Promise<any> {
     }
 
   } catch (error: any) {
-    console.error('Copy trade failed:', error);
+
     return {
       success: false,
       error: error.message || 'Copy trade failed',

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       scannedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Domain shield error:', err);
+
     return NextResponse.json({ error: 'Scan failed. Please try again.' }, { status: 500 });
   }
 }

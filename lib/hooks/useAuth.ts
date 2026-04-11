@@ -140,7 +140,7 @@ export function useAuthProvider(): AuthContextType {
       );
       subscription = data?.subscription;
     } catch (err) {
-      console.error('Auth listener error:', err);
+
       if (mounted) setLoading(false);
     }
 

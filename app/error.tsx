@@ -10,7 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Application error:', error);
+
     // Auto-retry once after 800ms — most reload errors are transient hydration
     // mismatches that resolve on the second render
     const t = setTimeout(() => reset(), 800);

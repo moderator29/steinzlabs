@@ -30,14 +30,14 @@ export async function POST(request: Request) {
     const emailSent = await sendPasswordResetEmail(cleanEmail, resetUrl, firstName);
 
     if (!emailSent) {
-      console.error('[ForgotPassword] Failed to send reset email to', cleanEmail);
+
       return NextResponse.json({ error: 'Failed to send email. Please try again.' }, { status: 500 });
     }
 
-    console.log(`[ForgotPassword] Reset email sent to ${cleanEmail}`);
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('[ForgotPassword] error:', err.message);
+
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
   }
 }

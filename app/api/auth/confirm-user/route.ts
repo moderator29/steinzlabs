@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     await admin.auth.admin.updateUserById(user.id, { email_confirm: true });
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('[ConfirmUser] error:', err.message);
+
     return NextResponse.json({ error: 'Failed to confirm user' }, { status: 500 });
   }
 }

@@ -110,7 +110,7 @@ Rules:
 
     return NextResponse.json({ analysis, wallet: walletAddress });
   } catch (error: any) {
-    console.error('DNA Analyzer error:', error);
+
     return NextResponse.json({ error: error.message || 'Analysis failed' }, { status: 500 });
   }
 }

@@ -81,7 +81,7 @@ async function getWalletBalances(address: string) {
       ...tokenDetails
     ];
   } catch (error) {
-    console.error('Wallet balance error:', error);
+
     return [];
   }
 }
@@ -142,7 +142,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Portfolio error:', error);
+
     return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
   }
 }

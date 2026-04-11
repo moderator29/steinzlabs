@@ -47,7 +47,7 @@ export default function WalletTab() {
         setTotalBalance(tokens.reduce((sum: number, t: TokenBalance) => sum + t.valueUsd, 0));
       }
     } catch (error) {
-      console.error('Failed to fetch wallet balances:', error);
+
     } finally {
       setLoading(false);
     }

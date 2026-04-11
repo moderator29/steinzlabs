@@ -42,7 +42,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
         setEntities(data.smartMoneyPresence.entities);
       }
     } catch (error) {
-      console.error('Failed to load smart money:', error);
+
     } finally {
       setLoading(false);
     }

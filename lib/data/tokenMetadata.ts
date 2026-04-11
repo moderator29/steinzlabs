@@ -27,7 +27,7 @@ export async function getTokenMetadata(address: string, chain: string = 'solana'
 
     return cacheAndReturn(cacheKey, createFallback(address, chain));
   } catch (error) {
-    console.error('Token metadata fetch failed:', error);
+
     return createFallback(address, chain);
   }
 }

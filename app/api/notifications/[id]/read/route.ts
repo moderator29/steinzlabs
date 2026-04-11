@@ -28,11 +28,11 @@ export async function PATCH(
           .eq('id', supabaseId);
 
         if (error) {
-          console.error('Supabase mark read error:', error);
+
         }
       }
     } catch (err) {
-      console.log('Supabase mark read skipped:', err);
+
     }
   }
 

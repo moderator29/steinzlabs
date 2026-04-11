@@ -190,7 +190,7 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
       };
     });
   } catch (error) {
-    console.error('Alchemy fetch error:', error);
+
     return [];
   }
 }
@@ -233,7 +233,7 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
       };
     });
   } catch (error) {
-    console.error('Helius fetch error:', error);
+
     return [];
   }
 }
@@ -278,7 +278,7 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
       };
     });
   } catch (error) {
-    console.error('Pump.fun fetch error:', error);
+
     return [];
   }
 }
@@ -424,7 +424,7 @@ async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
 
     return events;
   } catch (error) {
-    console.error('DexScreener trending error:', error);
+
     return [];
   }
 }
@@ -461,7 +461,7 @@ async function fetchDexScreenerProfiles(chainId: string, count: number = 15): Pr
 
     return events;
   } catch (error) {
-    console.error(`DexScreener profiles ${chainId} error:`, error);
+
     return [];
   }
 }
@@ -682,7 +682,7 @@ export async function GET(request: Request) {
       headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
     });
   } catch (error) {
-    console.error('Context feed error:', error);
+
     return NextResponse.json({ error: 'Failed to fetch context feed' }, { status: 500 });
   }
 }

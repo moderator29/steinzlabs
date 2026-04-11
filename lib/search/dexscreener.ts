@@ -28,7 +28,7 @@ export async function searchDEXScreener(query: string): Promise<SearchResult[]> 
       scammerPresent: false,
     }));
   } catch (error) {
-    console.error('DEXScreener search failed:', error);
+
     return [];
   }
 }

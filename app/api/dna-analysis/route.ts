@@ -241,7 +241,7 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
   try {
     const client = anthropic;
     if (!client) {
-      console.warn('ANTHROPIC_API_KEY not configured — skipping AI analysis');
+
       return null;
     }
     const message = await client.messages.create({
@@ -261,7 +261,7 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
     }
     return parsed;
   } catch (err) {
-    console.error('AI analysis error:', err);
+
     return null;
   }
 }
@@ -364,7 +364,7 @@ async function fetchSolWalletData(address: string): Promise<{ holdings: any[]; t
       txCount,
     };
   } catch (e) {
-    console.error('fetchSolWalletData error:', e);
+
     return { holdings: [], totalBalanceUsd: '0', txCount: 0 };
   }
 }
@@ -439,7 +439,7 @@ async function fetchEvmWalletData(address: string): Promise<{ holdings: any[]; t
         const results = await Promise.all(metaPromises);
         tokenHoldings = results.filter(Boolean);
       } catch (e) {
-        console.error('EVM token fetch error:', e);
+
       }
     }
 
@@ -452,7 +452,7 @@ async function fetchEvmWalletData(address: string): Promise<{ holdings: any[]; t
       txCount,
     };
   } catch (e) {
-    console.error('fetchEvmWalletData error:', e);
+
     return { holdings: [], totalBalanceUsd: '0', txCount: 0 };
   }
 }
@@ -489,7 +489,7 @@ export async function GET(request: Request) {
         txCount = walletData.txCount || 0;
       }
     } catch (e) {
-      console.error('wallet data fetch failed:', e);
+
     }
 
     // Fetch transactions for stats
@@ -541,7 +541,7 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error: any) {
-    console.error('DNA analysis error:', error);
+
     return NextResponse.json({ error: error.message || 'Analysis failed' }, { status: 500 });
   }
 }

@@ -13,7 +13,7 @@ class PriceFeedManager {
       this.ws = new WebSocket('wss://io.dexscreener.com/dex/screener/pairs/h24/1');
 
       this.ws.onopen = () => {
-        console.log('Price feed connected');
+
         this.reconnectDelay = 5000;
       };
 
@@ -22,20 +22,20 @@ class PriceFeedManager {
           const data = JSON.parse(event.data as string);
           this.handlePriceUpdate(data);
         } catch (error) {
-          console.error('Failed to parse price update:', error);
+
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('Price feed error:', error);
+
       };
 
       this.ws.onclose = () => {
-        console.log('Price feed disconnected, reconnecting...');
+
         this.scheduleReconnect();
       };
     } catch (error) {
-      console.error('Failed to connect to price feed:', error);
+
       this.scheduleReconnect();
     }
   }
@@ -87,7 +87,7 @@ class PriceFeedManager {
     }
 
     this.reconnectTimeout = setTimeout(() => {
-      console.log('Attempting to reconnect price feed...');
+
       this.connect();
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
     }, this.reconnectDelay);

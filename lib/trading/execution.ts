@@ -40,7 +40,7 @@ export async function executeTrade(params: {
   const { quote, userWallet, userAddress, chain, signTransaction, autoExit, followingEntity } = params;
 
   try {
-    console.log('Running Shadow Guardian pre-trade scan...');
+
     const scan = await shadowGuardian.scanTrade(
       quote.toToken,
       parseFloat(quote.toAmount),
@@ -48,7 +48,7 @@ export async function executeTrade(params: {
     );
 
     if (scan.blocked) {
-      console.log('Trade blocked by Shadow Guardian');
+
       return {
         success: false,
         error: `BLOCKED: ${scan.message}`,
@@ -60,7 +60,7 @@ export async function executeTrade(params: {
       };
     }
 
-    console.log('Shadow Guardian: Safe to proceed');
+
 
     let execution: TradeExecution;
 
@@ -105,13 +105,13 @@ export async function executeTrade(params: {
           txHash: execution.txHash || '',
         });
 
-        console.log(`Position saved. Fee: ${fee.feeAmount} (${fee.feeBps}bps) to treasury`);
+
       }
     }
 
     return execution;
   } catch (error: any) {
-    console.error('Trade execution failed:', error);
+
     return {
       success: false,
       error: error.message || 'Trade execution failed',
