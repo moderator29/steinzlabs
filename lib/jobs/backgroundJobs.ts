@@ -41,19 +41,17 @@ class BackgroundJobManager {
   }
 
   private startJob(name: string, handler: () => Promise<void>, intervalMs: number) {
-    handler().catch(err => // removed log
-
+    handler().catch(() => {});
 
     const interval = setInterval(async () => {
       try {
         await handler();
-      } catch (error) {
-
+      } catch {
+        // job error silenced in production
       }
     }, intervalMs);
 
     this.intervals.set(name, interval);
-
   }
 
   private async snapshotPopularTokens() {
