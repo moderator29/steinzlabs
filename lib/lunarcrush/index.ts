@@ -16,10 +16,10 @@
  */
 
 const LUNARCRUSH_KEYS = [
-  process.env.LUNARCRUSH_API_KEY_1,
-  process.env.LUNARCRUSH_API_KEY_2,
-  process.env.LUNARCRUSH_API_KEY_3,
-  process.env.LUNARCRUSH_API_KEY_4,
+  process.env.LUNARCRUSH_API_1,
+  process.env.LUNARCRUSH_API_2,
+  process.env.LUNARCRUSH_API_3,
+  process.env.LUNARCRUSH_API_4,
 ].filter(Boolean) as string[];
 
 // Round-robin key index

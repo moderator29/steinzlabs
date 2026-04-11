@@ -39,6 +39,7 @@ interface ScanResult {
     url?: string;
   };
   solanaNote?: string;
+  aiAnalysis?: string;
 }
 
 const CHAINS = [
@@ -406,14 +407,28 @@ export default function SecurityPage() {
                 </span>
               </div>
 
-              {/* Risk summary paragraph */}
+              {/* Risk summary paragraph — real AI if available, fallback to template */}
               <div className="bg-white/5 rounded-xl p-3 mb-3">
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  {result.safetyLevel === 'SAFE' && `This token (${result.symbol}) has passed all critical security checks with a trust score of ${result.trustScore}/100. The contract is ${result.isOpenSource ? 'open-source and verifiable' : 'not open-source'}, with ${result.holderCount.toLocaleString()} holders on-chain. Buy tax is ${result.buyTax} and sell tax is ${result.sellTax}. No honeypot behavior was detected. This token appears to be a relatively safe asset, though market risks always apply.`}
-                  {result.safetyLevel === 'CAUTION' && `Token ${result.symbol} shows a trust score of ${result.trustScore}/100 and warrants caution. ${result.isHoneypot ? 'A honeypot pattern was detected — you may be unable to sell. ' : ''}${result.isMintable ? 'The contract is mintable, which could allow supply inflation. ' : ''}${result.hasHiddenOwner ? 'A hidden owner was identified, posing a centralization risk. ' : ''}Taxes are ${result.buyTax} buy / ${result.sellTax} sell. Review all flags carefully before investing.`}
-                  {result.safetyLevel === 'WARNING' && `Significant risks have been identified for ${result.symbol} (score: ${result.trustScore}/100). ${result.isHoneypot ? 'HONEYPOT DETECTED — selling may be impossible. ' : ''}${result.ownerCanChangeBalance ? 'The owner can modify token balances, a critical risk. ' : ''}${result.canTakeBackOwnership ? 'Ownership can be reclaimed, enabling rugpull scenarios. ' : ''}${result.isMintable ? 'Unrestricted minting capability. ' : ''}Exercise extreme caution — this token has multiple high-severity flags.`}
-                  {result.safetyLevel === 'DANGER' && `CRITICAL: ${result.symbol} has failed multiple security checks with a score of only ${result.trustScore}/100. ${result.isHoneypot ? 'This is likely a HONEYPOT — funds may be permanently trapped. ' : ''}${result.ownerCanChangeBalance ? 'Owner can drain balances at will. ' : ''}${result.hasHiddenOwner ? 'Hidden owner detected. ' : ''}${result.canTakeBackOwnership ? 'Rugpull mechanism active. ' : ''}Do not interact with this contract. Consider this a high-probability scam.`}
-                </p>
+                {result.aiAnalysis ? (
+                  <div className="space-y-1.5">
+                    {result.aiAnalysis.split('\n').filter(Boolean).map((line, i) => (
+                      <p key={i} className={`text-xs leading-relaxed ${
+                        line.startsWith('SUMMARY:') ? 'text-gray-300 font-medium' :
+                        line.startsWith('RISKS:') ? 'text-amber-400 font-semibold mt-2' :
+                        line.startsWith('VERDICT:') ? 'text-white font-bold mt-2' :
+                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 pl-2' :
+                        'text-gray-300'
+                      }`}>{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    {result.safetyLevel === 'SAFE' && `This token (${result.symbol}) has passed all critical security checks with a trust score of ${result.trustScore}/100. The contract is ${result.isOpenSource ? 'open-source and verifiable' : 'not open-source'}, with ${result.holderCount.toLocaleString()} holders on-chain. Buy tax is ${result.buyTax} and sell tax is ${result.sellTax}. No honeypot behavior was detected.`}
+                    {result.safetyLevel === 'CAUTION' && `Token ${result.symbol} shows a trust score of ${result.trustScore}/100 and warrants caution. ${result.isHoneypot ? 'A honeypot pattern was detected — you may be unable to sell. ' : ''}${result.isMintable ? 'The contract is mintable, which could allow supply inflation. ' : ''}Taxes are ${result.buyTax} buy / ${result.sellTax} sell.`}
+                    {result.safetyLevel === 'WARNING' && `Significant risks identified for ${result.symbol} (score: ${result.trustScore}/100). ${result.isHoneypot ? 'HONEYPOT DETECTED. ' : ''}${result.ownerCanChangeBalance ? 'Owner can modify balances. ' : ''}${result.canTakeBackOwnership ? 'Rugpull mechanism active. ' : ''}Exercise extreme caution.`}
+                    {result.safetyLevel === 'DANGER' && `CRITICAL: ${result.symbol} has failed multiple security checks (score: ${result.trustScore}/100). ${result.isHoneypot ? 'HONEYPOT — funds may be trapped. ' : ''}${result.ownerCanChangeBalance ? 'Owner can drain balances. ' : ''}Do not interact with this contract.`}
+                  </p>
+                )}
               </div>
 
               {/* Specific warnings */}
