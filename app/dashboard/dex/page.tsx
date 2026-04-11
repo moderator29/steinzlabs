@@ -1,975 +1,445 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { RefreshCw, Copy, ChevronLeft, ExternalLink, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Copy, ChevronLeft, Check, ArrowLeftRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const BLUE = '#0A1EFF';
+const BLUE_DIM = 'rgba(10,30,255,0.15)';
+const BLUE_GLOW = '0 0 18px rgba(10,30,255,0.45)';
+const BG = '#111111';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface DexToken {
-  id: string;
-  name: string;
-  symbol: string;
-  imageUri: string;
-  contractAddress: string;
-  chain: string;
-  price: number;
-  marketCap: number;
-  liquidity: number;
-  volume24h: number;
-  change24h: number;
-  createdAt: number; // unix ms
-  graduated: boolean;
-  dexUrl: string;
-  pairAddress: string;
-  holders?: number;
-  fdv?: number;
-  supply?: number;
-  volume5m?: number;
+  id: string; name: string; symbol: string; imageUri: string;
+  contractAddress: string; chain: string;
+  price: number; marketCap: number; liquidity: number;
+  volume24h: number; volume5m: number; change24h: number;
+  createdAt: number; fdv: number; supply: number;
+  holders: number; dexUrl: string; pairAddress: string;
 }
 
-type Tab = 'pumpfun' | 'pumpswap' | 'bonk' | 'raydium' | 'new';
+type Chain = 'solana' | 'ethereum' | 'bsc' | 'base' | 'polygon' | 'avalanche' | 'tron' | 'arbitrum' | 'ton' | 'optimism' | 'fantom' | 'sui';
 type AgeFilter = 'all' | '2m' | '5m' | '20m' | '1h' | '5h' | '12h';
-type Timeframe = '1H' | '6H' | '1D' | '1W' | '1M' | '1Y' | 'ALL';
+
+const CHAINS: { id: Chain; label: string }[] = [
+  { id: 'solana',    label: 'Solana'    },
+  { id: 'ethereum',  label: 'Ethereum'  },
+  { id: 'bsc',       label: 'BNB'       },
+  { id: 'base',      label: 'Base'      },
+  { id: 'polygon',   label: 'Polygon'   },
+  { id: 'avalanche', label: 'Avalanche' },
+  { id: 'arbitrum',  label: 'Arbitrum'  },
+  { id: 'tron',      label: 'Tron'      },
+  { id: 'ton',       label: 'TON'       },
+  { id: 'optimism',  label: 'Optimism'  },
+  { id: 'fantom',    label: 'Fantom'    },
+  { id: 'sui',       label: 'Sui'       },
+];
+
+const AGE_OPTIONS: { id: AgeFilter; label: string; minutes: number }[] = [
+  { id: 'all',  label: 'All',  minutes: Infinity },
+  { id: '2m',   label: '2m',   minutes: 2        },
+  { id: '5m',   label: '5m',   minutes: 5        },
+  { id: '20m',  label: '20m',  minutes: 20       },
+  { id: '1h',   label: '1h',   minutes: 60       },
+  { id: '5h',   label: '5h',   minutes: 300      },
+  { id: '12h',  label: '12h',  minutes: 720      },
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+function ageInMinutes(ts: number): number { return (Date.now() - ts) / 60000; }
 
-function formatAge(createdAt: number): string {
-  const diff = Date.now() - createdAt;
+function formatAge(ts: number): string {
+  const diff = Date.now() - ts;
   const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s`;
+  if (s < 60) return s + 's';
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
+  if (m < 60) return m + 'm';
   const h = Math.floor(m / 60);
-  const rm = m % 60;
-  if (h < 24) return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
+  if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
 }
 
-function ageInMinutes(createdAt: number): number {
-  return (Date.now() - createdAt) / 60000;
-}
-
-function filterByAge(tokens: DexToken[], filter: AgeFilter): DexToken[] {
-  if (filter === 'all') return tokens;
-  const limits: Record<string, number> = {
-    '2m': 2,
-    '5m': 5,
-    '20m': 20,
-    '1h': 60,
-    '5h': 300,
-    '12h': 720,
-  };
-  const limit = limits[filter];
-  return tokens.filter((t) => ageInMinutes(t.createdAt) <= limit);
-}
-
-function formatPrice(price: number): string {
+function fmtPrice(price: number): string {
   if (price === 0) return '$0.00';
-  if (price >= 1) return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (price >= 0.01) return `$${price.toFixed(4)}`;
-
-  // Count leading zeros after decimal point
+  if (price >= 1) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price >= 0.01) return '$' + price.toFixed(4);
   const str = price.toFixed(20);
-  const afterDot = str.split('.')[1] || '';
+  const after = str.split('.')[1] || '';
   let zeros = 0;
-  for (const ch of afterDot) {
-    if (ch === '0') zeros++;
-    else break;
-  }
-
-  if (zeros < 4) {
-    return `$${price.toPrecision(4)}`;
-  }
-
-  // Build subscript representation as plain text
-  const sigStr = afterDot.slice(zeros);
-  const sig = sigStr.slice(0, 4);
-  return `$0.0\u2080${zeros}\u2080${sig}`;
+  for (const ch of after) { if (ch === '0') zeros++; else break; }
+  if (zeros < 4) return '$' + price.toPrecision(4);
+  return '$0.0(' + zeros + ')' + after.slice(zeros, zeros + 4);
 }
 
-// Actually we'll render a JSX element for subscript zeros
-function PriceDisplay({ price }: { price: number }) {
-  if (price === 0) return <span>$0.00</span>;
-  if (price >= 1)
-    return (
-      <span>
-        ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </span>
-    );
-  if (price >= 0.01) return <span>${price.toFixed(4)}</span>;
-
-  const str = price.toFixed(20);
-  const afterDot = str.split('.')[1] || '';
-  let zeros = 0;
-  for (const ch of afterDot) {
-    if (ch === '0') zeros++;
-    else break;
-  }
-
-  if (zeros < 4) return <span>${price.toPrecision(4)}</span>;
-
-  const sig = afterDot.slice(zeros, zeros + 4);
-  return (
-    <span>
-      $0.0<sub style={{ fontSize: '0.6em', lineHeight: 1 }}>{zeros}</sub>
-      {sig}
-    </span>
-  );
+function fmtMcap(n: number): string {
+  if (!n || n <= 0) return '—';
+  if (n >= 1e9)  return '$' + (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6)  return '$' + (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3)  return '$' + (n / 1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(0);
 }
 
-function formatCompact(n: number): string {
-  if (!n || isNaN(n)) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
-  return `$${n.toFixed(2)}`;
-}
-
-function changeColor(change: number): string {
-  return change >= 0 ? '#0A1EFF' : '#EF4444';
-}
-
-function truncateCA(ca: string, head = 6, tail = 4): string {
-  if (!ca || ca.length <= head + tail + 3) return ca;
-  return `${ca.slice(0, head)}...${ca.slice(-tail)}`;
-}
-
-// ─── CoinLogo ─────────────────────────────────────────────────────────────────
-
-function CoinLogo({ token, size = 40 }: { token: DexToken; size?: number }) {
+// ─── Token Logo ───────────────────────────────────────────────────────────────
+function TokenLogo({ token, size = 40 }: { token: DexToken; size?: number }) {
   const [err, setErr] = useState(false);
-  const colors = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
-  const color = colors[(token.symbol?.charCodeAt(0) || 65) % colors.length];
-  const initials = (token.symbol || token.name || '?').slice(0, 2).toUpperCase();
-
-  if (!token.imageUri || err) {
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          background: color,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 700,
-          fontSize: size * 0.35,
-          color: '#fff',
-          flexShrink: 0,
-        }}
-      >
-        {initials}
-      </div>
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={token.imageUri}
-      alt={token.symbol}
-      width={size}
-      height={size}
-      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-      onError={() => setErr(true)}
-    />
-  );
-}
-
-// ─── Chain Badge ──────────────────────────────────────────────────────────────
-
-function ChainBadge({ chain }: { chain: string }) {
-  const map: Record<string, { label: string; color: string }> = {
-    solana: { label: 'SOL', color: '#9945FF' },
-    bsc: { label: 'BSC', color: '#F0B90B' },
-    eth: { label: 'ETH', color: '#627EEA' },
-    base: { label: 'BASE', color: '#0052FF' },
-  };
-  const info = map[chain?.toLowerCase()] || { label: chain?.toUpperCase() || '?', color: '#6B7280' };
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        padding: '2px 8px',
-        borderRadius: 99,
-        fontSize: 11,
-        fontWeight: 600,
-        background: `${info.color}22`,
-        color: info.color,
-        border: `1px solid ${info.color}44`,
-      }}
-    >
-      {info.label}
-    </span>
-  );
-}
-
-// ─── Copy Button ──────────────────────────────────────────────────────────────
-
-function CopyButton({ text, label }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-  const handle = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // ignore
-    }
-  }, [text]);
-
-  return (
-    <button
-      onClick={handle}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '4px 10px',
-        borderRadius: 8,
-        background: copied ? 'rgba(10,30,255,0.15)' : 'rgba(255,255,255,0.06)',
-        border: `1px solid ${copied ? 'rgba(10,30,255,0.45)' : 'rgba(255,255,255,0.1)'}`,
-        color: copied ? '#0A1EFF' : '#9CA3AF',
-        fontSize: 12,
-        fontWeight: 500,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        flexShrink: 0,
-      }}
-    >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {label && <span>{copied ? 'Copied!' : label}</span>}
-    </button>
-  );
-}
-
-// ─── Area Chart ───────────────────────────────────────────────────────────────
-
-function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<unknown>(null);
-  const seriesRef = useRef<unknown>(null);
-
-  useEffect(() => {
-    let destroyed = false;
-
-    async function init() {
-      if (!containerRef.current) return;
-
-      const { createChart } = await import('lightweight-charts');
-
-      const isGreen = token.change24h >= 0;
-      const lineColor = isGreen ? '#0A1EFF' : '#EF4444';
-      const topColor = isGreen ? 'rgba(10,30,255,0.2)' : 'rgba(239,68,68,0.2)';
-      const bottomColor = isGreen ? 'rgba(10,30,255,0)' : 'rgba(239,68,68,0)';
-
-      if (destroyed) return;
-
-      const chart = createChart(containerRef.current!, {
-        width: containerRef.current!.clientWidth,
-        height: 200,
-        layout: {
-          background: { color: 'transparent' },
-          textColor: '#6B7280',
-        },
-        grid: {
-          vertLines: { color: 'rgba(255,255,255,0.04)' },
-          horzLines: { color: 'rgba(255,255,255,0.04)' },
-        },
-        rightPriceScale: {
-          borderVisible: false,
-          scaleMargins: { top: 0.1, bottom: 0.1 },
-        },
-        timeScale: {
-          borderVisible: false,
-          fixLeftEdge: true,
-          fixRightEdge: true,
-        },
-        crosshair: {
-          mode: 1,
-        },
-        handleScroll: false,
-        handleScale: false,
-      });
-
-      const series = chart.addAreaSeries({ lineColor, topColor, bottomColor, lineWidth: 2 });
-      chartRef.current = chart;
-      seriesRef.current = series;
-
-      // Fetch or generate data
-      try {
-        const res = await fetch(`/api/coin-chart?id=${token.contractAddress}&tf=${tf}`);
-        if (res.ok) {
-          const raw: [number, number][] = await res.json();
-          if (raw && raw.length > 0) {
-            // lightweight-charts v4 UTCTimestamp is just a branded number
-            const data = raw
-              .map(([ts, price]) => ({ time: (Math.floor(ts / 1000)) as unknown as number, value: price }))
-              .sort((a, b) => (a.time as number) - (b.time as number));
-            if (!destroyed) series.setData(data);
-          } else {
-            throw new Error('no data');
-          }
-        } else {
-          throw new Error('fetch failed');
-        }
-      } catch {
-        // Generate synthetic data
-        const now = Math.floor(Date.now() / 1000);
-        const tfSeconds: Record<Timeframe, number> = {
-          '1H': 3600,
-          '6H': 21600,
-          '1D': 86400,
-          '1W': 604800,
-          '1M': 2592000,
-          '1Y': 31536000,
-          'ALL': 31536000,
-        };
-        const duration = tfSeconds[tf];
-        const points = 60;
-        const start = token.price * (1 - token.change24h / 100);
-        const synth = Array.from({ length: points }, (_, i) => {
-          const t = now - duration + Math.floor((duration / points) * i);
-          const progress = i / (points - 1);
-          const noise = (Math.random() - 0.5) * token.price * 0.1;
-          const value = Math.max(0, start + (token.price - start) * progress + noise);
-          return { time: t as unknown as number, value };
-        });
-        if (!destroyed) series.setData(synth);
-      }
-
-      if (!destroyed) chart.timeScale().fitContent();
-
-      // Resize observer
-      const ro = new ResizeObserver(() => {
-        if (!destroyed && containerRef.current) {
-          chart.applyOptions({ width: containerRef.current.clientWidth });
-        }
-      });
-      if (containerRef.current) ro.observe(containerRef.current);
-
-      return () => {
-        ro.disconnect();
-      };
-    }
-
-    init();
-
-    return () => {
-      destroyed = true;
-      if (chartRef.current) {
-        (chartRef.current as { remove: () => void }).remove();
-        chartRef.current = null;
-      }
-    };
-  }, [token, tf]);
-
-  return <div ref={containerRef} style={{ width: '100%', height: 200 }} />;
-}
-
-// ─── Token Row ────────────────────────────────────────────────────────────────
-
-function TokenRow({ token, onPress }: { token: DexToken; onPress: () => void }) {
-  const isPos = token.change24h >= 0;
-  const [pressTimer, setPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [longPressed, setLongPressed] = useState(false);
-
-  const handlePointerDown = () => {
-    const t = setTimeout(() => {
-      setLongPressed(true);
-    }, 500);
-    setPressTimer(t);
-  };
-
-  const handlePointerUp = () => {
-    if (pressTimer) clearTimeout(pressTimer);
-    if (!longPressed) onPress();
-    setLongPressed(false);
-  };
-
-  const handlePointerLeave = () => {
-    if (pressTimer) clearTimeout(pressTimer);
-  };
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '12px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        cursor: 'pointer',
-        background: longPressed ? 'rgba(255,255,255,0.04)' : 'transparent',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        transition: 'background 0.15s',
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerLeave}
-    >
-      {/* Logo */}
-      <div style={{ position: 'relative', marginRight: 12 }}>
-        <CoinLogo token={token} size={40} />
-        {token.graduated && (
-          <span
-            style={{
-              position: 'absolute',
-              bottom: -2,
-              right: -2,
-              fontSize: 12,
-              lineHeight: 1,
-            }}
-            title="Graduated"
-          >
-            🎓
-          </span>
-        )}
-      </div>
-
-      {/* Name + age */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {token.symbol}
-          </span>
-          <ChainBadge chain={token.chain} />
-        </div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-          {formatAge(token.createdAt)} ago
-        </div>
-      </div>
-
-      {/* Price + change */}
-      <div style={{ textAlign: 'right', marginRight: longPressed ? 8 : 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#FFFFFF' }}>
-          <PriceDisplay price={token.price} />
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: changeColor(token.change24h), marginTop: 2 }}>
-          {isPos ? '+' : ''}{token.change24h.toFixed(2)}%
-        </div>
-      </div>
-
-      {/* Copy CA button on long press */}
-      {longPressed && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <CopyButton text={token.contractAddress} />
-        </div>
-      )}
+  const colors = ['#9945FF','#627EEA','#F0B90B','#0A1EFF','#E84142','#2775CA'];
+  const col = colors[(token.symbol.charCodeAt(0) || 0) % colors.length];
+  if (err || !token.imageUri) return (
+    <div style={{ width: size, height: size, borderRadius: 6, background: col, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.36, fontWeight: 900, color: '#fff', flexShrink: 0 }}>
+      {(token.symbol || '?').slice(0, 2)}
     </div>
   );
+  return <img src={token.imageUri} alt={token.symbol} width={size} height={size} style={{ borderRadius: 6, flexShrink: 0, objectFit: 'cover' }} onError={() => setErr(true)} />;
 }
 
-// ─── Detail View ──────────────────────────────────────────────────────────────
+// ─── Area Chart (synthetic, lightweight-charts) ───────────────────────────────
+function DexChart({ token }: { token: DexToken }) {
+  const ref = useRef<HTMLDivElement>(null);
 
-function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let chart: any;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { createChart } = await import('lightweight-charts');
+        if (cancelled || !ref.current) return;
+        chart = createChart(el, {
+          width: el.clientWidth, height: 220,
+          layout: { background: { color: 'transparent' }, textColor: '#6B7280' },
+          grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
+          rightPriceScale: { borderVisible: false },
+          timeScale: { borderVisible: false, timeVisible: false },
+          crosshair: { mode: 1 },
+          handleScale: false, handleScroll: false,
+        });
+        const isPos = token.change24h >= 0;
+        const lineColor = isPos ? BLUE : '#EF4444';
+        const series = chart.addAreaSeries({
+          lineColor, topColor: isPos ? 'rgba(10,30,255,0.2)' : 'rgba(239,68,68,0.2)',
+          bottomColor: isPos ? 'rgba(10,30,255,0.01)' : 'rgba(239,68,68,0.01)', lineWidth: 2,
+        });
+        const endPrice = token.price || 1;
+        const startPrice = endPrice / (1 + token.change24h / 100) || endPrice;
+        const now = Math.floor(Date.now() / 1000);
+        const pts: { time: any; value: number }[] = [];
+        let cur = startPrice;
+        for (let i = 47; i >= 0; i--) {
+          const progress = (47 - i) / 47;
+          const trend = (endPrice - startPrice) * progress / 20;
+          cur = Math.max(cur + trend + (Math.random() - 0.5) * endPrice * 0.015, endPrice * 0.001);
+          pts.push({ time: (now - i * 1800) as any, value: cur });
+        }
+        pts[47].value = endPrice;
+        series.setData(pts);
+        chart.timeScale().fitContent();
+        const ro = new ResizeObserver(() => { if (ref.current && chart) chart.applyOptions({ width: ref.current.clientWidth }); });
+        ro.observe(el);
+      } catch {}
+    })();
+
+    return () => { cancelled = true; try { chart?.remove(); } catch {} };
+  }, [token.id]);
+
+  return <div ref={ref} style={{ width: '100%' }} />;
+}
+
+// ─── Buy / Sell Modal ─────────────────────────────────────────────────────────
+function BuySellModal({ token, mode, onClose }: { token: DexToken; mode: 'buy' | 'sell'; onClose: () => void }) {
   const router = useRouter();
-  const [tf, setTf] = useState<Timeframe>('1D');
-  const timeframes: Timeframe[] = ['1H', '6H', '1D', '1W', '1M', '1Y', 'ALL'];
+  const [input, setInput] = useState('0');
+  const isBuy = mode === 'buy';
+  const accent = isBuy ? BLUE : '#EF4444';
 
-  const stats = [
-    { label: 'Liquidity', value: formatCompact(token.liquidity) },
-    { label: 'Mcap', value: formatCompact(token.marketCap) },
-    { label: 'FDV', value: formatCompact(token.fdv || token.marketCap) },
-    { label: 'Supply', value: token.supply ? `${(token.supply / 1e9).toFixed(2)}B` : '—' },
-    { label: 'Vol 5m', value: formatCompact(token.volume5m || 0) },
-    { label: 'Vol 24h', value: formatCompact(token.volume24h) },
-    { label: '24h%', value: `${token.change24h >= 0 ? '+' : ''}${token.change24h.toFixed(2)}%`, color: changeColor(token.change24h) },
-    { label: 'Holders', value: token.holders ? token.holders.toLocaleString() : '—' },
-    { label: 'Age', value: formatAge(token.createdAt) },
-  ];
+  const press = (k: string) => {
+    if (k === '⌫') { setInput(p => p.length <= 1 ? '0' : p.slice(0, -1)); return; }
+    if (k === '.' && input.includes('.')) return;
+    setInput(p => p === '0' ? k : p + k);
+  };
 
   return (
-    <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: '#111111',
-        zIndex: 50,
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '16px 16px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          position: 'sticky',
-          top: 0,
-          background: '#111111',
-          zIndex: 10,
-          gap: 12,
-        }}
-      >
-        <button
-          onClick={onBack}
-          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4, display: 'flex' }}
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <CoinLogo token={token} size={28} />
-        <span style={{ fontWeight: 700, fontSize: 16, color: '#FFFFFF', flex: 1 }}>
-          {token.symbol}/USD
-        </span>
-        <CopyButton text={token.contractAddress} label="CA" />
-        {token.dexUrl && (
-          <a
-            href={token.dexUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#6B7280', display: 'flex' }}
-          >
-            <ExternalLink size={18} />
-          </a>
-        )}
-      </div>
-
-      {/* Price hero */}
-      <div style={{ padding: '20px 16px 12px' }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', marginBottom: 4 }}>
-          <PriceDisplay price={token.price} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+      onClick={onClose}>
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+        style={{ background: '#0D0D14', borderRadius: '16px 16px 0 0', paddingBottom: 36, border: '1px solid rgba(255,255,255,0.07)', borderBottom: 'none' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.12)' }} />
         </div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: changeColor(token.change24h) }}>
-          {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+        <div style={{ padding: '0 20px' }}>
+          <div style={{ color: accent, fontWeight: 700, fontSize: 20, marginBottom: 18 }}>{isBuy ? 'Buy' : 'Sell'} {token.symbol}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, position: 'relative' }}>
+            <span style={{ fontSize: 52, fontWeight: 700, color: input === '0' ? '#333' : '#fff' }}>${input}</span>
+            <button style={{ position: 'absolute', right: 0, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <ArrowLeftRight size={15} color="#9CA3AF" />
+            </button>
+          </div>
+          <input type="range" min={0} max={100} defaultValue={0} style={{ width: '100%', accentColor: accent, cursor: 'pointer', marginBottom: 4 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+            {['0%','25%','50%','75%','MAX'].map(l => <span key={l} style={{ fontSize: 11, color: '#6B7280' }}>{l}</span>)}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span style={{ color: '#6B7280', fontSize: 13 }}>Available</span>
+            <span style={{ color: '#6B7280', fontSize: 13 }}>$0.00</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 18 }}>
+            {['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k => (
+              <button key={k} onClick={() => press(k)}
+                style={{ padding: '16px 0', borderRadius: 8, fontSize: k === '⌫' ? 18 : 22, fontWeight: 600, border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {k}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+            <button onClick={() => { onClose(); router.push(`/dashboard/swap?ca=${token.contractAddress}&chain=${token.chain}&amount=${input}`); }}
+              style={{ flex: 1, padding: 16, borderRadius: 10, fontSize: 16, fontWeight: 700, border: 'none', background: `linear-gradient(135deg, ${accent}, ${isBuy ? '#3d57ff' : '#ff3b3b'})`, color: '#fff', cursor: 'pointer', boxShadow: `0 0 18px ${isBuy ? 'rgba(10,30,255,0.4)' : 'rgba(239,68,68,0.4)'}` }}>
+              Connect Wallet
+            </button>
+            <button style={{ width: 52, borderRadius: 10, border: `1.5px solid ${isBuy ? '#EF4444' : BLUE}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <ArrowLeftRight size={18} color={isBuy ? '#EF4444' : BLUE} />
+            </button>
+          </div>
+          <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 12 }}>0.1% fee</div>
         </div>
-      </div>
-
-      {/* Chart */}
-      <div style={{ padding: '0 0 8px', background: '#111111' }}>
-        <AreaChart token={token} tf={tf} />
-      </div>
-
-      {/* Timeframe selector */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 4,
-          padding: '8px 16px 16px',
-          overflowX: 'auto',
-        }}
-      >
-        {timeframes.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTf(t)}
-            style={{
-              padding: '5px 12px',
-              borderRadius: 99,
-              fontSize: 12,
-              fontWeight: 600,
-              border: '1px solid',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s',
-              background: tf === t ? 'rgba(255,255,255,0.14)' : 'transparent',
-              borderColor: tf === t ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-              color: tf === t ? '#fff' : '#9CA3AF',
-            }}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* Key stats grid */}
-      <div style={{ padding: '0 16px 16px' }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#6B7280',
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            marginBottom: 14,
-          }}
-        >
-          KEY STATS
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 1,
-            borderRadius: 12,
-            overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          {stats.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                padding: '14px 12px',
-                background: 'transparent',
-                borderRight: (i + 1) % 3 !== 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                borderBottom: i < stats.length - 3 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>{s.label}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: s.color || '#FFFFFF' }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Contract address */}
-      <div
-        style={{
-          margin: '0 16px 16px',
-          padding: 14,
-          borderRadius: 12,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
-        <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Contract Address
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span
-            style={{
-              fontSize: 13,
-              color: '#9CA3AF',
-              fontFamily: 'monospace',
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {truncateCA(token.contractAddress, 10, 8)}
-          </span>
-          <CopyButton text={token.contractAddress} />
-          <ChainBadge chain={token.chain} />
-        </div>
-      </div>
-
-      {/* Spacer for sticky button */}
-      <div style={{ flex: 1, minHeight: 80 }} />
-
-      {/* Sticky BUY button */}
-      <div
-        style={{
-          position: 'sticky',
-          bottom: 0,
-          padding: '12px 16px 24px',
-          background: 'linear-gradient(to top, #111111 80%, transparent)',
-        }}
-      >
-        <button
-          onClick={() =>
-            router.push(`/dashboard/swap?ca=${token.contractAddress}&chain=${token.chain}`)
-          }
-          style={{
-            width: '100%',
-            padding: '16px',
-            borderRadius: 14,
-            background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)',
-            border: 'none',
-            color: '#fff',
-            fontSize: 16,
-            boxShadow: '0 0 18px rgba(10,30,255,0.45)',
-            fontWeight: 800,
-            cursor: 'pointer',
-            letterSpacing: '0.02em',
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={(e) => ((e.target as HTMLButtonElement).style.opacity = '0.88')}
-          onMouseLeave={(e) => ((e.target as HTMLButtonElement).style.opacity = '1')}
-        >
-          BUY {token.symbol}
-        </button>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Token Detail View ────────────────────────────────────────────────────────
+function TokenDetail({ token, onBack, onBuy, onSell }: { token: DexToken; onBack: () => void; onBuy: () => void; onSell: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [tf, setTf] = useState('1D');
+  const pos = token.change24h >= 0;
 
-const TABS: { label: string; value: Tab }[] = [
-  { label: 'pump.fun', value: 'pumpfun' },
-  { label: 'PumpSwap', value: 'pumpswap' },
-  { label: 'BONK', value: 'bonk' },
-  { label: 'Raydium', value: 'raydium' },
-  { label: 'New Pairs', value: 'new' },
-];
-
-const AGE_FILTERS: { label: string; value: AgeFilter }[] = [
-  { label: 'All', value: 'all' },
-  { label: '2m', value: '2m' },
-  { label: '5m', value: '5m' },
-  { label: '20m', value: '20m' },
-  { label: '1h', value: '1h' },
-  { label: '5h', value: '5h' },
-  { label: '12h', value: '12h' },
-];
-
-export default function DexPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('pumpfun');
-  const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');
-  const [tokens, setTokens] = useState<DexToken[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<DexToken | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchTokens = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const res = await fetch(`/api/dex-feed?tab=${activeTab}`);
-        if (res.ok) {
-          const data = await res.json();
-          setTokens(data.tokens || []);
-        }
-      } catch {
-        // network error — keep existing tokens
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [activeTab],
-  );
-
-  // Initial fetch + tab change
-  useEffect(() => {
-    setTokens([]);
-    fetchTokens(false);
-  }, [fetchTokens]);
-
-  // Auto-refresh every 20s (only when list is shown)
-  useEffect(() => {
-    if (selectedToken) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-    intervalRef.current = setInterval(() => fetchTokens(true), 20000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [fetchTokens, selectedToken]);
-
-  const displayed = filterByAge(tokens, ageFilter);
+  const copy = () => {
+    navigator.clipboard.writeText(token.contractAddress).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
 
   return (
-    <div
-      style={{
-        background: '#111111',
-        minHeight: '100vh',
-        color: '#FFFFFF',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        position: 'relative',
-        overflowX: 'hidden',
-      }}
-    >
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px 16px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          position: 'sticky',
-          top: 0,
-          background: '#111111',
-          zIndex: 20,
-        }}
-      >
-        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>DEX</span>
-        <button
-          onClick={() => fetchTokens(true)}
-          style={{
-            position: 'absolute',
-            right: 16,
-            background: 'none',
-            border: 'none',
-            color: '#6B7280',
-            cursor: 'pointer',
-            padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <RefreshCw
-            size={18}
-            style={{
-              transition: 'transform 0.5s',
-              transform: refreshing ? 'rotate(360deg)' : 'none',
-            }}
-          />
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', padding: 4 }}>
+          <ChevronLeft size={22} />
+        </button>
+        <TokenLogo token={token} size={26} />
+        <div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>{token.name}</div>
+          <div style={{ color: '#6B7280', fontSize: 11 }}>{token.symbol} · {token.chain.toUpperCase()}</div>
+        </div>
+      </div>
+      <div style={{ padding: '0 16px 10px' }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>{fmtPrice(token.price)}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: pos ? BLUE : '#EF4444', marginTop: 4 }}>
+          {pos ? '+' : ''}{token.change24h.toFixed(2)}%
+        </div>
+      </div>
+      <DexChart token={token} />
+      <div style={{ display: 'flex', padding: '8px 16px', gap: 2 }}>
+        {['1H','6H','1D','1W','1M','1Y','ALL'].map(t => (
+          <button key={t} onClick={() => setTf(t)}
+            style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0, background: tf === t ? BLUE_DIM : 'transparent', color: tf === t ? '#fff' : '#6B7280', boxShadow: tf === t ? BLUE_GLOW : 'none' }}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <div style={{ padding: '12px 16px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>Key Stats</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+          {[
+            { label: 'LIQUIDITY',  value: fmtMcap(token.liquidity) },
+            { label: 'MARKET CAP', value: fmtMcap(token.marketCap) },
+            { label: 'FDV',        value: fmtMcap(token.fdv || token.marketCap) },
+            { label: 'VOLUME 24H', value: fmtMcap(token.volume24h) },
+            { label: 'VOL 5M',     value: fmtMcap(token.volume5m) },
+            { label: '24H %',      value: (pos ? '+' : '') + token.change24h.toFixed(2) + '%' },
+            { label: 'AGE',        value: formatAge(token.createdAt) },
+            { label: 'HOLDERS',    value: token.holders > 0 ? token.holders.toLocaleString() : '—' },
+            { label: 'CHAIN',      value: token.chain.toUpperCase().slice(0, 6) },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, padding: '10px 10px' }}>
+              <div style={{ fontSize: 9, color: '#6B7280', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>{s.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: s.label === '24H %' ? (pos ? BLUE : '#EF4444') : '#fff' }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {token.contractAddress && (
+        <div style={{ margin: '0 16px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 9, color: '#6B7280', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Contract Address</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', fontFamily: 'monospace' }}>
+              {token.contractAddress.slice(0, 10)}...{token.contractAddress.slice(-6)}
+            </div>
+          </div>
+          <button onClick={copy} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? BLUE : '#6B7280', padding: 4, display: 'flex', flexShrink: 0 }}>
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+          </button>
+        </div>
+      )}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px 28px', background: 'linear-gradient(to top, #111111 80%, transparent)', display: 'flex', gap: 10, zIndex: 10 }}>
+        <button onClick={onBuy} style={{ flex: 1, padding: 16, borderRadius: 10, fontSize: 16, fontWeight: 700, border: 'none', background: `linear-gradient(135deg, ${BLUE}, #3d57ff)`, color: '#fff', cursor: 'pointer', boxShadow: BLUE_GLOW }}>Buy</button>
+        <button onClick={onSell} style={{ flex: 1, padding: 16, borderRadius: 10, fontSize: 16, fontWeight: 700, border: 'none', background: '#EF4444', color: '#fff', cursor: 'pointer' }}>Sell</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Token Row ────────────────────────────────────────────────────────────────
+function TokenRow({ token, rank, onClick }: { token: DexToken; rank: number; onClick: () => void }) {
+  const pos = token.change24h >= 0;
+  return (
+    <div onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, marginBottom: 4, cursor: 'pointer', gap: 12, userSelect: 'none', WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent' }}>
+      <span style={{ color: '#444', fontSize: 11, width: 18, textAlign: 'right', flexShrink: 0 }}>{rank}</span>
+      <TokenLogo token={token} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{token.name}</div>
+        <div style={{ color: '#6B7280', fontSize: 11, marginTop: 2 }}>{formatAge(token.createdAt)} · {fmtMcap(token.marketCap)}</div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{fmtPrice(token.price)}</div>
+        <div style={{ color: pos ? BLUE : '#EF4444', fontSize: 12, fontWeight: 600, marginTop: 2 }}>
+          {pos ? '▲' : '▼'} {Math.abs(token.change24h).toFixed(2)}%
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main DEX Page ────────────────────────────────────────────────────────────
+export default function DexPage() {
+  const [tokens, setTokens] = useState<DexToken[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [chain, setChain] = useState<Chain>('solana');
+  const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');
+  const [selectedToken, setSelectedToken] = useState<DexToken | null>(null);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchTokens = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const res = await fetch(`/api/dex-feed?chain=${chain}&limit=50`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const toks: DexToken[] = (data.tokens || []).map((t: any) => ({
+        id: t.id || t.pairAddress || Math.random().toString(),
+        name: t.name || t.symbol || 'Unknown',
+        symbol: (t.symbol || '???').toUpperCase(),
+        imageUri: t.imageUri || '',
+        contractAddress: t.contractAddress || '',
+        chain: t.chain || chain,
+        price: Number(t.price ?? 0),
+        marketCap: Number(t.marketCap ?? 0),
+        liquidity: Number(t.liquidity ?? 0),
+        volume24h: Number(t.volume24h ?? 0),
+        volume5m: Number(t.volume5m ?? 0),
+        change24h: Number(t.change24h ?? 0),
+        createdAt: Number(t.createdAt ?? Date.now()),
+        fdv: Number(t.fdv ?? 0),
+        supply: Number(t.supply ?? 0),
+        holders: Number(t.holders ?? 0),
+        dexUrl: t.dexUrl || '',
+        pairAddress: t.pairAddress || '',
+      }));
+      setTokens(toks);
+    } catch {}
+    setLoading(false);
+    setRefreshing(false);
+  }, [chain]);
+
+  // Initial load + 5s auto-refresh
+  useEffect(() => {
+    setLoading(true);
+    setTokens([]);
+    setAgeFilter('all');
+    fetchTokens();
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => fetchTokens(true), 5000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fetchTokens]);
+
+  // Age filter applied client-side
+  const ageConfig = AGE_OPTIONS.find(a => a.id === ageFilter)!;
+  const filtered = tokens.filter(t =>
+    ageConfig.minutes === Infinity || ageInMinutes(t.createdAt) <= ageConfig.minutes
+  );
+
+  if (selectedToken) {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', color: '#fff', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', maxWidth: 480, margin: '0 auto' }}>
+        <TokenDetail token={selectedToken} onBack={() => setSelectedToken(null)} onBuy={() => setBuyOpen(true)} onSell={() => setSellOpen(true)} />
+        <AnimatePresence>
+          {buyOpen && <BuySellModal key="buy" token={selectedToken} mode="buy" onClose={() => setBuyOpen(false)} />}
+        </AnimatePresence>
+        <AnimatePresence>
+          {sellOpen && <BuySellModal key="sell" token={selectedToken} mode="sell" onClose={() => setSellOpen(false)} />}
+        </AnimatePresence>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: BG, minHeight: '100vh', color: '#fff', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', maxWidth: 480, margin: '0 auto' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
+        <span style={{ fontWeight: 800, fontSize: 17 }}>DEX Discovery</span>
+        <button onClick={() => fetchTokens(true)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', padding: 4, display: 'flex' }}>
+          <RefreshCw size={16} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} />
         </button>
       </div>
 
-      {/* ── Tab bar ────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          padding: '10px 12px',
-          gap: 8,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          scrollbarWidth: 'none',
-        }}
-      >
-        {TABS.map((tab) => {
-          const active = activeTab === tab.value;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => {
-                setActiveTab(tab.value);
-                setAgeFilter('all');
-              }}
-              style={{
-                padding: '6px 16px',
-                borderRadius: 99,
-                fontSize: 13,
-                fontWeight: 600,
-                border: '1px solid',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-                background: active ? 'linear-gradient(135deg, #0A1EFF, #3d57ff)' : 'rgba(255,255,255,0.04)',
-                borderColor: active ? '#0A1EFF' : 'rgba(255,255,255,0.1)',
-                color: active ? '#fff' : '#9CA3AF',
-                boxShadow: active ? '0 0 14px rgba(10,30,255,0.4)' : 'none',
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Age filter row ──────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          padding: '8px 12px',
-          gap: 6,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          scrollbarWidth: 'none',
-        }}
-      >
-        {AGE_FILTERS.map((f) => {
-          const active = ageFilter === f.value;
-          return (
-            <button
-              key={f.value}
-              onClick={() => setAgeFilter(f.value)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 99,
-                fontSize: 12,
-                fontWeight: 500,
-                border: '1px solid',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-                background: active ? 'rgba(10,30,255,0.15)' : 'transparent',
-                borderColor: active ? '#0A1EFF' : 'rgba(255,255,255,0.1)',
-                color: active ? '#0A1EFF' : '#6B7280',
-              }}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Token list ──────────────────────────────────────────── */}
-      <div>
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                border: '3px solid rgba(255,255,255,0.1)',
-                borderTopColor: '#0A1EFF',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }}
-            />
-          </div>
-        )}
-
-        {!loading && displayed.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 60, color: '#6B7280', fontSize: 14 }}>
-            No tokens found
-          </div>
-        )}
-
-        {displayed.map((token) => (
-          <TokenRow key={token.id} token={token} onPress={() => setSelectedToken(token)} />
+      {/* Chain tabs */}
+      <div style={{ display: 'flex', padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+        {CHAINS.map(c => (
+          <button key={c.id} onClick={() => setChain(c.id)}
+            style={{ paddingBottom: 10, paddingTop: 4, paddingLeft: 12, paddingRight: 12, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'transparent', color: chain === c.id ? '#fff' : '#6B7280', borderBottom: chain === c.id ? `2px solid ${BLUE}` : '2px solid transparent', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {c.label}
+          </button>
         ))}
       </div>
 
-      {/* ── Pull-to-refresh spinner overlay ─────────────────────── */}
-      {refreshing && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 70,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 30,
-            background: 'rgba(10,30,255,0.15)',
-            border: '1px solid rgba(10,30,255,0.3)',
-            borderRadius: 99,
-            padding: '6px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 12,
-            color: '#0A1EFF',
-            fontWeight: 600,
-          }}
-        >
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              border: '2px solid rgba(10,30,255,0.3)',
-              borderTopColor: '#0A1EFF',
-              borderRadius: '50%',
-              animation: 'spin 0.7s linear infinite',
-            }}
-          />
-          Refreshing
-        </div>
-      )}
+      {/* Age filters */}
+      <div style={{ display: 'flex', padding: '10px 16px', gap: 6, overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+        {AGE_OPTIONS.map(a => (
+          <button key={a.id} onClick={() => setAgeFilter(a.id)}
+            style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, border: `1px solid ${ageFilter === a.id ? BLUE : 'rgba(255,255,255,0.12)'}`, background: ageFilter === a.id ? BLUE_DIM : 'transparent', color: ageFilter === a.id ? '#fff' : '#9CA3AF', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {a.label}
+          </button>
+        ))}
+      </div>
 
-      {/* ── Detail slide panel ───────────────────────────────────── */}
-      <AnimatePresence>
-        {selectedToken && (
-          <DetailView token={selectedToken} onBack={() => setSelectedToken(null)} />
+      {/* Token list */}
+      <div style={{ padding: '0 16px 20px' }}>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 12 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${BLUE_DIM}`, borderTop: `2px solid ${BLUE}`, animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ color: '#6B7280', fontSize: 13 }}>Loading new pairs...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6B7280', fontSize: 14 }}>
+            {ageFilter !== 'all' ? `No pairs in last ${ageConfig.label}` : 'No pairs found'}
+          </div>
+        ) : (
+          filtered.map((t, i) => (
+            <TokenRow key={t.id || i} token={t} rank={i + 1} onClick={() => setSelectedToken(t)} />
+          ))
         )}
-      </AnimatePresence>
+      </div>
 
-      {/* Spinner keyframe */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        ::-webkit-scrollbar { display: none; }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
