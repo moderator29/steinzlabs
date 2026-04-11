@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, ChevronRight, RefreshCw } from 'lucide-react';
+import {
+  Search, SlidersHorizontal, X, TrendingUp, TrendingDown,
+  ChevronRight, RefreshCw, AlertCircle,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -16,79 +19,31 @@ interface CoinRow {
   marketCap: number;
   volume24h: number;
   rank: number;
+  pairAddress?: string;
+  chain?: string;
+  isSearchResult?: boolean;
 }
 
-// ─── Static data maps ─────────────────────────────────────────────────────────
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
-const LOGOS: Record<string, string> = {
-  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
-  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
-  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
-  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
-  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
-  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
-  TRX: 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png',
-  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
-  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
-  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
-  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
-  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
-  LTC: 'https://assets.coingecko.com/coins/images/2/small/litecoin.png',
-  NEAR: 'https://assets.coingecko.com/coins/images/10365/small/near.jpg',
-  APT: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png',
-  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
-  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
-  ATOM: 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',
-  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
-  WIF: 'https://assets.coingecko.com/coins/images/33566/small/dogwifhat.jpg',
-  BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
-  SUI: 'https://assets.coingecko.com/coins/images/26375/small/sui-ocean-square.png',
-  TON: 'https://assets.coingecko.com/coins/images/17980/small/ton_symbol.png',
-  JUP: 'https://assets.coingecko.com/coins/images/34188/small/jup.png',
-  RAY: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg',
-  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
-  INJ: 'https://assets.coingecko.com/coins/images/12882/small/Secondary_Symbol.png',
-  SEI: 'https://assets.coingecko.com/coins/images/28205/small/Sei_Logo_-_Transparent.png',
-  TIA: 'https://assets.coingecko.com/coins/images/31967/small/tia.jpg',
-  BLUR: 'https://assets.coingecko.com/coins/images/28453/small/blur.png',
-};
-
-const NAMES: Record<string, string> = {
-  BTC: 'Bitcoin', ETH: 'Ethereum', BNB: 'BNB', XRP: 'XRP', SOL: 'Solana',
-  USDT: 'Tether', USDC: 'USD Coin', ADA: 'Cardano', DOGE: 'Dogecoin', TRX: 'TRON',
-  TON: 'Toncoin', AVAX: 'Avalanche', MATIC: 'Polygon', LINK: 'Chainlink',
-  DOT: 'Polkadot', SHIB: 'Shiba Inu', UNI: 'Uniswap', LTC: 'Litecoin',
-  NEAR: 'NEAR Protocol', APT: 'Aptos', ARB: 'Arbitrum', OP: 'Optimism',
-  ATOM: 'Cosmos', PEPE: 'Pepe', WIF: 'dogwifhat', BONK: 'Bonk', SUI: 'Sui',
-  JUP: 'Jupiter', RAY: 'Raydium', WBTC: 'Wrapped Bitcoin', INJ: 'Injective',
-  SEI: 'Sei', TIA: 'Celestia', BLUR: 'Blur',
-};
-
-// Stablecoins to skip (not interesting to show)
-const STABLES = new Set(['USDT','USDC','BUSD','DAI','FDUSD','TUSD','USDP','USDD']);
-
-function fmtPrice(p: number) {
-  if (!p) return '--';
+function fmtPrice(p: number): string {
+  if (!p && p !== 0) return '--';
   if (p >= 1000) return `$${p.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
   if (p >= 1) return `$${p.toFixed(2)}`;
   if (p >= 0.01) return `$${p.toFixed(4)}`;
   if (p >= 0.000001) return `$${p.toFixed(6)}`;
-  return `$${p.toFixed(8)}`;
+  return `$${p.toFixed(10)}`;
 }
 
-function fmtMcap(n: number) {
+function fmtMcap(n: number): string {
   if (!n || n <= 0) return '';
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e9)  return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6)  return `$${(n / 1e6).toFixed(2)}M`;
   return `$${n.toLocaleString()}`;
 }
 
-function fmtVol(n: number) {
+function fmtVol(n: number): string {
   if (!n || n <= 0) return '';
   if (n >= 1e9) return `Vol $${(n / 1e9).toFixed(1)}B`;
   if (n >= 1e6) return `Vol $${(n / 1e6).toFixed(1)}M`;
@@ -99,69 +54,59 @@ function fmtVol(n: number) {
 
 export default function Markets() {
   const router = useRouter();
-  const [coins, setCoins] = useState<CoinRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [search, setSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [totalMcap, setTotalMcap] = useState('');
-  const [totalChange, setTotalChange] = useState({ val: 0, positive: true });
-  const [refreshing, setRefreshing] = useState(false);
 
+  // Coin list state
+  const [coins, setCoins]           = useState<CoinRow[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [loadError, setLoadError]   = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [totalMcap, setTotalMcap]   = useState('');
+  const [mcapChange, setMcapChange] = useState({ val: 0, positive: true });
+
+  // Search state
+  const [search, setSearch]                 = useState('');
+  const [searchResults, setSearchResults]   = useState<CoinRow[]>([]);
+  const [searchLoading, setSearchLoading]   = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // UI
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ── Fetch top 100 from CoinGecko (via server-side route, no CORS) ──────────
   const fetchCoins = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(false);
+    else { setLoading(true); setLoadError(false); }
 
     try {
-      // Fetch directly from Binance — public API, no key needed, works from browser
-      const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-      if (!res.ok) throw new Error(`Binance ${res.status}`);
-      const tickers: any[] = await res.json();
-
-      // Filter USDT pairs, skip stablecoins, sort by USD volume
-      const rows: CoinRow[] = tickers
-        .filter((t: any) => t.symbol.endsWith('USDT') && !STABLES.has(t.symbol.replace('USDT', '')))
-        .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-        .slice(0, 100)
-        .map((t: any, i: number) => {
-          const sym = t.symbol.replace('USDT', '');
-          const vol = parseFloat(t.quoteVolume) || 0;
-          return {
-            id: sym.toLowerCase(),
-            symbol: sym,
-            name: NAMES[sym] || sym,
-            image: LOGOS[sym] || `https://ui-avatars.com/api/?name=${encodeURIComponent(sym)}&background=0A1EFF&color=fff&size=64&bold=true&rounded=true`,
-            price: parseFloat(t.lastPrice) || 0,
-            change24h: parseFloat(t.priceChangePercent) || 0,
-            volume24h: vol,
-            marketCap: 0,
-            rank: i + 1,
-          };
-        });
-
+      const res = await fetch('/api/market-data?category=top&limit=100', {
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data = await res.json();
+      const rows: CoinRow[] = (data.tokens || []).map((t: any) => ({
+        id:         t.id || t.symbol?.toLowerCase() || '',
+        symbol:     (t.symbol || '').toUpperCase(),
+        name:       t.name || t.symbol || '',
+        image:      t.image || '',
+        price:      Number(t.price ?? 0),
+        change24h:  Number(t.change24h ?? 0),
+        marketCap:  Number(t.marketCap ?? 0),
+        volume24h:  Number(t.volume24h ?? 0),
+        rank:       Number(t.rank ?? 0),
+      }));
       setCoins(rows);
 
-      // Compute weighted total market change
+      // Global mcap from CoinGecko data — compute total
+      const totalMc = rows.reduce((s, r) => s + r.marketCap, 0);
+      if (totalMc > 0) {
+        setTotalMcap(totalMc >= 1e12 ? `$${(totalMc / 1e12).toFixed(2)}T` : `$${(totalMc / 1e9).toFixed(1)}B`);
+      }
       const totalVol = rows.reduce((s, r) => s + r.volume24h, 0);
-      const weightedChange = rows.reduce((s, r) => s + r.change24h * r.volume24h, 0);
-      const avgChange = totalVol > 0 ? weightedChange / totalVol : 0;
-      setTotalChange({ val: Math.abs(avgChange), positive: avgChange >= 0 });
-
-      // Try to get global mcap from CoinGecko (optional, best-effort)
-      try {
-        const cgGlobal = await fetch('https://api.coingecko.com/api/v3/global');
-        if (cgGlobal.ok) {
-          const cgData = await cgGlobal.json();
-          const mc = cgData.data?.total_market_cap?.usd || 0;
-          if (mc > 0) {
-            setTotalMcap(mc >= 1e12 ? `$${(mc / 1e12).toFixed(2)}T` : `$${(mc / 1e9).toFixed(1)}B`);
-          }
-        }
-      } catch { /* non-critical */ }
-
-    } catch (err) {
-      setError(true);
+      const wChange  = rows.reduce((s, r) => s + r.change24h * r.volume24h, 0);
+      const avg      = totalVol > 0 ? wChange / totalVol : 0;
+      setMcapChange({ val: Math.abs(avg), positive: avg >= 0 });
+    } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,33 +115,102 @@ export default function Markets() {
 
   useEffect(() => { fetchCoins(); }, [fetchCoins]);
 
-  const filtered = search.length >= 1
-    ? coins.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.symbol.toLowerCase().includes(search.toLowerCase())
-      )
-    : coins;
+  // ── Search: local filter first, then DexScreener for CA/name ──────────────
+  const handleSearch = (q: string) => {
+    setSearch(q);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    // 1. Instant local match
+    const local = coins.filter(c =>
+      c.name.toLowerCase().includes(q.toLowerCase()) ||
+      c.symbol.toLowerCase().includes(q.toLowerCase())
+    );
+    if (local.length > 0) {
+      setSearchResults(local.slice(0, 20));
+    }
+
+    // 2. DexScreener search after 350ms — searches by CA, name, symbol, any chain
+    searchTimer.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(
+          `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(q)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const pairs: any[] = data.pairs || [];
+
+        const dexRows: CoinRow[] = pairs
+          .slice(0, 30)
+          .map((p: any) => ({
+            id:           p.pairAddress || p.baseToken?.address || '',
+            symbol:       (p.baseToken?.symbol || '').toUpperCase(),
+            name:         p.baseToken?.name || p.baseToken?.symbol || '',
+            image:        p.info?.imageUrl || '',
+            price:        parseFloat(p.priceUsd || '0'),
+            change24h:    p.priceChange?.h24 ?? 0,
+            marketCap:    p.marketCap ?? p.fdv ?? 0,
+            volume24h:    p.volume?.h24 ?? 0,
+            rank:         0,
+            pairAddress:  p.pairAddress,
+            chain:        p.chainId,
+            isSearchResult: true,
+          }))
+          .filter(r => r.symbol && r.price > 0);
+
+        // Merge: local CoinGecko hits first, then DEX results not already shown
+        const combined = [...local];
+        for (const d of dexRows) {
+          if (!combined.find(c => c.symbol === d.symbol && !c.isSearchResult)) {
+            combined.push(d);
+          }
+        }
+        setSearchResults(combined.slice(0, 30));
+      } catch { /* non-critical */ }
+      finally { setSearchLoading(false); }
+    }, 350);
+  };
 
   const handleCoinTap = (coin: CoinRow) => {
-    router.push(`/dashboard/market?symbol=${coin.symbol}&name=${encodeURIComponent(coin.name)}`);
+    if (coin.pairAddress) {
+      router.push(
+        `/dashboard/market?symbol=${coin.symbol}&name=${encodeURIComponent(coin.name)}&pair=${coin.pairAddress}&chain=${coin.chain || ''}`
+      );
+    } else {
+      router.push(
+        `/dashboard/market?symbol=${coin.symbol}&name=${encodeURIComponent(coin.name)}&coin=${coin.id}`
+      );
+    }
   };
+
+  const displayCoins = search.length >= 2 ? searchResults : coins;
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="pb-4">
-      {/* Stats row */}
-      <div className="mb-3 flex items-center justify-between">
+
+      {/* Stats bar */}
+      <div className="flex items-center justify-between mb-3">
         <div>
-          {totalMcap && <div className="text-xs text-gray-500">Total: {totalMcap}</div>}
-          {totalChange.val > 0 && (
-            <div className={`text-xs font-semibold ${totalChange.positive ? 'text-[#0A1EFF]' : 'text-red-400'}`}>
-              {totalChange.positive ? '+' : '-'}{totalChange.val.toFixed(2)}%
+          {totalMcap && (
+            <div className="text-xs text-gray-500">
+              Total: {totalMcap}&nbsp;
+              <span className={mcapChange.positive ? 'text-[#0A1EFF] font-semibold' : 'text-red-400 font-semibold'}>
+                {mcapChange.positive ? '+' : '-'}{mcapChange.val.toFixed(2)}%
+              </span>
             </div>
           )}
         </div>
         <button
           onClick={() => fetchCoins(true)}
-          className="text-gray-500 hover:text-white transition-colors p-1"
-          style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }}
+          className="text-gray-500 hover:text-white p-1 transition-colors"
+          style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -209,17 +223,20 @@ export default function Markets() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or symbol..."
-            className="w-full pl-9 pr-4 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors"
+            onChange={e => handleSearch(e.target.value)}
+            placeholder="Search by name or CA..."
+            className="w-full pl-9 pr-9 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors"
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => { setSearch(''); setSearchResults([]); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
+          )}
+          {searchLoading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
           )}
         </div>
         <button
@@ -236,61 +253,69 @@ export default function Markets() {
           <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
           <span className="text-sm text-gray-500">Loading markets...</span>
         </div>
-      ) : error ? (
+      ) : loadError ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <span className="text-sm text-gray-500">Failed to load market data</span>
-          <button
-            onClick={() => fetchCoins()}
-            className="text-xs text-[#0A1EFF] underline"
-          >
+          <AlertCircle className="w-8 h-8 text-gray-600" />
+          <span className="text-sm text-gray-500">Failed to load data</span>
+          <button onClick={() => fetchCoins()} className="text-xs text-[#0A1EFF] underline">
             Retry
           </button>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : displayCoins.length === 0 ? (
         <div className="py-10 text-center text-gray-500 text-sm">
-          {search ? `No results for "${search}"` : 'No coins found'}
+          {search.length >= 2 ? `No results for "${search}"` : 'No coins found'}
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden border border-white/[0.06]">
-          {filtered.map((coin, i) => {
-            const isPositive = coin.change24h >= 0;
+          {displayCoins.map((coin, i) => {
+            const isPos = coin.change24h >= 0;
+            const sub   = coin.isSearchResult
+              ? (coin.chain ? coin.chain.toUpperCase() : 'DEX')
+              : (fmtMcap(coin.marketCap) || fmtVol(coin.volume24h) || coin.symbol);
             return (
               <button
                 key={`${coin.id}-${i}`}
                 onClick={() => handleCoinTap(coin)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] active:bg-white/[0.05] transition-colors border-b border-white/[0.04] last:border-b-0 text-left"
+                className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] active:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 text-left"
               >
                 {/* Rank */}
-                <div className="w-6 text-right text-[11px] text-gray-600 flex-shrink-0 font-mono">
-                  {coin.rank}
+                <div className="w-5 text-right text-[11px] text-gray-600 flex-shrink-0 font-mono">
+                  {coin.rank > 0 ? coin.rank : ''}
                 </div>
 
                 {/* Logo */}
                 <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-[#0A1EFF]/10 flex items-center justify-center">
-                  <img
-                    src={coin.image}
-                    alt={coin.symbol}
-                    className="w-full h-full object-cover rounded-full"
-                    onError={e => {
-                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${coin.symbol.slice(0,2)}&background=0A1EFF&color=fff&size=64&bold=true&rounded=true`;
-                    }}
-                  />
+                  {coin.image ? (
+                    <img
+                      src={coin.image}
+                      alt={coin.symbol}
+                      className="w-full h-full object-cover rounded-full"
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-[#0A1EFF]">
+                      {coin.symbol.slice(0, 2)}
+                    </span>
+                  )}
                 </div>
 
-                {/* Name + volume */}
+                {/* Name + sub */}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{coin.name}</div>
-                  <div className="text-[11px] text-gray-500 truncate">
-                    {fmtVol(coin.volume24h) || coin.symbol}
-                  </div>
+                  <div className="text-[11px] text-gray-500 truncate">{sub}</div>
                 </div>
 
                 {/* Price + change */}
                 <div className="text-right flex-shrink-0">
                   <div className="text-sm font-mono font-semibold text-white">{fmtPrice(coin.price)}</div>
-                  <div className={`text-[11px] font-semibold flex items-center justify-end gap-0.5 ${isPositive ? 'text-[#0A1EFF]' : 'text-red-400'}`}>
-                    {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {isPositive ? '+' : ''}{coin.change24h.toFixed(2)}%
+                  <div className={`text-[11px] font-semibold flex items-center justify-end gap-0.5 ${isPos ? 'text-[#0A1EFF]' : 'text-red-400'}`}>
+                    {isPos
+                      ? <TrendingUp className="w-3 h-3" />
+                      : <TrendingDown className="w-3 h-3" />
+                    }
+                    {isPos ? '+' : ''}{Number(coin.change24h).toFixed(2)}%
                   </div>
                 </div>
 
@@ -301,27 +326,33 @@ export default function Markets() {
         </div>
       )}
 
-      {/* Filter sheet */}
+      {/* Filter bottom sheet */}
       {showFilters && (
         <div className="fixed inset-0 z-50 flex items-end">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFilters(false)} />
-          <div className="relative w-full bg-[#111827] rounded-t-2xl p-6 z-10 border-t border-white/[0.06]">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowFilters(false)}
+          />
+          <div className="relative w-full bg-[#0D1117] rounded-t-2xl p-6 z-10 border-t border-white/[0.06]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">Filters</h3>
+              <h3 className="text-base font-bold text-white">Filters</h3>
               <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-0">
               {[
                 { label: 'Blockchain', value: 'All Chains' },
                 { label: 'Market Cap', value: 'All' },
                 { label: 'Price Change', value: 'All' },
                 { label: 'Timeframe', value: '24H' },
               ].map(f => (
-                <div key={f.label} className="flex items-center justify-between py-3 border-b border-white/[0.06]">
+                <div
+                  key={f.label}
+                  className="flex items-center justify-between py-4 border-b border-white/[0.06]"
+                >
                   <span className="text-sm text-gray-300">{f.label}</span>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="flex items-center gap-1.5 text-sm text-gray-500">
                     <span>{f.value}</span>
                     <ChevronRight className="w-4 h-4" />
                   </div>
@@ -330,7 +361,7 @@ export default function Markets() {
             </div>
             <button
               onClick={() => setShowFilters(false)}
-              className="w-full mt-6 py-3.5 font-bold rounded-xl transition-colors text-white"
+              className="w-full mt-6 py-4 font-bold rounded-xl text-white text-sm transition-opacity hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)' }}
             >
               Apply Filters
