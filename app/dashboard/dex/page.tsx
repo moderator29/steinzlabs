@@ -192,10 +192,10 @@ function DexTokenChart({ token }: { token: DexToken }) {
       chart = createChart(el, {
         width: el.clientWidth,
         height: 300,
-        layout: { background: { color: '#070B14' }, textColor: '#6B7280' },
+        layout: { background: { color: '#070B14' }, textColor: '#9CA3AF' },
         grid: { vertLines: { visible: false }, horzLines: { color: '#1F2937' } },
-        rightPriceScale: { borderVisible: false, textColor: '#9CA3AF' },
-        timeScale: { borderVisible: false, textColor: '#9CA3AF' },
+        rightPriceScale: { borderVisible: false },
+        timeScale: { borderVisible: false },
         crosshair: { mode: CrosshairMode.Normal, vertLine: { color: '#374151' }, horzLine: { color: '#374151' } },
         handleScroll: false,
         handleScale: false,
