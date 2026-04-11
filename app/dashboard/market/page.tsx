@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import {
   Search, X, Copy, ExternalLink, TrendingUp, TrendingDown,
   Flame, Zap, BarChart2, Layers, ChevronDown, Loader2,
-  ArrowLeft, CheckCheck,
+  ArrowLeft, CheckCheck, LineChart, DollarSign, Package, Lock,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -28,12 +28,19 @@ interface MarketToken {
 }
 
 type TabId = 'trending' | 'launches' | 'cex' | 'all';
+type ComingSoonTabId = 'stocks' | 'forex' | 'commodities';
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'trending', label: 'Trending', icon: Flame },
-  { id: 'launches', label: 'New Launches', icon: Zap },
+  { id: 'launches', label: 'New', icon: Zap },
   { id: 'cex', label: 'CEX', icon: BarChart2 },
-  { id: 'all', label: 'All Tokens', icon: Layers },
+  { id: 'all', label: 'All', icon: Layers },
+];
+
+const COMING_SOON_TABS: { id: ComingSoonTabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'stocks', label: 'Stocks', icon: LineChart },
+  { id: 'forex', label: 'Forex', icon: DollarSign },
+  { id: 'commodities', label: 'Commodities', icon: Package },
 ];
 
 const CHAIN_FILTERS = ['all', 'eth', 'sol', 'bsc', 'base', 'arb'];
@@ -361,6 +368,7 @@ function CoinDetailModal({ token, onClose }: { token: MarketToken; onClose: () =
 // ---------------------------------------------------------------------------
 function MarketPageContent() {
   const [activeTab, setActiveTab] = useState<TabId>('trending');
+  const [comingSoonTab, setComingSoonTab] = useState<ComingSoonTabId | null>(null);
   const [chainFilter, setChainFilter] = useState('all');
   const [tokens, setTokens] = useState<MarketToken[]>([]);
   const [loading, setLoading] = useState(false);
@@ -439,28 +447,43 @@ function MarketPageContent() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Crypto */}
       <div className="flex border-b border-white/[0.06] flex-shrink-0 px-1">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => { setActiveTab(id); setSearch(''); }}
+            onClick={() => { setActiveTab(id); setComingSoonTab(null); setSearch(''); }}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold relative transition-colors ${
-              activeTab === id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+              activeTab === id && !comingSoonTab ? 'text-white' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
             <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{label}</span>
-            <span className="sm:hidden">{label.split(' ')[0]}</span>
-            {activeTab === id && (
+            {label}
+            {activeTab === id && !comingSoonTab && (
               <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#0A1EFF] rounded-full" />
+            )}
+          </button>
+        ))}
+        {/* Coming Soon tabs */}
+        {COMING_SOON_TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setComingSoonTab(id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold relative transition-colors ${
+              comingSoonTab === id ? 'text-[#F59E0B]' : 'text-gray-600 hover:text-gray-400'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+            {comingSoonTab === id && (
+              <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#F59E0B] rounded-full" />
             )}
           </button>
         ))}
       </div>
 
-      {/* Chain filter (only for All Tokens and Trending) */}
-      {(activeTab === 'all' || activeTab === 'trending') && (
+      {/* Chain filter (only for All Tokens and Trending, not in coming soon tabs) */}
+      {!comingSoonTab && (activeTab === 'all' || activeTab === 'trending') && (
         <div className="flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide flex-shrink-0 border-b border-white/[0.04]">
           {CHAIN_FILTERS.map(c => (
             <button
@@ -478,8 +501,38 @@ function MarketPageContent() {
         </div>
       )}
 
+      {/* Coming Soon overlay for Stocks/Forex/Commodities */}
+      {comingSoonTab && (
+        <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
+          <div className="w-20 h-20 rounded-2xl bg-[#F59E0B]/10 border border-[#F59E0B]/20 flex items-center justify-center">
+            <Lock className="w-10 h-10 text-[#F59E0B]" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold mb-2 capitalize">
+              {comingSoonTab === 'stocks' ? 'Stocks' : comingSoonTab === 'forex' ? 'Forex' : 'Commodities'} Coming Soon
+            </h3>
+            <p className="text-sm text-gray-400 max-w-xs mx-auto">
+              {comingSoonTab === 'stocks'
+                ? 'Real-time stock prices and institutional trading intelligence are on the roadmap for Premium members.'
+                : comingSoonTab === 'forex'
+                ? 'FX currency pairs with live rates and AI-powered trend signals are coming in a future update.'
+                : 'Gold, oil, silver, and commodity markets will be available with our upcoming Premium plan.'}
+            </p>
+          </div>
+          <div className="px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl text-[#F59E0B] text-xs font-semibold">
+            Available in Premium · $15/month
+          </div>
+          <button
+            onClick={() => setComingSoonTab(null)}
+            className="text-xs text-gray-500 hover:text-gray-300 underline"
+          >
+            Back to Crypto
+          </button>
+        </div>
+      )}
+
       {/* Token list */}
-      <div className="flex-1 overflow-y-auto">
+      {!comingSoonTab && <div className="flex-1 overflow-y-auto">
         {loading && tokens.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-7 h-7 text-[#0A1EFF] animate-spin" />
@@ -525,7 +578,7 @@ function MarketPageContent() {
             </span>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Detail modal */}
       {selected && (
