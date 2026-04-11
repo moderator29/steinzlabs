@@ -286,6 +286,108 @@ function SectorPie({ breakdown }: { breakdown: SectorBreakdown }) {
   );
 }
 
+// ─── Live Market Context ──────────────────────────────────────────────────────
+
+function LiveMarketContext() {
+  const [fearGreed, setFearGreed] = useState<{ value: number; label: string } | null>(null);
+  const [trending, setTrending] = useState<Array<{ symbol: string; change: number }>>([]);
+
+  useEffect(() => {
+    // Fear & Greed index
+    fetch('https://api.alternative.me/fng/?limit=1')
+      .then(r => r.json())
+      .then(d => {
+        const item = d?.data?.[0];
+        if (item) setFearGreed({ value: parseInt(item.value, 10), label: item.value_classification });
+      })
+      .catch(() => {});
+
+    // Trending from CoinGecko
+    fetch('https://api.coingecko.com/api/v3/search/trending')
+      .then(r => r.json())
+      .then(d => {
+        const coins = (d?.coins || []).slice(0, 8).map((c: any) => ({
+          symbol: c.item?.symbol?.toUpperCase() || '???',
+          change: c.item?.data?.price_change_percentage_24h?.usd ?? 0,
+        }));
+        setTrending(coins);
+      })
+      .catch(() => {});
+  }, []);
+
+  const fgColor = fearGreed
+    ? fearGreed.value >= 75 ? '#10B981'
+    : fearGreed.value >= 55 ? '#22d3ee'
+    : fearGreed.value >= 40 ? '#F59E0B'
+    : fearGreed.value >= 25 ? '#F97316'
+    : '#EF4444'
+    : '#6B7280';
+
+  return (
+    <div className="glass rounded-xl p-4 border border-white/10 space-y-3">
+      <div className="flex items-center gap-2">
+        <Activity className="w-4 h-4 text-[#0A1EFF]" />
+        <span className="font-bold text-sm">Live Market Context</span>
+        <span className="ml-auto text-[9px] text-gray-600 uppercase tracking-wider">Real-time</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* Fear & Greed */}
+        <div className="bg-white/[0.04] rounded-xl p-3 flex flex-col items-center gap-1 border border-white/[0.06]">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Fear & Greed</div>
+          {fearGreed ? (
+            <>
+              <div className="text-3xl font-black font-heading" style={{ color: fgColor }}>{fearGreed.value}</div>
+              <div className="text-[10px] font-semibold" style={{ color: fgColor }}>{fearGreed.label}</div>
+            </>
+          ) : (
+            <div className="text-2xl font-black text-gray-700 animate-pulse">--</div>
+          )}
+        </div>
+
+        {/* Market Pulse */}
+        <div className="bg-white/[0.04] rounded-xl p-3 flex flex-col gap-1 border border-white/[0.06]">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Market Pulse</div>
+          {fearGreed ? (
+            <div className="space-y-1">
+              {[
+                { label: 'Sentiment', val: fearGreed.value >= 50 ? 'Bullish' : 'Bearish', color: fearGreed.value >= 50 ? '#10B981' : '#EF4444' },
+                { label: 'Signal', val: fearGreed.value >= 75 ? 'Caution (overbought)' : fearGreed.value <= 25 ? 'Opportunity' : 'Neutral', color: fgColor },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="flex justify-between text-[10px]">
+                  <span className="text-gray-500">{label}</span>
+                  <span className="font-semibold" style={{ color }}>{val}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-600 animate-pulse">Loading...</div>
+          )}
+        </div>
+      </div>
+
+      {/* Trending tokens */}
+      {trending.length > 0 && (
+        <div>
+          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-2">Trending Now</div>
+          <div className="flex flex-wrap gap-1.5">
+            {trending.map((t, i) => {
+              const isPos = t.change >= 0;
+              return (
+                <span key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border"
+                  style={{ backgroundColor: `${isPos ? '#10B981' : '#EF4444'}10`, borderColor: `${isPos ? '#10B981' : '#EF4444'}25`, color: isPos ? '#10B981' : '#EF4444' }}>
+                  {t.symbol}
+                  <span className="text-[9px] opacity-70">{isPos ? '+' : ''}{t.change.toFixed(1)}%</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DNAAnalyzerPage() {
@@ -557,6 +659,58 @@ export default function DNAAnalyzerPage() {
               </button>
             </div>
 
+            {/* ── Score + Grade Hero Cards ─────────────────────────────────── */}
+            {dna.aiAnalysis && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Overall Score */}
+                <div className="glass rounded-2xl border border-white/10 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(circle at 50% 80%, ${getScoreColor(dna.aiAnalysis.overallScore)}, transparent 70%)` }} />
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Overall Score</div>
+                  <div className="relative w-24 h-24 flex items-center justify-center mb-2">
+                    <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full -rotate-90">
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                      <circle
+                        cx="50" cy="50" r="42" fill="none"
+                        stroke={getScoreColor(dna.aiAnalysis.overallScore)}
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - dna.aiAnalysis.overallScore / 100)}`}
+                        style={{ transition: 'stroke-dashoffset 1s ease', filter: `drop-shadow(0 0 6px ${getScoreColor(dna.aiAnalysis.overallScore)})` }}
+                      />
+                    </svg>
+                    <div className="flex flex-col items-center">
+                      <span className="text-3xl font-heading font-black" style={{ color: getScoreColor(dna.aiAnalysis.overallScore) }}>
+                        {dna.aiAnalysis.overallScore}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-semibold">/100</span>
+                    </div>
+                  </div>
+                  <div className="text-xs font-semibold" style={{ color: getScoreColor(dna.aiAnalysis.overallScore) }}>
+                    {dna.aiAnalysis.overallScore >= 80 ? 'Excellent' : dna.aiAnalysis.overallScore >= 60 ? 'Strong' : dna.aiAnalysis.overallScore >= 40 ? 'Moderate' : 'High Risk'}
+                  </div>
+                </div>
+
+                {/* Portfolio Grade */}
+                <div className="glass rounded-2xl border border-white/10 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(circle at 50% 80%, ${getGradeColor(dna.aiAnalysis.portfolioGrade)}, transparent 70%)` }} />
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Portfolio Grade</div>
+                  <div className="w-24 h-24 rounded-2xl flex items-center justify-center mb-2 border"
+                    style={{ backgroundColor: `${getGradeColor(dna.aiAnalysis.portfolioGrade)}15`, borderColor: `${getGradeColor(dna.aiAnalysis.portfolioGrade)}35` }}>
+                    <span className="text-5xl font-heading font-black" style={{ color: getGradeColor(dna.aiAnalysis.portfolioGrade), textShadow: `0 0 20px ${getGradeColor(dna.aiAnalysis.portfolioGrade)}80` }}>
+                      {dna.aiAnalysis.portfolioGrade}
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold" style={{ color: getGradeColor(dna.aiAnalysis.portfolioGrade) }}>
+                    {dna.aiAnalysis.portfolioGrade?.startsWith('A') ? 'Top Tier' : dna.aiAnalysis.portfolioGrade?.startsWith('B') ? 'Above Avg' : dna.aiAnalysis.portfolioGrade?.startsWith('C') ? 'Average' : 'Below Avg'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Live Market Context ──────────────────────────────────────── */}
+            <LiveMarketContext />
+
             {/* ── Section 1: Identity Profile ─────────────────────────────── */}
             <div className="glass rounded-xl p-5 border border-white/10 space-y-4">
               <div className="flex items-center gap-2 mb-1">
@@ -758,15 +912,8 @@ export default function DNAAnalyzerPage() {
               <div className="glass rounded-xl p-5 border border-[#7C3AED]/30 bg-gradient-to-br from-[#7C3AED]/5 to-transparent space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Brain className="w-4 h-4 text-[#7C3AED]" />
-                  <span className="font-bold text-sm">Steinz &#123;Sargon&#125; Intelligence Analysis</span>
-                  <div className="ml-auto flex items-center gap-2">
-                    <span className="text-4xl font-heading font-bold" style={{ color: getScoreColor(dna.aiAnalysis.overallScore) }}>
-                      {dna.aiAnalysis.overallScore}
-                    </span>
-                    <span className="text-3xl font-heading font-bold" style={{ color: getGradeColor(dna.aiAnalysis.portfolioGrade) }}>
-                      {dna.aiAnalysis.portfolioGrade}
-                    </span>
-                  </div>
+                  <span className="font-bold text-sm">Steinz Intelligence Analysis</span>
+                  <span className="ml-auto text-[10px] px-2 py-0.5 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-bold border border-[#7C3AED]/30">AI</span>
                 </div>
 
                 {/* personality profile */}
