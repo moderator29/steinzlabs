@@ -610,7 +610,7 @@ export default function LandingPage() {
             <span>On-Chain Intelligence</span>
             <span>Web3 Security</span>
           </div>
-          <div className="text-sm text-white/20">&copy; 2025 STEINZ LABS</div>
+          <div className="text-sm text-white/20">&copy; 2026 STEINZ LABS</div>
         </div>
       </footer>
     </div>
