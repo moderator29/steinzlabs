@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
-// In-memory cache — shared across warm serverless instances
+// ── In-memory cache (60s TTL) ─────────────────────────────────────────────────
 let cachedTokens: any[] | null = null;
 let cacheTs = 0;
-const CACHE_TTL = 60_000; // 60 seconds
+const CACHE_TTL = 60_000;
 
 async function fetchCoinGecko(): Promise<any[]> {
   const url =
