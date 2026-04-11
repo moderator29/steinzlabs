@@ -4,7 +4,12 @@ import { arkhamAPI } from '@/lib/arkham/api';
 
 // Health check — used by admin dashboard to verify VTX is online
 export async function GET() {
-  const configured = !!process.env.ANTHROPIC_API_KEY;
+  const configured = !!(
+    process.env.ANTHROPIC_API_KEY
+    || process.env.CLAUDE_API_KEY
+    || process.env.CLAUDE_KEY
+    || process.env.ANTHROPIC_KEY
+  );
   return NextResponse.json(
     { status: configured ? 'online' : 'unconfigured', engine: 'VTX Intelligence', version: '2.0' },
     { status: configured ? 200 : 503 }
@@ -769,9 +774,13 @@ export async function POST(request: Request) {
       }
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // Try multiple common env variable names for the Anthropic API key
+    const apiKey = process.env.ANTHROPIC_API_KEY
+      || process.env.CLAUDE_API_KEY
+      || process.env.CLAUDE_KEY
+      || process.env.ANTHROPIC_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to environment variables.' }, { status: 500 });
     }
 
     const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
@@ -987,34 +996,56 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
       : cleanMessage;
     messages.push({ role: 'user', content: finalUserMessage });
 
-    // Try preferred model first, fall back to stable model if unavailable
-    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    // Try models in order — most capable first, guaranteed fallback last
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022', 'claude-haiku-4-5-20251001'];
     let response: Response | null = null;
     let lastError = '';
+    let lastStatus = 0;
 
     for (const model of MODELS) {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages,
-        }),
-      });
-      if (response.ok) break;
-      lastError = await response.text();
-      console.error(`VTX model ${model} failed (${response.status}):`, lastError);
+      try {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages,
+          }),
+        });
+        if (response.ok) break;
+        lastStatus = response.status;
+        try { lastError = await response.text(); } catch { lastError = `HTTP ${response.status}`; }
+        console.error(`VTX model ${model} failed (${response.status}):`, lastError.slice(0, 300));
+      } catch (fetchErr: any) {
+        lastError = fetchErr?.message || 'Network error';
+        console.error(`VTX model ${model} fetch threw:`, lastError);
+        response = null;
+      }
     }
 
     if (!response || !response.ok) {
-      console.error('All VTX models failed. Last error:', lastError);
-      return NextResponse.json({ error: 'AI service temporarily unavailable. Please try again shortly.' }, { status: 502 });
+      console.error('All VTX models failed. Status:', lastStatus, 'Error:', lastError.slice(0, 200));
+      let userMsg: string;
+      if (lastStatus === 401) {
+        userMsg = 'VTX Error 401: API key is invalid or expired. Go to console.anthropic.com → API Keys and create a new key, then update ANTHROPIC_API_KEY in Vercel.';
+      } else if (lastStatus === 403) {
+        userMsg = 'VTX Error 403: API key found but has no access to AI models. Check your Anthropic account plan and permissions.';
+      } else if (lastStatus === 429) {
+        userMsg = 'VTX Error 429: Anthropic rate limit or usage cap reached. Check your billing at console.anthropic.com.';
+      } else if (lastStatus === 529 || lastStatus === 503) {
+        userMsg = 'VTX Error: Anthropic servers are overloaded right now. Please try again in 30 seconds.';
+      } else if (!lastStatus) {
+        userMsg = 'VTX Error: Network timeout reaching Anthropic. Please try again.';
+      } else {
+        userMsg = `VTX Error ${lastStatus}: AI service temporarily unavailable. Please try again shortly.`;
+      }
+      return NextResponse.json({ error: userMsg }, { status: 502 });
     }
 
     const data = await response.json();
