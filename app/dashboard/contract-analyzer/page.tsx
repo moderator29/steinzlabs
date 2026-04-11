@@ -44,6 +44,7 @@ interface AnalysisResult {
     labels: string[];
   } | null;
   analyzedAt: string;
+  aiAnalysis?: string;
 }
 
 const CHAINS = [
@@ -417,18 +418,32 @@ export default function ContractAnalyzerPage() {
                 </span>
               </div>
 
-              {/* Written summary paragraph */}
+              {/* Written summary paragraph — real AI if available */}
               <div className="bg-white/5 rounded-xl p-3 mb-3">
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  {result.overallScore >= 80
-                    ? `This contract scored ${result.overallScore}/100 and passed all critical security checks. ${result.riskFlags.length === 0 ? 'No risk flags were detected.' : `${result.riskFlags.length} minor flag(s) were noted.`} ${result.addressIntel ? `Address intelligence returned a ${result.addressIntel.riskLevel.toLowerCase()} risk level.` : ''} The contract appears to be safe for interaction, though on-chain due diligence is always recommended before committing funds.`
-                    : result.overallScore >= 55
-                    ? `This contract scored ${result.overallScore}/100 with ${result.riskFlags.length} risk flag(s) detected. ${result.tokenSecurity?.isHoneypot ? 'A honeypot pattern was identified. ' : ''}${result.tokenSecurity?.isMintable ? 'The token supply is mintable. ' : ''}${result.addressIntel?.riskLevel && result.addressIntel.riskLevel !== 'SAFE' ? `Address intelligence shows a ${result.addressIntel.riskLevel.toLowerCase()} risk classification. ` : ''}Exercise caution and verify all flags before interacting with this contract.`
-                    : result.overallScore >= 35
-                    ? `Significant issues found — this contract scored only ${result.overallScore}/100 with ${result.riskFlags.length} risk flags. ${result.tokenSecurity?.isHoneypot ? 'HONEYPOT LIKELY DETECTED. ' : ''}${result.tokenSecurity?.hasHiddenOwner ? 'A hidden owner was identified. ' : ''}${result.tokenSecurity?.ownerCanChangeBalance ? 'The owner can alter token balances. ' : ''}${result.addressIntel?.isMalicious ? 'This address is flagged as malicious. ' : ''}High caution is strongly advised — this contract poses substantial risk.`
-                    : `CRITICAL RISK: This contract scored ${result.overallScore}/100 and failed multiple security checks. ${result.riskFlags.slice(0, 3).join('. ')}. ${result.addressIntel?.isBlacklisted ? 'This address is blacklisted.' : result.addressIntel?.isPhishing ? 'This address is associated with phishing.' : ''} Do not interact with this contract under any circumstances.`
-                  }
-                </p>
+                {result.aiAnalysis ? (
+                  <div className="space-y-1.5">
+                    {result.aiAnalysis.split('\n').filter(Boolean).map((line, i) => (
+                      <p key={i} className={`text-xs leading-relaxed ${
+                        line.startsWith('ASSESSMENT:') ? 'text-gray-300 font-medium' :
+                        line.startsWith('KEY RISKS:') ? 'text-amber-400 font-semibold mt-1' :
+                        line.startsWith('VERDICT:') ? 'text-white font-bold mt-1' :
+                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 pl-2' :
+                        'text-gray-300'
+                      }`}>{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    {result.overallScore >= 80
+                      ? `Contract scored ${result.overallScore}/100 — ${result.riskFlags.length === 0 ? 'no risk flags detected' : `${result.riskFlags.length} minor flag(s) noted`}. Appears safe for interaction, though DYOR always applies.`
+                      : result.overallScore >= 55
+                      ? `Contract scored ${result.overallScore}/100 with ${result.riskFlags.length} risk flag(s). ${result.tokenSecurity?.isHoneypot ? 'Honeypot pattern identified. ' : ''}Exercise caution before interacting.`
+                      : result.overallScore >= 35
+                      ? `Significant issues — score ${result.overallScore}/100. ${result.riskFlags.slice(0, 2).join('. ')}. High caution advised.`
+                      : `CRITICAL RISK (${result.overallScore}/100): ${result.riskFlags.slice(0, 3).join('. ')}. Do not interact.`
+                    }
+                  </p>
+                )}
               </div>
 
               {/* Risk breakdown bars */}

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
-const HELIUS_KEY = process.env.HELIUS_KEY_1;
+const HELIUS_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
 
 interface WhaleEvent {
   id: string;
@@ -239,42 +239,46 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
 }
 
 async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
+  // Use DexScreener as reliable source for pump.fun tokens (the Heroku endpoint is unstable)
   try {
     const res = await fetch(
-      'https://client-api-2-74b1891ee9f9.herokuapp.com/coins?offset=0&limit=10&sort=last_trade_timestamp&order=DESC&includeNsfw=false',
+      'https://api.dexscreener.com/latest/dex/search?q=pump.fun',
+      { cache: 'no-store' }
     );
     if (!res.ok) return [];
     const data = await res.json();
-    if (!Array.isArray(data)) return [];
+    const pairs = (data.pairs || [])
+      .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
+      .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
+      .slice(0, 10);
 
-    return data.slice(0, 10).map((token: any) => {
-      const mcap = token.usd_market_cap || 0;
-      const replyCount = token.reply_count || 0;
-      const trustScore = Math.min(90, Math.max(20, replyCount * 3 + 25));
-      let sentiment = 'HYPE';
-      if (mcap > 100000) sentiment = 'BULLISH';
-      if (mcap < 5000 && replyCount < 3) sentiment = 'BEARISH';
+    return pairs.map((pair: any) => {
+      const mcap = pair.fdv || pair.marketCap || 0;
+      const vol24h = pair.volume?.h24 || 0;
+      const change24h = pair.priceChange?.h24 || 0;
+      const trustScore = Math.min(90, Math.max(20, 40 + (mcap > 100000 ? 20 : 0) + (vol24h > 10000 ? 15 : 0)));
+      const sentiment = change24h > 10 ? 'BULLISH' : change24h < -10 ? 'BEARISH' : 'HYPE';
 
       return {
-        id: token.mint || `pump-${Date.now()}-${Math.random()}`,
+        id: pair.pairAddress || `pump-${Date.now()}-${Math.random()}`,
         type: 'token_launch',
         sentiment,
-        title: `${token.symbol || '???'} live on Pump.fun — MCap ${fmtUsd(mcap)}`,
-        summary: `${token.name || 'Unknown'} ($${token.symbol || '???'}) is live on Pump.fun. Market cap: ${fmtUsd(mcap)}. ${replyCount} replies.`,
-        from: (token.creator || '').slice(0, 12) || 'PumpFun',
+        title: `${pair.baseToken?.symbol || '???'} on Pump.fun — MCap ${fmtUsd(mcap)}`,
+        summary: `${pair.baseToken?.name || 'Unknown'} ($${pair.baseToken?.symbol || '???'}) trading on pump.fun. MCap: ${fmtUsd(mcap)}. 24h vol: ${fmtUsd(vol24h)}. Change: ${change24h > 0 ? '+' : ''}${change24h.toFixed(1)}%.`,
+        from: pair.baseToken?.address?.slice(0, 12) || 'Pump.fun',
         to: 'Pump.fun',
         value: 0,
         valueUsd: mcap,
         chain: 'solana',
         trustScore,
-        txHash: token.mint || '',
+        txHash: pair.baseToken?.address || '',
         blockNumber: 0,
-        timestamp: token.created_timestamp ? new Date(token.created_timestamp).toISOString() : new Date().toISOString(),
-        tokenName: token.name || 'Unknown',
-        tokenSymbol: token.symbol || '???',
+        timestamp: new Date().toISOString(),
+        tokenName: pair.baseToken?.name || 'Unknown',
+        tokenSymbol: pair.baseToken?.symbol || '???',
         tokenMarketCap: mcap,
         platform: 'Pump.fun',
-        tokenIcon: token.image_uri || '',
+        tokenIcon: pair.info?.imageUrl || '',
       };
     });
   } catch (error) {

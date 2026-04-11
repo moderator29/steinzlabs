@@ -255,7 +255,11 @@ const EVM_CHAINS: Record<string, EvmChainConfig> = {
   },
 };
 
-const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+// Use Helius RPC if key available — much richer data + better rate limits than public RPC
+const HELIUS_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2 || '';
+const SOLANA_RPC = HELIUS_KEY
+  ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`
+  : 'https://api.mainnet-beta.solana.com';
 
 function detectChain(address: string): 'EVM' | 'SOL' | 'UNKNOWN' {
   if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'EVM';
@@ -494,7 +498,8 @@ async function getSolData(address: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'getSignaturesForAddress', params: [address, { limit: 1000 }] }),
     }),
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
+    // Binance for SOL price — real-time, free, no key needed
+    fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT', {
       headers: { 'Accept': 'application/json' },
     }).catch(() => null),
   ]);
@@ -521,13 +526,14 @@ async function getSolData(address: string) {
     }));
   } catch { txCount = 0; }
 
-  let solPrice = 170;
+  let solPrice = 130;
   try {
     if (priceRes) {
       const priceData = await priceRes.json();
-      solPrice = priceData.solana?.usd || 170;
+      // Binance returns { symbol: 'SOLUSDT', price: '130.12' }
+      solPrice = parseFloat(priceData.price) || 130;
     }
-  } catch { solPrice = 170; }
+  } catch { solPrice = 130; }
 
   const solValueUsd = solBalance * solPrice;
 

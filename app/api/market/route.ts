@@ -178,53 +178,33 @@ async function fetchLaunches(): Promise<MarketToken[]> {
 
   const results: MarketToken[] = [];
 
-  // pump.fun new coins
+  // pump.fun + pumpswap via DexScreener (reliable, replaces unstable pump.fun direct APIs)
   try {
-    const newRes = await fetch(
-      'https://frontend-api.pump.fun/coins?sort=created_timestamp&order=DESC&limit=50',
-      { next: { revalidate: 30 } }
+    const dexRes = await fetch(
+      'https://api.dexscreener.com/latest/dex/search?q=pump',
+      { cache: 'no-store' }
     );
-    if (newRes.ok) {
-      const coins: any[] = await newRes.json();
-      for (const c of (coins || [])) {
+    if (dexRes.ok) {
+      const dexData = await dexRes.json();
+      const solanaPumpPairs = (dexData.pairs || [])
+        .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
+        .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
+        .slice(0, 50);
+      for (const p of solanaPumpPairs) {
+        const isPumpSwap = p.dexId === 'raydium';
         results.push({
-          name: c.name || c.symbol,
-          symbol: (c.symbol || '').toUpperCase(),
-          price: c.usd_market_cap && c.total_supply ? c.usd_market_cap / c.total_supply : 0,
-          change24h: 0,
-          volume24h: 0,
-          marketCap: c.usd_market_cap ?? 0,
-          logo: c.image_uri || c.metadata_uri || fmtLogoFallback(c.symbol || 'NEW'),
+          name: p.baseToken?.name || p.baseToken?.symbol || 'Unknown',
+          symbol: (p.baseToken?.symbol || '').toUpperCase(),
+          price: parseFloat(p.priceUsd || '0'),
+          change24h: p.priceChange?.h24 || 0,
+          volume24h: p.volume?.h24 || 0,
+          marketCap: p.fdv || 0,
+          logo: p.info?.imageUrl || fmtLogoFallback(p.baseToken?.symbol || 'NEW'),
           chain: 'sol',
-          source: 'pumpfun',
-          address: c.mint,
-        });
-      }
-    }
-  } catch {}
-
-  // PumpSwap graduated coins
-  try {
-    const gradRes = await fetch(
-      'https://frontend-api.pump.fun/coins?sort=last_trade_timestamp&order=DESC&limit=30&complete=true',
-      { next: { revalidate: 30 } }
-    );
-    if (gradRes.ok) {
-      const coins: any[] = await gradRes.json();
-      for (const c of (coins || [])) {
-        const exists = results.find(r => r.address === c.mint);
-        if (exists) { exists.source = 'pumpswap'; continue; }
-        results.push({
-          name: c.name || c.symbol,
-          symbol: (c.symbol || '').toUpperCase(),
-          price: c.usd_market_cap && c.total_supply ? c.usd_market_cap / c.total_supply : 0,
-          change24h: 0,
-          volume24h: 0,
-          marketCap: c.usd_market_cap ?? 0,
-          logo: c.image_uri || fmtLogoFallback(c.symbol || 'GRAD'),
-          chain: 'sol',
-          source: 'pumpswap',
-          address: c.mint,
+          source: isPumpSwap ? 'pumpswap' : 'pumpfun',
+          address: p.baseToken?.address || '',
+          pairAddress: p.pairAddress,
+          liquidity: p.liquidity?.usd || 0,
         });
       }
     }

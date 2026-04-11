@@ -59,22 +59,76 @@ async function fetchWebSearch(query: string): Promise<string> {
 }
 
 async function fetchLiveMarketData(): Promise<string> {
+  // Primary: Binance (no API key, highly reliable, real-time)
+  try {
+    const BINANCE_SYMBOLS = [
+      'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
+      'AVAXUSDT','DOGEUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT',
+      'ATOMUSDT','LTCUSDT','NEARUSDT','APTUSDT','ARBUSDT','OPUSDT',
+      'INJUSDT','SUIUSDT','TONUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
+    ];
+    const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const lines = data.map((t: any) => {
+          const sym = t.symbol.replace('USDT', '');
+          const price = parseFloat(t.lastPrice);
+          const change24h = parseFloat(t.priceChangePercent);
+          const vol = parseFloat(t.quoteVolume);
+          const priceStr = price >= 1000
+            ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : price >= 1
+              ? `$${price.toFixed(4)}`
+              : `$${price.toFixed(8)}`;
+          return `${sym}: ${priceStr} (24h: ${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%, Vol: $${(vol / 1e6).toFixed(0)}M)`;
+        });
+        return 'LIVE MARKET PRICES (real-time):\n' + lines.join('\n');
+      }
+    }
+  } catch {}
+
+  // Fallback: CoinGecko
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=1h,24h,7d',
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h,7d',
       {
         headers: process.env.COINGECKO_API_KEY
           ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
           : {},
-        next: { revalidate: 30 },
+        cache: 'no-store',
       }
     );
     if (!res.ok) return '';
     const coins = await res.json();
     const lines = coins.map((c: any) =>
-      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(1)}%, 7d: ${c.price_change_percentage_7d_in_currency?.toFixed(1)}%, MCap: $${(c.market_cap / 1e9).toFixed(1)}B, Vol: $${(c.total_volume / 1e6).toFixed(0)}M)`
+      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(2)}%, MCap: $${(c.market_cap / 1e9).toFixed(1)}B, Vol: $${(c.total_volume / 1e6).toFixed(0)}M)`
     );
-    return lines.join('\n');
+    return 'LIVE MARKET PRICES:\n' + lines.join('\n');
+  } catch {
+    return '';
+  }
+}
+
+async function fetchDexScreenerTokenPrice(query: string): Promise<string> {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    const pairs = data.pairs?.slice(0, 3);
+    if (!pairs?.length) return '';
+    const lines = pairs.map((p: any) => {
+      const priceUsd = p.priceUsd ? (parseFloat(p.priceUsd) < 0.001 ? `$${parseFloat(p.priceUsd).toFixed(8)}` : `$${parseFloat(p.priceUsd).toFixed(6)}`) : 'N/A';
+      const change24h = p.priceChange?.h24 != null ? `${p.priceChange.h24 >= 0 ? '+' : ''}${p.priceChange.h24.toFixed(2)}%` : 'N/A';
+      const fdv = p.fdv ? `$${(p.fdv / 1e6).toFixed(2)}M` : 'N/A';
+      const vol24h = p.volume?.h24 ? `$${(p.volume.h24 / 1e3).toFixed(0)}K` : 'N/A';
+      const liq = p.liquidity?.usd ? `$${(p.liquidity.usd / 1e3).toFixed(0)}K` : 'N/A';
+      return `${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}:\nPrice: ${priceUsd} | 24h: ${change24h} | FDV: ${fdv} | Vol: ${vol24h} | Liquidity: ${liq}\nContract: ${p.baseToken.address} | DEX: ${p.dexId}`;
+    });
+    return `TOKEN PRICE DATA for "${query}":\n\n${lines.join('\n\n')}`;
   } catch {
     return '';
   }
@@ -109,7 +163,7 @@ async function fetchMemecoinsContext(): Promise<string> {
       `${t.tokenAddress?.slice(0, 10)}... on ${t.chainId} — ${t.description || 'no description'} (boosts: ${t.amount || 0})`
     );
     return lines.length > 0
-      ? 'Current hot tokens from Sargon Data Archive:\n' + lines.join('\n')
+      ? 'Current hot DEX tokens:\n' + lines.join('\n')
       : '';
   } catch {
     return '';
@@ -486,7 +540,7 @@ function detectArkhamIntent(message: string): {
   };
 }
 
-const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent powered by Steinz {Sargon} Intelligence. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
+const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by STEINZ LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
 PERSONALITY: {personality} (Professional Analyst = formal and precise; Degen Trader = casual crypto slang, direct; Conservative Advisor = cautious, emphasize risk; Neutral = balanced)
 
@@ -620,7 +674,7 @@ MEMECOIN ANALYSIS EXPERTISE:
 - Organic vs artificial volume detection
 
 ALWAYS:
-- Cite "Steinz Intelligence" as your data source, never mention third-party API names
+- Cite "STEINZ Intelligence" as your data source. NEVER invent or mention external URLs or website links like "coinmarketcap.com", "coingecko.com", or any other site. DO NOT recommend users visit external sites for price data — you have live data right here.
 - Signal [CHART:price] when discussing token prices/charts
 - Signal [CHART:holders] when discussing holder distribution
 - Signal [CHART:portfolio] when discussing wallet portfolios
@@ -657,7 +711,7 @@ PLATFORM CONTEXT:
 BRANDING:
 - Platform: STEINZ LABS
 - AI Agent: VTX
-- Data Source: Steinz Intelligence / Sargon Data Archive
+- Data Source: STEINZ Intelligence (real-time on-chain and market data)
 - Tiers: Free / STEINZ Pro / STEINZ Enterprise
 `;
 
@@ -814,6 +868,41 @@ export async function POST(request: Request) {
 
     const isMemecoinsQuery = /pump|bonk|degen|rug|sol\s*token|launch|(?:^|\s)ca(?:\s|$)|contract/i.test(cleanMessage);
 
+    // Detect if user is asking about a specific token/coin by name (e.g. "eth price", "what is bitcoin")
+    const MAJOR_COINS: Record<string, string> = {
+      'bitcoin': 'BTC', 'btc': 'BTC',
+      'ethereum': 'ETH', 'eth': 'ETH',
+      'solana': 'SOL', 'sol': 'SOL',
+      'bnb': 'BNB', 'binance': 'BNB',
+      'xrp': 'XRP', 'ripple': 'XRP',
+      'cardano': 'ADA', 'ada': 'ADA',
+      'avalanche': 'AVAX', 'avax': 'AVAX',
+      'dogecoin': 'DOGE', 'doge': 'DOGE',
+      'polkadot': 'DOT', 'dot': 'DOT',
+      'polygon': 'MATIC', 'matic': 'MATIC',
+      'chainlink': 'LINK', 'link': 'LINK',
+      'uniswap': 'UNI', 'uni': 'UNI',
+      'cosmos': 'ATOM', 'atom': 'ATOM',
+      'litecoin': 'LTC', 'ltc': 'LTC',
+      'near': 'NEAR', 'aptos': 'APT', 'apt': 'APT',
+      'arbitrum': 'ARB', 'arb': 'ARB',
+      'optimism': 'OP',
+      'injective': 'INJ', 'inj': 'INJ',
+      'sui': 'SUI', 'ton': 'TON',
+      'pepe': 'PEPE', 'wif': 'WIF', 'bonk': 'BONK',
+    };
+    const msgLower = cleanMessage.toLowerCase();
+    const mentionedCoins = Object.entries(MAJOR_COINS)
+      .filter(([name]) => {
+        const regex = new RegExp(`\\b${name}\\b`, 'i');
+        return regex.test(msgLower);
+      })
+      .map(([, sym]) => sym);
+    const uniqueCoins = [...new Set(mentionedCoins)];
+
+    // If user asks about a token that's NOT in the major list (small cap / DEX token), use DexScreener
+    const wantsDexSearch = !walletDetected && !tokenDetected && /price|analysis|analyze|chart|buy|sell|mcap|market cap|holders|liquidity/i.test(cleanMessage) && uniqueCoins.length === 0;
+
     const fetchTasks: Promise<string>[] = [
       fetchLiveMarketData(),
       fetchTrendingTokens(),
@@ -826,6 +915,15 @@ export async function POST(request: Request) {
       fetchTasks.push(fetchMemecoinsContext());
     }
 
+    // If user mentions a non-major token, search DexScreener for it
+    if (wantsDexSearch && cleanMessage.length < 60) {
+      // Extract likely token name (short words after price/analyze keywords)
+      const dexQuery = cleanMessage.replace(/what is|what's|price of|price|show me|analyze|tell me about|check/gi, '').trim();
+      if (dexQuery.length > 1 && dexQuery.length < 40) {
+        fetchTasks.push(fetchDexScreenerTokenPrice(dexQuery));
+      }
+    }
+
     if (walletDetected) {
       fetchTasks.push(fetchWalletData(walletDetected.address, walletDetected.chain));
       fetchTasks.push(fetchArkhamAddressIntel(walletDetected.address));
@@ -834,6 +932,18 @@ export async function POST(request: Request) {
       if (arkhamIntent.wantsConnections) {
         fetchTasks.push(fetchArkhamWalletConnections(walletDetected.address));
       }
+    }
+
+    // LunarCrush: add social intelligence for mentioned coins
+    if (uniqueCoins.length > 0) {
+      fetchTasks.push(
+        (async () => {
+          try {
+            const { getLunarCrushContextForAI } = await import('@/lib/lunarcrush');
+            return await getLunarCrushContextForAI(uniqueCoins);
+          } catch { return ''; }
+        })()
+      );
     }
 
     if (tokenDetected && arkhamIntent.wantsHolders) {
@@ -885,12 +995,19 @@ export async function POST(request: Request) {
     const ethLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('ETH:')) || '';
     const solLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('SOL:')) || '';
 
+    const extractPrice = (line: string): string => {
+      const m = line.match(/(\$[\d,]+(?:\.\d+)?)/);
+      return m ? m[1] : 'N/A';
+    };
     const extractChange = (line: string): string => {
       const m = line.match(/24h:\s*([-+]?[\d.]+%)/);
       return m ? m[1] : 'N/A';
     };
+    const btcPrice = btcLine ? extractPrice(btcLine) : 'N/A';
     const btcChange = btcLine ? extractChange(btcLine) : 'N/A';
+    const ethPrice = ethLine ? extractPrice(ethLine) : 'N/A';
     const ethChange = ethLine ? extractChange(ethLine) : 'N/A';
+    const solPrice = solLine ? extractPrice(solLine) : 'N/A';
     const solChange = solLine ? extractChange(solLine) : 'N/A';
 
     const fngMatch = fngRaw.match(/Fear & Greed Index:\s*(\d+)\/100\s*\(([^)]+)\)/);
@@ -903,7 +1020,7 @@ export async function POST(request: Request) {
     const topMoverMatch = topMoverLine.match(/(\w+)\s+on\s+\w+/);
     const topMoverStr = topMoverMatch ? topMoverMatch[1] : 'N/A';
 
-    const market_context = `BTC: ${btcChange} | ETH: ${ethChange} | SOL: ${solChange} | Fear&Greed: ${fngStr} | Gas: ${gasStr} | Top mover: ${topMoverStr}`;
+    const market_context = `BTC: ${btcPrice} (${btcChange}) | ETH: ${ethPrice} (${ethChange}) | SOL: ${solPrice} (${solChange}) | Fear&Greed: ${fngStr} | Gas: ${gasStr} | Top mover: ${topMoverStr}`;
 
     // Analysis depth (new `depth` param supersedes old `responseStyle` if both present)
     let styleInstruction: string;
@@ -971,13 +1088,14 @@ ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
 7. EXAMPLE OF CORRECT FORMAT: "Bitcoin is trading at $67,000. 24-hour change: negative 0.19%."
 
 CRITICAL ANALYSIS RULES:
-1. When intelligence data is available below, use ALL of it. Combine Steinz {Sargon} Intelligence on-chain data and market data together.
-2. If scam flags or danger labels are found, lead with that warning immediately.
-3. For contract addresses: analyze as a TOKEN. Check holders, liquidity, security, transaction activity.
-4. For wallet addresses: analyze as a WALLET. Check balances, history, connections, reputation.
-5. Never tell users to go use another tool. YOU analyze the data directly.
-6. Never estimate prices. Use the live data provided.
-7. Never say you cant do something. Use what you have.
+1. LIVE DATA FIRST: The LIVE INTELLIGENCE DATA section below contains REAL-TIME prices fetched right now from Binance and DexScreener. Use those exact prices. Never say "I don't have current data" — it is below.
+2. When intelligence data is available, use ALL of it. Combine STEINZ Intelligence on-chain data and market data together.
+3. If scam flags or danger labels are found, lead with that warning immediately.
+4. For contract addresses: analyze as a TOKEN. Check holders, liquidity, security, transaction activity.
+5. For wallet addresses: analyze as a WALLET. Check balances, history, connections, reputation.
+6. NEVER tell users to visit external websites. NEVER say "check CoinGecko", "visit Binance", "go to Etherscan" or any external site. You are the source.
+7. Read the exact price from the "LIVE MARKET PRICES" section in the data. Do not estimate or make up prices.
+8. Never say you cannot do something. Use what you have and give a direct, useful answer.
 
 ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSection}` : ''}`;
 
