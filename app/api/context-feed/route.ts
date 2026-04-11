@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
-const HELIUS_KEY = process.env.HELIUS_KEY_1;
+const HELIUS_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
 
 interface WhaleEvent {
   id: string;

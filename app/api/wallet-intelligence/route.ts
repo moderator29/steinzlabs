@@ -256,7 +256,7 @@ const EVM_CHAINS: Record<string, EvmChainConfig> = {
 };
 
 // Use Helius RPC if key available — much richer data + better rate limits than public RPC
-const HELIUS_KEY = process.env.HELIUS_API_KEY || process.env.HELIUS_KEY_1 || '';
+const HELIUS_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2 || '';
 const SOLANA_RPC = HELIUS_KEY
   ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`
   : 'https://api.mainnet-beta.solana.com';

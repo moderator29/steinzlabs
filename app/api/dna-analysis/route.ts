@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 const _anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY;
 const anthropic = _anthropicKey ? new Anthropic({ apiKey: _anthropicKey }) : null;
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2 || '';
 
 const SOLANA_RPC = HELIUS_API_KEY
   ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
