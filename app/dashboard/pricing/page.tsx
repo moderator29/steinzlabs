@@ -18,7 +18,7 @@ export default function PricingPage() {
         'Context Feed (live signals)',
         'Basic swap trading',
         '1 wallet',
-        'VTX Agent (15 msgs/day)',
+        'VTX Agent (25 msgs/day)',
         '3 active alerts',
         'Security scanner',
       ],
