@@ -343,6 +343,7 @@ export default function ProfileTab() {
   const [editUsername, setEditUsername] = useState('');
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
+  const [editBio, setEditBio] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
@@ -390,6 +391,7 @@ export default function ProfileTab() {
       setEditUsername(user.username || '');
       setEditFirstName(user.first_name || '');
       setEditLastName(user.last_name || '');
+      setEditBio((user as any).bio || '');
     }
   }, [user]);
 
@@ -457,6 +459,7 @@ export default function ProfileTab() {
           username: editUsername.trim(),
           first_name: editFirstName.trim(),
           last_name: editLastName.trim(),
+          bio: editBio.trim().slice(0, 160),
         })
         .eq('id', user.id);
       if (error) throw error;
@@ -744,7 +747,7 @@ export default function ProfileTab() {
               className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
             />
           </div>
-          <div className="px-3 py-3">
+          <div className="px-3 py-3 border-b border-white/5">
             <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Last Name</label>
             <input
               type="text"
@@ -753,6 +756,17 @@ export default function ProfileTab() {
               placeholder="Last name"
               className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
             />
+          </div>
+          <div className="px-3 py-3">
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Bio</label>
+            <textarea
+              value={editBio}
+              onChange={(e) => setEditBio(e.target.value)}
+              placeholder="Tell the world about yourself..."
+              rows={3}
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white resize-none"
+            />
+            <p className="text-[9px] text-gray-600 mt-1">Max 160 characters</p>
           </div>
         </div>
 
@@ -1263,6 +1277,35 @@ export default function ProfileTab() {
           </div>
         </div>
       )}
+
+      {/* Subscription / Plan */}
+      <SectionLabel>Plan</SectionLabel>
+      <div className="glass rounded-lg border border-white/10 mb-4 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <Crown className="w-4 h-4 text-[#FFD700]" />
+            <div>
+              <div className="text-sm font-semibold">Current Plan</div>
+              <div className="text-[10px] text-gray-500">Free Tier · 25 messages/day</div>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard/pricing')}
+            className="px-3 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/30 rounded-lg text-[10px] font-bold text-[#0A1EFF] hover:opacity-80 transition-opacity"
+          >
+            Upgrade
+          </button>
+        </div>
+        <div className="px-3 py-3">
+          <div className="text-[10px] text-gray-500 mb-2">What you get with STEINZ Pro:</div>
+          {['Unlimited VTX AI messages', 'Priority market data', 'Advanced DNA analysis', 'Early feature access'].map(f => (
+            <div key={f} className="flex items-center gap-2 mb-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#0A1EFF] flex-shrink-0" />
+              <span className="text-[11px] text-gray-300">{f}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <SectionLabel>Quick Actions</SectionLabel>
       <ProfileRow icon={PieChart} label="Portfolio" sub="View your holdings & P&L" onClick={() => router.push('/dashboard/portfolio')} />

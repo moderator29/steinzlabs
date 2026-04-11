@@ -116,24 +116,31 @@ export async function POST(request: Request) {
     }
     messages.push({ role: 'user', content: message });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
-        system: SUPPORT_SYSTEM_PROMPT,
-        messages,
-      }),
-    });
+    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    let response: Response | null = null;
+    let lastError = '';
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    for (const model of MODELS) {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 500,
+          system: SUPPORT_SYSTEM_PROMPT,
+          messages,
+        }),
+      });
+      if (response.ok) break;
+      lastError = await response.text();
+      console.error(`Customer service model ${model} failed (${response.status}):`, lastError);
+    }
 
+    if (!response || !response.ok) {
       return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 502 });
     }
 
