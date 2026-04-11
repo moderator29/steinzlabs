@@ -1,10 +1,22 @@
 'use client';
 
-import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, Users, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, Users, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 type TabMode = 'wallet' | 'contract';
+
+interface RecentTx {
+  hash: string;
+  blockTime: string | null;
+  status: 'success' | 'failed';
+  type?: string;
+  asset?: string;
+  value?: number;
+  from?: string;
+  to?: string;
+  memo?: string;
+}
 
 interface WalletData {
   chain: string;
@@ -17,6 +29,7 @@ interface WalletData {
     balance: string;
     valueUsd: string | null;
     contractAddress: string | null;
+    logoUrl?: string | null;
   }[];
   tokenCount: number;
   ethBalance?: string;
@@ -26,18 +39,193 @@ interface WalletData {
   nativeBalance?: string;
   nativeValueUsd?: string;
   explorerUrl?: string;
+  recentTransactions?: RecentTx[];
+}
+
+// ─── Portfolio Bubble Map ──────────────────────────────────────────────────────
+const BUBBLE_COLORS = ['#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#0A1EFF', '#06B6D4', '#8B5CF6', '#F97316', '#EC4899', '#14B8A6'];
+
+function PortfolioBubbleMap({ holdings, totalUsd }: { holdings: WalletData['holdings']; totalUsd: number }) {
+  const withValue = holdings.filter(h => h.valueUsd && parseFloat(h.valueUsd) > 0).slice(0, 8);
+  if (withValue.length === 0) return null;
+  const total = totalUsd > 0 ? totalUsd : withValue.reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
+  const sorted = [...withValue].sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+  const withPct = sorted.map(h => ({ ...h, pct: total > 0 ? parseFloat(h.valueUsd || '0') / total : 1 / withValue.length }));
+  const W = 340, H = 220, MAX_R = 90, MIN_R = 22;
+  const POSITIONS = [
+    { cx: W * 0.5, cy: H * 0.48 },
+    { cx: W * 0.77, cy: H * 0.35 },
+    { cx: W * 0.22, cy: H * 0.55 },
+    { cx: W * 0.72, cy: H * 0.72 },
+    { cx: W * 0.18, cy: H * 0.28 },
+    { cx: W * 0.52, cy: H * 0.14 },
+    { cx: W * 0.85, cy: H * 0.6 },
+    { cx: W * 0.38, cy: H * 0.82 },
+  ];
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#0A1EFF]" />
+          <h3 className="font-bold text-sm">Portfolio Bubble Map</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">{withValue.length} tokens</span>
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+        {withPct.map((h, i) => {
+          const r = Math.max(MIN_R, Math.round(MAX_R * Math.sqrt(h.pct)));
+          const pos = POSITIONS[i] || { cx: W / 2, cy: H / 2 };
+          const color = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
+          const fsLabel = Math.max(8, Math.min(14, r * 0.32));
+          const fsPct = Math.max(7, Math.min(12, r * 0.26));
+          return (
+            <g key={h.symbol + i}>
+              <circle cx={pos.cx} cy={pos.cy} r={r} fill={`${color}28`} stroke={color} strokeWidth="1.5" />
+              <text x={pos.cx} y={pos.cy - 5} textAnchor="middle" fill="white" fontSize={fsLabel} fontWeight="bold" fontFamily="system-ui">
+                {h.symbol.length > 5 ? h.symbol.slice(0, 5) : h.symbol}
+              </text>
+              <text x={pos.cx} y={pos.cy + fsPct + 2} textAnchor="middle" fill={color} fontSize={fsPct} fontFamily="system-ui">
+                {(h.pct * 100).toFixed(1)}%
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+        {withPct.map((h, i) => (
+          <div key={h.symbol + i} className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: BUBBLE_COLORS[i % BUBBLE_COLORS.length] }} />
+            <span className="text-[10px] font-semibold text-gray-300">{h.symbol}</span>
+            <span className="text-[10px] text-gray-500">${parseFloat(h.valueUsd || '0').toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span className="text-[10px] text-gray-600">{(h.pct * 100).toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Recent Transactions ───────────────────────────────────────────────────────
+function RecentTransactions({ transactions, chain, walletAddress }: { transactions: RecentTx[]; chain: string; walletAddress: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? transactions : transactions.slice(0, 8);
+  const explorerBase = chain === 'Solana' ? 'https://solscan.io/tx/' : 'https://etherscan.io/tx/';
+
+  function formatTime(blockTime: string | null) {
+    if (!blockTime) return '—';
+    const d = new Date(blockTime);
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
+  function txIcon(type: string | undefined) {
+    if (type === 'send') return <Send className="w-3 h-3 text-[#EF4444]" />;
+    if (type === 'receive') return <ArrowDownLeft className="w-3 h-3 text-[#10B981]" />;
+    return <RefreshCw className="w-3 h-3 text-[#0A1EFF]" />;
+  }
+
+  function txColor(type: string | undefined) {
+    if (type === 'send') return '#EF4444';
+    if (type === 'receive') return '#10B981';
+    return '#0A1EFF';
+  }
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-[#7C3AED]" />
+          <h3 className="font-bold text-sm">Recent Transactions</h3>
+          <span className="text-[10px] text-gray-500">(last {transactions.length})</span>
+        </div>
+      </div>
+      {transactions.length === 0 ? (
+        <p className="text-xs text-gray-500 text-center py-4">No recent transactions found</p>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            {shown.map((tx, i) => (
+              <div key={tx.hash + i} className="flex items-center gap-2 py-2 border-b border-[#1a1f2e]/50 last:border-0">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${txColor(tx.type)}15` }}>
+                  {txIcon(tx.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold capitalize" style={{ color: txColor(tx.type) }}>
+                      {tx.type || 'tx'}
+                    </span>
+                    {tx.asset && <span className="text-[10px] text-gray-400">{tx.asset}</span>}
+                    {tx.value != null && tx.value > 0 && (
+                      <span className="text-[10px] font-mono text-gray-300">
+                        {tx.value < 0.001 ? tx.value.toFixed(6) : tx.value.toFixed(4)}
+                      </span>
+                    )}
+                    {tx.memo && <span className="text-[9px] text-gray-600 italic truncate">{tx.memo.slice(0, 20)}</span>}
+                  </div>
+                  <div className="text-[9px] font-mono text-gray-600">{tx.hash.slice(0, 12)}...{tx.hash.slice(-6)}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-[9px] text-gray-500">{formatTime(tx.blockTime)}</div>
+                  <div className="flex items-center justify-end gap-1 mt-0.5">
+                    <span className={`text-[9px] font-semibold ${tx.status === 'failed' ? 'text-red-400' : 'text-green-400'}`}>
+                      {tx.status === 'failed' ? '✗' : '✓'}
+                    </span>
+                    <a href={`${explorerBase}${tx.hash}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-2.5 h-2.5 text-gray-600 hover:text-[#0A1EFF]" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {transactions.length > 8 && (
+            <button onClick={() => setExpanded(e => !e)}
+              className="w-full mt-2 py-2 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
+              {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show all {transactions.length} transactions</>}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 interface AiAnalysis {
   tradingStyle: string;
   riskProfile: string;
   overallScore: number;
-  strengths: string[];
-  weaknesses: string[];
-  recommendations: string[];
   portfolioGrade: string;
   topInsight: string;
   marketOutlook: string;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  personalityTraits?: string[];
+  metrics?: {
+    diversification: number;
+    timing: number;
+    riskManagement: number;
+    consistency: number;
+    conviction: number;
+  };
+  riskAssessment?: {
+    riskLevel: string;
+    riskScore: number;
+    summary: string;
+    keyRisks: string[];
+  };
+  activityPattern?: {
+    classification: string;
+    summary: string;
+    estimatedFrequency: string;
+    primaryChains: string[];
+  };
+  notableBehaviors?: Array<{ behavior: string; detail: string }>;
 }
 
 interface ContractResult {
@@ -149,6 +337,7 @@ export default function WalletIntelligencePage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
   const [contractInput, setContractInput] = useState('');
   const [contractChain, setContractChain] = useState('ethereum');
   const [contractResult, setContractResult] = useState<ContractResult | null>(null);
@@ -211,6 +400,7 @@ export default function WalletIntelligencePage() {
             walletAddress: trimmed,
             holdings: data.holdings,
             totalBalance: data.totalBalanceUsd,
+            txCount: data.txCount,
           }),
         });
         const aiData = await aiRes.json();
@@ -446,152 +636,286 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
+                {/* Portfolio Bubble Map */}
+                <PortfolioBubbleMap holdings={walletData.holdings} totalUsd={totalUsd} />
+
+                {/* All Holdings */}
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
-                  <h3 className="font-bold text-sm mb-3">Top Holdings</h3>
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-sm">All Holdings</h3>
+                    <span className="text-[10px] text-gray-500">{walletData.holdings.length} tokens</span>
+                  </div>
+                  <div className="space-y-1.5">
                     {walletData.holdings.length === 0 ? (
                       <p className="text-xs text-gray-500 text-center py-4">No holdings found</p>
                     ) : (
-                      walletData.holdings.slice(0, 10).map((h, i) => (
-                        <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/50 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
-                              {h.symbol.charAt(0)}
+                      (showAllHoldings ? walletData.holdings : walletData.holdings.slice(0, 10)).map((h, i) => {
+                        const val = h.valueUsd ? parseFloat(h.valueUsd) : 0;
+                        const pct = totalUsd > 0 && val > 0 ? (val / totalUsd * 100) : 0;
+                        return (
+                          <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/40 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-gray-600 w-4 text-right">{i + 1}</span>
+                              {h.logoUrl ? (
+                                <img src={h.logoUrl} alt={h.symbol} className="w-7 h-7 rounded-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              ) : (
+                                <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                                  {h.symbol.charAt(0)}
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-xs font-semibold">{h.symbol}</div>
+                                <div className="text-[10px] text-gray-500 truncate max-w-[100px]">{h.name}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-xs font-semibold">{h.symbol}</div>
-                              <div className="text-[10px] text-gray-500">{h.name}</div>
+                            <div className="flex items-center gap-3">
+                              {pct > 0 && (
+                                <div className="hidden sm:flex items-center gap-1.5 w-20">
+                                  <div className="flex-1 bg-white/5 rounded-full h-1">
+                                    <div className="h-1 rounded-full bg-[#0A1EFF]" style={{ width: `${Math.min(100, pct)}%` }} />
+                                  </div>
+                                  <span className="text-[9px] text-gray-600 w-8 text-right">{pct.toFixed(1)}%</span>
+                                </div>
+                              )}
+                              <div className="text-right">
+                                <div className="text-xs font-semibold">
+                                  {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
+                                </div>
+                                <div className="text-[10px] text-gray-500">{parseFloat(h.balance) > 1000 ? parseFloat(h.balance).toLocaleString(undefined, { maximumFractionDigits: 0 }) : h.balance} {h.symbol}</div>
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-xs font-semibold">
-                              {h.valueUsd ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : h.balance}
-                            </div>
-                            <div className="text-[10px] text-gray-500">{h.balance} {h.symbol}</div>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
-                </div>
-
-                <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
-                      <PieChart className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                    </div>
-                    <h3 className="font-bold text-sm">Portfolio Breakdown</h3>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    {[
-                      { label: 'Token Types', value: `${walletData.holdings.length}`, color: '#0A1EFF' },
-                      { label: 'Largest Hold', value: walletData.holdings[0]?.symbol || '—', color: '#7C3AED' },
-                      { label: 'Diversity', value: walletData.holdings.length > 5 ? 'HIGH' : walletData.holdings.length > 2 ? 'MODERATE' : 'LOW', color: walletData.holdings.length > 5 ? '#10B981' : walletData.holdings.length > 2 ? '#F59E0B' : '#EF4444' },
-                    ].map((stat) => (
-                      <div key={stat.label} className="bg-[#0f1320] rounded-lg p-2.5 text-center">
-                        <div className="text-[9px] text-gray-500 mb-0.5">{stat.label}</div>
-                        <div className="text-xs font-bold" style={{ color: stat.color }}>{stat.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="space-y-1.5">
-                    {walletData.holdings.slice(0, 5).map((h, i) => {
-                      const holdingVal = h.valueUsd ? parseFloat(h.valueUsd) : 0;
-                      const pct = totalUsd > 0 && holdingVal > 0 ? Math.max(3, Math.round((holdingVal / totalUsd) * 100)) : Math.max(3, Math.round(100 / walletData!.holdings.length));
-                      return (
-                        <div key={`portfolio-${i}`} className="flex items-center gap-2">
-                          <span className="text-[9px] text-gray-500 w-4 text-right">{i + 1}</span>
-                          <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
-                            <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: i === 0 ? '#0A1EFF' : i === 1 ? '#7C3AED' : i === 2 ? '#10B981' : '#F59E0B' }} />
-                          </div>
-                          <span className="text-[9px] font-semibold text-gray-400 w-12 text-right">{h.symbol}</span>
-                          <span className="text-[9px] font-mono text-gray-500 w-8 text-right">{pct}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
-                  <h3 className="font-bold text-sm mb-3">AI Wallet Assessment</h3>
-                  {aiLoading ? (
-                    <div className="flex items-center gap-3 py-4">
-                      <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
-                      <span className="text-xs text-gray-400">Running AI analysis...</span>
-                    </div>
-                  ) : aiAnalysis ? (
-                    <>
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="text-2xl font-bold" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
-                        <div className="flex-1">
-                          <div className="w-full bg-white/10 rounded-full h-2">
-                            <div className="h-2 rounded-full" style={{ width: `${aiAnalysis.overallScore}%`, backgroundColor: scoreColor(aiAnalysis.overallScore) }}></div>
-                          </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${scoreColor(aiAnalysis.overallScore)}20`, color: scoreColor(aiAnalysis.overallScore) }}>
-                          {scoreLabel(aiAnalysis.overallScore)}
-                        </span>
-                      </div>
-                      {/* Wallet Type Classification */}
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl mb-3 border" style={{ backgroundColor: `${walletClassification.color}08`, borderColor: `${walletClassification.color}25` }}>
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${walletClassification.color}20` }}>
-                          <Users className="w-3.5 h-3.5" style={{ color: walletClassification.color }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-gray-500">Wallet Classification</div>
-                          <div className="text-sm font-bold" style={{ color: walletClassification.color }}>{walletClassification.type}</div>
-                        </div>
-                        <div className="text-[9px] text-gray-500 text-right max-w-[100px] leading-tight">{walletClassification.desc}</div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        <div className="bg-[#0f1320] rounded-lg p-2">
-                          <span className="text-[10px] text-gray-500">Style</span>
-                          <div className="text-xs font-semibold">{aiAnalysis.tradingStyle}</div>
-                        </div>
-                        <div className="bg-[#0f1320] rounded-lg p-2">
-                          <span className="text-[10px] text-gray-500">Risk</span>
-                          <div className="text-xs font-semibold">{aiAnalysis.riskProfile}</div>
-                        </div>
-                        <div className="bg-[#0f1320] rounded-lg p-2">
-                          <span className="text-[10px] text-gray-500">Grade</span>
-                          <div className="text-xs font-semibold">{aiAnalysis.portfolioGrade}</div>
-                        </div>
-                        <div className="bg-[#0f1320] rounded-lg p-2">
-                          <span className="text-[10px] text-gray-500">Outlook</span>
-                          <div className="text-[10px] font-semibold leading-tight">{aiAnalysis.marketOutlook?.slice(0, 60)}...</div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400 leading-relaxed mb-2">{aiAnalysis.topInsight}</p>
-                      {aiAnalysis.strengths && aiAnalysis.strengths.length > 0 && (
-                        <div className="mb-2">
-                          <span className="text-[10px] text-[#10B981] font-semibold">Strengths:</span>
-                          <ul className="mt-1 space-y-0.5">
-                            {aiAnalysis.strengths.map((s, i) => (
-                              <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1.5">
-                                <span className="text-[#10B981] mt-px">•</span> {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                        <div>
-                          <span className="text-[10px] text-[#0A1EFF] font-semibold">Recommendations:</span>
-                          <ul className="mt-1 space-y-0.5">
-                            {aiAnalysis.recommendations.map((r, i) => (
-                              <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1.5">
-                                <span className="text-[#0A1EFF] mt-px">•</span> {r}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-xs text-gray-500">AI analysis unavailable. Wallet data is shown above.</p>
+                  {walletData.holdings.length > 10 && (
+                    <button onClick={() => setShowAllHoldings(v => !v)}
+                      className="w-full mt-2 py-2 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
+                      {showAllHoldings ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show all {walletData.holdings.length} holdings</>}
+                    </button>
                   )}
                 </div>
+
+                {/* ─── Full DNA-Level AI Analysis ─── */}
+                {aiLoading && (
+                  <div className="bg-[#0f1320] rounded-2xl p-6 border border-[#1a1f2e] flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">Running AI Analysis...</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">Analyzing portfolio patterns and risk</div>
+                    </div>
+                  </div>
+                )}
+                {!aiLoading && aiAnalysis && (
+                  <>
+                    {/* Score + Grade */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] text-center">
+                        <div className="text-4xl font-black mb-1" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-widest">Overall Score</div>
+                      </div>
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] text-center">
+                        <div className="text-4xl font-black mb-1 text-[#F59E0B]">{aiAnalysis.portfolioGrade}</div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-widest">Portfolio Grade</div>
+                      </div>
+                    </div>
+
+                    {/* Trading Style + Classification */}
+                    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${walletClassification.color}20` }}>
+                          <Brain className="w-5 h-5" style={{ color: walletClassification.color }} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold">{aiAnalysis.tradingStyle}</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: aiAnalysis.riskProfile?.toLowerCase().includes('ultra') ? '#EF4444' : aiAnalysis.riskProfile?.toLowerCase().includes('aggress') ? '#F59E0B' : '#10B981' }}>
+                              {aiAnalysis.riskProfile}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">{walletClassification.type} · {walletClassification.desc}</div>
+                        </div>
+                      </div>
+                      {aiAnalysis.personalityTraits && aiAnalysis.personalityTraits.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiAnalysis.personalityTraits.map((t, i) => (
+                            <span key={i} className="px-2 py-1 rounded-lg text-[10px] text-gray-300" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Performance Metrics Bars */}
+                    {aiAnalysis.metrics && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <PieChart className="w-4 h-4 text-[#0A1EFF]" />
+                          <h3 className="font-bold text-sm">Performance Metrics</h3>
+                        </div>
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: aiAnalysis.metrics.diversification >= 60 ? '#10B981' : aiAnalysis.metrics.diversification >= 35 ? '#0A1EFF' : '#EF4444' },
+                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: aiAnalysis.metrics.timing >= 60 ? '#0A1EFF' : '#F59E0B' },
+                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: aiAnalysis.metrics.riskManagement >= 60 ? '#10B981' : '#EF4444' },
+                            { label: 'Conviction', value: aiAnalysis.metrics.conviction, color: '#10B981' },
+                            { label: 'Consistency', value: aiAnalysis.metrics.consistency, color: '#7C3AED' },
+                          ].map(m => (
+                            <div key={m.label}>
+                              <div className="flex justify-between text-[10px] mb-1">
+                                <span className="text-gray-400">{m.label}</span>
+                                <span className="font-bold" style={{ color: m.color }}>{m.value}</span>
+                              </div>
+                              <div className="w-full bg-white/5 rounded-full h-1.5">
+                                <div className="h-1.5 rounded-full transition-all" style={{ width: `${m.value}%`, backgroundColor: m.color }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Key Insight */}
+                    {aiAnalysis.topInsight && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Zap className="w-4 h-4 text-[#0A1EFF]" />
+                          <h3 className="font-bold text-sm">Key Insight</h3>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-relaxed">{aiAnalysis.topInsight}</p>
+                      </div>
+                    )}
+
+                    {/* Strengths & Weaknesses */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {aiAnalysis.strengths && aiAnalysis.strengths.length > 0 && (
+                        <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#10B981]/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle className="w-4 h-4 text-[#10B981]" />
+                            <span className="text-sm font-bold text-[#10B981]">Strengths</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {aiAnalysis.strengths.map((s, i) => (
+                              <li key={i} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+                                <span className="text-[#10B981] mt-0.5 font-bold flex-shrink-0">+</span> {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiAnalysis.weaknesses && aiAnalysis.weaknesses.length > 0 && (
+                        <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#F59E0B]/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+                            <span className="text-sm font-bold text-[#F59E0B]">Weaknesses</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {aiAnalysis.weaknesses.map((w, i) => (
+                              <li key={i} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+                                <span className="text-[#F59E0B] mt-0.5 font-bold flex-shrink-0">!</span> {w}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI Recommendations */}
+                    {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
+                          <h3 className="font-bold text-sm">AI Recommendations</h3>
+                        </div>
+                        <div className="space-y-2">
+                          {aiAnalysis.recommendations.map((r, i) => (
+                            <div key={i} className="flex items-start gap-3 py-2 border-b border-[#1a1f2e]/50 last:border-0">
+                              <div className="w-5 h-5 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-[9px] font-bold text-[#7C3AED]">{i + 1}</span>
+                              </div>
+                              <p className="text-xs text-gray-300 leading-relaxed">{r}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Risk Assessment */}
+                    {aiAnalysis.riskAssessment && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-[#EF4444]" />
+                            <h3 className="font-bold text-sm">Risk Assessment</h3>
+                          </div>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={{ backgroundColor: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? '#EF444420' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? '#F59E0B20' : '#10B98120', color: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? '#EF4444' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? '#F59E0B' : '#10B981' }}>
+                            {aiAnalysis.riskAssessment.riskLevel}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed mb-2">{aiAnalysis.riskAssessment.summary}</p>
+                        {aiAnalysis.riskAssessment.keyRisks && aiAnalysis.riskAssessment.keyRisks.length > 0 && (
+                          <ul className="space-y-1">
+                            {aiAnalysis.riskAssessment.keyRisks.map((risk, i) => (
+                              <li key={i} className="text-[10px] text-[#EF4444] flex items-start gap-1.5">
+                                <span className="mt-0.5 flex-shrink-0">▲</span> {risk}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Activity Pattern */}
+                    {aiAnalysis.activityPattern && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity className="w-4 h-4 text-[#0A1EFF]" />
+                          <h3 className="font-bold text-sm">Activity Pattern</h3>
+                          <span className="text-[10px] text-gray-500 ml-auto">{aiAnalysis.activityPattern.estimatedFrequency}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed">{aiAnalysis.activityPattern.summary}</p>
+                      </div>
+                    )}
+
+                    {/* Notable Behaviors */}
+                    {aiAnalysis.notableBehaviors && aiAnalysis.notableBehaviors.length > 0 && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Brain className="w-4 h-4 text-[#7C3AED]" />
+                          <h3 className="font-bold text-sm">Notable Behaviors</h3>
+                        </div>
+                        <div className="space-y-3">
+                          {aiAnalysis.notableBehaviors.map((b, i) => (
+                            <div key={i} className="border-b border-[#1a1f2e]/50 last:border-0 pb-2 last:pb-0">
+                              <div className="text-xs font-semibold text-white mb-1">{b.behavior}</div>
+                              <p className="text-[10px] text-gray-500 leading-relaxed">{b.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Market Outlook */}
+                    {aiAnalysis.marketOutlook && (
+                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="w-4 h-4 text-[#10B981]" />
+                          <h3 className="font-bold text-sm">Market Outlook</h3>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed">{aiAnalysis.marketOutlook}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Recent Transactions */}
+                {walletData.recentTransactions && walletData.recentTransactions.length > 0 && (
+                  <RecentTransactions
+                    transactions={walletData.recentTransactions}
+                    chain={walletData.chain}
+                    walletAddress={walletData.address}
+                  />
+                )}
               </>
             )}
 

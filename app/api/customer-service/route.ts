@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
