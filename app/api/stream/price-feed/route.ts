@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { getDexPrice } from '@/lib/services/dexscreener';
