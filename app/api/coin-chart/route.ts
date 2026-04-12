@@ -48,13 +48,21 @@ function daysForTimeframe(tf: string): string {
   }
 }
 
+// ── Timeout-safe fetch ────────────────────────────────────────────────────────
+function fetchWithTimeout(url: string, opts: RequestInit & { next?: any } = {}, ms = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 // Fetch chart data from Binance Klines (primary — free, no key, real-time)
 async function fetchBinanceChart(symbol: string, tf: string): Promise<[number, number][] | null> {
   const klineConfig = BINANCE_KLINES[tf] || BINANCE_KLINES['1D'];
   const binanceSymbol = `${symbol.toUpperCase()}USDT`;
   try {
     const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${klineConfig.interval}&limit=${klineConfig.limit}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5000);
     if (!res.ok) return null;
     const klines: any[][] = await res.json();
     if (!Array.isArray(klines) || klines.length === 0) return null;
@@ -70,9 +78,9 @@ async function fetchBinanceChart(symbol: string, tf: string): Promise<[number, n
 async function fetchDexScreenerChart(tokenAddress: string, tf: string): Promise<[number, number][] | null> {
   try {
     // Search by contract address
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`, {
+    const res = await fetchWithTimeout(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`, {
       cache: 'no-store',
-    });
+    }, 5000);
     if (!res.ok) return null;
     const data = await res.json();
     const pairs = data.pairs;
@@ -139,12 +147,12 @@ async function fetchCoinGeckoChart(coinId: string, tf: string): Promise<[number,
   const days = daysForTimeframe(tf);
   try {
     const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart?vs_currency=usd&days=${days}`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: process.env.COINGECKO_API_KEY
         ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
         : {},
       cache: 'no-store',
-    });
+    }, 5000);
     if (!res.ok) return null;
     const data = await res.json();
     return data.prices || null;

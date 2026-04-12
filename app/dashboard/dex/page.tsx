@@ -128,7 +128,7 @@ function PriceDisplay({ price }: { price?: number }) {
 
 function CoinLogo({ token, size = 40 }: { token: DexToken; size?: number }) {
   const [err, setErr] = useState(false);
-  const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#0A1EFF'];
+  const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#0A1EFF', '#3B82F6', '#3d57ff'];
   const color = COLORS[(token.symbol?.charCodeAt(0) || 65) % COLORS.length];
   const initials = (token.symbol || token.name || '?').slice(0, 2).toUpperCase();
 
@@ -175,9 +175,9 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
   );
 }
 
-// ─── Area Chart ───────────────────────────────────────────────────────────────
+// ─── DEX Candle Chart (GeckoTerminal OHLCV + lightweight-charts) ──────────────
 
-function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
+function DexCandleChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -189,37 +189,49 @@ function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
       const { createChart } = await import('lightweight-charts');
       if (destroyed || !containerRef.current) return;
 
-      const isGreen = (token.change24h ?? 0) >= 0;
-      const lineColor = isGreen ? '#0A1EFF' : '#EF4444';
-      const topColor = isGreen ? 'rgba(10,30,255,0.2)' : 'rgba(239,68,68,0.2)';
-      const bottomColor = 'rgba(0,0,0,0)';
-
       chartInstance = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
-        height: 220,
-        layout: { background: { color: 'transparent' }, textColor: '#6B7280' },
+        height: 240,
+        layout: { background: { color: '#0A0E1A' }, textColor: '#6B7280' },
         grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
-        rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
+        rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
         timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
         crosshair: { mode: 1 },
         handleScroll: false,
         handleScale: false,
       });
 
-      const series = chartInstance.addAreaSeries({ lineColor, topColor, bottomColor, lineWidth: 2 });
+      const candleSeries = chartInstance.addCandlestickSeries({
+        upColor: '#0A1EFF',
+        downColor: '#EF4444',
+        borderUpColor: '#0A1EFF',
+        borderDownColor: '#EF4444',
+        wickUpColor: '#0A1EFF',
+        wickDownColor: '#EF4444',
+      });
 
-      try {
-        const res = await fetch(`/api/coin-chart?id=${token.contractAddress}&tf=${tf}`);
-        if (res.ok) {
-          const raw: [number, number][] = await res.json();
-          if (raw && raw.length > 0) {
-            const data = raw
-              .map(([ts, price]) => ({ time: Math.floor(ts / 1000) as any, value: price }))
-              .sort((a: any, b: any) => a.time - b.time);
-            if (!destroyed) series.setData(data);
-          } else throw new Error('no data');
-        } else throw new Error('fetch failed');
-      } catch {
+      // Try GeckoTerminal real OHLCV if we have a pairAddress
+      let loaded = false;
+      if (token.pairAddress) {
+        try {
+          const res = await fetch(
+            `/api/dex-candles?chain=${token.chain}&pair=${token.pairAddress}&tf=${tf}`
+          );
+          if (res.ok) {
+            const { candles } = await res.json();
+            if (Array.isArray(candles) && candles.length > 0) {
+              const data = candles.map((c: any) => ({
+                time: c.time as any,
+                open: c.open, high: c.high, low: c.low, close: c.close,
+              }));
+              if (!destroyed) { candleSeries.setData(data); loaded = true; }
+            }
+          }
+        } catch { /* fall through to synthetic */ }
+      }
+
+      // Synthetic candlesticks when no real data
+      if (!loaded && !destroyed) {
         const now = Math.floor(Date.now() / 1000);
         const tfSeconds: Record<string, number> = {
           '1H': 3600, '6H': 21600, '1D': 86400,
@@ -227,19 +239,26 @@ function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
         };
         const duration = tfSeconds[tf] ?? 86400;
         const points = 60;
-        const currentPrice = token.price ?? 0;
-        const start = currentPrice * (1 - (token.change24h ?? 0) / 100);
-        const synth = Array.from({ length: points }, (_, i) => ({
-          time: (now - duration + Math.floor((duration / points) * i)) as any,
-          value: Math.max(0, start + (currentPrice - start) * (i / (points - 1)) + (Math.random() - 0.5) * currentPrice * 0.08),
-        }));
-        if (!destroyed) series.setData(synth);
+        const step = Math.floor(duration / points);
+        const currentPrice = token.price ?? 0.001;
+        let price = currentPrice * (1 - (token.change24h ?? 0) / 100);
+        const synth = Array.from({ length: points }, (_, i) => {
+          const open = price;
+          const change = (Math.random() - 0.48) * price * 0.03;
+          const close = Math.max(price * 0.01, price + change);
+          const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+          const low  = Math.min(open, close) * (1 - Math.random() * 0.01);
+          price = close;
+          return { time: (now - (points - i) * step) as any, open, high, low, close };
+        });
+        candleSeries.setData(synth);
       }
 
       if (!destroyed) chartInstance.timeScale().fitContent();
 
       const ro = new ResizeObserver(() => {
-        if (!destroyed && containerRef.current) chartInstance.applyOptions({ width: containerRef.current.clientWidth });
+        if (!destroyed && containerRef.current)
+          chartInstance.applyOptions({ width: containerRef.current.clientWidth });
       });
       if (containerRef.current) ro.observe(containerRef.current);
     }
@@ -251,7 +270,7 @@ function AreaChart({ token, tf }: { token: DexToken; tf: Timeframe }) {
     };
   }, [token, tf]);
 
-  return <div ref={containerRef} style={{ width: '100%', height: 220 }} />;
+  return <div ref={containerRef} style={{ width: '100%', height: 240 }} />;
 }
 
 // ─── Token Row ────────────────────────────────────────────────────────────────
@@ -310,10 +329,10 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
     <motion.div
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-      style={{ position: 'fixed', inset: 0, background: '#111111', zIndex: 50, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+      style={{ position: 'fixed', inset: 0, background: '#0A0E1A', zIndex: 50, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#111111', zIndex: 10, gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#0A0E1A', zIndex: 10, gap: 12 }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4, display: 'flex' }}>
           <ChevronLeft size={24} />
         </button>
@@ -338,15 +357,15 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
       </div>
 
       {/* Chart */}
-      <div style={{ background: '#111111' }}>
-        <AreaChart token={token} tf={tf} />
+      <div style={{ background: '#0A0E1A' }}>
+        <DexCandleChart token={token} tf={tf} />
       </div>
 
       {/* Timeframes */}
-      <div style={{ display: 'flex', gap: 4, padding: '8px 16px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div style={{ display: 'flex', gap: 3, padding: '6px 16px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {timeframes.map(t => (
           <button key={t} onClick={() => setTf(t)}
-            style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, border: '1px solid', cursor: 'pointer', whiteSpace: 'nowrap', background: tf === t ? 'rgba(255,255,255,0.14)' : 'transparent', borderColor: tf === t ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', color: tf === t ? '#fff' : '#9CA3AF' }}>
+            style={{ padding: '3px 9px', borderRadius: 4, fontSize: 11, fontWeight: 600, border: '1px solid', cursor: 'pointer', whiteSpace: 'nowrap', background: tf === t ? 'rgba(10,30,255,0.2)' : 'transparent', borderColor: tf === t ? '#0A1EFF' : 'rgba(255,255,255,0.1)', color: tf === t ? '#0A1EFF' : '#6B7280' }}>
             {t}
           </button>
         ))}
@@ -388,10 +407,10 @@ function DetailView({ token, onBack }: { token: DexToken; onBack: () => void }) 
       <div style={{ flex: 1, minHeight: 80 }} />
 
       {/* Sticky BUY button */}
-      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px 24px', background: 'linear-gradient(to top, #111111 80%, transparent)' }}>
+      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px 24px', background: 'linear-gradient(to top, #0A0E1A 80%, transparent)' }}>
         <button
           onClick={() => router.push(`/dashboard/swap?ca=${token.contractAddress}&chain=${token.chain}`)}
-          style={{ width: '100%', padding: '16px', borderRadius: 14, background: 'linear-gradient(135deg, #10B981, #059669)', border: 'none', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 0 18px rgba(16,185,129,0.4)', letterSpacing: '0.02em' }}
+          style={{ width: '100%', padding: '16px', borderRadius: 14, background: 'linear-gradient(135deg, #0A1EFF, #3d57ff)', border: 'none', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 0 18px rgba(10,30,255,0.45)', letterSpacing: '0.02em' }}
         >
           BUY {token.symbol}
         </button>
@@ -452,10 +471,10 @@ export default function DexPage() {
   };
 
   return (
-    <div style={{ background: '#111111', minHeight: '100vh', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', position: 'relative', overflowX: 'hidden' }}>
+    <div style={{ background: '#0A0E1A', minHeight: '100vh', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', position: 'relative', overflowX: 'hidden' }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#111111', zIndex: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#0A0E1A', zIndex: 20 }}>
         <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>DEX</span>
         <button onClick={() => fetchTokens(true)}
           style={{ position: 'absolute', right: 16, background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
