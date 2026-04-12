@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { getUserWallets } from '@/lib/services/supabase';
 import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
