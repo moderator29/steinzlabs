@@ -1,5 +1,6 @@
 class AnthropicAPI {
   private apiKey = process.env.ANTHROPIC_API_KEY!;
+  private timeout = parseInt(process.env.API_TIMEOUT_MS || '600000');
 
   async analyze(prompt: string): Promise<string> {
     try {
@@ -10,6 +11,7 @@ class AnthropicAPI {
           'x-api-key': this.apiKey,
           'anthropic-version': '2023-06-01',
         },
+        signal: AbortSignal.timeout(this.timeout),
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1000,
