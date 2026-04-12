@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Search, SlidersHorizontal, ChevronDown, ChevronRight, X, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { Star, Search, SlidersHorizontal, ChevronDown, X, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 import { useRouter } from 'next/navigation';
 
 // ─── Brand color ──────────────────────────────────────────────────────────────
@@ -88,64 +89,14 @@ function fmtMcap(n: number) {
   return n > 0 ? `$${n.toFixed(0)}` : '';
 }
 
-// ─── Candlestick + Volume Chart ───────────────────────────────────────────────
-const TF_CONFIG: Record<string, { interval: string; limit: number }> = {
-  '1H': { interval: '1m',  limit: 60  },
-  '1D': { interval: '15m', limit: 96  },
-  '1W': { interval: '1h',  limit: 168 },
-  '1M': { interval: '4h',  limit: 180 },
-  '1Y': { interval: '1d',  limit: 365 },
+// ─── TF → TradingView interval mapping ───────────────────────────────────────
+const TF_TO_TV_INTERVAL: Record<string, string> = {
+  '1H': '1',
+  '1D': '60',
+  '1W': 'D',
+  '1M': 'W',
+  '1Y': 'M',
 };
-
-function CandleChart({ symbol, tf }: { symbol: string; tf: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let chart: any;
-    let cancelled = false;
-
-    (async () => {
-      const { createChart } = await import('lightweight-charts');
-      if (cancelled || !ref.current) return;
-      chart = createChart(el, {
-        width: el.clientWidth, height: 280,
-        layout: { background: { color: 'transparent' }, textColor: '#6B7280' },
-        grid: { vertLines: { color: 'rgba(255,255,255,0.05)' }, horzLines: { color: 'rgba(255,255,255,0.05)' } },
-        rightPriceScale: { borderVisible: false },
-        timeScale: { borderVisible: false, timeVisible: true },
-        crosshair: { mode: 1 },
-        handleScale: false, handleScroll: false,
-      });
-      const candleSeries = chart.addCandlestickSeries({
-        upColor: '#3B82F6', downColor: '#EF4444',
-        borderUpColor: '#3B82F6', borderDownColor: '#EF4444',
-        wickUpColor: '#3B82F6', wickDownColor: '#EF4444',
-      });
-      const volSeries = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol' });
-      chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.75, bottom: 0 } });
-      try {
-        const cfg = TF_CONFIG[tf] || TF_CONFIG['1D'];
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${cfg.interval}&limit=${cfg.limit}`, { cache: 'no-store' });
-        if (res.ok) {
-          const klines: any[][] = await res.json();
-          if (!cancelled) {
-            candleSeries.setData(klines.map(k => ({ time: Math.floor(k[0] / 1000) as any, open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]) })));
-            volSeries.setData(klines.map(k => ({ time: Math.floor(k[0] / 1000) as any, value: parseFloat(k[5]), color: parseFloat(k[4]) >= parseFloat(k[1]) ? 'rgba(59,130,246,0.5)' : 'rgba(239,68,68,0.5)' })));
-            chart.timeScale().fitContent();
-          }
-        }
-      } catch {}
-      const ro = new ResizeObserver(() => { if (ref.current) chart.applyOptions({ width: ref.current.clientWidth }); });
-      ro.observe(el);
-    })();
-
-    return () => { cancelled = true; try { chart?.remove(); } catch {} };
-  }, [symbol, tf]);
-
-  return <div ref={ref} style={{ width: '100%' }} />;
-}
 
 // ─── Buy Modal ────────────────────────────────────────────────────────────────
 function BuyModal({ token, onClose }: { token: MarketToken; onClose: () => void }) {
@@ -170,13 +121,13 @@ function BuyModal({ token, onClose }: { token: MarketToken; onClose: () => void 
       onClick={onClose}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        style={{ background: '#0D0D14', borderRadius: '20px 20px 0 0', paddingBottom: 32, border: '1px solid rgba(16,185,129,0.2)', borderBottom: 'none' }}
+        style={{ background: '#0D1020', borderRadius: '20px 20px 0 0', paddingBottom: 32, border: `1px solid ${BLUE_DIM}`, borderBottom: 'none' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }} />
         </div>
         <div style={{ padding: '0 20px' }}>
-          <div style={{ color: '#10B981', fontWeight: 700, fontSize: 20, marginBottom: 20 }}>Buy {token.symbol}</div>
+          <div style={{ color: BLUE, fontWeight: 700, fontSize: 20, marginBottom: 20 }}>Buy {token.symbol}</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, position: 'relative' }}>
             <span style={{ fontSize: 48, fontWeight: 700, color: input === '0' ? '#444' : '#fff' }}>${input}</span>
             <button style={{ position: 'absolute', right: 0, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -185,7 +136,7 @@ function BuyModal({ token, onClose }: { token: MarketToken; onClose: () => void 
           </div>
           <div style={{ marginBottom: 6 }}>
             <input type="range" min={0} max={100} value={sliderVal} onChange={e => setSliderVal(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#10B981', cursor: 'pointer' }} />
+              style={{ width: '100%', accentColor: BLUE, cursor: 'pointer' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               {['0%','25%','50%','75%','MAX'].map(l => <span key={l} style={{ fontSize: 11, color: '#6B7280' }}>{l}</span>)}
             </div>
@@ -200,7 +151,7 @@ function BuyModal({ token, onClose }: { token: MarketToken; onClose: () => void 
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
-            <button onClick={goSwap} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', cursor: 'pointer', boxShadow: '0 0 18px rgba(16,185,129,0.4)' }}>
+            <button onClick={goSwap} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: `linear-gradient(135deg, ${BLUE}, #3d57ff)`, color: '#fff', cursor: 'pointer', boxShadow: BLUE_GLOW }}>
               Connect Wallet
             </button>
             <button style={{ width: 52, borderRadius: 14, border: '1.5px solid #EF4444', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -231,7 +182,7 @@ function SellModal({ token, onClose }: { token: MarketToken; onClose: () => void
       onClick={onClose}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        style={{ background: '#0D0D14', borderRadius: '20px 20px 0 0', paddingBottom: 32, border: '1px solid rgba(239,68,68,0.2)', borderBottom: 'none' }}
+        style={{ background: '#0D1020', borderRadius: '20px 20px 0 0', paddingBottom: 32, border: '1px solid rgba(239,68,68,0.2)', borderBottom: 'none' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }} />
@@ -264,8 +215,8 @@ function SellModal({ token, onClose }: { token: MarketToken; onClose: () => void
             <button onClick={onClose} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', cursor: 'pointer', boxShadow: '0 0 18px rgba(239,68,68,0.4)' }}>
               Connect Wallet to Sell
             </button>
-            <button style={{ width: 52, borderRadius: 14, border: '1.5px solid #10B981', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <ArrowLeftRight size={18} color="#10B981" />
+            <button style={{ width: 52, borderRadius: 14, border: `1.5px solid ${BLUE}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <ArrowLeftRight size={18} color={BLUE} />
             </button>
           </div>
           <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 12 }}>0.1% fee</div>
@@ -308,7 +259,7 @@ function FilterModal({ filters, onApply, onClose }: { filters: Filters; onApply:
       onClick={onClose}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        style={{ background: '#0D0D14', borderRadius: '20px 20px 0 0', padding: '20px 20px 36px', border: '1px solid rgba(10,30,255,0.2)', borderBottom: 'none' }}
+        style={{ background: '#0D1020', borderRadius: '20px 20px 0 0', padding: '20px 20px 36px', border: '1px solid rgba(10,30,255,0.2)', borderBottom: 'none' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ width: 28 }} />
@@ -402,7 +353,7 @@ function TradeView({ token, onCoinPick, onBuy, onSell }: { token: MarketToken; o
     { label: '24h Vol', value: fmtMcap(token.volume24h) },
     { label: 'FDV',     value: fmtMcap(token.marketCap) },
     { label: 'Supply',  value: '—' },
-    { label: '24h%',    value: `${pos ? '+' : ''}${token.change24h.toFixed(2)}%`, color: pos ? '#10B981' : '#EF4444' },
+    { label: '24h%',    value: `${pos ? '+' : ''}${token.change24h.toFixed(2)}%`, color: pos ? BLUE : '#EF4444' },
     { label: 'Price',   value: fmtPrice(token.price) },
   ];
 
@@ -417,11 +368,17 @@ function TradeView({ token, onCoinPick, onBuy, onSell }: { token: MarketToken; o
       </div>
       <div style={{ padding: '0 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 30, fontWeight: 800, color: '#fff' }}>{fmtPrice(token.price)}</span>
-        <span style={{ fontSize: 15, fontWeight: 600, color: pos ? '#10B981' : '#EF4444' }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: pos ? BLUE : '#EF4444' }}>
           {pos ? '+' : ''}{token.change24h.toFixed(2)}%
         </span>
       </div>
-      <CandleChart symbol={token.symbol} tf={tf} />
+      <div style={{ background: '#0A0E1A' }}>
+        <TradingViewChart
+          symbol={getTradingViewSymbol(token.symbol) ?? `BINANCE:${token.symbol.toUpperCase()}USDT`}
+          interval={TF_TO_TV_INTERVAL[tf] ?? '60'}
+          height={300}
+        />
+      </div>
       <div style={{ display: 'flex', padding: '10px 16px', gap: 4 }}>
         {['1H','1D','1W','1M','1Y'].map(t => (
           <button key={t} onClick={() => setTf(t)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: tf === t ? 'rgba(10,30,255,0.25)' : 'transparent', color: tf === t ? '#fff' : '#6B7280', boxShadow: tf === t ? BLUE_GLOW : 'none' }}>{t}</button>
@@ -451,8 +408,8 @@ function TradeView({ token, onCoinPick, onBuy, onSell }: { token: MarketToken; o
       <div style={{ padding: '32px 16px', textAlign: 'center', color: '#6B7280', fontSize: 14 }}>
         Connect wallet to see {panel}
       </div>
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px 24px', background: 'linear-gradient(to top, #111111 85%, transparent)', display: 'flex', gap: 10 }}>
-        <button onClick={onBuy} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', cursor: 'pointer', boxShadow: '0 0 18px rgba(16,185,129,0.4)' }}>Buy</button>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px 24px', background: 'linear-gradient(to top, #0A0E1A 85%, transparent)', display: 'flex', gap: 10 }}>
+        <button onClick={onBuy} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: `linear-gradient(135deg, ${BLUE}, #3d57ff)`, color: '#fff', cursor: 'pointer', boxShadow: BLUE_GLOW }}>Buy</button>
         <button onClick={onSell} style={{ flex: 1, padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', cursor: 'pointer', boxShadow: '0 0 18px rgba(239,68,68,0.4)' }}>Sell</button>
       </div>
     </div>
@@ -499,7 +456,7 @@ export default function MarketPage() {
   const hasActiveFilters = filters.blockchain !== 'all' || filters.marketCap !== 'all' || filters.priceChange !== 'all';
 
   return (
-    <div style={{ background: '#111111', minHeight: '100vh', color: '#fff', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
+    <div style={{ background: '#0A0E1A', minHeight: '100vh', color: '#fff', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
 
       {/* STEINZ header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 10px' }}>

@@ -16,6 +16,14 @@ export interface MarketToken {
   liquidity?: number;
 }
 
+// ── Timeout-safe fetch ────────────────────────────────────────────────────────
+function fetchWithTimeout(url: string, opts: RequestInit & { next?: any } = {}, ms = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 // Simple in-memory cache
 const cache: Record<string, { data: MarketToken[]; ts: number }> = {};
 const CACHE_TTL = 30_000; // 30 seconds
@@ -98,9 +106,9 @@ async function fetchTrending(): Promise<MarketToken[]> {
 
   // PRIMARY: Binance 24hr ticker (no API key, always works, real data)
   try {
-    const binRes = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+    const binRes = await fetchWithTimeout('https://api.binance.com/api/v3/ticker/24hr', {
       next: { revalidate: 30 },
-    });
+    }, 6000);
     if (binRes.ok) {
       const tickers: any[] = await binRes.json();
       const usdt = tickers
@@ -127,14 +135,15 @@ async function fetchTrending(): Promise<MarketToken[]> {
 
   // SECONDARY: CoinGecko for market cap data (enriches Binance results)
   try {
-    const cgRes = await fetch(
+    const cgRes = await fetchWithTimeout(
       'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&sparkline=false',
       {
         headers: process.env.COINGECKO_API_KEY
           ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
           : {},
         next: { revalidate: 60 },
-      }
+      },
+      6000
     );
     if (cgRes.ok) {
       const coins: any[] = await cgRes.json();
@@ -180,9 +189,10 @@ async function fetchLaunches(): Promise<MarketToken[]> {
 
   // pump.fun + pumpswap via DexScreener (reliable, replaces unstable pump.fun direct APIs)
   try {
-    const dexRes = await fetch(
+    const dexRes = await fetchWithTimeout(
       'https://api.dexscreener.com/latest/dex/search?q=pump',
-      { cache: 'no-store' }
+      { cache: 'no-store' },
+      5000
     );
     if (dexRes.ok) {
       const dexData = await dexRes.json();
@@ -223,9 +233,9 @@ async function fetchCex(): Promise<MarketToken[]> {
 
   // Binance top 50 by quoteVolume
   try {
-    const binRes = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+    const binRes = await fetchWithTimeout('https://api.binance.com/api/v3/ticker/24hr', {
       next: { revalidate: 30 },
-    });
+    }, 6000);
     if (binRes.ok) {
       const tickers: any[] = await binRes.json();
       const usdt = tickers
@@ -252,9 +262,9 @@ async function fetchCex(): Promise<MarketToken[]> {
 
   // OKX top 50 by volCcy24h
   try {
-    const okxRes = await fetch('https://www.okx.com/api/v5/market/tickers?instType=SPOT', {
+    const okxRes = await fetchWithTimeout('https://www.okx.com/api/v5/market/tickers?instType=SPOT', {
       next: { revalidate: 30 },
-    });
+    }, 5000);
     if (okxRes.ok) {
       const okxData = await okxRes.json();
       const tickers: any[] = okxData?.data || [];
