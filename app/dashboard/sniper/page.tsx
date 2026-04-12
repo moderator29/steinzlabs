@@ -87,75 +87,15 @@ function SecurityBadge({ score, honeypot }: { score: number; honeypot?: boolean 
   );
 }
 
-// Real token fetching from DexScreener latest profiles
-async function fetchNewTokens(): Promise<DetectedToken[]> {
+/** Fetch new tokens from our API route (which uses the service layer). */
+async function fetchNewTokens(chains: string[]): Promise<DetectedToken[]> {
   try {
-    const res = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
-      headers: { 'Accept': 'application/json' },
-    });
+    const params = new URLSearchParams({ limit: '20' });
+    if (chains.length === 1) params.set('chain', chains[0]);
+    const res = await fetch(`/api/sniper?${params}`);
     if (!res.ok) return [];
-    const profiles: any[] = await res.json();
-    const slice = (Array.isArray(profiles) ? profiles : []).slice(0, 20);
-
-    const results = await Promise.allSettled(
-      slice.map(async (p: any): Promise<DetectedToken | null> => {
-        const address = p.tokenAddress || '';
-        const chain = p.chainId || 'solana';
-        if (!address) return null;
-        try {
-          const pairRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
-          if (pairRes.ok) {
-            const pairData = await pairRes.json();
-            const pair = (pairData.pairs || [])[0];
-            if (pair) {
-              const liquidity = pair.liquidity?.usd || 0;
-              const buyTax = pair.txns?.buyTax || 0;
-              const sellTax = pair.txns?.sellTax || 0;
-              const maxTax = Math.max(buyTax, sellTax);
-              const score = Math.max(0, 100 - (maxTax * 3) - (liquidity < 5000 ? 30 : 0) - (liquidity < 1000 ? 30 : 0));
-              const isHoneypot = score < 20;
-              return {
-                id: address,
-                address,
-                symbol: pair.baseToken?.symbol || p.header || '???',
-                name: pair.baseToken?.name || address.slice(0, 8),
-                chain,
-                liquidity,
-                tax: maxTax,
-                honeypot: isHoneypot,
-                securityScore: Math.round(score),
-                detectedAt: pair.pairCreatedAt || Date.now(),
-                status: isHoneypot ? 'blocked' : score >= 60 ? 'safe' : 'risky',
-                price: pair.priceUsd ? parseFloat(pair.priceUsd) : undefined,
-                marketCap: pair.marketCap,
-                logo: pair.info?.imageUrl || p.icon,
-                pairAge: pair.pairCreatedAt
-                  ? `${Math.round((Date.now() - pair.pairCreatedAt) / 60000)}m`
-                  : 'New',
-              } as DetectedToken;
-            }
-          }
-        } catch { /* ignore */ }
-        return {
-          id: address,
-          address,
-          symbol: p.header || '???',
-          name: address.slice(0, 10),
-          chain,
-          liquidity: 0,
-          tax: 0,
-          honeypot: false,
-          securityScore: 50,
-          detectedAt: Date.now(),
-          status: 'scanning',
-          logo: p.icon,
-          pairAge: 'New',
-        } as DetectedToken;
-      })
-    );
-    return results
-      .filter((r): r is PromiseFulfilledResult<DetectedToken | null> => r.status === 'fulfilled' && r.value !== null)
-      .map(r => r.value as DetectedToken);
+    const data = await res.json() as { tokens?: DetectedToken[] };
+    return data.tokens ?? [];
   } catch {
     return [];
   }
@@ -216,7 +156,7 @@ export default function SniperPage() {
   const loadRealTokens = useCallback(async () => {
     setLoadingFeed(true);
     try {
-      const fresh = await fetchNewTokens();
+      const fresh = await fetchNewTokens(config.chains);
       if (fresh.length > 0) {
         setTokens(prev => {
           const existingIds = new Set(prev.map(t => t.id));
@@ -227,7 +167,7 @@ export default function SniperPage() {
     } finally {
       setLoadingFeed(false);
     }
-  }, []);
+  }, [config.chains]);
 
   // Load real data on mount and when activated
   useEffect(() => {

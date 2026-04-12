@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { getNewPairs } from '@/lib/services/dexscreener';
 import { isHighRisk } from '@/lib/services/goplus';

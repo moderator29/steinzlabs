@@ -1,23 +1,10 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import { getNewPairs } from '@/lib/services/dexscreener';
+import type { DexPair } from '@/lib/services/dexscreener';
 
-const GOPLUS_API_KEY = process.env.GOPLUS_API_KEY || '';
-const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1/token_security';
-
-// Map our chain identifiers to GoPlus chain IDs
-const CHAIN_ID_MAP: Record<string, string> = {
-  ethereum: '1',
-  eth: '1',
-  bsc: '56',
-  binance: '56',
-  solana: 'solana',
-  sol: 'solana',
-  base: '8453',
-  arbitrum: '42161',
-  polygon: '137',
-  matic: '137',
-  avalanche: '43114',
-  avax: '43114',
-};
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GoPlusResult {
   address: string;
@@ -35,16 +22,97 @@ export interface GoPlusResult {
   flags: string[];
 }
 
-function scoreToken(data: any): GoPlusResult['status'] {
-  if (data.is_honeypot === '1') return 'BLOCKED';
-  const buyTax = parseFloat(data.buy_tax ?? '0') * 100;
-  const sellTax = parseFloat(data.sell_tax ?? '0') * 100;
-  if (buyTax > 10 || sellTax > 10) return 'RISKY';
-  const liqUsd = parseFloat(data.dex?.[0]?.liquidity ?? '0');
-  if (liqUsd > 0 && liqUsd < 50000) return 'CAUTION';
-  if (data.is_blacklisted === '1' || data.cannot_sell_all === '1') return 'RISKY';
-  return 'SAFE';
+export interface SniperToken {
+  id: string;
+  address: string;
+  symbol: string;
+  name: string;
+  chain: string;
+  liquidity: number;
+  tax: number;
+  honeypot: boolean;
+  securityScore: number;
+  detectedAt: number;
+  status: 'scanning' | 'safe' | 'risky' | 'blocked' | 'sniped';
+  price?: number;
+  marketCap?: number;
+  pairAge?: string;
+  logo?: string;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Heuristic security score from pair data alone (no GoPlus). */
+function scoreFromPair(pair: DexPair): number {
+  const liq = pair.liquidity?.usd ?? 0;
+  let score = 65;
+  if (liq > 100_000) score += 20;
+  else if (liq > 50_000) score += 12;
+  else if (liq > 10_000) score += 5;
+  else if (liq < 5_000) score -= 20;
+  else if (liq < 1_000) score -= 40;
+
+  // Penalise very new pairs (< 5 min old)
+  const ageMs = Date.now() - (pair.pairCreatedAt ?? Date.now());
+  if (ageMs < 5 * 60_000) score -= 10;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function statusFromScore(score: number): SniperToken['status'] {
+  if (score >= 70) return 'safe';
+  if (score >= 40) return 'risky';
+  return 'blocked';
+}
+
+function pairAgeLabel(pairCreatedAt?: number): string {
+  if (!pairCreatedAt) return 'New';
+  const mins = Math.round((Date.now() - pairCreatedAt) / 60_000);
+  if (mins < 1) return '<1m';
+  if (mins < 60) return `${mins}m`;
+  return `${Math.round(mins / 60)}h`;
+}
+
+// ─── GET Handler — New Token Feed ─────────────────────────────────────────────
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 30);
+  const chainFilter = searchParams.get('chain') || undefined;
+  const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '5000');
+
+  try {
+    const pairs = await getNewPairs(minLiquidity, chainFilter);
+
+    const tokens: SniperToken[] = pairs.slice(0, limit).map(pair => {
+      const score = scoreFromPair(pair);
+      return {
+        id: pair.baseToken.address,
+        address: pair.baseToken.address,
+        symbol: pair.baseToken.symbol,
+        name: pair.baseToken.name,
+        chain: pair.chainId,
+        liquidity: pair.liquidity?.usd ?? 0,
+        tax: 0,
+        honeypot: false,
+        securityScore: score,
+        detectedAt: pair.pairCreatedAt ?? Date.now(),
+        status: statusFromScore(score),
+        price: pair.priceUsd ? parseFloat(pair.priceUsd) : undefined,
+        marketCap: pair.fdv,
+        logo: pair.info?.imageUrl ?? undefined,
+        pairAge: pairAgeLabel(pair.pairCreatedAt),
+      };
+    });
+
+    return NextResponse.json({ tokens });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to fetch tokens';
+    return NextResponse.json({ error: msg, tokens: [] }, { status: 500 });
+  }
+}
+
+// ─── POST Handler — Token Security Check ──────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,91 +123,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'address and chain are required' }, { status: 400 });
     }
 
-    const chainId = CHAIN_ID_MAP[chain.toLowerCase()] ?? chain;
+    try {
+      const sec = await getTokenSecurity(address, chain);
 
-    const url = `${GOPLUS_BASE}/${chainId}?contract_addresses=${address}`;
-    const res = await fetch(url, {
-      headers: {
-        'X-API-KEY': GOPLUS_API_KEY,
-        Accept: 'application/json',
-      },
-      next: { revalidate: 0 },
-    });
+      // Derive status from safetyLevel
+      let status: GoPlusResult['status'] = 'SAFE';
+      if (sec.isHoneypot || sec.safetyLevel === 'DANGER') status = 'BLOCKED';
+      else if (sec.safetyLevel === 'WARNING') status = 'RISKY';
+      else if (sec.safetyLevel === 'CAUTION') status = 'CAUTION';
 
-    if (!res.ok) {
-      // GoPlus returned an error — return a neutral CAUTION result
-      return NextResponse.json({
+      // Extract extra fields from raw GoPlus response where available
+      const raw = sec.raw as Record<string, unknown> | undefined;
+      const dexArr = Array.isArray(raw?.dex) ? (raw!.dex as Array<Record<string, unknown>>) : [];
+      const liquidity = parseFloat(String(dexArr[0]?.liquidity ?? '0'));
+      const holders = Array.isArray(raw?.holders) ? (raw!.holders as Array<Record<string, unknown>>) : [];
+      const top10 = parseFloat(
+        holders.slice(0, 10).reduce((sum, h) => sum + parseFloat(String(h.percent ?? '0')), 0).toFixed(2)
+      );
+
+      const flags = sec.checks
+        .filter(c => c.status === 'fail')
+        .map(c => c.label);
+
+      const result: GoPlusResult = {
         address,
         chain,
-        isHoneypot: false,
-        buyTax: 0,
-        sellTax: 0,
-        liquidity: 0,
-        isOpenSource: false,
-        isMintable: false,
-        hasBlacklist: false,
-        holderCount: 0,
-        top10HolderPercent: 0,
+        isHoneypot: sec.isHoneypot,
+        buyTax: parseFloat((sec.buyTax * 100).toFixed(1)),
+        sellTax: parseFloat((sec.sellTax * 100).toFixed(1)),
+        liquidity,
+        isOpenSource: sec.isOpenSource,
+        isMintable: sec.isMintable,
+        hasBlacklist: !!(raw?.is_blacklisted === '1'),
+        holderCount: sec.holderCount,
+        top10HolderPercent: top10,
+        status,
+        flags,
+      };
+
+      return NextResponse.json(result);
+    } catch {
+      // Service layer unavailable — return neutral CAUTION result
+      return NextResponse.json({
+        address, chain,
+        isHoneypot: false, buyTax: 0, sellTax: 0, liquidity: 0,
+        isOpenSource: false, isMintable: false, hasBlacklist: false,
+        holderCount: 0, top10HolderPercent: 0,
         status: 'CAUTION',
         flags: ['Security data unavailable'],
       } satisfies GoPlusResult);
     }
-
-    const json = await res.json();
-    const tokenData = json?.result?.[address.toLowerCase()] ?? json?.result?.[address] ?? null;
-
-    if (!tokenData) {
-      return NextResponse.json({
-        address,
-        chain,
-        isHoneypot: false,
-        buyTax: 0,
-        sellTax: 0,
-        liquidity: 0,
-        isOpenSource: false,
-        isMintable: false,
-        hasBlacklist: false,
-        holderCount: 0,
-        top10HolderPercent: 0,
-        status: 'CAUTION',
-        flags: ['No security data found'],
-      } satisfies GoPlusResult);
-    }
-
-    const buyTax = Math.round(parseFloat(tokenData.buy_tax ?? '0') * 100 * 10) / 10;
-    const sellTax = Math.round(parseFloat(tokenData.sell_tax ?? '0') * 100 * 10) / 10;
-    const liqUsd = parseFloat(tokenData.dex?.[0]?.liquidity ?? '0');
-    const holderCount = parseInt(tokenData.holder_count ?? '0', 10);
-    const top10 = parseFloat(tokenData.holders?.slice(0, 10).reduce((acc: number, h: any) => acc + parseFloat(h.percent ?? '0'), 0).toFixed(2) ?? '0');
-
-    const flags: string[] = [];
-    if (tokenData.is_honeypot === '1') flags.push('Honeypot');
-    if (tokenData.is_mintable === '1') flags.push('Mintable');
-    if (tokenData.cannot_sell_all === '1') flags.push('Cannot sell all');
-    if (tokenData.is_blacklisted === '1') flags.push('Blacklist function');
-    if (tokenData.has_trading_cooldown === '1') flags.push('Trading cooldown');
-    if (buyTax > 10) flags.push(`High buy tax (${buyTax}%)`);
-    if (sellTax > 10) flags.push(`High sell tax (${sellTax}%)`);
-
-    const result: GoPlusResult = {
-      address,
-      chain,
-      isHoneypot: tokenData.is_honeypot === '1',
-      buyTax,
-      sellTax,
-      liquidity: liqUsd,
-      isOpenSource: tokenData.is_open_source === '1',
-      isMintable: tokenData.is_mintable === '1',
-      hasBlacklist: tokenData.is_blacklisted === '1',
-      holderCount,
-      top10HolderPercent: top10,
-      status: scoreToken(tokenData),
-      flags,
-    };
-
-    return NextResponse.json(result);
-  } catch (err) {
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
