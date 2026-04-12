@@ -8,11 +8,13 @@ import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
  */
 
 const BASE = 'https://api.dexscreener.com';
+const TIMEOUT_MS = parseInt(process.env.DEXSCREENER_TIMEOUT_MS || '10000', 10);
 
 async function dexFetch(path: string): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { Accept: 'application/json' },
     next: { revalidate: 10 },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Dexscreener error: ${res.status}`);
   return res.json();

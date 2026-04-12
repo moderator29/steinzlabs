@@ -8,6 +8,8 @@ import {
   EntityPerformance,
 } from './types';
 
+const ARKHAM_TIMEOUT_MS = parseInt(process.env.ARKHAM_TIMEOUT_MS || '15000', 10);
+
 class ArkhamAPI {
   private apiKey = process.env.ARKHAM_API_KEY!;
   private baseUrl = 'https://api.arkm.com';
@@ -25,6 +27,7 @@ class ArkhamAPI {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
+        signal: AbortSignal.timeout(ARKHAM_TIMEOUT_MS),
       });
 
       if (!response.ok) {
