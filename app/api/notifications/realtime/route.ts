@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 
+const STREAM_IDLE_TIMEOUT_MS = parseInt(process.env.CLAUDE_STREAM_IDLE_TIMEOUT_MS ?? '300000', 10);
+
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -16,9 +18,16 @@ export async function GET(request: NextRequest) {
         }
       }, 30000);
 
+      // Close the stream after idle timeout to free server resources
+      const idleTimer = setTimeout(() => {
+        clearInterval(interval);
+        try { controller.close(); } catch {}
+      }, STREAM_IDLE_TIMEOUT_MS);
+
       // Cleanup on disconnect
       request.signal.addEventListener('abort', () => {
         clearInterval(interval);
+        clearTimeout(idleTimer);
         controller.close();
       });
     }

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { arkhamAPI } from '@/lib/arkham/api';
 
+// Configurable timeouts (env overrides; defaults: 10 min API, 5 min data fetches)
+const DATA_FETCH_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS ?? '600000', 10);
+
 // Health check — used by admin dashboard to verify VTX is online
 export async function GET() {
   const configured = !!(
@@ -42,7 +45,7 @@ function incrementUsage(ip: string): void {
 
 async function fetchWebSearch(query: string): Promise<string> {
   try {
-    const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query + ' crypto')}&format=json&no_html=1&skip_disambig=1`);
+    const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query + ' crypto')}&format=json&no_html=1&skip_disambig=1`, { signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS) });
     if (!res.ok) return '';
     const data = await res.json();
     const results: string[] = [];
@@ -68,7 +71,7 @@ async function fetchLiveMarketData(): Promise<string> {
       'INJUSDT','SUIUSDT','TONUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
     ];
     const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS) });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -98,6 +101,7 @@ async function fetchLiveMarketData(): Promise<string> {
           ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
           : {},
         cache: 'no-store',
+        signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
       }
     );
     if (!res.ok) return '';
@@ -115,6 +119,7 @@ async function fetchDexScreenerTokenPrice(query: string): Promise<string> {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`, {
       cache: 'no-store',
+      signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return '';
     const data = await res.json();
@@ -138,6 +143,7 @@ async function fetchTrendingTokens(): Promise<string> {
   try {
     const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return '';
     const data = await res.json();
@@ -155,6 +161,7 @@ async function fetchMemecoinsContext(): Promise<string> {
   try {
     const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return '';
     const data = await res.json();
@@ -177,6 +184,7 @@ async function fetchCryptoNews(): Promise<string> {
         ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
         : {},
       next: { revalidate: 120 },
+      signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return '';
     const data = await res.json();
@@ -193,6 +201,7 @@ async function fetchFearAndGreedIndex(): Promise<string> {
   try {
     const res = await fetch('https://api.alternative.me/fng/?limit=1', {
       next: { revalidate: 300 },
+      signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return '';
     const data = await res.json();
@@ -210,7 +219,7 @@ async function fetchGasPrice(): Promise<string> {
     if (!etherscanKey) return '';
     const res = await fetch(
       `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanKey}`,
-      { next: { revalidate: 30 } }
+      { next: { revalidate: 30 }, signal: AbortSignal.timeout(DATA_FETCH_TIMEOUT_MS) }
     );
     if (!res.ok) return '';
     const data = await res.json();
@@ -1119,6 +1128,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
     let response: Response | null = null;
     let lastError = '';
     let lastStatus = 0;
+    const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS ?? '600000', 10);
 
     for (const model of MODELS) {
       try {
@@ -1135,6 +1145,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
             system: systemPrompt,
             messages,
           }),
+          signal: AbortSignal.timeout(apiTimeoutMs),
         });
         if (response.ok) break;
         lastStatus = response.status;
