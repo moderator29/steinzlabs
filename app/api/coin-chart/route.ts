@@ -1,4 +1,6 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { getBestPair } from '@/lib/services/dexscreener';
 
 // In-memory cache: key = `${coinId}_${tf}` → { data, ts }
 const cache = new Map<string, { data: [number, number][]; ts: number }>();
@@ -77,17 +79,7 @@ async function fetchBinanceChart(symbol: string, tf: string): Promise<[number, n
 // Fetch chart data from DexScreener (for DEX tokens by contract address)
 async function fetchDexScreenerChart(tokenAddress: string, tf: string): Promise<[number, number][] | null> {
   try {
-    // Search by contract address
-    const res = await fetchWithTimeout(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`, {
-      cache: 'no-store',
-    }, 5000);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pairs = data.pairs;
-    if (!pairs?.length) return null;
-
-    // Pick the pair with highest liquidity
-    const best = pairs.sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+    const best = await getBestPair(tokenAddress);
     if (!best?.priceUsd) return null;
 
     // DexScreener doesn't provide historical OHLCV via free API,

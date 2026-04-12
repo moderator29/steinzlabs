@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Code, Search, AlertTriangle, CheckCircle, XCircle,
@@ -43,6 +43,18 @@ interface AnalysisResult {
     isMixer: boolean;
     labels: string[];
   } | null;
+  dexData?: {
+    price: number;
+    priceChange24h: number;
+    volume24h: number;
+    liquidity: number;
+    fdv: number;
+    marketCap: number;
+    imageUrl?: string;
+    symbol?: string;
+    name?: string;
+    url?: string;
+  } | null;
   analyzedAt: string;
   aiAnalysis?: string;
 }
@@ -57,19 +69,6 @@ const CHAINS = [
   { id: 'solana', label: 'Solana' },
 ];
 
-interface DexTokenData {
-  price: number;
-  priceChange24h: number;
-  volume24h: number;
-  liquidity: number;
-  fdv: number;
-  marketCap: number;
-  imageUrl?: string;
-  symbol?: string;
-  name?: string;
-  url?: string;
-}
-
 export default function ContractAnalyzerPage() {
   const router = useRouter();
   const [input, setInput] = useState('');
@@ -78,35 +77,7 @@ export default function ContractAnalyzerPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showChecks, setShowChecks] = useState(false);
-  const [dexData, setDexData] = useState<DexTokenData | null>(null);
   const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
-
-  useEffect(() => {
-    if (!result) return;
-    setDexData(null);
-    // Fetch token data from DexScreener
-    fetch(`https://api.dexscreener.com/latest/dex/tokens/${result.address}`)
-      .then(r => r.json())
-      .then(d => {
-        const pairs = d.pairs || [];
-        if (pairs.length > 0) {
-          const p = pairs[0];
-          setDexData({
-            price: parseFloat(p.priceUsd || '0'),
-            priceChange24h: p.priceChange?.h24 || 0,
-            volume24h: p.volume?.h24 || 0,
-            liquidity: p.liquidity?.usd || 0,
-            fdv: p.fdv || 0,
-            marketCap: p.marketCap || 0,
-            imageUrl: p.info?.imageUrl,
-            symbol: p.baseToken?.symbol,
-            name: p.baseToken?.name,
-            url: p.url,
-          });
-        }
-      })
-      .catch(() => {});
-  }, [result]);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -208,11 +179,11 @@ export default function ContractAnalyzerPage() {
         {result && !analyzing && (
           <>
             {/* Token Header with DexScreener data */}
-            {dexData && (
+            {result.dexData && (
               <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                 <div className="flex items-center gap-3 mb-3">
-                  {dexData.imageUrl ? (
-                    <img src={dexData.imageUrl} alt={dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  {result.dexData.imageUrl ? (
+                    <img src={result.dexData.imageUrl} alt={result.dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
                     <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-full flex items-center justify-center flex-shrink-0">
                       <Code className="w-5 h-5 text-[#0A1EFF]" />
@@ -220,21 +191,21 @@ export default function ContractAnalyzerPage() {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm">{dexData.name || dexData.symbol || 'Token'}</span>
-                      {dexData.symbol && <span className="text-[10px] text-gray-500 font-mono">{dexData.symbol}</span>}
+                      <span className="font-bold text-sm">{result.dexData.name || result.dexData.symbol || 'Token'}</span>
+                      {result.dexData.symbol && <span className="text-[10px] text-gray-500 font-mono">{result.dexData.symbol}</span>}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs font-mono font-bold">
-                        ${dexData.price < 0.01 ? dexData.price.toFixed(8) : dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        ${result.dexData.price < 0.01 ? result.dexData.price.toFixed(8) : result.dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                       </span>
-                      <span className={`flex items-center gap-0.5 text-[10px] font-semibold ${dexData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {dexData.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {dexData.priceChange24h >= 0 ? '+' : ''}{dexData.priceChange24h.toFixed(2)}%
+                      <span className={`flex items-center gap-0.5 text-[10px] font-semibold ${result.dexData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {result.dexData.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        {result.dexData.priceChange24h >= 0 ? '+' : ''}{result.dexData.priceChange24h.toFixed(2)}%
                       </span>
                     </div>
                   </div>
-                  {dexData.url && (
-                    <a href={dexData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#0A1EFF] flex items-center gap-1 hover:underline flex-shrink-0">
+                  {result.dexData.url && (
+                    <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#0A1EFF] flex items-center gap-1 hover:underline flex-shrink-0">
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -243,19 +214,19 @@ export default function ContractAnalyzerPage() {
                   <div className="bg-[#060A12] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">MCap</p>
                     <p className="text-xs font-bold font-mono">
-                      ${dexData.marketCap > 1e6 ? (dexData.marketCap / 1e6).toFixed(2) + 'M' : dexData.marketCap > 1000 ? (dexData.marketCap / 1000).toFixed(1) + 'K' : dexData.marketCap.toFixed(0)}
+                      ${result.dexData.marketCap > 1e6 ? (result.dexData.marketCap / 1e6).toFixed(2) + 'M' : result.dexData.marketCap > 1000 ? (result.dexData.marketCap / 1000).toFixed(1) + 'K' : result.dexData.marketCap.toFixed(0)}
                     </p>
                   </div>
                   <div className="bg-[#060A12] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Volume 24h</p>
                     <p className="text-xs font-bold font-mono">
-                      ${dexData.volume24h > 1e6 ? (dexData.volume24h / 1e6).toFixed(2) + 'M' : dexData.volume24h > 1000 ? (dexData.volume24h / 1000).toFixed(1) + 'K' : dexData.volume24h.toFixed(0)}
+                      ${result.dexData.volume24h > 1e6 ? (result.dexData.volume24h / 1e6).toFixed(2) + 'M' : result.dexData.volume24h > 1000 ? (result.dexData.volume24h / 1000).toFixed(1) + 'K' : result.dexData.volume24h.toFixed(0)}
                     </p>
                   </div>
                   <div className="bg-[#060A12] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Liquidity</p>
                     <p className="text-xs font-bold font-mono">
-                      ${dexData.liquidity > 1e6 ? (dexData.liquidity / 1e6).toFixed(2) + 'M' : dexData.liquidity > 1000 ? (dexData.liquidity / 1000).toFixed(1) + 'K' : dexData.liquidity.toFixed(0)}
+                      ${result.dexData.liquidity > 1e6 ? (result.dexData.liquidity / 1e6).toFixed(2) + 'M' : result.dexData.liquidity > 1000 ? (result.dexData.liquidity / 1000).toFixed(1) + 'K' : result.dexData.liquidity.toFixed(0)}
                     </p>
                   </div>
                 </div>

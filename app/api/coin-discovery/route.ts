@@ -1,29 +1,13 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { getTopTokens } from '@/lib/services/coingecko';
 
 export async function GET() {
   try {
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h',
-      {
-        headers: {
-          'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || ''
-        },
-        next: { revalidate: 120 }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('CoinGecko API failed');
-    }
-
-    const coins = await response.json();
-
-    if (!Array.isArray(coins)) {
-      throw new Error('Invalid response');
-    }
+    const coins = await getTopTokens(1, 50);
 
     return NextResponse.json({
-      coins: coins.map((c: any) => ({
+      coins: coins.map(c => ({
         id: c.id,
         name: c.name,
         symbol: c.symbol.toUpperCase(),
@@ -40,8 +24,7 @@ export async function GET() {
       })),
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch coins' }, { status: 500 });
   }
 }

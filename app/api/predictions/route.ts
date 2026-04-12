@@ -1,6 +1,8 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
-
-const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
+import { getTopTokens } from '@/lib/services/coingecko';
+import { searchPairs, getTokenPairs } from '@/lib/services/dexscreener';
+import type { DexPair } from '@/lib/services/dexscreener';
 
 interface Prediction {
   id: string;
@@ -67,41 +69,41 @@ function clampProgress(current: number, target: number): number {
   return Math.min(100, Math.max(0, Math.round((current / target) * 100)));
 }
 
-async function fetchCoinGeckoCoins(): Promise<any[]> {
+interface CoinGeckoCoin {
+  id: string; name: string; symbol: string; current_price: number;
+  market_cap: number; total_volume: number; image: string;
+  market_cap_rank: number; high_24h: number; low_24h: number;
+  ath: number; ath_change_percentage: number;
+  price_change_percentage_24h: number;
+}
+
+interface PumpToken {
+  mint: string; symbol: string; name: string;
+  usd_market_cap: number; reply_count: number;
+  creator: string; image_uri: string; created_timestamp: number | null;
+}
+
+async function fetchCoinGeckoCoins(): Promise<CoinGeckoCoin[]> {
   try {
-    const headers: Record<string, string> = {};
-    if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=30&sparkline=false',
-      { headers }
-    );
-    if (!res.ok) return [];
-    return await res.json();
+    const coins = await getTopTokens(30);
+    return coins as unknown as CoinGeckoCoin[];
   } catch {
     return [];
   }
 }
 
-async function fetchPumpFunTokens(): Promise<any[]> {
+async function fetchPumpFunTokens(): Promise<PumpToken[]> {
   try {
-    // Use DexScreener instead of unstable Heroku endpoint
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=pump.fun',
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pairs = (data.pairs || [])
-      .filter((p: any) => p.chainId === 'solana')
-      .slice(0, 5);
-    return pairs.map((p: any) => ({
-      mint: p.baseToken?.address,
-      symbol: p.baseToken?.symbol,
-      name: p.baseToken?.name,
-      usd_market_cap: p.fdv || 0,
+    const allPairs = await searchPairs('pump.fun').catch(() => []);
+    const pairs = allPairs.filter(p => p.chainId === 'solana').slice(0, 5);
+    return pairs.map(p => ({
+      mint: p.baseToken?.address ?? '',
+      symbol: p.baseToken?.symbol ?? '',
+      name: p.baseToken?.name ?? '',
+      usd_market_cap: p.fdv ?? 0,
       reply_count: 0,
       creator: '',
-      image_uri: p.info?.imageUrl || '',
+      image_uri: p.info?.imageUrl ?? '',
       created_timestamp: null,
     }));
   } catch {
@@ -109,7 +111,7 @@ async function fetchPumpFunTokens(): Promise<any[]> {
   }
 }
 
-function generateCoinGeckoPredictions(coins: any[]): Prediction[] {
+function generateCoinGeckoPredictions(coins: CoinGeckoCoin[]): Prediction[] {
   const predictions: Prediction[] = [];
   const now = new Date().toISOString();
 
@@ -236,7 +238,7 @@ function generateCoinGeckoPredictions(coins: any[]): Prediction[] {
   return predictions;
 }
 
-function generatePumpFunPredictions(tokens: any[]): Prediction[] {
+function generatePumpFunPredictions(tokens: PumpToken[]): Prediction[] {
   const predictions: Prediction[] = [];
   const now = new Date().toISOString();
 
@@ -301,23 +303,23 @@ function generatePumpFunPredictions(tokens: any[]): Prediction[] {
   return predictions;
 }
 
-async function fetchDexScreenerTopTokens(): Promise<any[]> {
+interface DexBoostToken { tokenAddress: string; chainId: string; icon?: string; }
+
+async function fetchDexScreenerTopTokens(): Promise<DexBoostToken[]> {
+  // token-boosts endpoint has no service-layer equivalent — server-side only
   try {
     const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
     if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    const data = await res.json() as unknown;
+    return Array.isArray(data) ? (data as DexBoostToken[]) : [];
   } catch {
     return [];
   }
 }
 
-async function fetchDexScreenerSearch(query: string): Promise<any[]> {
+async function fetchDexScreenerSearch(query: string) {
   try {
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data?.pairs) ? data.pairs : [];
+    return await searchPairs(query);
   } catch {
     return [];
   }
@@ -348,7 +350,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
     fetchDexScreenerSearch('uniswap'),
   ]);
 
-  const dexSearchResults: Array<{ pairs: any[]; dexName: string; take: number }> = [
+  const dexSearchResults: Array<{ pairs: DexPair[]; dexName: string; take: number }> = [
     { pairs: raydiumPairs, dexName: 'Raydium', take: 3 },
     { pairs: pancakePairs, dexName: 'PancakeSwap', take: 3 },
     { pairs: uniswapPairs, dexName: 'Uniswap', take: 3 },
@@ -357,10 +359,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
   for (const token of topTokens.slice(0, 20)) {
     if (!token.tokenAddress || !token.chainId) continue;
     try {
-      const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.tokenAddress}`);
-      if (!searchRes.ok) continue;
-      const searchData = await searchRes.json();
-      const pairs = Array.isArray(searchData?.pairs) ? searchData.pairs : [];
+      const pairs = await getTokenPairs(token.tokenAddress).catch(() => []);
       if (pairs.length === 0) continue;
 
       const pair = pairs[0];

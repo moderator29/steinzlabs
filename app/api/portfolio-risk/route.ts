@@ -1,13 +1,15 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
-// GoPlus Security API - hidden from frontend, never expose "GoPlus" in UI responses
-const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1';
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TokenRiskResult {
   contractAddress: string;
   symbol: string;
   riskLevel: 'safe' | 'warning' | 'danger' | 'unknown';
-  score: number; // 0-100, higher = safer
+  score: number;
   flags: string[];
   details: {
     isHoneypot: boolean;
@@ -25,130 +27,99 @@ export interface TokenRiskResult {
   };
 }
 
-async function scanToken(contractAddress: string, chainId = '1'): Promise<TokenRiskResult | null> {
-  if (!contractAddress || contractAddress === 'native') return null;
+// ─── Mapping helper ───────────────────────────────────────────────────────────
 
-  try {
-    const res = await fetch(
-      `${GOPLUS_BASE}/token_security/${chainId}?contract_addresses=${contractAddress}`,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        next: { revalidate: 300 }, // cache 5 min
-      }
-    );
+function mapToTokenRiskResult(contractAddress: string, sec: TokenSecurityResult): TokenRiskResult {
+  const flags: string[] = sec.checks.filter(c => c.status === 'fail').map(c => c.label);
+  let deductions = 0;
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    const result = data?.result?.[contractAddress.toLowerCase()];
-    if (!result) return null;
+  if (sec.isHoneypot)          { flags.push('Honeypot detected');             deductions += 80; }
+  if (sec.hasHiddenOwner)      { flags.push('Hidden owner');                  deductions += 40; }
+  if (sec.isMintable)          { flags.push('Mintable supply');               deductions += 20; }
+  if (sec.canTakeBackOwnership){ flags.push('Owner can reclaim ownership');   deductions += 30; }
+  if (sec.ownerCanChangeBalance){ flags.push('Owner can change balances');    deductions += 50; }
 
-    const flags: string[] = [];
-    let deductions = 0;
+  const buyTaxPct = sec.buyTax > 0 ? sec.buyTax * 100 : null;
+  const sellTaxPct = sec.sellTax > 0 ? sec.sellTax * 100 : null;
+  if (buyTaxPct !== null && buyTaxPct > 10) { flags.push(`High buy tax (${buyTaxPct.toFixed(1)}%)`); deductions += Math.min(buyTaxPct * 2, 30); }
+  if (sellTaxPct !== null && sellTaxPct > 10) { flags.push(`High sell tax (${sellTaxPct.toFixed(1)}%)`); deductions += Math.min(sellTaxPct * 2, 30); }
 
-    const isHoneypot = result.is_honeypot === '1';
-    const isMintable = result.is_mintable === '1';
-    const isProxy = result.is_proxy === '1';
-    const isBlacklisted = result.is_blacklisted === '1';
-    const selfDestruct = result.selfdestruct === '1';
-    const hiddenOwner = result.hidden_owner === '1';
-    const cannotBuy = result.cannot_buy === '1';
-    const cannotSellAll = result.cannot_sell_all === '1';
-    const tradingCooldown = result.trading_cooldown === '1';
-    const transferPausable = result.transfer_pausable === '1';
-    const isAntiWhale = result.is_anti_whale === '1';
+  // Extract raw GoPlus fields for extra details
+  const raw = sec.raw as Record<string, unknown> | undefined;
+  const selfDestruct = raw?.selfdestruct === '1';
+  const isBlacklisted = raw?.is_blacklisted === '1';
+  const creatorPercent = raw?.creator_percent != null ? parseFloat(String(raw.creator_percent)) * 100 : null;
+  const lpHolders = Array.isArray(raw?.lp_holders) ? (raw!.lp_holders as Array<Record<string, unknown>>) : [];
+  const lpLockedPercent = lpHolders.reduce((sum, h) => sum + (h.is_locked === 1 ? parseFloat(String(h.percent ?? '0')) * 100 : 0), 0) || null;
+  const top10Holders = Array.isArray(raw?.holders) ? (raw!.holders as Array<Record<string, unknown>>) : [];
+  const top10HolderPercent = top10Holders.length > 0
+    ? top10Holders.slice(0, 10).reduce((sum, h) => sum + parseFloat(String(h.percent ?? '0')), 0) * 100
+    : null;
 
-    const buyTax = result.buy_tax != null ? parseFloat(result.buy_tax) * 100 : null;
-    const sellTax = result.sell_tax != null ? parseFloat(result.sell_tax) * 100 : null;
-    const holderCount = result.holder_count ? parseInt(result.holder_count) : null;
-    const top10HolderPercent = result.top_10_holders_percent != null
-      ? parseFloat(result.top_10_holders_percent) * 100
-      : null;
-    const lpLockedPercent = result.lp_holders?.reduce((sum: number, h: any) => {
-      return sum + (h.is_locked === 1 ? parseFloat(h.percent || '0') * 100 : 0);
-    }, 0) ?? null;
-    const creatorPercent = result.creator_percent != null
-      ? parseFloat(result.creator_percent) * 100
-      : null;
+  if (selfDestruct) { flags.push('Self-destruct code'); deductions += 60; }
+  if (isBlacklisted) { flags.push('Blacklist function'); deductions += 25; }
+  if (creatorPercent !== null && creatorPercent > 20) { flags.push(`Creator holds ${creatorPercent.toFixed(1)}%`); deductions += 10; }
 
-    if (isHoneypot) { flags.push('Honeypot detected'); deductions += 80; }
-    if (selfDestruct) { flags.push('Self-destruct code'); deductions += 60; }
-    if (hiddenOwner) { flags.push('Hidden owner'); deductions += 40; }
-    if (cannotBuy) { flags.push('Cannot buy'); deductions += 50; }
-    if (cannotSellAll) { flags.push('Cannot sell all tokens'); deductions += 40; }
-    if (isMintable) { flags.push('Mintable supply'); deductions += 20; }
-    if (isBlacklisted) { flags.push('Blacklist function'); deductions += 25; }
-    if (tradingCooldown) { flags.push('Trading cooldown'); deductions += 15; }
-    if (transferPausable) { flags.push('Transfers pausable'); deductions += 20; }
-    if (isAntiWhale) { flags.push('Anti-whale mechanism'); deductions += 5; }
-    if (buyTax !== null && buyTax > 10) { flags.push(`High buy tax (${buyTax.toFixed(1)}%)`); deductions += Math.min(buyTax * 2, 30); }
-    if (sellTax !== null && sellTax > 10) { flags.push(`High sell tax (${sellTax.toFixed(1)}%)`); deductions += Math.min(sellTax * 2, 30); }
-    if (top10HolderPercent !== null && top10HolderPercent > 80) { flags.push(`Concentrated supply (top 10: ${top10HolderPercent.toFixed(0)}%)`); deductions += 15; }
-    if (creatorPercent !== null && creatorPercent > 20) { flags.push(`Creator holds ${creatorPercent.toFixed(1)}%`); deductions += 10; }
+  const score = Math.max(0, Math.min(100, 100 - deductions));
+  const riskLevel: TokenRiskResult['riskLevel'] =
+    sec.isHoneypot || selfDestruct ? 'danger' :
+    score >= 75 ? 'safe' :
+    score >= 45 ? 'warning' : 'danger';
 
-    const score = Math.max(0, Math.min(100, 100 - deductions));
-
-    let riskLevel: TokenRiskResult['riskLevel'];
-    if (isHoneypot || selfDestruct || cannotBuy || cannotSellAll) {
-      riskLevel = 'danger';
-    } else if (score >= 75) {
-      riskLevel = 'safe';
-    } else if (score >= 45) {
-      riskLevel = 'warning';
-    } else {
-      riskLevel = 'danger';
-    }
-
-    return {
-      contractAddress,
-      symbol: result.token_symbol || '',
-      riskLevel,
-      score,
-      flags,
-      details: {
-        isHoneypot,
-        isMintable,
-        isProxy,
-        isBlacklisted,
-        selfDestruct,
-        hiddenOwner,
-        buyTax,
-        sellTax,
-        holderCount,
-        top10HolderPercent,
-        lpLockedPercent,
-        creatorPercent,
-      },
-    };
-  } catch {
-    return null;
-  }
+  return {
+    contractAddress,
+    symbol: sec.raw ? String((sec.raw as Record<string, unknown>).token_symbol ?? '') : '',
+    riskLevel, score, flags,
+    details: {
+      isHoneypot: sec.isHoneypot, isMintable: sec.isMintable, isProxy: sec.isProxy,
+      isBlacklisted, selfDestruct, hiddenOwner: sec.hasHiddenOwner,
+      buyTax: buyTaxPct, sellTax: sellTaxPct,
+      holderCount: sec.holderCount > 0 ? sec.holderCount : null,
+      top10HolderPercent, lpLockedPercent, creatorPercent,
+    },
+  };
 }
+
+// ─── POST Handler ─────────────────────────────────────────────────────────────
+
+interface RequestBody {
+  tokens: Array<{ contractAddress: string; symbol?: string }>;
+  chainId?: string;
+}
+
+// Map Ethereum chain IDs to service-layer chain slugs
+const CHAIN_ID_MAP: Record<string, string> = {
+  '1': 'ethereum', '8453': 'base', '42161': 'arbitrum',
+  '10': 'optimism', '137': 'polygon', '43114': 'avalanche',
+  '56': 'bsc',
+};
 
 export async function POST(request: Request) {
   try {
-    const { tokens, chainId = '1' } = await request.json();
+    const body = await request.json() as RequestBody;
+    const { tokens, chainId = '1' } = body;
 
     if (!tokens || !Array.isArray(tokens)) {
       return NextResponse.json({ error: 'tokens array required' }, { status: 400 });
     }
 
-    // Filter out native tokens and scan up to 15 at once
+    const chain = CHAIN_ID_MAP[chainId] ?? 'ethereum';
     const scannable = tokens
-      .filter((t: any) => t.contractAddress && t.contractAddress !== 'native')
+      .filter(t => t.contractAddress && t.contractAddress !== 'native')
       .slice(0, 15);
 
     const results = await Promise.allSettled(
-      scannable.map((t: any) => scanToken(t.contractAddress, chainId))
+      scannable.map(t => getTokenSecurity(t.contractAddress, chain))
     );
 
     const riskResults: Record<string, TokenRiskResult> = {};
     results.forEach((r, i) => {
-      if (r.status === 'fulfilled' && r.value) {
-        riskResults[scannable[i].contractAddress.toLowerCase()] = r.value;
+      if (r.status === 'fulfilled') {
+        const addr = scannable[i].contractAddress.toLowerCase();
+        riskResults[addr] = mapToTokenRiskResult(scannable[i].contractAddress, r.value);
       }
     });
 
-    // Compute portfolio risk summary
     const scanned = Object.values(riskResults);
     const dangerCount = scanned.filter(r => r.riskLevel === 'danger').length;
     const warningCount = scanned.filter(r => r.riskLevel === 'warning').length;
@@ -174,8 +145,7 @@ export async function POST(request: Request) {
         portfolioRisk,
       },
     });
-  } catch (error: any) {
-
+  } catch {
     return NextResponse.json({ error: 'Risk scan failed' }, { status: 500 });
   }
 }

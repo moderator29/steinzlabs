@@ -1,22 +1,8 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-interface DexPair {
-  chainId: string;
-  dexId: string;
-  url: string;
-  pairAddress: string;
-  baseToken: { address: string; name: string; symbol: string };
-  quoteToken: { address: string; name: string; symbol: string };
-  priceNative: string;
-  priceUsd?: string;
-  volume?: { h24?: number; h6?: number; h1?: number };
-  priceChange?: { h24?: number; h6?: number; h1?: number };
-  liquidity?: { usd?: number; base?: number; quote?: number };
-  fdv?: number;
-  marketCap?: number;
-  txns?: { h24?: { buys?: number; sells?: number } };
-}
+import { getTokenPairs, searchPairs } from '@/lib/services/dexscreener';
+import type { DexPair } from '@/lib/services/dexscreener';
 
 interface SearchResult {
   symbol: string;
@@ -43,21 +29,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const isAddress = /^0x[a-fA-F0-9]{40}$/.test(query) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query);
-    const endpoint = isAddress
-      ? `https://api.dexscreener.com/latest/dex/tokens/${query}`
-      : `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`;
-
-    const res = await fetch(endpoint, {
-      headers: { 'User-Agent': 'SteinzLabs/1.0' },
-      next: { revalidate: 30 },
-    });
-
-    if (!res.ok) {
-      throw new Error(`DexScreener returned ${res.status}`);
-    }
-
-    const data = await res.json();
-    const pairs: DexPair[] = data.pairs || [];
+    const pairs: DexPair[] = isAddress
+      ? await getTokenPairs(query)
+      : await searchPairs(query);
 
     const seen = new Set<string>();
     const results: SearchResult[] = [];
@@ -88,8 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ results, source: 'dexscreener' });
-  } catch (error) {
-
+  } catch {
     return NextResponse.json(
       { results: [], error: 'Search unavailable' },
       { status: 200 }
