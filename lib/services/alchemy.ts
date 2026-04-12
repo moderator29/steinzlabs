@@ -9,6 +9,8 @@ import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
 
 const API_KEY = process.env.ALCHEMY_API_KEY || '';
 
+// Alchemy-supported networks. BSC added in alchemy-sdk v3.3+.
+// Avalanche is not supported via Alchemy SDK — callers must use public RPC for that chain.
 const NETWORK_MAP: Record<string, Network> = {
   ethereum: Network.ETH_MAINNET,
   eth: Network.ETH_MAINNET,
@@ -19,7 +21,14 @@ const NETWORK_MAP: Record<string, Network> = {
   arb: Network.ARB_MAINNET,
   optimism: Network.OPT_MAINNET,
   op: Network.OPT_MAINNET,
+  // BNB chain — supported since alchemy-sdk 3.3
+  ...(Network.BNB_MAINNET ? { bsc: Network.BNB_MAINNET, bnb: Network.BNB_MAINNET } : {}),
 };
+
+/** Returns true if the chain name is supported by Alchemy. */
+function isAlchemySupported(chain: string): boolean {
+  return chain.toLowerCase() in NETWORK_MAP;
+}
 
 // Cache Alchemy client instances per network
 const clients = new Map<string, Alchemy>();
@@ -148,6 +157,10 @@ export async function getContractCode(
   contractAddress: string,
   chain: string
 ): Promise<string> {
+  if (!isAlchemySupported(chain)) {
+    // Chain not supported by Alchemy — throw so callers can use public RPC fallback
+    throw new Error(`Chain '${chain}' is not supported by Alchemy SDK`);
+  }
   const key = cacheKey('alchemy', 'contract_code', { contractAddress: contractAddress.toLowerCase(), chain });
   return withCache(key, TTL.ENTITY_LABEL, async () => {
     const alchemy = getAlchemy(chain);
@@ -167,36 +180,73 @@ export async function getTokenHolderCount(
   });
 }
 
+// ERC-20 ABI fragment — only what we need for allowance queries
+const ERC20_ALLOWANCE_SELECTOR = '0xdd62ed3e'; // allowance(address,address)
+
 /**
  * Get all ERC-20 token approvals for a wallet.
- * Used by the Approval Manager feature.
+ * Strategy: scan Approval(owner, spender, value) event logs via Alchemy,
+ * then call allowance() on each unique (token, spender) pair to get current value.
  */
 export async function getTokenApprovals(
   walletAddress: string,
   chain: string
 ): Promise<TokenApproval[]> {
+  if (!isAlchemySupported(chain)) {
+    throw new Error(`Chain '${chain}' is not supported by Alchemy SDK`);
+  }
   const key = cacheKey('alchemy', 'approvals', { walletAddress: walletAddress.toLowerCase(), chain });
   return withCache(key, TTL.WALLET_BALANCE, async () => {
     const alchemy = getAlchemy(chain);
-    // Get all ERC20 transfer events where from = wallet (approval proxy)
-    const result = await alchemy.core.getAssetTransfers({
-      fromAddress: walletAddress,
-      category: [AssetTransfersCategory.ERC20],
-      maxCount: 200,
+    const owner = walletAddress.toLowerCase();
+
+    // Scan ERC-20 Approval events where owner = walletAddress
+    // Topic[0] = keccak256("Approval(address,address,uint256)")
+    // Topic[1] = owner (padded to 32 bytes)
+    const approvalTopic = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925';
+    const ownerPadded = '0x000000000000000000000000' + owner.replace('0x', '');
+
+    const logs = await alchemy.core.getLogs({
+      fromBlock: '0x0',
+      toBlock: 'latest',
+      topics: [approvalTopic, ownerPadded],
     });
 
-    // Extract unique contract addresses
-    const contractSet = new Set<string>();
-    result.transfers.forEach(t => {
-      if (t.rawContract?.address) contractSet.add(t.rawContract.address);
-    });
+    // Collect unique (tokenAddress, spender) pairs from most recent log per pair
+    const pairMap = new Map<string, { tokenAddress: string; spender: string }>();
+    for (const log of logs) {
+      if (!log.address || !log.topics?.[2]) continue;
+      const tokenAddress = log.address.toLowerCase();
+      const spender = '0x' + log.topics[2].slice(26).toLowerCase();
+      const pairKey = `${tokenAddress}:${spender}`;
+      pairMap.set(pairKey, { tokenAddress, spender });
+    }
 
-    // Build basic approval list from the token contracts interacted with
-    return Array.from(contractSet).map(addr => ({
-      tokenAddress: addr,
-      spender: addr,
-      allowance: 'unknown',
-    }));
+    if (pairMap.size === 0) return [];
+
+    // Query current allowance for each (token, spender) pair in parallel
+    const results = await Promise.allSettled(
+      Array.from(pairMap.values()).map(async ({ tokenAddress, spender }) => {
+        try {
+          // ABI-encode allowance(owner, spender) call
+          const ownerEncoded = owner.replace('0x', '').padStart(64, '0');
+          const spenderEncoded = spender.replace('0x', '').padStart(64, '0');
+          const callData = ERC20_ALLOWANCE_SELECTOR + ownerEncoded + spenderEncoded;
+
+          const hex = await alchemy.core.call({ to: tokenAddress, data: callData });
+          const allowance = hex && hex !== '0x' ? BigInt(hex).toString() : '0';
+
+          return { tokenAddress, spender, allowance } satisfies TokenApproval;
+        } catch {
+          return { tokenAddress, spender, allowance: 'unknown' } satisfies TokenApproval;
+        }
+      })
+    );
+
+    return results
+      .filter((r): r is PromiseFulfilledResult<TokenApproval> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter(a => a.allowance !== '0'); // Filter out revoked approvals
   });
 }
 
