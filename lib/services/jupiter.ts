@@ -9,6 +9,7 @@ import { cacheKey, TTL, withCache } from '../api/cache-manager';
 
 const QUOTE_URL = 'https://lite-api.jup.ag/swap/v1';
 const PRICE_URL = 'https://api.jup.ag/price/v2';
+const TIMEOUT_MS = parseInt(process.env.JUPITER_TIMEOUT_MS || '10000', 10);
 
 // SOL mint address
 export const SOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -57,6 +58,7 @@ async function jupiterFetch(url: string, options?: RequestInit): Promise<unknown
       Accept: 'application/json',
       ...options?.headers,
     },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Jupiter error ${res.status}: ${await res.text()}`);
   return res.json();

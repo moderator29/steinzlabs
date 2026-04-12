@@ -9,6 +9,7 @@ import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
 
 const BASE = 'https://mainnet.helius-rpc.com';
 const API_BASE = 'https://api.helius.xyz/v0';
+const TIMEOUT_MS = parseInt(process.env.HELIUS_TIMEOUT_MS || '12000', 10);
 
 async function heliusRpc(method: string, params: unknown[]): Promise<unknown> {
   let lastError: Error | null = null;
@@ -26,6 +27,7 @@ async function heliusRpc(method: string, params: unknown[]): Promise<unknown> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
 
       if (res.status === 429) {
@@ -63,8 +65,9 @@ async function heliusApi(endpoint: string, body?: unknown): Promise<unknown> {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(TIMEOUT_MS),
           })
-        : await fetch(url);
+        : await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
 
       if (res.status === 429) {
         heliusRotation.markRateLimited(apiKey, 60_000);
