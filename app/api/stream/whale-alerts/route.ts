@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { getAddressTransfers } from '@/lib/services/arkham';
 import { getWhaleWatchlist } from '@/lib/services/supabase';

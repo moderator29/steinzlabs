@@ -1,6 +1,7 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { decodeSignature } from '@/lib/security/goplusService';
+import { getSignatureDecode } from '@/lib/services/goplus';
 
 const schema = z.object({
   data: z.string().trim().min(1).max(10000),
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await decodeSignature(clean, chain);
+    const result = await getSignatureDecode(clean, chain);
 
     return NextResponse.json({
       ...result,

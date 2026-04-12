@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Anthropic from '@anthropic-ai/sdk';
