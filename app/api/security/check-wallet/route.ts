@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getWalletReputation } from '@/lib/security/walletReputation';
-import { saveUser } from '@/lib/database/supabase';
+import { addWalletProfile } from '@/lib/services/supabase';
 
 const checkWalletSchema = z.object({
   walletAddress: z.string().trim().min(1).max(100),
@@ -24,19 +24,8 @@ export async function POST(request: NextRequest) {
 
     const reputation = await getWalletReputation(walletAddress);
 
-    try {
-      await saveUser({
-        walletAddress,
-        reputationScore: reputation.score,
-        reputationStatus: reputation.reputation,
-        isVerifiedEntity: reputation.verified,
-        entityId: reputation.entity?.id,
-        entityName: reputation.entity?.name,
-        blocked: !reputation.allowAccess,
-      });
-    } catch (dbError) {
-
-    }
+    // Log wallet check — non-critical, fire and forget
+    addWalletProfile({ userId: walletAddress, address: walletAddress, chain: 'ethereum', label: reputation.reputation }).catch(() => {});
 
     return NextResponse.json(reputation);
   } catch (error) {

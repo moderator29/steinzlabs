@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTotalRevenue } from '@/lib/revenue/feeSystem';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';

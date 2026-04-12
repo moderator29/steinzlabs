@@ -4,6 +4,7 @@ import { vtxAnalyze } from '@/lib/services/anthropic';
 import { getEthBalance, getAssetTransfers, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { getTokenPairs } from '@/lib/services/dexscreener';
+import { getBirdeyeTokenOverview } from '@/lib/services/birdeye';
 import { getSolanaSOLBalance, getSolanaWalletTokens, getSolanaTransactions } from '@/lib/services/helius';
 import type { TokenTransfer } from '@/lib/services/alchemy';
 import type { HeliusTransaction } from '@/lib/services/helius';
@@ -160,10 +161,23 @@ async function fetchSolWalletData(address: string): Promise<{
 
     const solValueUsd = solBalance * solPrice;
 
-    // Get price+metadata for SPL tokens via DexScreener
+    // Get price+metadata for SPL tokens — Birdeye primary, DexScreener fallback
     const tokenResults = await Promise.allSettled(
       splTokens.slice(0, 50).map(async t => {
         try {
+          // Try Birdeye first (more accurate for Solana)
+          const overview = await getBirdeyeTokenOverview(t.mint, 'solana').catch(() => null);
+          if (overview && overview.price > 0) {
+            const valueUsd = t.uiAmount * overview.price;
+            return {
+              symbol: overview.symbol || t.mint.slice(0, 6),
+              name: overview.name || 'SPL Token',
+              balance: t.uiAmount > 1000 ? t.uiAmount.toFixed(0) : t.uiAmount.toFixed(4),
+              valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
+              contractAddress: t.mint,
+            };
+          }
+          // Fallback to DexScreener
           const pairs = await getTokenPairs(t.mint);
           const top = pairs[0];
           const priceUsd = top?.priceUsd ? parseFloat(String(top.priceUsd)) : 0;

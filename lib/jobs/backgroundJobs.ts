@@ -1,7 +1,7 @@
 import { moneyRadarMonitor } from '../moneyRadar/monitor';
 import { monitorLimitOrders } from '../trading/advancedOrders';
 import { createHolderSnapshot } from '../intelligence/historicalTracking';
-import { arkhamAPI } from '../arkham/api';
+import { getEntity, getEntityPerformance, getEntityPortfolio } from '../services/arkham';
 import { getSupabaseAdmin } from '../supabaseAdmin';
 
 class BackgroundJobManager {
@@ -80,9 +80,9 @@ class BackgroundJobManager {
 
     for (const entityId of entities) {
       try {
-        const entity = await arkhamAPI.getEntity(entityId);
-        const performance = await arkhamAPI.getEntityPerformance(entityId);
-        const portfolio = await arkhamAPI.getEntityPortfolio(entityId);
+        const entity = await getEntity(entityId);
+        const performance = await getEntityPerformance(entityId);
+        const portfolio = await getEntityPortfolio(entityId);
 
         await supabaseAdmin.from('entity_cache').upsert({
           entity_id: entityId,

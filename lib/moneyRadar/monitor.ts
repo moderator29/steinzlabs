@@ -1,4 +1,4 @@
-import { arkhamAPI } from '../arkham/api';
+import { getAddressTransfers } from '../services/arkham';
 import { getSupabaseAdmin } from '../supabaseAdmin';
 import { EntityTrade } from './types';
 
@@ -55,7 +55,7 @@ class MoneyRadarMonitor {
   private async checkEntityActivity(followed: any) {
     try {
       for (const wallet of (followed.wallets || [])) {
-        const transfers = await arkhamAPI.getAddressTransfers(wallet, 10);
+        const transfers = await getAddressTransfers(wallet, 10);
 
         const recentTrades = transfers.filter(tx => {
           const txTime = new Date(tx.timestamp).getTime();
