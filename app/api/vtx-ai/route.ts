@@ -3,16 +3,14 @@ import { headers } from 'next/headers';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
-import { vtxQuery, vtxStream, VTX_TOOLS } from '@/lib/services/anthropic';
+import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getTokenDetail, getTopTokens, getGlobalMarketData, getTrendingTokens as getCGTrending } from '@/lib/services/coingecko';
-import { searchPairs, getTokenPairs, getNewPairs } from '@/lib/services/dexscreener';
-import { getTokenMetadata, getTokenHolderCount, getContractCode } from '@/lib/services/alchemy';
+import { getTokenDetail, getTopTokens } from '@/lib/services/coingecko';
+import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
+import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/helius';
 import { getSocialScore } from '@/lib/services/lunarcrush';
-import { getEntityLabel, getAddressIntel, getWalletConnections, getTokenHolders } from '@/lib/services/arkham';
-import { getEthBalance } from '@/lib/services/alchemy';
-import { vtxAnalyze } from '@/lib/services/anthropic';
+import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -645,7 +643,6 @@ export async function POST(request: NextRequest) {
       depth?: string;
       riskAppetite?: string;
       responseStyle?: string;
-      autoContext?: boolean;
       skipRateLimit?: boolean;
       context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
       stream?: boolean;
@@ -653,7 +650,7 @@ export async function POST(request: NextRequest) {
 
     const {
       message, history, tier, personality, language, depth,
-      riskAppetite, responseStyle, autoContext, skipRateLimit, context, stream: wantsStream,
+      riskAppetite, responseStyle, skipRateLimit, context, stream: wantsStream,
     } = body;
 
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
