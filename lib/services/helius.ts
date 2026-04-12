@@ -220,3 +220,31 @@ export async function getSolanaTokenSupply(mintAddress: string): Promise<number>
     }
   });
 }
+
+export interface SolanaTokenHolder {
+  address: string;
+  uiAmount: number;
+  percentage: number;
+}
+
+/** Fetch the top holders for a Solana SPL token mint. */
+export async function getSolanaTokenHolders(mintAddress: string): Promise<SolanaTokenHolder[]> {
+  const key = cacheKey('helius', 'token_holders', { mintAddress });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    try {
+      const result = await heliusRpc('getTokenLargestAccounts', [mintAddress]) as {
+        value: Array<{ address: string; uiAmount: number | null }>
+      };
+      const accounts = result?.value ?? [];
+      const totalAmount = accounts.reduce((sum, a) => sum + (a.uiAmount ?? 0), 0);
+      if (totalAmount === 0) return [];
+      return accounts.map(a => ({
+        address: a.address,
+        uiAmount: a.uiAmount ?? 0,
+        percentage: Math.round(((a.uiAmount ?? 0) / totalAmount) * 10_000) / 100,
+      }));
+    } catch {
+      return [];
+    }
+  });
+}
