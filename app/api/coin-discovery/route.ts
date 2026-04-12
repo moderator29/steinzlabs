@@ -4,7 +4,7 @@ import { getTopTokens } from '@/lib/services/coingecko';
 
 export async function GET() {
   try {
-    const coins = await getTopTokens(50);
+    const coins = await getTopTokens(1, 50);
 
     return NextResponse.json({
       coins: coins.map(c => ({

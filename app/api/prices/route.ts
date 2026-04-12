@@ -46,7 +46,7 @@ interface PriceEntry {
 /** Fetch top 50 market tokens from CoinGecko service and index by symbol. */
 async function getAllPricesBySymbol(): Promise<Record<string, PriceEntry>> {
   try {
-    const coins = await getTopTokens(50);
+    const coins = await getTopTokens(1, 50);
     const map: Record<string, PriceEntry> = {};
     for (const c of coins) {
       const sym = c.symbol.toUpperCase();
