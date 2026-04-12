@@ -360,7 +360,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
                   if (event.tokenName) params.set('name', event.tokenName);
                   if (event.pairAddress) params.set('pair', event.pairAddress);
                   if (event.chain) params.set('chain', event.chain);
-                  router.push(`/dashboard/market?${params.toString()}`);
+                  router.push(`/dashboard/swap?${params.toString()}`);
                 }}
                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3 rounded-lg text-sm font-bold transition-colors"
               >

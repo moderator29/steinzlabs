@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode, useRef } from 'react';
+import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,6 @@ import NotificationBell from '@/components/NotificationBell';
 import { maybeNotifyWelcome } from '@/lib/notifications';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
-const Markets = lazy(() => import('@/components/Markets'));
 const VtxAiTab = lazy(() => import('@/components/VtxAiTab'));
 const WalletTab = lazy(() => import('@/components/WalletTab'));
 const ProfileTab = lazy(() => import('@/components/ProfileTab'));
@@ -122,9 +121,16 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('context');
   const [activeNav, setActiveNav] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [marketStats, setMarketStats] = useState<{
+    totalMarketCap: string; totalVolume: string; btcDominance: string;
+    marketCapChange: string; volumeChange: string; dominanceChange: string;
+  } | null>(null);
+
+  const handleNavChange = useCallback((id: string) => {
+    setActiveNav(id);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -132,30 +138,11 @@ export default function Dashboard() {
     }
   }, [user, authLoading, router]);
 
-  // Welcome notification on first login
   useEffect(() => {
     if (user) {
       maybeNotifyWelcome(user.email);
     }
   }, [user]);
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  const [marketStats, setMarketStats] = useState<{ totalMarketCap: string; totalVolume: string; btcDominance: string; marketCapChange: string; volumeChange: string; dominanceChange: string } | null>(null);
-  const showHomeTabs = activeNav === 'home';
-
-  const handleNavChange = useCallback((id: string) => {
-    setActiveNav(id);
-    if (id === 'home') setActiveTab('context');
-  }, []);
 
   useEffect(() => {
     const fetchMarketStats = async () => {
@@ -183,11 +170,20 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const showHomeTabs = activeNav === 'home';
+
   const renderContent = () => {
-    if (activeNav === 'home') {
-      if (activeTab === 'context') return <ContextFeed />;
-      if (activeTab === 'markets') return <Markets />;
-    }
+    if (activeNav === 'home') return <ContextFeed />;
     if (activeNav === 'vtxai') return <VtxAiTab />;
     if (activeNav === 'wallet') return <WalletTab />;
     if (activeNav === 'profile') return <ProfileTab />;
@@ -242,27 +238,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <div className="flex gap-1 mb-4 bg-[#111827] border border-white/[0.06] p-1 rounded-xl max-w-xs mx-auto">
-              {[
-                { id: 'context', label: 'Context Feed' },
-                { id: 'markets', label: 'Market' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-1.5 ${
-                    activeTab === tab.id
-                      ? 'bg-[#0A1EFF] text-white'
-                      : 'text-gray-500 hover:text-white hover:bg-white/[0.04]'
-                  }`}
-                >
-                  {tab.label}
-                  {(tab as any).beta && (
-                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#10B981]/15 text-[#10B981]'}`}>BETA</span>
-                  )}
-                </button>
-              ))}
-            </div>
           </>
         )}
 
@@ -270,7 +245,7 @@ export default function Dashboard() {
           <Suspense fallback={<TabSpinner />}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeNav + activeTab}
+                key={activeNav}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}

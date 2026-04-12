@@ -1,4 +1,6 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { getTrendingTokens } from '@/lib/services/coingecko';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -115,50 +117,28 @@ async function fetchDexScreener(): Promise<ResearchPost[]> {
 
 // ---------- CoinGecko trending ----------
 async function fetchCoinGeckoTrending(): Promise<ResearchPost[]> {
-  const res = await fetch('https://api.coingecko.com/api/v3/search/trending', {
-    next: { revalidate: 300 },
-  });
-  if (!res.ok) return [];
-  const json = await res.json();
-  const coins: unknown[] = (json.coins || []).map((c: Record<string, unknown>) => c.item);
-  return coins.slice(0, 15).map((item: unknown, i: number) => {
-    const c = item as Record<string, unknown>;
-    const name = String(c.name || '');
-    const symbol = String(c.symbol || '').toUpperCase();
-    const score = Number(c.score ?? 0);
-    const marketCapRank = Number(c.market_cap_rank || 0);
-    const desc = String((c.data as Record<string, string> | undefined)?.content || '');
-    const priceChangeRaw = (c.data as Record<string, unknown> | undefined)?.price_change_percentage_24h;
-    const priceChange = Number((priceChangeRaw as Record<string, unknown> | undefined)?.usd ?? 0);
-    const thumb = String(c.large || c.thumb || '');
-    const title = `${name} (${symbol}) — Trending #${score + 1} on CoinGecko`;
-    const cat = mapCategory(name + ' ' + symbol + ' ' + desc);
-    const priceStr = priceChange >= 0 ? `+${priceChange.toFixed(2)}%` : `${priceChange.toFixed(2)}%`;
-    return {
-      id: String(c.id || slugify(title, i)),
-      title,
-      summary: desc || `${name} is trending on CoinGecko with a 24h price change of ${priceStr}.`,
-      content: [
+  try {
+    const coins = await getTrendingTokens();
+    return coins.slice(0, 15).map((coin, i) => {
+      const name = coin.name;
+      const symbol = coin.symbol.toUpperCase();
+      const title = `${name} (${symbol}) — Trending #${coin.score + 1} on CoinGecko`;
+      const cat = mapCategory(name + ' ' + symbol);
+      return {
+        id: coin.id || slugify(title, i),
         title,
-        '',
-        desc || `${name} (${symbol}) is currently trending on CoinGecko.`,
-        '',
-        `24h Price Change: ${priceStr}`,
-        marketCapRank ? `Market Cap Rank: #${marketCapRank}` : '',
-        '',
-        'Data source: CoinGecko Trending',
-      ]
-        .filter((l) => l !== undefined)
-        .join('\n'),
-      category: cat,
-      image_url: thumb || null,
-      tags: [symbol, 'Trending', 'CoinGecko'].filter(Boolean),
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      source: 'CoinGecko',
-      url: `https://www.coingecko.com/en/coins/${String(c.id || '')}`,
-    } as ResearchPost;
-  });
+        summary: `${name} is currently trending on CoinGecko.`,
+        content: [title, '', `${name} (${symbol}) is currently trending on CoinGecko.`, '', 'Data source: CoinGecko Trending'].join('\n'),
+        category: cat,
+        image_url: coin.thumb || null,
+        tags: [symbol, 'Trending', 'CoinGecko'].filter(Boolean),
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        source: 'CoinGecko',
+        url: `https://www.coingecko.com/en/coins/${coin.id}`,
+      } as ResearchPost;
+    });
+  } catch { return []; }
 }
 
 // ---------- Supabase (manual posts) ----------
