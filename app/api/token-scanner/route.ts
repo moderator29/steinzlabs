@@ -8,8 +8,9 @@ import { getContractCode } from '@/lib/services/alchemy';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
-// ─── Chain Map ────────────────────────────────────────────────────────────────
+// ─── Chain Maps ───────────────────────────────────────────────────────────────
 
+// Symbolic name → numeric chainId string
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', eth: '1',
   bsc: '56', bnb: '56',
@@ -22,10 +23,27 @@ const CHAIN_MAP: Record<string, string> = {
   '8453': '8453', '43114': '43114', '42161': '42161',
 };
 
+// Numeric chainId → symbolic chain name (used by service layer)
+const CHAIN_ID_TO_NAME: Record<string, string> = {
+  '1': 'ethereum',
+  '56': 'bsc',
+  '137': 'polygon',
+  '8453': 'base',
+  '42161': 'arbitrum',
+  '10': 'optimism',
+  '43114': 'avalanche',
+};
+
 const CHAIN_LABEL: Record<string, string> = {
   '1': 'Ethereum', '56': 'BSC', '137': 'Polygon',
   '8453': 'Base', '43114': 'Avalanche', '42161': 'Arbitrum',
   solana: 'Solana',
+};
+
+// Public RPC fallbacks for chains Alchemy SDK does not support (e.g. Avalanche)
+const FALLBACK_RPC: Record<string, string> = {
+  avalanche: 'https://api.avax.network/ext/bc/C/rpc',
+  '43114': 'https://api.avax.network/ext/bc/C/rpc',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,14 +52,36 @@ function isSolanaAddress(address: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
 }
 
-/** Uses the service layer (Alchemy) to detect if an address is an EOA wallet. */
+/**
+ * Detect if an address is an EOA (non-contract) wallet.
+ * Uses Alchemy service layer where supported; falls back to public RPC otherwise.
+ * Returns false (unknown = not EOA) on any failure to be permissive.
+ */
 async function isEOAWallet(address: string, chainId: string): Promise<boolean> {
-  const chainLabel = Object.entries(CHAIN_MAP).find(([, v]) => v === chainId)?.[0] ?? 'ethereum';
+  const chainName = CHAIN_ID_TO_NAME[chainId] ?? 'ethereum';
+
+  // Try Alchemy service layer first
   try {
-    const code = await getContractCode(address, chainLabel);
+    const code = await getContractCode(address, chainName);
     return !code || code === '0x' || code === '0x0';
   } catch {
-    return false;
+    // Alchemy doesn't support this chain — try public RPC fallback
+    const rpcUrl = FALLBACK_RPC[chainName] ?? FALLBACK_RPC[chainId];
+    if (!rpcUrl) return false; // Can't determine — treat as contract (permissive)
+
+    try {
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getCode', params: [address, 'latest'] }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const data = await res.json() as { result?: string };
+      const code = data.result;
+      return !code || code === '0x' || code === '0x0';
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -52,18 +92,19 @@ async function fetchDexData(address: string): Promise<Record<string, unknown> | 
     const top = pairs[0];
     if (!top) return null;
     return {
+      name: top.baseToken.name,
+      symbol: top.baseToken.symbol,
       price: parseFloat(String(top.priceUsd ?? '0')),
       priceChange24h: top.priceChange?.h24 ?? 0,
       volume24h: top.volume?.h24 ?? 0,
       liquidity: top.liquidity?.usd ?? 0,
       fdv: top.fdv ?? 0,
-      marketCap: (top as any).marketCap ?? top.fdv ?? 0,
+      marketCap: top.fdv ?? 0,          // DexPair has no marketCap field; use fdv
       dexId: top.dexId,
       pairAddress: top.pairAddress,
-      url: (top as any).url ?? null,
-      image: (top as any).info?.imageUrl ?? null,
-      socials: (top as any).info?.socials ?? [],
-      websites: (top as any).info?.websites ?? [],
+      url: top.url ?? null,
+      image: top.info?.imageUrl ?? null,
+      websites: top.info?.websites ?? [],
     };
   } catch {
     return null;
@@ -79,20 +120,15 @@ async function handleSolanaToken(address: string): Promise<Record<string, unknow
 
   const liquidity = (dexData.liquidity as number) ?? 0;
   const volume24h = (dexData.volume24h as number) ?? 0;
-  const socials = (dexData.socials as unknown[]) ?? [];
-  const websites = (dexData.websites as unknown[]) ?? [];
-  const buys = (dexData as any).txns5m?.buys ?? 0;
-  const sells = (dexData as any).txns5m?.sells ?? 0;
-  const totalTxns = buys + sells;
+  const websites = (dexData.websites as Array<{ label: string; url: string }>) ?? [];
+  // Note: DexPair.info has no 'socials' field — use websites as proxy for social presence
+  const totalTxns = 0; // DexPair doesn't surface 5m txns directly in searchPairs result
 
   let score = 70;
   if (liquidity > 100_000) score += 10;
   else if (liquidity < 10_000) score -= 15;
   if (volume24h > 50_000) score += 5;
-  if (totalTxns > 100) score += 5;
-  else if (totalTxns < 10) score -= 10;
-  if (websites.length > 0) score += 5;
-  if (socials.length > 0) score += 5;
+  if (websites.length > 0) score += 10; // social/website presence
   score = Math.max(0, Math.min(100, score));
 
   let safetyLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER' = 'SAFE';
@@ -105,17 +141,15 @@ async function handleSolanaToken(address: string): Promise<Record<string, unknow
     { label: 'Token Listed on DEX', status: 'pass' as const },
     { label: 'Has Liquidity Pool', status: liquidity > 1_000 ? 'pass' as const : 'fail' as const },
     { label: 'Active Trading Volume', status: volume24h > 1_000 ? 'pass' as const : volume24h > 0 ? 'warn' as const : 'fail' as const },
-    { label: 'Multiple Transactions', status: totalTxns > 50 ? 'pass' as const : totalTxns > 5 ? 'warn' as const : 'fail' as const },
-    { label: 'Has Website', status: websites.length > 0 ? 'pass' as const : 'warn' as const },
-    { label: 'Has Social Links', status: socials.length > 0 ? 'pass' as const : 'warn' as const },
+    { label: 'Has Website / Social', status: websites.length > 0 ? 'pass' as const : 'warn' as const },
     { label: 'Sufficient Liquidity (>$10k)', status: liquidity > 10_000 ? 'pass' as const : liquidity > 1_000 ? 'warn' as const : 'fail' as const },
   ];
 
   return {
     contract: address,
     chainId: 'solana',
-    name: (dexData as any).name || 'Unknown Token',
-    symbol: (dexData as any).symbol || '???',
+    name: (dexData.name as string) || 'Unknown Token',
+    symbol: (dexData.symbol as string) || '???',
     totalSupply: 'N/A',
     holderCount: 0,
     creatorAddress: 'N/A',
