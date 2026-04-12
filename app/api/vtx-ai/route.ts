@@ -1129,6 +1129,7 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
           },
+          signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
           body: JSON.stringify({
             model,
             max_tokens: 4096,

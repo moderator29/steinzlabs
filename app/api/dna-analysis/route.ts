@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
 const _anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY;
-const anthropic = _anthropicKey ? new Anthropic({ apiKey: _anthropicKey }) : null;
+const anthropic = _anthropicKey ? new Anthropic({ apiKey: _anthropicKey, timeout: parseInt(process.env.API_TIMEOUT_MS || '600000') }) : null;
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
 const HELIUS_API_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2 || '';
 

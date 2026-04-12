@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY,
+  timeout: parseInt(process.env.API_TIMEOUT_MS || '600000'),
 });
 
 const schema = z.object({

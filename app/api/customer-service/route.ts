@@ -128,6 +128,7 @@ export async function POST(request: Request) {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
+        signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
         body: JSON.stringify({
           model,
           max_tokens: 500,
