@@ -1,4 +1,7 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { getTokenPrice } from '@/lib/services/coingecko';
+import { searchPairs, getTokenPairs } from '@/lib/services/dexscreener';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
@@ -111,15 +114,18 @@ function getArchivedEvents(chain: string): WhaleEvent[] {
 async function fetchPrices(): Promise<void> {
   if (Date.now() - priceCache.ts < 30000) return;
   try {
-    const headers: Record<string, string> = {};
-    if (COINGECKO_KEY) headers['x-cg-demo-api-key'] = COINGECKO_KEY;
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,binancecoin,matic-network,avalanche-2&vs_currencies=usd', { headers });
-    const data = await res.json();
-    priceCache.eth = data?.ethereum?.usd || priceCache.eth;
-    priceCache.sol = data?.solana?.usd || priceCache.sol;
-    priceCache.bnb = data?.binancecoin?.usd || priceCache.bnb;
-    priceCache.matic = data?.['matic-network']?.usd || priceCache.matic;
-    priceCache.avax = data?.['avalanche-2']?.usd || priceCache.avax;
+    const [eth, sol, bnb, matic, avax] = await Promise.allSettled([
+      getTokenPrice('ethereum'),
+      getTokenPrice('solana'),
+      getTokenPrice('binancecoin'),
+      getTokenPrice('matic-network'),
+      getTokenPrice('avalanche-2'),
+    ]);
+    if (eth.status === 'fulfilled' && eth.value > 0) priceCache.eth = eth.value;
+    if (sol.status === 'fulfilled' && sol.value > 0) priceCache.sol = sol.value;
+    if (bnb.status === 'fulfilled' && bnb.value > 0) priceCache.bnb = bnb.value;
+    if (matic.status === 'fulfilled' && matic.value > 0) priceCache.matic = matic.value;
+    if (avax.status === 'fulfilled' && avax.value > 0) priceCache.avax = avax.value;
     priceCache.ts = Date.now();
   } catch {}
 }
@@ -239,23 +245,17 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
 }
 
 async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
-  // Use DexScreener as reliable source for pump.fun tokens (the Heroku endpoint is unstable)
   try {
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=pump.fun',
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pairs = (data.pairs || [])
-      .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
-      .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
+    const allPairs = await searchPairs('pump.fun').catch(() => []);
+    const pairs = allPairs
+      .filter(p => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
+      .sort((a, b) => (b.volume?.h24 ?? 0) - (a.volume?.h24 ?? 0))
       .slice(0, 10);
 
-    return pairs.map((pair: any) => {
-      const mcap = pair.fdv || pair.marketCap || 0;
-      const vol24h = pair.volume?.h24 || 0;
-      const change24h = pair.priceChange?.h24 || 0;
+    return pairs.map(pair => {
+      const mcap = pair.fdv ?? 0;
+      const vol24h = pair.volume?.h24 ?? 0;
+      const change24h = pair.priceChange?.h24 ?? 0;
       const trustScore = Math.min(90, Math.max(20, 40 + (mcap > 100000 ? 20 : 0) + (vol24h > 10000 ? 15 : 0)));
       const sentiment = change24h > 10 ? 'BULLISH' : change24h < -10 ? 'BEARISH' : 'HYPE';
 
@@ -408,27 +408,19 @@ async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
     const topTokens = boostsData.slice(0, 40);
 
     const pairResults = await Promise.allSettled(
-      topTokens.map((t: any) =>
-        fetch(`https://api.dexscreener.com/latest/dex/search?q=${t.tokenAddress}`)
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null)
-      )
+      topTokens.map((t: { tokenAddress: string }) => getTokenPairs(t.tokenAddress).catch(() => []))
     );
 
     const events: WhaleEvent[] = [];
-    for (let i = 0; i < topTokens.length; i++) {
-      const pairResult = pairResults[i];
-      const pairData = pairResult.status === 'fulfilled' ? pairResult.value : null;
-      const pair = pairData?.pairs?.[0];
-      if (!pair) continue;
-
-      const event = mapDexPairToEvent(pair, 'DexScreener');
+    for (const pairResult of pairResults) {
+      const pairs = pairResult.status === 'fulfilled' ? pairResult.value : [];
+      if (!pairs.length) continue;
+      const event = mapDexPairToEvent(pairs[0], 'DexScreener');
       if (event) events.push(event);
     }
 
     return events;
-  } catch (error) {
-
+  } catch {
     return [];
   }
 }
@@ -444,42 +436,30 @@ async function fetchDexScreenerProfiles(chainId: string, count: number = 15): Pr
     if (chainTokens.length === 0) return [];
 
     const pairResults = await Promise.allSettled(
-      chainTokens.map((t: any) =>
-        fetch(`https://api.dexscreener.com/latest/dex/tokens/${t.tokenAddress}`)
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null)
-      )
+      chainTokens.map((t: { tokenAddress: string }) => getTokenPairs(t.tokenAddress).catch(() => []))
     );
 
     const events: WhaleEvent[] = [];
-    for (let i = 0; i < chainTokens.length; i++) {
-      const pairResult = pairResults[i];
-      const pairData = pairResult.status === 'fulfilled' ? pairResult.value : null;
-      const pairs = pairData?.pairs;
-      if (!pairs || pairs.length === 0) continue;
-
-      const bestPair = pairs.sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0];
+    for (const pairResult of pairResults) {
+      const pairs = pairResult.status === 'fulfilled' ? pairResult.value : [];
+      if (!pairs.length) continue;
+      const bestPair = [...pairs].sort((a, b) => (b.volume?.h24 ?? 0) - (a.volume?.h24 ?? 0))[0];
       const event = mapDexPairToEvent(bestPair, 'DexScreener-Profiles');
       if (event) events.push(event);
     }
 
     return events;
-  } catch (error) {
-
+  } catch {
     return [];
   }
 }
 
 async function fetchDexSearchPairs(query: string, chainFilter: string, count: number = 5): Promise<WhaleEvent[]> {
   try {
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pairs = data?.pairs || [];
-
-    const filtered = pairs
-      .filter((p: any) => chainFilter === 'all' || p.chainId === chainFilter)
-      .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
+    const allPairs = await searchPairs(query).catch(() => []);
+    const filtered = allPairs
+      .filter(p => chainFilter === 'all' || p.chainId === chainFilter)
+      .sort((a, b) => (b.volume?.h24 ?? 0) - (a.volume?.h24 ?? 0))
       .slice(0, count);
 
     const events: WhaleEvent[] = [];

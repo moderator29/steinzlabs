@@ -1,10 +1,7 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { vtxAnalyze } from '@/lib/services/anthropic';
 import { z } from 'zod';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY,
-});
 
 const schema = z.object({
   address: z.string().trim().min(1).max(100),
@@ -42,78 +39,56 @@ export async function POST(req: NextRequest) {
 
     const { address, chain, overallScore, riskFlags, tokenSecurity, addressIntel } = parsed.data;
 
-    const securityContext = `
-Token Address: ${address}
-Chain: ${chain}
-Security Score: ${overallScore}/100
-Risk Flags: ${riskFlags.length > 0 ? riskFlags.join(', ') : 'None'}
-${tokenSecurity ? `
-Token Security:
-- Honeypot: ${tokenSecurity.isHoneypot ? 'YES (CRITICAL)' : 'No'}
-- Buy Tax: ${tokenSecurity.buyTax}
-- Sell Tax: ${tokenSecurity.sellTax}
-- Open Source: ${tokenSecurity.isOpenSource ? 'Yes' : 'No (RISK)'}
-- Mintable: ${tokenSecurity.isMintable ? 'Yes (RISK)' : 'No'}
-- Hidden Owner: ${tokenSecurity.hasHiddenOwner ? 'Yes (RISK)' : 'No'}
-- Can Take Back Ownership: ${tokenSecurity.canTakeBackOwnership ? 'Yes (RISK)' : 'No'}
-- Owner Can Change Balances: ${tokenSecurity.ownerCanChangeBalance ? 'Yes (CRITICAL RISK)' : 'No'}
-- Self Destruct: ${tokenSecurity.selfDestruct ? 'Yes (RISK)' : 'No'}
-- Holder Count: ${tokenSecurity.holderCount}
-` : 'Token security data unavailable.'}
-${addressIntel ? `
-Address Intelligence:
-- Risk Level: ${addressIntel.riskLevel}
-- Risk Score: ${addressIntel.riskScore}/100
-- Malicious: ${addressIntel.isMalicious ? 'YES' : 'No'}
-- Phishing: ${addressIntel.isPhishing ? 'YES' : 'No'}
-- Known Labels: ${addressIntel.labels.length > 0 ? addressIntel.labels.join(', ') : 'None'}
-` : 'Address intelligence unavailable.'}
-`;
+    const secCtx = [
+      `Token Address: ${address}`,
+      `Chain: ${chain}`,
+      `Security Score: ${overallScore}/100`,
+      `Risk Flags: ${riskFlags.length > 0 ? riskFlags.join(', ') : 'None'}`,
+      tokenSecurity ? [
+        'Token Security:',
+        `- Honeypot: ${tokenSecurity.isHoneypot ? 'YES (CRITICAL)' : 'No'}`,
+        `- Buy Tax: ${tokenSecurity.buyTax}`,
+        `- Sell Tax: ${tokenSecurity.sellTax}`,
+        `- Open Source: ${tokenSecurity.isOpenSource ? 'Yes' : 'No (RISK)'}`,
+        `- Mintable: ${tokenSecurity.isMintable ? 'Yes (RISK)' : 'No'}`,
+        `- Hidden Owner: ${tokenSecurity.hasHiddenOwner ? 'Yes (RISK)' : 'No'}`,
+        `- Can Take Back Ownership: ${tokenSecurity.canTakeBackOwnership ? 'Yes (RISK)' : 'No'}`,
+        `- Owner Can Change Balances: ${tokenSecurity.ownerCanChangeBalance ? 'Yes (CRITICAL RISK)' : 'No'}`,
+        `- Self Destruct: ${tokenSecurity.selfDestruct ? 'Yes (RISK)' : 'No'}`,
+        `- Holder Count: ${tokenSecurity.holderCount}`,
+      ].join('\n') : 'Token security data unavailable.',
+      addressIntel ? [
+        'Address Intelligence:',
+        `- Risk Level: ${addressIntel.riskLevel}`,
+        `- Risk Score: ${addressIntel.riskScore}/100`,
+        `- Malicious: ${addressIntel.isMalicious ? 'YES' : 'No'}`,
+        `- Phishing: ${addressIntel.isPhishing ? 'YES' : 'No'}`,
+        `- Known Labels: ${addressIntel.labels.length > 0 ? addressIntel.labels.join(', ') : 'None'}`,
+      ].join('\n') : 'Address intelligence unavailable.',
+    ].join('\n');
 
     const prompt = `You are a senior DeFi security analyst at STEINZ LABS. Analyze this token contract security data and provide a clear, honest risk assessment for retail investors.
 
-${securityContext}
+${secCtx}
 
 Respond with valid JSON only. No markdown, no code blocks, just raw JSON:
 {
   "riskLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
   "riskColor": "#10B981" | "#F59E0B" | "#F97316" | "#EF4444",
-  "summary": "<3-4 sentence paragraph in plain English explaining the overall risk situation, what the security score means, and whether this token appears safe to interact with. Be direct and specific.>",
-  "warnings": [
-    {
-      "title": "<short warning title>",
-      "description": "<1-2 sentences explaining what this means for an investor in plain English, and what the risk is>",
-      "severity": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
-    }
-  ],
-  "positives": [
-    "<one positive security attribute, if any>"
-  ],
-  "verdict": "<single sentence investor verdict — e.g. 'Approach with extreme caution' or 'Appears safe but always DYOR'>"
+  "summary": "<3-4 sentence paragraph in plain English explaining the overall risk situation>",
+  "warnings": [{"title": "<title>", "description": "<1-2 sentences>", "severity": "LOW"|"MEDIUM"|"HIGH"|"CRITICAL"}],
+  "positives": ["<one positive security attribute, if any>"],
+  "verdict": "<single sentence investor verdict>"
 }`;
 
-    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
-    let aiResponse: Awaited<ReturnType<typeof anthropic.messages.create>> | null = null;
-    for (const model of MODELS) {
-      try {
-        aiResponse = await anthropic.messages.create({
-          model,
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        });
-        break;
-      } catch (err: any) {
-        // model failed, try next
-      }
-    }
-    if (!aiResponse) throw new Error('AI assessment unavailable');
+    const text = await vtxAnalyze(prompt, 1000);
+    if (!text) throw new Error('AI assessment unavailable');
 
-    const text = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
-    const assessment = JSON.parse(text);
+    const match = text.match(/\{[\s\S]*\}/);
+    const assessment = JSON.parse(match ? match[0] : text);
 
     return NextResponse.json(assessment);
-  } catch (err) {
-
+  } catch {
     return NextResponse.json({ error: 'AI assessment failed' }, { status: 500 });
   }
 }
