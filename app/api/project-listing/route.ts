@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
 
 type ListingStatus = 'pending' | 'approved_pending_payment' | 'payment_sent' | 'paid' | 'listed' | 'rejected';

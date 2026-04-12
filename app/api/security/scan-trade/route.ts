@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { shadowGuardian } from '@/lib/security/shadowGuardian';
-import { saveScanResult, getUserByWallet } from '@/lib/database/supabase';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const scanTradeSchema = z.object({
   tokenAddress: z.string().trim().min(1).max(100),
@@ -30,23 +30,10 @@ export async function POST(request: NextRequest) {
       userWallet
     );
 
+    // Log scan result to Supabase — non-critical
     if (userWallet) {
-      try {
-        const user = await getUserByWallet(userWallet);
-        if (user) {
-          await saveScanResult({
-            userId: user.id,
-            tokenAddress,
-            scanResult,
-            allowed: scanResult.allowed,
-            blocked: scanResult.blocked,
-            riskScore: scanResult.riskScore,
-            reason: scanResult.reason,
-          });
-        }
-      } catch (dbError) {
-
-      }
+      const admin = getSupabaseAdmin();
+      admin.from('scans').insert({ user_wallet: userWallet, token_address: tokenAddress, scan_result: scanResult, allowed: scanResult.allowed, blocked: scanResult.blocked, risk_score: scanResult.riskScore, reason: scanResult.reason }).then(() => {}).catch(() => {});
     }
 
     return NextResponse.json(scanResult);

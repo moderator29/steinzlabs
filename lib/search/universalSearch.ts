@@ -1,5 +1,5 @@
 import { searchDEXScreener } from './dexscreener';
-import { arkhamAPI } from '../arkham/api';
+import { getTokenHolders } from '../services/arkham';
 import { SearchResult } from './types';
 
 // Binance symbol → name mapping for major coin search
@@ -118,7 +118,7 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
         // Skip Arkham enrichment for Binance major coins (no contract address)
         if ((result as any).source === 'binance' || result.address.length < 10) return result;
         try {
-          const holders = await arkhamAPI.getTokenHolders(result.address, 5);
+          const holders = await getTokenHolders(result.address, 5);
           if (holders.length === 0) return result;
 
           const arkhamVerified = holders[0]?.entity?.verified || false;

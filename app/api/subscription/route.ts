@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { TIER_FEATURES, TIER_PRICING } from '@/lib/subscriptions/tiers';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';

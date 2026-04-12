@@ -5,6 +5,7 @@
 
 const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1';
 const API_KEY = process.env.GOPLUS_API_KEY || '';
+const TIMEOUT_MS = parseInt(process.env.GOPLUS_TIMEOUT_MS || '15000', 10);
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', eth: '1',
@@ -29,6 +30,7 @@ async function goplusGet(path: string): Promise<any> {
   const res = await fetch(url, {
     headers: { Authorization: API_KEY },
     next: { revalidate: 60 },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Security API error: ${res.status}`);
   const data = await res.json();

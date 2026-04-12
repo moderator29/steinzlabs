@@ -10,6 +10,8 @@ const API_KEY = process.env.COINGECKO_API_KEY || '';
 const BASE_PRO = 'https://pro-api.coingecko.com/api/v3';
 const BASE_PUBLIC = 'https://api.coingecko.com/api/v3';
 
+const TIMEOUT_MS = parseInt(process.env.COINGECKO_TIMEOUT_MS || '12000', 10);
+
 function getBase(): string {
   return API_KEY ? BASE_PRO : BASE_PUBLIC;
 }
@@ -27,7 +29,11 @@ async function cgFetch(endpoint: string, params?: Record<string, string>): Promi
     }
   }
 
-  let res = await fetch(url.toString(), { headers: getHeaders(), next: { revalidate: 60 } });
+  let res = await fetch(url.toString(), {
+    headers: getHeaders(),
+    next: { revalidate: 60 },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
 
   // Fallback to public API on rate limit
   if (res.status === 429 && API_KEY) {
@@ -37,7 +43,10 @@ async function cgFetch(endpoint: string, params?: Record<string, string>): Promi
         publicUrl.searchParams.set(k, v);
       }
     }
-    res = await fetch(publicUrl.toString(), { next: { revalidate: 60 } });
+    res = await fetch(publicUrl.toString(), {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
   }
 
   if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
