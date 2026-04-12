@@ -1,5 +1,5 @@
 import 'server-only';
-import { serviceCache, TTL } from '../api/cache-manager';
+import { cache, TTL } from '../api/cache-manager';
 
 const BASE = 'https://public-api.birdeye.so';
 const KEY = process.env.BIRDEYE_API_KEY ?? '';
@@ -10,7 +10,7 @@ function headers(chain = 'solana') {
 
 async function get<T>(path: string, chain = 'solana'): Promise<T> {
   const cacheKey = `birdeye:${chain}:${path}`;
-  const cached = serviceCache.get<T>(cacheKey);
+  const cached = cache.get<T>(cacheKey);
   if (cached) return cached;
 
   const res = await fetch(`${BASE}${path}`, {
@@ -19,7 +19,7 @@ async function get<T>(path: string, chain = 'solana'): Promise<T> {
   });
   if (!res.ok) throw new Error(`Birdeye ${path} → ${res.status}`);
   const json = await res.json() as { data: T };
-  serviceCache.set(cacheKey, json.data, TTL.TOKEN_PRICE);
+  cache.set(cacheKey, json.data, TTL.TOKEN_PRICE);
   return json.data;
 }
 
@@ -90,13 +90,13 @@ export interface BirdeyeTokenListItem {
 export async function getBirdeyeTopTokens(limit = 20, chain = 'solana'): Promise<BirdeyeTokenListItem[]> {
   try {
     const cacheKey = `birdeye:top:${chain}:${limit}`;
-    const cached = serviceCache.get<BirdeyeTokenListItem[]>(cacheKey);
+    const cached = cache.get<BirdeyeTokenListItem[]>(cacheKey);
     if (cached) return cached;
     const data = await get<{ tokens: BirdeyeTokenListItem[] }>(
       `/defi/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=${limit}`, chain
     );
     const tokens = data?.tokens ?? [];
-    serviceCache.set(cacheKey, tokens, TTL.TOKEN_PRICE);
+    cache.set(cacheKey, tokens, TTL.TOKEN_PRICE);
     return tokens;
   } catch { return []; }
 }

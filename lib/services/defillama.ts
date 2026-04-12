@@ -1,17 +1,17 @@
 import 'server-only';
-import { serviceCache, TTL } from '../api/cache-manager';
+import { cache, TTL } from '../api/cache-manager';
 
 const BASE = 'https://api.llama.fi';
 const COINS = 'https://coins.llama.fi';
 const TIMEOUT = parseInt(process.env.API_TIMEOUT_MS || '600000');
 
 async function get<T>(url: string, ttl = TTL.WALLET_BALANCE): Promise<T> {
-  const cached = serviceCache.get<T>(url);
+  const cached = cache.get<T>(url);
   if (cached) return cached;
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
   if (!res.ok) throw new Error(`DefiLlama ${url} → ${res.status}`);
   const data = await res.json() as T;
-  serviceCache.set(url, data, ttl);
+  cache.set(url, data, ttl);
   return data;
 }
 
