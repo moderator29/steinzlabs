@@ -631,3 +631,280 @@ export async function GET() {
     { status: configured ? 200 : 503 }
   );
 }
+
+// ─── POST — Main VTX Chat Handler ─────────────────────────────────────────────
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json() as {
+      message?: string;
+      history?: Array<{ role: string; content: string }>;
+      tier?: string;
+      personality?: string;
+      language?: string;
+      depth?: string;
+      riskAppetite?: string;
+      responseStyle?: string;
+      autoContext?: boolean;
+      skipRateLimit?: boolean;
+      context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
+      stream?: boolean;
+    };
+
+    const {
+      message, history, tier, personality, language, depth,
+      riskAppetite, responseStyle, autoContext, skipRateLimit, context, stream: wantsStream,
+    } = body;
+
+    if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to environment variables.' }, { status: 500 });
+    }
+
+    // ── Rate Limiting ───────────────────────────────────────────────────────
+    const headersList = await headers();
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || headersList.get('x-real-ip') || 'unknown';
+    const isPro = tier === 'pro';
+
+    if (!isPro && !skipRateLimit) {
+      const rateInfo = getRateLimitInfo(ip);
+      if (rateInfo.remaining <= 0) {
+        return NextResponse.json({
+          error: 'Daily message limit reached. Upgrade to STEINZ Pro for unlimited messages.',
+          rateLimited: true,
+          usage: { used: rateInfo.total, limit: rateInfo.total, remaining: 0 },
+        }, { status: 429 });
+      }
+    }
+
+    // ── Parse Message ───────────────────────────────────────────────────────
+    const webSearchEnabled = message.includes('[WEB_SEARCH]');
+    const rawMessage = message.replace('[WEB_SEARCH]', '').trim();
+    const slashCmd = parseSlashCommand(rawMessage);
+    const cleanMessage = slashCmd ? (slashCmd.args || rawMessage) : rawMessage;
+    const commandInstruction = slashCmd?.instruction ?? null;
+    const forceWebSearch = slashCmd?.forceWebSearch ?? false;
+
+    // ── Detectors ───────────────────────────────────────────────────────────
+    const walletDetected = detectWalletAddress(cleanMessage);
+    const tokenDetected = detectTokenAddress(cleanMessage);
+    const arkhamIntent = detectArkhamIntent(cleanMessage);
+    const userChartSignal = detectChartSignal(cleanMessage);
+    if (slashCmd?.command === 'chart' && !userChartSignal.chartType) {
+      userChartSignal.chartType = 'price';
+      userChartSignal.chartToken = cleanMessage;
+    }
+
+    // ── Pre-flight Data (parallel) ──────────────────────────────────────────
+    const [marketData, fng, dexTrending, gasData] = await Promise.all([
+      fetchLiveMarketContext(),
+      fetchFearAndGreed(),
+      fetchDexTrending(),
+      fetchGasPrice(),
+    ]);
+
+    // Build live data section for system prompt
+    const liveDataParts = [marketData, fng, dexTrending, gasData].filter(Boolean);
+    const liveDataStr = liveDataParts.length > 0
+      ? `LIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataParts.join('\n\n')}`
+      : '';
+
+    // Extract market context summary for template placeholder
+    const btcLine = marketData.split('\n').find(l => l.startsWith('BTC:')) ?? '';
+    const ethLine = marketData.split('\n').find(l => l.startsWith('ETH:')) ?? '';
+    const solLine = marketData.split('\n').find(l => l.startsWith('SOL:')) ?? '';
+    const fngShort = fng.replace('Fear & Greed Index: ', '') || 'N/A';
+    const market_context = [btcLine, ethLine, solLine, fngShort, gasData].filter(Boolean).join(' | ');
+
+    // ── Style Instructions ──────────────────────────────────────────────────
+    const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
+      ? personality.trim() : 'Neutral';
+    const resolvedDepth = depth ?? responseStyle ?? 'Standard';
+    const styleInstruction = resolvedDepth === 'Quick'
+      ? 'Concise responses (1-2 paragraphs). Key data points only.'
+      : resolvedDepth === 'Deep' || resolvedDepth === 'detailed'
+        ? 'Comprehensive analysis with full sections. Be thorough, cover all angles.'
+        : 'Balanced — structured but not exhaustive.';
+
+    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite : 'Balanced';
+    const riskInstruction = resolvedRisk === 'Conservative'
+      ? 'Emphasize downside risks. Prioritize capital preservation. Flag every red flag prominently.'
+      : resolvedRisk === 'Aggressive'
+        ? 'Focus on high-reward opportunities. Identify asymmetric upside. User accepts high risk.'
+        : 'Present balanced view of risks and rewards.';
+
+    const resolvedLanguage = (language && typeof language === 'string') ? language : 'English';
+    const languageInstruction = resolvedLanguage !== 'English'
+      ? `Respond entirely in ${resolvedLanguage}.` : '';
+
+    const platformContextStr = context
+      ? `Current Page: ${context.currentPage ?? 'Unknown'} | Token in View: ${context.currentToken ?? 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
+      : '';
+
+    // ── Build System Prompt ─────────────────────────────────────────────────
+    const systemPrompt = VTX_SYSTEM_PROMPT_TEMPLATE
+      .replace('{personality}', resolvedPersonality)
+      .replace('{market_context}', market_context || 'N/A')
+      .replace('{platform_context}', platformContextStr || 'N/A')
+      .replace('{style_instruction}', styleInstruction)
+      .replace('{risk_instruction}', riskInstruction)
+      .replace('{language_instruction}', languageInstruction)
+      .replace('{live_data}', liveDataStr);
+
+    // ── Build Message History ───────────────────────────────────────────────
+    const loopMessages: Anthropic.MessageParam[] = [];
+    if (history && Array.isArray(history)) {
+      for (const msg of history.slice(-10)) {
+        loopMessages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+        });
+      }
+    }
+    const finalUserMessage = commandInstruction
+      ? `[COMMAND: /${slashCmd!.command}]\nINSTRUCTION: ${commandInstruction}\nUSER INPUT: ${cleanMessage || rawMessage}`
+      : cleanMessage;
+    loopMessages.push({ role: 'user', content: finalUserMessage });
+
+    // ── Streaming Path (no tool loop) ───────────────────────────────────────
+    if (wantsStream) {
+      const textStream = await vtxStream({ messages: loopMessages, system: systemPrompt });
+      const encoder = new TextEncoder();
+      const sseStream = new ReadableStream({
+        async start(controller) {
+          const reader = textStream.getReader();
+          let fullText = '';
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              fullText += value;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: value })}\n\n`));
+            }
+            // Final event with scrubbed full text
+            const scrubbed = scrubBranding(fullText);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
+          } catch {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+      if (!isPro && !skipRateLimit) incrementUsage(ip);
+      return new Response(sseStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        },
+      });
+    }
+
+    // ── Tool Execution Loop ─────────────────────────────────────────────────
+    let finalReply = '';
+    let toolIterations = 0;
+    let toolsUsed: string[] = [];
+
+    while (toolIterations < MAX_TOOL_ITERATIONS) {
+      const vtxResponse = await vtxQuery({
+        messages: loopMessages,
+        system: systemPrompt,
+      });
+
+      if (vtxResponse.stop_reason === 'tool_use') {
+        // Collect all tool_use blocks from this response
+        const toolUseBlocks = vtxResponse.content.filter(
+          (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+        );
+
+        // Execute all tool calls in parallel
+        const toolResults = await Promise.all(
+          toolUseBlocks.map(async (block) => {
+            toolsUsed.push(block.name);
+            const result = await executeVTXTool(block.name, block.input as Record<string, unknown>);
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: block.id,
+              content: result,
+            };
+          })
+        );
+
+        // Append assistant turn (with tool_use blocks) + user turn (with tool_results)
+        loopMessages.push({ role: 'assistant', content: vtxResponse.content });
+        loopMessages.push({ role: 'user', content: toolResults });
+        toolIterations++;
+        continue;
+      }
+
+      // stop_reason === 'end_turn' — extract text
+      const textBlock = vtxResponse.content.find(
+        (b): b is Anthropic.TextBlock => b.type === 'text'
+      );
+      finalReply = textBlock?.text ?? '';
+      break;
+    }
+
+    if (!finalReply) {
+      finalReply = 'VTX could not generate a response. Please try again.';
+    }
+
+    // ── Post-Processing ─────────────────────────────────────────────────────
+    const replyChartSignal = detectChartSignal(finalReply);
+    finalReply = finalReply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+    finalReply = scrubBranding(finalReply);
+    finalReply = finalReply
+      .replace(/\*\*/g, '').replace(/\*/g, '')
+      .replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
+
+    if (!isPro && !skipRateLimit) incrementUsage(ip);
+
+    // ── Chart Payload ───────────────────────────────────────────────────────
+    const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
+    const chartPayload = finalChartType ? {
+      type: finalChartType,
+      token: replyChartSignal.chartToken || userChartSignal.chartToken || undefined,
+      address: tokenDetected || undefined,
+    } : null;
+
+    // ── Usage Info ──────────────────────────────────────────────────────────
+    const currentUsage = isPro ? null : getRateLimitInfo(ip);
+
+    return NextResponse.json({
+      reply: finalReply,
+      tier: isPro ? 'pro' : 'free',
+      toolsUsed: [...new Set(toolsUsed)],
+      toolIterations,
+      dailyUsage: isPro ? null : {
+        used: currentUsage ? currentUsage.total - currentUsage.remaining : 0,
+        limit: FREE_TIER_LIMIT,
+        remaining: currentUsage ? currentUsage.remaining : FREE_TIER_LIMIT,
+      },
+      chart: chartPayload,
+      chartType: finalChartType,
+      ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address } : {}),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: `VTX Error: ${msg}` }, { status: 500 });
+  }
+}
+
+// ─── Branding Scrub ───────────────────────────────────────────────────────────
+
+function scrubBranding(text: string): string {
+  return text
+    .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
+    .replace(/\bArkham\b/gi, 'Steinz Intelligence')
+    .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
+    .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
+    .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
+    .replace(/\bHelius\b/gi, 'Steinz Intelligence')
+    .replace(/\bGoPlus\b/gi, 'Steinz Intelligence')
+    .replace(/\bLunarCrush\b/gi, 'Steinz Intelligence')
+    .replace(/\bMoralis\b/gi, 'Steinz Intelligence')
+    .replace(/\bJupiter\b/gi, 'Steinz Router');
+}
