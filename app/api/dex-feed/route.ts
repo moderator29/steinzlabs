@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs'; // switch from edge - edge can't reach pump.fun
+export const runtime = 'nodejs';
 
 // --- Normalised token shape returned to the client ---
 export interface DexToken {
@@ -19,6 +19,30 @@ export interface DexToken {
   graduated?: boolean;
   dexUrl?: string;
   pairAddress?: string;
+  holders?: number;
+  fdv?: number;
+  supply?: number;
+  volume5m?: number;
+}
+
+// DexScreener chainId values for each supported chain
+const CHAIN_IDS: Record<string, string> = {
+  solana: 'solana',
+  ethereum: 'ethereum',
+  bsc: 'bsc',
+  polygon: 'polygon',
+  avalanche: 'avalanche',
+  ton: 'ton',
+  base: 'base',
+  tron: 'tron',
+};
+
+// ── Timeout-safe fetch (aborts after `ms` milliseconds) ──────────────────────
+function fetchWithTimeout(url: string, opts: RequestInit & { next?: any } = {}, ms = 4000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
 }
 
 // ── DexScreener helpers ───────────────────────────────────────────────────────
@@ -35,181 +59,118 @@ function normaliseDexPair(pair: any): DexToken {
     marketCap: pair.marketCap,
     liquidity: pair.liquidity?.usd,
     volume24h: pair.volume?.h24,
+    volume5m: pair.volume?.m5,
     change24h: pair.priceChange?.h24,
     createdAt: pair.pairCreatedAt,
     graduated: false,
     dexUrl: pair.url,
     pairAddress: pair.pairAddress,
+    fdv: pair.fdv,
   };
 }
 
-async function fetchDexScreenerLatest(): Promise<DexToken[]> {
-  const res = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
-    headers: { 'Accept': 'application/json' },
-    next: { revalidate: 20 },
-  });
+// Run an array of async tasks in chunks to limit concurrency
+async function runInBatches<T>(tasks: (() => Promise<T>)[], batchSize: number): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < tasks.length; i += batchSize) {
+    const chunk = tasks.slice(i, i + batchSize);
+    const settled = await Promise.allSettled(chunk.map(fn => fn()));
+    for (const r of settled) {
+      if (r.status === 'fulfilled') results.push(r.value);
+    }
+  }
+  return results;
+}
+
+// Fetch latest token profiles across all chains
+async function fetchTokenProfiles(): Promise<DexToken[]> {
+  const res = await fetchWithTimeout(
+    'https://api.dexscreener.com/token-profiles/latest/v1',
+    { headers: { 'Accept': 'application/json' }, next: { revalidate: 5 } },
+    6000
+  );
   if (!res.ok) throw new Error(`DexScreener profiles ${res.status}`);
   const profiles: any[] = await res.json();
-  const slice = (Array.isArray(profiles) ? profiles : []).slice(0, 30);
+  const slice = (Array.isArray(profiles) ? profiles : []).slice(0, 30); // reduced from 50
 
-  const settled = await Promise.allSettled(
-    slice.map(async (p: any): Promise<DexToken> => {
-      const chain = p.chainId ?? 'solana';
-      const address = p.tokenAddress ?? '';
-      try {
-        const pairRes = await fetch(
-          `https://api.dexscreener.com/latest/dex/tokens/${address}`,
-          { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
-        );
-        if (pairRes.ok) {
-          const pairData = await pairRes.json();
-          const topPair = (pairData.pairs ?? [])[0];
-          if (topPair) return normaliseDexPair(topPair);
-        }
-      } catch { /* fall through */ }
-      return {
-        id: address,
-        name: p.description ?? address.slice(0, 8),
-        symbol: p.header ?? '???',
-        imageUri: p.icon,
-        contractAddress: address,
-        chain,
-        dexUrl: p.url,
-        createdAt: Date.now(),
-      };
-    })
-  );
-  return settled
-    .filter((r): r is PromiseFulfilledResult<DexToken> => r.status === 'fulfilled')
-    .map(r => r.value);
+  const tasks = slice.map((p: any) => async (): Promise<DexToken> => {
+    const chain = p.chainId ?? 'solana';
+    const address = p.tokenAddress ?? '';
+    try {
+      const pairRes = await fetchWithTimeout(
+        `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+        { headers: { 'Accept': 'application/json' }, next: { revalidate: 5 } },
+        3500
+      );
+      if (pairRes.ok) {
+        const pairData = await pairRes.json();
+        const topPair = (pairData.pairs ?? [])[0];
+        if (topPair) return normaliseDexPair(topPair);
+      }
+    } catch { /* fall through */ }
+    return {
+      id: address,
+      name: p.description ?? address.slice(0, 8),
+      symbol: p.header ?? '???',
+      imageUri: p.icon,
+      contractAddress: address,
+      chain,
+      dexUrl: p.url,
+      createdAt: Date.now(),
+    };
+  });
+
+  // Process 10 at a time to avoid hammering the API
+  return runInBatches(tasks, 10);
 }
 
-async function fetchPumpFunViaDex(): Promise<DexToken[]> {
-  // Use DexScreener's search for pump.fun tokens as primary source
-  // (pump.fun's own API blocks edge/serverless environments)
+// Fetch tokens for a specific chain via DexScreener search
+async function fetchByChain(chain: string): Promise<DexToken[]> {
+  const chainId = CHAIN_IDS[chain] ?? chain;
+
   try {
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=pump',
-      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
+    const res = await fetchWithTimeout(
+      `https://api.dexscreener.com/latest/dex/search?q=${chainId}`,
+      { headers: { 'Accept': 'application/json' }, next: { revalidate: 5 } },
+      6000
     );
-    if (!res.ok) throw new Error(`DexScreener pump search ${res.status}`);
+    if (!res.ok) throw new Error(`DexScreener search ${res.status}`);
     const data = await res.json();
     const pairs = (data.pairs ?? [])
-      .filter((p: any) => p.chainId === 'solana' && p.dexId === 'pump')
-      .slice(0, 50);
-    if (pairs.length > 0) return pairs.map(normaliseDexPair);
-  } catch { /* fall through */ }
-
-  // Fallback: latest profiles from DexScreener (solana filter)
-  const all = await fetchDexScreenerLatest();
-  return all.filter(t => t.chain === 'solana').slice(0, 40);
-}
-
-async function fetchPumpSwap(): Promise<DexToken[]> {
-  // PumpSwap = graduated pump.fun tokens now on Raydium
-  try {
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=pumpswap',
-      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
-    );
-    if (!res.ok) throw new Error(`DexScreener pumpswap ${res.status}`);
-    const data = await res.json();
-    return (data.pairs ?? [])
-      .filter((p: any) => p.chainId === 'solana')
-      .slice(0, 50)
-      .map((p: any) => ({ ...normaliseDexPair(p), graduated: true }));
-  } catch {
-    return fetchDexScreenerLatest().then(t => t.filter(x => x.chain === 'solana').slice(0, 30));
-  }
-}
-
-async function fetchBonk(): Promise<DexToken[]> {
-  try {
-    const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=bonk', {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 20 },
-    });
-    if (!res.ok) throw new Error(`DexScreener BONK ${res.status}`);
-    const data = await res.json();
-    return (data.pairs ?? []).slice(0, 50).map(normaliseDexPair);
-  } catch {
-    return [];
-  }
-}
-
-async function fetchFourMeme(): Promise<DexToken[]> {
-  // FourMeme is BSC-native. Use DexScreener to find new BSC token pairs.
-  try {
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=bsc new',
-      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
-    );
-    if (!res.ok) throw new Error(`DexScreener BSC ${res.status}`);
-    const data = await res.json();
-    return (data.pairs ?? [])
-      .filter((p: any) => p.chainId === 'bsc')
+      .filter((p: any) => p.chainId === chainId)
       .slice(0, 50)
       .map(normaliseDexPair);
-  } catch {
-    // Fallback: get latest from BSC chain
-    const all = await fetchDexScreenerLatest();
-    return all.filter(t => t.chain === 'bsc').slice(0, 30);
-  }
-}
+    if (pairs.length > 0) return pairs;
+  } catch { /* fall through to profile filter */ }
 
-async function fetchRaydium(): Promise<DexToken[]> {
-  // Raydium = Solana DEX. Search for Raydium pairs on DexScreener.
-  try {
-    const res = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=raydium',
-      { headers: { 'Accept': 'application/json' }, next: { revalidate: 20 } }
-    );
-    if (!res.ok) throw new Error(`DexScreener Raydium ${res.status}`);
-    const data = await res.json();
-    return (data.pairs ?? [])
-      .filter((p: any) => p.chainId === 'solana' && p.dexId === 'raydium')
-      .slice(0, 50)
-      .map(normaliseDexPair);
-  } catch {
-    const all = await fetchDexScreenerLatest();
-    return all.filter(t => t.chain === 'solana').slice(0, 30);
-  }
-}
-
-async function fetchNewPairs(): Promise<DexToken[]> {
-  return fetchDexScreenerLatest();
+  // Fallback: filter token profiles by chain
+  const all = await fetchTokenProfiles();
+  return all.filter(t => t.chain === chainId);
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
-  const tab = req.nextUrl.searchParams.get('tab') ?? 'pumpfun';
+  // Support both ?chain= (new) and ?tab= (legacy) params
+  const chain = req.nextUrl.searchParams.get('chain') ??
+                req.nextUrl.searchParams.get('tab') ?? 'all';
 
-  try {
-    let tokens: DexToken[];
-    switch (tab) {
-      case 'pumpswap':
-        tokens = await fetchPumpSwap();
-        break;
-      case 'bonk':
-        tokens = await fetchBonk();
-        break;
-      case 'fourmeme':
-        tokens = await fetchFourMeme();
-        break;
-      case 'raydium':
-        tokens = await fetchRaydium();
-        break;
-      case 'new':
-        tokens = await fetchNewPairs();
-        break;
-      case 'pumpfun':
-      default:
-        tokens = await fetchPumpFunViaDex();
-    }
-    return NextResponse.json({ tokens, tab, fetchedAt: Date.now() });
-  } catch (err: any) {
+  // Overall 12s deadline — prevents Vercel/edge idle-stream timeouts
+  const result = await Promise.race([
+    (async () => {
+      let tokens: DexToken[];
+      if (chain === 'all') {
+        tokens = await fetchTokenProfiles();
+      } else {
+        tokens = await fetchByChain(chain);
+      }
+      return NextResponse.json({ tokens, chain, fetchedAt: Date.now() });
+    })(),
+    new Promise<NextResponse>(resolve =>
+      setTimeout(() => resolve(
+        NextResponse.json({ tokens: [], chain, fetchedAt: Date.now(), error: 'timeout' })
+      ), 12000)
+    ),
+  ]);
 
-    // Return empty array with 200 instead of 502 - UI handles gracefully
-    return NextResponse.json({ tokens: [], tab, fetchedAt: Date.now(), error: err?.message });
-  }
+  return result;
 }
