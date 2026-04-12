@@ -1,4 +1,6 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { vtxQuery } from '@/lib/services/anthropic';
 
 const SUPPORT_SYSTEM_PROMPT = `You are the STEINZ LABS AI Customer Service assistant. You help users with questions about the platform, its features, troubleshooting, and general crypto guidance.
 
@@ -101,56 +103,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE_KEY || process.env.ANTHROPIC_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
-    }
-
-    const messages = [];
+    const messages: { role: 'user' | 'assistant'; content: string }[] = [];
     if (Array.isArray(history)) {
       for (const h of history.slice(-10)) {
         if (h.role === 'user' || h.role === 'assistant') {
-          messages.push({ role: h.role, content: h.content });
+          messages.push({ role: h.role, content: String(h.content) });
         }
       }
     }
     messages.push({ role: 'user', content: message });
 
-    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
-    let response: Response | null = null;
-    let lastError = '';
+    const response = await vtxQuery({
+      messages,
+      system: SUPPORT_SYSTEM_PROMPT,
+      tools: [],
+      maxTokens: 500,
+    });
 
-    for (const model of MODELS) {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
-        body: JSON.stringify({
-          model,
-          max_tokens: 500,
-          system: SUPPORT_SYSTEM_PROMPT,
-          messages,
-        }),
-      });
-      if (response.ok) break;
-      lastError = await response.text();
-      console.error(`Customer service model ${model} failed (${response.status}):`, lastError);
-    }
-
-    if (!response || !response.ok) {
-      return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 502 });
-    }
-
-    const data = await response.json();
-    const reply = data.content?.[0]?.text || 'Sorry, I couldn\'t process that. Please try again.';
+    const textBlock = response.content.find(b => b.type === 'text');
+    const reply = textBlock?.type === 'text' ? textBlock.text : "Sorry, I couldn't process that. Please try again.";
 
     return NextResponse.json({ reply });
-  } catch (error) {
-
+  } catch {
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

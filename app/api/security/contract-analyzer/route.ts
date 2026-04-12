@@ -1,11 +1,9 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { scanTokenSecurity, scanAddress } from '@/lib/security/goplusService';
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: parseInt(process.env.API_TIMEOUT_MS || '600000') })
-  : null;
+import { getTokenSecurity, getAddressSecurity } from '@/lib/services/goplus';
+import { searchPairs } from '@/lib/services/dexscreener';
+import { vtxAnalyze } from '@/lib/services/anthropic';
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', bsc: '56', polygon: '137', base: '8453',
@@ -27,14 +25,28 @@ export async function POST(req: NextRequest) {
 
     const { address, chain } = parsed.data;
 
-    // Run token security scan (works for contracts)
-    const [tokenScan, addressScan] = await Promise.allSettled([
-      scanTokenSecurity(address, chain),
-      scanAddress(address, chain),
+    // Run security scans + DEX data in parallel via service layer
+    const [tokenScan, addressScan, dexScan] = await Promise.allSettled([
+      getTokenSecurity(address, chain),
+      getAddressSecurity(address, chain),
+      searchPairs(address),
     ]);
 
     const token = tokenScan.status === 'fulfilled' ? tokenScan.value : null;
     const addr = addressScan.status === 'fulfilled' ? addressScan.value : null;
+    const topPair = dexScan.status === 'fulfilled' && dexScan.value.length > 0 ? dexScan.value[0] : null;
+    const dexData = topPair ? {
+      price: parseFloat(String(topPair.priceUsd ?? '0')),
+      priceChange24h: topPair.priceChange?.h24 ?? 0,
+      volume24h: topPair.volume?.h24 ?? 0,
+      liquidity: topPair.liquidity?.usd ?? 0,
+      fdv: topPair.fdv ?? 0,
+      marketCap: (topPair as any).marketCap ?? topPair.fdv ?? 0,
+      imageUrl: (topPair as any).info?.imageUrl ?? null,
+      symbol: topPair.baseToken?.symbol,
+      name: topPair.baseToken?.name,
+      url: (topPair as any).url ?? null,
+    } : null;
 
     // Build comprehensive analysis
     const riskFlags: string[] = [];
@@ -105,31 +117,26 @@ export async function POST(req: NextRequest) {
         isMixer: addr.isMixer,
         labels: addr.labels,
       } : null,
+      dexData,
       analyzedAt: new Date().toISOString(),
     };
 
-    // AI-powered contract analysis
-    if (anthropic) {
-      try {
-        const tokenInfo = token ? `
+    // AI-powered contract analysis via vtxAnalyze (service layer)
+    try {
+      const tokenInfo = token ? `
 Token: ${token.raw?.token_name || token.raw?.name || address.slice(0, 10)} (${token.raw?.token_symbol || token.raw?.symbol || '?'}) | Score: ${overallScore}/100 | ${riskFlags.length} risk flags
 Honeypot: ${token.isHoneypot} | Open Source: ${token.isOpenSource} | Mintable: ${token.isMintable}
 Buy Tax: ${(token.buyTax * 100).toFixed(1)}% | Sell Tax: ${(token.sellTax * 100).toFixed(1)}%
 Holder Count: ${token.holderCount} | Flags: ${riskFlags.slice(0, 5).join('; ') || 'None'}` : '';
-        const addrInfo = addr ? `\nAddress Risk: ${addr.riskLevel} | Blacklisted: ${addr.isBlacklisted} | Malicious: ${addr.isMalicious} | Phishing: ${addr.isPhishing}` : '';
-        const aiMsg = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 280,
-          messages: [{
-            role: 'user',
-            content: `Crypto contract analysis — give a concise expert verdict:\n${tokenInfo}${addrInfo}\n\nReply with:\nASSESSMENT: (2 sentences)\nKEY RISKS: (bullet list or "None detected")\nVERDICT: (SAFE/CAUTION/WARNING/DANGER — one sentence why)`,
-          }],
-        });
-        if (aiMsg.content[0].type === 'text') {
-          result.aiAnalysis = aiMsg.content[0].text;
-        }
-      } catch { /* non-critical */ }
-    }
+      const addrInfo = addr
+        ? `\nAddress Risk: ${addr.riskLevel} | Blacklisted: ${addr.isBlacklisted} | Malicious: ${addr.isMalicious} | Phishing: ${addr.isPhishing}`
+        : '';
+      const aiText = await vtxAnalyze(
+        `Crypto contract analysis — give a concise expert verdict:\n${tokenInfo}${addrInfo}\n\nReply with:\nASSESSMENT: (2 sentences)\nKEY RISKS: (bullet list or "None detected")\nVERDICT: (SAFE/CAUTION/WARNING/DANGER — one sentence why)`,
+        280
+      );
+      if (aiText) result.aiAnalysis = aiText;
+    } catch { /* non-critical */ }
 
     return NextResponse.json(result);
   } catch (err) {

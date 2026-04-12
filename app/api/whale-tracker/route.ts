@@ -1,4 +1,6 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { getTopTokens } from '@/lib/services/coingecko';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 
@@ -125,16 +127,11 @@ async function getAlchemyTransfers(): Promise<WhaleEvent[]> {
 
 async function getCoinGeckoWhaleActivity(): Promise<WhaleEvent[]> {
   try {
-    const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=volume_desc&per_page=10&page=1&sparkline=false', {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!res.ok) return [];
-    const coins = await res.json();
-
+    const coins = await getTopTokens(1, 10);
     return coins
-      .filter((c: any) => Math.abs(c.price_change_percentage_24h || 0) > 5)
+      .filter(c => Math.abs(c.price_change_percentage_24h || 0) > 5)
       .slice(0, 5)
-      .map((coin: any) => {
+      .map(coin => {
         const isBuy = coin.price_change_percentage_24h > 0;
         const vol = coin.total_volume || 0;
         const volStr = vol >= 1e9 ? `${(vol / 1e9).toFixed(1)}B` : vol >= 1e6 ? `${(vol / 1e6).toFixed(1)}M` : `${(vol / 1e3).toFixed(0)}K`;
@@ -152,10 +149,7 @@ async function getCoinGeckoWhaleActivity(): Promise<WhaleEvent[]> {
           blockNum: undefined,
         };
       });
-  } catch (err) {
-
-    return [];
-  }
+  } catch { return []; }
 }
 
 export async function GET() {

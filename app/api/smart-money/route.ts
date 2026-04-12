@@ -1,4 +1,7 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
+import { searchPairs } from '@/lib/services/dexscreener';
+import type { DexPair } from '@/lib/services/dexscreener';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 
@@ -162,34 +165,22 @@ async function getWalletsFromAlchemy(): Promise<SmartWallet[]> {
 
 async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
   try {
-    // Fetch high-volume pairs from multiple searches to get diverse whale wallets
     const queries = ['ethereum', 'sol', 'bitcoin'];
-    const results = await Promise.allSettled(
-      queries.map(q =>
-        fetch(`https://api.dexscreener.com/latest/dex/search?q=${q}`, {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(8000),
-        }).then(r => r.json())
-      )
-    );
+    const results = await Promise.allSettled(queries.map(q => searchPairs(q)));
 
-    const allPairs: any[] = [];
+    const allPairs: DexPair[] = [];
     for (const result of results) {
-      if (result.status === 'fulfilled' && result.value?.pairs) {
-        allPairs.push(...result.value.pairs);
-      }
+      if (result.status === 'fulfilled') allPairs.push(...result.value);
     }
 
-    // Filter for high-volume pairs (>$500K 24h volume)
     const highVolumePairs = allPairs
-      .filter((p: any) => p.volume?.h24 && p.volume.h24 > 500000)
-      .sort((a: any, b: any) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
+      .filter(p => (p.volume?.h24 ?? 0) > 500000)
+      .sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
       .slice(0, 20);
 
     if (highVolumePairs.length === 0) return [];
 
-    // Derive pseudo-wallet profiles from pair maker addresses or pool addresses
-    const wallets: SmartWallet[] = highVolumePairs.slice(0, 10).map((pair: any, i: number) => {
+    const wallets: SmartWallet[] = highVolumePairs.slice(0, 10).map((pair: DexPair, i: number) => {
       const volume24h = pair.volume?.h24 || 0;
       const priceChange = pair.priceChange?.h24 || 0;
       const isBuy = priceChange > 0;
@@ -200,7 +191,6 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
         chain === 'base' ? 'BASE' :
         chain.toUpperCase().slice(0, 4);
 
-      // Use pair address as a proxy for "wallet" (pool/market maker)
       const address = pair.pairAddress || `0x${Math.random().toString(16).slice(2).padStart(40, '0')}`;
       const tokenSymbol = pair.baseToken?.symbol || 'TOKEN';
       const quoteSymbol = pair.quoteToken?.symbol || 'USD';
@@ -222,7 +212,7 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
         },
       ];
 
-      const txns24h = (pair.txns?.h24?.buys || 0) + (pair.txns?.h24?.sells || 0);
+      const txns24h = (pair.txns.h24?.buys || 0) + (pair.txns.h24?.sells || 0);
       const tags = [chainLabel];
       if (volume24h > 5e6) tags.push('High Vol');
       if (Math.abs(priceChange) > 10) tags.push('Volatile');
@@ -251,45 +241,29 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
     });
 
     return wallets;
-  } catch (err) {
-
-    return [];
-  }
+  } catch { return []; }
 }
 
 async function getRecentMovesFromDexScreener(): Promise<SmartTrade[]> {
   try {
-    const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=sol', {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pairs = (data.pairs || [])
-      .filter((p: any) => p.volume?.h1 > 10000)
-      .sort((a: any, b: any) => (b.volume?.h1 || 0) - (a.volume?.h1 || 0))
+    const pairs = (await searchPairs('sol'))
+      .filter(p => (p.volume?.h1 ?? 0) > 10000)
+      .sort((a, b) => (b.volume?.h1 || 0) - (a.volume?.h1 || 0))
       .slice(0, 8);
 
-    return pairs.map((pair: any) => {
+    return pairs.map(pair => {
       const priceChange = pair.priceChange?.h1 || 0;
       const chain = pair.chainId === 'solana' ? 'SOL' : pair.chainId === 'ethereum' ? 'ETH' : pair.chainId?.toUpperCase().slice(0, 4) || 'MULTI';
-      const token = pair.baseToken?.symbol || 'TOKEN';
-      const vol = pair.volume?.h1 || 0;
-      const address = pair.pairAddress || '0x???';
-
       return {
-        wallet: shortenAddress(address),
+        wallet: shortenAddress(pair.pairAddress || '0x???'),
         action: priceChange > 0 ? 'Bought' : 'Sold',
-        token,
-        amount: formatVolume(vol),
+        token: pair.baseToken?.symbol || 'TOKEN',
+        amount: formatVolume(pair.volume?.h1 || 0),
         time: '< 1h ago',
         chain,
       };
     });
-  } catch (err) {
-
-    return [];
-  }
+  } catch { return []; }
 }
 
 export async function GET() {

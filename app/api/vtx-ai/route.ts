@@ -1,22 +1,25 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { arkhamAPI } from '@/lib/arkham/api';
+import Anthropic from '@anthropic-ai/sdk';
 
-// Health check — used by admin dashboard to verify VTX is online
-export async function GET() {
-  const configured = !!(
-    process.env.ANTHROPIC_API_KEY
-    || process.env.CLAUDE_API_KEY
-    || process.env.CLAUDE_KEY
-    || process.env.ANTHROPIC_KEY
-  );
-  return NextResponse.json(
-    { status: configured ? 'online' : 'unconfigured', engine: 'VTX Intelligence', version: '2.0' },
-    { status: configured ? 200 : 503 }
-  );
-}
+// Service layer — all external data comes through here
+import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import { getTokenDetail, getTopTokens } from '@/lib/services/coingecko';
+import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
+import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
+import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/helius';
+import { getSocialScore } from '@/lib/services/lunarcrush';
+import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const FREE_TIER_LIMIT = 25;
+const MAX_TOOL_ITERATIONS = 5;
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function getRateLimitInfo(ip: string): { remaining: number; total: number; resetAt: number } {
@@ -27,7 +30,11 @@ function getRateLimitInfo(ip: string): { remaining: number; total: number; reset
     rateLimitStore.set(ip, { count: 0, resetAt });
     return { remaining: FREE_TIER_LIMIT, total: FREE_TIER_LIMIT, resetAt };
   }
-  return { remaining: Math.max(0, FREE_TIER_LIMIT - entry.count), total: FREE_TIER_LIMIT, resetAt: entry.resetAt };
+  return {
+    remaining: Math.max(0, FREE_TIER_LIMIT - entry.count),
+    total: FREE_TIER_LIMIT,
+    resetAt: entry.resetAt,
+  };
 }
 
 function incrementUsage(ip: string): void {
@@ -40,187 +47,7 @@ function incrementUsage(ip: string): void {
   }
 }
 
-async function fetchWebSearch(query: string): Promise<string> {
-  try {
-    const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query + ' crypto')}&format=json&no_html=1&skip_disambig=1`);
-    if (!res.ok) return '';
-    const data = await res.json();
-    const results: string[] = [];
-    if (data.AbstractText) results.push(`Summary: ${data.AbstractText}`);
-    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-      for (const topic of data.RelatedTopics.slice(0, 5)) {
-        if (topic.Text) results.push(`- ${topic.Text}`);
-      }
-    }
-    return results.length > 0 ? `Web Search Results for "${query}":\n${results.join('\n')}` : '';
-  } catch {
-    return '';
-  }
-}
-
-async function fetchLiveMarketData(): Promise<string> {
-  // Primary: Binance (no API key, highly reliable, real-time)
-  try {
-    const BINANCE_SYMBOLS = [
-      'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
-      'AVAXUSDT','DOGEUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT',
-      'ATOMUSDT','LTCUSDT','NEARUSDT','APTUSDT','ARBUSDT','OPUSDT',
-      'INJUSDT','SUIUSDT','TONUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
-    ];
-    const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const lines = data.map((t: any) => {
-          const sym = t.symbol.replace('USDT', '');
-          const price = parseFloat(t.lastPrice);
-          const change24h = parseFloat(t.priceChangePercent);
-          const vol = parseFloat(t.quoteVolume);
-          const priceStr = price >= 1000
-            ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : price >= 1
-              ? `$${price.toFixed(4)}`
-              : `$${price.toFixed(8)}`;
-          return `${sym}: ${priceStr} (24h: ${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%, Vol: $${(vol / 1e6).toFixed(0)}M)`;
-        });
-        return 'LIVE MARKET PRICES (real-time):\n' + lines.join('\n');
-      }
-    }
-  } catch {}
-
-  // Fallback: CoinGecko
-  try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h,7d',
-      {
-        headers: process.env.COINGECKO_API_KEY
-          ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
-          : {},
-        cache: 'no-store',
-      }
-    );
-    if (!res.ok) return '';
-    const coins = await res.json();
-    const lines = coins.map((c: any) =>
-      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(2)}%, MCap: $${(c.market_cap / 1e9).toFixed(1)}B, Vol: $${(c.total_volume / 1e6).toFixed(0)}M)`
-    );
-    return 'LIVE MARKET PRICES:\n' + lines.join('\n');
-  } catch {
-    return '';
-  }
-}
-
-async function fetchDexScreenerTokenPrice(query: string): Promise<string> {
-  try {
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    const pairs = data.pairs?.slice(0, 3);
-    if (!pairs?.length) return '';
-    const lines = pairs.map((p: any) => {
-      const priceUsd = p.priceUsd ? (parseFloat(p.priceUsd) < 0.001 ? `$${parseFloat(p.priceUsd).toFixed(8)}` : `$${parseFloat(p.priceUsd).toFixed(6)}`) : 'N/A';
-      const change24h = p.priceChange?.h24 != null ? `${p.priceChange.h24 >= 0 ? '+' : ''}${p.priceChange.h24.toFixed(2)}%` : 'N/A';
-      const fdv = p.fdv ? `$${(p.fdv / 1e6).toFixed(2)}M` : 'N/A';
-      const vol24h = p.volume?.h24 ? `$${(p.volume.h24 / 1e3).toFixed(0)}K` : 'N/A';
-      const liq = p.liquidity?.usd ? `$${(p.liquidity.usd / 1e3).toFixed(0)}K` : 'N/A';
-      return `${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}:\nPrice: ${priceUsd} | 24h: ${change24h} | FDV: ${fdv} | Vol: ${vol24h} | Liquidity: ${liq}\nContract: ${p.baseToken.address} | DEX: ${p.dexId}`;
-    });
-    return `TOKEN PRICE DATA for "${query}":\n\n${lines.join('\n\n')}`;
-  } catch {
-    return '';
-  }
-}
-
-async function fetchTrendingTokens(): Promise<string> {
-  try {
-    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    if (!Array.isArray(data)) return '';
-    const lines = data.slice(0, 8).map((t: any) =>
-      `${t.tokenAddress?.slice(0, 8)}... on ${t.chainId} — ${t.description || 'trending'} (${t.amount || 0} boosts)`
-    );
-    return lines.length > 0 ? 'DexScreener trending tokens:\n' + lines.join('\n') : '';
-  } catch {
-    return '';
-  }
-}
-
-async function fetchMemecoinsContext(): Promise<string> {
-  try {
-    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    if (!Array.isArray(data)) return '';
-    const lines = data.slice(0, 15).map((t: any) =>
-      `${t.tokenAddress?.slice(0, 10)}... on ${t.chainId} — ${t.description || 'no description'} (boosts: ${t.amount || 0})`
-    );
-    return lines.length > 0
-      ? 'Current hot DEX tokens:\n' + lines.join('\n')
-      : '';
-  } catch {
-    return '';
-  }
-}
-
-async function fetchCryptoNews(): Promise<string> {
-  try {
-    const res = await fetch('https://api.coingecko.com/api/v3/search/trending', {
-      headers: process.env.COINGECKO_API_KEY
-        ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
-        : {},
-      next: { revalidate: 120 },
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    const coins = data.coins?.slice(0, 7).map((c: any) =>
-      `${c.item.symbol}: rank #${c.item.market_cap_rank || '?'}, price $${c.item.data?.price?.toFixed(6) || '?'}, 24h: ${c.item.data?.price_change_percentage_24h?.usd?.toFixed(1) || '?'}%`
-    ) || [];
-    return coins.length > 0 ? 'Trending on CoinGecko:\n' + coins.join('\n') : '';
-  } catch {
-    return '';
-  }
-}
-
-async function fetchFearAndGreedIndex(): Promise<string> {
-  try {
-    const res = await fetch('https://api.alternative.me/fng/?limit=1', {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    const entry = data.data?.[0];
-    if (!entry) return '';
-    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification}) — updated ${entry.time_until_update || 'recently'}`;
-  } catch {
-    return '';
-  }
-}
-
-async function fetchGasPrice(): Promise<string> {
-  try {
-    const etherscanKey = process.env.ETHERSCAN_API_KEY;
-    if (!etherscanKey) return '';
-    const res = await fetch(
-      `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanKey}`,
-      { next: { revalidate: 30 } }
-    );
-    if (!res.ok) return '';
-    const data = await res.json();
-    if (data.status !== '1' || !data.result) return '';
-    const r = data.result;
-    return `Ethereum Gas Prices: Low ${r.SafeGasPrice} gwei | Standard ${r.ProposeGasPrice} gwei | Fast ${r.FastGasPrice} gwei`;
-  } catch {
-    return '';
-  }
-}
+// ─── Address / Intent Detectors ──────────────────────────────────────────────
 
 function detectWalletAddress(message: string): { address: string; chain: 'eth' | 'sol' } | null {
   const ethMatch = message.match(/0x[a-fA-F0-9]{40}/);
@@ -248,283 +75,34 @@ function detectTokenAddress(message: string): string | null {
   return null;
 }
 
-async function fetchWalletData(address: string, chain: 'eth' | 'sol'): Promise<string> {
-  try {
-    if (chain === 'eth') {
-      const alchemyKey = process.env.ALCHEMY_API_KEY;
-      const rpcUrl = alchemyKey
-        ? `https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`
-        : 'https://eth.llamarpc.com';
-
-      const [balanceRes, txCountRes] = await Promise.all([
-        fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [address, 'latest'] }),
-        }),
-        fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_getTransactionCount', params: [address, 'latest'] }),
-        }),
-      ]);
-
-      const balanceData = await balanceRes.json();
-      const txData = await txCountRes.json();
-      const ethBalance = parseInt(balanceData.result || '0', 16) / 1e18;
-      const txCount = parseInt(txData.result || '0', 16);
-
-      let tokenInfo = '';
-      if (alchemyKey) {
-        try {
-          const tokenRes = await fetch(rpcUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              jsonrpc: '2.0', id: 3, method: 'alchemy_getTokenBalances',
-              params: [address, 'DEFAULT_TOKENS'],
-            }),
-          });
-          const tokenData = await tokenRes.json();
-          const nonZero = tokenData.result?.tokenBalances?.filter((t: any) => t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')?.length || 0;
-          tokenInfo = `, Token types held: ${nonZero}`;
-        } catch {}
-      }
-
-      return `ON-CHAIN WALLET DATA for ${address} (Ethereum):\nETH Balance: ${ethBalance.toFixed(4)} ETH\nTransaction count: ${txCount}${tokenInfo}\nView on Etherscan: https://etherscan.io/address/${address}`;
-    } else {
-      const solRes = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [address] }),
-      });
-      const solData = await solRes.json();
-      const solBalance = (solData.result?.value || 0) / 1e9;
-      return `ON-CHAIN WALLET DATA for ${address} (Solana):\nSOL Balance: ${solBalance.toFixed(4)} SOL\nView on Solscan: https://solscan.io/account/${address}`;
-    }
-  } catch {
-    return '';
-  }
-}
-
-async function fetchArkhamAddressIntel(address: string): Promise<string> {
-  try {
-    const intel = await arkhamAPI.getAddressIntel(address);
-    const lines: string[] = [`\nARKHAM INTELLIGENCE — ADDRESS ANALYSIS for ${address}:`];
-
-    if (intel.arkhamEntity) {
-      lines.push(`IDENTIFIED ENTITY: ${intel.arkhamEntity.name}`);
-      lines.push(`  Type: ${intel.arkhamEntity.type}`);
-      lines.push(`  Verified: ${intel.arkhamEntity.verified ? 'YES ✓' : 'NO'}`);
-      if (intel.arkhamEntity.description) lines.push(`  Description: ${intel.arkhamEntity.description}`);
-      if (intel.arkhamEntity.website) lines.push(`  Website: ${intel.arkhamEntity.website}`);
-      if (intel.arkhamEntity.twitter) lines.push(`  Twitter: ${intel.arkhamEntity.twitter}`);
-    } else {
-      lines.push(`Entity: UNKNOWN — This address is not identified by Arkham Intelligence`);
-    }
-
-    if (intel.labels && intel.labels.length > 0) {
-      lines.push(`Labels: ${intel.labels.join(', ')}`);
-      const dangerLabels = intel.labels.filter((l: string) =>
-        ['scammer', 'rug_puller', 'phishing', 'mixer', 'tornado_cash', 'mule'].includes(l)
-      );
-      if (dangerLabels.length > 0) {
-        lines.push(`⚠️ DANGER FLAGS: ${dangerLabels.join(', ').toUpperCase()}`);
-      }
-    }
-
-    lines.push(`Chain: ${intel.chain}`);
-    lines.push(`First seen: ${intel.firstSeen}`);
-    lines.push(`Last seen: ${intel.lastSeen}`);
-    lines.push(`Transaction count: ${intel.transactionCount}`);
-    if (intel.totalVolume) lines.push(`Total volume: ${intel.totalVolume}`);
-
-    if (intel.scamHistory) {
-      lines.push(`\n⚠️ SCAM HISTORY DETECTED:`);
-      lines.push(`  Total rug pulls: ${intel.scamHistory.totalRugs}`);
-      lines.push(`  Total stolen: ${intel.scamHistory.totalStolen}`);
-      lines.push(`  Victims: ${intel.scamHistory.victims}`);
-      lines.push(`  Status: ${intel.scamHistory.status}`);
-      lines.push(`  Last scam: ${intel.scamHistory.lastScam}`);
-      if (intel.scamHistory.scams && intel.scamHistory.scams.length > 0) {
-        for (const scam of intel.scamHistory.scams.slice(0, 3)) {
-          lines.push(`  - ${scam.type}: ${scam.token} on ${scam.date} — ${scam.amount} stolen from ${scam.victims} victims`);
-        }
-      }
-    }
-
-    return lines.join('\n');
-  } catch (error) {
-
-    return '';
-  }
-}
-
-async function fetchArkhamWalletConnections(address: string): Promise<string> {
-  try {
-    const connections = await arkhamAPI.getWalletConnections(address, 15);
-    if (!connections || connections.length === 0) return '';
-
-    const lines: string[] = [`\nARKHAM INTELLIGENCE — WALLET CONNECTIONS for ${address}:`];
-    lines.push(`Found ${connections.length} connected addresses:`);
-
-    let suspiciousCount = 0;
-    let verifiedCount = 0;
-
-    for (const conn of connections.slice(0, 10)) {
-      const entity = conn.entity ? conn.entity.name : 'Unknown';
-      const labelStr = conn.labels?.length > 0 ? ` [${conn.labels.join(', ')}]` : '';
-      lines.push(`  ${conn.address.slice(0, 10)}... → ${entity} | ${conn.relationship} | ${conn.transactionCount} txns | ${conn.totalValue}${labelStr}`);
-
-      if (conn.labels?.some((l: string) => ['mixer', 'tornado_cash', 'mule', 'scammer'].includes(l))) {
-        suspiciousCount++;
-      }
-      if (conn.entity?.verified) {
-        verifiedCount++;
-      }
-    }
-
-    lines.push(`\nConnection Summary: ${verifiedCount} verified entities, ${suspiciousCount} suspicious connections`);
-    if (suspiciousCount > 3) {
-      lines.push(`⚠️ HIGH RISK: This wallet has ${suspiciousCount} connections to suspicious/mixer wallets`);
-    }
-
-    return lines.join('\n');
-  } catch (error) {
-
-    return '';
-  }
-}
-
-async function fetchArkhamTokenHoldersRaw(tokenAddress: string): Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> {
-  try {
-    const holders = await arkhamAPI.getTokenHolders(tokenAddress, 10);
-    if (!holders || holders.length === 0) return [];
-    return holders.map((h: any) => ({
-      address: h.address,
-      label: h.entity?.name || undefined,
-      percentage: h.percentage || 0,
-      balanceUSD: h.balanceUSD,
-      entity: h.entity,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function fetchArkhamTokenHolders(tokenAddress: string): Promise<string> {
-  try {
-    const holders = await arkhamAPI.getTokenHolders(tokenAddress, 15);
-    if (!holders || holders.length === 0) return '';
-
-    const lines: string[] = [`\nARKHAM INTELLIGENCE — TOP TOKEN HOLDERS for ${tokenAddress}:`];
-
-    let scammerCount = 0;
-    let verifiedCount = 0;
-
-    for (const holder of holders) {
-      const entity = holder.entity ? holder.entity.name : 'Unknown';
-      const verified = holder.entity?.verified ? ' ✓' : '';
-      const holderLabels = holder.labels || [];
-      const labelStr = holderLabels.length > 0 ? ` [${holderLabels.join(', ')}]` : '';
-      lines.push(`  ${holder.address.slice(0, 10)}... → ${entity}${verified} | ${holder.percentage?.toFixed(2)}% | ${holder.balanceUSD}${labelStr}`);
-
-      if (holder.labels?.some((l: string) => ['scammer', 'rug_puller'].includes(l))) {
-        scammerCount++;
-      }
-      if (holder.entity?.verified) {
-        verifiedCount++;
-      }
-    }
-
-    lines.push(`\nHolder Analysis: ${verifiedCount} verified entities, ${scammerCount} known scammers`);
-    if (scammerCount > 0) {
-      lines.push(`🚨 CRITICAL WARNING: ${scammerCount} KNOWN SCAMMER(S) found in top holders!`);
-    }
-
-    const topHolderPct = holders[0]?.percentage || 0;
-    if (topHolderPct > 50) {
-      lines.push(`⚠️ CONCENTRATION RISK: Top holder owns ${topHolderPct.toFixed(1)}% of supply`);
-    } else if (topHolderPct > 20) {
-      lines.push(`⚠️ Note: Top holder owns ${topHolderPct.toFixed(1)}% of supply — moderate concentration`);
-    }
-
-    return lines.join('\n');
-  } catch (error) {
-
-    return '';
-  }
-}
-
-async function fetchArkhamEntitySearch(query: string): Promise<string> {
-  try {
-    const entities = await arkhamAPI.searchEntities(query);
-    if (!entities || entities.length === 0) return '';
-
-    const lines: string[] = [`\nARKHAM INTELLIGENCE — ENTITY SEARCH for "${query}":`];
-    for (const entity of entities.slice(0, 5)) {
-      const verified = entity.verified ? ' ✓ VERIFIED' : '';
-      lines.push(`  ${entity.name}${verified} | Type: ${entity.type} | ID: ${entity.id}`);
-      if (entity.description) lines.push(`    ${entity.description.slice(0, 150)}`);
-    }
-    return lines.join('\n');
-  } catch (error) {
-
-    return '';
-  }
-}
-
-async function fetchArkhamScamCheck(address: string): Promise<string> {
-  try {
-    const isScammer = await arkhamAPI.isScammer(address);
-    const isVerified = await arkhamAPI.isVerifiedEntity(address);
-
-    const lines: string[] = [`\nARKHAM SECURITY CHECK for ${address}:`];
-    lines.push(`Known scammer: ${isScammer ? '🚨 YES — DO NOT INTERACT' : '✓ Not flagged'}`);
-    lines.push(`Verified entity: ${isVerified ? '✓ YES — Verified by Arkham' : 'No — Unknown entity'}`);
-
-    return lines.join('\n');
-  } catch (error) {
-
-    return '';
-  }
-}
-
 function detectChartSignal(message: string): {
   chartType: 'price' | 'bubble' | 'portfolio' | 'holders' | null;
   chartToken: string | null;
 } {
-  const lower = message.toLowerCase();
-
-  // Check for explicit chart request tags in the AI response (not the user message)
-  // We expose this for the reply processing step
   const chartTagMatch = message.match(/\[CHART:(price|bubble|portfolio|holders)\]/i);
   if (chartTagMatch) {
-    return { chartType: chartTagMatch[1].toLowerCase() as 'price' | 'bubble' | 'portfolio' | 'holders', chartToken: null };
+    return {
+      chartType: chartTagMatch[1].toLowerCase() as 'price' | 'bubble' | 'portfolio' | 'holders',
+      chartToken: null,
+    };
   }
-
-  // Heuristic detection from user message
+  const lower = message.toLowerCase();
   if (/\bportfolio\b.*\b(breakdown|allocation|pie|chart|show|visual)\b|\b(show|visual|chart).*\bportfolio\b/.test(lower)) {
     return { chartType: 'portfolio', chartToken: null };
   }
   if (/\b(holder|holders|distribution|who.*hold|bubble\s*map)\b.*\b(chart|show|visual|map)\b|\b(show|visual|chart|map).*\b(holder|distribution|bubble)\b/.test(lower)) {
-    const isBubble = /bubble/.test(lower);
-    return { chartType: isBubble ? 'bubble' : 'holders', chartToken: null };
+    return { chartType: /bubble/.test(lower) ? 'bubble' : 'holders', chartToken: null };
   }
   if (/\b(price|chart|graph|candle|tradingview|dexscreener)\b/.test(lower)) {
-    // Try to find a token name/symbol
     const tokenMatch = lower.match(/(?:price|chart|graph)\s+(?:of\s+|for\s+)?([a-z]+)/);
-    const token = tokenMatch ? tokenMatch[1] : null;
-    return { chartType: 'price', chartToken: token };
+    return { chartType: 'price', chartToken: tokenMatch ? tokenMatch[1] : null };
   }
-
   return { chartType: null, chartToken: null };
 }
 
 function detectArkhamIntent(message: string): {
   wantsHolders: boolean;
   wantsConnections: boolean;
-  wantsScamCheck: boolean;
   wantsEntitySearch: boolean;
   entityQuery: string;
 } {
@@ -532,39 +110,45 @@ function detectArkhamIntent(message: string): {
   return {
     wantsHolders: /holder|top.*hold|who.*hold|distribution|supply|whale.*hold|bag.*hold|biggest.*hold/.test(lower),
     wantsConnections: /connect|link|relation|associated|tied.*to|network|graph|cluster|who.*interact/.test(lower),
-    wantsScamCheck: /scam|rug|safe|legit|trust|fraud|honeypot|danger|risk|suspicious|check.*wallet|check.*address|is.*safe/.test(lower),
     wantsEntitySearch: /who.*is|identify|lookup|find.*entity|search.*entity|which.*fund|which.*exchange/.test(lower),
-    entityQuery: (lower.match(/who\s+is\s+(.+?)(?:\?|$)/)?.[1] ||
-                  lower.match(/identify\s+(.+?)(?:\?|$)/)?.[1] ||
-                  lower.match(/search\s+(?:for\s+)?(.+?)(?:\?|$)/)?.[1] || '').trim(),
+    entityQuery: (
+      lower.match(/who\s+is\s+(.+?)(?:\?|$)/)?.[1] ||
+      lower.match(/identify\s+(.+?)(?:\?|$)/)?.[1] ||
+      lower.match(/search\s+(?:for\s+)?(.+?)(?:\?|$)/)?.[1] || ''
+    ).trim(),
   };
 }
 
+// ─── VTX System Prompt Template ───────────────────────────────────────────────
+
 const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by STEINZ LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
-PERSONALITY: {personality} (Professional Analyst = formal and precise; Degen Trader = casual crypto slang, direct; Conservative Advisor = cautious, emphasize risk; Neutral = balanced)
+PERSONALITY: {personality}
 
 CAPABILITIES:
-- Deep multi-chain on-chain analysis: Ethereum, Solana, BSC, Base, Polygon, Arbitrum, Avalanche, Optimism
-- Real-time token analysis with full security scanning (honeypot, tax, ownership, mint, liquidity)
-- Wallet intelligence: entity identification, transaction patterns, cluster detection, wallet type classification
-- Memecoin expertise: pump.fun dynamics, bonding curves, rug pull detection, bundled supply
-- Smart money tracking: whale moves, institutional patterns, insider detection
-- Trading DNA: P&L analysis, win rate, hold time, behavioral archetypes
-- General knowledge: stock market, finance, economics, technology, AI, real-world events, people
-- Security analysis: contract risks, phishing detection, signature decoding, transaction simulation
+Deep multi-chain on-chain analysis: Ethereum, Solana, BSC, Base, Polygon, Arbitrum, Avalanche, Optimism
+Real-time token analysis with full security scanning (honeypot, tax, ownership, mint, liquidity)
+Wallet intelligence: entity identification, transaction patterns, cluster detection, wallet type classification
+Memecoin expertise: pump.fun dynamics, bonding curves, rug pull detection, bundled supply
+Smart money tracking: whale moves, institutional patterns, insider detection
+Trading DNA: P&L analysis, win rate, hold time, behavioral archetypes
+General knowledge: stock market, finance, economics, technology, AI, real-world events, people
+Security analysis: contract risks, phishing detection, signature decoding, transaction simulation
 
-GLOBAL KNOWLEDGE RULE:
-You answer questions about EVERYTHING. Crypto, stocks, finance, AI, technology, real-world events, people, science. You are not limited to crypto. If a user asks about the S&P 500, explain it. If they ask about Elon Musk, answer. Use your training knowledge plus live data.
+TOOL USAGE RULES:
+You have access to real-time data tools. Use them proactively.
+When analyzing a token address: call token_security_scan AND token_market_data
+When analyzing a wallet: call wallet_profile AND entity_lookup
+When asked about social sentiment: call social_sentiment
+When asked about new launches: call new_token_detection
+Always cross-reference — never rely on a single tool
 
-TOKEN CARD SYSTEM (CRITICAL):
-When a user asks about ANY token, you MUST structure your response as a TOKEN CARD with these exact sections:
-
+TOKEN CARD FORMAT (use when analyzing any token):
 TOKEN: [Name] ([Symbol])
 Price: $[amount] | 24h: [+/-]%
 Market Cap: $[amount] | Volume: $[amount]
 Liquidity: $[amount] | Holders: [count]
-Contract: [address if provided]
+Contract: [address]
 
 SECURITY ANALYSIS:
 Trust Score: [0-100]
@@ -576,25 +160,15 @@ Minting: [Enabled/Disabled]
 Key Flags: [list any issues]
 
 AI ANALYSIS:
-Summary: [2-3 sentence overview of what this token is]
-Strengths: [2-3 bullet points]
-Weaknesses: [2-3 bullet points]
+Summary: [2-3 sentence overview]
+Strengths: [2-3 points]
+Weaknesses: [2-3 points]
 Risk Level: [Low/Medium/High/Critical]
-Recommendation: [Buy/Hold/Avoid with reasoning]
+Recommendation: [BUY/HOLD/AVOID with reasoning]
 
 [CHART:price]
 
-TOKEN CARD BEHAVIOR RULE:
-Generate a token card when:
-1. /token command is used
-2. Any token symbol or address is mentioned
-3. User asks "what is [token]" or "analyze [token]"
-4. Sniper bot detects a new token
-5. Trending tokens are discussed
-
-WALLET ANALYSIS STRUCTURE:
-When analyzing a wallet address, structure as:
-
+WALLET PROFILE FORMAT:
 WALLET PROFILE: [address shortened]
 Type: [Whale / Smart Money / Retail / Bot/MEV / Dormant / Institutional]
 Risk Level: [Safe / Low / Medium / High / Critical]
@@ -607,116 +181,277 @@ BEHAVIOR ANALYSIS:
 Trading Style: [archetype]
 Win Rate: [%] estimate
 Avg Hold Time: [duration]
-Chain Preference: [chain]
-DEX Usage: [protocols]
 
 SECURITY FLAGS:
-[Any Steinz Intelligence flags: mixer connections, phishing activity, scam history, etc]
+[Any flags: mixer connections, phishing, scam history]
 
 [CHART:portfolio]
 
-SECURITY RESPONSE STRUCTURE:
-When a security scan is requested, structure as:
+BRANDING RULES:
+Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, Helius, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
 
-CONTRACT SECURITY REPORT: [address]
-Overall Score: [0-100]
-Verdict: [SAFE / CAUTION / WARNING / DANGER]
-
-SECURITY CHECKS:
-Contract Verified: [Yes/No]
-Honeypot Risk: [None/Detected]
-Buy Tax: [%]
-Sell Tax: [%]
-Ownership: [Renounced/Active/Hidden]
-Mint Function: [Enabled/Disabled]
-Proxy Contract: [Yes/No]
-Self-Destruct: [Yes/No]
-LP Locked: [Yes/No/Unknown]
-Blacklist Function: [Yes/No]
-
-RISK ASSESSMENT:
-[Summary of risks found]
-[Specific red flags if any]
-[Final recommendation]
-
-TRADING DNA STRUCTURE:
-When /dna or DNA analysis is requested:
-
-TRADING DNA PROFILE: [wallet]
-Archetype: [Diamond Hands / Scalper / Swing Trader / Degen / Whale Follower / DeFi Farmer]
-
-PERFORMANCE METRICS:
-P&L Estimate: [+/-$amount]
-Win Rate: [%]
-Avg Hold Time: [duration]
-Position Sizing: [avg trade size]
-Gas Efficiency: [Low/Medium/High waste]
-Profit Factor: [ratio]
-
-BEHAVIORAL PATTERNS:
-Entry Timing: [analysis]
-Exit Timing: [analysis]
-Chain Preference: [chain breakdown]
-DEX Usage: [protocols used]
-Token Bias: [memecoins/DeFi/stables/L1s %]
-Risk Score: [0-100]
-
-AI ADVICE:
-[Personalized advice based on archetype]
-[3-5 specific actionable recommendations]
-
-MEMECOIN ANALYSIS EXPERTISE:
-- Check bundled supply (multiple wallets buying at launch = rug risk)
-- Dev wallet % of supply (>5% = caution, >10% = danger)
-- Bonding curve progress for pump.fun tokens
-- Migration patterns (pump.fun to Raydium)
-- Historical comparison: Bonk, WIF, PEPE, FLOKI
-- Organic vs artificial volume detection
-
-ALWAYS:
-- Cite "STEINZ Intelligence" as your data source. NEVER invent or mention external URLs or website links like "coinmarketcap.com", "coingecko.com", or any other site. DO NOT recommend users visit external sites for price data — you have live data right here.
-- Signal [CHART:price] when discussing token prices/charts
-- Signal [CHART:holders] when discussing holder distribution
-- Signal [CHART:portfolio] when discussing wallet portfolios
-- Signal [CHART:bubble] when showing wallet connections
-- Give actionable advice, not just data
-- End every token/wallet/security analysis with a clear verdict
-
-SLASH COMMAND BEHAVIOR:
-When a COMMAND INSTRUCTION is provided, follow it exactly. Structure your response according to the command type. Be precise and comprehensive.
+ABSOLUTE FORMATTING RULES:
+No **, no *, no ##, no -- , no bullet dashes. Clean plain text only.
+Use blank lines between sections. Use "Label: value" format for data.
+Numbers: 1. 2. 3. — NEVER start lines with - or * or bullet.
+Never start with "Great question" or filler phrases.
 
 CURRENT MARKET CONTEXT: {market_context}
 
-IDENTITY:
-You are VTX — a professional on-chain intelligence agent, financial analyst, and conversational AI. You use ALL available data. You never say you cannot do something. You answer everything intelligently.
+PLATFORM CONTEXT: {platform_context}
 
-RESPONSE FORMAT RULES (STRICT):
-- No markdown formatting symbols: no **, no *, no ##, no --, no bullet dashes
-- Write in clean plain text
-- Use blank lines between sections
-- Use label: value format for data
-- Never start with "Great question" or filler
-- Match user energy: short questions = short answers, deep questions = full analysis
+RESPONSE STYLE: {style_instruction}
 
-PLATFORM CONTEXT:
-- Domain Shield: phishing detection tool
-- Signature Insight: transaction decoder
-- Security Center: contract security scanner
-- Trading Suite: advanced trading tools
-- DNA Analyzer: wallet behavior profiling
-- Bubble Map: visual wallet cluster analysis
-- Research Lab: intelligence reports
-- VTX Agent: this interface
+RISK FRAMING: {risk_instruction}
 
-BRANDING:
-- Platform: STEINZ LABS
-- AI Agent: VTX
-- Data Source: STEINZ Intelligence (real-time on-chain and market data)
-- Tiers: Free / STEINZ Pro / STEINZ Enterprise
-`;
+{language_instruction}
 
+{live_data}`;
 
-// ─── Slash Command System ──────────────────────────────────────────────────────
+// ─── Tool Executors ───────────────────────────────────────────────────────────
+// Each function maps a VTX tool name to real service layer calls.
+// Returns a string that becomes the tool_result content fed back to the model.
+
+async function executeTokenSecurityScan(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  try {
+    const result = await getTokenSecurity(address, chain);
+    if (!result) return `Security scan unavailable for ${address} on ${chain}.`;
+    return JSON.stringify(result, null, 2);
+  } catch {
+    return `Security scan failed for ${address}.`;
+  }
+}
+
+async function executeTokenMarketData(input: Record<string, unknown>): Promise<string> {
+  const identifier = input.identifier as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [];
+
+  // Try DexScreener first (works for any address/symbol)
+  try {
+    const pairs = await searchPairs(identifier);
+    if (pairs.length > 0) {
+      const top = pairs.slice(0, 3);
+      lines.push(`DexScreener data for "${identifier}":`);
+      for (const p of top) {
+        lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
+        lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
+        lines.push(`  Volume 24h: $${(p.volume?.h24 ?? 0).toLocaleString()}`);
+        lines.push(`  Liquidity: $${(p.liquidity?.usd ?? 0).toLocaleString()}`);
+        lines.push(`  FDV: $${(p.fdv ?? 0).toLocaleString()}`);
+        lines.push(`  Buys/Sells 24h: ${p.txns?.h24?.buys ?? 0} / ${p.txns?.h24?.sells ?? 0}`);
+        lines.push(`  Contract: ${p.baseToken.address}`);
+        lines.push('');
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Also try CoinGecko for major tokens
+  try {
+    const detail = await getTokenDetail(identifier.toLowerCase());
+    lines.push(`CoinGecko data for ${detail.name}:`);
+    lines.push(`  Price: $${detail.market_data?.current_price?.usd}`);
+    lines.push(`  Market Cap: $${(detail.market_data?.market_cap?.usd ?? 0).toLocaleString()}`);
+    lines.push(`  Volume 24h: $${(detail.market_data?.total_volume?.usd ?? 0).toLocaleString()}`);
+    lines.push(`  24h change: ${detail.market_data?.price_change_percentage_24h?.toFixed(2)}%`);
+    lines.push(`  7d change: ${detail.market_data?.price_change_percentage_7d?.toFixed(2)}%`);
+    lines.push(`  Circulating supply: ${detail.market_data?.circulating_supply?.toLocaleString()}`);
+  } catch { /* CoinGecko doesn't have this token — that's fine */ }
+
+  return lines.length > 0 ? lines.join('\n') : `No market data found for "${identifier}".`;
+}
+
+async function executeWalletProfile(input: Record<string, unknown>): Promise<string> {
+  const address = input.address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [`Wallet profile for ${address}:`];
+
+  try {
+    const isSolana = !address.startsWith('0x');
+    if (isSolana) {
+      const [balance, meta] = await Promise.all([
+        getSolanaSOLBalance(address).catch(() => 0),
+        getAddressIntel(address).catch(() => null),
+      ]);
+      lines.push(`  Chain: Solana`);
+      lines.push(`  SOL Balance: ${balance.toFixed(4)} SOL`);
+      if (meta?.arkhamEntity) {
+        lines.push(`  Entity: ${meta.arkhamEntity.name} (${meta.arkhamEntity.type})`);
+        lines.push(`  Verified: ${meta.arkhamEntity.verified}`);
+      }
+      if (meta?.labels?.length) lines.push(`  Labels: ${meta.labels.join(', ')}`);
+    } else {
+      const [balance, intel] = await Promise.all([
+        getEthBalance(address, chain).catch(() => '0'),
+        getAddressIntel(address).catch(() => null),
+      ]);
+      lines.push(`  Chain: ${chain}`);
+      lines.push(`  ETH Balance: ${balance} ETH`);
+      if (intel?.arkhamEntity) {
+        lines.push(`  Entity: ${intel.arkhamEntity.name} (${intel.arkhamEntity.type})`);
+        lines.push(`  Verified: ${intel.arkhamEntity.verified}`);
+      }
+      if (intel?.labels?.length) lines.push(`  Labels: ${intel.labels.join(', ')}`);
+      if (intel?.scamHistory) {
+        lines.push(`  ⚠️ SCAM HISTORY: ${intel.scamHistory.totalRugs} rugs, ${intel.scamHistory.totalStolen} stolen`);
+      }
+    }
+  } catch {
+    lines.push('  Could not fetch wallet data.');
+  }
+
+  return lines.join('\n');
+}
+
+async function executeEntityLookup(input: Record<string, unknown>): Promise<string> {
+  const address = input.address as string;
+  try {
+    const label = await getEntityLabel(address);
+    if (label.confidence === 0) return `No entity identified for ${address}. Unknown wallet.`;
+    return [
+      `Entity lookup for ${address}:`,
+      `  Name: ${label.entity}`,
+      `  Type: ${label.type}`,
+      `  Confidence: ${label.confidence}%`,
+      `  Verified: ${label.verified}`,
+      label.website ? `  Website: ${label.website}` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Entity lookup failed for ${address}.`;
+  }
+}
+
+async function executeSocialSentiment(input: Record<string, unknown>): Promise<string> {
+  const symbol = input.symbol as string;
+  try {
+    const score = await getSocialScore(symbol);
+    if (!score) return `No social data found for ${symbol}.`;
+    return [
+      `Social sentiment for ${symbol}:`,
+      `  Galaxy Score: ${score.galaxyScore}/100`,
+      `  Alt Rank: #${score.altRank}`,
+      `  Social Volume 24h: ${score.socialVolume24h.toLocaleString()} posts`,
+      `  Sentiment Score: ${score.sentimentScore} (-100 bearish to +100 bullish)`,
+      `  Social Dominance: ${score.socialDominance?.toFixed(2)}%`,
+      `  Influencers: ${score.influencerCount}`,
+      score.bullishPercent !== undefined ? `  Bullish: ${score.bullishPercent?.toFixed(1)}%` : '',
+      score.bearishPercent !== undefined ? `  Bearish: ${score.bearishPercent?.toFixed(1)}%` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Social sentiment fetch failed for ${symbol}.`;
+  }
+}
+
+async function executeSolanaTokenData(input: Record<string, unknown>): Promise<string> {
+  const mint = input.mint_address as string;
+  const lines: string[] = [`Solana token data for ${mint}:`];
+  try {
+    const [meta, supply] = await Promise.all([
+      getSolanaTokenMeta(mint).catch(() => null),
+      getSolanaTokenSupply(mint).catch(() => 0),
+    ]);
+    if (meta) {
+      lines.push(`  Name: ${meta.name}`);
+      lines.push(`  Symbol: ${meta.symbol}`);
+      lines.push(`  Decimals: ${meta.decimals}`);
+      lines.push(`  Mint Authority: ${meta.mintAuthority ?? 'Renounced'}`);
+      lines.push(`  Freeze Authority: ${meta.freezeAuthority ?? 'None'}`);
+      if (meta.description) lines.push(`  Description: ${meta.description.slice(0, 200)}`);
+    }
+    lines.push(`  Total Supply: ${supply.toLocaleString()}`);
+  } catch {
+    lines.push('  Could not fetch Solana token data.');
+  }
+  return lines.join('\n');
+}
+
+async function executeEvmTokenData(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [`EVM token data for ${address} on ${chain}:`];
+  try {
+    const [meta, holderCount] = await Promise.all([
+      getTokenMetadata(address, chain).catch(() => null),
+      getTokenHolderCount(address, chain).catch(() => 0),
+    ]);
+    if (meta) {
+      lines.push(`  Name: ${meta.name ?? 'Unknown'}`);
+      lines.push(`  Symbol: ${meta.symbol ?? 'Unknown'}`);
+      lines.push(`  Decimals: ${meta.decimals ?? 18}`);
+      if (meta.logo) lines.push(`  Logo: ${meta.logo}`);
+    }
+    lines.push(`  Holder Count (sampled): ${holderCount.toLocaleString()}`);
+  } catch {
+    lines.push('  Could not fetch EVM token data.');
+  }
+  return lines.join('\n');
+}
+
+async function executeNewTokenDetection(input: Record<string, unknown>): Promise<string> {
+  const chain = (input.chain as string) ?? undefined;
+  const minLiq = (input.min_liquidity_usd as number) ?? 5000;
+  try {
+    const pairs = await getNewPairs(minLiq, chain);
+    if (pairs.length === 0) return 'No new token launches found matching criteria.';
+    const lines = [`New token launches (last 24h, min liquidity $${minLiq.toLocaleString()}):`];
+    for (const p of pairs.slice(0, 10)) {
+      const ageMins = Math.floor((Date.now() - (p.pairCreatedAt ?? 0)) / 60_000);
+      lines.push(`  ${p.baseToken.symbol} on ${p.chainId} (${p.dexId})`);
+      lines.push(`    Age: ${ageMins}m | Price: $${p.priceUsd} | Liquidity: $${(p.liquidity?.usd ?? 0).toLocaleString()}`);
+      lines.push(`    Contract: ${p.baseToken.address}`);
+    }
+    return lines.join('\n');
+  } catch {
+    return 'New token detection failed.';
+  }
+}
+
+async function executeContractAnalysis(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  try {
+    const code = await getContractCode(address, chain);
+    if (!code || code === '0x') return `${address} is not a contract on ${chain} (EOA wallet or non-existent).`;
+    // Use VTX internal analysis to interpret the bytecode length as a signal
+    const sizeKb = (code.length / 2 / 1024).toFixed(1);
+    const summary = await vtxAnalyze(
+      `Analyze this EVM smart contract on ${chain}. Contract address: ${address}. Bytecode size: ${sizeKb}KB. Based on the bytecode size and address, provide a brief security assessment. Note: actual bytecode not included for brevity. Focus on what can be inferred.`,
+      600
+    ).catch(() => '');
+    return [
+      `Contract analysis for ${address} on ${chain}:`,
+      `  Bytecode size: ${sizeKb}KB`,
+      `  Status: Contract exists and is deployed`,
+      summary ? `\nAI Assessment:\n${summary}` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Contract analysis failed for ${address}.`;
+  }
+}
+
+// ─── Tool Dispatch ────────────────────────────────────────────────────────────
+
+async function executeVTXTool(
+  toolName: string,
+  toolInput: Record<string, unknown>
+): Promise<string> {
+  switch (toolName) {
+    case 'token_security_scan':  return executeTokenSecurityScan(toolInput);
+    case 'token_market_data':    return executeTokenMarketData(toolInput);
+    case 'wallet_profile':       return executeWalletProfile(toolInput);
+    case 'entity_lookup':        return executeEntityLookup(toolInput);
+    case 'social_sentiment':     return executeSocialSentiment(toolInput);
+    case 'solana_token_data':    return executeSolanaTokenData(toolInput);
+    case 'evm_token_data':       return executeEvmTokenData(toolInput);
+    case 'new_token_detection':  return executeNewTokenDetection(toolInput);
+    case 'contract_analysis':    return executeContractAnalysis(toolInput);
+    default:                     return `Unknown tool: ${toolName}`;
+  }
+}
+
+// ─── Slash Command System ─────────────────────────────────────────────────────
 
 interface SlashCommandResult {
   command: string;
@@ -732,56 +467,43 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
   const args = parts.slice(1).join(' ');
 
   const COMMANDS: Record<string, string> = {
-    help: `The user typed /help. Respond with a clean, organized list of all available VTX slash commands. Format each command on its own line as "command  description". Group them into: Token/Market, Wallet/Security, Trading, Data, Platform. Be concise.`,
-    token: `The user wants a full token analysis for: "${args || 'the specified token'}". Provide: current price, 24h change, market cap, volume, liquidity, holders, trust score, and a professional AI analysis with strengths and risks. Generate a token card response.`,
-    wallet: `The user wants a deep wallet analysis for: "${args}". Analyze: holdings, total portfolio value, transaction history, trading style (degen/smart money/institutional/bot), risk profile, top tokens held, and any red flags. Be thorough.`,
-    security: `The user wants a security scan for contract: "${args}". Analyze: honeypot risk, buy/sell taxes, ownership status, mintability, proxy status, liquidity lock, and overall trust score. Give a clear SAFE/CAUTION/WARNING/DANGER verdict.`,
-    contract: `The user wants a contract analysis for: "${args}". Analyze the contract functions, permissions, ownership, upgrade patterns, and security risks. Explain what the contract does in plain English.`,
-    domain: `The user wants to check if this URL/domain is safe: "${args}". Analyze for phishing signals, scam patterns, suspicious TLDs, and known threats. Give a clear SAFE/SUSPICIOUS/PHISHING verdict with explanation.`,
-    sig: `The user wants to decode this transaction signature/calldata: "${args}". Decode the function being called, parameters, what it will do, and any risk flags (unlimited approvals, dangerous permissions, etc). Use plain English.`,
-    swap: `The user wants a swap quote for: "${args}". Parse the tokens and amount, provide the best route, estimated output, price impact, fees (including 0.1-0.3% STEINZ platform fee), and slippage recommendation.`,
-    portfolio: `The user wants a portfolio analysis${args ? ` for address: ${args}` : ' for their wallet'}. Show: total value, asset allocation breakdown, profit/loss estimates, risk score, diversification grade, and AI recommendations.`,
-    chart: `The user wants a price chart for: "${args || 'the specified token'}". Include [CHART:price] in your response. Provide the current price, trend direction, key support/resistance levels, and a short technical outlook.`,
-    dna: `The user wants a Trading DNA analysis for wallet: "${args}". Analyze: trading style archetype, win rate estimate, average hold time, risk profile (Conservative/Balanced/Aggressive/Degen), sector preferences, top trading patterns, and give actionable advice.`,
-    cluster: `The user wants a wallet cluster analysis for: "${args}". Identify connected wallets, coordinated behavior patterns, fund flow relationships, and whether this wallet is part of a pump group, insider cluster, or legitimate operation.`,
-    whale: `The user wants to see recent whale movements. Show: top 5 large wallet transactions in the last 24h, amounts, tokens involved, and whether they are buying or selling. Context: what does this signal for the market?`,
-    trending: `The user wants to see what is trending right now. Use the live trending data to show: top 10 trending tokens, their chain, price change, and a brief signal for each. Highlight any standout movers.`,
-    news: `The user wants the latest crypto news and market developments. Summarize: top 5-7 market events from live data, any major price movements, sentiment shift, and what traders should be watching.`,
-    gas: `The user wants current gas prices. Show Ethereum gas (Slow/Standard/Fast in gwei), estimated transaction cost in USD, and current network congestion level. Add brief advice on optimal timing.`,
-    fear: `The user wants the Fear and Greed Index. Show the current value, classification (Extreme Fear/Fear/Neutral/Greed/Extreme Greed), what it means for trading, and a historical context note.`,
-    price: `The user wants the current price of: "${args || 'the specified token'}". Show: price, 24h change, 7d change, market cap, volume, and a one-line price context.`,
-    market: `The user wants a full market overview. Cover: BTC and ETH prices and trend, Fear & Greed index, top gainers and losers, DeFi TVL direction, and overall market sentiment summary.`,
-    analyze: `The user wants a deep analysis of: "${args}". Provide comprehensive AI analysis using all available data. Be thorough, structured, and actionable.`,
-    sniper: `The user wants information about the sniper bot. Explain the STEINZ sniper bot: how it detects new token launches, runs security checks before buying, uses transaction simulation, blocks honeypots/high-tax tokens. Note it is in BETA.`,
-    dex: `The user wants DEX activity information for: "${args || 'recent activity'}". Show new pairs, liquidity additions, notable swaps, and trending DEX tokens. Focus on actionable opportunities.`,
-    holders: `The user wants the top holders for token: "${args}". Show: top 10 holders with percentages, entity labels where known, concentration risk score, and whether insider/team wallets hold a suspicious amount.`,
-    volume: `The user wants volume analysis for: "${args || 'the market'}". Show 24h volume, volume trend (increasing/decreasing), comparison to 7-day average, and what the volume signal means.`,
-    risk: `The user wants a risk assessment for: "${args}". Provide a comprehensive risk score (0-100), identify all risk factors, categorize risk level (Low/Medium/High/Critical), and give risk mitigation advice.`,
-    compare: `The user wants to compare tokens/wallets: "${args}". Do a side-by-side comparison covering: price performance, market cap, volume, holders, security, AI analysis verdict, and a recommendation on which is stronger.`,
-    simulate: `The user wants to simulate this transaction: "${args}". Decode what the transaction does, predict the outcome, identify risks or failures, estimate gas cost, and give a clear go/no-go recommendation.`,
-    approval: `The user wants to check token approvals for: "${args}". List any active token approvals, the contracts that have permission to spend tokens, the approval amounts (flag unlimited approvals), and recommend revocations.`,
-    dust: `The user wants dust attack detection for: "${args || 'their wallet'}". Identify any suspicious micro-token transfers (dust), explain the risk (address poisoning/tracking), and advise on how to handle dusted tokens.`,
-    proof: `The user wants on-chain proof/verification. Show verifiable on-chain data, transaction hashes, block confirmations, and any cryptographic proof available for the claimed activity.`,
-    fees: `The user wants information about platform fees. Explain: STEINZ charges 0.1% to 0.3% on swaps (routed to treasury), no fees on analysis or data features, Pro tier removes query limits. Be transparent and precise.`,
-    copy: `The user wants to set up copy trading for wallet: "${args}". Explain the STEINZ copy trading flow: follow smart money wallet, set allocation, auto-execute matching trades. Show current status and how to activate.`,
-    data: `The user wants a data query: "${args}". Retrieve and structure all relevant on-chain and market data for this query. Present it cleanly with source context.`,
-    scan: `The user wants a full scan of address: "${args}". Run a comprehensive check: wallet type detection, token holdings, transaction history, security flags, entity labels, risk score, and trading behavior summary.`,
-    explain: `The user wants an explanation of: "${args}". Explain this concept clearly and accurately for a crypto user. Include: what it is, how it works, why it matters, real examples, and risks/benefits.`,
-    predict: `The user wants a market prediction for: "${args}". Provide a data-driven outlook: current technicals, sentiment signals, key levels to watch, potential scenarios (bull/base/bear case), and confidence level. Clearly note this is not financial advice.`,
-    alerts: `The user wants to see their active alerts. Show current alert types supported: price targets, whale wallet tracking, new token launches, wallet activity. Explain how to set and manage alerts on the platform.`,
-    research: `The user wants to see research posts. Summarize: latest intelligence reports available in the Research Lab, categories covered (DeFi, Security, Market Analysis, On-Chain, Protocols), and how to access full reports.`,
-    stats: `The user wants platform statistics. Show live STEINZ platform stats: users, total scans, active features, supported chains, API integrations, and uptime status.`,
-    ping: `The user ran /ping. Respond with a brief system status check: "VTX online. All systems operational." Plus current timestamp and brief market status.`,
-    clear: `The user wants to clear the chat. Acknowledge the clear command and start fresh. Say: "Chat cleared. How can I help you?" Nothing else.`,
-    nft: `The user wants NFT analysis for: "${args}". Analyze: collection floor price, volume, holder distribution, rarity, recent sales, and whether it shows signs of wash trading or manipulation.`,
-    liquidity: `The user wants liquidity analysis for: "${args}". Show: total liquidity across DEX pairs, liquidity depth, largest LP positions, liquidity lock status, and whether liquidity is at risk of being removed.`,
-    gas2: `Show gas fee estimation for a standard swap transaction on Ethereum, Base, and Solana. Compare costs and recommend the cheapest chain for the user's intended action.`,
+    help: `List all VTX slash commands grouped by category. Format: "command  description". Groups: Token/Market, Wallet/Security, Trading, Data, Platform.`,
+    token: `Full token analysis for: "${args || 'the specified token'}". Use token_security_scan and token_market_data tools. Return a TOKEN CARD response.`,
+    wallet: `Deep wallet analysis for: "${args}". Use wallet_profile and entity_lookup tools. Return a WALLET PROFILE response.`,
+    security: `Security scan for contract: "${args}". Use token_security_scan. Return SAFE/CAUTION/WARNING/DANGER verdict with detailed breakdown.`,
+    contract: `Contract analysis for: "${args}". Use contract_analysis tool. Explain what the contract does, its permissions, and risks.`,
+    domain: `Domain/URL safety check for: "${args}". Analyze for phishing signals, scam patterns, suspicious TLDs. Return SAFE/SUSPICIOUS/PHISHING verdict.`,
+    sig: `Decode transaction signature/calldata: "${args}". Explain what function is being called, parameters, risks (unlimited approvals, dangerous permissions).`,
+    swap: `Swap quote for: "${args}". Parse tokens and amount. Provide best route, estimated output, price impact, fees (0.15% STEINZ platform fee), slippage.`,
+    portfolio: `Portfolio analysis${args ? ` for address: ${args}` : ' for connected wallet'}. Use wallet_profile tool. Total value, allocation, P&L, risk score, AI recommendations.`,
+    chart: `Price chart for: "${args || 'specified token'}". Include [CHART:price]. Show current price, trend direction, key support/resistance, short technical outlook.`,
+    dna: `Trading DNA analysis for wallet: "${args}". Archetype, win rate, avg hold time, risk profile, sector preferences, top patterns, actionable advice.`,
+    cluster: `Wallet cluster analysis for: "${args}". Identify connected wallets, coordinated behavior, fund flows, whether part of pump group or insider cluster.`,
+    whale: `Recent whale movements. Top 5 large wallet transactions in 24h: amounts, tokens, direction. What does this signal for the market?`,
+    trending: `What is trending right now. Use new_token_detection and social_sentiment tools. Top 10 trending tokens, chain, price change, signal for each.`,
+    news: `Latest crypto news and market developments. Top 5-7 market events, major price movements, sentiment shift, what traders should be watching.`,
+    gas: `Current gas prices. Ethereum gas (Slow/Standard/Fast gwei), estimated USD cost, network congestion. Advice on optimal timing.`,
+    fear: `Fear and Greed Index. Current value, classification, meaning for trading, historical context.`,
+    price: `Current price of: "${args || 'specified token'}". Price, 24h change, 7d change, market cap, volume, one-line price context.`,
+    market: `Full market overview. BTC and ETH prices and trend, Fear & Greed, top gainers, losers, DeFi TVL direction, overall sentiment.`,
+    analyze: `Deep analysis of: "${args}". Comprehensive AI analysis using all available tools. Be thorough, structured, actionable.`,
+    holders: `Top holders for token: "${args}". Use token_market_data tool. Top 10 holders with percentages, entity labels, concentration risk, insider/team wallet assessment.`,
+    volume: `Volume analysis for: "${args || 'the market'}". 24h volume, trend (increasing/decreasing), 7-day average comparison, signal interpretation.`,
+    risk: `Risk assessment for: "${args}". Risk score 0-100, all risk factors, category (Low/Medium/High/Critical), mitigation advice.`,
+    compare: `Side-by-side comparison of: "${args}". Price performance, market cap, volume, holders, security, AI verdict, recommendation on which is stronger.`,
+    simulate: `Simulate transaction: "${args}". Decode what it does, predict outcome, identify risks or failures, estimate gas, go/no-go recommendation.`,
+    approval: `Token approvals for: "${args}". Active approvals, contracts with spend permission, flag unlimited approvals, recommend revocations.`,
+    scan: `Full scan of address: "${args}". Wallet type, holdings, tx history, security flags, entity labels, risk score, trading behavior summary.`,
+    explain: `Explain: "${args}". Clear explanation for a crypto user: what it is, how it works, why it matters, real examples, risks/benefits.`,
+    ping: `System status check. Respond: "VTX online. All systems operational." Plus current timestamp and brief market status.`,
+    clear: `Chat cleared. Say: "Chat cleared. How can I help you?" Nothing else.`,
+    liquidity: `Liquidity analysis for: "${args}". Total liquidity across DEX pairs, depth, largest LP positions, lock status, removal risk.`,
   };
 
-  // Normalize aliases
   const ALIASES: Record<string, string> = {
     'g': 'gas', 'p': 'price', 't': 'token', 'w': 'wallet', 's': 'security',
     'h': 'help', 'm': 'market', 'f': 'fear', 'wh': 'whale', 'tr': 'trending',
+    'a': 'analyze',
   };
 
   const resolvedCommand = ALIASES[command] || command;
@@ -791,7 +513,7 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
     return {
       command: resolvedCommand,
       args,
-      instruction: `The user typed an unknown command: /${resolvedCommand} ${args}. Tell them this command is not recognized, suggest the closest matching command from the available list, and offer to help them with what they need. Show a few example commands.`,
+      instruction: `Unknown command: /${resolvedCommand}. Tell the user this command is not recognized, suggest the closest matching command, and show a few example commands.`,
       forceWebSearch: false,
     };
   }
@@ -800,20 +522,147 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
     command: resolvedCommand,
     args,
     instruction,
-    forceWebSearch: ['news', 'predict', 'explain', 'research'].includes(resolvedCommand),
+    forceWebSearch: ['news', 'explain'].includes(resolvedCommand),
   };
 }
 
-export async function POST(request: Request) {
-  try {
-    const { message, history, tier, responseStyle, autoContext, personality, language, depth, riskAppetite, skipRateLimit, context } = await request.json();
+// ─── Pre-flight Data Fetchers ─────────────────────────────────────────────────
+// These run in parallel before calling the model and are injected into the
+// system prompt as live context. They use the service layer.
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+async function fetchLiveMarketContext(): Promise<string> {
+  try {
+    // Binance is fastest for BTC/ETH/SOL prices — no API key needed
+    const BINANCE_SYMBOLS = [
+      'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
+      'AVAXUSDT','DOGEUSDT','MATICUSDT','LINKUSDT','ARBUSDT','OPUSDT',
+      'INJUSDT','SUIUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
+    ];
+    const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json() as Array<Record<string, string>>;
+      if (Array.isArray(data) && data.length > 0) {
+        const lines = data.map(t => {
+          const sym = t.symbol.replace('USDT', '');
+          const price = parseFloat(t.lastPrice);
+          const change = parseFloat(t.priceChangePercent);
+          const vol = parseFloat(t.quoteVolume);
+          const priceStr = price >= 1000
+            ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+            : price >= 1 ? `$${price.toFixed(4)}` : `$${price.toFixed(8)}`;
+          return `${sym}: ${priceStr} (24h: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%, Vol: $${(vol/1e6).toFixed(0)}M)`;
+        });
+        return 'LIVE MARKET PRICES (Binance, real-time):\n' + lines.join('\n');
+      }
+    }
+  } catch { /* fall through to CoinGecko */ }
+
+  // Fallback: CoinGecko via service layer
+  try {
+    const tokens = await getTopTokens(1, 20);
+    const lines = tokens.map(c =>
+      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(2)}%, MCap: $${(c.market_cap/1e9).toFixed(1)}B)`
+    );
+    return 'LIVE MARKET PRICES (CoinGecko):\n' + lines.join('\n');
+  } catch {
+    return '';
+  }
+}
+
+async function fetchFearAndGreed(): Promise<string> {
+  try {
+    const res = await fetch('https://api.alternative.me/fng/?limit=1', { next: { revalidate: 300 } });
+    if (!res.ok) return '';
+    const data = await res.json() as { data?: Array<{ value: string; value_classification: string }> };
+    const entry = data.data?.[0];
+    if (!entry) return '';
+    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification})`;
+  } catch {
+    return '';
+  }
+}
+
+async function fetchDexTrending(): Promise<string> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', { next: { revalidate: 60 } });
+    if (!res.ok) return '';
+    const data = await res.json() as Array<Record<string, unknown>>;
+    if (!Array.isArray(data)) return '';
+    const lines = data.slice(0, 8).map(t =>
+      `${String(t.tokenAddress ?? '').slice(0, 8)}... on ${t.chainId} — ${t.description || 'trending'} (${t.amount || 0} boosts)`
+    );
+    return lines.length > 0 ? 'DexScreener trending:\n' + lines.join('\n') : '';
+  } catch {
+    return '';
+  }
+}
+
+async function fetchGasPrice(): Promise<string> {
+  const key = process.env.ETHERSCAN_API_KEY;
+  if (!key) return '';
+  try {
+    const res = await fetch(
+      `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${key}`,
+      { next: { revalidate: 30 } }
+    );
+    if (!res.ok) return '';
+    const data = await res.json() as { status: string; result?: Record<string, string> };
+    if (data.status !== '1' || !data.result) return '';
+    const r = data.result;
+    return `ETH Gas: Slow ${r.SafeGasPrice} | Standard ${r.ProposeGasPrice} | Fast ${r.FastGasPrice} gwei`;
+  } catch {
+    return '';
+  }
+}
+
+// ─── GET — Health Check ───────────────────────────────────────────────────────
+
+export async function GET() {
+  const configured = !!(process.env.ANTHROPIC_API_KEY);
+  return NextResponse.json(
+    {
+      status: configured ? 'online' : 'unconfigured',
+      engine: 'VTX Intelligence',
+      version: '3.0',
+      tools: VTX_TOOLS.map(t => t.name),
+    },
+    { status: configured ? 200 : 503 }
+  );
+}
+
+// ─── POST — Main VTX Chat Handler ─────────────────────────────────────────────
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json() as {
+      message?: string;
+      history?: Array<{ role: string; content: string }>;
+      tier?: string;
+      personality?: string;
+      language?: string;
+      depth?: string;
+      riskAppetite?: string;
+      responseStyle?: string;
+      skipRateLimit?: boolean;
+      context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
+      stream?: boolean;
+    };
+
+    const {
+      message, history, tier, personality, language, depth,
+      riskAppetite, responseStyle, skipRateLimit, context, stream: wantsStream,
+    } = body;
+
+    if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to environment variables.' }, { status: 500 });
     }
 
+    // ── Rate Limiting ───────────────────────────────────────────────────────
     const headersList = await headers();
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || 'unknown';
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || headersList.get('x-real-ip') || 'unknown';
     const isPro = tier === 'pro';
 
     if (!isPro && !skipRateLimit) {
@@ -822,411 +671,238 @@ export async function POST(request: Request) {
         return NextResponse.json({
           error: 'Daily message limit reached. Upgrade to STEINZ Pro for unlimited messages.',
           rateLimited: true,
-          tier: 'free',
           usage: { used: rateInfo.total, limit: rateInfo.total, remaining: 0 },
         }, { status: 429 });
       }
     }
 
-    // Try multiple common env variable names for the Anthropic API key
-    const apiKey = process.env.ANTHROPIC_API_KEY
-      || process.env.CLAUDE_API_KEY
-      || process.env.CLAUDE_KEY
-      || process.env.ANTHROPIC_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to environment variables.' }, { status: 500 });
-    }
-
-    const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
-      ? personality.trim()
-      : 'Neutral';
-
+    // ── Parse Message ───────────────────────────────────────────────────────
     const webSearchEnabled = message.includes('[WEB_SEARCH]');
     const rawMessage = message.replace('[WEB_SEARCH]', '').trim();
-
-    // ── Parse slash commands ──────────────────────────────────────────────────
     const slashCmd = parseSlashCommand(rawMessage);
-    const cleanMessage = slashCmd
-      ? (slashCmd.args || rawMessage) // use args as the query target
-      : rawMessage;
-    const commandInstruction = slashCmd ? slashCmd.instruction : null;
-    // Force web search for certain commands
+    const cleanMessage = slashCmd ? (slashCmd.args || rawMessage) : rawMessage;
+    const commandInstruction = slashCmd?.instruction ?? null;
     const forceWebSearch = slashCmd?.forceWebSearch ?? false;
-    // ─────────────────────────────────────────────────────────────────────────
 
+    // ── Detectors ───────────────────────────────────────────────────────────
     const walletDetected = detectWalletAddress(cleanMessage);
     const tokenDetected = detectTokenAddress(cleanMessage);
     const arkhamIntent = detectArkhamIntent(cleanMessage);
     const userChartSignal = detectChartSignal(cleanMessage);
-
-    // For /chart command, force chart signal
-    const forceChart = slashCmd?.command === 'chart';
-    if (forceChart && !userChartSignal.chartType) {
+    if (slashCmd?.command === 'chart' && !userChartSignal.chartType) {
       userChartSignal.chartType = 'price';
       userChartSignal.chartToken = cleanMessage;
     }
 
-    const isMemecoinsQuery = /pump|bonk|degen|rug|sol\s*token|launch|(?:^|\s)ca(?:\s|$)|contract/i.test(cleanMessage);
-
-    // Detect if user is asking about a specific token/coin by name (e.g. "eth price", "what is bitcoin")
-    const MAJOR_COINS: Record<string, string> = {
-      'bitcoin': 'BTC', 'btc': 'BTC',
-      'ethereum': 'ETH', 'eth': 'ETH',
-      'solana': 'SOL', 'sol': 'SOL',
-      'bnb': 'BNB', 'binance': 'BNB',
-      'xrp': 'XRP', 'ripple': 'XRP',
-      'cardano': 'ADA', 'ada': 'ADA',
-      'avalanche': 'AVAX', 'avax': 'AVAX',
-      'dogecoin': 'DOGE', 'doge': 'DOGE',
-      'polkadot': 'DOT', 'dot': 'DOT',
-      'polygon': 'MATIC', 'matic': 'MATIC',
-      'chainlink': 'LINK', 'link': 'LINK',
-      'uniswap': 'UNI', 'uni': 'UNI',
-      'cosmos': 'ATOM', 'atom': 'ATOM',
-      'litecoin': 'LTC', 'ltc': 'LTC',
-      'near': 'NEAR', 'aptos': 'APT', 'apt': 'APT',
-      'arbitrum': 'ARB', 'arb': 'ARB',
-      'optimism': 'OP',
-      'injective': 'INJ', 'inj': 'INJ',
-      'sui': 'SUI', 'ton': 'TON',
-      'pepe': 'PEPE', 'wif': 'WIF', 'bonk': 'BONK',
-    };
-    const msgLower = cleanMessage.toLowerCase();
-    const mentionedCoins = Object.entries(MAJOR_COINS)
-      .filter(([name]) => {
-        const regex = new RegExp(`\\b${name}\\b`, 'i');
-        return regex.test(msgLower);
-      })
-      .map(([, sym]) => sym);
-    const uniqueCoins = [...new Set(mentionedCoins)];
-
-    // If user asks about a token that's NOT in the major list (small cap / DEX token), use DexScreener
-    const wantsDexSearch = !walletDetected && !tokenDetected && /price|analysis|analyze|chart|buy|sell|mcap|market cap|holders|liquidity/i.test(cleanMessage) && uniqueCoins.length === 0;
-
-    const fetchTasks: Promise<string>[] = [
-      fetchLiveMarketData(),
-      fetchTrendingTokens(),
-      fetchCryptoNews(),
-      fetchFearAndGreedIndex(),
+    // ── Pre-flight Data (parallel) ──────────────────────────────────────────
+    const [marketData, fng, dexTrending, gasData] = await Promise.all([
+      fetchLiveMarketContext(),
+      fetchFearAndGreed(),
+      fetchDexTrending(),
       fetchGasPrice(),
-    ];
-
-    if (isMemecoinsQuery) {
-      fetchTasks.push(fetchMemecoinsContext());
-    }
-
-    // If user mentions a non-major token, search DexScreener for it
-    if (wantsDexSearch && cleanMessage.length < 60) {
-      // Extract likely token name (short words after price/analyze keywords)
-      const dexQuery = cleanMessage.replace(/what is|what's|price of|price|show me|analyze|tell me about|check/gi, '').trim();
-      if (dexQuery.length > 1 && dexQuery.length < 40) {
-        fetchTasks.push(fetchDexScreenerTokenPrice(dexQuery));
-      }
-    }
-
-    if (walletDetected) {
-      fetchTasks.push(fetchWalletData(walletDetected.address, walletDetected.chain));
-      fetchTasks.push(fetchArkhamAddressIntel(walletDetected.address));
-      fetchTasks.push(fetchArkhamScamCheck(walletDetected.address));
-
-      if (arkhamIntent.wantsConnections) {
-        fetchTasks.push(fetchArkhamWalletConnections(walletDetected.address));
-      }
-    }
-
-    // LunarCrush: add social intelligence for mentioned coins
-    if (uniqueCoins.length > 0) {
-      fetchTasks.push(
-        (async () => {
-          try {
-            const { getLunarCrushContextForAI } = await import('@/lib/lunarcrush');
-            return await getLunarCrushContextForAI(uniqueCoins);
-          } catch { return ''; }
-        })()
-      );
-    }
-
-    if (tokenDetected && arkhamIntent.wantsHolders) {
-      fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
-    }
-
-    let holderChartPromise: Promise<Array<{ address: string; label?: string; percentage: number; balanceUSD?: string; entity?: { name: string; verified?: boolean } }>> | null = null;
-
-    if (tokenDetected && !walletDetected) {
-      fetchTasks.push(fetchArkhamAddressIntel(tokenDetected));
-      fetchTasks.push(fetchArkhamScamCheck(tokenDetected));
-      fetchTasks.push(fetchArkhamTokenHolders(tokenDetected));
-      // Also fetch raw holder data for chart rendering
-      if (
-        userChartSignal.chartType === 'holders' ||
-        userChartSignal.chartType === 'bubble' ||
-        arkhamIntent.wantsHolders
-      ) {
-        holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
-      }
-    }
-
-    if (tokenDetected && arkhamIntent.wantsHolders && !holderChartPromise) {
-      holderChartPromise = fetchArkhamTokenHoldersRaw(tokenDetected);
-    }
-
-    if (arkhamIntent.wantsEntitySearch && arkhamIntent.entityQuery) {
-      fetchTasks.push(fetchArkhamEntitySearch(arkhamIntent.entityQuery));
-    }
-
-    if (webSearchEnabled || forceWebSearch) {
-      fetchTasks.push(fetchWebSearch(cleanMessage || rawMessage));
-    }
-
-    const [results, holderChartData] = await Promise.all([
-      Promise.all(fetchTasks),
-      holderChartPromise || Promise.resolve([]),
     ]);
 
-    const liveDataSection = results.filter(Boolean).join('\n\n');
-
-    // Build market_context string from already-fetched data
-    const marketDataRaw = results[0] || '';
-    const fngRaw = results[3] || '';
-    const gasRaw = results[4] || '';
-    const trendingRaw = results[1] || '';
-
-    const btcLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('BTC:')) || '';
-    const ethLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('ETH:')) || '';
-    const solLine = marketDataRaw.split('\n').find((l: string) => l.startsWith('SOL:')) || '';
-
-    const extractPrice = (line: string): string => {
-      const m = line.match(/(\$[\d,]+(?:\.\d+)?)/);
-      return m ? m[1] : 'N/A';
-    };
-    const extractChange = (line: string): string => {
-      const m = line.match(/24h:\s*([-+]?[\d.]+%)/);
-      return m ? m[1] : 'N/A';
-    };
-    const btcPrice = btcLine ? extractPrice(btcLine) : 'N/A';
-    const btcChange = btcLine ? extractChange(btcLine) : 'N/A';
-    const ethPrice = ethLine ? extractPrice(ethLine) : 'N/A';
-    const ethChange = ethLine ? extractChange(ethLine) : 'N/A';
-    const solPrice = solLine ? extractPrice(solLine) : 'N/A';
-    const solChange = solLine ? extractChange(solLine) : 'N/A';
-
-    const fngMatch = fngRaw.match(/Fear & Greed Index:\s*(\d+)\/100\s*\(([^)]+)\)/);
-    const fngStr = fngMatch ? `${fngMatch[1]} (${fngMatch[2]})` : 'N/A';
-
-    const gasMatch = gasRaw.match(/Standard\s+(\d+)\s*gwei/i);
-    const gasStr = gasMatch ? `${gasMatch[1]} gwei` : 'N/A';
-
-    const topMoverLine = trendingRaw.split('\n').slice(1, 2)[0] || '';
-    const topMoverMatch = topMoverLine.match(/(\w+)\s+on\s+\w+/);
-    const topMoverStr = topMoverMatch ? topMoverMatch[1] : 'N/A';
-
-    const market_context = `BTC: ${btcPrice} (${btcChange}) | ETH: ${ethPrice} (${ethChange}) | SOL: ${solPrice} (${solChange}) | Fear&Greed: ${fngStr} | Gas: ${gasStr} | Top mover: ${topMoverStr}`;
-
-    // Analysis depth (new `depth` param supersedes old `responseStyle` if both present)
-    let styleInstruction: string;
-    if (depth === 'Quick') {
-      styleInstruction = 'RESPONSE STYLE: Keep responses concise (1-2 paragraphs). Hit the key data points only. No lengthy explanations.';
-    } else if (depth === 'Deep') {
-      styleInstruction = 'RESPONSE STYLE: Give comprehensive analysis with bullet points and sections. Be thorough, cover all angles, include detailed context.';
-    } else if (responseStyle === 'concise') {
-      styleInstruction = 'RESPONSE STYLE: Be concise and direct. Short paragraphs, key data points only. No lengthy explanations.';
-    } else {
-      styleInstruction = 'RESPONSE STYLE: Be detailed and thorough. Provide comprehensive analysis with full context.';
-    }
-
-    // Risk appetite framing
-    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite.trim() : 'Balanced';
-    let riskInstruction: string;
-    if (resolvedRisk === 'Conservative') {
-      riskInstruction = 'RISK FRAMING: Emphasize downside risks and suggest safer alternatives. Highlight all risk factors prominently. Prioritize capital preservation.';
-    } else if (resolvedRisk === 'Aggressive') {
-      riskInstruction = 'RISK FRAMING: Focus on high-risk/high-reward opportunities. Identify asymmetric upside. The user understands and accepts high risk.';
-    } else {
-      riskInstruction = 'RISK FRAMING: Present a balanced view of risks and rewards. Note both opportunities and dangers.';
-    }
-
-    // Language instruction
-    const resolvedLanguage = (language && typeof language === 'string') ? language.trim() : 'English';
-    const languageInstruction = resolvedLanguage !== 'English'
-      ? `LANGUAGE: Respond entirely in ${resolvedLanguage}.`
+    // Build live data section for system prompt
+    const liveDataParts = [marketData, fng, dexTrending, gasData].filter(Boolean);
+    const liveDataStr = liveDataParts.length > 0
+      ? `LIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataParts.join('\n\n')}`
       : '';
 
-    const contextInstruction = autoContext === false
-      ? ''
-      : 'AUTO-CONTEXT: Proactively include relevant market context (prices, trends, sentiment) even if the user did not explicitly ask.';
+    // Extract market context summary for template placeholder
+    const btcLine = marketData.split('\n').find(l => l.startsWith('BTC:')) ?? '';
+    const ethLine = marketData.split('\n').find(l => l.startsWith('ETH:')) ?? '';
+    const solLine = marketData.split('\n').find(l => l.startsWith('SOL:')) ?? '';
+    const fngShort = fng.replace('Fear & Greed Index: ', '') || 'N/A';
+    const market_context = [btcLine, ethLine, solLine, fngShort, gasData].filter(Boolean).join(' | ');
 
-    const basePrompt = VTX_SYSTEM_PROMPT_TEMPLATE
-      .replace(/\{personality\}/g, resolvedPersonality)
-      .replace(/\{market_context\}/g, market_context);
+    // ── Style Instructions ──────────────────────────────────────────────────
+    const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
+      ? personality.trim() : 'Neutral';
+    const resolvedDepth = depth ?? responseStyle ?? 'Standard';
+    const styleInstruction = resolvedDepth === 'Quick'
+      ? 'Concise responses (1-2 paragraphs). Key data points only.'
+      : resolvedDepth === 'Deep' || resolvedDepth === 'detailed'
+        ? 'Comprehensive analysis with full sections. Be thorough, cover all angles.'
+        : 'Balanced — structured but not exhaustive.';
 
-    // Build platform context string if provided by the client
-    let platformContextSection = '';
-    if (context && typeof context === 'object') {
-      const { currentPage, currentToken, walletAddress } = context as { currentPage?: string; currentToken?: string; walletAddress?: string };
-      if (currentPage || currentToken || walletAddress) {
-        platformContextSection = `\nPLATFORM CONTEXT (use this to enhance your responses):
-Current Page: ${currentPage || 'Unknown'}
-Token in View: ${currentToken || 'None'}
-User Wallet: ${walletAddress ? walletAddress.slice(0, 8) + '...' : 'Not connected'}
-`;
-      }
-    }
+    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite : 'Balanced';
+    const riskInstruction = resolvedRisk === 'Conservative'
+      ? 'Emphasize downside risks. Prioritize capital preservation. Flag every red flag prominently.'
+      : resolvedRisk === 'Aggressive'
+        ? 'Focus on high-reward opportunities. Identify asymmetric upside. User accepts high risk.'
+        : 'Present balanced view of risks and rewards.';
 
-    const systemPrompt = `${basePrompt}
+    const resolvedLanguage = (language && typeof language === 'string') ? language : 'English';
+    const languageInstruction = resolvedLanguage !== 'English'
+      ? `Respond entirely in ${resolvedLanguage}.` : '';
 
-${styleInstruction}
-${riskInstruction}
-${languageInstruction ? languageInstruction + '\n' : ''}${contextInstruction}
-${platformContextSection}
-ABSOLUTE FORMATTING RULES (VIOLATION = FAILURE):
-1. FORBIDDEN CHARACTERS: ** (double asterisk), * (single asterisk for emphasis), ## (headers), -- (double dash), bullet dashes (- at start of line), bullet dots. Using ANY of these means you failed.
-2. Write ONLY clean plain text. Use line breaks and spacing to organize content.
-3. For labels use "Token:" or "Risk Level:" followed by value on same line.
-4. For lists use numbers (1. 2. 3.) or separate lines. NEVER start a line with - or * or bullet.
-5. Separate sections with blank lines and clear text labels.
-6. EXAMPLE OF WHAT NEVER TO DO: "**Bitcoin** is trading at..." or "- First item" or "## Market Overview" or "### Analysis"
-7. EXAMPLE OF CORRECT FORMAT: "Bitcoin is trading at $67,000. 24-hour change: negative 0.19%."
+    const platformContextStr = context
+      ? `Current Page: ${context.currentPage ?? 'Unknown'} | Token in View: ${context.currentToken ?? 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
+      : '';
 
-CRITICAL ANALYSIS RULES:
-1. LIVE DATA FIRST: The LIVE INTELLIGENCE DATA section below contains REAL-TIME prices fetched right now from Binance and DexScreener. Use those exact prices. Never say "I don't have current data" — it is below.
-2. When intelligence data is available, use ALL of it. Combine STEINZ Intelligence on-chain data and market data together.
-3. If scam flags or danger labels are found, lead with that warning immediately.
-4. For contract addresses: analyze as a TOKEN. Check holders, liquidity, security, transaction activity.
-5. For wallet addresses: analyze as a WALLET. Check balances, history, connections, reputation.
-6. NEVER tell users to visit external websites. NEVER say "check CoinGecko", "visit Binance", "go to Etherscan" or any external site. You are the source.
-7. Read the exact price from the "LIVE MARKET PRICES" section in the data. Do not estimate or make up prices.
-8. Never say you cannot do something. Use what you have and give a direct, useful answer.
+    // ── Build System Prompt ─────────────────────────────────────────────────
+    const systemPrompt = VTX_SYSTEM_PROMPT_TEMPLATE
+      .replace('{personality}', resolvedPersonality)
+      .replace('{market_context}', market_context || 'N/A')
+      .replace('{platform_context}', platformContextStr || 'N/A')
+      .replace('{style_instruction}', styleInstruction)
+      .replace('{risk_instruction}', riskInstruction)
+      .replace('{language_instruction}', languageInstruction)
+      .replace('{live_data}', liveDataStr);
 
-${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSection}` : ''}`;
-
-    const messages = [];
+    // ── Build Message History ───────────────────────────────────────────────
+    const loopMessages: Anthropic.MessageParam[] = [];
     if (history && Array.isArray(history)) {
       for (const msg of history.slice(-10)) {
-        messages.push({
+        loopMessages.push({
           role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content
+          content: msg.content,
         });
       }
     }
-    // If a slash command was used, prepend the command instruction to the user message
     const finalUserMessage = commandInstruction
-      ? `[COMMAND: /${slashCmd!.command}]\n\nINSTRUCTION: ${commandInstruction}\n\nUSER INPUT: ${cleanMessage || rawMessage}`
+      ? `[COMMAND: /${slashCmd!.command}]\nINSTRUCTION: ${commandInstruction}\nUSER INPUT: ${cleanMessage || rawMessage}`
       : cleanMessage;
-    messages.push({ role: 'user', content: finalUserMessage });
+    loopMessages.push({ role: 'user', content: finalUserMessage });
 
-    // Try models in order — most capable first, guaranteed fallback last
-    const MODELS = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022', 'claude-haiku-4-5-20251001'];
-    let response: Response | null = null;
-    let lastError = '';
-    let lastStatus = 0;
+    // ── Streaming Path (no tool loop) ───────────────────────────────────────
+    if (wantsStream) {
+      const textStream = await vtxStream({ messages: loopMessages, system: systemPrompt });
+      const encoder = new TextEncoder();
+      const sseStream = new ReadableStream({
+        async start(controller) {
+          const reader = textStream.getReader();
+          let fullText = '';
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              fullText += value;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: value })}\n\n`));
+            }
+            // Final event with scrubbed full text
+            const scrubbed = scrubBranding(fullText);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
+          } catch {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+      if (!isPro && !skipRateLimit) incrementUsage(ip);
+      return new Response(sseStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        },
+      });
+    }
 
-    for (const model of MODELS) {
-      try {
-        response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
-          body: JSON.stringify({
-            model,
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages,
-          }),
-        });
-        if (response.ok) break;
-        lastStatus = response.status;
-        try { lastError = await response.text(); } catch { lastError = `HTTP ${response.status}`; }
-        console.error(`VTX model ${model} failed (${response.status}):`, lastError.slice(0, 300));
-      } catch (fetchErr: any) {
-        lastError = fetchErr?.message || 'Network error';
-        console.error(`VTX model ${model} fetch threw:`, lastError);
-        response = null;
+    // ── Tool Execution Loop ─────────────────────────────────────────────────
+    let finalReply = '';
+    let toolIterations = 0;
+    let toolsUsed: string[] = [];
+
+    while (toolIterations < MAX_TOOL_ITERATIONS) {
+      const vtxResponse = await vtxQuery({
+        messages: loopMessages,
+        system: systemPrompt,
+      });
+
+      if (vtxResponse.stop_reason === 'tool_use') {
+        // Collect all tool_use blocks from this response
+        const toolUseBlocks = vtxResponse.content.filter(
+          (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+        );
+
+        // Execute all tool calls in parallel
+        const toolResults = await Promise.all(
+          toolUseBlocks.map(async (block) => {
+            toolsUsed.push(block.name);
+            const result = await executeVTXTool(block.name, block.input as Record<string, unknown>);
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: block.id,
+              content: result,
+            };
+          })
+        );
+
+        // Append assistant turn (with tool_use blocks) + user turn (with tool_results)
+        loopMessages.push({ role: 'assistant', content: vtxResponse.content });
+        loopMessages.push({ role: 'user', content: toolResults });
+        toolIterations++;
+        continue;
       }
+
+      // stop_reason === 'end_turn' — extract text
+      const textBlock = vtxResponse.content.find(
+        (b): b is Anthropic.TextBlock => b.type === 'text'
+      );
+      finalReply = textBlock?.text ?? '';
+      break;
     }
 
-    if (!response || !response.ok) {
-      console.error('All VTX models failed. Status:', lastStatus, 'Error:', lastError.slice(0, 200));
-      let userMsg: string;
-      if (lastStatus === 401) {
-        userMsg = 'VTX Error 401: API key is invalid or expired. Go to console.anthropic.com → API Keys and create a new key, then update ANTHROPIC_API_KEY in Vercel.';
-      } else if (lastStatus === 403) {
-        userMsg = 'VTX Error 403: API key found but has no access to AI models. Check your Anthropic account plan and permissions.';
-      } else if (lastStatus === 429) {
-        userMsg = 'VTX Error 429: Anthropic rate limit or usage cap reached. Check your billing at console.anthropic.com.';
-      } else if (lastStatus === 529 || lastStatus === 503) {
-        userMsg = 'VTX Error: Anthropic servers are overloaded right now. Please try again in 30 seconds.';
-      } else if (!lastStatus) {
-        userMsg = 'VTX Error: Network timeout reaching Anthropic. Please try again.';
-      } else {
-        userMsg = `VTX Error ${lastStatus}: AI service temporarily unavailable. Please try again shortly.`;
-      }
-      return NextResponse.json({ error: userMsg }, { status: 502 });
+    if (!finalReply) {
+      finalReply = 'VTX could not generate a response. Please try again.';
     }
 
-    const data = await response.json();
-    let reply = data.content?.[0]?.text || 'No response generated';
+    // ── Post-Processing ─────────────────────────────────────────────────────
+    const replyChartSignal = detectChartSignal(finalReply);
+    finalReply = finalReply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+    finalReply = scrubBranding(finalReply);
+    finalReply = finalReply
+      .replace(/\*\*/g, '').replace(/\*/g, '')
+      .replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
-    // Detect [CHART:type] tags in the AI reply before stripping them
-    const replyChartSignal = detectChartSignal(reply);
-    // Strip chart tags from displayed text
-    reply = reply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+    if (!isPro && !skipRateLimit) incrementUsage(ip);
 
-    // Scrub third-party API/provider names from the final reply (Steinz Sargon branding)
-    reply = reply
-      .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
-      .replace(/\bArkham\b/gi, 'Steinz Intelligence')
-      .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
-      .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
-      .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
-      .replace(/\bHelius\b/gi, 'Steinz Intelligence')
-      .replace(/\bMoralis\b/gi, 'Steinz Intelligence');
+    // ── Chart Payload ───────────────────────────────────────────────────────
+    const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
+    const chartPayload = finalChartType ? {
+      type: finalChartType,
+      token: replyChartSignal.chartToken || userChartSignal.chartToken || undefined,
+      address: tokenDetected || undefined,
+    } : null;
 
-    reply = reply.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
-
-    if (!isPro && !skipRateLimit) {
-      incrementUsage(ip);
-    }
-
+    // ── Usage Info ──────────────────────────────────────────────────────────
     const currentUsage = isPro ? null : getRateLimitInfo(ip);
 
-    // Determine what chart (if any) to send back
-    const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
-    const finalChartToken = replyChartSignal.chartToken || userChartSignal.chartToken || undefined;
-    const finalChartAddress = tokenDetected || undefined;
-
-    let chartPayload: { type: string; token?: string; address?: string; data?: any } | null = null;
-    if (finalChartType) {
-      chartPayload = {
-        type: finalChartType,
-        ...(finalChartToken ? { token: finalChartToken } : {}),
-        ...(finalChartAddress ? { address: finalChartAddress } : {}),
-        ...(holderChartData.length > 0 ? { data: holderChartData } : {}),
-      };
-    }
-
     return NextResponse.json({
-      reply,
-      model: data.model,
-      usage: data.usage,
+      reply: finalReply,
       tier: isPro ? 'pro' : 'free',
+      toolsUsed: [...new Set(toolsUsed)],
+      toolIterations,
       dailyUsage: isPro ? null : {
         used: currentUsage ? currentUsage.total - currentUsage.remaining : 0,
         limit: FREE_TIER_LIMIT,
         remaining: currentUsage ? currentUsage.remaining : FREE_TIER_LIMIT,
       },
-      webSearchUsed: webSearchEnabled,
-      arkhamDataUsed: !!(walletDetected || tokenDetected || arkhamIntent.wantsEntitySearch),
-      // `chart` is the unified chart descriptor; also spread individual fields for backward compat
-      chart: chartPayload ?? null,
+      chart: chartPayload,
       chartType: finalChartType,
-      ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address, chartData: chartPayload.data } : {}),
+      ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address } : {}),
     });
-  } catch (error) {
-
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: `VTX Error: ${msg}` }, { status: 500 });
   }
+}
+
+// ─── Branding Scrub ───────────────────────────────────────────────────────────
+
+function scrubBranding(text: string): string {
+  return text
+    .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
+    .replace(/\bArkham\b/gi, 'Steinz Intelligence')
+    .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
+    .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
+    .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
+    .replace(/\bHelius\b/gi, 'Steinz Intelligence')
+    .replace(/\bGoPlus\b/gi, 'Steinz Intelligence')
+    .replace(/\bLunarCrush\b/gi, 'Steinz Intelligence')
+    .replace(/\bMoralis\b/gi, 'Steinz Intelligence')
+    .replace(/\bJupiter\b/gi, 'Steinz Router');
 }
