@@ -209,6 +209,249 @@ RISK FRAMING: {risk_instruction}
 
 {live_data}`;
 
+// ─── Tool Executors ───────────────────────────────────────────────────────────
+// Each function maps a VTX tool name to real service layer calls.
+// Returns a string that becomes the tool_result content fed back to the model.
+
+async function executeTokenSecurityScan(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  try {
+    const result = await getTokenSecurity(address, chain);
+    if (!result) return `Security scan unavailable for ${address} on ${chain}.`;
+    return JSON.stringify(result, null, 2);
+  } catch {
+    return `Security scan failed for ${address}.`;
+  }
+}
+
+async function executeTokenMarketData(input: Record<string, unknown>): Promise<string> {
+  const identifier = input.identifier as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [];
+
+  // Try DexScreener first (works for any address/symbol)
+  try {
+    const pairs = await searchPairs(identifier);
+    if (pairs.length > 0) {
+      const top = pairs.slice(0, 3);
+      lines.push(`DexScreener data for "${identifier}":`);
+      for (const p of top) {
+        lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
+        lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
+        lines.push(`  Volume 24h: $${(p.volume?.h24 ?? 0).toLocaleString()}`);
+        lines.push(`  Liquidity: $${(p.liquidity?.usd ?? 0).toLocaleString()}`);
+        lines.push(`  FDV: $${(p.fdv ?? 0).toLocaleString()}`);
+        lines.push(`  Buys/Sells 24h: ${p.txns?.h24?.buys ?? 0} / ${p.txns?.h24?.sells ?? 0}`);
+        lines.push(`  Contract: ${p.baseToken.address}`);
+        lines.push('');
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Also try CoinGecko for major tokens
+  try {
+    const detail = await getTokenDetail(identifier.toLowerCase());
+    lines.push(`CoinGecko data for ${detail.name}:`);
+    lines.push(`  Price: $${detail.market_data?.current_price?.usd}`);
+    lines.push(`  Market Cap: $${(detail.market_data?.market_cap?.usd ?? 0).toLocaleString()}`);
+    lines.push(`  Volume 24h: $${(detail.market_data?.total_volume?.usd ?? 0).toLocaleString()}`);
+    lines.push(`  24h change: ${detail.market_data?.price_change_percentage_24h?.toFixed(2)}%`);
+    lines.push(`  7d change: ${detail.market_data?.price_change_percentage_7d?.toFixed(2)}%`);
+    lines.push(`  Circulating supply: ${detail.market_data?.circulating_supply?.toLocaleString()}`);
+  } catch { /* CoinGecko doesn't have this token — that's fine */ }
+
+  return lines.length > 0 ? lines.join('\n') : `No market data found for "${identifier}".`;
+}
+
+async function executeWalletProfile(input: Record<string, unknown>): Promise<string> {
+  const address = input.address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [`Wallet profile for ${address}:`];
+
+  try {
+    const isSolana = !address.startsWith('0x');
+    if (isSolana) {
+      const [balance, meta] = await Promise.all([
+        getSolanaSOLBalance(address).catch(() => 0),
+        getAddressIntel(address).catch(() => null),
+      ]);
+      lines.push(`  Chain: Solana`);
+      lines.push(`  SOL Balance: ${balance.toFixed(4)} SOL`);
+      if (meta?.arkhamEntity) {
+        lines.push(`  Entity: ${meta.arkhamEntity.name} (${meta.arkhamEntity.type})`);
+        lines.push(`  Verified: ${meta.arkhamEntity.verified}`);
+      }
+      if (meta?.labels?.length) lines.push(`  Labels: ${meta.labels.join(', ')}`);
+    } else {
+      const [balance, intel] = await Promise.all([
+        getEthBalance(address, chain).catch(() => '0'),
+        getAddressIntel(address).catch(() => null),
+      ]);
+      lines.push(`  Chain: ${chain}`);
+      lines.push(`  ETH Balance: ${balance} ETH`);
+      if (intel?.arkhamEntity) {
+        lines.push(`  Entity: ${intel.arkhamEntity.name} (${intel.arkhamEntity.type})`);
+        lines.push(`  Verified: ${intel.arkhamEntity.verified}`);
+      }
+      if (intel?.labels?.length) lines.push(`  Labels: ${intel.labels.join(', ')}`);
+      if (intel?.scamHistory) {
+        lines.push(`  ⚠️ SCAM HISTORY: ${intel.scamHistory.totalRugs} rugs, ${intel.scamHistory.totalStolen} stolen`);
+      }
+    }
+  } catch {
+    lines.push('  Could not fetch wallet data.');
+  }
+
+  return lines.join('\n');
+}
+
+async function executeEntityLookup(input: Record<string, unknown>): Promise<string> {
+  const address = input.address as string;
+  try {
+    const label = await getEntityLabel(address);
+    if (label.confidence === 0) return `No entity identified for ${address}. Unknown wallet.`;
+    return [
+      `Entity lookup for ${address}:`,
+      `  Name: ${label.entity}`,
+      `  Type: ${label.type}`,
+      `  Confidence: ${label.confidence}%`,
+      `  Verified: ${label.verified}`,
+      label.website ? `  Website: ${label.website}` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Entity lookup failed for ${address}.`;
+  }
+}
+
+async function executeSocialSentiment(input: Record<string, unknown>): Promise<string> {
+  const symbol = input.symbol as string;
+  try {
+    const score = await getSocialScore(symbol);
+    if (!score) return `No social data found for ${symbol}.`;
+    return [
+      `Social sentiment for ${symbol}:`,
+      `  Galaxy Score: ${score.galaxyScore}/100`,
+      `  Alt Rank: #${score.altRank}`,
+      `  Social Volume 24h: ${score.socialVolume24h.toLocaleString()} posts`,
+      `  Sentiment Score: ${score.sentimentScore} (-100 bearish to +100 bullish)`,
+      `  Social Dominance: ${score.socialDominance?.toFixed(2)}%`,
+      `  Influencers: ${score.influencerCount}`,
+      score.bullishPercent !== undefined ? `  Bullish: ${score.bullishPercent?.toFixed(1)}%` : '',
+      score.bearishPercent !== undefined ? `  Bearish: ${score.bearishPercent?.toFixed(1)}%` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Social sentiment fetch failed for ${symbol}.`;
+  }
+}
+
+async function executeSolanaTokenData(input: Record<string, unknown>): Promise<string> {
+  const mint = input.mint_address as string;
+  const lines: string[] = [`Solana token data for ${mint}:`];
+  try {
+    const [meta, supply] = await Promise.all([
+      getSolanaTokenMeta(mint).catch(() => null),
+      getSolanaTokenSupply(mint).catch(() => 0),
+    ]);
+    if (meta) {
+      lines.push(`  Name: ${meta.name}`);
+      lines.push(`  Symbol: ${meta.symbol}`);
+      lines.push(`  Decimals: ${meta.decimals}`);
+      lines.push(`  Mint Authority: ${meta.mintAuthority ?? 'Renounced'}`);
+      lines.push(`  Freeze Authority: ${meta.freezeAuthority ?? 'None'}`);
+      if (meta.description) lines.push(`  Description: ${meta.description.slice(0, 200)}`);
+    }
+    lines.push(`  Total Supply: ${supply.toLocaleString()}`);
+  } catch {
+    lines.push('  Could not fetch Solana token data.');
+  }
+  return lines.join('\n');
+}
+
+async function executeEvmTokenData(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  const lines: string[] = [`EVM token data for ${address} on ${chain}:`];
+  try {
+    const [meta, holderCount] = await Promise.all([
+      getTokenMetadata(address, chain).catch(() => null),
+      getTokenHolderCount(address, chain).catch(() => 0),
+    ]);
+    if (meta) {
+      lines.push(`  Name: ${meta.name ?? 'Unknown'}`);
+      lines.push(`  Symbol: ${meta.symbol ?? 'Unknown'}`);
+      lines.push(`  Decimals: ${meta.decimals ?? 18}`);
+      if (meta.logo) lines.push(`  Logo: ${meta.logo}`);
+    }
+    lines.push(`  Holder Count (sampled): ${holderCount.toLocaleString()}`);
+  } catch {
+    lines.push('  Could not fetch EVM token data.');
+  }
+  return lines.join('\n');
+}
+
+async function executeNewTokenDetection(input: Record<string, unknown>): Promise<string> {
+  const chain = (input.chain as string) ?? undefined;
+  const minLiq = (input.min_liquidity_usd as number) ?? 5000;
+  try {
+    const pairs = await getNewPairs(minLiq, chain);
+    if (pairs.length === 0) return 'No new token launches found matching criteria.';
+    const lines = [`New token launches (last 24h, min liquidity $${minLiq.toLocaleString()}):`];
+    for (const p of pairs.slice(0, 10)) {
+      const ageMins = Math.floor((Date.now() - (p.pairCreatedAt ?? 0)) / 60_000);
+      lines.push(`  ${p.baseToken.symbol} on ${p.chainId} (${p.dexId})`);
+      lines.push(`    Age: ${ageMins}m | Price: $${p.priceUsd} | Liquidity: $${(p.liquidity?.usd ?? 0).toLocaleString()}`);
+      lines.push(`    Contract: ${p.baseToken.address}`);
+    }
+    return lines.join('\n');
+  } catch {
+    return 'New token detection failed.';
+  }
+}
+
+async function executeContractAnalysis(input: Record<string, unknown>): Promise<string> {
+  const address = input.contract_address as string;
+  const chain = (input.chain as string) ?? 'ethereum';
+  try {
+    const code = await getContractCode(address, chain);
+    if (!code || code === '0x') return `${address} is not a contract on ${chain} (EOA wallet or non-existent).`;
+    // Use VTX internal analysis to interpret the bytecode length as a signal
+    const sizeKb = (code.length / 2 / 1024).toFixed(1);
+    const summary = await vtxAnalyze(
+      `Analyze this EVM smart contract on ${chain}. Contract address: ${address}. Bytecode size: ${sizeKb}KB. Based on the bytecode size and address, provide a brief security assessment. Note: actual bytecode not included for brevity. Focus on what can be inferred.`,
+      600
+    ).catch(() => '');
+    return [
+      `Contract analysis for ${address} on ${chain}:`,
+      `  Bytecode size: ${sizeKb}KB`,
+      `  Status: Contract exists and is deployed`,
+      summary ? `\nAI Assessment:\n${summary}` : '',
+    ].filter(Boolean).join('\n');
+  } catch {
+    return `Contract analysis failed for ${address}.`;
+  }
+}
+
+// ─── Tool Dispatch ────────────────────────────────────────────────────────────
+
+async function executeVTXTool(
+  toolName: string,
+  toolInput: Record<string, unknown>
+): Promise<string> {
+  switch (toolName) {
+    case 'token_security_scan':  return executeTokenSecurityScan(toolInput);
+    case 'token_market_data':    return executeTokenMarketData(toolInput);
+    case 'wallet_profile':       return executeWalletProfile(toolInput);
+    case 'entity_lookup':        return executeEntityLookup(toolInput);
+    case 'social_sentiment':     return executeSocialSentiment(toolInput);
+    case 'solana_token_data':    return executeSolanaTokenData(toolInput);
+    case 'evm_token_data':       return executeEvmTokenData(toolInput);
+    case 'new_token_detection':  return executeNewTokenDetection(toolInput);
+    case 'contract_analysis':    return executeContractAnalysis(toolInput);
+    default:                     return `Unknown tool: ${toolName}`;
+  }
+}
+
 // ─── Slash Command System ─────────────────────────────────────────────────────
 
 interface SlashCommandResult {
