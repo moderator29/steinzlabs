@@ -1,6 +1,7 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { scanDomain } from '@/lib/security/goplusService';
+import { getDomainSecurity } from '@/lib/services/goplus';
 
 const schema = z.object({
   url: z.string().trim().min(1).max(500),
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       url = 'https://' + url;
     }
 
-    const result = await scanDomain(url);
+    const result = await getDomainSecurity(url);
 
     return NextResponse.json({
       url,
