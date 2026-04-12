@@ -101,7 +101,7 @@ Rules:
         });
         break;
       } catch (err: any) {
-        console.error(`DNA analyzer model ${model} failed:`, err?.message || err);
+        // model failed, try next
       }
     }
     if (!aiMessage) throw new Error('AI analysis unavailable');

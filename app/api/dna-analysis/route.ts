@@ -256,7 +256,7 @@ Be direct, specific, and constructive. Focus on memecoin patterns if relevant. R
         });
         break;
       } catch (err: any) {
-        console.error(`DNA analysis model ${model} failed:`, err?.message || err);
+        // model failed, try next
       }
     }
     if (!message) return null;

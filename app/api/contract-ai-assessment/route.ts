@@ -103,7 +103,7 @@ Respond with valid JSON only. No markdown, no code blocks, just raw JSON:
         });
         break;
       } catch (err: any) {
-        console.error(`Contract AI model ${model} failed:`, err?.message || err);
+        // model failed, try next
       }
     }
     if (!aiResponse) throw new Error('AI assessment unavailable');

@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       });
       if (response.ok) break;
       lastError = await response.text();
-      console.error(`Customer service model ${model} failed (${response.status}):`, lastError);
+      // model failed, try next
     }
 
     if (!response || !response.ok) {
