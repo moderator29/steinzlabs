@@ -1139,16 +1139,14 @@ ${liveDataSection ? `\nLIVE INTELLIGENCE DATA (fetched now):\n\n${liveDataSectio
         if (response.ok) break;
         lastStatus = response.status;
         try { lastError = await response.text(); } catch { lastError = `HTTP ${response.status}`; }
-        console.error(`VTX model ${model} failed (${response.status}):`, lastError.slice(0, 300));
+        // model failed, try next
       } catch (fetchErr: any) {
         lastError = fetchErr?.message || 'Network error';
-        console.error(`VTX model ${model} fetch threw:`, lastError);
         response = null;
       }
     }
 
     if (!response || !response.ok) {
-      console.error('All VTX models failed. Status:', lastStatus, 'Error:', lastError.slice(0, 200));
       let userMsg: string;
       if (lastStatus === 401) {
         userMsg = 'VTX Error 401: API key is invalid or expired. Go to console.anthropic.com → API Keys and create a new key, then update ANTHROPIC_API_KEY in Vercel.';
