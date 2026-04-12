@@ -2,6 +2,8 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getTokenPairs } from '@/lib/services/dexscreener';
 import { getSolanaTokenHolders } from '@/lib/services/helius';
+import { getBirdeyeHolders } from '@/lib/services/birdeye';
+import { getTokenHolders, getAddressIntel } from '@/lib/services/arkham';
 
 interface BubbleNode {
   id: string;
@@ -156,55 +158,31 @@ interface ArkhamIntel {
 const ARKHAM_NULL: ArkhamIntel = { entityName: null, entityType: null, entityLabel: null, entityBadge: null, isScammer: false };
 
 async function fetchArkhamHolders(token: string): Promise<ArkhamHolder[]> {
-  const apiKey = process.env.ARKHAM_API_KEY;
-  if (!apiKey) return [];
   try {
-    const res = await fetch(`https://api.arkhamintelligence.com/token/holders?address=${token}&limit=30`, {
-      headers: { 'API-Key': apiKey },
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return [];
-    const data = await res.json() as ArkhamHolder[] | { holders?: ArkhamHolder[] };
-    return Array.isArray(data) ? data : data.holders ?? [];
+    const holders = await getTokenHolders(token, 100);
+    return holders.map(h => ({
+      address: h.address,
+      percentage: h.percentage,
+      entity: h.entity ? { name: h.entity.name, type: h.entity.type, verified: h.entity.verified } : undefined,
+      labels: h.labels ?? [],
+      label: h.entity?.name ?? null,
+    }));
   } catch {
     return [];
   }
 }
 
 async function fetchArkhamAddressIntel(address: string): Promise<ArkhamIntel> {
-  const apiKey = process.env.ARKHAM_API_KEY;
-  if (!apiKey || !address) return ARKHAM_NULL;
+  if (!address) return ARKHAM_NULL;
   try {
-    const res = await fetch(`https://api.arkhamintelligence.com/intelligence/address/${address}`, {
-      headers: { 'API-Key': apiKey },
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return ARKHAM_NULL;
-    const data = await res.json() as {
-      arkhamEntity?: { name?: string; type?: string };
-      entity?: { name?: string; type?: string };
-      arkhamLabel?: { name?: string };
-      labels?: string[];
-    };
-
-    const entity = data.arkhamEntity || data.entity || null;
-    const rawLabels: string[] = [];
-    if (data.arkhamLabel?.name) rawLabels.push(data.arkhamLabel.name);
-    if (Array.isArray(data.labels)) rawLabels.push(...data.labels);
-
+    const intel = await getAddressIntel(address);
+    const rawLabels = intel.labels ?? [];
     const isScammer = rawLabels.some(l =>
       ['scammer', 'rug_puller', 'phishing', 'hack', 'exploit'].includes(l.toLowerCase())
     );
-
-    if (!entity) {
-      if (isScammer) return { entityName: null, entityType: null, entityLabel: 'RISK', entityBadge: '🚨', isScammer };
-      return ARKHAM_NULL;
-    }
-
-    const entityName = entity.name || null;
-    const entityType = entity.type || null;
+    const entityName = intel.arkhamEntity?.name ?? null;
+    const entityType = intel.arkhamEntity?.type ?? null;
     const { entityLabel, entityBadge } = mapEntityTypeToLabel(entityType ?? '', entityName ?? '', rawLabels);
-
     return { entityName, entityType, entityLabel, entityBadge, isScammer };
   } catch {
     return ARKHAM_NULL;
@@ -328,10 +306,21 @@ export async function GET(request: Request) {
         };
       });
     } else {
-      // Try chain-specific real holder data (via service layer)
+      // Try chain-specific real holder data — Birdeye for Solana (ALL holders), Helius fallback
       if (isSolana) {
-        const solanaHolders = await getSolanaTokenHolders(token);
-        if (solanaHolders.length > 0) {
+        // Birdeye returns up to 100 holders with accurate balance data
+        const birdeyeHolders = await getBirdeyeHolders(token, 100, 'solana').catch(() => []);
+        if (birdeyeHolders.length > 0) {
+          const totalSupply = birdeyeHolders.reduce((s, h) => s + h.uiAmount, 0) || 1;
+          rawHolders = birdeyeHolders.map(h => ({
+            address: h.owner,
+            label: `${h.owner.slice(0, 6)}...${h.owner.slice(-4)}`,
+            percentage: Math.round((h.uiAmount / totalSupply) * 10000) / 100,
+            entityName: null, entityType: null, entityLabel: null, entityBadge: null,
+            verified: false, isScammer: false,
+          }));
+        } else {
+          const solanaHolders = await getSolanaTokenHolders(token);
           rawHolders = solanaHolders.map(h => ({
             address: h.address,
             label: `${h.address.slice(0, 6)}...${h.address.slice(-4)}`,
