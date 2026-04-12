@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
 
 const engagementStore: Record<string, { views: number; likes: number; shares: number; comments: number }> = {};

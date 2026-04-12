@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 
 function buildEmailHtml(title: string, message: string, type: string): string {

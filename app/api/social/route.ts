@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * STEINZ LABS — Social Intelligence API
  * Powered by LunarCrush — social data for any crypto asset
