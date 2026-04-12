@@ -325,16 +325,16 @@ function FilterModal({ filters, onApply, onClose }: { filters: Filters; onApply:
 function CoinRow({ token, rank, onClick }: { token: MarketToken; rank: number; onClick: () => void }) {
   const pos = token.change24h >= 0;
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', gap: 14, userSelect: 'none', WebkitUserSelect: 'none' }}>
-      <span style={{ color: '#444', fontSize: 12, width: 18, textAlign: 'right', flexShrink: 0 }}>{rank}</span>
-      <CoinLogo token={token} size={46} />
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', padding: '16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', gap: 14, userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <span style={{ color: '#444', fontSize: 12, width: 20, textAlign: 'right', flexShrink: 0 }}>{rank}</span>
+      <CoinLogo token={token} size={50} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{token.name}</div>
-        <div style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>{token.marketCap > 0 ? fmtMcap(token.marketCap) : token.symbol}</div>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{token.name}</div>
+        <div style={{ color: '#6B7280', fontSize: 12, marginTop: 3 }}>{token.marketCap > 0 ? fmtMcap(token.marketCap) : token.symbol}</div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>{fmtPrice(token.price)}</div>
-        <div style={{ color: pos ? '#3B82F6' : '#EF4444', fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+        <div style={{ color: pos ? '#3B82F6' : '#EF4444', fontSize: 13, fontWeight: 600, marginTop: 3 }}>
           {pos ? '▲' : '▼'} {Math.abs(token.change24h).toFixed(2)}%
         </div>
       </div>
