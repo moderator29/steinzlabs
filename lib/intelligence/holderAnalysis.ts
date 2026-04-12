@@ -1,5 +1,5 @@
-import { arkhamAPI } from '../arkham/api';
-import { ArkhamHolder } from '../arkham/types';
+import { getTokenHolders, getAddressIntel, getWalletConnections, getEntityPerformance } from '../services/arkham';
+import type { ArkhamHolder } from '../arkham/types';
 import { analyzeLiquidity, findSimilarTokens, LiquidityAnalysis, PatternMatchingResults } from './historicalTracking';
 
 export interface HolderIntelligence {
@@ -195,7 +195,7 @@ export async function loadHolderIntelligence(
 
 
   try {
-    const holders = await arkhamAPI.getTokenHolders(tokenAddress, holderLimit, chain);
+    const holders = await getTokenHolders(tokenAddress, holderLimit);
 
     if (!holders || holders.length === 0) {
       throw new Error('No holder data available');
@@ -252,7 +252,7 @@ async function enrichHolder(
 ): Promise<EnrichedHolder> {
 
   try {
-    const addressIntel = await arkhamAPI.getAddressIntel(holder.address);
+    const addressIntel = await getAddressIntel(holder.address);
 
     const isScammer =
       addressIntel.labels?.includes('scammer') ||
@@ -266,7 +266,7 @@ async function enrichHolder(
     let performance = undefined;
     if (addressIntel.arkhamEntity?.id) {
       try {
-        const entityPerf = await arkhamAPI.getEntityPerformance(addressIntel.arkhamEntity.id);
+        const entityPerf = await getEntityPerformance(addressIntel.arkhamEntity.id);
         performance = {
           winRate: entityPerf.winRate,
           avgHoldTime: entityPerf.avgHoldTime,
@@ -278,7 +278,7 @@ async function enrichHolder(
       }
     }
 
-    const connections = await arkhamAPI.getWalletConnections(holder.address, 50);
+    const connections = await getWalletConnections(holder.address, 50);
     const mixerCount = connections.filter(c =>
       c.labels?.includes('mixer') || c.labels?.includes('tornado_cash')
     ).length;
