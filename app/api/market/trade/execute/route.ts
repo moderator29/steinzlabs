@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Security scan on output token
     const security = await getTokenSecurity(tokenOut, chain);
-    const riskScore = security?.riskScore ?? 0;
+    const riskScore = (security as any)?.riskScore ?? 0;
 
     if (riskScore > SWAP_RISK_THRESHOLD) {
       return NextResponse.json({
@@ -43,14 +43,14 @@ export async function POST(req: NextRequest) {
 
     // Log swap attempt to Supabase
     const db = getSupabaseAdmin();
-    await db.from('swap_logs').insert({
+    await (db.from('swap_logs').insert({
       user_id: userId ?? null,
       chain,
       input_token: tokenIn,
       output_token: tokenOut,
       input_amount: parseFloat(amountIn),
       status: 'pending',
-    }).catch(() => {});
+    }) as any).catch?.(() => {});
 
     // Return swap data for client-side execution
     // Actual swap is executed client-side via wallet
