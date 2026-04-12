@@ -1,4 +1,11 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenPrice } from '@/lib/services/coingecko';
+import { searchPairs } from '@/lib/services/dexscreener';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import { simulateTransaction, getGasPrice } from '@/lib/services/alchemy';
+
+// ─── Token Configuration ──────────────────────────────────────────────────────
 
 const COMMON_TOKENS: Record<string, Record<string, string>> = {
   ethereum: {
@@ -48,6 +55,7 @@ const COMMON_TOKENS: Record<string, Record<string, string>> = {
   },
 };
 
+// CoinGecko coin ID map for known token symbols
 const COINGECKO_IDS: Record<string, string> = {
   ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin', MATIC: 'matic-network',
   AVAX: 'avalanche-2', WBTC: 'wrapped-bitcoin', USDC: 'usd-coin', USDT: 'tether',
@@ -58,24 +66,44 @@ const COINGECKO_IDS: Record<string, string> = {
   XRP: 'ripple', ADA: 'cardano',
 };
 
-// Stablecoins only — always $1, never stale
+// Stablecoins — always $1, never stale
 const STABLECOIN_PRICES: Record<string, number> = {
   USDC: 1, USDT: 1, DAI: 1, BUSD: 1, TUSD: 1, FRAX: 1,
 };
 
 // Chain ID mapping for EVM chains
 const CHAIN_IDS: Record<string, number> = {
-  ethereum: 1,
-  base: 8453,
-  polygon: 137,
-  bsc: 56,
-  avalanche: 43114,
-  arbitrum: 42161,
+  ethereum: 1, base: 8453, polygon: 137, bsc: 56, avalanche: 43114, arbitrum: 42161,
 };
 
-let priceCache: { prices: Record<string, number>; ts: number } = { prices: {}, ts: 0 };
-const CACHE_TTL = 30000;
+// ─── Platform Fee ─────────────────────────────────────────────────────────────
+// 15bps = 0.15% per STEINZ master engineering specification
 
+const PLATFORM_FEE_BPS = 15;
+const PLATFORM_FEE_RATE = PLATFORM_FEE_BPS / 10_000; // 0.0015
+
+// ─── Treasury ─────────────────────────────────────────────────────────────────
+
+const EVM_TREASURY = '0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4';
+const TREASURY_WALLETS: Record<string, string> = {
+  ethereum: EVM_TREASURY,
+  solana:   'Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy',
+  bsc:      EVM_TREASURY,
+  base:     EVM_TREASURY,
+  polygon:  EVM_TREASURY,
+  arbitrum: EVM_TREASURY,
+  avalanche: EVM_TREASURY,
+};
+
+// ─── Price Cache ──────────────────────────────────────────────────────────────
+
+let priceCache: { prices: Record<string, number>; ts: number } = { prices: {}, ts: 0 };
+const CACHE_TTL = 30_000; // 30 seconds
+
+/**
+ * Fetch live prices for a list of token symbols via the service layer.
+ * Priority: stablecoins (hardcoded) → CoinGecko → DexScreener fallback.
+ */
 async function fetchLivePrices(tokens: string[]): Promise<Record<string, number>> {
   const now = Date.now();
   if (now - priceCache.ts < CACHE_TTL && tokens.every(t => priceCache.prices[t] !== undefined)) {
@@ -84,76 +112,69 @@ async function fetchLivePrices(tokens: string[]): Promise<Record<string, number>
 
   const prices: Record<string, number> = { ...priceCache.prices };
 
-  // PRIMARY: Binance — real-time, free, no key needed
-  const nonStable = tokens.filter(t => !STABLECOIN_PRICES[t]);
-  if (nonStable.length > 0) {
-    try {
-      const syms = nonStable.map(t => `"${t}USDT"`);
-      const url = `https://api.binance.com/api/v3/ticker/price?symbols=[${syms.join(',')}]`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) {
-        const data: any[] = await res.json();
-        for (const item of data) {
-          const sym = item.symbol?.replace('USDT', '');
-          if (sym && item.price) prices[sym] = parseFloat(item.price);
-        }
-      }
-    } catch {}
+  // Stablecoins — fixed price, never stale
+  for (const t of tokens) {
+    if (STABLECOIN_PRICES[t]) prices[t] = STABLECOIN_PRICES[t];
   }
 
-  // FALLBACK: DexScreener for tokens not found on Binance
-  const missing = tokens.filter(t => !prices[t] && !STABLECOIN_PRICES[t]);
-  for (const token of missing) {
-    try {
-      const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(token)}`, { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        const best = (data.pairs || []).sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-        if (best?.priceUsd) prices[token] = parseFloat(best.priceUsd);
-      }
-    } catch {}
-  }
+  // CoinGecko service layer for known tokens (parallel)
+  const cgTokens = tokens.filter(t => !prices[t] && COINGECKO_IDS[t]);
+  await Promise.allSettled(
+    cgTokens.map(async t => {
+      try {
+        const price = await getTokenPrice(COINGECKO_IDS[t]);
+        if (price > 0) prices[t] = price;
+      } catch {}
+    })
+  );
+
+  // DexScreener service layer fallback for any remaining tokens
+  const missing = tokens.filter(t => !prices[t]);
+  await Promise.allSettled(
+    missing.map(async t => {
+      try {
+        const pairs = await searchPairs(t);
+        const best = [...pairs].sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+        if (best?.priceUsd) prices[t] = parseFloat(String(best.priceUsd));
+      } catch {}
+    })
+  );
 
   priceCache = { prices, ts: now };
   return prices;
 }
 
-// Alchemy gas price for EVM chains
-async function fetchAlchemyGasPrice(chain: string): Promise<number> {
-  const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY || '';
-  if (!ALCHEMY_KEY || chain === 'solana') return 0;
-  const RPC_URLS: Record<string, string> = {
-    ethereum: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    base:     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    polygon:  `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    arbitrum: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    optimism: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    avalanche:`https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    bnb:      `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-  };
-  const url = RPC_URLS[chain];
-  if (!url) return 0;
+// ─── Gas Estimation ───────────────────────────────────────────────────────────
+
+const NATIVE_SYMBOLS: Record<string, string> = {
+  ethereum: 'ETH', base: 'ETH', arbitrum: 'ETH', optimism: 'ETH',
+  polygon: 'MATIC', avalanche: 'AVAX', bsc: 'BNB',
+};
+
+const STATIC_GAS_USD: Record<string, number> = {
+  base: 0.02, polygon: 0.01, bsc: 0.10, avalanche: 0.05, arbitrum: 0.15,
+};
+
+/**
+ * Estimate swap gas cost in USD (~200k gas units) for a given chain.
+ * Uses Alchemy service layer for real-time gas price; falls back to static table.
+ */
+async function estimateGasUsd(chain: string): Promise<number> {
+  if (chain === 'solana') return 0.001;
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }),
-      cache: 'no-store',
-    });
-    if (!res.ok) return 0;
-    const data = await res.json();
-    const gasPriceGwei = parseInt(data.result || '0x0', 16) / 1e9;
-    // Estimate gas cost for a swap (~200k gas) in USD
-    // Use ETH/AVAX/MATIC price as denominator
-    const nativePrices: Record<string, string> = { ethereum: 'ETH', base: 'ETH', arbitrum: 'ETH', optimism: 'ETH', polygon: 'MATIC', avalanche: 'AVAX', bnb: 'BNB' };
-    const nativeSym = nativePrices[chain] || 'ETH';
-    const nativePrice = priceCache.prices[nativeSym] || 0;
-    const gasCostEth = (gasPriceGwei * 1e9 * 200000) / 1e18;
-    return gasCostEth * nativePrice;
+    const gasPriceGwei = await getGasPrice(chain);
+    if (gasPriceGwei <= 0) return STATIC_GAS_USD[chain] ?? 2.40;
+    const nativeSym = NATIVE_SYMBOLS[chain] ?? 'ETH';
+    const nativePrice = priceCache.prices[nativeSym] ?? 0;
+    if (nativePrice <= 0) return STATIC_GAS_USD[chain] ?? 2.40;
+    const gasCostNative = (gasPriceGwei * 1e9 * 200_000) / 1e18;
+    return gasCostNative * nativePrice;
   } catch {
-    return 0;
+    return STATIC_GAS_USD[chain] ?? 2.40;
   }
 }
+
+// ─── GET Handler — Swap Quote ─────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -168,27 +189,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
 
+  // Fetch live prices via service layer
   let livePrices: Record<string, number> = {};
   try {
     livePrices = await fetchLivePrices([fromToken, toToken]);
   } catch {}
-
-  // For tokens not found via CoinGecko, try on-chain price search
-  for (const token of [fromToken, toToken]) {
-    if (!livePrices[token] && !STABLECOIN_PRICES[token]) {
-      try {
-        const dexRes = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(token.toLowerCase())}&vs_currencies=usd`,
-          { next: { revalidate: 60 } }
-        );
-        if (dexRes.ok) {
-          const data = await dexRes.json();
-          const price = Object.values(data)[0] as any;
-          if (price?.usd) livePrices[token] = price.usd;
-        }
-      } catch {}
-    }
-  }
 
   const fromPrice = livePrices[fromToken] ?? STABLECOIN_PRICES[fromToken];
   const toPrice = livePrices[toToken] ?? STABLECOIN_PRICES[toToken];
@@ -201,44 +206,24 @@ export async function GET(req: NextRequest) {
   }
 
   const fromUsd = amountNum * fromPrice;
-
-  // ── STEINZ Platform Fee (0.1%) ─────────────────────────────────────────────
-  const PLATFORM_FEE_RATE = 0.001; // 0.1%
   const platformFeeUsd = fromUsd * PLATFORM_FEE_RATE;
   const amountAfterFee = fromUsd - platformFeeUsd;
-
   const toAmount = amountAfterFee / toPrice;
+
   const priceImpact = amountNum > 1000 ? 0.15 : amountNum > 100 ? 0.05 : 0.01;
   const minReceived = toAmount * (1 - slippage / 100);
 
-  const gasEstimate = chain === 'solana' ? 0.001 : chain === 'base' ? 0.02 : chain === 'polygon' ? 0.01 : chain === 'bsc' ? 0.10 : chain === 'avalanche' ? 0.05 : chain === 'arbitrum' ? 0.15 : 2.40;
-
   const fromAddress = COMMON_TOKENS[chain]?.[fromToken] || '0x0';
   const toAddress = COMMON_TOKENS[chain]?.[toToken] || '0x0';
+  const dexName =
+    chain === 'solana'    ? 'Raydium'     :
+    chain === 'bsc'       ? 'PancakeSwap' :
+    chain === 'polygon'   ? 'QuickSwap'   :
+    chain === 'avalanche' ? 'TraderJoe'   :
+    chain === 'arbitrum'  ? 'Camelot'     :
+    chain === 'base'      ? 'Aerodrome'   : 'Uniswap V3';
 
-  const dexName = chain === 'solana' ? 'Raydium' : chain === 'bsc' ? 'PancakeSwap' : chain === 'polygon' ? 'QuickSwap' : chain === 'avalanche' ? 'TraderJoe' : chain === 'arbitrum' ? 'Camelot' : chain === 'base' ? 'Aerodrome' : 'Uniswap V3';
-
-  // Treasury wallets — fees routed here on every swap
-  const EVM_TREASURY = '0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4';
-  const SOL_TREASURY = 'Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy';
-  const TREASURY_WALLETS: Record<string, string> = {
-    ethereum: EVM_TREASURY,
-    solana: SOL_TREASURY,
-    bsc: EVM_TREASURY,
-    base: EVM_TREASURY,
-    polygon: EVM_TREASURY,
-    arbitrum: EVM_TREASURY,
-    avalanche: EVM_TREASURY,
-  };
-
-  // Use Alchemy for accurate real gas price (non-blocking)
-  let realGasUsd = gasEstimate;
-  if (chain !== 'solana') {
-    try {
-      const alchemyGas = await fetchAlchemyGasPrice(chain);
-      if (alchemyGas > 0) realGasUsd = alchemyGas;
-    } catch {}
-  }
+  const realGasUsd = await estimateGasUsd(chain).catch(() => STATIC_GAS_USD[chain] ?? 2.40);
 
   return NextResponse.json({
     fromToken,
@@ -254,9 +239,10 @@ export async function GET(req: NextRequest) {
     gasEstimateUsd: parseFloat(realGasUsd.toFixed(4)),
     platformFee: {
       rate: PLATFORM_FEE_RATE,
-      ratePercent: `${(PLATFORM_FEE_RATE * 100).toFixed(1)}%`,
+      ratePercent: `${(PLATFORM_FEE_RATE * 100).toFixed(2)}%`,
+      feeBps: PLATFORM_FEE_BPS,
       amountUsd: parseFloat(platformFeeUsd.toFixed(4)),
-      treasuryWallet: TREASURY_WALLETS[chain] || TREASURY_WALLETS.ethereum,
+      treasuryWallet: TREASURY_WALLETS[chain] || EVM_TREASURY,
     },
     route: {
       dex: dexName,
@@ -265,44 +251,43 @@ export async function GET(req: NextRequest) {
       toAddress,
       hops: 1,
     },
-    validUntil: Date.now() + 30000,
-    priceSource: 'binance+dexscreener',
+    validUntil: Date.now() + 30_000,
+    priceSource: 'coingecko+dexscreener',
   });
 }
 
-// POST endpoint: proxy DEX APIs for swap execution to avoid CORS
+// ─── POST Handler — Swap Execution ───────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, fromToken, toToken, amount, chain, walletAddress, slippage = 0.5, contractAddress } = body;
+    const {
+      action, fromToken, toToken, amount, chain,
+      walletAddress, slippage = 0.5, contractAddress,
+    } = body;
 
     if (!action) {
       return NextResponse.json({ error: 'Missing action' }, { status: 400 });
     }
 
-    // ── Alchemy Simulation — preview swap outcome before signing ─────────────
+    // ── Alchemy Transaction Simulation ────────────────────────────────────────
     if (action === 'simulate') {
       const { txFrom, txTo, txData, txValue, txChain } = body;
       if (!txFrom || !txTo || !txData) {
         return NextResponse.json({ error: 'Missing tx fields for simulation' }, { status: 400 });
       }
-      const { simulateTransaction, normalizeChain } = await import('@/lib/alchemy');
-      const alchemyChain = normalizeChain(txChain || 'ethereum');
-      const result = await simulateTransaction(alchemyChain, {
+      const result = await simulateTransaction(txChain || 'ethereum', {
         from: txFrom, to: txTo, data: txData, value: txValue || '0x0',
       });
       return NextResponse.json(result);
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
-    // ── GoPlus Token Security Check ───────────────────────────────────────────
-    // Run security check before any swap execution
+    // ── GoPlus Token Security Pre-Check ───────────────────────────────────────
     if (action === 'security-check' || action === '1inch-swap' || action === 'raydium-compute') {
       const tokenToCheck = contractAddress || (toToken && COMMON_TOKENS[chain || 'ethereum']?.[toToken]);
       if (tokenToCheck && tokenToCheck !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
         try {
-          const { scanTokenSecurity } = await import('@/lib/security/goplusService');
-          const scanResult = await scanTokenSecurity(tokenToCheck, chain || 'ethereum');
+          const scanResult = await getTokenSecurity(tokenToCheck, chain || 'ethereum');
 
           if (action === 'security-check') {
             return NextResponse.json({
@@ -317,12 +302,12 @@ export async function POST(req: NextRequest) {
               blockReason: scanResult.isHoneypot
                 ? 'Honeypot detected. This token cannot be sold.'
                 : (scanResult.buyTax > 0.25 || scanResult.sellTax > 0.25)
-                ? `Extremely high tax detected (buy: ${(scanResult.buyTax * 100).toFixed(0)}%, sell: ${(scanResult.sellTax * 100).toFixed(0)}%). Swap blocked.`
-                : null,
+                  ? `Extremely high tax detected (buy: ${(scanResult.buyTax * 100).toFixed(0)}%, sell: ${(scanResult.sellTax * 100).toFixed(0)}%). Swap blocked.`
+                  : null,
             });
           }
 
-          // Auto-block for execution actions
+          // Auto-block execution actions on dangerous tokens
           if (scanResult.isHoneypot) {
             return NextResponse.json({
               error: 'Security check failed: Honeypot detected. This token cannot be sold. Swap blocked for your protection.',
@@ -342,9 +327,8 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
-    // --- Solana: proxy Raydium compute swap ---
+    // ── Solana: proxy Raydium compute swap ────────────────────────────────────
     if (action === 'raydium-compute') {
       const { inputMint, outputMint, amountLamports } = body;
       const url = `https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${Math.round(slippage * 100)}&txVersion=V0`;
@@ -356,7 +340,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data);
     }
 
-    // --- Solana: proxy Raydium build transaction ---
+    // ── Solana: proxy Raydium build transaction ───────────────────────────────
     if (action === 'raydium-build-tx') {
       const { computeData, walletAddress: wallet } = body;
       const res = await fetch('https://transaction-v1.raydium.io/transaction/swap-base-in', {
@@ -377,13 +361,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data);
     }
 
-    // --- EVM: proxy 1inch swap quote + tx data ---
+    // ── EVM: proxy 1inch swap quote + tx data ────────────────────────────────
     if (action === '1inch-swap') {
       const chainId = CHAIN_IDS[chain] || 1;
       const fromAddress = COMMON_TOKENS[chain]?.[fromToken] || fromToken;
       const toAddress = COMMON_TOKENS[chain]?.[toToken] || toToken;
 
-      // Convert human amount to wei (assuming 18 decimals for most tokens, 6 for USDC/USDT)
       const DECIMALS: Record<string, number> = {
         USDC: 6, USDT: 6, WBTC: 8, BONK: 5, WIF: 6, JUP: 6, RAY: 6,
       };
@@ -407,7 +390,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

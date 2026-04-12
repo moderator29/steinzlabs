@@ -294,23 +294,18 @@ function LiveMarketContext() {
 
   useEffect(() => {
     // Fear & Greed index
-    fetch('https://api.alternative.me/fng/?limit=1')
+    fetch('/api/market?type=fear-greed')
       .then(r => r.json())
-      .then(d => {
-        const item = d?.data?.[0];
-        if (item) setFearGreed({ value: parseInt(item.value, 10), label: item.value_classification });
+      .then((d: { value?: number; label?: string }) => {
+        if (d.value !== undefined) setFearGreed({ value: d.value, label: d.label ?? '' });
       })
       .catch(() => {});
 
-    // Trending from CoinGecko
-    fetch('https://api.coingecko.com/api/v3/search/trending')
+    // Trending from CoinGecko (via internal proxy)
+    fetch('/api/market?type=trending')
       .then(r => r.json())
-      .then(d => {
-        const coins = (d?.coins || []).slice(0, 8).map((c: any) => ({
-          symbol: c.item?.symbol?.toUpperCase() || '???',
-          change: c.item?.data?.price_change_percentage_24h?.usd ?? 0,
-        }));
-        setTrending(coins);
+      .then((d: { coins?: Array<{ symbol: string; change: number }> }) => {
+        setTrending(d.coins ?? []);
       })
       .catch(() => {});
   }, []);
@@ -406,25 +401,12 @@ export default function DNAAnalyzerPage() {
 
   useEffect(() => {
     if (!dna) return;
-    // Fetch trending coins from DexScreener for coin recommendations
+    // Fetch trending tokens from DexScreener via internal proxy
     const chain = dna.chain.toLowerCase().includes('sol') ? 'solana' : 'ethereum';
-    fetch(`https://api.dexscreener.com/latest/dex/search?q=${chain}`)
+    fetch(`/api/market?type=trending-tokens&chain=${chain}`)
       .then(r => r.json())
-      .then(d => {
-        const pairs = (d.pairs || [])
-          .filter((p: any) => p.chainId === chain && p.priceUsd && p.volume?.h24 > 10000)
-          .slice(0, 6)
-          .map((p: any): TrendingCoin => ({
-            symbol: p.baseToken?.symbol || '???',
-            name: p.baseToken?.name || 'Unknown',
-            address: p.baseToken?.address || '',
-            price: p.priceUsd || '0',
-            change24h: p.priceChange?.h24 || 0,
-            chain: p.chainId,
-            imageUri: p.info?.imageUrl,
-            dexUrl: p.url,
-          }));
-        setTrendingCoins(pairs);
+      .then((d: { tokens?: TrendingCoin[] }) => {
+        setTrendingCoins(d.tokens ?? []);
       })
       .catch(() => {});
   }, [dna]);
@@ -433,24 +415,13 @@ export default function DNAAnalyzerPage() {
   const checkIfContract = async (address: string): Promise<boolean> => {
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return false;
     try {
-      const rpcUrls = ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'];
-      for (const rpcUrl of rpcUrls) {
-        try {
-          const res = await fetch(rpcUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getCode', params: [address, 'latest'], id: 1 }),
-            signal: AbortSignal.timeout(5000),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.result && data.result !== '0x' && data.result !== '0x0') return true;
-            return false;
-          }
-        } catch { continue; }
-      }
-    } catch {}
-    return false;
+      const res = await fetch(`/api/util/is-contract?address=${encodeURIComponent(address)}`);
+      if (!res.ok) return false;
+      const data = await res.json() as { isContract?: boolean };
+      return data.isContract ?? false;
+    } catch {
+      return false;
+    }
   };
 
   // ── main analysis runner
