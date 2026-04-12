@@ -250,6 +250,24 @@ export async function getTokenApprovals(
   });
 }
 
+export async function getGasPrice(chain: string): Promise<number> {
+  if (!isAlchemySupported(chain)) return 0;
+  const alchemy = getAlchemy(chain);
+  const gasPrice = await alchemy.core.getGasPrice();
+  return Number(gasPrice) / 1e9; // Convert wei → Gwei
+}
+
+export async function simulateTransaction(
+  chain: string,
+  tx: { from: string; to: string; data: string; value?: string }
+): Promise<unknown> {
+  if (!isAlchemySupported(chain)) {
+    throw new Error(`Chain '${chain}' is not supported for simulation`);
+  }
+  const alchemy = getAlchemy(chain);
+  return alchemy.transact.simulateAssetChanges(tx);
+}
+
 /**
  * Build a transaction for sending ETH or ERC-20 tokens.
  * Returns raw transaction object for client-side signing.
