@@ -526,3 +526,108 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
     forceWebSearch: ['news', 'explain'].includes(resolvedCommand),
   };
 }
+
+// ─── Pre-flight Data Fetchers ─────────────────────────────────────────────────
+// These run in parallel before calling the model and are injected into the
+// system prompt as live context. They use the service layer.
+
+async function fetchLiveMarketContext(): Promise<string> {
+  try {
+    // Binance is fastest for BTC/ETH/SOL prices — no API key needed
+    const BINANCE_SYMBOLS = [
+      'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
+      'AVAXUSDT','DOGEUSDT','MATICUSDT','LINKUSDT','ARBUSDT','OPUSDT',
+      'INJUSDT','SUIUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
+    ];
+    const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json() as Array<Record<string, string>>;
+      if (Array.isArray(data) && data.length > 0) {
+        const lines = data.map(t => {
+          const sym = t.symbol.replace('USDT', '');
+          const price = parseFloat(t.lastPrice);
+          const change = parseFloat(t.priceChangePercent);
+          const vol = parseFloat(t.quoteVolume);
+          const priceStr = price >= 1000
+            ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+            : price >= 1 ? `$${price.toFixed(4)}` : `$${price.toFixed(8)}`;
+          return `${sym}: ${priceStr} (24h: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%, Vol: $${(vol/1e6).toFixed(0)}M)`;
+        });
+        return 'LIVE MARKET PRICES (Binance, real-time):\n' + lines.join('\n');
+      }
+    }
+  } catch { /* fall through to CoinGecko */ }
+
+  // Fallback: CoinGecko via service layer
+  try {
+    const tokens = await getTopTokens(1, 20);
+    const lines = tokens.map(c =>
+      `${c.symbol.toUpperCase()}: $${c.current_price?.toLocaleString()} (24h: ${c.price_change_percentage_24h?.toFixed(2)}%, MCap: $${(c.market_cap/1e9).toFixed(1)}B)`
+    );
+    return 'LIVE MARKET PRICES (CoinGecko):\n' + lines.join('\n');
+  } catch {
+    return '';
+  }
+}
+
+async function fetchFearAndGreed(): Promise<string> {
+  try {
+    const res = await fetch('https://api.alternative.me/fng/?limit=1', { next: { revalidate: 300 } });
+    if (!res.ok) return '';
+    const data = await res.json() as { data?: Array<{ value: string; value_classification: string }> };
+    const entry = data.data?.[0];
+    if (!entry) return '';
+    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification})`;
+  } catch {
+    return '';
+  }
+}
+
+async function fetchDexTrending(): Promise<string> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', { next: { revalidate: 60 } });
+    if (!res.ok) return '';
+    const data = await res.json() as Array<Record<string, unknown>>;
+    if (!Array.isArray(data)) return '';
+    const lines = data.slice(0, 8).map(t =>
+      `${String(t.tokenAddress ?? '').slice(0, 8)}... on ${t.chainId} — ${t.description || 'trending'} (${t.amount || 0} boosts)`
+    );
+    return lines.length > 0 ? 'DexScreener trending:\n' + lines.join('\n') : '';
+  } catch {
+    return '';
+  }
+}
+
+async function fetchGasPrice(): Promise<string> {
+  const key = process.env.ETHERSCAN_API_KEY;
+  if (!key) return '';
+  try {
+    const res = await fetch(
+      `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${key}`,
+      { next: { revalidate: 30 } }
+    );
+    if (!res.ok) return '';
+    const data = await res.json() as { status: string; result?: Record<string, string> };
+    if (data.status !== '1' || !data.result) return '';
+    const r = data.result;
+    return `ETH Gas: Slow ${r.SafeGasPrice} | Standard ${r.ProposeGasPrice} | Fast ${r.FastGasPrice} gwei`;
+  } catch {
+    return '';
+  }
+}
+
+// ─── GET — Health Check ───────────────────────────────────────────────────────
+
+export async function GET() {
+  const configured = !!(process.env.ANTHROPIC_API_KEY);
+  return NextResponse.json(
+    {
+      status: configured ? 'online' : 'unconfigured',
+      engine: 'VTX Intelligence',
+      version: '3.0',
+      tools: VTX_TOOLS.map(t => t.name),
+    },
+    { status: configured ? 200 : 503 }
+  );
+}
