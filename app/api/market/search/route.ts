@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const res = await fetch(`${BASE}/search?query=${encodeURIComponent(query)}`, {
       headers: cgHeaders(),
       next: { revalidate: 60 },
-    });
+    } as RequestInit);
 
     if (!res.ok) {
       return NextResponse.json({ error: `CoinGecko ${res.status}` }, { status: res.status });

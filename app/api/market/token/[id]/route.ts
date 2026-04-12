@@ -30,7 +30,7 @@ export async function GET(
     const res = await fetch(url.toString(), {
       headers: cgHeaders(),
       next: { revalidate: 120 },
-    });
+    } as RequestInit);
 
     if (!res.ok) {
       return NextResponse.json({ error: `CoinGecko error ${res.status}` }, { status: res.status });

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const res = await fetch(`${BASE}/coins/markets?${params}`, {
       headers: cgHeaders(),
       next: { revalidate: 60 },
-    });
+    } as RequestInit);
 
     if (!res.ok) {
       // Fallback to public if pro 429
