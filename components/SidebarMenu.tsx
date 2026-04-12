@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation';
 import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Wallet, CandlestickChart, Archive, Globe, Circle, FileCode,
-  FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network
+  Wallet, CandlestickChart, Archive, Circle, FileCode,
+  FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network,
+  LineChart, Globe
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -37,9 +38,9 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Trading',
     items: [
+      { icon: LineChart, label: 'Market', path: '/market' },
       { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite' },
-{ icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
-      { icon: Globe, label: 'Exchanges', path: '/dashboard/exchanges' },
+      { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
     ],
   },
   {
