@@ -163,10 +163,12 @@ export interface VTXQueryOptions {
   tools?: Anthropic.Tool[];
   maxAdvisorUses?: number;
   stream?: boolean;
+  system?: string;       // Override the default VTX_SYSTEM_PROMPT
+  maxTokens?: number;    // Override default 4096
 }
 
 export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Message> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2 } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096 } = options;
 
   // Advisor Strategy: Sonnet as executor, Opus as advisor on hard decisions
   const advisorTool = {
@@ -179,8 +181,8 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
   const response = await (client.messages.create as Function)(
     {
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: VTX_SYSTEM_PROMPT,
+      max_tokens: maxTokens,
+      system: system ?? VTX_SYSTEM_PROMPT,
       tools: [advisorTool, ...tools],
       messages,
     },
@@ -199,7 +201,7 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
  * Used by the VTX chat API route for live streaming to the client.
  */
 export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStream<string>> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2 } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096 } = options;
 
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
@@ -211,8 +213,8 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
   const stream = await (client.messages.stream as Function)(
     {
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: VTX_SYSTEM_PROMPT,
+      max_tokens: maxTokens,
+      system: system ?? VTX_SYSTEM_PROMPT,
       tools: [advisorTool, ...tools],
       messages,
     },
