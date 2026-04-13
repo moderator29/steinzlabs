@@ -134,6 +134,55 @@ export interface OrderBookData {
   sellCount: number;
 }
 
+// ─── VTX Token Card ──────────────────────────────────────────────────────────
+
+export interface VTXTokenCard {
+  address: string;
+  symbol: string;
+  name: string;
+  logo?: string;
+  chain: 'ethereum' | 'solana' | 'base' | 'bsc' | 'arbitrum' | string;
+
+  // Market data
+  priceUsd: number;
+  priceChange1h?: number;
+  priceChange24h: number;
+  priceChange7d?: number;
+  volumeUsd24h: number;
+  marketCapUsd?: number;
+  fdvUsd?: number;
+  liquidityUsd?: number;
+  holderCount?: number;
+
+  // VTX Intelligence
+  riskScore?: number;        // 0–100, higher = riskier
+  aiScore?: number;          // 0–100, VTX opportunity score
+  isHoneypot?: boolean;
+  isVerified?: boolean;
+  threatCount?: number;
+  alertCount?: number;
+  sentiment?: 'bullish' | 'bearish' | 'neutral';
+  sentimentScore?: number;   // -100 to 100
+  socialVolume?: number;
+  galaxyScore?: number;
+
+  // Trading signals
+  whaleActivity?: 'buying' | 'selling' | 'neutral' | 'none';
+  smartMoneyFlow?: number;   // USD net flow from smart wallets
+  newTokenFlag?: boolean;
+  launchDate?: string;
+
+  // Chart data
+  sparkline7d?: number[];
+
+  // Meta
+  dexId?: string;
+  pairAddress?: string;
+  coingeckoId?: string;
+  lunarcrushId?: string;
+  updatedAt?: string;
+}
+
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
 export interface PortfolioPosition {

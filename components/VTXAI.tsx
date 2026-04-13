@@ -12,7 +12,7 @@ export function VTXAI() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm VTX AI with full Arkham intelligence. Ask me anything about tokens, wallets, or smart money.",
+      content: "Hi! I'm VTX AI — on-chain intelligence. Ask me anything about tokens, wallets, or smart money.",
     },
   ]);
   const [input, setInput] = useState('');
@@ -27,7 +27,7 @@ export function VTXAI() {
     setLoading(true);
 
     try {
-      // Call VTX AI API (would integrate with Anthropic + Arkham)
+      // Call VTX AI API
       const response = await fetch('/api/vtx-ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,7 +52,7 @@ export function VTXAI() {
       <div className="bg-[#0A1EFF] p-4 rounded-t-lg flex items-center gap-2">
         <Bot size={20} className="text-white" />
         <span className="text-white font-medium">VTX AI</span>
-        <span className="ml-auto text-xs text-white/70">Arkham Powered</span>
+        <span className="ml-auto text-xs text-white/70">On-chain Intelligence</span>
       </div>
 
       {/* Messages */}

@@ -1,17 +1,13 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-const ADMIN_PASSWORD = '195656';
+import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get('password');
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) return unauthorizedResponse();
 
-    if (password !== ADMIN_PASSWORD) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  try {
 
     const supabase = getSupabaseAdmin();
 

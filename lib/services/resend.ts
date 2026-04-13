@@ -188,6 +188,119 @@ export async function sendWhaleAlert(params: {
   });
 }
 
+// ─── Sniper Notification ─────────────────────────────────────────────────────
+
+export async function sendSniperNotification(params: {
+  to: string;
+  symbol: string;
+  action: 'executed' | 'failed' | 'cancelled';
+  amountUsd: number;
+  entryPrice: number;
+  targetPrice?: number;
+  stopLoss?: number;
+  txHash?: string;
+  chain: 'solana' | 'ethereum' | 'base';
+}): Promise<EmailResult> {
+  const { symbol, action, amountUsd, entryPrice, targetPrice, stopLoss, txHash, chain } = params;
+  const statusColor = action === 'executed' ? '#22c55e' : action === 'failed' ? '#ef4444' : '#f59e0b';
+  const statusLabel = action === 'executed' ? 'Order Executed' : action === 'failed' ? 'Order Failed' : 'Order Cancelled';
+  const chainLabel = chain.charAt(0).toUpperCase() + chain.slice(1);
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
+      <div style="border-left:4px solid ${statusColor};padding-left:16px;margin-bottom:20px">
+        <p style="margin:0 0 4px;color:${statusColor};font-size:12px;font-weight:700;text-transform:uppercase">${statusLabel}</p>
+        <h2 style="margin:0;color:#f1f5f9;font-size:24px">${symbol}</h2>
+        <p style="margin:4px 0 0;color:#94a3b8;font-size:13px">${chainLabel} Network</p>
+      </div>
+      <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:#64748b;font-size:13px">Amount</span>
+          <span style="color:#f1f5f9;font-size:13px;font-weight:600">$${amountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:#64748b;font-size:13px">Entry Price</span>
+          <span style="color:#f1f5f9;font-size:13px;font-weight:600">$${entryPrice.toLocaleString()}</span>
+        </div>
+        ${targetPrice ? `
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:#64748b;font-size:13px">Target Price</span>
+          <span style="color:#22c55e;font-size:13px;font-weight:600">$${targetPrice.toLocaleString()}</span>
+        </div>` : ''}
+        ${stopLoss ? `
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#64748b;font-size:13px">Stop Loss</span>
+          <span style="color:#ef4444;font-size:13px;font-weight:600">$${stopLoss.toLocaleString()}</span>
+        </div>` : ''}
+      </div>
+      ${txHash ? `
+      <div style="background:#0a0e1a;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-bottom:16px">
+        <p style="margin:0 0 4px;color:#64748b;font-size:11px;text-transform:uppercase">Transaction Hash</p>
+        <code style="color:#a855f7;font-size:12px;word-break:break-all">${txHash}</code>
+      </div>` : ''}
+      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
+      <p style="font-size:12px;color:#475569">
+        Steinz Labs Sniper Engine — <a href="#" style="color:#a855f7">View Dashboard</a>
+      </p>
+    </div>
+  `;
+
+  return sendBroadcast({
+    to: params.to,
+    subject: `Sniper ${statusLabel}: ${symbol} on ${chainLabel}`,
+    html,
+    tags: [{ name: 'type', value: 'sniper_notification' }, { name: 'action', value: action }],
+  });
+}
+
+// ─── Research Notification ────────────────────────────────────────────────────
+
+export async function sendResearchNotification(params: {
+  to: string;
+  authorName: string;
+  title: string;
+  summary: string;
+  category: string;
+  slug: string;
+  publishedAt?: string;
+}): Promise<EmailResult> {
+  const { authorName, title, summary, category, slug, publishedAt } = params;
+  const categoryColor = '#0a1eff';
+  const dateLabel = publishedAt
+    ? new Date(publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
+      <div style="text-align:center;margin-bottom:24px">
+        <p style="margin:0 0 4px;color:${categoryColor};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px">${category}</p>
+        <h2 style="margin:0;color:#f1f5f9;font-size:20px;line-height:1.4">${title}</h2>
+        <p style="margin:8px 0 0;color:#64748b;font-size:13px">By ${authorName} · ${dateLabel}</p>
+      </div>
+      <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:20px">
+        <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7">${summary}</p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://steinzlabs.com'}/research/${slug}"
+           style="display:inline-block;background:${categoryColor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
+          Read Full Research
+        </a>
+      </div>
+      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
+      <p style="font-size:12px;color:#475569;text-align:center">
+        Steinz Labs Research — <a href="#" style="color:#a855f7">Manage notifications</a>
+      </p>
+    </div>
+  `;
+
+  return sendBroadcast({
+    to: params.to,
+    subject: `New Research: ${title}`,
+    html,
+    tags: [{ name: 'type', value: 'research_notification' }, { name: 'category', value: category }],
+  });
+}
+
 // ─── Batch Send ───────────────────────────────────────────────────────────────
 
 /**
