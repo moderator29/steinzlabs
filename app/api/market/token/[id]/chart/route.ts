@@ -4,13 +4,11 @@ import { OHLCVCandle, VolumeBar } from '@/lib/market/types';
 
 export const dynamic = 'force-dynamic';
 
-const BASE = process.env.COINGECKO_API_KEY
-  ? 'https://pro-api.coingecko.com/api/v3'
-  : 'https://api.coingecko.com/api/v3';
+const BASE = 'https://api.coingecko.com/api/v3';
 
 function cgHeaders() {
   return process.env.COINGECKO_API_KEY
-    ? { 'x-cg-pro-api-key': process.env.COINGECKO_API_KEY }
+    ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
     : {};
 }
 

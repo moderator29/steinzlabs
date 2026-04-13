@@ -16,13 +16,11 @@ interface SearchResult {
   contractAddress?: string;
 }
 
-const CG_BASE = process.env.COINGECKO_API_KEY
-  ? 'https://pro-api.coingecko.com/api/v3'
-  : 'https://api.coingecko.com/api/v3';
+const CG_BASE = 'https://api.coingecko.com/api/v3';
 
 function cgHeaders(): Record<string, string> {
   return process.env.COINGECKO_API_KEY
-    ? { 'x-cg-pro-api-key': process.env.COINGECKO_API_KEY }
+    ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
     : {};
 }
 
