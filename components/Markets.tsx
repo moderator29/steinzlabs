@@ -57,7 +57,7 @@ export default function Markets() {
     try {
       const res = await fetch('/api/market-data?category=top&limit=100');
       const data = await res.json();
-      if (data.tokens) {
+      if (data.tokens && data.tokens.length > 0) {
         const rows: CoinRow[] = data.tokens.map((t: any, i: number) => ({
           id: t.id || t.symbol?.toLowerCase() || `coin-${i}`,
           symbol: t.symbol?.toUpperCase() || '',
@@ -71,8 +71,11 @@ export default function Markets() {
           source: 'coingecko',
         }));
         setCoins(rows);
+      } else {
+        setCoins([]);
       }
     } catch {
+      setCoins([]);
     } finally {
       setLoading(false);
     }
@@ -131,16 +134,17 @@ export default function Markets() {
   };
 
   const handleCoinTap = (coin: CoinRow) => {
-    const params = new URLSearchParams({
-      symbol: coin.symbol,
-      name: coin.name,
-    });
+    // Go to the full coin detail / trading page
     if (coin.source === 'coingecko' && coin.id) {
-      params.set('coin', coin.id);
+      router.push(`/market/prices/${coin.id}`);
+    } else if (coin.pairAddress) {
+      const params = new URLSearchParams({ symbol: coin.symbol, name: coin.name });
+      if (coin.chain) params.set('chain', coin.chain);
+      params.set('pair', coin.pairAddress);
+      router.push(`/market/prices/${coin.id}?${params.toString()}`);
+    } else {
+      router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
     }
-    if (coin.pairAddress) params.set('pair', coin.pairAddress);
-    if (coin.chain) params.set('chain', coin.chain);
-    router.push(`/dashboard/market?${params.toString()}`);
   };
 
   const displayCoins = searchQuery.length >= 2 ? searchResults : coins;
@@ -188,6 +192,17 @@ export default function Markets() {
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
           <span className="text-sm text-gray-500">Loading all coins...</span>
+        </div>
+      ) : coins.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <p className="text-gray-400 text-sm text-center">Market data unavailable.<br />Please retry in a moment.</p>
+          <button
+            onClick={fetchTopCoins}
+            className="flex items-center gap-2 text-sm text-[#0A1EFF] hover:text-blue-400 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            Retry
+          </button>
         </div>
       ) : (
         <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06]">
