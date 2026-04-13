@@ -1,14 +1,4 @@
 'use client';
 
-export default function SteinzLogo({ size = 32, className = '' }: { size?: number; className?: string }) {
-  return (
-    <img
-      src="/steinz-logo-128.png"
-      alt="STEINZ LABS"
-      width={size}
-      height={size}
-      className={className}
-      style={{ objectFit: 'contain' }}
-    />
-  );
-}
+// Re-exports the canonical SVG animated logo so all import paths stay in sync
+export { default } from '@/components/ui/SteinzLogo';

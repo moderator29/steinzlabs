@@ -50,9 +50,9 @@ function fmtPrice(price: string | number): string {
   return `$${p.toFixed(2)}`;
 }
 
-function recentTimestamp(offsetMax: number = 30): string {
-  const offset = Math.floor(Math.random() * offsetMax) * 1000;
-  return new Date(Date.now() - offset).toISOString();
+function recentTimestamp(): string {
+  // Return actual current time — no artificial randomization
+  return new Date().toISOString();
 }
 
 const priceCache: { eth: number; sol: number; bnb: number; matic: number; avax: number; ts: number } = { eth: 3500, sol: 180, bnb: 600, matic: 0.5, avax: 35, ts: 0 };
@@ -156,10 +156,18 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
       const isErc20 = tx.category === 'erc20';
       const valueEth = tx.value || 0;
       const valueUsd = isErc20 ? (tx.rawContract?.value ? parseInt(tx.rawContract.value, 16) / 1e18 * priceCache.eth : 0) : valueEth * priceCache.eth;
-      let sentiment = 'BULLISH';
-      let trustScore = 65 + Math.floor(Math.random() * 25);
-      if (i % 4 === 2) sentiment = 'BEARISH';
-      if (i % 4 === 3) sentiment = 'HYPE';
+
+      // Deterministic sentiment based on transfer type, not position index
+      const tokenSym = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
+      const isStable = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD'].includes(tokenSym.toUpperCase());
+      const sentiment = isStable ? 'HYPE' : isErc20 ? 'HYPE' : 'BULLISH';
+
+      // Deterministic trust score based on USD value of transfer
+      const trustScore = valueUsd >= 1_000_000 ? 92
+        : valueUsd >= 500_000 ? 88
+        : valueUsd >= 100_000 ? 80
+        : valueUsd >= 50_000 ? 72
+        : 65;
 
       const tokenSymbol = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
       const tokenName = isErc20 ? (tx.asset || 'ERC-20 Token') : 'Ethereum';
@@ -223,7 +231,8 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
         value: txCount,
         valueUsd: Math.round(txCount * 0.01 * priceCache.sol),
         chain: 'solana',
-        trustScore: 80 + Math.floor(Math.random() * 15),
+        // Network-level data from Helius validators is high-trust by definition
+        trustScore: txCount > 5000 ? 95 : txCount > 2000 ? 90 : 85,
         txHash: `slot-${slot}`,
         blockNumber: slot,
         timestamp: new Date(Date.now() - i * 60000).toISOString(),
@@ -261,7 +270,7 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
       const sentiment = change24h > 10 ? 'BULLISH' : change24h < -10 ? 'BEARISH' : 'HYPE';
 
       return {
-        id: pair.pairAddress || `pump-${Date.now()}-${Math.random()}`,
+        id: pair.pairAddress || pair.baseToken?.address || `pump-${pair.baseToken?.symbol || Date.now()}`,
         type: 'token_launch',
         sentiment,
         title: `${pair.baseToken?.symbol || '???'} on Pump.fun — MCap ${fmtUsd(mcap)}`,

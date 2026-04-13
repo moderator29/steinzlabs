@@ -230,6 +230,79 @@ export interface SolanaTokenHolder {
   percentage: number;
 }
 
+// ─── Batch Token Metadata ─────────────────────────────────────────────────────
+
+export interface HeliusTokenMeta {
+  mint: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  logoUrl: string | null;
+  description: string | null;
+}
+
+/**
+ * Fetch metadata for up to 100 mints in one Helius call.
+ * Returns a map keyed by mint address.
+ */
+export async function getSolanaTokenMetaBatch(
+  mintAddresses: string[]
+): Promise<Map<string, HeliusTokenMeta>> {
+  const result = new Map<string, HeliusTokenMeta>();
+  if (mintAddresses.length === 0) return result;
+
+  // Check cache first — only fetch mints we don't have cached
+  const uncached: string[] = [];
+  const cached: HeliusTokenMeta[] = [];
+
+  for (const mint of mintAddresses) {
+    const key = cacheKey('helius', 'token_meta', { mintAddress: mint });
+    const hit = cache.get<HeliusTokenMeta>(key);
+    if (hit) {
+      cached.push(hit);
+      result.set(mint, hit);
+    } else {
+      uncached.push(mint);
+    }
+  }
+
+  if (uncached.length === 0) return result;
+
+  try {
+    // Helius /token-metadata accepts arrays — batch all uncached mints
+    const raw = await heliusApi(`/token-metadata`, {
+      mintAccounts: uncached,
+      includeOffChain: true,
+      disableCache: false,
+    }) as unknown[];
+
+    for (const item of raw ?? []) {
+      const r = item as Record<string, unknown>;
+      const mint = r.account as string;
+      if (!mint) continue;
+
+      const onChain = ((r.onChainMetadata as Record<string, unknown>)?.metadata as Record<string, unknown>) ?? {};
+      const offChain = ((r.offChainMetadata as Record<string, unknown>)?.metadata as Record<string, unknown>) ?? {};
+      const accountInfo = ((r.onChainAccountInfo as Record<string, unknown>)?.accountInfo as Record<string, unknown>)?.data as Record<string, unknown> ?? {};
+      const parsedInfo = (accountInfo?.parsed as Record<string, unknown>)?.info as Record<string, unknown> ?? {};
+
+      const symbol: string = (onChain.symbol as string) || (offChain.symbol as string) || '';
+      const name: string = (onChain.name as string) || (offChain.name as string) || '';
+      const decimals: number = (parsedInfo.decimals as number) ?? 0;
+      const logoUrl: string | null = (offChain.image as string) || null;
+      const description: string | null = (offChain.description as string) || null;
+
+      const meta: HeliusTokenMeta = { mint, symbol, name, decimals, logoUrl, description };
+      result.set(mint, meta);
+      cache.set(cacheKey('helius', 'token_meta', { mintAddress: mint }), meta, TTL.ENTITY_LABEL);
+    }
+  } catch (err) {
+    console.error('[helius] getSolanaTokenMetaBatch failed:', err);
+  }
+
+  return result;
+}
+
 /** Fetch the top holders for a Solana SPL token mint. */
 export async function getSolanaTokenHolders(mintAddress: string): Promise<SolanaTokenHolder[]> {
   const key = cacheKey('helius', 'token_holders', { mintAddress });

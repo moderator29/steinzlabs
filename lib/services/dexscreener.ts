@@ -120,6 +120,73 @@ export function getOrderBookRatio(pair: DexPair): {
 }
 
 /**
+ * Batch fetch token data for up to 30 token addresses at once.
+ * Returns a map of mintAddress → best pair (highest liquidity).
+ * Used for logo resolution and identity verification.
+ */
+export async function getTokensMulti(
+  tokenAddresses: string[]
+): Promise<Map<string, DexPair>> {
+  const result = new Map<string, DexPair>();
+  if (tokenAddresses.length === 0) return result;
+
+  // Check individual caches first
+  const uncached: string[] = [];
+  for (const addr of tokenAddresses) {
+    const key = cacheKey('dexscreener', 'token_pairs', { tokenAddress: addr.toLowerCase() });
+    const hit = cache.get<DexPair[]>(key);
+    if (hit && hit.length > 0) {
+      const best = hit.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+      result.set(addr.toLowerCase(), best);
+    } else {
+      uncached.push(addr);
+    }
+  }
+
+  if (uncached.length === 0) return result;
+
+  // DexScreener supports up to 30 addresses per batch call
+  const CHUNK = 30;
+  for (let i = 0; i < uncached.length; i += CHUNK) {
+    const chunk = uncached.slice(i, i + CHUNK);
+    try {
+      const data = await dexFetch(
+        `/latest/dex/tokens/${chunk.join(',')}`
+      ) as { pairs: DexPair[] | null };
+
+      const pairs = data.pairs ?? [];
+
+      // Group by base token address, pick highest-liquidity pair per token
+      const byToken = new Map<string, DexPair>();
+      for (const pair of pairs) {
+        const addr = pair.baseToken.address.toLowerCase();
+        const existing = byToken.get(addr);
+        if (!existing || (pair.liquidity?.usd ?? 0) > (existing.liquidity?.usd ?? 0)) {
+          byToken.set(addr, pair);
+        }
+      }
+
+      // Write results + cache each token's pairs
+      for (const addr of chunk) {
+        const best = byToken.get(addr.toLowerCase());
+        if (best) {
+          result.set(addr.toLowerCase(), best);
+          cache.set(
+            cacheKey('dexscreener', 'token_pairs', { tokenAddress: addr.toLowerCase() }),
+            [best],
+            TTL.TOKEN_PRICE
+          );
+        }
+      }
+    } catch (err) {
+      console.error(`[dexscreener] getTokensMulti chunk ${i} failed:`, err);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Get newly listed pairs (last 24h) across all chains.
  * Used by sniper bot for new token detection.
  */

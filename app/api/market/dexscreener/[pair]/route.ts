@@ -47,15 +47,10 @@ export async function GET(
       sellCount: sells,
     };
 
-    // Generate synthetic recent trades from available data
-    const trades: RecentTrade[] = Array.from({ length: 10 }).map((_, i) => ({
-      timestamp: Math.floor(Date.now() / 1000) - i * 30,
-      type: Math.random() > 0.5 ? 'buy' : 'sell',
-      price: parseFloat(p.priceUsd ?? '0'),
-      amount: Math.random() * 1000,
-      valueUSD: Math.random() * 5000,
-      wallet: `0x${Math.random().toString(16).substring(2, 10)}...${Math.random().toString(16).substring(2, 6)}`,
-    }));
+    // Recent trades: derive from buy/sell ratio data — no fake values
+    // DexScreener does not provide individual trade history via their free API.
+    // We expose empty trades array rather than fabricating transaction data.
+    const trades: RecentTrade[] = [];
 
     return NextResponse.json({
       priceUSD: parseFloat(p.priceUsd ?? '0'),

@@ -2,7 +2,8 @@
 
 import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc, Award, Fish, Building2, Settings2, X, Radio, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { addLocalNotification } from '@/lib/notifications';
 
 type WalletArchetype = 'DIAMOND_HANDS' | 'SCALPER' | 'DEGEN' | 'WHALE_FOLLOWER' | 'HOLDER' | 'INACTIVE' | 'NEW_WALLET';
 
@@ -87,6 +88,9 @@ export default function SmartMoneyPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  // Track which convergence signals we've already notified about (by token+count key)
+  const notifiedConvergenceRef = useRef<Set<string>>(new Set());
+
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     setError(null);
@@ -99,6 +103,19 @@ export default function SmartMoneyPage() {
       setConvergence(data.convergence ?? []);
       setWeeklyRisers(data.weeklyRisers ?? []);
       setLastUpdated(new Date());
+
+      // Fire in-page notifications for new convergence signals
+      for (const signal of (data.convergence ?? [])) {
+        const key = `${signal.token}-${signal.walletCount}`;
+        if (!notifiedConvergenceRef.current.has(key)) {
+          notifiedConvergenceRef.current.add(key);
+          addLocalNotification({
+            type: 'whale_alert',
+            title: `Convergence Signal: ${signal.symbol || signal.token}`,
+            message: `${signal.walletCount} smart-money wallets entered ${signal.symbol || signal.token} — ${signal.totalVolume} volume (${signal.timeWindow})`,
+          });
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
