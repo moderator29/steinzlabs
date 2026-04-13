@@ -124,6 +124,17 @@ export default function Dashboard() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('home');
   const [activeTab, setActiveTab] = useState<'context' | 'markets'>('context');
+
+  // Restore market tab when navigating back from a coin detail page
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('steinz_last_tab');
+      if (saved === 'markets') {
+        localStorage.removeItem('steinz_last_tab');
+        setActiveTab('markets');
+      }
+    } catch {}
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [marketStats, setMarketStats] = useState<{
     totalMarketCap: string; totalVolume: string; btcDominance: string;
