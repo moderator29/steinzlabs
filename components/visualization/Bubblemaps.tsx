@@ -431,10 +431,10 @@ export function Bubblemaps({ nodes, width = 800, height = 500, risk }: Bubblemap
         </div>
         <div className="flex items-center gap-1 ml-auto text-[10px]">
           <span>Badges:</span>
-          <span>🏦 CEX</span>
-          <span>🏛 Protocol</span>
-          <span>⚠️ Team</span>
-          <span>🚨 Risk</span>
+          <span>CEX</span>
+          <span>Protocol</span>
+          <span>[!] Team</span>
+          <span>[!] Risk</span>
         </div>
       </div>
     </div>

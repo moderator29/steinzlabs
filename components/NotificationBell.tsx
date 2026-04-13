@@ -30,15 +30,15 @@ function formatTimeAgo(ts: number): string {
 
 function getNotifIcon(type: DisplayNotification['type']) {
   switch (type) {
-    case 'welcome':         return <span className="text-sm leading-none">🎉</span>;
+    case 'welcome':         return <span className="text-sm leading-none font-bold text-[#0A1EFF]">W</span>;
     case 'wallet_created':
-    case 'wallet_imported': return <span className="text-sm leading-none">💼</span>;
+    case 'wallet_imported': return <span className="text-sm leading-none font-bold text-[#F59E0B]">W</span>;
     case 'whale_alert':
-    case 'whale':           return <span className="text-sm leading-none">🐳</span>;
+    case 'whale':           return <span className="text-sm leading-none font-bold text-[#10B981]">WH</span>;
     case 'price_target':
-    case 'price':           return <span className="text-sm leading-none">📊</span>;
-    case 'new_launch':      return <span className="text-sm leading-none">🚀</span>;
-    case 'wallet_activity': return <span className="text-sm leading-none">🔔</span>;
+    case 'price':           return <span className="text-sm leading-none font-bold text-[#0A1EFF]">P</span>;
+    case 'new_launch':      return <span className="text-sm leading-none font-bold text-[#7C3AED]">NL</span>;
+    case 'wallet_activity': return <span className="text-sm leading-none font-bold text-gray-400">A</span>;
     case 'swap':            return <ArrowLeftRight className="w-4 h-4 text-[#0A1EFF]" />;
     case 'send':            return <Send className="w-4 h-4 text-[#F59E0B]" />;
     case 'security':        return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
