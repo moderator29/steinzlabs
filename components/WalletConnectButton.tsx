@@ -138,7 +138,7 @@ export default function WalletConnectButton({ compact = false }: WalletConnectBu
               onClick={() => { setShowProviderPicker(false); connectEVM(); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-gray-300 hover:bg-white/5 rounded-lg transition-colors"
             >
-              <div className="w-7 h-7 bg-[#F6851B]/10 rounded-lg flex items-center justify-center text-base">🦊</div>
+              <div className="w-7 h-7 bg-[#F6851B]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#F6851B]">MM</div>
               <div>
                 <div className="font-semibold text-white">MetaMask</div>
                 <div className="text-[10px] text-gray-500">Ethereum &amp; EVM chains</div>
@@ -148,7 +148,7 @@ export default function WalletConnectButton({ compact = false }: WalletConnectBu
               onClick={() => { setShowProviderPicker(false); connectSolana(); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-gray-300 hover:bg-white/5 rounded-lg transition-colors"
             >
-              <div className="w-7 h-7 bg-[#AB9FF2]/10 rounded-lg flex items-center justify-center text-base">👻</div>
+              <div className="w-7 h-7 bg-[#AB9FF2]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#AB9FF2]">PH</div>
               <div>
                 <div className="font-semibold text-white">Phantom</div>
                 <div className="text-[10px] text-gray-500">Solana</div>

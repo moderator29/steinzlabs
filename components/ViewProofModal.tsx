@@ -262,7 +262,7 @@ export default function ViewProofModal({ event, onClose }: ViewProofModalProps) 
 
           <div className="glass rounded-xl p-4 border border-white/10">
             <div className="flex items-center gap-2 mb-3">
-              <span style={{ color: trustColor }} className="text-lg">✅</span>
+              <span style={{ color: trustColor }} className="text-lg font-bold">OK</span>
               <h3 className="font-bold text-sm">Trust Score</h3>
             </div>
             <div className="flex items-center justify-center mb-2">
