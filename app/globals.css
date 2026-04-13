@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes floatIcon {
+  0%, 100% { transform: perspective(400px) rotateX(8deg) rotateY(-8deg) translateY(0px); }
+  50%       { transform: perspective(400px) rotateX(8deg) rotateY(-8deg) translateY(-6px); }
+}
+@keyframes floatBadge {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
