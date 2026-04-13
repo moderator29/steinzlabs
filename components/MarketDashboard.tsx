@@ -95,7 +95,6 @@ export default function MarketDashboard() {
   const [searching, setSearching] = useState(false);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Persistent cache across category switches so watchlist always finds coins
   const coinCache = useRef<Map<string, CoinRow>>(new Map());
 
   useEffect(() => { setMounted(true); }, []);
@@ -128,7 +127,6 @@ export default function MarketDashboard() {
           source:   'coingecko' as const,
         }));
         if (category === 'majors') rows = rows.filter(c => MAJOR_IDS.includes(c.id));
-        // Store every fetched coin in cache so watchlist can always find them
         rows.forEach(r => coinCache.current.set(r.id, r));
         setCoins(rows);
       } else { setCoins([]); }
@@ -172,7 +170,7 @@ export default function MarketDashboard() {
     return watchlist
       .map(id => coinCache.current.get(id))
       .filter((c): c is CoinRow => c !== undefined);
-  }, [watchlist, coins]); // coins dep ensures refresh after fetch
+  }, [watchlist, coins]);
 
   const displayCoins = useMemo<CoinRow[]>(() => {
     if (tab === 'watchlist') return watchlistCoins;
@@ -193,7 +191,6 @@ export default function MarketDashboard() {
   }, [coins, searchResults, search, filters, tab, watchlistCoins]);
 
   const handleCoinTap = (coin: CoinRow) => {
-    // Remember we came from the market tab so the back button restores it
     try { localStorage.setItem('steinz_last_tab', 'markets'); } catch {}
     router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
   };
@@ -220,7 +217,6 @@ export default function MarketDashboard() {
           <h3 className="text-lg font-bold text-white">Filters</h3>
           <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort By</p>
         <div className="flex flex-wrap gap-2 mb-5">
           {[{v:'market_cap',l:'Market Cap'},{v:'change_desc',l:'Top Gainers'},{v:'change_asc',l:'Top Losers'},{v:'volume',l:'Volume'},{v:'price_desc',l:'Price ↓'}].map(o=>(
@@ -230,7 +226,6 @@ export default function MarketDashboard() {
             </button>
           ))}
         </div>
-
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Price Change</p>
         <div className="flex flex-wrap gap-2 mb-5">
           {[{v:'all',l:'All'},{v:'gainers',l:'Gainers'},{v:'big_gainers',l:'Big Gainers (>5%)'},{v:'losers',l:'Losers'},{v:'big_losers',l:'Big Losers (<-5%)'}].map(o=>(
@@ -240,7 +235,6 @@ export default function MarketDashboard() {
             </button>
           ))}
         </div>
-
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Market Cap</p>
         <div className="flex flex-wrap gap-2 mb-6">
           {[{v:'all',l:'All'},{v:'micro',l:'Micro (<$10M)'},{v:'small',l:'Small ($10M–$100M)'},{v:'mid',l:'Mid ($100M–$1B)'},{v:'large',l:'Large (>$1B)'}].map(o=>(
@@ -250,7 +244,6 @@ export default function MarketDashboard() {
             </button>
           ))}
         </div>
-
         <div className="flex gap-3">
           <button onClick={()=>{setFilters(pendingFilters);setShowFilters(false);}}
             className="flex-1 py-3.5 bg-[#0A1EFF] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
@@ -267,7 +260,6 @@ export default function MarketDashboard() {
 
   return (
     <div className="pb-4">
-      {/* Sub-tab toggle */}
       <div className="flex gap-1 p-1 bg-[#111827] border border-white/[0.06] rounded-xl mb-4">
         {(['prices','watchlist'] as const).map(t=>(
           <button key={t} onClick={()=>setTab(t)}
@@ -277,7 +269,6 @@ export default function MarketDashboard() {
         ))}
       </div>
 
-      {/* Search + Filter row */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -305,7 +296,6 @@ export default function MarketDashboard() {
         )}
       </div>
 
-      {/* Category pills — only on Prices tab */}
       {tab === 'prices' && search.length < 2 && (
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide" style={{scrollbarWidth:'none'}}>
           {CATEGORIES.map(cat=>(
@@ -317,7 +307,6 @@ export default function MarketDashboard() {
         </div>
       )}
 
-      {/* Watchlist Grid */}
       {tab === 'watchlist' && !loading && (
         watchlistCoins.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -367,7 +356,6 @@ export default function MarketDashboard() {
         )
       )}
 
-      {/* Prices List */}
       {tab === 'prices' && (
         loading ? (
           <div className="space-y-2">
@@ -433,7 +421,6 @@ export default function MarketDashboard() {
         )
       )}
 
-      {/* Filter modal via portal so framer-motion transforms don't trap it */}
       {mounted && createPortal(filterModal, document.body)}
     </div>
   );
