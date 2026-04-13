@@ -702,7 +702,7 @@ export default function VtxAiPage() {
                   <img src="/steinz-logo-128.png" alt="" className="w-4.5 h-4.5" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                 </div>
               )}
-              <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative ${
+              <div className={`max-w-[82%] min-w-0 rounded-2xl px-4 py-3 text-xs leading-relaxed relative overflow-hidden ${
                 msg.role === 'user'
                   ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/15 text-white'
                   : 'bg-white/[0.02] border border-white/[0.06] text-gray-300'
@@ -714,7 +714,7 @@ export default function VtxAiPage() {
                     {msg.timestamp && <span className="text-[9px] text-gray-700 ml-auto">{formatTime(msg.timestamp)}</span>}
                   </div>
                 )}
-                <div className="whitespace-pre-wrap">{cleanContent(msg.content)}</div>
+                <div className="whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere' }}>{cleanContent(msg.content)}</div>
                 {msg.tokenCards && msg.tokenCards.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {msg.tokenCards.map((token, ti) => (

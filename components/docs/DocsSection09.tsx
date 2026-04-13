@@ -1,80 +1,88 @@
-import { BarChart3, RefreshCw, Wallet } from 'lucide-react';
+import { BarChart3, Wallet, TrendingUp, Target, BookOpen } from 'lucide-react';
 
-const PORTFOLIO_METRICS = [
-  { metric: 'Total Value USD', desc: 'Combined USD value of all positions across all linked wallets' },
-  { metric: 'Total PnL (Unrealized)', desc: 'Sum of all open position PnL at current market prices' },
-  { metric: '24h Change', desc: 'Portfolio value delta over the last 24 hours' },
-  { metric: 'AI Score (0–100)', desc: 'VTX portfolio quality rating: diversification, risk, profitability' },
-  { metric: 'Risk Level', desc: 'Aggregate risk: low / moderate / high / critical' },
-  { metric: '90-Day Snapshot Chart', desc: 'Historical portfolio value chart with daily change % overlay' },
+const PORTFOLIO_FEATURES = [
+  { title: 'Multi-wallet sync', desc: 'Add up to 25 wallets across any supported chain. Holdings and balances sync automatically without manual input.' },
+  { title: 'USD P&L tracking', desc: 'Real-time profit and loss in USD, with historical charting so you can see how your portfolio has changed over time.' },
+  { title: 'Chain breakdown', desc: 'See your exposure split by chain — how much value you hold on Ethereum vs Solana vs Base, etc.' },
+  { title: 'Token history', desc: 'Full history of every token you\'ve held, including entry price, exit price, and realized gain/loss.' },
+  { title: 'Risk exposure', desc: 'Portfolio-level concentration risk — what percentage of your capital is in a single token, sector, or chain.' },
 ];
 
-const AI_SCORE_BREAKDOWN = [
-  { factor: 'Diversification', weight: '+20 max', desc: '2 points per unique position, capped at 10 positions' },
-  { factor: 'Profitable Positions', weight: '+20 max', desc: 'Ratio of positions with positive unrealized PnL' },
-  { factor: 'Risk Score', weight: '-30 max', desc: 'Weighted average risk score across all holdings' },
-  { factor: 'Concentration Penalty', weight: '-20 max', desc: 'If top holding > 80% of portfolio, -20 applied' },
-  { factor: 'Base Score', weight: '+50 base', desc: 'Starting score before adjustments' },
+const PREDICTION_MECHANICS = [
+  { step: '1', title: 'Browse markets', desc: 'View open prediction questions — price targets, protocol milestones, on-chain events.' },
+  { step: '2', title: 'Stake your position', desc: 'Stake tokens on the YES or NO side. Staking size is your conviction — larger stakes mean larger potential payout.' },
+  { step: '3', title: 'Market resolves', desc: 'When the event occurs (or the time window closes), the market resolves on-chain and winners claim their rewards.' },
 ];
 
 export function DocsSection09() {
   return (
-    <section id="portfolio" className="mb-14 scroll-mt-24">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-4xl font-bold text-[#0A1EFF]/15 font-mono select-none">09</span>
-        <h2 className="text-2xl font-bold text-white">Portfolio &amp; Analytics</h2>
+    <section id="portfolio" className="mb-16 scroll-mt-20">
+      <div className="flex items-baseline gap-3 mb-1">
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">09</span>
+        <h2 className="text-xl sm:text-2xl font-bold text-white">Portfolio & Analytics</h2>
       </div>
-      <p className="text-gray-400 text-sm leading-relaxed mb-6 ml-12">
-        Track up to 10 wallets simultaneously. The Portfolio page aggregates all positions into a unified dashboard with historical P&L and AI-driven quality scoring.
+      <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
+        A unified portfolio view across every chain and wallet you own — with real-time USD values, P&L tracking, risk metrics, and access to on-chain prediction markets.
       </p>
 
-      <div className="ml-12 space-y-6">
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3">Portfolio Metrics</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {PORTFOLIO_METRICS.map(m => (
-              <div key={m.metric} className="bg-[#141824] border border-[#1E2433] rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <BarChart3 className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                  <span className="text-xs font-semibold text-white">{m.metric}</span>
-                </div>
-                <p className="text-xs text-gray-400">{m.desc}</p>
+      {/* Portfolio Tracker */}
+      <div id="portfolio-tracker" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-[#0A1EFF]" />Portfolio Tracker
+        </h3>
+        <p className="text-xs text-gray-400 leading-relaxed mb-4">
+          Connect any number of wallets by address (no private keys required) and get a unified view of your holdings across all supported chains. The tracker auto-syncs with live price data so your portfolio value is always current.
+        </p>
+        <div className="space-y-2 mb-6">
+          {PORTFOLIO_FEATURES.map(f => (
+            <div key={f.title} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <BarChart3 className="w-3.5 h-3.5 text-[#0A1EFF] flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-semibold text-white">{f.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+        <div className="bg-[#10B981]/[0.05] border border-[#10B981]/20 rounded-xl p-3">
+          <p className="text-xs text-gray-400">
+            <span className="text-[#10B981] font-semibold">Privacy first:</span> Portfolio tracking is read-only. You provide only a wallet address — no private keys, no seed phrases, no signing. Your funds are never at risk from the tracking feature.
+          </p>
+        </div>
+      </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3">AI Score Calculation</h3>
-          <p className="text-xs text-gray-400 mb-3">The AI Score (0–100) is calculated from the following weighted factors:</p>
-          <div className="space-y-2">
-            {AI_SCORE_BREAKDOWN.map(f => (
-              <div key={f.factor} className="flex items-center gap-3 bg-[#141824] border border-[#1E2433] rounded-xl p-3">
-                <span className="text-xs font-semibold text-white w-36 flex-shrink-0">{f.factor}</span>
-                <span className="text-xs font-mono text-[#0A1EFF] w-20 flex-shrink-0">{f.weight}</span>
-                <span className="text-xs text-gray-400">{f.desc}</span>
+      {/* Prediction Markets */}
+      <div id="predictions" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <Target className="w-4 h-4 text-[#8B5CF6]" />Prediction Markets
+        </h3>
+        <p className="text-xs text-gray-400 leading-relaxed mb-4">
+          Create or participate in on-chain prediction markets for crypto events — price targets, protocol achievements, or market milestones. Outcomes resolve on-chain with verifiable data.
+        </p>
+        <div className="space-y-2 mb-5">
+          {PREDICTION_MECHANICS.map(s => (
+            <div key={s.step} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div className="w-6 h-6 rounded-full bg-[#8B5CF6]/15 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-[#8B5CF6]">{s.step}</span>
               </div>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
-            {[['80–100', 'Excellent', 'text-green-400'], ['60–79', 'Good', 'text-blue-400'], ['40–59', 'Fair', 'text-yellow-400'], ['0–39', 'Poor', 'text-red-400']].map(([range, label, color]) => (
-              <div key={label} className="bg-[#141824] border border-[#1E2433] rounded-lg p-2">
-                <div className={`font-bold ${color}`}>{range}</div>
-                <div className="text-gray-500 mt-0.5">{label}</div>
+              <div>
+                <div className="text-xs font-semibold text-white">{s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="flex items-start gap-3 bg-[#141824] border border-[#1E2433] rounded-xl p-4">
-          <RefreshCw className="w-4 h-4 text-[#0A1EFF] flex-shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-semibold text-white mb-1">Cache &amp; Refresh</div>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Portfolio data is cached for 60 seconds per wallet. Manual refresh clears the cache and fetches live data. Wallet data is persisted to localStorage under the key <code className="font-mono text-[#0A1EFF]">portfolio_wallets_v2</code>.
-            </p>
-          </div>
+      {/* Research Lab */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <BookOpen className="w-4 h-4 text-[#F59E0B]" />
+          <span className="text-sm font-semibold text-white">Research Lab</span>
         </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          In-depth protocol analysis, sector reports, and on-chain thesis write-ups. The Research Lab houses STEINZ LABS original research and allows Pro users to submit their own findings for community review.
+        </p>
       </div>
     </section>
   );

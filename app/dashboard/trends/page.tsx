@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, TrendingDown, ArrowLeft, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowLeft, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
 import type { TrendCard, TrendAlertItem, TrendsResponse, TrendSparkpoint } from '@/app/api/intelligence/on-chain-trends/route';
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
@@ -37,14 +37,15 @@ function Sparkline({ points, color, height = 36 }: { points: TrendSparkpoint[]; 
 
 // ─── VTX Insight Card ─────────────────────────────────────────────────────────
 
-function InsightCard({ card }: { card: TrendCard }) {
+function InsightCard({ card, onSelect }: { card: TrendCard; onSelect: (c: TrendCard) => void }) {
   const up = card.direction === 'up';
   const down = card.direction === 'down';
   const color = up ? '#10B981' : down ? '#EF4444' : '#6B7280';
   const sparkColor = card.hot ? (up ? '#10B981' : '#EF4444') : '#3B82F6';
 
   return (
-    <div className={`bg-[#0f1320] border rounded-2xl p-4 transition-all hover:border-white/[0.12] ${card.hot ? 'border-[' + color + ']/30' : 'border-white/[0.06]'}`}>
+    <div className={`bg-[#0f1320] border rounded-2xl p-4 transition-all hover:border-white/[0.16] cursor-pointer active:scale-[0.99] ${card.hot ? 'border-[' + color + ']/30' : 'border-white/[0.06]'}`}
+      onClick={() => onSelect(card)}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
@@ -72,6 +73,9 @@ function InsightCard({ card }: { card: TrendCard }) {
       {card.alert && (
         <div className="mt-2 text-[10px] text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-1 rounded-lg">{card.alert}</div>
       )}
+      <div className="flex items-center justify-end mt-2">
+        <span className="text-[9px] text-gray-600 flex items-center gap-0.5">Tap for details<ChevronRight className="w-2.5 h-2.5" /></span>
+      </div>
     </div>
   );
 }
@@ -92,6 +96,85 @@ function AlertBanner({ alert }: { alert: TrendAlertItem }) {
   );
 }
 
+// ─── Trend Detail Drawer ──────────────────────────────────────────────────────
+
+function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }) {
+  const up = card.direction === 'up';
+  const down = card.direction === 'down';
+  const color = up ? '#10B981' : down ? '#EF4444' : '#6B7280';
+  const sparkColor = card.hot ? (up ? '#10B981' : '#EF4444') : '#3B82F6';
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D1117] border-t border-white/[0.08] rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-white/[0.15] rounded-full" />
+        </div>
+        <div className="px-5 pb-8">
+          <div className="flex items-start justify-between mb-4 pt-2">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-sm font-bold text-white">{card.chain}</span>
+                {card.hot && <Zap className="w-3.5 h-3.5 text-[#F59E0B]" />}
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: color + '20', color }}>{card.direction.toUpperCase()}</span>
+              </div>
+              <div className="text-[11px] text-gray-500 uppercase tracking-wider">{card.metric}</div>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-400">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Large value */}
+          <div className="text-4xl font-black text-white mb-1">{card.value}</div>
+          <div className="flex items-center gap-4 mb-6">
+            <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-[#10B981]' : down ? 'text-[#EF4444]' : 'text-gray-400'}`}>
+              {up ? <TrendingUp className="w-4 h-4" /> : down ? <TrendingDown className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
+              {card.change24h > 0 ? '+' : ''}{card.change24h.toFixed(2)}% <span className="text-xs text-gray-500 font-normal">24h</span>
+            </div>
+            <div className={`text-sm ${card.change7d >= 0 ? 'text-gray-400' : 'text-[#EF4444]'}`}>
+              {card.change7d > 0 ? '+' : ''}{card.change7d.toFixed(1)}% <span className="text-xs text-gray-500">7d</span>
+            </div>
+          </div>
+
+          {/* Large sparkline */}
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 mb-4">
+            <div className="text-[10px] text-gray-500 mb-3 uppercase tracking-wider">7-Day Trend</div>
+            <Sparkline points={card.sparkline} color={sparkColor} height={80} />
+          </div>
+
+          {/* Alert */}
+          {card.alert && (
+            <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 mb-4 flex items-start gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-[#F59E0B]">{card.alert}</p>
+            </div>
+          )}
+
+          {/* Insight text */}
+          {card.insight && (
+            <div className="bg-[#0A1EFF]/[0.06] border border-[#0A1EFF]/20 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <span className="text-[10px] font-bold text-[#0A1EFF] uppercase tracking-wider">VTX Analysis</span>
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed">{card.insight}</p>
+            </div>
+          )}
+
+          <button onClick={onClose}
+            className="w-full py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function TrendsPage() {
@@ -100,6 +183,7 @@ export default function TrendsPage() {
   const [loading, setLoading] = useState(false);
   const [chain, setChain] = useState('all');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [selectedCard, setSelectedCard] = useState<TrendCard | null>(null);
 
   async function fetchTrends(selectedChain = chain) {
     setLoading(true);
@@ -215,7 +299,7 @@ export default function TrendsPage() {
               <span className="text-[10px] text-gray-600">{sortedCards.length} metrics</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {sortedCards.map(card => <InsightCard key={card.id} card={card} />)}
+              {sortedCards.map(card => <InsightCard key={card.id} card={card} onSelect={setSelectedCard} />)}
             </div>
           </div>
         )}
@@ -227,6 +311,9 @@ export default function TrendsPage() {
           </div>
         )}
       </div>
+
+      {/* Trend Detail Drawer */}
+      {selectedCard && <TrendDrawer card={selectedCard} onClose={() => setSelectedCard(null)} />}
     </div>
   );
 }

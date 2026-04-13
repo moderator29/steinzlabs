@@ -1,84 +1,80 @@
-import { Brain, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Brain, MessageSquare, Zap, BarChart3 } from 'lucide-react';
 
-const MODELS = [
-  { name: 'Pattern Matcher', role: 'Compares current setups to 10,000+ historical token profiles' },
-  { name: 'Sentiment Analyzer', role: 'NLP over social channels, Telegram groups, and on-chain activity' },
-  { name: 'Momentum Engine', role: 'Short-term price momentum with volume confirmation signals' },
-  { name: 'Risk Classifier', role: 'Multi-factor risk scoring — liquidity, concentration, contract risk' },
+const CAPABILITIES = [
+  { q: 'What is the smart money doing with SOL right now?', a: 'Returns top wallet movements, recent buys/sells, and momentum direction for SOL in the last 24 hours.' },
+  { q: 'Analyze this wallet: 0xabc...', a: 'Provides win rate, P&L history, trading archetype, most traded tokens, and activity patterns.' },
+  { q: 'Is this token safe to buy?', a: 'Runs a full Trust Score scan including contract audit, holder concentration, liquidity lock status, and tax check.' },
+  { q: 'Show me the biggest whale moves in the last hour', a: 'Surfaces large transfers and buys/sells across all monitored chains, sorted by USD value.' },
 ];
 
-const CONFIDENCE_LEVELS = [
-  { level: 'High', range: '75–100%', color: 'text-green-400', bg: 'bg-green-400/10', desc: 'Strong pattern match with multiple confirming signals' },
-  { level: 'Medium', range: '50–74%', color: 'text-yellow-400', bg: 'bg-yellow-400/10', desc: 'Moderate signal alignment, some conflicting indicators' },
-  { level: 'Low', range: '25–49%', color: 'text-orange-400', bg: 'bg-orange-400/10', desc: 'Weak signal, limited historical precedent' },
-  { level: 'Insufficient', range: '0–24%', color: 'text-red-400', bg: 'bg-red-400/10', desc: 'Not enough data or contradictory signals' },
+const USE_CASES = [
+  { title: 'Market research', desc: 'Ask about any token, protocol, or on-chain narrative and get AI-synthesized answers from live blockchain data.' },
+  { title: 'Wallet profiling', desc: 'Drop in any wallet address and get a full behavioral breakdown — archetypes, P&L, win rates, and risk signals.' },
+  { title: 'Security analysis', desc: 'Ask VTX to audit a contract, decode a transaction, or explain what a smart contract actually does.' },
+  { title: 'Strategy validation', desc: 'Ask the AI to validate a thesis — e.g. "Is DeFi TVL growing on Base?" — backed by real DeFiLlama data.' },
 ];
 
 export function DocsSection04() {
   return (
-    <section id="vtx-ai-engine" className="mb-14 scroll-mt-24">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-4xl font-bold text-[#0A1EFF]/15 font-mono select-none">04</span>
-        <h2 className="text-2xl font-bold text-white">VTX AI Engine</h2>
+    <section id="vtx-ai" className="mb-16 scroll-mt-20">
+      <div className="flex items-baseline gap-3 mb-1">
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">04</span>
+        <h2 className="text-xl sm:text-2xl font-bold text-white">VTX AI Engine</h2>
       </div>
-      <p className="text-gray-400 text-sm leading-relaxed mb-6 ml-12">
-        The VTX AI Engine orchestrates multiple analysis models powered by Anthropic Claude to deliver token intelligence scores, price predictions, and risk assessments.
+      <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
+        VTX AI is your on-chain analyst, available 24/7. Ask any question about crypto markets, wallets, tokens, or on-chain trends in plain English and get answers backed by live blockchain data — not guesses or general knowledge.
       </p>
 
-      <div className="ml-12 space-y-6">
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3">Analysis Models</h3>
-          <div className="space-y-2">
-            {MODELS.map(m => (
-              <div key={m.name} className="flex items-start gap-3 bg-[#141824] border border-[#1E2433] rounded-xl p-3">
-                <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Brain className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white mb-0.5">{m.name}</div>
-                  <div className="text-xs text-gray-400">{m.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="bg-gradient-to-br from-[#0A1EFF]/10 to-[#10B981]/5 border border-[#0A1EFF]/20 rounded-xl p-4 mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <Brain className="w-4 h-4 text-[#4D6BFF]" />
+          <span className="text-sm font-semibold text-white">Powered by Anthropic Claude</span>
         </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          VTX AI is built on Claude and given direct access to live on-chain data tools — Birdeye, Helius, Alchemy, DexScreener, DeFiLlama, and GoPlus. Every answer is grounded in real-time blockchain data, not training data from months ago.
+        </p>
+      </div>
 
-        <div id="vtx-predictions">
-          <h3 className="text-sm font-semibold text-white mb-3">Price Predictions</h3>
-          <p className="text-xs text-gray-400 leading-relaxed mb-3">
-            Predictions are generated for 1h, 4h, 24h, and 7d timeframes. Each prediction includes an expected gain/loss range, a timeframe, and a confidence score derived from historical pattern matching.
-          </p>
-          <div className="bg-gradient-to-r from-[#0A1EFF]/10 to-purple-500/10 border border-[#0A1EFF]/20 rounded-xl p-4">
-            <div className="grid grid-cols-3 gap-4 text-center text-xs">
-              {[['Expected Gain', '+35–80%', 'text-green-400'], ['Timeframe', '24–72h', 'text-white'], ['Confidence', '78%', 'text-[#0A1EFF]']].map(([label, val, color]) => (
-                <div key={label}>
-                  <div className="text-gray-500 mb-1">{label}</div>
-                  <div className={`text-lg font-bold ${color}`}>{val}</div>
-                </div>
-              ))}
+      <div id="vtx-capabilities" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Zap className="w-4 h-4 text-[#F59E0B]" />Example Queries
+        </h3>
+        <div className="space-y-3">
+          {CAPABILITIES.map(c => (
+            <div key={c.q} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <div className="flex items-start gap-2 mb-2">
+                <MessageSquare className="w-3.5 h-3.5 text-[#4D6BFF] flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-white font-medium">"{c.q}"</span>
+              </div>
+              <div className="flex items-start gap-2 ml-5">
+                <Brain className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                <span className="text-xs text-gray-400 leading-relaxed">{c.a}</span>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
+      </div>
 
-        <div id="vtx-pattern">
-          <h3 className="text-sm font-semibold text-white mb-3">Confidence Levels</h3>
-          <div className="space-y-2">
-            {CONFIDENCE_LEVELS.map(c => (
-              <div key={c.level} className={`flex items-center gap-3 ${c.bg} border border-transparent rounded-xl p-3`}>
-                <span className={`text-xs font-bold ${c.color} w-20 flex-shrink-0`}>{c.level}</span>
-                <span className="text-xs font-mono text-gray-400 w-16 flex-shrink-0">{c.range}</span>
-                <span className="text-xs text-gray-400">{c.desc}</span>
-              </div>
-            ))}
-          </div>
+      <div id="vtx-usage" className="scroll-mt-20 mb-8">
+        <h3 className="text-sm font-semibold text-white mb-4">What You Can Ask About</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {USE_CASES.map(u => (
+            <div key={u.title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <div className="text-sm font-semibold text-white mb-1">{u.title}</div>
+              <div className="text-xs text-gray-400 leading-relaxed">{u.desc}</div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-          <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-gray-400 leading-relaxed">
-            VTX AI predictions are informational tools — not financial advice. All predictions are based on historical pattern matching and carry inherent uncertainty. Never trade based solely on AI signals.
-          </p>
+      <div className="bg-[#F59E0B]/[0.05] border border-[#F59E0B]/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <BarChart3 className="w-4 h-4 text-[#F59E0B]" />
+          <span className="text-sm font-semibold text-white">Pro tip</span>
         </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          VTX AI works best with specific questions. Instead of "what should I buy?", try "which wallets with 70%+ win rates have accumulated ETH in the last 48 hours?" — the more specific, the more actionable the answer.
+        </p>
       </div>
     </section>
   );
