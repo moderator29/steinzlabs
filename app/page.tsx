@@ -1,6 +1,7 @@
 import { LandingNav } from '@/components/landing/LandingNav';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { FeatureCardsSection } from '@/components/landing/FeatureCardsSection';
+import { VTXSection } from '@/components/landing/VTXSection';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
@@ -12,6 +13,7 @@ export default function LandingPage() {
       <LandingNav />
       <HeroSection />
       <FeatureCardsSection />
+      <VTXSection />
       <StatsSection />
       <FAQSection />
       <CTASection />

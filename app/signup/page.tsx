@@ -2,23 +2,44 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
 import Link from 'next/link';
-import SteinzLogo from '@/components/SteinzLogo';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { AuthRightPanel } from '@/components/auth/AuthRightPanel';
+import { CoinIcon } from '@/components/landing/CoinIcon';
 
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_SECONDS = 60;
 
+const BG_COINS = [
+  { coin: 'ETH'  as const, size: 36, top: '10%',  right: '6%',  opacity: 0.16, dur: '7s',   delay: '0.5s' },
+  { coin: 'SOL'  as const, size: 26, top: '60%',  left: '4%',   opacity: 0.13, dur: '5.5s', delay: '2s'   },
+  { coin: 'BTC'  as const, size: 30, bottom: '12%',right: '8%', opacity: 0.14, dur: '6.5s', delay: '1s'   },
+  { coin: 'MATIC'as const, size: 22, top: '40%',  left: '3%',   opacity: 0.11, dur: '8s',   delay: '1.5s' },
+];
+
+function getPasswordStrength(pw: string): { level: number; label: string; color: string } {
+  if (!pw) return { level: 0, label: '', color: '' };
+  const hasLower = /[a-z]/.test(pw);
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasNum   = /[0-9]/.test(pw);
+  const hasSym   = /[^a-zA-Z0-9]/.test(pw);
+  const long     = pw.length >= 10;
+  const score    = [pw.length >= 8, hasLower, hasUpper, hasNum, hasSym, long].filter(Boolean).length;
+  if (score <= 2) return { level: 20,  label: 'Weak',        color: '#ef4444' };
+  if (score <= 3) return { level: 45,  label: 'Fair',        color: '#f59e0b' };
+  if (score <= 4) return { level: 70,  label: 'Strong',      color: '#10b981' };
+  return           { level: 100, label: 'Very Strong',  color: '#4d80ff' };
+}
+
 function getPasswordChecks(pw: string) {
   return [
-    { label: 'Between 8 and 100 characters', ok: pw.length >= 8 && pw.length <= 100 },
-    { label: 'At least one lowercase letter', ok: /[a-z]/.test(pw) },
-    { label: 'At least one uppercase letter', ok: /[A-Z]/.test(pw) },
-    { label: 'At least one number', ok: /[0-9]/.test(pw) },
-    { label: 'At least one special character', ok: /[^a-zA-Z0-9]/.test(pw) },
+    { label: '8–100 characters',          ok: pw.length >= 8 && pw.length <= 100 },
+    { label: 'One lowercase letter',       ok: /[a-z]/.test(pw) },
+    { label: 'One uppercase letter',       ok: /[A-Z]/.test(pw) },
+    { label: 'One number',                 ok: /[0-9]/.test(pw) },
+    { label: 'One special character',      ok: /[^a-zA-Z0-9]/.test(pw) },
   ];
 }
 
@@ -26,8 +47,9 @@ export default function SignUpPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const [form, setForm] = useState({ firstName: '', lastName: '', username: '', email: '', password: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', username: '', email: '', password: '', confirm: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
@@ -85,6 +107,7 @@ export default function SignUpPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email';
     if (!form.password) e.password = 'Required';
     else if (!getPasswordChecks(form.password).every(c => c.ok)) e.password = 'Password does not meet requirements';
+    if (form.password && form.confirm !== form.password) e.confirm = "Passwords don't match";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -92,7 +115,6 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cooldown > 0 || !validate()) return;
-
     setLoading(true);
     try {
       const res = await fetch('/api/auth/signup', {
@@ -106,44 +128,30 @@ export default function SignUpPage() {
           username: form.username.trim().toLowerCase(),
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok || !data.success) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
         const errMsg = data.error || 'Signup failed';
-
         if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many')) {
-          if (newAttempts >= MAX_ATTEMPTS) {
-            startCooldown();
-            showToast(`Too many attempts. Please wait ${COOLDOWN_SECONDS} seconds.`, 'error');
-          } else {
-            showToast(`Rate limited. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? 's' : ''} left before waiting.`, 'error');
-          }
+          if (newAttempts >= MAX_ATTEMPTS) { startCooldown(); showToast(`Too many attempts. Wait ${COOLDOWN_SECONDS}s.`, 'error'); }
+          else showToast(`Rate limited. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? 's' : ''} left.`, 'error');
         } else if (errMsg.includes('already') || errMsg.includes('exists')) {
-          showToast('An account with this email already exists. Try signing in.', 'error');
+          showToast('An account with this email already exists.', 'error');
         } else if (errMsg.includes('Username')) {
           showToast(errMsg, 'error');
           setErrors(prev => ({ ...prev, username: 'Username taken' }));
-        } else {
-          showToast(errMsg, 'error');
-        }
+        } else { showToast(errMsg, 'error'); }
         return;
       }
-
-      showToast('Account created! Check your email to verify your account.', 'success');
+      showToast('Account created! Check your email to verify.', 'success');
       router.push('/login?confirmed=pending');
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {
         showToast('Unable to connect. Check your internet connection.', 'error');
-      } else {
-        showToast('Sign up failed. Please try again.', 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
+      } else { showToast('Sign up failed. Please try again.', 'error'); }
+    } finally { setLoading(false); }
   };
 
   const updateField = (field: string, value: string) => {
@@ -151,64 +159,92 @@ export default function SignUpPage() {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
-  const inputStyle = (field: string) => ({
-    background: 'rgba(255,255,255,.04)',
-    border: `1px solid ${errors[field] ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.08)'}`,
+  const inputBase: React.CSSProperties = {
+    background: 'rgba(10,10,30,.8)',
+    border: '1px solid rgba(26,58,204,.18)',
+    borderRadius: 10,
+    padding: '12px 16px',
+    fontSize: 14,
+    color: 'white',
+    width: '100%',
+    outline: 'none',
+    transition: 'border-color 200ms, box-shadow 200ms',
+  };
+
+  const inputStyle = (field: string, extra?: React.CSSProperties) => ({
+    ...inputBase,
+    borderColor: errors[field] ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)',
+    ...extra,
   });
 
+  const strength = getPasswordStrength(form.password);
+
   return (
-    <div className="min-h-screen bg-[#07090f] text-white flex flex-row-reverse">
-      {/* Right: 3D visual panel */}
-      <AuthRightPanel mode="signup" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: '#07090f' }}>
+      {/* Grid overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(26,58,204,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,58,204,.04) 1px,transparent 1px)',
+        backgroundSize: '60px 60px',
+      }} />
+      <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[900px] h-[700px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse,rgba(13,30,140,.13) 0%,transparent 70%)' }} />
 
-      {/* Left: form (45%) */}
-      <div className="flex-1 lg:max-w-[45%] flex flex-col items-center justify-center p-6 relative overflow-y-auto">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[20%] left-[10%] w-[400px] h-[400px] bg-[#0A1EFF]/[0.04] rounded-full blur-[100px]" />
-        </div>
+      {/* Floating coins */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {BG_COINS.map((c, i) => (
+          <div key={i} className="absolute hidden md:block" style={{
+            top: c.top, left: (c as any).left, right: (c as any).right, bottom: (c as any).bottom,
+          }}>
+            <CoinIcon coin={c.coin} size={c.size} opacity={c.opacity}
+              floatDuration={c.dur} floatDelay={c.delay} floatAmplitude={c.size * 0.28} />
+          </div>
+        ))}
+      </div>
 
-        <div className="w-full max-w-md relative z-10 py-4">
-          {/* Top nav row */}
-          <div className="flex items-center justify-between mb-10">
-            <Link href="/" className="flex items-center gap-2">
-              <SteinzLogo size={28} />
-              <span className="text-sm font-bold tracking-tight">STEINZ LABS</span>
-            </Link>
-            <Link href="/" className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back
-            </Link>
+      {/* Card */}
+      <div className="relative z-10 w-full py-4" style={{ maxWidth: 440 }}>
+        <div className="w-full rounded-3xl"
+          style={{
+            background: 'rgba(6,6,15,.92)',
+            border: '1px solid rgba(26,58,204,.14)',
+            padding: '44px 40px',
+            backdropFilter: 'blur(24px)',
+            boxShadow: '0 24px 80px rgba(0,0,0,.6),0 0 40px rgba(13,30,140,.06)',
+          }}>
+
+          <div className="flex flex-col items-center mb-7">
+            <SteinzLogo size={48} animated={true} />
+            <p className="mt-2 text-[10px] font-bold tracking-[6px] uppercase" style={{ color: '#1a2855', letterSpacing: 6 }}>
+              STEINZ LABS
+            </p>
           </div>
 
-          {/* Header */}
-          <div className="mb-8">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: 'rgba(10,30,255,.1)', border: '1px solid rgba(10,30,255,.2)' }}>
-              <Shield className="w-7 h-7" style={{ color: '#6d85ff' }} />
-            </div>
-            <h2 className="text-2xl font-black text-white mb-1">Create your account</h2>
-            <p className="text-white/40 text-sm">Get started with STEINZ LABS — free forever</p>
-          </div>
+          <h2 className="text-[26px] font-bold text-white mb-1">Create your account.</h2>
+          <p className="text-sm mb-7" style={{ color: '#1e2e50' }}>Start with institutional intelligence. Free forever.</p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* First / Last Name row */}
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* First + Last Name row */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-2">First Name</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>FIRST</label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                   <input type="text" value={form.firstName} onChange={e => updateField('firstName', e.target.value)}
-                    className="w-full rounded-xl pl-10 pr-3 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none"
-                    style={inputStyle('firstName')} placeholder="John" autoComplete="given-name" />
+                    style={{ ...inputStyle('firstName'), paddingLeft: 34 }} placeholder="John" autoComplete="given-name"
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = errors.firstName ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }} />
                 </div>
                 {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-2">Last Name</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>LAST</label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                   <input type="text" value={form.lastName} onChange={e => updateField('lastName', e.target.value)}
-                    className="w-full rounded-xl pl-10 pr-3 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none"
-                    style={inputStyle('lastName')} placeholder="Doe" autoComplete="family-name" />
+                    style={{ ...inputStyle('lastName'), paddingLeft: 34 }} placeholder="Doe" autoComplete="family-name"
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = errors.lastName ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }} />
                 </div>
                 {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
               </div>
@@ -216,59 +252,103 @@ export default function SignUpPage() {
 
             {/* Username */}
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-2">Username</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>USERNAME</label>
               <div className="relative">
-                <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                 <input type="text" value={form.username}
                   onChange={e => updateField('username', e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                  className="w-full rounded-xl pl-11 pr-10 py-4 text-sm text-white placeholder-white/20 focus:outline-none"
-                  style={{ ...inputStyle('username'), border: `1px solid ${usernameAvailable === true ? 'rgba(74,222,128,.35)' : errors.username ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.08)'}` }}
-                  placeholder="johndoe" maxLength={20} autoComplete="username" />
-                {checkingUsername && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 animate-spin" />}
+                  style={{ ...inputStyle('username'), paddingLeft: 38, paddingRight: 38, borderColor: usernameAvailable === true ? 'rgba(74,222,128,.35)' : errors.username ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)' }}
+                  placeholder="johndoe" maxLength={20} autoComplete="username"
+                  onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.boxShadow = 'none'; }} />
+                {checkingUsername && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'rgba(255,255,255,.3)' }} />}
                 {!checkingUsername && usernameAvailable === true && form.username.length >= 3 &&
-                  <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#4ade80' }} />}
+                  <Check className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#4ade80' }} />}
               </div>
-              {errors.username && <p className="text-red-400 text-xs mt-1.5">{errors.username}</p>}
-              {!errors.username && usernameAvailable === false && <p className="text-red-400 text-xs mt-1.5">Username is taken</p>}
+              {errors.username && <p className="text-red-400 text-xs mt-1">{errors.username}</p>}
+              {!errors.username && usernameAvailable === false && <p className="text-red-400 text-xs mt-1">Username is taken</p>}
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-2">Email</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>EMAIL</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                 <input type="email" value={form.email} onChange={e => updateField('email', e.target.value)}
-                  className="w-full rounded-xl pl-11 pr-4 py-4 text-sm text-white placeholder-white/20 focus:outline-none"
-                  style={inputStyle('email')} placeholder="john@example.com" autoComplete="email" />
+                  style={{ ...inputStyle('email'), paddingLeft: 38 }} placeholder="john@example.com" autoComplete="email"
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.email ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }} />
               </div>
-              {errors.email && <p className="text-red-400 text-xs mt-1.5">{errors.email}</p>}
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-2">Password</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>PASSWORD</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                 <input type={showPassword ? 'text' : 'password'} value={form.password}
                   onChange={e => updateField('password', e.target.value)}
-                  className="w-full rounded-xl pl-11 pr-11 py-4 text-sm text-white placeholder-white/20 focus:outline-none"
-                  style={inputStyle('password')} placeholder="Create a strong password" autoComplete="new-password" />
+                  style={{ ...inputStyle('password'), paddingLeft: 38, paddingRight: 40 }}
+                  placeholder="Create a strong password" autoComplete="new-password"
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.password ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-white"
+                  style={{ color: 'rgba(255,255,255,.25)' }}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Strength bar */}
               {form.password.length > 0 && (
-                <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-                  {getPasswordChecks(form.password).map(({ label, ok }) => (
-                    <div key={label} className="flex items-center gap-1.5">
-                      {ok ? <Check className="w-3 h-3 flex-shrink-0" style={{ color: '#4ade80' }} />
-                           : <X className="w-3 h-3 flex-shrink-0 text-white/20" />}
-                      <span className={`text-[10px] ${ok ? 'text-emerald-400' : 'text-white/30'}`}>{label}</span>
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex-1 h-[3px] rounded-full mr-3" style={{ background: 'rgba(255,255,255,.05)' }}>
+                      <div className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${strength.level}%`, background: strength.color }} />
                     </div>
-                  ))}
+                    <span className="text-[10px] font-semibold" style={{ color: strength.color, minWidth: 64, textAlign: 'right' }}>
+                      {strength.label}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {getPasswordChecks(form.password).map(({ label, ok }) => (
+                      <div key={label} className="flex items-center gap-1.5">
+                        {ok ? <Check className="w-3 h-3 flex-shrink-0" style={{ color: '#4ade80' }} />
+                             : <X className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,.15)' }} />}
+                        <span className={`text-[10px] ${ok ? 'text-emerald-400' : 'text-white/25'}`}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5" style={{ color: '#0e1535' }}>CONFIRM PASSWORD</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
+                <input type={showConfirm ? 'text' : 'password'} value={form.confirm}
+                  onChange={e => updateField('confirm', e.target.value)}
+                  style={{
+                    ...inputBase,
+                    paddingLeft: 38, paddingRight: 72,
+                    borderColor: errors.confirm ? 'rgba(239,68,68,.4)' : form.confirm && form.confirm === form.password ? 'rgba(74,222,128,.35)' : 'rgba(26,58,204,.18)',
+                  }}
+                  placeholder="Repeat password" autoComplete="new-password"
+                  onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.boxShadow = 'none'; }} />
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {form.confirm && form.confirm === form.password && <Check className="w-4 h-4" style={{ color: '#4ade80' }} />}
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                    className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,.25)' }}>
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              {errors.confirm && <p className="text-red-400 text-xs mt-1">{errors.confirm}</p>}
             </div>
 
             {cooldown > 0 && (
@@ -284,23 +364,36 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading || cooldown > 0}
-              className="w-full py-4 rounded-xl font-bold text-sm text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 30px rgba(10,30,255,.3)' }}
+              className="w-full font-bold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                marginTop: 4,
+                padding: 14,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg,#1a3acc,#0d1f88)',
+                border: '1px solid rgba(77,128,255,.28)',
+                boxShadow: '0 0 20px rgba(26,58,204,.25)',
+              }}
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {cooldown > 0 ? `Wait ${cooldown}s` : loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-white/30 mt-6">
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
+            <span className="text-[11px]" style={{ color: '#0e1535' }}>or</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
+          </div>
+
+          <p className="text-center text-sm" style={{ color: '#0e1535' }}>
             Already have an account?{' '}
-            <Link href="/login" className="font-medium transition-colors hover:text-white" style={{ color: '#6d85ff' }}>Sign in</Link>
+            <Link href="/login" className="font-medium transition-colors hover:opacity-80" style={{ color: '#4d80ff' }}>Sign in</Link>
           </p>
 
-          <p className="text-center text-[11px] text-white/20 mt-5">
-            By creating an account, you agree to our{' '}
-            <span className="text-white/40 cursor-pointer hover:text-white">Terms of Service</span> and{' '}
-            <span className="text-white/40 cursor-pointer hover:text-white">Privacy Policy</span>
+          <p className="text-center text-[11px] mt-4" style={{ color: '#080e20' }}>
+            By creating an account you agree to our{' '}
+            <Link href="/terms" className="hover:text-white/40 transition-colors">Terms</Link> and{' '}
+            <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
           </p>
         </div>
       </div>
