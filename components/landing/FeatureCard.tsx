@@ -2,21 +2,33 @@
 
 import Link from 'next/link';
 import { ArrowRight, type LucideIcon } from 'lucide-react';
+import { ContainerBadge, type BadgeType } from './ContainerBadge';
 
 export interface FeatureCardProps {
   tag: string;
   title: string;
   description: string;
   bullets: string[];
+  pills?: string[];
+  badge?: BadgeType;
+  badgePosition?: 'top-right' | 'top-left';
   icon: LucideIcon;
   gradient: string;
   cta: string;
   href: string;
 }
 
-export function FeatureCard({ tag, title, description, bullets, icon: Icon, gradient, cta, href }: FeatureCardProps) {
+export function FeatureCard({
+  tag, title, description, bullets, pills, badge, badgePosition = 'top-right',
+  icon: Icon, gradient, cta, href,
+}: FeatureCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 flex flex-col gap-5" style={{ background: gradient }}>
+    <div
+      className="relative overflow-visible rounded-3xl p-8 md:p-10 flex flex-col gap-5"
+      style={{ background: gradient }}
+    >
+      {badge && <ContainerBadge type={badge} position={badgePosition} />}
+
       {/* Tag pill */}
       <div className="inline-flex w-fit">
         <span className="px-3 py-1 bg-white/15 border border-white/25 rounded-full text-xs font-semibold text-white">{tag}</span>
@@ -42,6 +54,22 @@ export function FeatureCard({ tag, title, description, bullets, icon: Icon, grad
         <h3 className="text-2xl font-bold text-white mb-2 leading-tight">{title}</h3>
         <p className="text-white/75 text-sm leading-relaxed">{description}</p>
       </div>
+
+      {/* Capability pills */}
+      {pills && pills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {pills.map(p => (
+            <span key={p} className="text-[10px] font-medium px-2.5 py-1 rounded-full"
+              style={{
+                background: 'rgba(255,255,255,.08)',
+                border: '1px solid rgba(255,255,255,.12)',
+                color: 'rgba(255,255,255,.6)',
+              }}>
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Bullets */}
       <ul className="space-y-2">

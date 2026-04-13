@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -29,11 +30,8 @@ export function LandingNav() {
       >
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm"
-              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 16px rgba(10,30,255,.4)' }}>
-              S
-            </div>
-            <span className="font-black text-sm tracking-tight text-white">STEINZ LABS</span>
+            <SteinzLogo size={28} animated={false} />
+            <span className="font-bold text-[14px] tracking-[3px] text-white/90" style={{ letterSpacing: 3 }}>STEINZ LABS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7">
