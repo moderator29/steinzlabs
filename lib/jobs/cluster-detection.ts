@@ -12,7 +12,7 @@ const supabase = createClient(
 // ─── Helius helpers ────────────────────────────────────────────────────────────
 
 async function getRecentTransfers(addresses: string[]): Promise<TransferEdge[]> {
-  const HELIUS_KEY = process.env.HELIUS_API_KEY ?? process.env.HELIUS_API_KEY_2 ?? '';
+  const HELIUS_KEY = process.env.HELIUS_API_KEY_1 ?? process.env.HELIUS_API_KEY_2 ?? '';
   if (!HELIUS_KEY) return [];
   const edges: TransferEdge[] = [];
   const batch = addresses.slice(0, 20); // cap to 20 wallets per job run
@@ -40,7 +40,7 @@ async function getRecentTransfers(addresses: string[]): Promise<TransferEdge[]> 
 }
 
 async function getRecentTrades(addresses: string[]): Promise<TokenTradeEvent[]> {
-  const HELIUS_KEY = process.env.HELIUS_API_KEY ?? process.env.HELIUS_API_KEY_2 ?? '';
+  const HELIUS_KEY = process.env.HELIUS_API_KEY_1 ?? process.env.HELIUS_API_KEY_2 ?? '';
   if (!HELIUS_KEY) return [];
   const events: TokenTradeEvent[] = [];
   const batch = addresses.slice(0, 20);

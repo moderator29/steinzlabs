@@ -105,7 +105,7 @@ async function analyseSolanaMev(
   tokenAddress: string,
   swapAmountUsd: number,
 ): Promise<Partial<MevAnalysis>> {
-  const heliusKey = process.env.HELIUS_API_KEY;
+  const heliusKey = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
   if (!heliusKey) return {};
 
   try {
