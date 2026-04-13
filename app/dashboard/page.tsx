@@ -9,9 +9,9 @@ import SidebarMenu from '@/components/SidebarMenu';
 import NotificationBell from '@/components/NotificationBell';
 import { maybeNotifyWelcome } from '@/lib/notifications';
 
-const ContextFeed = lazy(() => import('@/components/ContextFeed'));
-const Markets     = lazy(() => import('@/components/Markets'));
-const VtxAiTab    = lazy(() => import('@/components/VtxAiTab'));
+const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
+const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
+const VtxAiTab       = lazy(() => import('@/components/VtxAiTab'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 
@@ -186,7 +186,7 @@ export default function Dashboard() {
 
   const renderContent = () => {
     if (activeNav === 'home') {
-      if (activeTab === 'markets') return <Markets />;
+      if (activeTab === 'markets') return <MarketDashboard />;
       return <ContextFeed />;
     }
     if (activeNav === 'vtxai') return <VtxAiTab />;

@@ -3,13 +3,12 @@ import { NextResponse } from 'next/server';
 // ISR — regenerate every 5 minutes at the edge so CoinGecko is hit at most once per 5 min
 export const revalidate = 300;
 
-const CG_BASE = process.env.COINGECKO_API_KEY
-  ? 'https://pro-api.coingecko.com/api/v3'
-  : 'https://api.coingecko.com/api/v3';
+// Demo API key — always use api.coingecko.com, header is x-cg-demo-api-key
+const CG_BASE = 'https://api.coingecko.com/api/v3';
 
 function cgHeaders() {
   if (!process.env.COINGECKO_API_KEY) return {};
-  return { 'x-cg-pro-api-key': process.env.COINGECKO_API_KEY };
+  return { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY };
 }
 
 // CoinCap fallback — free, no key, no rate limit issues
