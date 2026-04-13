@@ -20,8 +20,12 @@ export interface PushPayload {
   title: string;
   body: string;
   icon?: string;
+  image?: string;
   url?: string;
   tag?: string;
+  requireInteraction?: boolean;
+  renotify?: boolean;
+  actions?: Array<{ action: string; title: string }>;
   data?: Record<string, unknown>;
 }
 
@@ -87,4 +91,116 @@ export async function sendBulkWebPush(
 
 export function getVapidPublicKey(): string {
   return VAPID_PUBLIC;
+}
+
+// ─── Supabase-aware send functions ────────────────────────────────────────────
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+/**
+ * Send push to all devices registered for a given userId.
+ * Automatically removes 410-Gone (unsubscribed) entries.
+ * Logs delivery to push_delivery_log table.
+ */
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+  const { data: subs } = await supabase
+    .from('push_subscriptions')
+    .select('id, subscription')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  if (!subs || subs.length === 0) return;
+
+  for (const row of subs) {
+    const sub = row.subscription as PushSubscription;
+    const result = await sendWebPush(sub, payload);
+
+    if (!result.ok && result.error?.includes('410')) {
+      await supabase.from('push_subscriptions').update({ is_active: false }).eq('id', row.id);
+    }
+
+    await supabase.from('push_delivery_log').insert({
+      user_id: userId,
+      notification_type: payload.tag ?? 'general',
+      payload,
+      delivered: result.ok,
+      error: result.error ?? null,
+    });
+  }
+}
+
+/**
+ * Send push to many users, batched in groups of 50.
+ */
+export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<void> {
+  const BATCH = 50;
+  for (let i = 0; i < userIds.length; i += BATCH) {
+    const batch = userIds.slice(i, i + BATCH);
+    await Promise.allSettled(batch.map(uid => sendPushToUser(uid, payload)));
+  }
+}
+
+// ─── Notification Templates ───────────────────────────────────────────────────
+
+export function whaleTradeNotification(
+  whaleName: string, action: 'bought' | 'sold', token: string, amount: string, url: string
+): PushPayload {
+  return {
+    title: `🐋 ${whaleName} just ${action} ${token}`,
+    body: `$${amount} ${action === 'bought' ? '→ entering position' : '→ exiting position'}`,
+    icon: '/steinz-logo-192.png',
+    url,
+    tag: `whale-${whaleName}-${token}`,
+    requireInteraction: false,
+  };
+}
+
+export function convergenceAlertNotification(
+  whaleCount: number, token: string, totalAmount: string
+): PushPayload {
+  return {
+    title: `⚡ ${whaleCount} Whales Converging on ${token}`,
+    body: `$${totalAmount} combined deployment detected`,
+    icon: '/steinz-logo-192.png',
+    url: '/dashboard/whale-tracker',
+    tag: `convergence-${token}`,
+    requireInteraction: true,
+  };
+}
+
+export function priceAlertNotification(
+  symbol: string, direction: 'above' | 'below', price: string
+): PushPayload {
+  return {
+    title: `📈 ${symbol} price alert`,
+    body: `${symbol} is now ${direction} $${price}`,
+    icon: '/steinz-logo-192.png',
+    url: '/dashboard/alerts',
+    tag: `price-${symbol}-${direction}`,
+  };
+}
+
+export function smartMoneySignalNotification(walletCount: number, token: string): PushPayload {
+  return {
+    title: `🧠 Smart Money Signal: ${token}`,
+    body: `${walletCount} top wallets entered ${token} in the last 24h`,
+    icon: '/steinz-logo-192.png',
+    url: '/dashboard/smart-money',
+    tag: `smart-money-${token}`,
+    requireInteraction: false,
+  };
+}
+
+export function trendAlertNotification(chain: string, metric: string, change: string): PushPayload {
+  return {
+    title: `📊 ${chain} Trend Alert`,
+    body: `${metric} changed by ${change}`,
+    icon: '/steinz-logo-192.png',
+    url: '/dashboard/trends',
+    tag: `trend-${chain}-${metric}`,
+  };
 }
