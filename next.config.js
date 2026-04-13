@@ -27,6 +27,9 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
+  redirects: async () => [
+    { source: '/whitepaper', destination: '/docs', permanent: false },
+  ],
   headers: async () => [
     {
       source: '/_next/static/:path*',
