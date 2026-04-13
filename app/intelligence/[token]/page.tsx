@@ -145,13 +145,13 @@ export default function ViewProofPage() {
             <div className="mt-4 space-y-2">
               {intelligence.safetyAnalysis.greenFlags.map((flag: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-green-500">✓</span>
+                  <span className="text-green-500 font-bold text-xs">OK</span>
                   <span className="text-gray-300">{flag}</span>
                 </div>
               ))}
               {intelligence.safetyAnalysis.warnings.map((warning: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-yellow-500">⚠</span>
+                  <span className="text-yellow-500 font-bold text-xs">!</span>
                   <span className="text-gray-300">{warning}</span>
                 </div>
               ))}
