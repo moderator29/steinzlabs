@@ -8,6 +8,7 @@ import {
   Settings2, Filter, AlertTriangle, Info,
 } from 'lucide-react';
 import type { WhaleProfile, WhaleFeedEvent, WhaleTier } from '@/app/api/whale-tracker/route';
+import { addLocalNotification } from '@/lib/notifications';
 
 const TIER_COLORS: Record<WhaleTier, string> = {
   MEGA: '#F59E0B', LARGE: '#8B5CF6', MID: '#0A1EFF', SMALL: '#6B7280',
@@ -399,6 +400,8 @@ export default function WhaleTrackerPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const sseRef = useRef<EventSource | null>(null);
+  // Track which MEGA whales have already triggered a notification in this session
+  const notifiedMegaRef = useRef<Set<string>>(new Set());
 
   // Load watchlist from localStorage on mount
   useEffect(() => {
@@ -422,6 +425,19 @@ export default function WhaleTrackerPage() {
         setWhales(json.whales ?? []);
         setFeed(json.feed ?? []);
         setFeatured(json.featured ?? []);
+
+        // Notify once per session for newly seen MEGA-tier whales
+        for (const whale of (json.whales ?? [])) {
+          if (whale.tier !== 'MEGA') continue;
+          const key = whale.address || whale.id;
+          if (!key || notifiedMegaRef.current.has(key)) continue;
+          notifiedMegaRef.current.add(key);
+          addLocalNotification({
+            type: 'whale_alert',
+            title: `MEGA Whale: ${whale.name}`,
+            message: `${whale.shortAddress} is active on ${whale.chain} — ${whale.volumeStr} volume tracked`,
+          });
+        }
       }
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [tab, chainFilter]);

@@ -170,15 +170,15 @@ async function getWalletsFromAlchemy(): Promise<SmartWallet[]> {
           : 'recent',
         rank: i + 1,
         tags: label.includes('Binance') || label.includes('Coinbase') ? ['CEX', 'Exchange'] : ['Whale', 'DeFi'],
-        winRate: Math.floor(65 + Math.random() * 25),
-        pnl: formatVolume(volumeUsd * 0.15),
-        pnlChange: parseFloat((Math.random() * 20 - 5).toFixed(1)),
+        winRate: 0,   // P&L win rate requires trade outcome data unavailable from transfer history
+        pnl: 'N/A',
+        pnlChange: 0,
         trades: w.trades.length,
-        avgHold: '2d',
-        bestTrade: formatVolume(Math.max(...w.trades.map((t: any) => t.value * 2500))),
-        archetype: detectArchetype(Math.floor(65 + Math.random() * 25), w.trades.length, parseFloat((Math.random() * 20 - 5).toFixed(1)), '2d'),
-        weeklyPnlChange: parseFloat((Math.random() * 30 - 5).toFixed(1)),
-        isRiser: i < 3 && Math.random() > 0.5,
+        avgHold: 'Unknown',
+        bestTrade: formatVolume(Math.max(...w.trades.map((t: any) => (t.value ?? 0) * 2500))),
+        archetype: detectArchetype(0, w.trades.length, 0, 'unknown'),
+        weeklyPnlChange: 0,
+        isRiser: false,
       };
     });
   } catch (err) {
@@ -215,7 +215,7 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
         chain === 'base' ? 'BASE' :
         chain.toUpperCase().slice(0, 4);
 
-      const address = pair.pairAddress || `0x${Math.random().toString(16).slice(2).padStart(40, '0')}`;
+      const address = pair.pairAddress || pair.baseToken?.address || '';
       const tokenSymbol = pair.baseToken?.symbol || 'TOKEN';
       const quoteSymbol = pair.quoteToken?.symbol || 'USD';
 
@@ -255,15 +255,15 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
         lastActive: '< 1h ago',
         rank: i + 1,
         tags,
-        winRate: Math.floor(60 + Math.abs(priceChange) % 30),
-        pnl: `${priceChange >= 0 ? '+' : ''}${formatVolume(volume24h * Math.abs(priceChange) / 100)}`,
+        winRate: 0,   // requires trade outcome history
+        pnl: priceChange !== 0 ? `${priceChange >= 0 ? '+' : ''}${formatVolume(volume24h * Math.abs(priceChange) / 100)}` : 'N/A',
         pnlChange: parseFloat(priceChange.toFixed(1)),
         trades: txns24h,
         avgHold: '6h',
         bestTrade: formatVolume(volume24h * 0.15),
-        archetype: detectArchetype(Math.floor(60 + Math.abs(priceChange) % 30), txns24h, parseFloat(priceChange.toFixed(1)), '6h'),
-        weeklyPnlChange: parseFloat((Math.random() * 40 - 5).toFixed(1)),
-        isRiser: i < 3 && Math.random() > 0.4,
+        archetype: detectArchetype(0, txns24h, parseFloat(priceChange.toFixed(1)), '6h'),
+        weeklyPnlChange: 0,
+        isRiser: i < 3 && priceChange > 5,
       };
     });
 

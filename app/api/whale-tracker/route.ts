@@ -13,6 +13,8 @@ export interface WhaleProfile {
   name: string;
   chain: string;
   tier: WhaleTier;
+  /** Weighted score: balance 40% + txSize 30% + frequency 20% + concentration 10% */
+  whaleScore: number;
   totalVolumeUsd: number;
   volumeStr: string;
   pnl: number;
@@ -46,22 +48,20 @@ export interface WhaleFeedEvent {
 
 // ─── Known exchange/DEX router/bot/contract addresses to exclude ──────────────
 const KNOWN_NON_HUMAN_PREFIXES = new Set([
-  // Ethereum DEX routers
-  '0x7a250d5630b4cf539739df2c5dacb4c659f2488d', // Uniswap V2
-  '0xe592427a0aece92de3edee1f18e0157c05861564', // Uniswap V3
-  '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45', // Uniswap Universal
-  '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', // Sushiswap
-  '0x1111111254fb6c44bac0bed2854e76f90643097d', // 1inch V4
-  '0x1111111254eeb25477b68fb85ed929f73a960582', // 1inch V5
-  '0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad', // Uniswap Universal 2
-  '0x00000000219ab540356cbb839cbe05303d7705fa', // ETH2 deposit
-  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', // WETH
-  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
-  '0xdac17f958d2ee523a2206206994597c13d831ec7', // USDT
-  '0x6b175474e89094c44da98b954eedeac495271d0f', // DAI
+  '0x7a250d5630b4cf539739df2c5dacb4c659f2488d',
+  '0xe592427a0aece92de3edee1f18e0157c05861564',
+  '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45',
+  '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f',
+  '0x1111111254fb6c44bac0bed2854e76f90643097d',
+  '0x1111111254eeb25477b68fb85ed929f73a960582',
+  '0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad',
+  '0x00000000219ab540356cbb839cbe05303d7705fa',
+  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+  '0xdac17f958d2ee523a2206206994597c13d831ec7',
+  '0x6b175474e89094c44da98b954eedeac495271d0f',
 ]);
 
-// Known exchange hot-wallet patterns (partial)
 const KNOWN_CEX_PATTERNS = [
   'binance', 'coinbase', 'kraken', 'okx', 'bybit', 'kucoin', 'huobi', 'bitfinex',
 ];
@@ -69,21 +69,12 @@ const KNOWN_CEX_PATTERNS = [
 function isLikelyHuman(address: string, name?: string): boolean {
   const lowerAddr = address.toLowerCase();
   const lowerName = (name ?? '').toLowerCase();
-
-  // Exclude known contracts
   if (KNOWN_NON_HUMAN_PREFIXES.has(lowerAddr)) return false;
-
-  // Exclude zero address
   if (lowerAddr === '0x0000000000000000000000000000000000000000') return false;
-
-  // Exclude bridge/multisig patterns (typically 0x000... or 0xdead...)
   if (lowerAddr.startsWith('0x000000') || lowerAddr.includes('dead')) return false;
-
-  // Exclude if name contains exchange/bot patterns
   for (const pat of KNOWN_CEX_PATTERNS) {
     if (lowerName.includes(pat)) return false;
   }
-
   return true;
 }
 
@@ -113,6 +104,37 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+/**
+ * Weighted whale score (0–100):
+ * - balance   40%: total volume vs tier threshold
+ * - txSize    30%: average transaction size
+ * - frequency 20%: trade count normalized to 50 trades = max
+ * - concentration 10%: token diversity (inverse — fewer tokens = more concentrated = higher score)
+ */
+function computeWhaleScore(params: {
+  totalVolumeUsd: number;
+  trades: number;
+  tokenCount: number;
+  winRate: number;   // 0-100
+}): number {
+  const { totalVolumeUsd, trades, tokenCount, winRate } = params;
+
+  // balance score (40): $5M+ = 100, scales down
+  const balanceScore = Math.min(100, (totalVolumeUsd / 5_000_000) * 100) * 0.40;
+
+  // txSize score (30): average per trade, $100K+ = full marks
+  const avgTx = trades > 0 ? totalVolumeUsd / trades : 0;
+  const txSizeScore = Math.min(100, (avgTx / 100_000) * 100) * 0.30;
+
+  // frequency score (20): 50 trades in window = full marks
+  const freqScore = Math.min(100, (trades / 50) * 100) * 0.20;
+
+  // concentration score (10): win rate as proxy (real concentration requires portfolio data)
+  const concentrationScore = Math.min(100, winRate) * 0.10;
+
+  return Math.round(balanceScore + txSizeScore + freqScore + concentrationScore);
+}
+
 // ─── Solana — Birdeye top traders ─────────────────────────────────────────────
 
 async function getSolanaWhales(): Promise<WhaleProfile[]> {
@@ -121,32 +143,50 @@ async function getSolanaWhales(): Promise<WhaleProfile[]> {
     return traders
       .filter(t => t.volume >= 20_000 && t.volume <= 5_000_000 && t.trades >= 3)
       .slice(0, 100)
-      .map((t, i) => ({
-        id: `sol-${t.address}`,
-        address: t.address,
-        shortAddress: shortAddr(t.address),
-        name: `Solana Trader #${i + 1}`,
-        chain: 'solana',
-        tier: tier(t.volume),
-        totalVolumeUsd: t.volume,
-        volumeStr: fmt(t.volume),
-        pnl: t.pnl,
-        pnlStr: `${t.pnl >= 0 ? '+' : ''}${fmt(Math.abs(t.pnl))}`,
-        pnlPercent: t.pnlPercent,
-        winRate: Math.round(t.winRate * 100),
-        trades: t.trades,
-        winTrades: t.winTrades,
-        lossTrades: t.lossTrades,
-        lastTradeTime: timeAgo(t.lastTradeTime * 1000),
-        recentTokens: [],
-        featured: i < 3,
-        tags: ['Solana', t.volume >= 1e6 ? 'High Volume' : 'Active'],
-        explorerUrl: getExplorerUrl('solana', t.address),
-      }));
+      .map((t, i) => {
+        const winRatePct = Math.round(t.winRate * 100);
+        const score = computeWhaleScore({
+          totalVolumeUsd: t.volume,
+          trades: t.trades,
+          tokenCount: 1,
+          winRate: winRatePct,
+        });
+        return {
+          id: `sol-${t.address}`,
+          address: t.address,
+          shortAddress: shortAddr(t.address),
+          name: `Solana Trader #${i + 1}`,
+          chain: 'solana',
+          tier: tier(t.volume),
+          whaleScore: score,
+          totalVolumeUsd: t.volume,
+          volumeStr: fmt(t.volume),
+          pnl: t.pnl,
+          pnlStr: `${t.pnl >= 0 ? '+' : ''}${fmt(Math.abs(t.pnl))}`,
+          pnlPercent: t.pnlPercent,
+          winRate: winRatePct,
+          trades: t.trades,
+          winTrades: t.winTrades,
+          lossTrades: t.lossTrades,
+          lastTradeTime: timeAgo(t.lastTradeTime * 1000),
+          recentTokens: [],
+          featured: i < 3,
+          tags: ['Solana', t.volume >= 1e6 ? 'High Volume' : 'Active'],
+          explorerUrl: getExplorerUrl('solana', t.address),
+        };
+      });
   } catch { return []; }
 }
 
-// ─── EVM — Alchemy large transfers, human traders only ────────────────────────
+// ─── EVM — Alchemy large transfers ───────────────────────────────────────────
+
+interface EvmAddrData {
+  vol: number;
+  count: number;
+  ts: number;
+  tokens: Set<string>;
+  maxSingleTx: number;
+}
 
 async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
   const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
@@ -183,7 +223,7 @@ async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
           toBlock: 'latest',
           category: ['external', 'erc20'],
           order: 'desc',
-          maxCount: '0xC8', // 200 transfers
+          maxCount: '0xC8',
           withMetadata: true,
           excludeZeroValue: true,
         }],
@@ -204,28 +244,22 @@ async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
 
     const transfers = txData.result?.transfers ?? [];
 
-    // Build a per-address profile: vol, trade count, tokens, last trade time
-    const addrMap = new Map<string, {
-      vol: number;
-      count: number;
-      ts: number;
-      tokens: Set<string>;
-    }>();
-
-    // ETH price estimate — rough
+    // ETH price estimate (rough — no live price needed for scoring)
     const ETH_USD = 3000;
+
+    const addrMap = new Map<string, EvmAddrData>();
 
     for (const tx of transfers) {
       const addr = tx.from;
       if (!addr || !isLikelyHuman(addr)) continue;
 
       const usdValue = (tx.value ?? 0) * (tx.asset === 'ETH' || tx.asset === 'WETH' ? ETH_USD : 1);
-      // Min $20K, max $5M per individual transfer to filter out tiny and mega-institution
       if (usdValue < 20_000 || usdValue > 5_000_000) continue;
 
-      const existing = addrMap.get(addr) ?? { vol: 0, count: 0, ts: 0, tokens: new Set() };
+      const existing = addrMap.get(addr) ?? { vol: 0, count: 0, ts: 0, tokens: new Set<string>(), maxSingleTx: 0 };
       existing.vol += usdValue;
       existing.count++;
+      existing.maxSingleTx = Math.max(existing.maxSingleTx, usdValue);
       existing.ts = tx.metadata?.blockTimestamp
         ? new Date(tx.metadata.blockTimestamp).getTime()
         : Date.now();
@@ -234,35 +268,50 @@ async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
     }
 
     return Array.from(addrMap.entries())
-      .filter(([, d]) => d.count >= 2 && d.tokens.size >= 1)
+      .filter(([, d]) => d.count >= 2)
       .sort((a, b) => b[1].vol - a[1].vol)
       .slice(0, 100)
-      .map(([addr, d], i) => ({
-        id: `${chain}-${addr}`,
-        address: addr,
-        shortAddress: shortAddr(addr),
-        name: `${chain.charAt(0).toUpperCase() + chain.slice(1)} Trader #${i + 1}`,
-        chain,
-        tier: tier(d.vol),
-        totalVolumeUsd: d.vol,
-        volumeStr: fmt(d.vol),
-        pnl: d.vol * (0.05 + Math.random() * 0.15),
-        pnlStr: `+${fmt(d.vol * (0.05 + Math.random() * 0.15))}`,
-        pnlPercent: 5 + Math.random() * 15,
-        winRate: Math.floor(55 + Math.random() * 30),
-        trades: d.count,
-        winTrades: Math.floor(d.count * 0.65),
-        lossTrades: Math.floor(d.count * 0.35),
-        lastTradeTime: timeAgo(d.ts),
-        recentTokens: Array.from(d.tokens).slice(0, 5),
-        featured: i < 3,
-        tags: [chain.toUpperCase(), d.tokens.size >= 3 ? 'Multi-Token' : 'Active'],
-        explorerUrl: getExplorerUrl(chain, addr),
-      }));
+      .map(([addr, d], i) => {
+        // For EVM we only have volume data, not P&L. Derive what we can.
+        // Win rate and P&L cannot be computed without trade-level outcome data.
+        // We set them to 0/unknown rather than fake them with Math.random().
+        const winRate = 0; // unknown — would require trade history API
+        const score = computeWhaleScore({
+          totalVolumeUsd: d.vol,
+          trades: d.count,
+          tokenCount: d.tokens.size,
+          winRate,
+        });
+        return {
+          id: `${chain}-${addr}`,
+          address: addr,
+          shortAddress: shortAddr(addr),
+          name: `${chain.charAt(0).toUpperCase() + chain.slice(1)} Trader #${i + 1}`,
+          chain,
+          tier: tier(d.vol),
+          whaleScore: score,
+          totalVolumeUsd: d.vol,
+          volumeStr: fmt(d.vol),
+          pnl: 0,
+          pnlStr: 'N/A',
+          pnlPercent: 0,
+          winRate,
+          trades: d.count,
+          winTrades: 0,
+          lossTrades: 0,
+          lastTradeTime: timeAgo(d.ts),
+          recentTokens: Array.from(d.tokens).slice(0, 5),
+          featured: i < 3,
+          tags: [chain.toUpperCase(), d.tokens.size >= 3 ? 'Multi-Token' : 'Active'],
+          explorerUrl: getExplorerUrl(chain, addr),
+        };
+      });
   } catch { return []; }
 }
 
-// ─── BSC — public RPC (no Alchemy) ───────────────────────────────────────────
+// ─── BSC — public RPC ─────────────────────────────────────────────────────────
+// Note: BSC public RPC eth_getLogs doesn't provide value data, so we can only
+// identify active addresses. Volume/PNL/winRate are unknown and not fabricated.
 
 async function getBscWhales(): Promise<WhaleProfile[]> {
   try {
@@ -271,6 +320,7 @@ async function getBscWhales(): Promise<WhaleProfile[]> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+      signal: AbortSignal.timeout(8_000),
     });
     const { result } = await blockRes.json() as { result: string };
     const fromBlock = '0x' + (parseInt(result, 16) - 100).toString(16);
@@ -281,17 +331,14 @@ async function getBscWhales(): Promise<WhaleProfile[]> {
       body: JSON.stringify({
         jsonrpc: '2.0', id: 2,
         method: 'eth_getLogs',
-        params: [{
-          fromBlock,
-          toBlock: 'latest',
-        }],
+        params: [{ fromBlock, toBlock: 'latest' }],
       }),
+      signal: AbortSignal.timeout(8_000),
     });
 
     const logsData = await txRes.json() as { result: Array<{ address: string; topics: string[]; data: string }> };
     const logs = logsData.result ?? [];
 
-    // Extract unique addresses
     const addrSet = new Set<string>();
     for (const log of logs) {
       if (log.topics[1]) {
@@ -300,6 +347,7 @@ async function getBscWhales(): Promise<WhaleProfile[]> {
       }
     }
 
+    // BSC data: addresses only — no volume/PNL data available from public RPC logs
     return Array.from(addrSet).slice(0, 50).map((addr, i) => ({
       id: `bsc-${addr}`,
       address: addr,
@@ -307,17 +355,18 @@ async function getBscWhales(): Promise<WhaleProfile[]> {
       name: `BSC Trader #${i + 1}`,
       chain: 'bsc',
       tier: 'MID' as WhaleTier,
-      totalVolumeUsd: 50_000 + Math.random() * 500_000,
-      volumeStr: fmt(50_000 + Math.random() * 500_000),
-      pnl: 5000 + Math.random() * 50_000,
-      pnlStr: `+${fmt(5000 + Math.random() * 50_000)}`,
-      pnlPercent: 5 + Math.random() * 20,
-      winRate: Math.floor(55 + Math.random() * 30),
-      trades: Math.floor(3 + Math.random() * 20),
-      winTrades: Math.floor(3 + Math.random() * 13),
-      lossTrades: Math.floor(1 + Math.random() * 7),
-      lastTradeTime: `${Math.floor(1 + Math.random() * 24)}h ago`,
-      recentTokens: ['BNB', 'BUSD', 'CAKE'],
+      whaleScore: 0,  // unknown — no volume data from public RPC
+      totalVolumeUsd: 0,
+      volumeStr: 'Unknown',
+      pnl: 0,
+      pnlStr: 'N/A',
+      pnlPercent: 0,
+      winRate: 0,
+      trades: 0,
+      winTrades: 0,
+      lossTrades: 0,
+      lastTradeTime: 'Recent',
+      recentTokens: [],
       featured: i < 2,
       tags: ['BSC', 'Active'],
       explorerUrl: getExplorerUrl('bsc', addr),
@@ -406,7 +455,7 @@ async function getLiveFeedEvents(): Promise<WhaleFeedEvent[]> {
 // ─── Cache ────────────────────────────────────────────────────────────────────
 
 let cache: { whales: WhaleProfile[]; feed: WhaleFeedEvent[]; ts: number } | null = null;
-const CACHE_TTL = 90_000; // 90 seconds
+const CACHE_TTL = 90_000;
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
@@ -419,7 +468,6 @@ export async function GET(request: Request) {
     return buildResponse(cache.whales, cache.feed, tab, chainFilter);
   }
 
-  // Fetch all chains in parallel
   const [solanaResult, ethResult, polyResult, arbResult, baseResult, optResult, bscResult, feedResult] =
     await Promise.allSettled([
       getSolanaWhales(),
@@ -458,14 +506,16 @@ function buildResponse(
     ? whales
     : whales.filter(w => w.chain === chainFilter);
 
-  const featured = filtered.filter(w => w.featured).slice(0, 6);
+  // Sort by whaleScore descending
+  const sorted = [...filtered].sort((a, b) => b.whaleScore - a.whaleScore);
+  const featured = sorted.filter(w => w.featured).slice(0, 6);
 
   const chainCounts: Record<string, number> = {};
   for (const w of whales) chainCounts[w.chain] = (chainCounts[w.chain] ?? 0) + 1;
 
   return NextResponse.json(
     {
-      whales: tab === 'feed' ? [] : filtered,
+      whales: tab === 'feed' ? [] : sorted,
       feed: tab === 'feed' ? feed : [],
       featured,
       chainCounts,
