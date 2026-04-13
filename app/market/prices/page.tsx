@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { useMarketData } from '@/hooks/market/useMarketData';
 import { useWatchlist } from '@/hooks/market/useWatchlist';
 import { CategoryPills } from '@/components/market/CategoryPills';
@@ -17,11 +18,12 @@ const MAJOR_IDS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'ca
 
 export default function PricesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [category, setCategory] = useState<CategoryId>('all');
   const [search, setSearch] = useState('');
 
   const { tokens, loading, error, refetch } = useMarketData({ category });
-  const { isWatched, toggleWatchlist } = useWatchlist(null); // TODO: pass userId from auth
+  const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
 
   const filtered = tokens.filter((t) => {
     if (category === 'majors') return MAJOR_IDS.includes(t.id);
