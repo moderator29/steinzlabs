@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Shield, Brain, Zap, Globe, Code, Search, BookOpen, Lock, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, Menu, X, ChevronRight, ExternalLink } from 'lucide-react';
 import { DocsSidebar, DOC_SECTIONS } from '@/components/docs/DocsSidebar';
 import { DocsSection01 } from '@/components/docs/DocsSection01';
 import { DocsSection02 } from '@/components/docs/DocsSection02';
@@ -17,6 +17,7 @@ import { DocsSection10 } from '@/components/docs/DocsSection10';
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('getting-started');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const allIds = DOC_SECTIONS.flatMap(s => [
@@ -42,47 +43,92 @@ export default function DocsPage() {
     return () => observer.disconnect();
   }, []);
 
+  const currentLabel = DOC_SECTIONS.find(s =>
+    s.id === activeSection || s.subsections?.some(sub => sub.id === activeSection)
+  )?.label ?? 'Documentation';
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
+    <div className="min-h-screen bg-[#080C18] text-white">
       {/* Top Nav */}
-      <div className="sticky top-0 z-20 bg-[#0A0E1A]/95 backdrop-blur border-b border-[#1E2433]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
+      <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="w-5 h-5 text-gray-400" />
+            </button>
+            <Link href="/" className="hidden sm:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-sm">
               <ArrowLeft className="w-4 h-4" />
-              Back
+              <span>Back</span>
             </Link>
-            <span className="text-[#1E2433]">|</span>
+            <span className="hidden sm:block w-px h-4 bg-white/[0.08]" />
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#0A1EFF]" />
               <span className="text-sm font-semibold text-white">STEINZ LABS Docs</span>
             </div>
+            <span className="lg:hidden text-[10px] text-gray-500 ml-1">— {currentLabel}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/whitepaper" className="text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-[#1E2433] rounded-lg hover:border-[#2E3443]">
+          <div className="flex items-center gap-2">
+            <Link href="/whitepaper" className="hidden sm:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>
-            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-medium">
+            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-semibold">
               Open App
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10 flex gap-10">
-        <DocsSidebar activeSection={activeSection} />
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-[#0D1117] border-r border-white/[0.06] overflow-y-auto">
+            <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#0A1EFF]" />
+                <span className="text-sm font-semibold">Documentation</span>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-white/[0.06]">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4">
+              <DocsSidebar
+                activeSection={activeSection}
+                onSectionClick={() => setMobileOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-12 lg:flex lg:gap-12">
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block w-60 flex-shrink-0">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
+            <DocsSidebar activeSection={activeSection} />
+          </div>
+        </aside>
 
         {/* Main Content */}
         <main className="flex-1 min-w-0 max-w-3xl">
-          <div className="mb-10">
-            <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-full px-3 py-1 text-xs text-[#0A1EFF] font-medium mb-4">
+          <div className="mb-10 pb-8 border-b border-white/[0.06]">
+            <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-full px-3 py-1 text-xs text-[#0A1EFF] font-semibold mb-4">
               <BookOpen className="w-3 h-3" />
-              Developer Documentation
+              Platform Documentation
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">STEINZ LABS Documentation</h1>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Complete reference for every feature, API, and integration. Use the sidebar to navigate sections.
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">STEINZ LABS</h1>
+            <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-2xl">
+              The complete reference for every feature in STEINZ LABS — your institutional-grade on-chain intelligence operating system. Navigate using the menu to explore any section.
             </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {['Intelligence', 'Security', 'Trading', 'Portfolio', 'AI'].map(tag => (
+                <span key={tag} className="text-[10px] px-2 py-0.5 bg-white/[0.05] border border-white/[0.08] rounded-full text-gray-400">{tag}</span>
+              ))}
+            </div>
           </div>
 
           <DocsSection01 />
@@ -96,9 +142,16 @@ export default function DocsPage() {
           <DocsSection09 />
           <DocsSection10 />
 
-          <div className="mt-12 pt-8 border-t border-[#1E2433] flex items-center justify-between text-xs text-gray-600">
-            <span>&copy; 2026 STEINZ LABS. All rights reserved.</span>
-            <Link href="/whitepaper" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">View Whitepaper</Link>
+          <div className="mt-16 pt-8 border-t border-white/[0.06]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <span className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</span>
+              <div className="flex items-center gap-4">
+                <Link href="/whitepaper" className="flex items-center gap-1 text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">
+                  <ExternalLink className="w-3 h-3" />View Whitepaper
+                </Link>
+                <Link href="/dashboard" className="text-xs text-gray-400 hover:text-white transition-colors">Open App</Link>
+              </div>
+            </div>
           </div>
         </main>
       </div>
