@@ -5,11 +5,7 @@ import { getTokenPrice } from '@/lib/services/coingecko';
 import { getTokenPairs } from '@/lib/services/dexscreener';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { fetchWalletPositions, fetchWalletTransactions } from '@/lib/services/zerion';
-import {
-  getSolanaSOLBalance,
-  getSolanaTransactions,
-} from '@/lib/services/helius';
-import { getWalletTokenList } from '@/lib/services/birdeye';
+import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -290,120 +286,59 @@ async function getEvmData(address: string, chain: string) {
 }
 
 // ─── Solana Data Fetcher ──────────────────────────────────────────────────────
-// Uses Birdeye wallet token list as PRIMARY — returns ALL tokens with USD values in one call.
-// Falls back to Helius per-account approach only if Birdeye fails.
+// Uses the canonical Solana intelligence pipeline:
+// Helius (authoritative balances + txns) → Birdeye (prices) → DexScreener (logos)
 
 async function getSolData(address: string) {
-  // Step 1: Parallel fetch — wallet tokens (Birdeye), SOL balance, and transactions (Helius)
-  const [birdeyeTokensResult, solBalanceResult, txsResult] = await Promise.allSettled([
-    getWalletTokenList(address, 'solana'),
-    getSolanaSOLBalance(address),
-    getSolanaTransactions(address, 100), // 100 transactions for accurate timestamps
-  ]);
+  const intel = await buildSolanaWalletIntelligence(address);
 
-  const solBalance = solBalanceResult.status === 'fulfilled' ? solBalanceResult.value : 0;
-  const txs = txsResult.status === 'fulfilled' ? txsResult.value : [];
-
-  console.log(`[WalletIntel] Helius transactions: ${txs.length} for ${address}`);
-
-  // Step 2: Get SOL price
-  const solPrice = await getTokenPrice('solana').catch(() => 170);
-  const solValueUsd = solBalance * solPrice;
-
-  // Step 3: Build holdings from Birdeye wallet token list (no limits)
-  let tokenHoldings: Array<{
-    symbol: string; name: string; balance: string;
-    valueUsd: string | null; contractAddress: string | null; logoUrl: string | null;
-  }> = [];
-
-  let totalTokenValueUsd = 0;
-
-  if (birdeyeTokensResult.status === 'fulfilled') {
-    const { items } = birdeyeTokensResult.value;
-    console.log(`[WalletIntel] Birdeye returned ${items.length} tokens for ${address}`);
-
-    // Filter out zero-value dust and SOL (we handle SOL separately)
-    const validTokens = items.filter(t =>
-      t.uiAmount > 0 &&
-      t.valueUsd > 0 &&
-      t.address !== 'So11111111111111111111111111111111111111112' // exclude wrapped SOL
-    );
-
-    // Sort by USD value descending — all tokens, no slice
-    validTokens.sort((a, b) => b.valueUsd - a.valueUsd);
-
-    tokenHoldings = validTokens.map(t => {
-      totalTokenValueUsd += t.valueUsd;
-      return {
-        symbol: t.symbol || t.address.slice(0, 6),
-        name: t.name || t.symbol || 'SPL Token',
-        balance: t.uiAmount > 1000 ? t.uiAmount.toFixed(0) : t.uiAmount.toFixed(4),
-        valueUsd: t.valueUsd.toFixed(2),
-        contractAddress: t.address,
-        logoUrl: t.logoURI || null,
-      };
-    });
-  } else {
-    // Birdeye failed — log real error, return empty token list (not fake data)
-    console.error('[WalletIntel] Birdeye wallet token list failed:', birdeyeTokensResult.reason);
-  }
-
-  const totalBalanceUsd = solValueUsd + totalTokenValueUsd;
-
-  const holdings = [
-    {
-      symbol: 'SOL',
-      name: 'Solana',
-      balance: solBalance.toFixed(4),
-      valueUsd: solValueUsd.toFixed(2),
-      contractAddress: null,
-      logoUrl: KNOWN_TOKEN_LOGOS['SOL'],
-    },
-    ...tokenHoldings,
-  ];
-
-  // Step 4: Real TX count and timestamps from Helius transactions
-  const txCount = txs.length;
-  const timestamps = txs
-    .map(tx => tx.timestamp)
-    .filter((t): t is number => typeof t === 'number' && t > 0)
-    .sort((a, b) => a - b);
-
-  const firstSeen = timestamps.length > 0
-    ? new Date(timestamps[0] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : null;
-  const lastActive = timestamps.length > 0
-    ? new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : null;
-
-  const recentTransactions = txs.slice(0, 30).map(tx => ({
-    hash: tx.signature,
-    blockTime: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : null,
-    status: 'success' as const,
-    type: tx.type || 'transaction',
-    asset: 'SOL',
-    value: null,
-    from: tx.feePayer,
-    to: '',
-    slot: tx.slot,
+  // Map to the holdings format expected by the response shape
+  const holdings = intel.tokens.map(t => ({
+    symbol: t.symbol,
+    name: t.name,
+    balance: t.balance,
+    valueUsd: t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
+    contractAddress: t.mintAddress === 'So11111111111111111111111111111111111111112'
+      ? null
+      : t.mintAddress,
+    logoUrl: t.logoURI ?? KNOWN_TOKEN_LOGOS[t.symbol] ?? null,
   }));
 
-  const aiAnalysisContext = buildAiAnalysisContext(address, 'Solana', holdings, totalBalanceUsd.toFixed(2), txCount);
+  const recentTransactions = intel.transactions.map(tx => ({
+    hash: tx.hash,
+    blockTime: tx.timestamp,
+    status: tx.type === 'burn' ? 'burn' : 'success',
+    type: tx.type,
+    asset: tx.tokenSymbol || 'SOL',
+    value: tx.amountRaw > 0 ? String(tx.amountRaw) : null,
+    from: tx.direction === 'out' ? address : (tx.counterparty ?? address),
+    to: tx.direction === 'in' ? address : (tx.counterparty ?? ''),
+    valueUsd: tx.valueUSD ?? null,
+  }));
+
+  const totalBalanceUsd = intel.totalBalanceUSD;
+  const aiAnalysisContext = buildAiAnalysisContext(
+    address, 'Solana', holdings, totalBalanceUsd.toFixed(2), intel.metadata.txCount
+  );
 
   return {
     chain: 'Solana',
     address,
-    solBalance: solBalance.toFixed(4),
-    solValueUsd: solValueUsd.toFixed(2),
+    solBalance: intel.solBalance.toFixed(4),
+    solValueUsd: intel.solValueUSD.toFixed(2),
     totalBalanceUsd: totalBalanceUsd.toFixed(2),
-    txCount,
-    firstSeen,
-    lastActive,
+    txCount: intel.metadata.txCount,
+    firstSeen: intel.metadata.firstSeen,
+    lastActive: intel.metadata.lastActive,
     holdings,
-    tokenCount: tokenHoldings.length,
+    tokenCount: holdings.filter(h => h.contractAddress).length,
     explorerUrl: 'https://solscan.io',
     aiAnalysisContext,
     recentTransactions,
+    isWhale: intel.isWhale,
+    whaleScore: intel.whaleScore,
+    tokenDistribution: intel.tokenDistribution,
+    dataSource: intel.dataSource,
   };
 }
 

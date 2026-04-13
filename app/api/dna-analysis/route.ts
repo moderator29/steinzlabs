@@ -4,15 +4,8 @@ import { vtxAnalyze } from '@/lib/services/anthropic';
 import { getEthBalance, getAssetTransfers, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { fetchWalletPositions, fetchWalletTransactions } from '@/lib/services/zerion';
-import {
-  getBirdeyeTokenOverview,
-  getWalletTokenList,
-  getWalletTransactions,
-  getTrendingByVolume,
-  getTrendingByHolderGrowth,
-} from '@/lib/services/birdeye';
-import { getSolanaSOLBalance, getSolanaTransactions } from '@/lib/services/helius';
-import type { HeliusTransaction } from '@/lib/services/helius';
+import { getTrendingByVolume, getTrendingByHolderGrowth } from '@/lib/services/birdeye';
+import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
 
 // ─── Chain Detection ──────────────────────────────────────────────────────────
 
@@ -75,77 +68,25 @@ function archetypeDescription(a: WalletArchetype): string {
 }
 
 // ─── Solana DNA Fetch ─────────────────────────────────────────────────────────
+// Uses the canonical Solana intelligence pipeline:
+// Helius (authoritative) → Birdeye (prices) → DexScreener (logos/identity)
 
 async function fetchSolDNA(address: string) {
-  const [birdeyeResult, solBalResult, txsResult] = await Promise.allSettled([
-    getWalletTokenList(address, 'solana'),
-    getSolanaSOLBalance(address),
-    getSolanaTransactions(address, 100),
-  ]);
+  const intel = await buildSolanaWalletIntelligence(address);
 
-  const solBalance = solBalResult.status === 'fulfilled' ? solBalResult.value : 0;
-  const txs: HeliusTransaction[] = txsResult.status === 'fulfilled' ? txsResult.value : [];
-  console.log(`[DNA] Helius: ${txs.length} txs for ${address}`);
+  // Map to the Holding interface expected by the shared AI analysis
+  const holdings: Holding[] = intel.tokens.map(t => ({
+    symbol: t.symbol,
+    name: t.name,
+    balance: t.balance,
+    valueUsd: t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
+    contractAddress: t.mintAddress === 'So11111111111111111111111111111111111111112'
+      ? null
+      : t.mintAddress,
+    logoUrl: t.logoURI,
+  }));
 
-  const solPrice = await getTokenPrice('solana').catch(() => 170);
-  const solValueUsd = solBalance * solPrice;
-
-  let tokenHoldings: Holding[] = [];
-  let totalTokenValue = 0;
-
-  if (birdeyeResult.status === 'fulfilled') {
-    const { items } = birdeyeResult.value;
-    console.log(`[DNA] Birdeye: ${items.length} tokens for ${address}`);
-    const valid = items
-      .filter(t => t.uiAmount > 0 && t.valueUsd > 0 &&
-        t.address !== 'So11111111111111111111111111111111111111112')
-      .sort((a, b) => b.valueUsd - a.valueUsd);
-    tokenHoldings = valid.map(t => {
-      totalTokenValue += t.valueUsd;
-      return {
-        symbol: t.symbol || t.address.slice(0, 6),
-        name: t.name || t.symbol || 'SPL Token',
-        balance: t.uiAmount > 1000 ? t.uiAmount.toFixed(0) : t.uiAmount.toFixed(4),
-        valueUsd: t.valueUsd.toFixed(2),
-        contractAddress: t.address,
-        logoUrl: t.logoURI || null,
-      };
-    });
-  } else {
-    console.error('[DNA] Birdeye failed:', birdeyeResult.reason);
-  }
-
-  const totalBalance = solValueUsd + totalTokenValue;
-  const holdings: Holding[] = [
-    { symbol: 'SOL', name: 'Solana', balance: solBalance.toFixed(4), valueUsd: solValueUsd.toFixed(2), contractAddress: null,
-      logoUrl: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
-    ...tokenHoldings,
-  ];
-
-  const timestamps = txs
-    .map(tx => tx.timestamp).filter((t): t is number => typeof t === 'number' && t > 0)
-    .sort((a, b) => a - b);
-
-  const firstSeen = timestamps.length > 0
-    ? new Date(timestamps[0] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : null;
-  const lastActive = timestamps.length > 0
-    ? new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : null;
-
-  let txPerWeek = 0;
-  if (timestamps.length >= 2) {
-    const daysActive = (timestamps[timestamps.length - 1] - timestamps[0]) / 86400;
-    txPerWeek = daysActive > 0 ? (txs.length / daysActive) * 7 : txs.length;
-  }
-
-  let totalBuys = 0, totalSells = 0;
-  txs.forEach(tx => {
-    const transfers = tx.tokenTransfers ?? [];
-    if (transfers.some((t: { toUserAccount: string }) => t.toUserAccount === address)) totalBuys++;
-    if (transfers.some((t: { fromUserAccount: string }) => t.fromUserAccount === address)) totalSells++;
-  });
-
+  const totalBalance = intel.totalBalanceUSD;
   const blueChipValue = holdings
     .filter(h => BLUE_CHIP.has(h.symbol.toUpperCase()))
     .reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
@@ -155,18 +96,24 @@ async function fetchSolDNA(address: string) {
     const share = totalBalance > 0 ? parseFloat(h.valueUsd || '0') / totalBalance : 0;
     return sum + share * share;
   }, 0);
-  const diversificationScore = Math.round((1 - hhi) * 100);
-  const archetype = computeArchetype(txs.length, txPerWeek, memePercent, holdings.length);
+
+  const txCount = intel.metadata.txCount;
+  const txPerWeek = intel.metadata.txPerWeek;
+  const archetype = computeArchetype(txCount, txPerWeek, memePercent, holdings.length);
 
   return {
     chain: 'Solana', address, holdings, totalBalanceUsd: totalBalance,
-    txCount: txs.length, firstSeen, lastActive,
-    txPerWeek: Math.round(txPerWeek * 10) / 10, totalBuys, totalSells,
+    txCount, firstSeen: intel.metadata.firstSeen, lastActive: intel.metadata.lastActive,
+    txPerWeek, totalBuys: intel.metadata.totalBuys, totalSells: intel.metadata.totalSells,
     blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
-    diversificationScore, archetype, archetypeDescription: archetypeDescription(archetype),
-    recentTxs: txs.slice(0, 25).map(tx => ({
-      hash: tx.signature, type: tx.type || 'transaction', asset: 'SOL', amount: '—',
-      from: tx.feePayer, to: '', blockTime: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : null,
+    diversificationScore: Math.round((1 - hhi) * 100),
+    archetype, archetypeDescription: archetypeDescription(archetype),
+    dataSource: intel.dataSource,
+    recentTxs: intel.transactions.slice(0, 25).map(tx => ({
+      hash: tx.hash, type: tx.type, asset: tx.tokenSymbol || 'SOL',
+      amount: tx.amount, from: tx.counterparty || address,
+      to: tx.direction === 'out' ? (tx.counterparty || '') : address,
+      blockTime: tx.timestamp,
     })),
   };
 }

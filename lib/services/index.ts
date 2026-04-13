@@ -21,6 +21,7 @@ export * from './birdeye';
 export * from './defillama';
 export * from './webpush';
 export * from './zerion';
+export * from './solana-intelligence';
 
 // ─── Shared Error Types ────────────────────────────────────────────────────────
 
