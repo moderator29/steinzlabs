@@ -11,8 +11,12 @@ import Anthropic from '@anthropic-ai/sdk';
  * This delivers near-Opus quality at ~80-90% Sonnet cost.
  */
 
+const API_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS || '600000', 10);
+const STREAM_IDLE_TIMEOUT_MS = parseInt(process.env.CLAUDE_STREAM_IDLE_TIMEOUT_MS || '300000', 10);
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
+  timeout: API_TIMEOUT_MS,
 });
 
 export const VTX_SYSTEM_PROMPT = `You are VTX, the intelligence layer of Steinz Labs.
@@ -227,13 +231,28 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
 
   return new ReadableStream({
     async start(controller) {
-      for await (const chunk of stream) {
-        if (
-          chunk.type === 'content_block_delta' &&
-          chunk.delta.type === 'text_delta'
-        ) {
-          controller.enqueue(chunk.delta.text);
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const resetIdleTimer = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          controller.error(new Error(`Stream idle timeout after ${STREAM_IDLE_TIMEOUT_MS}ms`));
+        }, STREAM_IDLE_TIMEOUT_MS);
+      };
+
+      resetIdleTimer();
+      try {
+        for await (const chunk of stream) {
+          if (
+            chunk.type === 'content_block_delta' &&
+            chunk.delta.type === 'text_delta'
+          ) {
+            resetIdleTimer();
+            controller.enqueue(chunk.delta.text);
+          }
         }
+      } finally {
+        if (idleTimer) clearTimeout(idleTimer);
       }
       controller.close();
     },
