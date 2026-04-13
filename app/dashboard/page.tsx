@@ -10,9 +10,10 @@ import NotificationBell from '@/components/NotificationBell';
 import { maybeNotifyWelcome } from '@/lib/notifications';
 
 const ContextFeed = lazy(() => import('@/components/ContextFeed'));
-const VtxAiTab = lazy(() => import('@/components/VtxAiTab'));
-const WalletTab = lazy(() => import('@/components/WalletTab'));
-const ProfileTab = lazy(() => import('@/components/ProfileTab'));
+const Markets     = lazy(() => import('@/components/Markets'));
+const VtxAiTab    = lazy(() => import('@/components/VtxAiTab'));
+const WalletTab   = lazy(() => import('@/components/WalletTab'));
+const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 
 function TabSpinner() {
   return (
@@ -122,6 +123,7 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('home');
+  const [activeTab, setActiveTab] = useState<'context' | 'markets'>('context');
   const [menuOpen, setMenuOpen] = useState(false);
   const [marketStats, setMarketStats] = useState<{
     totalMarketCap: string; totalVolume: string; btcDominance: string;
@@ -183,7 +185,10 @@ export default function Dashboard() {
   const showHomeTabs = activeNav === 'home';
 
   const renderContent = () => {
-    if (activeNav === 'home') return <ContextFeed />;
+    if (activeNav === 'home') {
+      if (activeTab === 'markets') return <Markets />;
+      return <ContextFeed />;
+    }
     if (activeNav === 'vtxai') return <VtxAiTab />;
     if (activeNav === 'wallet') return <WalletTab />;
     if (activeNav === 'profile') return <ProfileTab />;
@@ -238,6 +243,25 @@ export default function Dashboard() {
               ))}
             </div>
 
+            {/* Context Feed / Market tab toggle */}
+            <div className="flex gap-1 p-1 bg-[#111827] border border-white/[0.06] rounded-xl mb-4">
+              {([
+                { id: 'context', label: 'Context Feed' },
+                { id: 'markets', label: 'Market' },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-[#0A1EFF] text-white shadow-[0_0_12px_rgba(10,30,255,0.35)]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </>
         )}
 
