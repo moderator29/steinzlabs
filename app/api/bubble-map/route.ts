@@ -37,6 +37,8 @@ interface RiskInfo {
 interface BubbleMapData {
   nodes: BubbleNode[];
   links: BubbleLink[];
+  mode: 'holders' | 'network' | 'clusters';
+  clusters?: Array<{ id: string; label: string; color: string; nodeIds: string[] }>;
   tokenInfo: {
     name: string;
     symbol: string;
@@ -61,6 +63,11 @@ const NODE_COLORS: Record<string, string> = {
   team: '#EC4899',
   scammer: '#EF4444',
   unknown: '#6B7280',
+};
+
+const TYPE_LABELS_SERVER: Record<string, string> = {
+  token: 'Token', exchange: 'Exchange', whale: 'Whale', contract: 'Contract',
+  unknown: 'Unknown', scammer: 'Scammer', dex: 'DEX', team: 'Team',
 };
 
 function classifyHolder(entity: string, labels: string[]): BubbleNode['type'] {
@@ -258,12 +265,36 @@ interface RawHolder {
   isScammer: boolean;
 }
 
+// ─── Connection Analysis (Wallet Network mode) ────────────────────────────────
+
+function buildWalletConnections(holders: BubbleNode[]): BubbleLink[] {
+  const links: BubbleLink[] = [];
+  // Heuristic: wallets with similar holding percentages (±0.5%) may be coordinated
+  for (let i = 0; i < holders.length; i++) {
+    for (let j = i + 1; j < holders.length; j++) {
+      const a = holders[i], b = holders[j];
+      // Same entity type (non-unknown) — likely related
+      if (a.type !== 'unknown' && a.type === b.type && a.type !== 'whale') {
+        links.push({ source: a.id, target: b.id, value: Math.min(a.percentage, b.percentage), direction: 'both' });
+        continue;
+      }
+      // Similar holding size — potential coordinated wallets
+      const diff = Math.abs(a.percentage - b.percentage);
+      if (diff < 0.3 && a.percentage > 0.5) {
+        links.push({ source: a.id, target: b.id, value: diff < 0.1 ? 2 : 1, direction: 'both' });
+      }
+    }
+  }
+  return links.slice(0, 60); // cap at 60 connections for readability
+}
+
 // ─── GET Handler ──────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
   const chain = searchParams.get('chain') || 'ethereum';
+  const mode = (searchParams.get('mode') || 'holders') as 'holders' | 'network' | 'clusters';
 
   if (!token) {
     return NextResponse.json({ error: 'Token address is required' }, { status: 400 });
@@ -309,7 +340,7 @@ export async function GET(request: Request) {
       // Try chain-specific real holder data — Birdeye for Solana (ALL holders), Helius fallback
       if (isSolana) {
         // Birdeye returns up to 100 holders with accurate balance data
-        const birdeyeHolders = await getBirdeyeHolders(token, 100, 'solana').catch(() => []);
+        const birdeyeHolders = await getBirdeyeHolders(token, 200, 'solana').catch(() => []);
         if (birdeyeHolders.length > 0) {
           const totalSupply = birdeyeHolders.reduce((s, h) => s + h.uiAmount, 0) || 1;
           rawHolders = birdeyeHolders.map(h => ({
@@ -410,12 +441,37 @@ export async function GET(request: Request) {
     };
 
     const nodes = [centerNode, ...holderNodes];
-    const links: BubbleLink[] = holderNodes.map(h => ({
-      source: 'center',
-      target: h.id,
-      value: h.percentage,
-      direction: 'both' as const,
-    }));
+
+    let links: BubbleLink[];
+    let clusters: Array<{ id: string; label: string; color: string; nodeIds: string[] }> | undefined;
+
+    if (mode === 'network') {
+      // Wallet Network mode: peer-to-peer connections + center links for top holders
+      const centerLinks = holderNodes.slice(0, 20).map(h => ({
+        source: 'center', target: h.id, value: h.percentage, direction: 'both' as const,
+      }));
+      const walletLinks = buildWalletConnections(holderNodes);
+      links = [...centerLinks, ...walletLinks];
+    } else if (mode === 'clusters') {
+      // Cluster View: group by entity type
+      links = holderNodes.map(h => ({
+        source: 'center', target: h.id, value: h.percentage, direction: 'both' as const,
+      }));
+      const groupMap: Record<string, BubbleNode[]> = {};
+      for (const h of holderNodes) {
+        (groupMap[h.type] = groupMap[h.type] || []).push(h);
+      }
+      clusters = Object.entries(groupMap).map(([type, members]) => ({
+        id: `cluster-${type}`,
+        label: TYPE_LABELS_SERVER[type] ?? type,
+        color: NODE_COLORS[type] ?? '#6B7280',
+        nodeIds: members.map(m => m.id),
+      }));
+    } else {
+      links = holderNodes.map(h => ({
+        source: 'center', target: h.id, value: h.percentage, direction: 'both' as const,
+      }));
+    }
 
     const risk = calculateRisk(holderNodes);
     const topHolderPct = holderNodes.reduce((sum, h) => sum + h.percentage, 0);
@@ -423,6 +479,8 @@ export async function GET(request: Request) {
     const bubbleData: BubbleMapData = {
       nodes,
       links,
+      clusters,
+      mode,
       tokenInfo: {
         name: tokenName,
         symbol: tokenSymbol,

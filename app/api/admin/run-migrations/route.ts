@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   const migrations = [
     'phase1-schema.sql',
     'phase2-missing-tables.sql',
+    'phase3-intelligence-tables.sql',
   ];
 
   const results: { file: string; ok: boolean; error?: string }[] = [];
