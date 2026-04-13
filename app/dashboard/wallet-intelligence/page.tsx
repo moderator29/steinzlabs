@@ -23,6 +23,8 @@ interface WalletData {
   address: string;
   totalBalanceUsd: string;
   txCount: number;
+  firstSeen?: string | null;
+  lastActive?: string | null;
   holdings: {
     symbol: string;
     name: string;
@@ -116,7 +118,7 @@ function PortfolioBubbleMap({ holdings, totalUsd }: { holdings: WalletData['hold
 // ─── Recent Transactions ───────────────────────────────────────────────────────
 function RecentTransactions({ transactions, chain, walletAddress }: { transactions: RecentTx[]; chain: string; walletAddress: string }) {
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? transactions : transactions.slice(0, 8);
+  const shown = expanded ? transactions : transactions.slice(0, 15);
   const explorerBase = chain === 'Solana' ? 'https://solscan.io/tx/' : 'https://etherscan.io/tx/';
 
   function formatTime(blockTime: string | null) {
@@ -191,7 +193,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
               </div>
             ))}
           </div>
-          {transactions.length > 8 && (
+          {transactions.length > 15 && (
             <button onClick={() => setExpanded(e => !e)}
               className="w-full mt-2 py-2 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
               {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show all {transactions.length} transactions</>}
@@ -632,6 +634,8 @@ export default function WalletIntelligencePage() {
                       { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: '#7C3AED' },
                       { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#0A1EFF' },
                       { label: 'Chain', value: walletData.chain, icon: Clock, color: '#F59E0B' },
+                      ...(walletData.firstSeen ? [{ label: 'First Seen', value: walletData.firstSeen, icon: Clock, color: '#10B981' }] : []),
+                      ...(walletData.lastActive ? [{ label: 'Last Active', value: walletData.lastActive, icon: Activity, color: '#F59E0B' }] : []),
                     ].map((stat) => (
                       <div key={stat.label} className="bg-[#0f1320] rounded-lg p-3">
                         <div className="flex items-center gap-1.5 mb-1">

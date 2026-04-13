@@ -79,6 +79,19 @@ interface TrendingCoin {
   dexUrl?: string;
 }
 
+interface CoinWorthWatching {
+  address: string;
+  symbol: string;
+  name: string;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  liquidity: number;
+  marketCap?: number;
+  holders?: number;
+  logoURI?: string;
+}
+
 interface DNAData {
   address: string;
   chain: string;
@@ -94,6 +107,7 @@ interface DNAData {
   riskClassification: string;
   aiAnalysis: AIAnalysis | null;
   recentTransactions: RecentTx[];
+  coinsWorthWatching?: CoinWorthWatching[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,10 +120,12 @@ function shortAddr(addr: string): string {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return 'Unknown';
+  // Already formatted (e.g. "Jan 1, 2024") — return as-is
+  if (/[A-Za-z]/.test(iso) && !iso.includes('T')) return iso;
   try {
     return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch {
-    return 'Unknown';
+    return iso;
   }
 }
 
@@ -401,7 +417,22 @@ export default function DNAAnalyzerPage() {
 
   useEffect(() => {
     if (!dna) return;
-    // Fetch trending tokens from DexScreener via internal proxy
+    // Use coinsWorthWatching from DNA analysis API — pre-filtered, excludes held tokens.
+    // Falls back to market trending only if the API returned nothing.
+    if (dna.coinsWorthWatching && dna.coinsWorthWatching.length > 0) {
+      setTrendingCoins(dna.coinsWorthWatching.map(c => ({
+        symbol: c.symbol,
+        name: c.name,
+        address: c.address,
+        price: String(c.price),
+        change24h: c.priceChange24h,
+        chain: dna.chain,
+        imageUri: c.logoURI,
+        dexUrl: undefined,
+      })));
+      return;
+    }
+    // Fallback: raw market trending (unfiltered)
     const chain = dna.chain.toLowerCase().includes('sol') ? 'solana' : 'ethereum';
     fetch(`/api/market?type=trending-tokens&chain=${chain}`)
       .then(r => r.json())
@@ -1041,7 +1072,7 @@ export default function DNAAnalyzerPage() {
                       <span className="ml-auto text-[10px] text-gray-600">{dna.recentTransactions.length} shown</span>
                     </div>
                     <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                      {dna.recentTransactions.slice(0, 20).map((tx, i) => {
+                      {dna.recentTransactions.map((tx, i) => {
                         const isOut = tx.from?.toLowerCase() === dna.address.toLowerCase();
                         const timeStr = tx.blockTime ? new Date(tx.blockTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
                         const typeColor = tx.type === 'erc20' || tx.type === 'transfer' ? '#0A1EFF' : tx.type === 'external' ? '#F59E0B' : '#6B7280';
