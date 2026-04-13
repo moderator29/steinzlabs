@@ -32,11 +32,11 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
         height: fullscreen ? window.innerHeight - 100 : height,
         layout: {
           background: { type: ColorType.Solid, color: 'transparent' },
-          textColor: '#6b7280',
+          textColor: '#9ca3af',
         },
         grid: {
-          vertLines: { color: 'rgba(255,255,255,0.04)' },
-          horzLines: { color: 'rgba(255,255,255,0.04)' },
+          vertLines: { color: 'rgba(255,255,255,0.03)' },
+          horzLines: { color: 'rgba(255,255,255,0.03)' },
         },
         crosshair: { mode: CrosshairMode.Normal },
         rightPriceScale: { borderVisible: false, textColor: '#6b7280' },
@@ -49,15 +49,6 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
         wickUpColor: '#22c55e', wickDownColor: '#ef4444',
       });
       candleSeries.setData(data);
-
-      if (volumeData?.length) {
-        const volSeries = chart.addHistogramSeries({
-          priceFormat: { type: 'volume' },
-          priceScaleId: 'volume',
-          scaleMargins: { top: 0.85, bottom: 0 },
-        });
-        volSeries.setData(volumeData);
-      }
 
       chart.timeScale().fitContent();
       chartRef.current = chart;

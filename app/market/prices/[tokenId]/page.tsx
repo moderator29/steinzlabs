@@ -34,16 +34,9 @@ export default function TokenDetailPage({ params }: { params: { tokenId: string 
   if (loading) return <LoadingSkeleton variant="header" />;
   if (error || !detail) return <ErrorState message={error ?? 'Token not found'} onRetry={() => router.back()} />;
 
-  const stats = [
-    { label: 'Rank', value: `#${detail.market_cap_rank}` },
-    { label: 'Market Cap', value: formatLargeNumber(md?.market_cap?.usd ?? 0) },
-    { label: 'FDV', value: md?.fully_diluted_valuation?.usd ? formatLargeNumber(md.fully_diluted_valuation.usd) : 'N/A' },
-    { label: '24H Volume', value: formatLargeNumber(md?.total_volume?.usd ?? 0) },
-    { label: '24H High', value: formatPrice(md?.high_24h?.usd ?? 0) },
-    { label: '24H Low', value: formatPrice(md?.low_24h?.usd ?? 0) },
-    { label: 'Circulating', value: md?.circulating_supply ? `${(md.circulating_supply / 1e6).toFixed(1)}M` : 'N/A' },
-    { label: 'ATH', value: `${formatPrice(md?.ath?.usd ?? 0)} (${formatPercent(md?.ath_change_percentage?.usd)})` },
-  ];
+  const athPct = md?.ath_change_percentage?.usd ?? 0;
+  const athProgress = Math.max(0, Math.min(100, 100 + athPct)); // 0% = AT ATH, going down
+  const volChange = md?.price_change_percentage_24h ?? 0; // proxy for volume direction
 
   return (
     <div className="space-y-4">
@@ -65,7 +58,7 @@ export default function TokenDetailPage({ params }: { params: { tokenId: string 
       </div>
 
       {/* Price */}
-      <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-4">
+      <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-4">
         <div className="flex items-baseline gap-3 mb-1">
           <span className="text-3xl font-bold text-white font-mono">{formatPrice(price)}</span>
           <PriceChangeDisplay value={change24h} size="lg" />
@@ -74,21 +67,77 @@ export default function TokenDetailPage({ params }: { params: { tokenId: string 
       </div>
 
       {/* Chart */}
-      <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-4">
+      <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <TimeframeSelector value={timeframe} onChange={setTimeframe} />
         </div>
         <CandlestickChart data={candles} volumeData={volume} height={380} loading={chartLoading} enableFullscreen />
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-3">
-            <p className="text-gray-500 text-xs mb-1">{s.label}</p>
-            <p className="text-white font-mono text-sm font-medium">{s.value}</p>
+      {/* KEY STATS */}
+      <div>
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">Key Stats</p>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Rank */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">RANK</p>
+            <p className="text-white font-bold text-base">#{detail.market_cap_rank ?? '—'}</p>
           </div>
-        ))}
+          {/* Market Cap */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">MARKET CAP</p>
+            <p className="text-white font-bold text-base font-mono">{formatLargeNumber(md?.market_cap?.usd ?? 0)}</p>
+          </div>
+          {/* FDV */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">FDV</p>
+            <p className="text-white font-bold text-base font-mono">
+              {md?.fully_diluted_valuation?.usd ? formatLargeNumber(md.fully_diluted_valuation.usd) : '= Market Cap'}
+            </p>
+          </div>
+          {/* Volume 24H with direction */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">VOLUME 24H</p>
+            <p className="text-white font-bold text-base font-mono">{formatLargeNumber(md?.total_volume?.usd ?? 0)}</p>
+            <p className={`text-xs font-semibold mt-0.5 ${volChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {volChange >= 0 ? '+' : ''}{volChange.toFixed(1)}%
+            </p>
+          </div>
+          {/* ATH with progress bar */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 col-span-2">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">ATH</p>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-white font-bold text-base font-mono">{formatPrice(md?.ath?.usd ?? 0)}</p>
+              <p className={`text-xs font-semibold ${athPct >= -5 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatPercent(athPct)} from ATH
+              </p>
+            </div>
+            <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${athPct >= -5 ? 'bg-emerald-400' : 'bg-red-400'}`}
+                style={{ width: `${athProgress}%` }}
+              />
+            </div>
+          </div>
+          {/* 24H High / Low */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">24H HIGH</p>
+            <p className="text-emerald-400 font-bold text-sm font-mono">{formatPrice(md?.high_24h?.usd ?? 0)}</p>
+          </div>
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">24H LOW</p>
+            <p className="text-red-400 font-bold text-sm font-mono">{formatPrice(md?.low_24h?.usd ?? 0)}</p>
+          </div>
+          {/* Circulating */}
+          <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 col-span-2">
+            <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">CIRCULATING SUPPLY</p>
+            <p className="text-white font-bold text-sm font-mono">
+              {md?.circulating_supply
+                ? `${md.circulating_supply.toLocaleString('en-US', { maximumFractionDigits: 0 })} ${detail.symbol.toUpperCase()}`
+                : 'No max supply'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
@@ -98,11 +147,11 @@ export default function TokenDetailPage({ params }: { params: { tokenId: string 
           Buy {detail.symbol.toUpperCase()}
         </button>
         <button onClick={() => setShowAlert(true)}
-          className="flex items-center gap-2 px-4 py-3 bg-[#141824] border border-[#1E2433] text-gray-300 hover:text-white rounded-lg transition-colors">
+          className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-white/[0.06] text-gray-300 hover:text-white rounded-lg transition-colors">
           <Bell size={14} /> Alert
         </button>
         <button onClick={() => router.push(`/dashboard/vtx-ai?q=Analyze+token+${tokenId}`)}
-          className="flex items-center gap-2 px-4 py-3 bg-[#141824] border border-[#1E2433] text-gray-300 hover:text-white rounded-lg transition-colors">
+          className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-white/[0.06] text-gray-300 hover:text-white rounded-lg transition-colors">
           <ExternalLink size={14} /> VTX Analysis
         </button>
       </div>
