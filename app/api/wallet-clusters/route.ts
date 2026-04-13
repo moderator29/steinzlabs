@@ -11,7 +11,7 @@ const supabase = createClient(
 );
 
 async function fetchTransferData(addresses: string[]): Promise<{ transfers: TransferEdge[]; trades: TokenTradeEvent[] }> {
-  const key = process.env.HELIUS_API_KEY ?? process.env.HELIUS_API_KEY_2 ?? '';
+  const key = process.env.HELIUS_API_KEY_1 ?? process.env.HELIUS_API_KEY_2 ?? '';
   if (!key) return { transfers: [], trades: [] };
 
   const transfers: TransferEdge[] = [];
