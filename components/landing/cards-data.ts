@@ -1,5 +1,5 @@
 import {
-  Brain, Shield, Zap, Network, TrendingUp, Crosshair, BarChart2,
+  Brain, Shield, Zap, Network, TrendingUp, BarChart2,
   Fingerprint, Target, type LucideIcon,
 } from 'lucide-react';
 import type { BadgeType } from './ContainerBadge';
