@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
 import NotificationBell from '@/components/NotificationBell';
 import { maybeNotifyWelcome } from '@/lib/notifications';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
@@ -226,7 +227,7 @@ export default function Dashboard() {
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
             </button>
-            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7 flex-shrink-0 rounded-lg" style={{ objectFit: 'contain' }} />
+            <SteinzLogo size={28} animated={false} />
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
