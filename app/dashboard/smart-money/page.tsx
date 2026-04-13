@@ -1,43 +1,50 @@
 'use client';
 
-import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, ExternalLink, Activity, DollarSign, Target, Shield, Clock, ChevronRight, Search, Filter, Users, Zap, Loader2, RefreshCw } from 'lucide-react';
+import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
-interface SmartTrade {
-  action: string;
-  token: string;
-  amount: string;
-  time: string;
-  chain: string;
-  wallet?: string;
-}
+type WalletArchetype = 'DIAMOND_HANDS' | 'SCALPER' | 'DEGEN' | 'WHALE_FOLLOWER' | 'HOLDER' | 'INACTIVE' | 'NEW_WALLET';
+
+interface SmartTrade { action: string; token: string; amount: string; time: string; chain: string; wallet?: string }
 
 interface SmartWallet {
-  id: string;
-  address: string;
-  shortAddress: string;
-  name: string;
-  totalVolume: number;
-  totalVolumeStr: string;
-  recentTrades: SmartTrade[];
-  chain: string;
-  chains: string[];
-  lastActive: string;
-  rank: number;
-  tags: string[];
-  winRate: number;
-  pnl: string;
-  pnlChange: number;
-  trades: number;
-  avgHold: string;
-  bestTrade: string;
+  id: string; address: string; shortAddress: string; name: string;
+  totalVolume: number; totalVolumeStr: string; recentTrades: SmartTrade[];
+  chain: string; chains: string[]; lastActive: string; rank: number;
+  tags: string[]; winRate: number; pnl: string; pnlChange: number;
+  trades: number; avgHold: string; bestTrade: string;
+  archetype?: WalletArchetype; weeklyPnlChange?: number; isRiser?: boolean;
+}
+
+interface ConvergenceSignal { token: string; symbol: string; walletCount: number; totalVolume: string; timeWindow: string }
+
+const ARCHETYPE_COLORS: Record<WalletArchetype, string> = {
+  DIAMOND_HANDS: '#60A5FA', SCALPER: '#F59E0B', DEGEN: '#EF4444',
+  WHALE_FOLLOWER: '#8B5CF6', HOLDER: '#10B981', INACTIVE: '#6B7280', NEW_WALLET: '#06B6D4',
+};
+const ARCHETYPE_EMOJI: Record<WalletArchetype, string> = {
+  DIAMOND_HANDS: '💎', SCALPER: '⚡', DEGEN: '🎲', WHALE_FOLLOWER: '🐋', HOLDER: '🏦', INACTIVE: '💤', NEW_WALLET: '🆕',
+};
+
+type SortKey = 'rank' | 'winRate' | 'pnlChange' | 'totalVolume' | 'trades';
+
+function ArchetypeBadge({ archetype }: { archetype: WalletArchetype }) {
+  const color = ARCHETYPE_COLORS[archetype];
+  return (
+    <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold border"
+      style={{ color, borderColor: color + '40', background: color + '15' }}>
+      {ARCHETYPE_EMOJI[archetype]} {archetype.replace('_', ' ')}
+    </span>
+  );
 }
 
 export default function SmartMoneyPage() {
   const router = useRouter();
   const [wallets, setWallets] = useState<SmartWallet[]>([]);
   const [recentMoves, setRecentMoves] = useState<SmartTrade[]>([]);
+  const [convergence, setConvergence] = useState<ConvergenceSignal[]>([]);
+  const [weeklyRisers, setWeeklyRisers] = useState<SmartWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -46,6 +53,8 @@ export default function SmartMoneyPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedWallet, setExpandedWallet] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
 
   // Load watched wallets from localStorage
   useEffect(() => {
@@ -75,12 +84,14 @@ export default function SmartMoneyPage() {
     try {
       const res = await fetch('/api/smart-money');
       if (!res.ok) throw new Error('Failed to fetch smart money data');
-      const data = await res.json();
-      setWallets(data.wallets || []);
-      setRecentMoves(data.recentMoves || []);
+      const data = await res.json() as { wallets: SmartWallet[]; recentMoves: SmartTrade[]; convergence?: ConvergenceSignal[]; weeklyRisers?: SmartWallet[] };
+      setWallets(data.wallets ?? []);
+      setRecentMoves(data.recentMoves ?? []);
+      setConvergence(data.convergence ?? []);
+      setWeeklyRisers(data.weeklyRisers ?? []);
       setLastUpdated(new Date());
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -92,18 +103,22 @@ export default function SmartMoneyPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const filteredWallets = wallets.filter(w => {
-    if (filter === 'watching' && !watching.includes(w.id)) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        w.name.toLowerCase().includes(q) ||
-        w.address.toLowerCase().includes(q) ||
-        w.tags.some(t => t.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  const filteredWallets = wallets
+    .filter(w => {
+      if (filter === 'watching' && !watching.includes(w.id)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return w.name.toLowerCase().includes(q) || w.address.toLowerCase().includes(q) || w.tags.some(t => t.toLowerCase().includes(q));
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortKey === 'winRate') return b.winRate - a.winRate;
+      if (sortKey === 'pnlChange') return b.pnlChange - a.pnlChange;
+      if (sortKey === 'totalVolume') return b.totalVolume - a.totalVolume;
+      if (sortKey === 'trades') return b.trades - a.trades;
+      return a.rank - b.rank;
+    });
 
   const totalWatching = watching.length;
   const watchedWallets = wallets.filter(w => watching.includes(w.id));
@@ -194,6 +209,96 @@ export default function SmartMoneyPage() {
             <div className="text-lg font-bold">{loading ? '...' : `${avgWin}%`}</div>
             <div className="text-[9px] text-gray-600 uppercase">Avg Win</div>
           </div>
+        </div>
+
+        {/* Convergence Banner */}
+        {convergence.length > 0 && (
+          <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+              <span className="text-xs font-bold text-[#F59E0B]">Smart Money Convergence Detected</span>
+            </div>
+            <div className="space-y-1.5">
+              {convergence.map((c, i) => (
+                <div key={i} className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-200 font-semibold">{c.symbol}</span>
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <span><span className="text-[#F59E0B] font-bold">{c.walletCount}</span> wallets</span>
+                    <span>{c.totalVolume} · {c.timeWindow}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Top-3 Champion Cards */}
+        {!loading && wallets.slice(0, 3).length === 3 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="w-3.5 h-3.5 text-[#F59E0B]" />
+              <span className="text-xs font-bold text-gray-300">Top Performers</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {wallets.slice(0, 3).map((w, i) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                const colors = ['#F59E0B', '#9CA3AF', '#CD7F32'];
+                return (
+                  <div key={w.id} className="bg-[#0D1117] rounded-xl p-3 border text-center"
+                    style={{ borderColor: colors[i] + '30' }}>
+                    <div className="text-xl mb-1">{medals[i]}</div>
+                    <div className="text-[10px] font-bold text-white truncate">{w.name}</div>
+                    <div className="text-xs font-bold mt-1" style={{ color: colors[i] }}>{w.winRate}%</div>
+                    <div className="text-[9px] text-gray-600">win rate</div>
+                    {w.archetype && <div className="mt-1"><ArchetypeBadge archetype={w.archetype} /></div>}
+                    <button onClick={() => setPaperTrade(w)}
+                      className="mt-2 w-full text-[9px] py-1 rounded-lg font-bold transition-colors"
+                      style={{ background: colors[i] + '20', color: colors[i] }}>
+                      Paper Trade
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Risers */}
+        {weeklyRisers.length > 0 && (
+          <div className="bg-[#0D1117] rounded-2xl border border-white/[0.04] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2">
+              <Flame className="w-3.5 h-3.5 text-[#EF4444]" />
+              <span className="text-xs font-bold">Weekly Risers</span>
+            </div>
+            <div className="divide-y divide-white/[0.03]">
+              {weeklyRisers.map((w) => (
+                <div key={w.id} className="px-4 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-[#EF4444]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#EF4444]">#{w.rank}</div>
+                    <div>
+                      <div className="text-[11px] font-semibold">{w.name}</div>
+                      {w.archetype && <ArchetypeBadge archetype={w.archetype} />}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-[#10B981]">+{(w.weeklyPnlChange ?? 0).toFixed(1)}%</div>
+                    <div className="text-[9px] text-gray-600">this week</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard Sort Controls */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <SortAsc className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+          {(['rank', 'winRate', 'pnlChange', 'totalVolume', 'trades'] as SortKey[]).map(k => (
+            <button key={k} onClick={() => setSortKey(k)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.05]'}`}>
+              {k === 'pnlChange' ? 'PnL%' : k === 'totalVolume' ? 'Volume' : k === 'winRate' ? 'Win Rate' : k.charAt(0).toUpperCase() + k.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Recent Moves */}
@@ -315,13 +420,18 @@ export default function SmartMoneyPage() {
                     </span>
                   </div>
 
-                  <div className="flex gap-1.5 mt-2 flex-wrap">
+                  <div className="flex gap-1.5 mt-2 flex-wrap items-center">
+                    {wallet.archetype && <ArchetypeBadge archetype={wallet.archetype} />}
                     {wallet.chains.map(c => (
                       <span key={c} className="text-[8px] px-1.5 py-0.5 bg-white/[0.04] rounded font-mono text-gray-500">{c}</span>
                     ))}
                     {wallet.tags.map(t => (
                       <span key={t} className="text-[8px] px-1.5 py-0.5 bg-[#0A1EFF]/[0.06] rounded text-[#0A1EFF]/70">{t}</span>
                     ))}
+                    <button onClick={e => { e.stopPropagation(); setPaperTrade(wallet); }}
+                      className="ml-auto text-[9px] px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg font-semibold">
+                      Paper Trade
+                    </button>
                   </div>
                 </div>
 
@@ -385,6 +495,55 @@ export default function SmartMoneyPage() {
           </div>
         )}
       </div>
+
+      {/* Paper Trading Modal */}
+      {paperTrade && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={e => e.target === e.currentTarget && setPaperTrade(null)}>
+          <div className="w-full sm:max-w-sm bg-[#0D1117] border border-white/[0.08] rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm font-bold text-white">Paper Trade — {paperTrade.name}</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">Simulate copying this wallet's strategy</div>
+              </div>
+              <button onClick={() => setPaperTrade(null)} className="p-1.5 hover:bg-white/[0.06] rounded-lg">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-[#060A12] rounded-xl p-3">
+                  <div className="text-xs font-bold text-[#10B981]">{paperTrade.winRate}%</div>
+                  <div className="text-[9px] text-gray-600">Win Rate</div>
+                </div>
+                <div className="bg-[#060A12] rounded-xl p-3">
+                  <div className={`text-xs font-bold ${paperTrade.pnlChange >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                    {paperTrade.pnlChange >= 0 ? '+' : ''}{paperTrade.pnlChange}%
+                  </div>
+                  <div className="text-[9px] text-gray-600">PnL Change</div>
+                </div>
+              </div>
+              <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 text-[11px] text-[#F59E0B]">
+                <ArrowUpRight className="w-3.5 h-3.5 inline mr-1" />
+                Paper trading simulates copying without real funds. Results are for educational purposes only.
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-[10px] text-gray-500 font-semibold uppercase">Simulated Allocation</div>
+                {['$100', '$500', '$1,000'].map(amt => (
+                  <button key={amt} className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-xs transition-colors">
+                    <span className="text-gray-300">{amt} simulated capital</span>
+                    <span className="text-[#10B981] font-semibold">
+                      +{(parseFloat(amt.replace(/[^0-9]/g, '')) * (paperTrade.winRate / 100) * 0.05).toFixed(2)} est.
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setPaperTrade(null)}
+                className="w-full py-2.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-xs font-bold">
+                Start Paper Simulation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
