@@ -40,13 +40,7 @@ export async function GET(
       open: o, high: h, low: l, close: c,
     }));
 
-    const volume: VolumeBar[] = candles.map((c) => ({
-      time: c.time,
-      value: Math.abs(c.close - c.open) * 1000, // approximate volume
-      color: c.close >= c.open ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)',
-    }));
-
-    return NextResponse.json({ candles, volume }, { headers: { 'Cache-Control': 'public, max-age=30' } });
+    return NextResponse.json({ candles, volume: [] }, { headers: { 'Cache-Control': 'public, max-age=30' } });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
   }
