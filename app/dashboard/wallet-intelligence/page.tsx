@@ -46,21 +46,29 @@ interface WalletData {
 const BUBBLE_COLORS = ['#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#0A1EFF', '#06B6D4', '#8B5CF6', '#F97316', '#EC4899', '#14B8A6'];
 
 function PortfolioBubbleMap({ holdings, totalUsd }: { holdings: WalletData['holdings']; totalUsd: number }) {
-  const withValue = holdings.filter(h => h.valueUsd && parseFloat(h.valueUsd) > 0).slice(0, 8);
+  // Show up to 12 tokens in bubble map — sorted by value, no artificial cap on input
+  const withValue = holdings
+    .filter(h => h.valueUsd && parseFloat(h.valueUsd) > 0)
+    .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'))
+    .slice(0, 12);
   if (withValue.length === 0) return null;
   const total = totalUsd > 0 ? totalUsd : withValue.reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
-  const sorted = [...withValue].sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+  const sorted = [...withValue];
   const withPct = sorted.map(h => ({ ...h, pct: total > 0 ? parseFloat(h.valueUsd || '0') / total : 1 / withValue.length }));
-  const W = 340, H = 220, MAX_R = 90, MIN_R = 22;
+  const W = 340, H = 240, MAX_R = 85, MIN_R = 18;
   const POSITIONS = [
-    { cx: W * 0.5, cy: H * 0.48 },
-    { cx: W * 0.77, cy: H * 0.35 },
-    { cx: W * 0.22, cy: H * 0.55 },
-    { cx: W * 0.72, cy: H * 0.72 },
-    { cx: W * 0.18, cy: H * 0.28 },
-    { cx: W * 0.52, cy: H * 0.14 },
-    { cx: W * 0.85, cy: H * 0.6 },
-    { cx: W * 0.38, cy: H * 0.82 },
+    { cx: W * 0.5,  cy: H * 0.42 },
+    { cx: W * 0.77, cy: H * 0.30 },
+    { cx: W * 0.22, cy: H * 0.50 },
+    { cx: W * 0.72, cy: H * 0.68 },
+    { cx: W * 0.18, cy: H * 0.24 },
+    { cx: W * 0.52, cy: H * 0.12 },
+    { cx: W * 0.85, cy: H * 0.56 },
+    { cx: W * 0.38, cy: H * 0.80 },
+    { cx: W * 0.62, cy: H * 0.88 },
+    { cx: W * 0.10, cy: H * 0.70 },
+    { cx: W * 0.90, cy: H * 0.18 },
+    { cx: W * 0.30, cy: H * 0.10 },
   ];
   return (
     <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">

@@ -6,9 +6,9 @@ import { getTokenPairs } from '@/lib/services/dexscreener';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import {
   getSolanaSOLBalance,
-  getSolanaWalletTokens,
   getSolanaTransactions,
 } from '@/lib/services/helius';
+import { getWalletTokenList } from '@/lib/services/birdeye';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -79,13 +79,12 @@ function buildAiAnalysisContext(
   txCount: number
 ): string {
   const tokenList = holdings
-    .slice(0, 15)
+    .slice(0, 20)
     .map(h => `${h.symbol}: ${h.balance}${h.valueUsd ? ` ($${h.valueUsd})` : ''}`)
     .join(', ');
-  return `Analyze this wallet: ${address} on ${chain}. Holdings: ${tokenList}. Total value: $${totalBalanceUsd}. Transaction count: ${txCount}. Give me: risk assessment, notable patterns, is this wallet suspicious or legitimate, and what actions the wallet owner should take.`;
+  return `Analyze this wallet: ${address} on ${chain}. Holdings (${holdings.length} total): ${tokenList}. Total value: $${totalBalanceUsd}. Transaction count: ${txCount}. Give me: risk assessment, notable patterns, is this wallet suspicious or legitimate, and what actions the wallet owner should take.`;
 }
 
-/** Convert TokenSecurityResult from service layer to ContractSecurity UI shape. */
 function toContractSecurity(sec: TokenSecurityResult): ContractSecurity {
   const flags: SecurityFlag[] = sec.checks
     .filter(c => c.status === 'fail')
@@ -108,7 +107,6 @@ function toContractSecurity(sec: TokenSecurityResult): ContractSecurity {
   };
 }
 
-/** Resolve DexScreener image for a token address (non-blocking). */
 async function resolveLogoFromDex(contractAddress: string): Promise<string | null> {
   try {
     const pairs = await getTokenPairs(contractAddress);
@@ -123,18 +121,16 @@ async function resolveLogoFromDex(contractAddress: string): Promise<string | nul
 async function getEvmData(address: string, chain: string) {
   const cfg = EVM_CHAIN_CONFIG[chain] ?? EVM_CHAIN_CONFIG.ethereum;
 
-  // Parallel: native balance + transfers + native price
   const [nativeBalStr, fromTxs, toTxs, nativePrice] = await Promise.all([
     getEthBalance(address, chain).catch(() => '0'),
-    getAssetTransfers(address, chain, 'from', 20).catch(() => []),
-    getAssetTransfers(address, chain, 'to', 20).catch(() => []),
+    getAssetTransfers(address, chain, 'from', 100).catch(() => []),
+    getAssetTransfers(address, chain, 'to', 100).catch(() => []),
     getTokenPrice(cfg.priceId).catch(() => cfg.fallbackPrice),
   ]);
 
   const nativeBalance = parseFloat(nativeBalStr);
   const nativeValueUsd = nativeBalance * nativePrice;
 
-  // ERC-20 token balances + metadata
   let tokenDetails: Array<{
     symbol: string; name: string; balance: number;
     valueUsd: string | null; contractAddress: string; logoUrl: string | null;
@@ -142,7 +138,8 @@ async function getEvmData(address: string, chain: string) {
 
   try {
     const rawBalances = await getTokenBalances(address, chain);
-    const nonZero = rawBalances.filter(b => b.tokenBalance && b.tokenBalance !== '0').slice(0, 30);
+    // No artificial limit — fetch all non-zero balances
+    const nonZero = rawBalances.filter(b => b.tokenBalance && b.tokenBalance !== '0');
 
     const metaResults = await Promise.allSettled(
       nonZero.map(async b => {
@@ -168,7 +165,6 @@ async function getEvmData(address: string, chain: string) {
       .map(r => r.value);
   } catch {}
 
-  // Resolve missing logos from DexScreener
   await Promise.allSettled(
     tokenDetails
       .filter(t => !t.logoUrl)
@@ -178,11 +174,15 @@ async function getEvmData(address: string, chain: string) {
       })
   );
 
-  // Merge + dedupe recent transactions
   const allTxs = [...fromTxs, ...toTxs];
   const seenHashes = new Set<string>();
-  const recentTransactions = allTxs
-    .filter(t => { if (seenHashes.has(t.hash)) return false; seenHashes.add(t.hash); return true; })
+  const dedupedTxs = allTxs.filter(t => {
+    if (seenHashes.has(t.hash)) return false;
+    seenHashes.add(t.hash);
+    return true;
+  });
+
+  const recentTransactions = dedupedTxs
     .sort((a, b) => (b.blockNum || '').localeCompare(a.blockNum || ''))
     .slice(0, 30)
     .map(t => ({
@@ -215,7 +215,7 @@ async function getEvmData(address: string, chain: string) {
     })),
   ];
 
-  const txCount = fromTxs.length + toTxs.length;
+  const txCount = dedupedTxs.length;
   const aiAnalysisContext = buildAiAnalysisContext(address, cfg.chainName, holdings, nativeValueUsd.toFixed(2), txCount);
 
   return {
@@ -238,52 +238,63 @@ async function getEvmData(address: string, chain: string) {
 }
 
 // ─── Solana Data Fetcher ──────────────────────────────────────────────────────
+// Uses Birdeye wallet token list as PRIMARY — returns ALL tokens with USD values in one call.
+// Falls back to Helius per-account approach only if Birdeye fails.
 
 async function getSolData(address: string) {
-  const [solBalance, splTokens, txs, solPrice] = await Promise.all([
-    getSolanaSOLBalance(address).catch(() => 0),
-    getSolanaWalletTokens(address).catch(() => []),
-    getSolanaTransactions(address, 30).catch(() => []),
-    getTokenPrice('solana').catch(() => 130),
+  // Step 1: Parallel fetch — wallet tokens (Birdeye), SOL balance, and transactions (Helius)
+  const [birdeyeTokensResult, solBalanceResult, txsResult] = await Promise.allSettled([
+    getWalletTokenList(address, 'solana'),
+    getSolanaSOLBalance(address),
+    getSolanaTransactions(address, 100), // 100 transactions for accurate timestamps
   ]);
 
+  const solBalance = solBalanceResult.status === 'fulfilled' ? solBalanceResult.value : 0;
+  const txs = txsResult.status === 'fulfilled' ? txsResult.value : [];
+
+  console.log(`[WalletIntel] Helius transactions: ${txs.length} for ${address}`);
+
+  // Step 2: Get SOL price
+  const solPrice = await getTokenPrice('solana').catch(() => 170);
   const solValueUsd = solBalance * solPrice;
 
-  // Fetch price + metadata for each SPL token via DexScreener
-  const tokenResults = await Promise.allSettled(
-    splTokens.slice(0, 30).map(async t => {
-      try {
-        const pairs = await getTokenPairs(t.mint);
-        const top = pairs[0];
-        if (!top) return null;
-        const priceUsd = parseFloat(String(top.priceUsd ?? '0'));
-        const valueUsd = t.uiAmount * priceUsd;
-        const symbol = top.baseToken.symbol;
-        return {
-          symbol,
-          name: top.baseToken.name,
-          balance: t.uiAmount > 1000 ? t.uiAmount.toFixed(0) : t.uiAmount.toFixed(4),
-          valueUsd: valueUsd > 0 ? valueUsd.toFixed(2) : null,
-          contractAddress: t.mint,
-          logoUrl: top.info?.imageUrl ?? KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] ?? null,
-        };
-      } catch { return null; }
-    })
-  );
+  // Step 3: Build holdings from Birdeye wallet token list (no limits)
+  let tokenHoldings: Array<{
+    symbol: string; name: string; balance: string;
+    valueUsd: string | null; contractAddress: string | null; logoUrl: string | null;
+  }> = [];
 
   let totalTokenValueUsd = 0;
-  const tokenHoldings = tokenResults
-    .filter((r): r is PromiseFulfilledResult<NonNullable<ReturnType<typeof tokenResults[number] extends PromiseFulfilledResult<infer V> ? () => V : never>>> =>
-      r.status === 'fulfilled' && r.value !== null)
-    .map(r => {
-      const t = (r as PromiseFulfilledResult<{
-        symbol: string; name: string; balance: string;
-        valueUsd: string | null; contractAddress: string; logoUrl: string | null;
-      }>).value;
-      if (t.valueUsd) totalTokenValueUsd += parseFloat(t.valueUsd);
-      return t;
-    })
-    .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+
+  if (birdeyeTokensResult.status === 'fulfilled') {
+    const { items } = birdeyeTokensResult.value;
+    console.log(`[WalletIntel] Birdeye returned ${items.length} tokens for ${address}`);
+
+    // Filter out zero-value dust and SOL (we handle SOL separately)
+    const validTokens = items.filter(t =>
+      t.uiAmount > 0 &&
+      t.valueUsd > 0 &&
+      t.address !== 'So11111111111111111111111111111111111111112' // exclude wrapped SOL
+    );
+
+    // Sort by USD value descending — all tokens, no slice
+    validTokens.sort((a, b) => b.valueUsd - a.valueUsd);
+
+    tokenHoldings = validTokens.map(t => {
+      totalTokenValueUsd += t.valueUsd;
+      return {
+        symbol: t.symbol || t.address.slice(0, 6),
+        name: t.name || t.symbol || 'SPL Token',
+        balance: t.uiAmount > 1000 ? t.uiAmount.toFixed(0) : t.uiAmount.toFixed(4),
+        valueUsd: t.valueUsd.toFixed(2),
+        contractAddress: t.address,
+        logoUrl: t.logoURI || null,
+      };
+    });
+  } else {
+    // Birdeye failed — log real error, return empty token list (not fake data)
+    console.error('[WalletIntel] Birdeye wallet token list failed:', birdeyeTokensResult.reason);
+  }
 
   const totalBalanceUsd = solValueUsd + totalTokenValueUsd;
 
@@ -299,6 +310,20 @@ async function getSolData(address: string) {
     ...tokenHoldings,
   ];
 
+  // Step 4: Real TX count and timestamps from Helius transactions
+  const txCount = txs.length;
+  const timestamps = txs
+    .map(tx => tx.timestamp)
+    .filter((t): t is number => typeof t === 'number' && t > 0)
+    .sort((a, b) => a - b);
+
+  const firstSeen = timestamps.length > 0
+    ? new Date(timestamps[0] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : null;
+  const lastActive = timestamps.length > 0
+    ? new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : null;
+
   const recentTransactions = txs.slice(0, 30).map(tx => ({
     hash: tx.signature,
     blockTime: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : null,
@@ -311,7 +336,7 @@ async function getSolData(address: string) {
     slot: tx.slot,
   }));
 
-  const aiAnalysisContext = buildAiAnalysisContext(address, 'Solana', holdings, totalBalanceUsd.toFixed(2), txs.length);
+  const aiAnalysisContext = buildAiAnalysisContext(address, 'Solana', holdings, totalBalanceUsd.toFixed(2), txCount);
 
   return {
     chain: 'Solana',
@@ -319,7 +344,9 @@ async function getSolData(address: string) {
     solBalance: solBalance.toFixed(4),
     solValueUsd: solValueUsd.toFixed(2),
     totalBalanceUsd: totalBalanceUsd.toFixed(2),
-    txCount: txs.length,
+    txCount,
+    firstSeen,
+    lastActive,
     holdings,
     tokenCount: tokenHoldings.length,
     explorerUrl: 'https://solscan.io',
@@ -357,7 +384,7 @@ export async function GET(request: Request) {
       walletData = await getEvmData(address, chain);
     }
 
-    // GoPlus security scan for top EVM token holdings (non-blocking)
+    // GoPlus security scan for top token holdings (non-blocking)
     const contractSecurityMap: Record<string, ContractSecurity | null> = {};
     if (detectedType === 'EVM') {
       const holdings = (walletData.holdings as Array<{ contractAddress: string | null }>) ?? [];
