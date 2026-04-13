@@ -1,112 +1,96 @@
-import { Code, Lock, AlertTriangle } from 'lucide-react';
+import { Bell, Zap, Shield, Smartphone, Clock, Settings } from 'lucide-react';
 
-const AUTH_HEADERS = [
-  { header: 'Authorization', value: 'Bearer <supabase_access_token>', desc: 'Required for all protected endpoints' },
-  { header: 'Content-Type', value: 'application/json', desc: 'Required for POST/PUT requests' },
-  { header: 'x-admin-token', value: '<admin_bearer_token>', desc: 'Admin-only routes require this header additionally' },
+const ALERT_TYPES = [
+  { icon: Zap, color: '#F59E0B', title: 'Price Alerts', desc: 'Set a target price for any token. You will be notified the moment it crosses your threshold — above or below.' },
+  { icon: Bell, color: '#0A1EFF', title: 'Whale Movement Alerts', desc: 'Get notified when a watched whale wallet makes a transaction above your configured USD threshold (min $10K).' },
+  { icon: Shield, color: '#EF4444', title: 'Security Alerts', desc: 'Instant notification when a token in your portfolio drops below a Trust Score threshold or a new risk is detected.' },
+  { icon: Zap, color: '#10B981', title: 'Smart Money Alerts', desc: 'Alert when 2+ smart money wallets buy the same token — the convergence signal delivered to your device.' },
+  { icon: Bell, color: '#8B5CF6', title: 'Trend Alerts', desc: 'Notified when a monitored on-chain metric (TVL, stablecoin flow, active addresses) moves more than 10% in 24 hours.' },
 ];
 
-const ENDPOINTS = [
-  { method: 'GET', path: '/api/intelligence/holders/:address', auth: 'Bearer', desc: 'Full holder intelligence report for token' },
-  { method: 'GET', path: '/api/smart-money', auth: 'Bearer', desc: 'Smart money wallet feed with filters' },
-  { method: 'POST', path: '/api/swap/quote', auth: 'Bearer', desc: 'Fetch best swap quote across DEXs' },
-  { method: 'POST', path: '/api/swap/execute', auth: 'Bearer', desc: 'Execute swap transaction' },
-  { method: 'GET', path: '/api/portfolio', auth: 'Bearer', desc: 'Portfolio positions for wallet address' },
-  { method: 'GET', path: '/api/security', auth: 'Bearer', desc: 'Shadow Guardian token security scan' },
-  { method: 'GET', path: '/api/mev-protection', auth: 'Bearer', desc: 'MEV risk score for pending swap' },
-  { method: 'POST', path: '/api/auth/verify-captcha', auth: 'None', desc: 'Server-side Cloudflare Turnstile verification' },
+const PUSH_STEPS = [
+  { n: '1', title: 'Enable in Settings', desc: 'Go to Settings → Notifications and click "Enable Push Notifications". Your browser will ask for permission.' },
+  { n: '2', title: 'Grant permission', desc: 'Accept the browser permission prompt. This allows the platform to send you alerts even when the tab is closed.' },
+  { n: '3', title: 'Configure categories', desc: 'Choose which alert types you want as push notifications — price, whale, security, smart money, or trends.' },
+  { n: '4', title: 'Set quiet hours', desc: 'Configure a quiet window (e.g. 11pm–7am) to pause non-critical alerts while you sleep.' },
 ];
-
-const RATE_LIMITS = [
-  { tier: 'Free', limit: '100 req/hour', scope: 'Per user' },
-  { tier: 'Pro', limit: '1,000 req/hour', scope: 'Per user' },
-  { tier: 'Institutional', limit: '10,000 req/hour', scope: 'Per account' },
-  { tier: 'Admin', limit: 'Unlimited', scope: 'Platform' },
-];
-
-const METHOD_COLORS: Record<string, string> = {
-  GET: 'text-green-400 bg-green-400/10',
-  POST: 'text-blue-400 bg-blue-400/10',
-  PUT: 'text-yellow-400 bg-yellow-400/10',
-  DELETE: 'text-red-400 bg-red-400/10',
-};
 
 export function DocsSection10() {
   return (
-    <section id="api-reference" className="mb-14 scroll-mt-24">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-4xl font-bold text-[#0A1EFF]/15 font-mono select-none">10</span>
-        <h2 className="text-2xl font-bold text-white">API Reference</h2>
+    <section id="alerts-notifications" className="mb-16 scroll-mt-20">
+      <div className="flex items-baseline gap-3 mb-1">
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">10</span>
+        <h2 className="text-xl sm:text-2xl font-bold text-white">Alerts & Notifications</h2>
       </div>
-      <p className="text-gray-400 text-sm leading-relaxed mb-6 ml-12">
-        All API routes are Next.js App Router route handlers. Authentication uses Supabase JWT tokens. Base URL: your deployment domain.
+      <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
+        STEINZ LABS keeps you informed without keeping you glued to a screen. Configure price alerts, whale movement notifications, security events, and trend signals — delivered via push notification, in-app, or email.
       </p>
 
-      <div className="ml-12 space-y-6">
-        <div id="api-auth">
-          <h3 className="text-sm font-semibold text-white mb-3">Authentication</h3>
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[#1E2433]">
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Header</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Value</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {AUTH_HEADERS.map(h => (
-                  <tr key={h.header} className="border-b border-[#1E2433] last:border-0">
-                    <td className="px-3 py-2 font-mono text-[#0A1EFF]">{h.header}</td>
-                    <td className="px-3 py-2 font-mono text-gray-300 text-[10px]">{h.value}</td>
-                    <td className="px-3 py-2 text-gray-400">{h.desc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="api-endpoints">
-          <h3 className="text-sm font-semibold text-white mb-3">Endpoints</h3>
-          <div className="space-y-1.5">
-            {ENDPOINTS.map(e => (
-              <div key={e.path} className="flex items-center gap-3 bg-[#141824] border border-[#1E2433] rounded-xl p-3">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono flex-shrink-0 w-10 text-center ${METHOD_COLORS[e.method] ?? 'text-gray-400 bg-gray-400/10'}`}>{e.method}</span>
-                <code className="text-xs font-mono text-gray-300 flex-1">{e.path}</code>
-                <span className="text-[10px] text-gray-500 flex-shrink-0">{e.desc}</span>
+      {/* Alert types */}
+      <div id="price-alerts" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Bell className="w-4 h-4 text-[#0A1EFF]" />Alert Types
+        </h3>
+        <div className="space-y-3">
+          {ALERT_TYPES.map(({ icon: Icon, color, title, desc }) => (
+            <div key={title} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: color + '20' }}>
+                <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
-            ))}
-          </div>
+              <div>
+                <div className="text-sm font-semibold text-white mb-0.5">{title}</div>
+                <div className="text-xs text-gray-400 leading-relaxed">{desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div id="api-rate-limits">
-          <h3 className="text-sm font-semibold text-white mb-3">Rate Limits</h3>
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[#1E2433]">
-                  {['Tier', 'Limit', 'Scope'].map(h => (
-                    <th key={h} className="text-left px-3 py-2 text-gray-500 font-medium">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {RATE_LIMITS.map(r => (
-                  <tr key={r.tier} className="border-b border-[#1E2433] last:border-0">
-                    <td className="px-3 py-2 text-white font-semibold">{r.tier}</td>
-                    <td className="px-3 py-2 font-mono text-[#0A1EFF]">{r.limit}</td>
-                    <td className="px-3 py-2 text-gray-400">{r.scope}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-3 flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-400">Auth endpoints have an additional IP-based limit: 5 attempts per 10 minutes. Exceeding this triggers a 15-minute block.</p>
-          </div>
+      {/* Push Notifications */}
+      <div id="push-notifications" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <Smartphone className="w-4 h-4 text-[#10B981]" />Push Notifications Setup
+        </h3>
+        <p className="text-xs text-gray-400 leading-relaxed mb-4">
+          Push notifications work on Chrome, Firefox, and Safari (iOS 16.4+) and are delivered via the Web Push standard — no app download required.
+        </p>
+        <div className="space-y-2 mb-6">
+          {PUSH_STEPS.map(s => (
+            <div key={s.n} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div className="w-6 h-6 rounded-full bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-[#10B981]">{s.n}</span>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-white">{s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* Alert limits */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        {[
+          { tier: 'Free', limit: '10 active alerts', color: '#6B7280' },
+          { tier: 'Pro', limit: '50 active alerts', color: '#0A1EFF' },
+          { tier: 'Enterprise', limit: 'Unlimited alerts', color: '#F59E0B' },
+        ].map(t => (
+          <div key={t.tier} className="bg-white/[0.02] border rounded-xl p-3 text-center" style={{ borderColor: t.color + '30' }}>
+            <div className="text-xs font-bold mb-1" style={{ color: t.color }}>{t.tier}</div>
+            <div className="text-xs text-gray-400">{t.limit}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Settings className="w-4 h-4 text-gray-400" />
+          <span className="text-sm font-semibold text-white">Notification Settings</span>
+        </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Manage all notification preferences from <strong className="text-gray-300">Settings → Notifications</strong>. Configure per-category toggles, quiet hours with timezone support, email backup delivery, and minimum threshold filters for each alert type.
+        </p>
       </div>
     </section>
   );

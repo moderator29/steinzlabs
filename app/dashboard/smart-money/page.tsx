@@ -1,8 +1,8 @@
 'use client';
 
-import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc } from 'lucide-react';
+import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc, Award, Fish, Building2, Settings2, X, Radio, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 type WalletArchetype = 'DIAMOND_HANDS' | 'SCALPER' | 'DEGEN' | 'WHALE_FOLLOWER' | 'HOLDER' | 'INACTIVE' | 'NEW_WALLET';
 
@@ -23,18 +23,26 @@ const ARCHETYPE_COLORS: Record<WalletArchetype, string> = {
   DIAMOND_HANDS: '#60A5FA', SCALPER: '#F59E0B', DEGEN: '#EF4444',
   WHALE_FOLLOWER: '#8B5CF6', HOLDER: '#10B981', INACTIVE: '#6B7280', NEW_WALLET: '#06B6D4',
 };
-const ARCHETYPE_EMOJI: Record<WalletArchetype, string> = {
-  DIAMOND_HANDS: '💎', SCALPER: '⚡', DEGEN: '🎲', WHALE_FOLLOWER: '🐋', HOLDER: '🏦', INACTIVE: '💤', NEW_WALLET: '🆕',
+const ARCHETYPE_ICONS: Record<WalletArchetype, React.ElementType> = {
+  DIAMOND_HANDS: Award, SCALPER: Zap, DEGEN: Target,
+  WHALE_FOLLOWER: Fish, HOLDER: Building2, INACTIVE: Clock, NEW_WALLET: Plus,
+};
+
+const ARCHETYPE_LABELS: Record<WalletArchetype, string> = {
+  DIAMOND_HANDS: 'Diamond Hands', SCALPER: 'Scalper', DEGEN: 'Degen',
+  WHALE_FOLLOWER: 'Whale Follower', HOLDER: 'Holder', INACTIVE: 'Inactive', NEW_WALLET: 'New Wallet',
 };
 
 type SortKey = 'rank' | 'winRate' | 'pnlChange' | 'totalVolume' | 'trades';
+type SmartTab = 'leaderboard' | 'history' | 'settings';
 
 function ArchetypeBadge({ archetype }: { archetype: WalletArchetype }) {
   const color = ARCHETYPE_COLORS[archetype];
+  const Icon = ARCHETYPE_ICONS[archetype];
   return (
-    <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold border"
+    <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold border"
       style={{ color, borderColor: color + '40', background: color + '15' }}>
-      {ARCHETYPE_EMOJI[archetype]} {archetype.replace('_', ' ')}
+      <Icon className="w-2.5 h-2.5" style={{ color }} />{ARCHETYPE_LABELS[archetype]}
     </span>
   );
 }
@@ -55,6 +63,7 @@ export default function SmartMoneyPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
+  const [activeTab, setActiveTab] = useState<SmartTab>('leaderboard');
 
   // Load watched wallets from localStorage
   useEffect(() => {
@@ -152,23 +161,26 @@ export default function SmartMoneyPage() {
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => fetchData()}
-              className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors text-gray-500 hover:text-gray-300"
-              title="Refresh"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <button onClick={() => setShowSettings(true)} className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors text-gray-500 hover:text-gray-300">
+              <Settings2 className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setFilter(filter === 'all' ? 'watching' : 'all')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${filter === 'watching' ? 'bg-[#0A1EFF]/15 text-[#0A1EFF] border border-[#0A1EFF]/20' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-              <Eye className="w-3 h-3 inline mr-1" />{filter === 'watching' ? 'Watched' : 'All'}
+            <button onClick={() => fetchData()} className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors text-gray-500 hover:text-gray-300" title="Refresh">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        <div className="px-4 pb-3">
+        {/* Tabs */}
+        <div className="flex border-t border-white/[0.04]">
+          {([['leaderboard', 'Leaderboard', Trophy], ['history', 'History', Radio], ['settings', 'Settings', Settings2]] as [SmartTab, string, React.ElementType][]).map(([t, label, Icon]) => (
+            <button key={t} onClick={() => setActiveTab(t)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold transition-colors border-b-2 ${activeTab === t ? 'border-[#F59E0B] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+              <Icon className="w-3.5 h-3.5" />{label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'leaderboard' && <div className="px-4 pb-3">
           <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 focus-within:border-[#0A1EFF]/30 transition-colors">
             <Search className="w-3.5 h-3.5 text-gray-600" />
             <input
@@ -179,7 +191,7 @@ export default function SmartMoneyPage() {
               className="flex-1 bg-transparent text-xs focus:outline-none placeholder-gray-600"
             />
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="px-4 pt-4 space-y-4 max-w-3xl mx-auto">
@@ -190,6 +202,7 @@ export default function SmartMoneyPage() {
           </div>
         )}
 
+        {activeTab === 'leaderboard' && <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
@@ -241,12 +254,15 @@ export default function SmartMoneyPage() {
             </div>
             <div className="grid grid-cols-3 gap-2">
               {wallets.slice(0, 3).map((w, i) => {
-                const medals = ['🥇', '🥈', '🥉'];
+                const RankIcons = [Trophy, Award, Award];
+                const RankIcon = RankIcons[i];
                 const colors = ['#F59E0B', '#9CA3AF', '#CD7F32'];
                 return (
                   <div key={w.id} className="bg-[#0D1117] rounded-xl p-3 border text-center"
                     style={{ borderColor: colors[i] + '30' }}>
-                    <div className="text-xl mb-1">{medals[i]}</div>
+                    <div className="w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center" style={{ background: colors[i] + '20' }}>
+                      <RankIcon className="w-4 h-4" style={{ color: colors[i] }} />
+                    </div>
                     <div className="text-[10px] font-bold text-white truncate">{w.name}</div>
                     <div className="text-xs font-bold mt-1" style={{ color: colors[i] }}>{w.winRate}%</div>
                     <div className="text-[9px] text-gray-600">win rate</div>
@@ -492,6 +508,84 @@ export default function SmartMoneyPage() {
                 <p className="text-xs text-gray-700">Try a different search or filter</p>
               </div>
             )}
+          </div>
+        )}
+        </>}
+
+        {/* ── HISTORY TAB ─────────────────────────────────────────── */}
+        {activeTab === 'history' && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Radio className="w-3.5 h-3.5 text-[#10B981]" />
+              <span className="text-xs font-bold text-gray-300">Recent Smart Money Moves</span>
+              <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
+            </div>
+            {recentMoves.length === 0 ? (
+              <div className="flex flex-col items-center py-12 gap-2">
+                <Activity className="w-8 h-8 text-gray-700 animate-pulse" />
+                <p className="text-sm text-gray-500">Loading recent moves…</p>
+              </div>
+            ) : (
+              <div className="bg-[#0D1117] border border-white/[0.04] rounded-2xl divide-y divide-white/[0.04]">
+                {recentMoves.map((move, i) => {
+                  const isUp = move.action === 'buy';
+                  const color = isUp ? '#10B981' : '#EF4444';
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: color + '20' }}>
+                        {isUp ? <TrendingUp className="w-3.5 h-3.5" style={{ color }} /> : <TrendingDown className="w-3.5 h-3.5" style={{ color }} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold truncate">
+                          {move.wallet ?? 'Smart Wallet'} <span className="text-gray-500 font-normal">·</span> <span style={{ color }}>{move.action.toUpperCase()}</span> {move.token}
+                        </div>
+                        <div className="text-[10px] text-gray-500">{move.chain} · {move.time}</div>
+                      </div>
+                      <div className="text-xs font-bold text-white">{move.amount}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── SETTINGS TAB ─────────────────────────────────────────── */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notification Settings</div>
+            {[
+              { label: 'New whale entry alerts', desc: 'Notify when a tracked wallet makes a new entry', key: 'entry' },
+              { label: 'Large exit alerts', desc: 'Notify when a tracked wallet exits a large position', key: 'exit' },
+              { label: 'Smart money convergence', desc: 'Multiple wallets buying same token', key: 'convergence' },
+              { label: 'Weekly performance report', desc: 'Summary of tracked wallet performance', key: 'weekly' },
+            ].map(({ label, desc, key }) => (
+              <div key={key} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+                <div>
+                  <div className="text-xs font-semibold text-white">{label}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
+                </div>
+                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ml-4 cursor-pointer">
+                  <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
+                </div>
+              </div>
+            ))}
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4">Display Settings</div>
+            {[
+              { label: 'Show archetype badges', desc: 'Display wallet behavior classification' },
+              { label: 'Show convergence signals', desc: 'Alert when multiple smart wallets target same token' },
+              { label: 'Show weekly risers', desc: 'Highlight wallets with improving recent performance' },
+            ].map(({ label, desc }) => (
+              <div key={label} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+                <div>
+                  <div className="text-xs font-semibold text-white">{label}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
+                </div>
+                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ml-4 cursor-pointer">
+                  <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

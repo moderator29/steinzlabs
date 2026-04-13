@@ -174,6 +174,7 @@ export default function WalletClustersPage() {
   const [searchToken, setSearchToken] = useState('');
   const [query, setQuery] = useState('');  // wallet address search filter
   const [selected, setSelected] = useState<ClusterRow | null>(null);
+  const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
   const fetchClusters = useCallback(async (token = searchToken, refresh = false) => {
     setLoading(true);
@@ -195,6 +196,7 @@ export default function WalletClustersPage() {
   };
 
   const filteredClusters = (data?.clusters ?? []).filter(c => {
+    if (riskFilter !== 'all' && c.risk_level !== riskFilter) return false;
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return c.name.toLowerCase().includes(q) ||
@@ -217,12 +219,21 @@ export default function WalletClustersPage() {
               <span className="text-sm font-bold">Wallet Clusters</span>
               <span className="text-[9px] px-1.5 py-0.5 bg-[#7C3AED]/20 text-[#7C3AED] border border-[#7C3AED]/30 rounded font-bold">LIVE</span>
             </div>
-            <span className="text-[10px] text-gray-600">On-chain coordination detection · Union-Find algorithm</span>
+            <span className="text-[10px] text-gray-600">Multi-chain wallet relationship intelligence</span>
           </div>
           <button onClick={() => fetchClusters(searchToken, true)} disabled={loading}
             className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors disabled:opacity-40">
             <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
+        </div>
+        {/* Filter bar */}
+        <div className="flex gap-2 px-4 pb-3 border-t border-white/[0.04] pt-2 overflow-x-auto scrollbar-hide">
+          {(['all', 'high', 'medium', 'low'] as const).map(level => (
+            <button key={level} onClick={() => setRiskFilter(level)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${riskFilter === level ? 'bg-[#7C3AED]/20 text-[#7C3AED] border border-[#7C3AED]/30' : 'bg-white/[0.04] text-gray-500 border border-white/[0.06]'}`}>
+              {level === 'all' ? 'All Risk Levels' : level.charAt(0).toUpperCase() + level.slice(1) + ' Risk'}
+            </button>
+          ))}
         </div>
       </div>
 
