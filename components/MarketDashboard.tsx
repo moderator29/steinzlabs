@@ -193,6 +193,8 @@ export default function MarketDashboard() {
   }, [coins, searchResults, search, filters, tab, watchlistCoins]);
 
   const handleCoinTap = (coin: CoinRow) => {
+    // Remember we came from the market tab so the back button restores it
+    try { localStorage.setItem('steinz_last_tab', 'markets'); } catch {}
     router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
