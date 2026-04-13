@@ -1,6 +1,6 @@
 import 'server-only';
 import { getQuote, buildSwapTransaction, SOL_MINT, JupiterQuote } from './jupiter';
-import { buildTransferTx } from './alchemy';
+import { getUniswapV3Quote, buildUniswapV3SwapTx } from './uniswap';
 import { isHighRisk } from './goplus';
 import { getSupabaseAdmin } from '../supabaseAdmin';
 
@@ -29,7 +29,7 @@ export interface SwapRequest {
 
 export interface SwapQuoteResult {
   ok: true;
-  quote: JupiterQuote | { to: string; value: string; data: string; chainId: number };
+  quote: JupiterQuote | { to: string; value: string; data: string; chainId: number; gasLimit?: string };
   chain: string;
   inputToken: string;
   outputToken: string;
@@ -108,21 +108,38 @@ export async function getSwapQuote(req: SwapRequest): Promise<SwapResult> {
     };
   }
 
-  // ── EVM — Alchemy tx builder ─────────────────────────────────────────────────
-  const tx = await buildTransferTx({
-    from: userAddress,
-    to: outputToken,
-    valueEth: String(inputAmount),
+  // ── EVM — Uniswap v3 ────────────────────────────────────────────────────────
+  const amountInWei = BigInt(Math.floor(inputAmount * Math.pow(10, inputDecimals)));
+  const uniQuote = await getUniswapV3Quote({
+    tokenIn: inputToken,
+    tokenOut: outputToken,
+    amountIn: amountInWei,
     chain,
   });
 
+  if (!uniQuote) {
+    return { ok: false, error: 'Uniswap v3: no route found for this pair', code: 'NO_ROUTE' };
+  }
+
+  const swapTx = buildUniswapV3SwapTx({
+    quote: uniQuote,
+    recipient: userAddress,
+    slippageBps: slippageBps,
+  });
+
+  if (!swapTx) {
+    return { ok: false, error: 'Failed to build Uniswap v3 swap transaction', code: 'TX_BUILD_FAILED' };
+  }
+
   return {
     ok: true,
-    quote: tx,
+    quote: swapTx,
     chain,
     inputToken,
     outputToken,
     inputAmount,
+    estimatedOutput: Number(uniQuote.amountOut),
+    priceImpact: uniQuote.priceImpact,
     platformFeeBps: PLATFORM_FEE_BPS,
     securityWarning,
   };

@@ -1,16 +1,14 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-const ADMIN_PASSWORD = '195656';
+import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 
 export async function POST(request: Request) {
-  try {
-    const { password, subject, body, targetTier } = await request.json();
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) return unauthorizedResponse();
 
-    if (password !== ADMIN_PASSWORD) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  try {
+    const { subject, body, targetTier } = await request.json();
 
     if (!subject || !body) {
       return NextResponse.json({ error: 'Subject and body are required' }, { status: 400 });
