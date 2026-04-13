@@ -56,110 +56,103 @@ function shortenAddress(addr: string): string {
 }
 
 function classifyNode(address: string, volume: number, txCount: number): NetworkNode['type'] {
-  if (KNOWN_PROTOCOLS[address]) return 'bridge';
   if (address === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') return 'usdc';
   if (address === 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB') return 'usdt';
+  if (KNOWN_PROTOCOLS[address]) return 'bridge';
   if (volume > 500000 || txCount > 50) return 'high-activity';
   if (volume > 100000 || txCount > 20) return 'high-activity';
   return 'regular';
 }
 
+// ─── Static fallback: well-known Solana protocol addresses with representative values ──
+
+const STATIC_NODES: Array<{ address: string; volume: number; txCount: number }> = [
+  { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', volume: 28_400_000, txCount: 842 }, // USDC Mint
+  { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', volume: 14_200_000, txCount: 371 }, // USDT Mint
+  { address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', volume: 9_100_000,  txCount: 612 }, // Jupiter
+  { address: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', volume: 7_800_000,  txCount: 519 }, // Raydium AMM
+  { address: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3sFjno',  volume: 5_600_000,  txCount: 288 }, // Orca Whirlpool
+  { address: 'So11111111111111111111111111111111111111112',   volume: 18_700_000, txCount: 931 }, // Wrapped SOL
+  { address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', volume: 3_900_000,  txCount: 194 }, // mSOL
+  { address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', volume: 2_100_000,  txCount: 143 }, // Bonk
+  { address: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',  volume: 6_200_000,  txCount: 445 }, // Token Program
+  { address: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bM',  volume: 450_000,    txCount: 31  }, // Associated Token
+  { address: 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',  volume: 380_000,    txCount: 28  }, // Metaplex
+  { address: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM', volume: 2_400_000,  txCount: 127 }, // Wallet A
+  { address: '5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9', volume: 1_850_000,  txCount: 98  }, // Wallet B
+  { address: 'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ', volume: 980_000,    txCount: 67  }, // Wallet C
+  { address: '6FzXPMkMDWCHBkpqPCMrFP9xCxCVxCSApwBxXJCd4WHH', volume: 720_000,    txCount: 45  }, // Wallet D
+  { address: 'SysvarRent111111111111111111111111111111111',   volume: 120_000,    txCount: 18  }, // Sysvar Rent
+];
+
+// Pre-defined edges between the static nodes above (by index)
+const STATIC_EDGES: Array<{
+  srcIdx: number; tgtIdx: number; type: 'usdc' | 'usdt'; amount: number; count: number;
+}> = [
+  { srcIdx: 2,  tgtIdx: 0,  type: 'usdc', amount: 4_200_000, count: 312 }, // Jupiter → USDC
+  { srcIdx: 2,  tgtIdx: 1,  type: 'usdt', amount: 1_800_000, count: 142 }, // Jupiter → USDT
+  { srcIdx: 3,  tgtIdx: 0,  type: 'usdc', amount: 3_900_000, count: 287 }, // Raydium → USDC
+  { srcIdx: 3,  tgtIdx: 1,  type: 'usdt', amount: 1_200_000, count: 98  }, // Raydium → USDT
+  { srcIdx: 4,  tgtIdx: 0,  type: 'usdc', amount: 2_800_000, count: 195 }, // Orca → USDC
+  { srcIdx: 5,  tgtIdx: 2,  type: 'usdc', amount: 5_100_000, count: 421 }, // wSOL → Jupiter
+  { srcIdx: 5,  tgtIdx: 3,  type: 'usdc', amount: 4_300_000, count: 358 }, // wSOL → Raydium
+  { srcIdx: 5,  tgtIdx: 4,  type: 'usdc', amount: 2_200_000, count: 183 }, // wSOL → Orca
+  { srcIdx: 6,  tgtIdx: 2,  type: 'usdc', amount: 1_900_000, count: 112 }, // mSOL → Jupiter
+  { srcIdx: 7,  tgtIdx: 3,  type: 'usdc', amount: 890_000,   count: 74  }, // Bonk → Raydium
+  { srcIdx: 8,  tgtIdx: 5,  type: 'usdc', amount: 2_400_000, count: 198 }, // Token Prog → wSOL
+  { srcIdx: 11, tgtIdx: 2,  type: 'usdc', amount: 980_000,   count: 67  }, // Wallet A → Jupiter
+  { srcIdx: 11, tgtIdx: 3,  type: 'usdc', amount: 720_000,   count: 51  }, // Wallet A → Raydium
+  { srcIdx: 12, tgtIdx: 2,  type: 'usdc', amount: 820_000,   count: 58  }, // Wallet B → Jupiter
+  { srcIdx: 12, tgtIdx: 4,  type: 'usdt', amount: 490_000,   count: 34  }, // Wallet B → Orca
+  { srcIdx: 13, tgtIdx: 3,  type: 'usdc', amount: 340_000,   count: 26  }, // Wallet C → Raydium
+  { srcIdx: 14, tgtIdx: 2,  type: 'usdc', amount: 280_000,   count: 19  }, // Wallet D → Jupiter
+  { srcIdx: 9,  tgtIdx: 8,  type: 'usdc', amount: 180_000,   count: 14  }, // Assoc Token → Token Prog
+  { srcIdx: 10, tgtIdx: 9,  type: 'usdc', amount: 150_000,   count: 11  }, // Metaplex → Assoc Token
+  { srcIdx: 12, tgtIdx: 5,  type: 'usdc', amount: 620_000,   count: 43  }, // Wallet B → wSOL
+  { srcIdx: 13, tgtIdx: 4,  type: 'usdt', amount: 320_000,   count: 22  }, // Wallet C → Orca
+  { srcIdx: 14, tgtIdx: 4,  type: 'usdc', amount: 260_000,   count: 17  }, // Wallet D → Orca
+];
+
+// Static timeline — 8 buckets × 3h = 24h, normalized 0-100 (most recent = index 7)
+const STATIC_TIMELINE = [38, 45, 52, 61, 74, 83, 91, 78];
+
 function generateMockData(): NetworkGraphResponse {
-  const rng = (min: number, max: number) => Math.random() * (max - min) + min;
-  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  const nodes: NetworkNode[] = STATIC_NODES.map((n, i) => ({
+    id: `node-${i}`,
+    address: n.address,
+    type: classifyNode(n.address, n.volume, n.txCount),
+    volume: n.volume,
+    txCount: n.txCount,
+  }));
 
-  const addressPool = [
-    '0x9f8B0Da95BbA1f66E1890C2D8E7b7EFAD16e16e',
-    '0x7a25E...2F9c',
-    '0x3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C2D',
-    '0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B',
-    '0xDead...Beef1',
-    '0xCafe...Babe2',
-    '0xF00D...C0DE3',
-    '0x1337...H4X04',
-    '0xABCD...EF015',
-    '0x5678...90AB6',
-    '0xBEEF...CAFE7',
-    '0x4269...42008',
-    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-    'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
-    'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3sFjno',
-    '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
-    '0x9999...11119',
-    '0xAAAA...BBBB10',
-    '0xCCCC...DDDD11',
-    '0xEEEE...FFFF12',
-    '0x1111...222213',
-    '0x3333...444414',
-  ];
-
-  const count = Math.floor(rng(18, 24));
-  const selectedAddresses = addressPool.slice(0, count);
-
-  const nodes: NetworkNode[] = selectedAddresses.map((addr, i) => {
-    const isProtocol = !!KNOWN_PROTOCOLS[addr];
-    const isStable = addr.includes('EPjF') || addr.includes('Es9v');
-    const volume = isProtocol ? rng(2000000, 10000000) :
-      isStable ? rng(5000000, 50000000) :
-      i < 4 ? rng(500000, 3000000) :
-      rng(5000, 200000);
-    const txCount = isProtocol ? Math.floor(rng(200, 1000)) :
-      i < 4 ? Math.floor(rng(50, 200)) :
-      Math.floor(rng(2, 50));
-    return {
-      id: `node-${i}`,
-      address: addr,
-      type: classifyNode(addr, volume, txCount),
-      volume,
-      txCount,
-    };
-  });
-
-  const edgeCount = Math.floor(rng(22, 32));
-  const edges: NetworkEdge[] = [];
-  const edgeSet = new Set<string>();
-
-  for (let i = 0; i < edgeCount * 3 && edges.length < edgeCount; i++) {
-    const src = pick(nodes);
-    let tgt = pick(nodes);
-    while (tgt.id === src.id) tgt = pick(nodes);
-    const key = `${src.id}-${tgt.id}`;
-    if (edgeSet.has(key)) continue;
-    edgeSet.add(key);
-
-    const edgeType = pick(['usdc', 'usdt'] as const);
-    edges.push({
-      source: src.id,
-      target: tgt.id,
-      type: edgeType,
-      amount: rng(1000, 500000),
-      count: Math.floor(rng(1, 20)),
-    });
-  }
+  const edges: NetworkEdge[] = STATIC_EDGES
+    .filter(e => e.srcIdx < nodes.length && e.tgtIdx < nodes.length)
+    .map(e => ({
+      source: nodes[e.srcIdx].id,
+      target: nodes[e.tgtIdx].id,
+      type: e.type,
+      amount: e.amount,
+      count: e.count,
+    }));
 
   const usdcTxns = edges.filter(e => e.type === 'usdc').length;
   const usdtTxns = edges.filter(e => e.type === 'usdt').length;
   const n = nodes.length;
   const maxEdges = n * (n - 1);
   const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
-  const degreeSum = edges.length * 2;
-  const avgDegree = parseFloat((degreeSum / Math.max(n, 1)).toFixed(2));
-  const clusters = Math.max(1, Math.floor(n / 5));
-
-  const timelineData = Array.from({ length: 8 }, () => Math.floor(rng(10, 100)));
+  const avgDegree = parseFloat(((edges.length * 2) / Math.max(n, 1)).toFixed(2));
 
   return {
     nodes,
     edges,
     stats: {
-      clusters,
+      clusters: Math.max(1, Math.floor(n / 5)),
       avgDegree,
       density,
       usdcTxns,
       usdtTxns,
-      totalVolume: nodes.reduce((s, n) => s + n.volume, 0),
-      timelineData,
+      totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
+      timelineData: STATIC_TIMELINE,
     },
     source: 'mock',
   };
@@ -256,19 +249,36 @@ async function fetchHeliusData(wallet: string): Promise<NetworkGraphResponse | n
     const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
     const degreeSum = edges.length * 2;
     const avgDegree = parseFloat((degreeSum / Math.max(n, 1)).toFixed(2));
-    const clusters = Math.max(1, Math.floor(n / 5));
+
+    // Build timelineData from actual tx timestamps
+    // 8 buckets × 3h each = last 24h; index 7 = most recent, index 0 = oldest
+    const bucketMs = 3 * 60 * 60 * 1000;
+    const windowMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const buckets = new Array(8).fill(0);
+    for (const tx of txs) {
+      const ts = tx.timestamp ? tx.timestamp * 1000 : 0; // Helius timestamps are Unix seconds
+      if (!ts) continue;
+      const age = now - ts;
+      if (age < 0 || age >= windowMs) continue;
+      const bucketIdx = 7 - Math.floor(age / bucketMs);
+      if (bucketIdx >= 0 && bucketIdx < 8) buckets[bucketIdx]++;
+    }
+    // Normalize to 0-100 for chart display
+    const maxBucket = Math.max(...buckets, 1);
+    const timelineData = buckets.map(v => Math.round((v / maxBucket) * 100));
 
     return {
       nodes,
       edges,
       stats: {
-        clusters,
+        clusters: Math.max(1, Math.floor(n / 5)),
         avgDegree,
         density,
         usdcTxns,
         usdtTxns,
         totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
-        timelineData: Array.from({ length: 8 }, () => Math.floor(Math.random() * 90 + 10)),
+        timelineData,
       },
       source: 'helius',
     };
@@ -372,6 +382,27 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
     const maxEdges = n * (n - 1);
     const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
 
+    // Build timelineData from actual DexScreener h1/h6/h24 transaction counts
+    // 8 buckets × 3h each = last 24h; index 7 = most recent (0-3h), index 0 = oldest (21-24h)
+    let totalH1 = 0, totalH6 = 0, totalH24 = 0;
+    for (const pair of pairs.slice(0, 20)) {
+      totalH1  += (parseInt(String(pair.txns?.h1?.buys  ?? 0)) + parseInt(String(pair.txns?.h1?.sells  ?? 0)));
+      totalH6  += (parseInt(String(pair.txns?.h6?.buys  ?? 0)) + parseInt(String(pair.txns?.h6?.sells  ?? 0)));
+      totalH24 += (parseInt(String(pair.txns?.h24?.buys ?? 0)) + parseInt(String(pair.txns?.h24?.sells ?? 0)));
+    }
+    // Per-3h bucket rates derived from cumulative windows
+    const rate1h  = totalH1;
+    const rate6h  = totalH6  > 0 ? totalH6  / 6  : rate1h;   // avg/hour over last 6h
+    const rate24h = totalH24 > 0 ? totalH24 / 24 : rate6h;   // avg/hour over last 24h
+    const rawBuckets = [
+      rate24h * 3, rate24h * 3, rate24h * 3, rate24h * 3,  // buckets 0-3: 12-24h ago
+      rate6h * 3,  rate6h * 3,                               // buckets 4-5: 6-12h ago
+      rate6h * 3,                                             // bucket 6: 3-6h ago
+      rate1h * 3,                                             // bucket 7: 0-3h ago (most recent)
+    ];
+    const maxBucket = Math.max(...rawBuckets, 1);
+    const timelineData = rawBuckets.map(v => Math.round((v / maxBucket) * 100));
+
     return {
       nodes,
       edges,
@@ -382,7 +413,7 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
         usdcTxns,
         usdtTxns,
         totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
-        timelineData: Array.from({ length: 8 }, () => Math.floor(Math.random() * 90 + 10)),
+        timelineData,
       },
       source: 'dexscreener',
     };
@@ -405,7 +436,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Always fallback to mock if nothing worked
+  // Fallback to static deterministic mock if no wallet or APIs unavailable
   if (!result) {
     result = generateMockData();
   }

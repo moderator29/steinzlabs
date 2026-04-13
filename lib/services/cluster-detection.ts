@@ -2,17 +2,18 @@ import 'server-only';
 import type { WalletChain, WalletCluster, ClusterMember } from '@/lib/types/wallet';
 
 /**
- * Wallet Cluster Detection Algorithm
+ * Wallet Cluster Detection Algorithm v2
  *
- * A cluster is identified when:
- *  1. 3 or more wallets exhibit 2 or more of the following coordination signals:
- *     - Shared token buys within the same block window (±5 blocks)
- *     - Sequential token purchases of the same asset within 24h
- *     - On-chain fund flows between the wallets (direct transfers)
- *     - Correlated entry/exit timing (> 0.7 Pearson correlation)
- *     - Same funding source (common ancestor wallet within 3 hops)
+ * A cluster is identified when 3+ wallets exhibit 2+ coordination signals:
+ *  1. Coordinated buys in the same block window (±5 blocks)
+ *  2. Sequential token purchases of the same asset within 24h
+ *  3. Direct fund flows between the wallets
+ *  4. Correlated entry/exit timing (Pearson r ≥ 0.7)
+ *  5. Repeated co-trading (same token, same side, 3+ times)
+ *  6. Shared counterparties (wallets transact with the same third-party addresses)
  *
- * Score is 0–100: >= 60 = confirmed cluster, 40–59 = likely, < 40 = weak
+ * Behavior types: accumulation | distribution | pump | wash_trading | unknown
+ * Score: 0–100 — ≥60 confirmed, 40–59 likely, 20–39 weak
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,26 +36,30 @@ export interface TokenTradeEvent {
   txHash: string;
 }
 
+export type ClusterBehaviorType = 'accumulation' | 'distribution' | 'pump' | 'wash_trading' | 'unknown';
+
 export interface ClusterInput {
   addresses: string[];
   chain: WalletChain;
   transfers: TransferEdge[];
   trades: TokenTradeEvent[];
-  windowBlocks?: number;  // block window for coordinated buys (default 5)
-  windowSeconds?: number; // time window for sequential buys (default 86400 = 24h)
+  windowBlocks?: number;
+  windowSeconds?: number;
 }
 
 export interface ClusterSignalResult {
   signal: string;
-  score: number;       // contribution 0–30 per signal
-  wallets: string[];   // wallets involved
+  score: number;
+  wallets: string[];
   detail: string;
 }
 
 export interface ClusterDetectionResult {
   detected: boolean;
-  score: number;           // 0–100
+  score: number;
   confidence: 'confirmed' | 'likely' | 'weak' | 'none';
+  behaviorType: ClusterBehaviorType;
+  behaviorLabel: string;
   signals: ClusterSignalResult[];
   members: ClusterMember[];
   cluster?: WalletCluster;
@@ -63,17 +68,16 @@ export interface ClusterDetectionResult {
 // ─── Signal weights ───────────────────────────────────────────────────────────
 
 const SIGNAL_WEIGHTS = {
-  coordinated_buy_block:    28,   // same token, same ±5 block window
-  sequential_buy:           22,   // same token, within 24h
-  direct_fund_flow:         25,   // on-chain transfer between wallets
-  timing_correlation:       20,   // correlated entry/exit across assets
-  common_funding_source:    20,   // same ancestor wallet
-  repeated_co_trading:      15,   // 3+ times trading same token on same side
+  coordinated_buy_block:    28,
+  sequential_buy:           22,
+  direct_fund_flow:         25,
+  timing_correlation:       20,
+  repeated_co_trading:      15,
+  shared_counterparties:    20,   // NEW: wallets share the same external counterparties
 } as const;
 
-// ─── Signal Detectors ─────────────────────────────────────────────────────────
+// ─── Signal 1: Coordinated buys in the same block window ─────────────────────
 
-/** Signal 1: Coordinated buys in the same block window */
 function detectCoordinatedBlockBuys(
   trades: TokenTradeEvent[],
   addresses: string[],
@@ -86,7 +90,6 @@ function detectCoordinatedBlockBuys(
     const buys = tokenTrades.filter(t => t.side === 'buy' && addresses.includes(t.address));
     if (buys.length < 2) continue;
 
-    // Find groups of buys within ±windowBlocks of each other
     const groups: TokenTradeEvent[][] = [];
     const used = new Set<number>();
 
@@ -120,7 +123,8 @@ function detectCoordinatedBlockBuys(
   return results;
 }
 
-/** Signal 2: Sequential buys of the same token within time window */
+// ─── Signal 2: Sequential buys within time window ────────────────────────────
+
 function detectSequentialBuys(
   trades: TokenTradeEvent[],
   addresses: string[],
@@ -136,7 +140,6 @@ function detectSequentialBuys(
 
     if (buys.length < 3) continue;
 
-    // Rolling window: count buys from distinct wallets within windowSeconds
     let windowStart = 0;
     for (let i = 1; i < buys.length; i++) {
       while (buys[i].timestamp - buys[windowStart].timestamp > windowSeconds) {
@@ -151,7 +154,7 @@ function detectSequentialBuys(
           wallets: uniqueWallets,
           detail: `${uniqueWallets.length} wallets sequentially bought ${token.slice(0, 8)}... within ${Math.round(windowSeconds / 3600)}h`,
         });
-        break;  // only report once per token
+        break;
       }
     }
   }
@@ -159,7 +162,8 @@ function detectSequentialBuys(
   return results;
 }
 
-/** Signal 3: Direct fund flows between wallet cluster members */
+// ─── Signal 3: Direct fund flows ─────────────────────────────────────────────
+
 function detectDirectFundFlows(
   transfers: TransferEdge[],
   addresses: string[],
@@ -167,7 +171,6 @@ function detectDirectFundFlows(
   const results: ClusterSignalResult[] = [];
   const addrSet = new Set(addresses.map(a => a.toLowerCase()));
 
-  // Find transfers between addresses in the set
   const internalTransfers = transfers.filter(t =>
     addrSet.has(t.from.toLowerCase()) && addrSet.has(t.to.toLowerCase()),
   );
@@ -191,7 +194,8 @@ function detectDirectFundFlows(
   return results;
 }
 
-/** Signal 4: Correlated entry/exit timing (Pearson correlation) */
+// ─── Signal 4: Correlated timing (Pearson) ───────────────────────────────────
+
 function detectTimingCorrelation(
   trades: TokenTradeEvent[],
   addresses: string[],
@@ -199,7 +203,6 @@ function detectTimingCorrelation(
   const results: ClusterSignalResult[] = [];
   if (addresses.length < 2) return results;
 
-  // Build time series per wallet: 1-hour bins of trade activity
   const HOUR_BIN = 3600;
   const tradesByWallet: Record<string, Record<number, number>> = {};
 
@@ -212,14 +215,12 @@ function detectTimingCorrelation(
     tradesByWallet[trade.address][bin] = (tradesByWallet[trade.address][bin] || 0) + 1;
   }
 
-  // Find all unique bins
   const allBins = [...new Set(
     Object.values(tradesByWallet).flatMap(bins => Object.keys(bins).map(Number)),
   )].sort((a, b) => a - b);
 
-  if (allBins.length < 10) return results; // not enough data
+  if (allBins.length < 10) return results;
 
-  // Check all pairs for high correlation
   const correlatedPairs: string[] = [];
   for (let i = 0; i < addresses.length; i++) {
     for (let j = i + 1; j < addresses.length; j++) {
@@ -247,13 +248,13 @@ function detectTimingCorrelation(
   return results;
 }
 
-/** Signal 5: Repeated co-trading (same token, same side, 3+ occurrences) */
+// ─── Signal 5: Repeated co-trading ───────────────────────────────────────────
+
 function detectRepeatedCoTrading(
   trades: TokenTradeEvent[],
   addresses: string[],
 ): ClusterSignalResult[] {
   const results: ClusterSignalResult[] = [];
-  // Group by (token, side)
   const groups = groupBy(trades, t => `${t.tokenAddress}:${t.side}`);
 
   for (const [key, group] of Object.entries(groups)) {
@@ -261,7 +262,6 @@ function detectRepeatedCoTrading(
     const uniqueWallets = [...new Set(wallets)];
     if (uniqueWallets.length < 2) continue;
 
-    // Count how many times each pair co-traded this token
     for (let i = 0; i < uniqueWallets.length; i++) {
       for (let j = i + 1; j < uniqueWallets.length; j++) {
         const countA = wallets.filter(w => w === uniqueWallets[i]).length;
@@ -281,6 +281,100 @@ function detectRepeatedCoTrading(
 
   return deduplicateSignals(results);
 }
+
+// ─── Signal 6: Shared counterparties (NEW) ────────────────────────────────────
+// Detects when 3+ cluster wallets frequently transact with the same external address
+// (common funder/coordinator pattern)
+
+function detectSharedCounterparties(
+  transfers: TransferEdge[],
+  addresses: string[],
+): ClusterSignalResult[] {
+  const results: ClusterSignalResult[] = [];
+  const addrSet = new Set(addresses.map(a => a.toLowerCase()));
+
+  // Map each external counterparty → which cluster wallets interacted with it
+  const counterpartyMap: Record<string, Set<string>> = {};
+
+  for (const tx of transfers) {
+    const from = tx.from.toLowerCase();
+    const to = tx.to.toLowerCase();
+    const isFromCluster = addrSet.has(from);
+    const isToCluster = addrSet.has(to);
+
+    if (isFromCluster && !isToCluster) {
+      // cluster wallet sent to external address
+      (counterpartyMap[to] ??= new Set()).add(from);
+    } else if (isToCluster && !isFromCluster) {
+      // external address sent to cluster wallet
+      (counterpartyMap[from] ??= new Set()).add(to);
+    }
+  }
+
+  // Find counterparties shared by ≥3 cluster wallets
+  for (const [counterparty, clusterWallets] of Object.entries(counterpartyMap)) {
+    if (clusterWallets.size >= 3) {
+      const walletList = [...clusterWallets];
+      results.push({
+        signal: 'shared_counterparties',
+        score: SIGNAL_WEIGHTS.shared_counterparties,
+        wallets: walletList,
+        detail: `${walletList.length} wallets share counterparty ${counterparty.slice(0, 8)}... (common funder/coordinator)`,
+      });
+    }
+  }
+
+  return deduplicateSignals(results).slice(0, 3); // top 3 shared counterparty findings
+}
+
+// ─── Behavior Type Classification (NEW) ──────────────────────────────────────
+
+function classifyBehaviorType(
+  signals: ClusterSignalResult[],
+  trades: TokenTradeEvent[],
+  addresses: string[],
+): ClusterBehaviorType {
+  const signalTypes = new Set(signals.map(s => s.signal));
+  const addrSet = new Set(addresses);
+
+  const clusterTrades = trades.filter(t => addrSet.has(t.address));
+  const totalBuys = clusterTrades.filter(t => t.side === 'buy').length;
+  const totalSells = clusterTrades.filter(t => t.side === 'sell').length;
+  const totalTrades = totalBuys + totalSells;
+  const buyRatio = totalTrades > 0 ? totalBuys / totalTrades : 0.5;
+
+  // Wash trading: high repeated co-trading + timing correlation
+  if (signalTypes.has('repeated_co_trading') && signalTypes.has('timing_correlation') && buyRatio > 0.4 && buyRatio < 0.6) {
+    return 'wash_trading';
+  }
+
+  // Coordinated pump: coordinated block buys + sequential buys
+  if (signalTypes.has('coordinated_buy_block') && signalTypes.has('sequential_buy') && buyRatio >= 0.7) {
+    return 'pump';
+  }
+
+  // Distribution: common funder (direct fund flow or shared counterparties) + primarily selling
+  if ((signalTypes.has('direct_fund_flow') || signalTypes.has('shared_counterparties')) && buyRatio <= 0.35) {
+    return 'distribution';
+  }
+
+  // Accumulation: coordinated buying with common funding source
+  if (buyRatio >= 0.65 && (signalTypes.has('coordinated_buy_block') || signalTypes.has('sequential_buy'))) {
+    return 'accumulation';
+  }
+
+  if (totalTrades === 0) return 'unknown';
+
+  return buyRatio >= 0.6 ? 'accumulation' : 'distribution';
+}
+
+const BEHAVIOR_LABELS: Record<ClusterBehaviorType, string> = {
+  accumulation: 'Coordinated Accumulation',
+  distribution: 'Coordinated Distribution',
+  pump: 'Pump Coordination',
+  wash_trading: 'Wash Trading Ring',
+  unknown: 'Coordinated Activity',
+};
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -343,32 +437,38 @@ export function detectCluster(input: ClusterInput): ClusterDetectionResult {
       detected: false,
       score: 0,
       confidence: 'none',
+      behaviorType: 'unknown',
+      behaviorLabel: BEHAVIOR_LABELS.unknown,
       signals: [],
       members: [],
     };
   }
 
-  // Run all signal detectors
+  // Run all signal detectors (including new shared_counterparties)
   const allSignals: ClusterSignalResult[] = [
     ...detectCoordinatedBlockBuys(trades, addresses, windowBlocks),
     ...detectSequentialBuys(trades, addresses, windowSeconds),
     ...detectDirectFundFlows(transfers, addresses),
     ...detectTimingCorrelation(trades, addresses),
     ...detectRepeatedCoTrading(trades, addresses),
+    ...detectSharedCounterparties(transfers, addresses),
   ];
 
-  // Only count at most 2 signals per type to prevent single-signal inflation
+  // Cap at 2 signals per type to prevent inflation
   const byType = groupBy(allSignals, s => s.signal);
   const dedupedSignals: ClusterSignalResult[] = Object.values(byType)
     .flatMap(sigs => sigs.slice(0, 2));
 
-  // Total score (capped at 100)
   const rawScore = dedupedSignals.reduce((s, sig) => s + sig.score, 0);
   const score = Math.min(100, rawScore);
 
   const detected = score >= 40 && dedupedSignals.length >= 2;
 
-  // Build per-member coordination scores
+  // Behavior classification
+  const behaviorType = classifyBehaviorType(dedupedSignals, trades, addresses);
+  const behaviorLabel = BEHAVIOR_LABELS[behaviorType];
+
+  // Per-member coordination scores
   const memberScoreMap: Record<string, { score: number; signals: Set<string> }> = {};
   for (const addr of addresses) {
     memberScoreMap[addr] = { score: 0, signals: new Set() };
@@ -390,7 +490,6 @@ export function detectCluster(input: ClusterInput): ClusterDetectionResult {
     firstSeenTogether: new Date().toISOString(),
   }));
 
-  // Identify the most commonly involved tokens
   const primaryTokens = [...new Set(
     trades
       .filter(t => addresses.includes(t.address))
@@ -404,7 +503,7 @@ export function detectCluster(input: ClusterInput): ClusterDetectionResult {
       memberCount: addresses.length,
       members,
       coordinationScore: score,
-      totalValueUsd: 0,      // caller enriches with portfolio data
+      totalValueUsd: 0,
       dominantChain: chain,
       primaryTokens,
       detectedAt: new Date().toISOString(),
@@ -416,6 +515,8 @@ export function detectCluster(input: ClusterInput): ClusterDetectionResult {
     detected,
     score,
     confidence: toConfidence(score),
+    behaviorType,
+    behaviorLabel,
     signals: dedupedSignals,
     members,
     cluster,
