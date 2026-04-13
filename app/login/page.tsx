@@ -2,17 +2,25 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
-import SteinzLogo from '@/components/SteinzLogo';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { CoinIcon } from '@/components/landing/CoinIcon';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
-
 const SESSION_HOURS = 1;
+
+// Deterministic coin positions (no Math.random for SSR safety)
+const BG_COINS = [
+  { coin: 'BTC' as const, size: 40, top: '12%',  left: '7%',   opacity: 0.18, dur: '6s',   delay: '0s'   },
+  { coin: 'ETH' as const, size: 30, top: '72%',  right: '8%',  opacity: 0.15, dur: '7.5s', delay: '1.4s' },
+  { coin: 'SOL' as const, size: 24, top: '45%',  left: '4%',   opacity: 0.12, dur: '5.5s', delay: '2.2s' },
+  { coin: 'AVAX'as const, size: 28, bottom: '15%',left: '12%', opacity: 0.14, dur: '8s',   delay: '0.8s' },
+];
 
 function LoginPageInner() {
   const router = useRouter();
@@ -63,16 +71,10 @@ function LoginPageInner() {
         body: JSON.stringify({ email: verificationEmail }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        showToast('Verification email sent! Check your inbox and spam folder.', 'success');
-      } else {
-        showToast(data.error || 'Failed to resend. Try again.', 'error');
-      }
-    } catch {
-      showToast('Failed to resend. Check your connection.', 'error');
-    } finally {
-      setResending(false);
-    }
+      if (res.ok && data.success) showToast('Verification email sent! Check your inbox.', 'success');
+      else showToast(data.error || 'Failed to resend.', 'error');
+    } catch { showToast('Failed to resend. Check your connection.', 'error'); }
+    finally { setResending(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,10 +83,8 @@ function LoginPageInner() {
     submitting.current = true;
     setLoading(true);
     setNeedsVerification(false);
-
     try {
       let email = identifier.trim();
-
       if (!email.includes('@')) {
         const res = await fetch('/api/auth/lookup', {
           method: 'POST',
@@ -100,8 +100,6 @@ function LoginPageInner() {
         email = result.email;
       }
 
-      // Sign in with a 12-second timeout — signInWithPassword has no built-in
-      // timeout and will hang forever on a bad mobile connection.
       const TIMEOUT_MS = 12000;
       const signInPromise = supabase.auth.signInWithPassword({ email, password });
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -144,12 +142,8 @@ function LoginPageInner() {
         return;
       }
 
-      if (!data.session) {
-        showToast('Sign in failed. Please try again.', 'error');
-        return;
-      }
+      if (!data.session) { showToast('Sign in failed. Please try again.', 'error'); return; }
 
-      // Set cookie for middleware (Supabase writes localStorage, we write the cookie)
       if (typeof window !== 'undefined') {
         const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
         const isSecure = window.location.protocol === 'https:';
@@ -157,12 +151,9 @@ function LoginPageInner() {
       }
 
       showToast('Welcome back!', 'success');
-
-      // Hard redirect — fresh page load reads the localStorage Supabase just wrote
       const destination = searchParams.get('from') || '/dashboard';
       window.location.href = destination;
     } catch (err: any) {
-
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
         showToast('Connection error. Check your internet and try again.', 'error');
@@ -175,97 +166,123 @@ function LoginPageInner() {
     }
   };
 
+  const inputBase: React.CSSProperties = {
+    background: 'rgba(10,10,30,.8)',
+    border: '1px solid rgba(26,58,204,.18)',
+    borderRadius: 10,
+    padding: '12px 16px',
+    fontSize: 14,
+    color: 'white',
+    width: '100%',
+    outline: 'none',
+    transition: 'border-color 200ms, box-shadow 200ms',
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: '#07090f' }}>
+      {/* Grid overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(26,58,204,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,58,204,.04) 1px,transparent 1px)',
+        backgroundSize: '60px 60px',
+      }} />
+      {/* Top radial glow */}
+      <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[900px] h-[700px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse,rgba(13,30,140,.13) 0%,transparent 70%)' }} />
+
+      {/* Floating coins */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0A1EFF]/[0.04] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
+        {BG_COINS.map((c, i) => (
+          <div key={i} className="absolute hidden md:block" style={{
+            top: c.top, left: (c as any).left, right: (c as any).right, bottom: (c as any).bottom,
+          }}>
+            <CoinIcon coin={c.coin} size={c.size} opacity={c.opacity}
+              floatDuration={c.dur} floatDelay={c.delay} floatAmplitude={c.size * 0.3} />
+          </div>
+        ))}
       </div>
 
-      <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
-        <Link href="/" className="flex items-center gap-2.5">
-          <SteinzLogo size={32} />
-          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
-        </Link>
-        <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight mb-4">Welcome back to<br /><span className="text-[#0A1EFF]">STEINZ LABS</span></h1>
-          <p className="text-gray-400 text-sm leading-relaxed mb-8">Access your intelligence dashboard. Track whales, analyze wallets, and act on real blockchain data before the crowd.</p>
-          <div className="space-y-3">
-            {['Real-time on-chain intelligence', 'AI-powered trading analysis', 'Professional security scanning'].map(t => (
-              <div key={t} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#0A1EFF]/10 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-[#0A1EFF]" /></div>
-                <span className="text-sm text-gray-300">{t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center justify-between mb-8">
-            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
-            <Link href="/" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back</Link>
+      {/* Card */}
+      <div className="relative z-10 w-full" style={{ maxWidth: 440 }}>
+        <div
+          className="w-full rounded-3xl"
+          style={{
+            background: 'rgba(6,6,15,.92)',
+            border: '1px solid rgba(26,58,204,.14)',
+            padding: '44px 40px',
+            backdropFilter: 'blur(24px)',
+            boxShadow: '0 24px 80px rgba(0,0,0,.6),0 0 40px rgba(13,30,140,.06)',
+          }}
+        >
+          {/* Top */}
+          <div className="flex flex-col items-center mb-7">
+            <SteinzLogo size={48} animated={true} />
+            <p className="mt-2 text-[10px] font-bold tracking-[6px] uppercase" style={{ color: '#1a2855', letterSpacing: 6 }}>
+              STEINZ LABS
+            </p>
           </div>
 
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-              <Shield className="w-8 h-8 text-[#0A1EFF]" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Sign in to your account</h2>
-            <p className="text-gray-500 text-sm">Access your intelligence dashboard</p>
-          </div>
+          <h2 className="text-[26px] font-bold text-white mb-1">Welcome back.</h2>
+          <p className="text-sm mb-7" style={{ color: '#1e2e50' }}>Continue your intelligence session.</p>
 
+          {/* Verification banner */}
           {needsVerification && (
-            <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-              <p className="text-amber-300 text-sm mb-3">Your email is not verified. Check your inbox and spam folder for the verification link.</p>
-              <button
-                onClick={handleResendVerification}
-                disabled={resending}
-                className="flex items-center gap-2 text-sm font-medium text-[#0A1EFF] hover:text-white transition-colors disabled:opacity-50"
-              >
+            <div className="mb-5 rounded-xl p-4" style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)' }}>
+              <p className="text-amber-300 text-sm mb-3">Your email is not verified. Check your inbox and spam folder.</p>
+              <button onClick={handleResendVerification} disabled={resending}
+                className="flex items-center gap-2 text-sm font-medium disabled:opacity-50" style={{ color: '#4d80ff' }}>
                 {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 {resending ? 'Sending...' : 'Resend verification email'}
               </button>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email or Username</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5"
+                style={{ color: '#0e1535' }}>EMAIL</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                 <input
                   type="text"
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
-                  className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                  style={{ ...inputBase, paddingLeft: 38, borderColor: errors.identifier ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)' }}
                   placeholder="john@example.com or username"
                   autoComplete="username"
                   autoFocus
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.identifier ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
               {errors.identifier && !needsVerification && <p className="text-red-400 text-xs mt-1.5">{errors.identifier}</p>}
             </div>
 
+            {/* Password */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-300">Password</label>
-                <Link href="/forgot-password" className="text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">Forgot password?</Link>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-[1.5px]" style={{ color: '#0e1535' }}>PASSWORD</label>
+                <Link href="/forgot-password" className="text-[12px] transition-colors hover:opacity-80" style={{ color: '#1a3acc' }}>
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors({}); }}
-                  className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
-                  placeholder="Enter your password"
+                  style={{ ...inputBase, paddingLeft: 38, paddingRight: 44, borderColor: errors.password ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)' }}
+                  placeholder="Your password"
                   autoComplete="current-password"
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.password ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-white"
+                  style={{ color: 'rgba(255,255,255,.25)' }}>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
@@ -273,43 +290,47 @@ function LoginPageInner() {
 
             {TURNSTILE_SITE_KEY && (
               <div>
-                <div
-                  className="cf-turnstile"
-                  data-sitekey={TURNSTILE_SITE_KEY}
-                  data-callback="onTurnstileSuccess"
-                  data-theme="dark"
-                  data-size="flexible"
-                />
-                <Script
-                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-                  strategy="lazyOnload"
-                  onLoad={() => {
-                    (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token);
-                  }}
-                />
-                {errors.captcha && <p className="text-red-400 text-xs mt-1.5">{errors.captcha}</p>}
+                <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}
+                  data-callback="onTurnstileSuccess" data-theme="dark" data-size="flexible" />
+                <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload"
+                  onLoad={() => { (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token); }} />
+                {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
+              className="w-full font-bold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                marginTop: 4,
+                padding: 14,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg,#1a3acc,#0d1f88)',
+                border: '1px solid rgba(77,128,255,.28)',
+                boxShadow: '0 0 20px rgba(26,58,204,.25)',
+              }}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
+            <span className="text-[11px]" style={{ color: '#0e1535' }}>or</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
+          </div>
+
+          <p className="text-center text-sm" style={{ color: '#0e1535' }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-medium transition-colors">Sign up</Link>
+            <Link href="/signup" className="font-medium transition-colors hover:opacity-80" style={{ color: '#4d80ff' }}>Sign up</Link>
           </p>
 
-          <p className="text-center text-[11px] text-gray-600 mt-6">
-            By continuing, you agree to our{' '}
-            <span className="text-gray-400 cursor-pointer hover:text-white">Terms of Service</span> and{' '}
-            <span className="text-gray-400 cursor-pointer hover:text-white">Privacy Policy</span>
+          <p className="text-center text-[11px] mt-4" style={{ color: '#080e20' }}>
+            By continuing you agree to our{' '}
+            <Link href="/terms" className="hover:text-white/40 transition-colors">Terms</Link> and{' '}
+            <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
           </p>
         </div>
       </div>
@@ -319,7 +340,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#07090f]" />}>
       <LoginPageInner />
     </Suspense>
   );
