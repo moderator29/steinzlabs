@@ -12,7 +12,6 @@ function cgHeaders(): Record<string, string> {
     : {};
 }
 
-// Group raw price points into OHLC candles at `intervalSec` resolution
 function synthesizeOHLC(
   prices: [number, number][],
   intervalSec: number
@@ -36,13 +35,12 @@ function synthesizeOHLC(
   return candles;
 }
 
-// How many seconds per candle for each days param
 function intervalFor(days: string): number {
-  if (days === '1')   return 1800;   // 30-min → 48 candles/day
-  if (days === '7')   return 7200;   // 2-hour  → 84 candles/week
-  if (days === '30')  return 21600;  // 6-hour  → 120 candles/month
-  if (days === '365') return 86400;  // 1-day   → 365 candles/year
-  return 604800;                      // 1-week  → for 'max'
+  if (days === '1')   return 1800;
+  if (days === '7')   return 7200;
+  if (days === '30')  return 21600;
+  if (days === '365') return 86400;
+  return 604800;
 }
 
 export async function GET(
@@ -52,7 +50,6 @@ export async function GET(
   const { id } = params;
   const days = req.nextUrl.searchParams.get('days') ?? '1';
 
-  // market_chart gives dense price + real volume (unlike sparse /ohlc)
   const url = new URL(`${BASE}/coins/${id}/market_chart`);
   url.searchParams.set('vs_currency', 'usd');
   url.searchParams.set('days', days);
