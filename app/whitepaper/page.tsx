@@ -121,6 +121,9 @@ export default function WhitepaperPage() {
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            <Link href="/docs" className="text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/10 rounded-lg hover:border-white/20">
+              Docs
+            </Link>
             <Link href="/dashboard">
               <button className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-3 py-1.5 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
                 Launch App
