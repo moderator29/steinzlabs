@@ -1,0 +1,79 @@
+/* RTL (Right-to-Left) overrides for Arabic (ar) locale */
+/* Applied when <html dir="rtl"> is set by LanguageSwitcher */
+
+[dir="rtl"] {
+  /* Text alignment */
+  text-align: right;
+
+  /* Reverse flex row directions */
+  .flex-row,
+  .flex {
+    flex-direction: row-reverse;
+  }
+
+  /* Sidebars and navigation — flip from left to right */
+  .sidebar-left {
+    left: auto;
+    right: 0;
+    border-right: none;
+    border-left: 1px solid var(--border-color, #1E2433);
+  }
+
+  /* Padding and margin flips */
+  .pl-4 { padding-left: 0; padding-right: 1rem; }
+  .pr-4 { padding-right: 0; padding-left: 1rem; }
+  .ml-4 { margin-left: 0; margin-right: 1rem; }
+  .mr-4 { margin-right: 0; margin-left: 1rem; }
+  .pl-6 { padding-left: 0; padding-right: 1.5rem; }
+  .pr-6 { padding-right: 0; padding-left: 1.5rem; }
+  .ml-6 { margin-left: 0; margin-right: 1.5rem; }
+  .mr-6 { margin-right: 0; margin-left: 1.5rem; }
+  .pl-12 { padding-left: 0; padding-right: 3rem; }
+  .pr-12 { padding-right: 0; padding-left: 3rem; }
+
+  /* Input icons — flip to right side */
+  .input-icon-left {
+    left: auto;
+    right: 1rem;
+  }
+
+  /* Absolute positioned elements */
+  .absolute.left-0 { left: auto; right: 0; }
+  .absolute.right-0 { right: auto; left: 0; }
+  .absolute.left-4 { left: auto; right: 1rem; }
+  .absolute.right-4 { right: auto; left: 1rem; }
+
+  /* Table cell alignment */
+  th, td {
+    text-align: right;
+  }
+
+  /* Chevron icons in breadcrumbs / navigation */
+  .breadcrumb-separator,
+  .nav-arrow {
+    transform: scaleX(-1);
+  }
+
+  /* Badge / tag positioning */
+  .badge-right {
+    right: auto;
+    left: 0.5rem;
+  }
+
+  /* Scrollbar on the left for RTL */
+  * {
+    scrollbar-gutter: stable both-edges;
+  }
+
+  /* Font family override for Arabic — system Arabic fonts */
+  body, input, textarea, button, select {
+    font-family:
+      "Segoe UI",
+      "Tahoma",
+      "Arial",
+      "Helvetica Neue",
+      sans-serif;
+  }
+}
+
+/* Import RTL CSS in globals.css or root layout */

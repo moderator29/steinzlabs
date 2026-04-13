@@ -144,7 +144,7 @@ async function getCoinGeckoWhaleActivity(): Promise<WhaleEvent[]> {
           amountRaw: vol,
           time: 'recent',
           chain: 'Multi-chain',
-          label: `${coin.name} ${isBuy ? '📈' : '📉'} ${Math.abs(coin.price_change_percentage_24h).toFixed(1)}%`,
+          label: `${coin.name} ${isBuy ? '+' : '-'}${Math.abs(coin.price_change_percentage_24h).toFixed(1)}%`,
           txHash: undefined,
           blockNum: undefined,
         };

@@ -10,8 +10,8 @@ import {
   Globe, ChevronRight, Heart, Share2, LayoutDashboard, UserPlus,
   ShieldAlert, Radio, RefreshCw
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-const ADMIN_PASSWORD = '195656';
 const REFRESH_INTERVAL = 30000;
 
 interface AdminStats {
@@ -130,7 +130,7 @@ function SectionHeader({ title, subtitle, action }: { title: string; subtitle: s
 
 export default function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState('');
+  const [accessToken, setAccessToken] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -157,7 +157,9 @@ export default function AdminPanel() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/stats?password=${ADMIN_PASSWORD}`);
+      const res = await fetch('/api/admin/stats', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -165,14 +167,16 @@ export default function AdminPanel() {
     } catch (e) { // removed log
 }
     setLoadingStats(false);
-  }, []);
+  }, [accessToken]);
 
   const fetchUsers = useCallback(async (search?: string, page?: number) => {
     setLoadingUsers(true);
     try {
       const s = search ?? userSearch;
       const p = page ?? userPage;
-      const res = await fetch(`/api/admin/users?password=${ADMIN_PASSWORD}&search=${encodeURIComponent(s)}&page=${p}&limit=20`);
+      const res = await fetch(`/api/admin/users?search=${encodeURIComponent(s)}&page=${p}&limit=20`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -182,7 +186,7 @@ export default function AdminPanel() {
     } catch (e) { // removed log
 }
     setLoadingUsers(false);
-  }, [userSearch, userPage]);
+  }, [accessToken, userSearch, userPage]);
 
   const fetchTokens = useCallback(async () => {
     setLoadingTokens(true);
@@ -222,7 +226,9 @@ export default function AdminPanel() {
   const fetchListings = useCallback(async () => {
     setLoadingListings(true);
     try {
-      const res = await fetch(`/api/project-listing?password=${ADMIN_PASSWORD}`);
+      const res = await fetch('/api/project-listing', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setTokenListings(data.listings || []);
@@ -230,14 +236,14 @@ export default function AdminPanel() {
     } catch (e) { // removed log
 }
     setLoadingListings(false);
-  }, []);
+  }, [accessToken]);
 
   const handleListingAction = async (id: string, action: string) => {
     try {
       await fetch('/api/project-listing', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action, password: ADMIN_PASSWORD }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id, action }),
       });
       fetchListings();
     } catch (e) { // removed log
@@ -272,14 +278,46 @@ export default function AdminPanel() {
     if (isLoggedIn && activeSection === 'users') fetchUsers();
   }, [activeSection, isLoggedIn]);
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
+  const handleLogin = async () => {
+    setLoginError('');
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session) {
+        setLoginError('Not authenticated. Please sign in first.');
+        return;
+      }
+      // Verify admin role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      if (profile?.role !== 'admin') {
+        setLoginError('Access denied. Admin privileges required.');
+        return;
+      }
+      setAccessToken(session.access_token);
       setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid admin credentials');
+    } catch {
+      setLoginError('Authentication failed. Try again.');
     }
   };
+
+  // Auto-verify session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      if (profile?.role === 'admin') {
+        setAccessToken(session.access_token);
+        setIsLoggedIn(true);
+      }
+    });
+  }, []);
 
   const handleUserSearch = (val: string) => {
     setUserSearch(val);
@@ -329,18 +367,16 @@ export default function AdminPanel() {
               </div>
             </div>
             <div className="space-y-3">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                placeholder="Enter admin password"
-                className="w-full bg-[#0A0E1A] border border-white/[0.08] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white placeholder-gray-600 transition-colors"
-              />
+              <p className="text-gray-400 text-sm text-center">
+                Sign in to your Steinz Labs account with admin privileges to access this panel.
+              </p>
               {loginError && <p className="text-[#EF4444] text-xs text-center">{loginError}</p>}
               <button onClick={handleLogin} className="w-full bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
-                Access Panel
+                Verify Admin Access
               </button>
+              <a href="/login" className="block text-center text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                Sign in to your account first
+              </a>
             </div>
           </div>
           <p className="text-center text-[10px] text-gray-700 mt-4">Protected access — authorized personnel only</p>

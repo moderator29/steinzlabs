@@ -59,10 +59,11 @@ function extractTokenFromCookies(request: NextRequest): string | null {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  const isProtected = path.startsWith('/dashboard');
+  const isProtectedDashboard = path.startsWith('/dashboard');
+  const isAdminRoute = path.startsWith('/admin');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
-  if (isProtected && !isPublic) {
+  if ((isProtectedDashboard || isAdminRoute) && !isPublic) {
     const token = extractTokenFromCookies(request);
     const isValid = await verifySupabaseJWT(token ?? '');
 
@@ -70,6 +71,14 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('from', path);
+      return applyHeaders(NextResponse.redirect(url));
+    }
+
+    // Admin routes require a valid session — role check happens in the page/API
+    // Non-authenticated users are silently redirected to /dashboard
+    if (isAdminRoute && !isValid) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
       return applyHeaders(NextResponse.redirect(url));
     }
   }

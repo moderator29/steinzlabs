@@ -92,20 +92,20 @@ function mapEntityTypeToLabel(type: string, name: string, labels: string[]): {
   const allLabels = labels.map(l => l.toLowerCase());
 
   if (allLabels.some(l => ['scammer', 'rug_puller', 'phishing', 'hack', 'exploit'].includes(l))) {
-    return { entityLabel: 'RISK', entityBadge: '🚨' };
+    return { entityLabel: 'RISK', entityBadge: '!' };
   }
-  if (t === 'cex' || t === 'exchange') return { entityLabel: 'CEX', entityBadge: '🏦' };
-  if (t === 'protocol' || t === 'defi' || t === 'dex') return { entityLabel: 'Protocol', entityBadge: '🏛' };
-  if (t === 'team' || t === 'deployer') return { entityLabel: 'Team', entityBadge: '⚠️' };
+  if (t === 'cex' || t === 'exchange') return { entityLabel: 'CEX', entityBadge: 'CEX' };
+  if (t === 'protocol' || t === 'defi' || t === 'dex') return { entityLabel: 'Protocol', entityBadge: 'PRO' };
+  if (t === 'team' || t === 'deployer') return { entityLabel: 'Team', entityBadge: '!' };
 
   const n = name.toLowerCase();
   if (n.includes('binance') || n.includes('coinbase') || n.includes('kraken') ||
       n.includes('okx') || n.includes('bybit') || n.includes('kucoin')) {
-    return { entityLabel: 'CEX', entityBadge: '🏦' };
+    return { entityLabel: 'CEX', entityBadge: 'CEX' };
   }
   if (n.includes('uniswap') || n.includes('sushiswap') || n.includes('pancake') ||
       n.includes('curve') || n.includes('raydium') || n.includes('orca')) {
-    return { entityLabel: 'Protocol', entityBadge: '🏛' };
+    return { entityLabel: 'Protocol', entityBadge: 'PRO' };
   }
 
   return { entityLabel: null, entityBadge: null };
@@ -213,15 +213,15 @@ async function fetchEvmHolders(tokenAddress: string): Promise<Array<{ address: s
 
 function generateSyntheticHolders(): RawHolder[] {
   const types: Array<Omit<RawHolder, 'address' | 'percentage'> & { pctRange: [number, number] }> = [
-    { label: 'Binance Hot Wallet', pctRange: [8, 15], entityName: 'Binance', entityType: 'cex', entityLabel: 'CEX', entityBadge: '🏦', verified: true, isScammer: false },
-    { label: 'Coinbase Custody', pctRange: [5, 10], entityName: 'Coinbase', entityType: 'cex', entityLabel: 'CEX', entityBadge: '🏦', verified: true, isScammer: false },
-    { label: 'Uniswap V3 Pool', pctRange: [4, 8], entityName: 'Uniswap', entityType: 'defi', entityLabel: 'Protocol', entityBadge: '🏛', verified: true, isScammer: false },
+    { label: 'Binance Hot Wallet', pctRange: [8, 15], entityName: 'Binance', entityType: 'cex', entityLabel: 'CEX', entityBadge: 'CEX', verified: true, isScammer: false },
+    { label: 'Coinbase Custody', pctRange: [5, 10], entityName: 'Coinbase', entityType: 'cex', entityLabel: 'CEX', entityBadge: 'CEX', verified: true, isScammer: false },
+    { label: 'Uniswap V3 Pool', pctRange: [4, 8], entityName: 'Uniswap', entityType: 'defi', entityLabel: 'Protocol', entityBadge: 'PRO', verified: true, isScammer: false },
     { label: 'Whale 0x7a2...f3e', pctRange: [3, 7], entityName: null, entityType: null, entityLabel: null, entityBadge: null, verified: false, isScammer: false },
     { label: 'Whale 0x4c1...8d2', pctRange: [2, 5], entityName: null, entityType: null, entityLabel: null, entityBadge: null, verified: false, isScammer: false },
     { label: 'Staking Contract', pctRange: [5, 12], entityName: null, entityType: 'contract', entityLabel: null, entityBadge: null, verified: false, isScammer: false },
-    { label: 'Team Vesting', pctRange: [3, 8], entityName: null, entityType: 'team', entityLabel: 'Team', entityBadge: '⚠️', verified: false, isScammer: false },
-    { label: 'OKX', pctRange: [2, 6], entityName: 'OKX', entityType: 'cex', entityLabel: 'CEX', entityBadge: '🏦', verified: true, isScammer: false },
-    { label: 'Raydium Pool', pctRange: [1, 4], entityName: 'Raydium', entityType: 'defi', entityLabel: 'Protocol', entityBadge: '🏛', verified: true, isScammer: false },
+    { label: 'Team Vesting', pctRange: [3, 8], entityName: null, entityType: 'team', entityLabel: 'Team', entityBadge: '!', verified: false, isScammer: false },
+    { label: 'OKX', pctRange: [2, 6], entityName: 'OKX', entityType: 'cex', entityLabel: 'CEX', entityBadge: 'CEX', verified: true, isScammer: false },
+    { label: 'Raydium Pool', pctRange: [1, 4], entityName: 'Raydium', entityType: 'defi', entityLabel: 'Protocol', entityBadge: 'PRO', verified: true, isScammer: false },
     { label: 'Whale 0x9f3...1a7', pctRange: [1, 3], entityName: null, entityType: null, entityLabel: null, entityBadge: null, verified: false, isScammer: false },
     { label: 'Holder 0xb2e...c91', pctRange: [0.5, 2], entityName: null, entityType: null, entityLabel: null, entityBadge: null, verified: false, isScammer: false },
     { label: 'Holder 0xd5a...7f4', pctRange: [0.5, 1.5], entityName: null, entityType: null, entityLabel: null, entityBadge: null, verified: false, isScammer: false },

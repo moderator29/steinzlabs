@@ -148,7 +148,7 @@ export default function DNAAnalyzerPage() {
               <AlertTriangle className="text-red-500" size={32} />
               <div>
                 <h2 className="text-xl font-bold text-red-500">
-                  🚨 CRYPTO SCAMMER DETECTED
+                  CRYPTO SCAMMER DETECTED
                 </h2>
                 <p className="text-gray-300">This wallet is flagged for malicious activity</p>
               </div>
@@ -173,7 +173,7 @@ export default function DNAAnalyzerPage() {
             </div>
 
             <div className="p-4 bg-red-500/20 rounded text-sm text-red-300">
-              ⚠️ DO NOT INTERACT WITH THIS WALLET. Shadow Guardian will block all trades.
+              WARNING: DO NOT INTERACT WITH THIS WALLET. Shadow Guardian will block all trades.
             </div>
           </div>
         )}

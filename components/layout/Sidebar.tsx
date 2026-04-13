@@ -22,7 +22,7 @@ export function Sidebar() {
     <div className="fixed left-0 top-0 h-full w-64 bg-[#0A0E1A] border-r border-[#1E2433] flex flex-col">
       <div className="p-6 border-b border-[#1E2433]">
         <h1 className="text-2xl font-bold text-white">STEINZ <span className="text-[#0A1EFF]">Labs</span></h1>
-        <p className="text-xs text-gray-500 mt-1">Powered by Arkham</p>
+        <p className="text-xs text-gray-500 mt-1">On-chain Intelligence</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {nav.map((item) => {
