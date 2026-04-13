@@ -6,6 +6,7 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { searchPairs } from '@/lib/services/dexscreener';
 import { getContractCode } from '@/lib/services/alchemy';
 import { vtxAnalyze } from '@/lib/services/anthropic';
+import { getBirdeyeTokenSecurity, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Chain Maps ───────────────────────────────────────────────────────────────
@@ -112,23 +113,43 @@ async function fetchDexData(address: string): Promise<Record<string, unknown> | 
 }
 
 // ─── Solana Handler ───────────────────────────────────────────────────────────
-// GoPlus does not support Solana. We derive a heuristic score from DexScreener.
+// GoPlus does not support Solana. We combine Birdeye token security + DexScreener.
 
 async function handleSolanaToken(address: string): Promise<Record<string, unknown>> {
-  const dexData = await fetchDexData(address);
+  // Parallel fetch: DEX market data + Birdeye security + token overview (holder count)
+  const [dexData, birdSec, birdOverview] = await Promise.all([
+    fetchDexData(address),
+    getBirdeyeTokenSecurity(address),
+    getBirdeyeTokenOverview(address, 'solana'),
+  ]);
+
   if (!dexData) throw new Error('Token not found. Verify the Solana token address.');
 
   const liquidity = (dexData.liquidity as number) ?? 0;
   const volume24h = (dexData.volume24h as number) ?? 0;
   const websites = (dexData.websites as Array<{ label: string; url: string }>) ?? [];
-  // Note: DexPair.info has no 'socials' field — use websites as proxy for social presence
-  const totalTxns = 0; // DexPair doesn't surface 5m txns directly in searchPairs result
 
+  // ── Real Birdeye security flags ──────────────────────────────────────────
+  const isMintable = birdSec?.isMintable ?? false;
+  const freezeable = birdSec?.freezeable ?? false;
+  const lpBurned = birdSec?.lpBurned ?? false;
+  const top10HolderPercent = birdSec?.top10HolderPercent ?? null;
+  const creatorAddress = birdSec?.creatorAddress || birdSec?.ownerAddress || 'N/A';
+  const holderCount = birdOverview?.holder ?? 0;
+
+  // ── Deterministic trust score ─────────────────────────────────────────────
   let score = 70;
+  // Market signals
   if (liquidity > 100_000) score += 10;
   else if (liquidity < 10_000) score -= 15;
   if (volume24h > 50_000) score += 5;
-  if (websites.length > 0) score += 10; // social/website presence
+  if (websites.length > 0) score += 5;
+  // Real security flags from Birdeye
+  if (isMintable) score -= 10;
+  if (!lpBurned && birdSec !== null) score -= 10; // only penalize if we have real data
+  if (freezeable) score -= 10;
+  if (top10HolderPercent !== null && top10HolderPercent > 80) score -= 15;
+  else if (top10HolderPercent !== null && top10HolderPercent > 60) score -= 5;
   score = Math.max(0, Math.min(100, score));
 
   let safetyLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER' = 'SAFE';
@@ -137,23 +158,37 @@ async function handleSolanaToken(address: string): Promise<Record<string, unknow
   else if (score < 50) { safetyLevel = 'WARNING'; safetyColor = '#F59E0B'; }
   else if (score < 70) { safetyLevel = 'CAUTION'; safetyColor = '#F59E0B'; }
 
+  // ── Security checks — all backed by real data ────────────────────────────
   const checks = [
     { label: 'Token Listed on DEX', status: 'pass' as const },
     { label: 'Has Liquidity Pool', status: liquidity > 1_000 ? 'pass' as const : 'fail' as const },
     { label: 'Active Trading Volume', status: volume24h > 1_000 ? 'pass' as const : volume24h > 0 ? 'warn' as const : 'fail' as const },
     { label: 'Has Website / Social', status: websites.length > 0 ? 'pass' as const : 'warn' as const },
     { label: 'Sufficient Liquidity (>$10k)', status: liquidity > 10_000 ? 'pass' as const : liquidity > 1_000 ? 'warn' as const : 'fail' as const },
+    // Real Birdeye flags — only shown when Birdeye returned data
+    ...(birdSec !== null ? [
+      { label: 'Mint Authority Disabled', status: isMintable ? 'fail' as const : 'pass' as const },
+      { label: 'Freeze Authority Disabled', status: freezeable ? 'fail' as const : 'pass' as const },
+      { label: 'LP Tokens Burned', status: lpBurned ? 'pass' as const : 'warn' as const },
+      {
+        label: `Top 10 Holder Concentration${top10HolderPercent !== null ? ` (${top10HolderPercent.toFixed(1)}%)` : ''}`,
+        status: top10HolderPercent === null ? 'warn' as const
+          : top10HolderPercent > 80 ? 'fail' as const
+          : top10HolderPercent > 60 ? 'warn' as const
+          : 'pass' as const,
+      },
+    ] : []),
   ];
 
   return {
     contract: address,
     chainId: 'solana',
-    name: (dexData.name as string) || 'Unknown Token',
-    symbol: (dexData.symbol as string) || '???',
+    name: (dexData.name as string) || birdOverview?.name || 'Unknown Token',
+    symbol: (dexData.symbol as string) || birdOverview?.symbol || '???',
     totalSupply: 'N/A',
-    holderCount: 0,
-    creatorAddress: 'N/A',
-    ownerAddress: 'N/A',
+    holderCount,
+    creatorAddress,
+    ownerAddress: birdSec?.ownerAddress || 'N/A',
     trustScore: score,
     safetyLevel,
     safetyColor,
@@ -161,17 +196,19 @@ async function handleSolanaToken(address: string): Promise<Record<string, unknow
     sellTax: '0.0%',
     isHoneypot: false,
     isOpenSource: true,
-    isMintable: false,
-    isProxy: false,
+    isMintable,
+    isProxy: freezeable,         // freezeable = can freeze accounts = closest proxy analogue
     hasHiddenOwner: false,
     canTakeBackOwnership: false,
-    ownerCanChangeBalance: false,
+    ownerCanChangeBalance: freezeable,
     lpHolders: [],
     lpTotalSupply: 'N/A',
     checks,
     dexData,
     timestamp: new Date().toISOString(),
-    solanaNote: 'Security data derived from DEX market signals. Contract audit not available for Solana. Always DYOR.',
+    solanaNote: birdSec
+      ? 'Security data from Birdeye on-chain analysis + DEX market signals.'
+      : 'Security data derived from DEX market signals only (Birdeye data unavailable). Always DYOR.',
   };
 }
 
