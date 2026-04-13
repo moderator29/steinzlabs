@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, Check, RefreshCw } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, Loader2, Mail, Lock, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { AuthRightPanel } from '@/components/auth/AuthRightPanel';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
@@ -162,7 +163,6 @@ function LoginPageInner() {
       const destination = searchParams.get('from') || '/dashboard';
       window.location.href = destination;
     } catch (err: any) {
-
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
         showToast('Connection error. Check your internet and try again.', 'error');
@@ -176,54 +176,48 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0A1EFF]/[0.04] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
-      </div>
+    <div className="min-h-screen bg-[#07090f] text-white flex flex-row-reverse">
+      {/* Right: 3D visual panel (rendered first in DOM but visually on the right via flex-row-reverse) */}
+      <AuthRightPanel mode="login" />
 
-      <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
-        <Link href="/" className="flex items-center gap-2.5">
-          <SteinzLogo size={32} />
-          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
-        </Link>
-        <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight mb-4">Welcome back to<br /><span className="text-[#0A1EFF]">STEINZ LABS</span></h1>
-          <p className="text-gray-400 text-sm leading-relaxed mb-8">Access your intelligence dashboard. Track whales, analyze wallets, and act on real blockchain data before the crowd.</p>
-          <div className="space-y-3">
-            {['Real-time on-chain intelligence', 'AI-powered trading analysis', 'Professional security scanning'].map(t => (
-              <div key={t} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#0A1EFF]/10 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-[#0A1EFF]" /></div>
-                <span className="text-sm text-gray-300">{t}</span>
-              </div>
-            ))}
-          </div>
+      {/* Left: form (45%) */}
+      <div className="flex-1 lg:max-w-[45%] flex flex-col items-center justify-center p-6 relative overflow-y-auto">
+        {/* Background glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[20%] left-[10%] w-[400px] h-[400px] bg-[#0A1EFF]/[0.04] rounded-full blur-[100px]" />
         </div>
-        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
-      </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center justify-between mb-8">
-            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
-            <Link href="/" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back</Link>
+        <div className="w-full max-w-md relative z-10">
+          {/* Top nav row */}
+          <div className="flex items-center justify-between mb-10">
+            <Link href="/" className="flex items-center gap-2">
+              <SteinzLogo size={28} />
+              <span className="text-sm font-bold tracking-tight">STEINZ LABS</span>
+            </Link>
+            <Link href="/" className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </Link>
           </div>
 
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-              <Shield className="w-8 h-8 text-[#0A1EFF]" />
+          {/* Header */}
+          <div className="mb-8">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+              style={{ background: 'rgba(10,30,255,.1)', border: '1px solid rgba(10,30,255,.2)' }}>
+              <Shield className="w-7 h-7" style={{ color: '#6d85ff' }} />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Sign in to your account</h2>
-            <p className="text-gray-500 text-sm">Access your intelligence dashboard</p>
+            <h2 className="text-2xl font-black text-white mb-1">Welcome back</h2>
+            <p className="text-white/40 text-sm">Sign in to your intelligence dashboard</p>
           </div>
 
+          {/* Verification warning */}
           {needsVerification && (
-            <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-              <p className="text-amber-300 text-sm mb-3">Your email is not verified. Check your inbox and spam folder for the verification link.</p>
+            <div className="mb-5 rounded-xl p-4" style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)' }}>
+              <p className="text-amber-300 text-sm mb-3">Your email is not verified. Check your inbox and spam folder.</p>
               <button
                 onClick={handleResendVerification}
                 disabled={resending}
-                className="flex items-center gap-2 text-sm font-medium text-[#0A1EFF] hover:text-white transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ color: '#6d85ff' }}
               >
                 {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 {resending ? 'Sending...' : 'Resend verification email'}
@@ -231,16 +225,18 @@ function LoginPageInner() {
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email or Username</label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Email or Username</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/25" />
                 <input
                   type="text"
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
-                  className={`w-full bg-white/[0.04] border ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                  className={`w-full rounded-xl pl-12 pr-4 py-4 text-sm text-white placeholder-white/20 focus:outline-none transition-colors ${errors.identifier ? 'border-red-500/50' : 'border-white/[0.08]'}`}
+                  style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${errors.identifier ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.08)'}` }}
                   placeholder="john@example.com or username"
                   autoComplete="username"
                   autoFocus
@@ -251,20 +247,24 @@ function LoginPageInner() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-300">Password</label>
-                <Link href="/forgot-password" className="text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">Forgot password?</Link>
+                <label className="text-sm font-medium text-white/60">Password</label>
+                <Link href="/forgot-password" className="text-xs transition-colors hover:text-white" style={{ color: '#6d85ff' }}>
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/25" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors({}); }}
-                  className={`w-full bg-white/[0.04] border ${errors.password ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                  className="w-full rounded-xl pl-12 pr-12 py-4 text-sm text-white placeholder-white/20 focus:outline-none transition-colors"
+                  style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${errors.password ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.08)'}` }}
                   placeholder="Enter your password"
                   autoComplete="current-password"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
@@ -273,20 +273,10 @@ function LoginPageInner() {
 
             {TURNSTILE_SITE_KEY && (
               <div>
-                <div
-                  className="cf-turnstile"
-                  data-sitekey={TURNSTILE_SITE_KEY}
-                  data-callback="onTurnstileSuccess"
-                  data-theme="dark"
-                  data-size="flexible"
-                />
-                <Script
-                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-                  strategy="lazyOnload"
-                  onLoad={() => {
-                    (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token);
-                  }}
-                />
+                <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}
+                  data-callback="onTurnstileSuccess" data-theme="dark" data-size="flexible" />
+                <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload"
+                  onLoad={() => { (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token); }} />
                 {errors.captcha && <p className="text-red-400 text-xs mt-1.5">{errors.captcha}</p>}
               </div>
             )}
@@ -294,22 +284,23 @@ function LoginPageInner() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
+              className="w-full py-4 rounded-xl font-bold text-sm text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 30px rgba(10,30,255,.3)' }}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-white/30 mt-6">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-medium transition-colors">Sign up</Link>
+            <Link href="/signup" className="font-medium transition-colors hover:text-white" style={{ color: '#6d85ff' }}>Sign up</Link>
           </p>
 
-          <p className="text-center text-[11px] text-gray-600 mt-6">
+          <p className="text-center text-[11px] text-white/20 mt-5">
             By continuing, you agree to our{' '}
-            <span className="text-gray-400 cursor-pointer hover:text-white">Terms of Service</span> and{' '}
-            <span className="text-gray-400 cursor-pointer hover:text-white">Privacy Policy</span>
+            <span className="text-white/40 cursor-pointer hover:text-white">Terms of Service</span> and{' '}
+            <span className="text-white/40 cursor-pointer hover:text-white">Privacy Policy</span>
           </p>
         </div>
       </div>
@@ -319,7 +310,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#07090f]" />}>
       <LoginPageInner />
     </Suspense>
   );
