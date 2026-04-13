@@ -34,13 +34,12 @@ async function fetchPriceAlerts(): Promise<NotificationItem[]> {
       const change1h = coin.price_change_percentage_1h_in_currency;
       if (change1h && Math.abs(change1h) > 5) {
         const direction = change1h > 0 ? 'up' : 'down';
-        const emoji = change1h > 0 ? '📈' : '📉';
         const price = coin.current_price?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) || '$0';
         alerts.push({
           id: `price-${coin.id}-${Date.now()}`,
           type: 'price',
           title: 'Price Break',
-          message: `${emoji} ${coin.name} (${coin.symbol?.toUpperCase()}) ${direction} ${Math.abs(change1h).toFixed(1)}% in 1h — now at ${price}`,
+          message: `${coin.name} (${coin.symbol?.toUpperCase()}) ${direction} ${Math.abs(change1h).toFixed(1)}% in 1h — now at ${price}`,
           time: timeAgo(new Date(coin.last_updated || Date.now())),
           read: false,
         });
@@ -57,7 +56,7 @@ async function fetchTrending(): Promise<NotificationItem[]> {
       id: `trending-${coin.id}-${Date.now()}-${i}`,
       type: 'trending' as const,
       title: 'Trending Token',
-      message: `🔥 ${coin.name} (${coin.symbol?.toUpperCase()}) is trending on CoinGecko`,
+      message: `${coin.name} (${coin.symbol?.toUpperCase()}) is trending on CoinGecko`,
       time: timeAgo(new Date(Date.now() - i * 300000)),
       read: false,
     }));
@@ -75,7 +74,7 @@ async function fetchSecurityAlerts(): Promise<NotificationItem[]> {
           id: `security-${coin.id}-${Date.now()}`,
           type: 'security',
           title: 'Security Alert',
-          message: `⚠️ ${coin.name} (${coin.symbol?.toUpperCase()}) crashed ${Math.abs(change1h).toFixed(1)}% in 1h — potential risk event`,
+          message: `${coin.name} (${coin.symbol?.toUpperCase()}) crashed ${Math.abs(change1h).toFixed(1)}% in 1h — potential risk event`,
           time: timeAgo(new Date(coin.last_updated || Date.now())),
           read: false,
         });
@@ -88,7 +87,7 @@ async function fetchSecurityAlerts(): Promise<NotificationItem[]> {
           id: `security-vol-${coin.id}-${Date.now()}`,
           type: 'security',
           title: 'Security Alert',
-          message: `⚠️ ${coin.name} (${coin.symbol?.toUpperCase()}) has unusually high volume-to-mcap ratio — monitor closely`,
+          message: `${coin.name} (${coin.symbol?.toUpperCase()}) has unusually high volume-to-mcap ratio — monitor closely`,
           time: timeAgo(new Date(coin.last_updated || Date.now())),
           read: false,
         });
@@ -108,7 +107,7 @@ async function fetchWhaleAlerts(): Promise<NotificationItem[]> {
         id: `whale-${coin.id}-${Date.now()}-${i}`,
         type: 'whale' as const,
         title: 'Whale Alert',
-        message: `🐋 ${coin.name} 24h volume at ${volStr} — large institutional activity detected`,
+        message: `${coin.name} 24h volume at ${volStr} — large institutional activity detected`,
         time: timeAgo(new Date(Date.now() - i * 600000)),
         read: false,
       };

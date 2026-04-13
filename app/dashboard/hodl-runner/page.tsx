@@ -767,7 +767,7 @@ export default function HodlRunnerPage() {
         {showDeathOverlay && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 20 }}>
             <div className="bg-[#0a0e1a]/95 backdrop-blur-md border border-[#EF4444]/30 rounded-3xl p-6 mx-4 max-w-sm w-full text-center animate-in fade-in zoom-in-95 duration-300">
-              <div className="text-4xl mb-3">💀</div>
+              <div className="text-4xl mb-3 font-bold text-red-500">X</div>
               <h2 className="text-xl font-bold mb-1 text-white">LIQUIDATED!</h2>
               <p className="text-xs text-gray-500 mb-4">The market got you, {username}.</p>
 
@@ -944,9 +944,9 @@ export default function HodlRunnerPage() {
               <div className="text-[10px] font-bold mb-3 flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-[#EF4444]"/>Obstacles</div>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Red Candles', desc: 'Jump over', color: '#EF4444', icon: '📉' },
-                  { label: 'Bears', desc: 'Jump over', color: '#EF4444', icon: '🐻' },
-                  { label: 'Rug Pulls', desc: 'Jump over', color: '#7C3AED', icon: '🕳️' },
+                  { label: 'Red Candles', desc: 'Jump over', color: '#EF4444', icon: '-' },
+                  { label: 'Bears', desc: 'Jump over', color: '#EF4444', icon: 'B' },
+                  { label: 'Rug Pulls', desc: 'Jump over', color: '#7C3AED', icon: 'R' },
                 ].map(o => (
                   <div key={o.label} className="text-center">
                     <div className="text-2xl mb-1">{o.icon}</div>
@@ -962,7 +962,7 @@ export default function HodlRunnerPage() {
         {gameState === 'gameover' && (
           <div className="space-y-5">
             <div className="bg-gradient-to-br from-[#EF4444]/5 to-[#F59E0B]/5 rounded-2xl border border-[#EF4444]/15 p-6 text-center">
-              <div className="text-3xl mb-2">💀</div>
+              <div className="text-3xl mb-2 font-bold text-red-500">X</div>
               <h2 className="text-xl font-heading font-bold mb-1">LIQUIDATED!</h2>
               <p className="text-[10px] text-gray-500 mb-4">The market got you, {username}.</p>
 

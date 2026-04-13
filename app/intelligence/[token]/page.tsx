@@ -122,7 +122,7 @@ export default function ViewProofPage() {
           <div className="bg-[#141824] rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">Liquidity</div>
             <div className="text-xl font-bold text-white font-mono">$250K</div>
-            <div className="text-sm text-green-500">🔒 Locked 180d</div>
+            <div className="text-sm text-green-500">Locked 180d</div>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export default function ViewProofPage() {
           {/* Security Analysis */}
           <div className="bg-[#141824] rounded-lg p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-4">
-              🛡️ Shadow Guardian Analysis
+              Shadow Guardian Analysis
             </h3>
 
             <ShadowGuardianScan tokenAddress={tokenAddress} />
@@ -204,7 +204,7 @@ export default function ViewProofPage() {
         {intelligence.patternMatching.historicalOutcomes.totalMatches > 0 && (
           <div className="bg-[#141824] rounded-lg p-6">
             <h3 className="text-lg font-bold text-white mb-4">
-              📊 Historical Pattern Matching
+              Historical Pattern Matching
             </h3>
 
             <p className="text-gray-300 mb-4">
@@ -240,7 +240,7 @@ export default function ViewProofPage() {
 
             {/* AI Prediction */}
             <div className="bg-gradient-to-r from-[#0A1EFF]/20 to-purple-500/20 border border-[#0A1EFF] rounded-lg p-4">
-              <h4 className="text-sm font-medium text-white mb-2">🤖 AI Prediction</h4>
+              <h4 className="text-sm font-medium text-white mb-2">AI Prediction</h4>
               <div className="grid grid-cols-3 gap-4 mb-3">
                 <div>
                   <div className="text-xs text-gray-400">Expected Gain</div>

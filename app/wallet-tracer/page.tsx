@@ -208,7 +208,7 @@ export default function WalletTracerPage() {
                         <div>
                           <div className="text-white font-medium">{approval.tokenSymbol || 'Unknown Token'}</div>
                           <div className="text-gray-400 text-sm font-mono mt-1">{approval.spender?.slice(0, 20)}...</div>
-                          <div className="text-gray-500 text-xs mt-1">{approval.allowance === 'unlimited' ? '♾️ Unlimited' : approval.allowance}</div>
+                          <div className="text-gray-500 text-xs mt-1">{approval.allowance === 'unlimited' ? 'Unlimited' : approval.allowance}</div>
                         </div>
                         <button
                           onClick={async () => {

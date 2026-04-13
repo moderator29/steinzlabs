@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   // Handle events
   switch (event.type) {
     case 'checkout.session.completed':
-      console.log('✅ Checkout completed');
+      console.log('Checkout completed');
       break;
 
     case 'customer.subscription.created':
@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
       break;
 
     case 'invoice.payment_succeeded':
-      console.log('💰 Payment succeeded');
+      console.log('Payment succeeded');
       break;
 
     case 'invoice.payment_failed':
-      console.log('❌ Payment failed');
+      console.log('Payment failed');
       // TODO: Send email to user
       break;
 
