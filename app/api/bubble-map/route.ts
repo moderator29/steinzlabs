@@ -2,7 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getTokenPairs } from '@/lib/services/dexscreener';
 import { getSolanaTokenHolders } from '@/lib/services/helius';
-import { getBirdeyeHolders } from '@/lib/services/birdeye';
+import { getBirdeyeHolders, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
 import { getTokenHolders, getAddressIntel } from '@/lib/services/arkham';
 
 interface BubbleNode {
@@ -303,15 +303,23 @@ export async function GET(request: Request) {
   try {
     const isSolana = chain === 'solana' || (token.length >= 32 && token.length <= 44 && !token.startsWith('0x'));
 
-    // Fetch DexScreener info and Arkham holders in parallel (service layer)
-    const [dexPairs, arkhamHolders] = await Promise.all([
+    // Fetch token metadata + Arkham holders in parallel
+    // Primary: Birdeye (multi-chain) | Fallback: DexScreener
+    const [birdeyeOverview, dexPairs, arkhamHolders] = await Promise.all([
+      getBirdeyeTokenOverview(token, isSolana ? 'solana' : chain).catch(() => null),
       getTokenPairs(token).catch(() => []),
       fetchArkhamHolders(token),
     ]);
 
     const dexData = dexPairs[0] ?? null;
-    const tokenSymbol = dexData?.baseToken?.symbol || 'TOKEN';
-    const tokenName = dexData?.baseToken?.name || 'Unknown Token';
+    // Prefer Birdeye for token metadata (more accurate); fall back to DexScreener
+    const tokenSymbol = birdeyeOverview?.symbol || dexData?.baseToken?.symbol || 'TOKEN';
+    const tokenName = birdeyeOverview?.name || dexData?.baseToken?.name || 'Unknown Token';
+    const tokenPrice = birdeyeOverview?.price ?? parseFloat(dexData?.priceUsd || '0');
+    const priceChange24h = birdeyeOverview?.priceChange24hPercent ?? dexData?.priceChange?.h24 ?? 0;
+    const volume24h = birdeyeOverview?.volume24h ?? dexData?.volume?.h24 ?? 0;
+    const marketCap = birdeyeOverview?.marketCap ?? dexData?.fdv ?? 0;
+    const liquidity = birdeyeOverview?.liquidity ?? dexData?.liquidity?.usd ?? 0;
 
     let rawHolders: RawHolder[] = [];
 
@@ -373,9 +381,7 @@ export async function GET(request: Request) {
         }
       }
 
-      if (rawHolders.length === 0) {
-        rawHolders = generateSyntheticHolders();
-      }
+      // No synthetic fallback — return empty if no real data available
     }
 
     // Enrich top 10 with Arkham entity intel
@@ -485,13 +491,14 @@ export async function GET(request: Request) {
         name: tokenName,
         symbol: tokenSymbol,
         chain,
-        price: parseFloat(dexData?.priceUsd || '0'),
-        priceChange24h: dexData?.priceChange?.h24 ?? 0,
-        volume24h: dexData?.volume?.h24 ?? 0,
-        marketCap: dexData?.fdv ?? 0,
-        liquidity: dexData?.liquidity?.usd ?? 0,
+        price: tokenPrice,
+        priceChange24h,
+        volume24h,
+        marketCap,
+        liquidity,
         totalHolders: holderNodes.length,
         topHolderConcentration: Math.round(topHolderPct * 100) / 100,
+        dataSource: birdeyeOverview ? 'birdeye' : dexData ? 'dexscreener' : 'unknown',
       },
       risk,
     };
