@@ -2,6 +2,7 @@
 
 import { useEffect, memo } from 'react';
 import { usePathname } from 'next/navigation';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 import {
   X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
@@ -105,7 +106,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <img src="/steinz-logo-128.png" alt="STEINZ LABS" className="w-7 h-7" style={{ objectFit: 'contain' }} />
+            <SteinzLogo size={28} animated={false} />
             <span className="text-sm font-heading font-bold tracking-tight text-white">STEINZ LABS</span>
           </div>
           <button

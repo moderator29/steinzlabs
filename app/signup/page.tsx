@@ -4,11 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
 import Link from 'next/link';
+import Script from 'next/script';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CoinIcon } from '@/components/landing/CoinIcon';
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_SECONDS = 60;
 
@@ -56,7 +58,30 @@ export default function SignUpPage() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaReady, setCaptchaReady] = useState(false);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref so Turnstile callback always has fresh setter
+  const setCaptchaTokenRef = useRef(setCaptchaToken);
+  setCaptchaTokenRef.current = setCaptchaToken;
+
+  // Register global Turnstile callbacks BEFORE the script loads
+  useEffect(() => {
+    (window as any).onTurnstileSignupSuccess = (token: string) => {
+      setCaptchaTokenRef.current(token);
+    };
+    (window as any).onTurnstileSignupExpired = () => {
+      setCaptchaTokenRef.current('');
+    };
+    (window as any).onTurnstileSignupError = () => {
+      setCaptchaTokenRef.current('');
+    };
+    return () => {
+      delete (window as any).onTurnstileSignupSuccess;
+      delete (window as any).onTurnstileSignupExpired;
+      delete (window as any).onTurnstileSignupError;
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) router.replace('/dashboard');
@@ -108,6 +133,7 @@ export default function SignUpPage() {
     if (!form.password) e.password = 'Required';
     else if (!getPasswordChecks(form.password).every(c => c.ok)) e.password = 'Password does not meet requirements';
     if (form.password && form.confirm !== form.password) e.confirm = "Passwords don't match";
+    if (TURNSTILE_SITE_KEY && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -117,6 +143,26 @@ export default function SignUpPage() {
     if (cooldown > 0 || !validate()) return;
     setLoading(true);
     try {
+      // ── CAPTCHA backend verification ──────────────────────────────────────
+      if (TURNSTILE_SITE_KEY && captchaToken) {
+        const captchaRes = await fetch('/api/auth/verify-captcha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: captchaToken, action: 'signup' }),
+        });
+        const captchaData = await captchaRes.json();
+        if (!captchaData.success) {
+          showToast('Security check failed. Please try again.', 'error');
+          setErrors(prev => ({ ...prev, captcha: 'Security verification failed' }));
+          if (typeof (window as any).turnstile?.reset === 'function') {
+            (window as any).turnstile.reset();
+          }
+          setCaptchaToken('');
+          setLoading(false);
+          return;
+        }
+      }
+
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -222,6 +268,15 @@ export default function SignUpPage() {
 
           <h2 className="text-[26px] font-bold text-white mb-1">Create your account.</h2>
           <p className="text-sm mb-7" style={{ color: '#1e2e50' }}>Start with institutional intelligence. Free forever.</p>
+
+          {/* Turnstile script — afterInteractive so callback is set before it runs */}
+          {TURNSTILE_SITE_KEY && (
+            <Script
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+              strategy="afterInteractive"
+              onReady={() => setCaptchaReady(true)}
+            />
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* First + Last Name row */}
@@ -350,6 +405,23 @@ export default function SignUpPage() {
               </div>
               {errors.confirm && <p className="text-red-400 text-xs mt-1">{errors.confirm}</p>}
             </div>
+
+            {/* Turnstile CAPTCHA */}
+            {TURNSTILE_SITE_KEY && (
+              <div>
+                <div
+                  className="cf-turnstile"
+                  data-sitekey={TURNSTILE_SITE_KEY}
+                  data-callback="onTurnstileSignupSuccess"
+                  data-expired-callback="onTurnstileSignupExpired"
+                  data-error-callback="onTurnstileSignupError"
+                  data-theme="dark"
+                  data-size="flexible"
+                  style={{ minHeight: 65, colorScheme: 'dark' }}
+                />
+                {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
+              </div>
+            )}
 
             {cooldown > 0 && (
               <div className="flex items-center gap-2 rounded-xl px-4 py-3"

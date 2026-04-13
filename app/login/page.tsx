@@ -36,7 +36,29 @@ function LoginPageInner() {
   const [verificationEmail, setVerificationEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaReady, setCaptchaReady] = useState(false);
   const submitting = useRef(false);
+  // Ref so the Turnstile callback always has a fresh setter without re-registering
+  const setCaptchaTokenRef = useRef(setCaptchaToken);
+  setCaptchaTokenRef.current = setCaptchaToken;
+
+  // Register global callback BEFORE the script loads so Turnstile can call it
+  useEffect(() => {
+    (window as any).onTurnstileSuccess = (token: string) => {
+      setCaptchaTokenRef.current(token);
+    };
+    (window as any).onTurnstileExpired = () => {
+      setCaptchaTokenRef.current('');
+    };
+    (window as any).onTurnstileError = () => {
+      setCaptchaTokenRef.current('');
+    };
+    return () => {
+      delete (window as any).onTurnstileSuccess;
+      delete (window as any).onTurnstileExpired;
+      delete (window as any).onTurnstileError;
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) router.replace('/dashboard');
@@ -46,17 +68,19 @@ function LoginPageInner() {
     const confirmed = searchParams.get('confirmed');
     const verified = searchParams.get('verified');
     const err = searchParams.get('error');
+    const session = searchParams.get('session');
     if (confirmed === 'pending') showToast('Account created! Check your email to verify, then sign in.', 'success');
     if (confirmed === 'reset') showToast('Password updated! Sign in with your new password.', 'success');
     if (verified === 'true') showToast('Email verified! Sign in below.', 'success');
     if (err) showToast('Verification link issue. Try resending below.', 'error');
+    if (session === 'expired') showToast('Your session has expired. Please sign in again.', 'error');
   }, [searchParams, showToast]);
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!identifier.trim()) e.identifier = 'Email or username is required';
     if (!password) e.password = 'Password is required';
-    if (TURNSTILE_SITE_KEY && !captchaToken) e.captcha = 'Please complete the security check';
+    if (TURNSTILE_SITE_KEY && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -84,6 +108,26 @@ function LoginPageInner() {
     setLoading(true);
     setNeedsVerification(false);
     try {
+      // ── CAPTCHA backend verification ──────────────────────────────────────
+      if (TURNSTILE_SITE_KEY && captchaToken) {
+        const captchaRes = await fetch('/api/auth/verify-captcha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: captchaToken, action: 'login' }),
+        });
+        const captchaData = await captchaRes.json();
+        if (!captchaData.success) {
+          showToast('Security check failed. Please try again.', 'error');
+          setErrors({ captcha: 'Security verification failed' });
+          // Reset widget
+          if (typeof (window as any).turnstile?.reset === 'function') {
+            (window as any).turnstile.reset();
+          }
+          setCaptchaToken('');
+          return;
+        }
+      }
+
       let email = identifier.trim();
       if (!email.includes('@')) {
         const res = await fetch('/api/auth/lookup', {
@@ -148,6 +192,8 @@ function LoginPageInner() {
         const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
         const isSecure = window.location.protocol === 'https:';
         document.cookie = `steinz_session=${data.session.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
+        // Store last activity for idle timeout enforcement
+        localStorage.setItem('steinz_last_activity', Date.now().toString());
       }
 
       showToast('Welcome back!', 'success');
@@ -288,12 +334,25 @@ function LoginPageInner() {
               {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
             </div>
 
+            {/* Turnstile CAPTCHA */}
             {TURNSTILE_SITE_KEY && (
               <div>
-                <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}
-                  data-callback="onTurnstileSuccess" data-theme="dark" data-size="flexible" />
-                <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload"
-                  onLoad={() => { (window as any).onTurnstileSuccess = (token: string) => setCaptchaToken(token); }} />
+                {/* Script loads with afterInteractive so it's ready early */}
+                <Script
+                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                  strategy="afterInteractive"
+                  onReady={() => setCaptchaReady(true)}
+                />
+                <div
+                  className="cf-turnstile"
+                  data-sitekey={TURNSTILE_SITE_KEY}
+                  data-callback="onTurnstileSuccess"
+                  data-expired-callback="onTurnstileExpired"
+                  data-error-callback="onTurnstileError"
+                  data-theme="dark"
+                  data-size="flexible"
+                  style={{ minHeight: 65, colorScheme: 'dark' }}
+                />
                 {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
               </div>
             )}
