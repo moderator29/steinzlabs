@@ -18,6 +18,17 @@ CREATE POLICY "Admin only platform_settings"
   ON platform_settings FOR ALL USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 
+-- ─── platform_settings defaults ──────────────────────────────────────────────
+INSERT INTO platform_settings (key, value, description) VALUES
+  ('maintenance_mode',  '{"enabled": false}',                         'Toggle maintenance mode'),
+  ('registration_open', '{"enabled": true}',                          'Allow new user registrations'),
+  ('platform_fee_bps',  '{"value": 15}',                              'Platform swap fee in basis points'),
+  ('vtx_daily_limit',   '{"free": 5, "pro": 50, "elite": 500}',       'VTX AI queries per day by tier'),
+  ('sniper_enabled',    '{"free": false, "pro": true, "elite": true}', 'Sniper access by tier'),
+  ('max_wallets',       '{"free": 1, "pro": 5, "elite": 20}',         'Max linked wallets by tier'),
+  ('announcement_bar',  '{"enabled": false, "text": "", "type": "info"}', 'Global announcement bar')
+ON CONFLICT (key) DO NOTHING;
+
 -- ─── api_logs ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS api_logs (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -186,11 +186,11 @@ async function buildAiAnalysis(response: Record<string, unknown>): Promise<strin
 
 Token: ${response.name} (${response.symbol}) on ${chainLabel}
 Trust Score: ${response.trustScore}/100 — ${response.safetyLevel}
-Honeypot: ${response.isHoneypot ? 'YES ⚠️' : 'No'}
-Open Source: ${response.isOpenSource ? 'Yes' : 'NO ⚠️'}
-Mintable: ${response.isMintable ? 'YES ⚠️' : 'No'}
-Hidden Owner: ${response.hasHiddenOwner ? 'YES ⚠️' : 'No'}
-Owner Can Change Balance: ${response.ownerCanChangeBalance ? 'YES ⚠️' : 'No'}
+Honeypot: ${response.isHoneypot ? 'YES [WARNING]' : 'No'}
+Open Source: ${response.isOpenSource ? 'Yes' : 'NO [WARNING]'}
+Mintable: ${response.isMintable ? 'YES [WARNING]' : 'No'}
+Hidden Owner: ${response.hasHiddenOwner ? 'YES [WARNING]' : 'No'}
+Owner Can Change Balance: ${response.ownerCanChangeBalance ? 'YES [WARNING]' : 'No'}
 Buy Tax: ${response.buyTax} | Sell Tax: ${response.sellTax}
 Holders: ${response.holderCount}
 Failed Checks: ${failedChecks}

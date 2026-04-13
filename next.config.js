@@ -1,3 +1,6 @@
+const createNextIntlPlugin = require('next-intl/plugin');
+const withNextIntl = createNextIntlPlugin('./i18n.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -27,6 +30,9 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 3600,
   },
+  redirects: async () => [
+    { source: '/whitepaper', destination: '/docs', permanent: false },
+  ],
   headers: async () => [
     {
       source: '/_next/static/:path*',
@@ -58,4 +64,4 @@ const nextConfig = {
   ],
 }
 
-module.exports = nextConfig
+module.exports = withNextIntl(nextConfig)

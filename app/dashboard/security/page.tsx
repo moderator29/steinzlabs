@@ -268,7 +268,7 @@ export default function SecurityPage() {
               <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">
                 <p className="text-[10px] text-gray-500 mb-1">Honeypot</p>
                 <p className={`text-sm font-bold ${result.isHoneypot ? 'text-red-400' : 'text-green-400'}`}>
-                  {result.isHoneypot ? 'YES ⚠️' : 'NO ✓'}
+                  {result.isHoneypot ? 'YES [!]' : 'NO [ok]'}
                 </p>
               </div>
               <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">

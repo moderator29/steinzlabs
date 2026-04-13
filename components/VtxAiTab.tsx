@@ -862,9 +862,9 @@ export default function VtxAiTab() {
                 <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Risk Appetite</label>
                 <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
                   {([
-                    { value: 'Conservative', icon: '🛡️' },
-                    { value: 'Balanced', icon: '⚖️' },
-                    { value: 'Aggressive', icon: '🚀' },
+                    { value: 'Conservative', icon: 'C' },
+                    { value: 'Balanced', icon: 'B' },
+                    { value: 'Aggressive', icon: 'A' },
                   ] as const).map(({ value, icon }) => (
                     <button
                       key={value}
