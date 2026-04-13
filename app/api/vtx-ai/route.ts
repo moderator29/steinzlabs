@@ -295,7 +295,7 @@ async function executeWalletProfile(input: Record<string, unknown>): Promise<str
       }
       if (intel?.labels?.length) lines.push(`  Labels: ${intel.labels.join(', ')}`);
       if (intel?.scamHistory) {
-        lines.push(`  ⚠️ SCAM HISTORY: ${intel.scamHistory.totalRugs} rugs, ${intel.scamHistory.totalStolen} stolen`);
+        lines.push(`  [WARNING] SCAM HISTORY: ${intel.scamHistory.totalRugs} rugs, ${intel.scamHistory.totalStolen} stolen`);
       }
     }
   } catch {

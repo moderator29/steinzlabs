@@ -28,20 +28,20 @@ interface Message {
 }
 
 const GROUPS: ChatGroup[] = [
-  { id: 1, name: 'Solana Traders', members: 1247, isPublic: true, lastMessage: 'Just bought the dip', lastUser: 'SolKing', time: '2m', unread: 5, avatar: '☀️', online: true },
-  { id: 2, name: 'DeFi Alpha', members: 523, isPublic: false, lastMessage: 'New farm APY 420%', lastUser: 'YieldFarmer', time: '8m', unread: 2, avatar: '💎', online: true },
-  { id: 3, name: 'NFT Flippers', members: 892, isPublic: true, lastMessage: 'Floor price mooning', lastUser: 'NFTWhale', time: '15m', unread: 0, avatar: '🖼️', online: false },
-  { id: 4, name: 'Builder Network', members: 234, isPublic: true, lastMessage: 'Looking for Rust dev', lastUser: 'DevDAO', time: '1h', unread: 0, avatar: '🔧', online: true },
-  { id: 5, name: 'Whale Alerts', members: 3401, isPublic: true, lastMessage: 'Large transfer detected', lastUser: 'WhaleBot', time: '3m', unread: 12, avatar: '🐋', online: true },
+  { id: 1, name: 'Solana Traders', members: 1247, isPublic: true, lastMessage: 'Just bought the dip', lastUser: 'SolKing', time: '2m', unread: 5, avatar: 'ST', online: true },
+  { id: 2, name: 'DeFi Alpha', members: 523, isPublic: false, lastMessage: 'New farm APY 420%', lastUser: 'YieldFarmer', time: '8m', unread: 2, avatar: 'DA', online: true },
+  { id: 3, name: 'NFT Flippers', members: 892, isPublic: true, lastMessage: 'Floor price mooning', lastUser: 'NFTWhale', time: '15m', unread: 0, avatar: 'NF', online: false },
+  { id: 4, name: 'Builder Network', members: 234, isPublic: true, lastMessage: 'Looking for Rust dev', lastUser: 'DevDAO', time: '1h', unread: 0, avatar: 'BN', online: true },
+  { id: 5, name: 'Whale Alerts', members: 3401, isPublic: true, lastMessage: 'Large transfer detected', lastUser: 'WhaleBot', time: '3m', unread: 12, avatar: 'WA', online: true },
 ];
 
 const MESSAGES: Message[] = [
-  { id: 1, user: 'SolanaKing', avatar: '👑', text: 'GM everyone! SOL looking bullish today 🚀', time: '10:32 AM', isOwn: false, reactions: [{ emoji: '👍', count: 12 }, { emoji: '🔥', count: 8 }] },
-  { id: 2, user: 'CryptoWhale', avatar: '🐳', text: 'Just bought 10K SOL. Feels good.', time: '10:34 AM', isOwn: false, reactions: [{ emoji: '💎', count: 15 }, { emoji: '🚀', count: 9 }] },
-  { id: 3, user: 'You', avatar: '🧑‍💻', text: 'Thoughts on the new DEX launching tomorrow?', time: '10:36 AM', isOwn: true, reactions: [{ emoji: '👀', count: 3 }] },
-  { id: 4, user: 'DeFiDegen', avatar: '🦊', text: 'APY is crazy right now on the new pool. 200% on stables.', time: '10:38 AM', isOwn: false, reactions: [{ emoji: '🔥', count: 6 }] },
-  { id: 5, user: 'SolanaKing', avatar: '👑', text: 'That DEX looks solid. Audited by CertiK. I\'m in.', time: '10:40 AM', isOwn: false, reactions: [{ emoji: '✅', count: 4 }] },
-  { id: 6, user: 'You', avatar: '🧑‍💻', text: 'Good call. Gonna ape in with 500 SOL 💰', time: '10:41 AM', isOwn: true, reactions: [{ emoji: '💎', count: 7 }, { emoji: '🚀', count: 3 }] },
+  { id: 1, user: 'SolanaKing', avatar: 'SK', text: 'GM everyone! SOL looking bullish today', time: '10:32 AM', isOwn: false, reactions: [{ emoji: '+1', count: 12 }, { emoji: 'fire', count: 8 }] },
+  { id: 2, user: 'CryptoWhale', avatar: 'CW', text: 'Just bought 10K SOL. Feels good.', time: '10:34 AM', isOwn: false, reactions: [{ emoji: 'diamond', count: 15 }, { emoji: 'rocket', count: 9 }] },
+  { id: 3, user: 'You', avatar: 'ME', text: 'Thoughts on the new DEX launching tomorrow?', time: '10:36 AM', isOwn: true, reactions: [{ emoji: 'eyes', count: 3 }] },
+  { id: 4, user: 'DeFiDegen', avatar: 'DD', text: 'APY is crazy right now on the new pool. 200% on stables.', time: '10:38 AM', isOwn: false, reactions: [{ emoji: 'fire', count: 6 }] },
+  { id: 5, user: 'SolanaKing', avatar: 'SK', text: 'That DEX looks solid. Audited by CertiK. I\'m in.', time: '10:40 AM', isOwn: false, reactions: [{ emoji: 'ok', count: 4 }] },
+  { id: 6, user: 'You', avatar: 'ME', text: 'Good call. Gonna ape in with 500 SOL', time: '10:41 AM', isOwn: true, reactions: [{ emoji: 'diamond', count: 7 }, { emoji: 'rocket', count: 3 }] },
 ];
 
 export default function MessagesPage() {

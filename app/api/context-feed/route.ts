@@ -306,16 +306,16 @@ function getDexPlatformLabel(dexId: string): string {
 
 function generateEventTitle(name: string, symbol: string, priceChange: number, vol24h: number, platformLabel: string, pairCreatedAt?: number): string {
   if (pairCreatedAt && Date.now() - pairCreatedAt < 3600000) {
-    return `🆕 New pair: ${name} ($${symbol}) just launched on ${platformLabel}`;
+    return `New pair: ${name} ($${symbol}) just launched on ${platformLabel}`;
   }
   if (priceChange > 20) {
-    return `🚀 ${name} surging +${priceChange.toFixed(1)}% on ${platformLabel}`;
+    return `${name} surging +${priceChange.toFixed(1)}% on ${platformLabel}`;
   }
   if (priceChange < -20) {
-    return `📉 ${name} dropping ${priceChange.toFixed(1)}% on ${platformLabel}`;
+    return `${name} dropping ${priceChange.toFixed(1)}% on ${platformLabel}`;
   }
   if (vol24h > 1000000) {
-    return `💰 ${name} high volume (${fmtUsd(vol24h)}) on ${platformLabel}`;
+    return `${name} high volume (${fmtUsd(vol24h)}) on ${platformLabel}`;
   }
   return `${name} ($${symbol}) trending on ${platformLabel}`;
 }
