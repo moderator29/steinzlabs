@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { useWatchlist } from '@/hooks/market/useWatchlist';
 import { WatchlistCard } from '@/components/market/WatchlistCard';
 import { LoadingSkeleton } from '@/components/market/LoadingSkeleton';
@@ -10,7 +11,8 @@ import { CoinGeckoMarket } from '@/lib/market/types';
 
 export default function WatchlistPage() {
   const router = useRouter();
-  const { watchlist, loading: wLoading, removeFromWatchlist } = useWatchlist(null); // TODO: real userId
+  const { user } = useAuth();
+  const { watchlist, loading: wLoading, removeFromWatchlist } = useWatchlist(user?.id ?? null);
   const [tokens, setTokens] = useState<CoinGeckoMarket[]>([]);
   const [loading, setLoading] = useState(false);
 
