@@ -188,7 +188,7 @@ SECURITY FLAGS:
 [CHART:portfolio]
 
 BRANDING RULES:
-Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, Helius, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
+Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
 
 ABSOLUTE FORMATTING RULES:
 No **, no *, no ##, no -- , no bullet dashes. Clean plain text only.
@@ -887,7 +887,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: `VTX Error: ${msg}` }, { status: 500 });
+    const isDev = process.env.NODE_ENV === 'development';
+    console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+
+    // Surface specific errors
+    if (msg.includes('API key')) {
+      return NextResponse.json({ error: 'AI service not configured. ANTHROPIC_API_KEY missing.' }, { status: 500 });
+    }
+    if (msg.includes('rate_limit') || msg.includes('429')) {
+      return NextResponse.json({ error: 'AI service is busy. Please try again in a moment.' }, { status: 429 });
+    }
+    if (msg.includes('overloaded') || msg.includes('529')) {
+      return NextResponse.json({ error: 'AI service is temporarily overloaded. Please try again shortly.' }, { status: 503 });
+    }
+
+    return NextResponse.json({
+      error: isDev ? `VTX Error: ${msg}` : 'AI service temporarily unavailable. Please try again.',
+    }, { status: 500 });
   }
 }
 
