@@ -48,14 +48,8 @@ const CACHE_TTL = 120000;
 
 const userPredictions: Record<string, UserPrediction[]> = {};
 
-function randomPool(): { totalPool: number; yesPool: number; noPool: number; yesPercent: number; noPercent: number; totalPredictors: number } {
-  const totalPool = Math.round((Math.random() * 50000 + 5000) * 100) / 100;
-  const yesPercent = Math.round(Math.random() * 60 + 20);
-  const noPercent = 100 - yesPercent;
-  const yesPool = Math.round(totalPool * yesPercent / 100 * 100) / 100;
-  const noPool = Math.round((totalPool - yesPool) * 100) / 100;
-  const totalPredictors = Math.floor(Math.random() * 500 + 50);
-  return { totalPool, yesPool, noPool, yesPercent, noPercent, totalPredictors };
+function defaultPool(): { totalPool: number; yesPool: number; noPool: number; yesPercent: number; noPercent: number; totalPredictors: number } {
+  return { totalPool: 0, yesPool: 0, noPool: 0, yesPercent: 50, noPercent: 50, totalPredictors: 0 };
 }
 
 function futureDate(days: number): string {
@@ -127,7 +121,7 @@ function generateCoinGeckoPredictions(coins: CoinGeckoCoin[]): Prediction[] {
     const cgId = coin.id || '';
 
     if (change24h > 10) {
-      const pool = randomPool();
+      const pool = defaultPool();
       predictions.push({
         id: `cg-gains-${cgId}`,
         category: 'price',
@@ -154,8 +148,8 @@ function generateCoinGeckoPredictions(coins: CoinGeckoCoin[]): Prediction[] {
 
     if (vol > 1000000000) {
       const target = Math.round(mcap * 1.5);
-      const pool = randomPool();
-      const daysOut = Math.floor(Math.random() * 23) + 7;
+      const pool = defaultPool();
+      const daysOut = 14;
       predictions.push({
         id: `cg-mcap-${cgId}`,
         category: 'market_cap',
@@ -182,7 +176,7 @@ function generateCoinGeckoPredictions(coins: CoinGeckoCoin[]): Prediction[] {
 
     if (change24h < -5) {
       const recoverPrice = Math.round(price * 1.1 * 100) / 100;
-      const pool = randomPool();
+      const pool = defaultPool();
       predictions.push({
         id: `cg-recover-${cgId}`,
         category: 'price',
@@ -209,7 +203,7 @@ function generateCoinGeckoPredictions(coins: CoinGeckoCoin[]): Prediction[] {
 
     if (vol > 500000000) {
       const targetVol = Math.round(vol * 2);
-      const pool = randomPool();
+      const pool = defaultPool();
       predictions.push({
         id: `cg-vol-${cgId}`,
         category: 'volume',
@@ -249,7 +243,7 @@ function generatePumpFunPredictions(tokens: PumpToken[]): Prediction[] {
     const icon = token.image_uri || '';
     const mint = token.mint || '';
 
-    const pool1 = randomPool();
+    const pool1 = defaultPool();
     predictions.push({
       id: `pump-survive-${mint.slice(0, 16)}`,
       category: 'launch',
@@ -274,7 +268,7 @@ function generatePumpFunPredictions(tokens: PumpToken[]): Prediction[] {
       createdAt: now,
     });
 
-    const pool2 = randomPool();
+    const pool2 = defaultPool();
     predictions.push({
       id: `pump-100k-${mint.slice(0, 16)}`,
       category: 'market_cap',
@@ -375,7 +369,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
       const pairAddress = pair.pairAddress || '';
 
       if (change24h > 10) {
-        const pool = randomPool();
+        const pool = defaultPool();
         predictions.push({
           id: `dex-gains-${pairAddress.slice(0, 16)}`,
           category: 'price',
@@ -403,7 +397,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
       }
 
       const targetPrice = Math.round(price * 1.3 * 100) / 100;
-      const pool = randomPool();
+      const pool = defaultPool();
       predictions.push({
         id: `dex-target-${pairAddress.slice(0, 16)}`,
         category: 'price',
@@ -431,7 +425,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
 
       if (vol > 1000000) {
         const targetVol = Math.round(vol * 2);
-        const volPool = randomPool();
+        const volPool = defaultPool();
         predictions.push({
           id: `dex-vol-${pairAddress.slice(0, 16)}`,
           category: 'volume',
@@ -477,7 +471,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
       const pairAddress = pair.pairAddress || '';
 
       const targetPrice = Math.round(price * 1.3 * 100) / 100;
-      const pool = randomPool();
+      const pool = defaultPool();
       predictions.push({
         id: `dex-${dexName.toLowerCase()}-${pairAddress.slice(0, 16)}`,
         category: 'price',
@@ -567,7 +561,7 @@ function generateWellKnownPredictions(): Prediction[] {
   ];
 
   return wellKnown.map(wk => {
-    const pool = randomPool();
+    const pool = defaultPool();
     return {
       id: `wk-${wk.id}`,
       category: wk.category,
@@ -640,7 +634,7 @@ function generateResolvedPredictions(): Prediction[] {
   ];
 
   return resolved.map(r => {
-    const pool = randomPool();
+    const pool = defaultPool();
     return {
       id: `res-${r.id}`,
       category: r.category,
