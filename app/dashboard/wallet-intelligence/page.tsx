@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, Users, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain } from 'lucide-react';
+import { Search, ArrowLeft, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -42,77 +42,6 @@ interface WalletData {
   nativeValueUsd?: string;
   explorerUrl?: string;
   recentTransactions?: RecentTx[];
-}
-
-// ─── Portfolio Bubble Map ──────────────────────────────────────────────────────
-const BUBBLE_COLORS = ['#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#0A1EFF', '#06B6D4', '#8B5CF6', '#F97316', '#EC4899', '#14B8A6'];
-
-function PortfolioBubbleMap({ holdings, totalUsd }: { holdings: WalletData['holdings']; totalUsd: number }) {
-  // Show up to 12 tokens in bubble map — sorted by value, no artificial cap on input
-  const withValue = holdings
-    .filter(h => h.valueUsd && parseFloat(h.valueUsd) > 0)
-    .sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'))
-    .slice(0, 12);
-  if (withValue.length === 0) return null;
-  const total = totalUsd > 0 ? totalUsd : withValue.reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
-  const sorted = [...withValue];
-  const withPct = sorted.map(h => ({ ...h, pct: total > 0 ? parseFloat(h.valueUsd || '0') / total : 1 / withValue.length }));
-  const W = 340, H = 240, MAX_R = 85, MIN_R = 18;
-  const POSITIONS = [
-    { cx: W * 0.5,  cy: H * 0.42 },
-    { cx: W * 0.77, cy: H * 0.30 },
-    { cx: W * 0.22, cy: H * 0.50 },
-    { cx: W * 0.72, cy: H * 0.68 },
-    { cx: W * 0.18, cy: H * 0.24 },
-    { cx: W * 0.52, cy: H * 0.12 },
-    { cx: W * 0.85, cy: H * 0.56 },
-    { cx: W * 0.38, cy: H * 0.80 },
-    { cx: W * 0.62, cy: H * 0.88 },
-    { cx: W * 0.10, cy: H * 0.70 },
-    { cx: W * 0.90, cy: H * 0.18 },
-    { cx: W * 0.30, cy: H * 0.10 },
-  ];
-  return (
-    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#0A1EFF]" />
-          <h3 className="font-bold text-sm">Portfolio Bubble Map</h3>
-        </div>
-        <span className="text-[10px] text-gray-500">{withValue.length} tokens</span>
-      </div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-        {withPct.map((h, i) => {
-          const r = Math.max(MIN_R, Math.round(MAX_R * Math.sqrt(h.pct)));
-          const pos = POSITIONS[i] || { cx: W / 2, cy: H / 2 };
-          const color = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
-          const fsLabel = Math.max(8, Math.min(14, r * 0.32));
-          const fsPct = Math.max(7, Math.min(12, r * 0.26));
-          return (
-            <g key={h.symbol + i}>
-              <circle cx={pos.cx} cy={pos.cy} r={r} fill={`${color}28`} stroke={color} strokeWidth="1.5" />
-              <text x={pos.cx} y={pos.cy - 5} textAnchor="middle" fill="white" fontSize={fsLabel} fontWeight="bold" fontFamily="system-ui">
-                {h.symbol.length > 5 ? h.symbol.slice(0, 5) : h.symbol}
-              </text>
-              <text x={pos.cx} y={pos.cy + fsPct + 2} textAnchor="middle" fill={color} fontSize={fsPct} fontFamily="system-ui">
-                {(h.pct * 100).toFixed(1)}%
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-        {withPct.map((h, i) => (
-          <div key={h.symbol + i} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: BUBBLE_COLORS[i % BUBBLE_COLORS.length] }} />
-            <span className="text-[10px] font-semibold text-gray-300">{h.symbol}</span>
-            <span className="text-[10px] text-gray-500">${parseFloat(h.valueUsd || '0').toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-            <span className="text-[10px] text-gray-600">{(h.pct * 100).toFixed(1)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 // ─── Recent Transactions ───────────────────────────────────────────────────────
@@ -648,8 +577,6 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
-                {/* Portfolio Bubble Map */}
-                <PortfolioBubbleMap holdings={walletData.holdings} totalUsd={totalUsd} />
 
                 {/* All Holdings */}
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
