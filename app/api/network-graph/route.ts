@@ -1,7 +1,8 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2 || '';
+const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
+  || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
 
 export interface NetworkNode {
   id: string;
@@ -35,7 +36,7 @@ export interface NetworkGraphResponse {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
   stats: NetworkStats;
-  source: 'helius' | 'dexscreener' | 'mock';
+  source: 'alchemy' | 'dexscreener' | 'mock';
 }
 
 // Known Solana protocol/bridge addresses
@@ -158,15 +159,39 @@ function generateMockData(): NetworkGraphResponse {
   };
 }
 
-async function fetchHeliusData(wallet: string): Promise<NetworkGraphResponse | null> {
-  if (!HELIUS_API_KEY) return null;
+async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphResponse | null> {
+  if (!SOLANA_RPC) return null;
 
   try {
-    const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=50&type=TRANSFER`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
+    // Get transaction signatures via Alchemy Solana RPC
+    const sigRes = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [wallet, { limit: 50 }] }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!sigRes.ok) return null;
+    const sigData = await sigRes.json() as { result?: Array<{ signature: string; blockTime: number | null }> };
+    const sigs = sigData.result ?? [];
+    if (sigs.length === 0) return null;
 
-    const txs: any[] = await res.json();
+    // Fetch transaction details in parallel (batch of 10)
+    const txDetails = await Promise.allSettled(
+      sigs.slice(0, 30).map(async (sig) => {
+        const r = await fetch(SOLANA_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!r.ok) return null;
+        const d = await r.json() as { result?: Record<string, unknown> };
+        return d.result ? { ...d.result, timestamp: sig.blockTime } : null;
+      })
+    );
+    const txs = txDetails
+      .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled' && r.value !== null)
+      .map(r => r.value) as any[];
     if (!Array.isArray(txs) || txs.length === 0) return null;
 
     const nodeMap = new Map<string, { volume: number; txCount: number; addresses: Set<string> }>();
@@ -179,12 +204,29 @@ async function fetchHeliusData(wallet: string): Promise<NetworkGraphResponse | n
     };
 
     for (const tx of txs) {
-      const transfers = tx.tokenTransfers || [];
+      const meta = tx.meta as Record<string, unknown> | undefined;
+      const preTokens = (meta?.preTokenBalances as any[]) ?? [];
+      const postTokens = (meta?.postTokenBalances as any[]) ?? [];
+      const accountKeys = ((tx.transaction as any)?.message?.accountKeys ?? []) as Array<{ pubkey: string }>;
+      // Build token transfers from balance diffs
+      const transfers: Array<{ fromUserAccount: string; toUserAccount: string; mint: string; tokenAmount: number }> = [];
+      for (const pt of postTokens) {
+        const pre = preTokens.find((p: any) => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
+        const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
+        if (Math.abs(diff) > 0) {
+          const owner = pt.owner || accountKeys[pt.accountIndex]?.pubkey || '';
+          if (diff > 0) {
+            transfers.push({ fromUserAccount: wallet, toUserAccount: owner, mint: pt.mint, tokenAmount: diff });
+          } else {
+            transfers.push({ fromUserAccount: owner, toUserAccount: wallet, mint: pt.mint, tokenAmount: Math.abs(diff) });
+          }
+        }
+      }
       for (const t of transfers) {
-        const from = t.fromUserAccount || t.fromTokenAccount || '';
-        const to = t.toUserAccount || t.toTokenAccount || '';
+        const from = t.fromUserAccount || '';
+        const to = t.toUserAccount || '';
         const mint = t.mint || '';
-        const amount = parseFloat(t.tokenAmount || '0');
+        const amount = t.tokenAmount || 0;
 
         if (!from || !to || !amount) continue;
 
@@ -257,7 +299,7 @@ async function fetchHeliusData(wallet: string): Promise<NetworkGraphResponse | n
     const now = Date.now();
     const buckets = new Array(8).fill(0);
     for (const tx of txs) {
-      const ts = tx.timestamp ? tx.timestamp * 1000 : 0; // Helius timestamps are Unix seconds
+      const ts = tx.timestamp ? tx.timestamp * 1000 : 0;
       if (!ts) continue;
       const age = now - ts;
       if (age < 0 || age >= windowMs) continue;
@@ -280,7 +322,7 @@ async function fetchHeliusData(wallet: string): Promise<NetworkGraphResponse | n
         totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
         timelineData,
       },
-      source: 'helius',
+      source: 'alchemy',
     };
   } catch {
     return null;
@@ -429,8 +471,8 @@ export async function GET(req: NextRequest) {
   let result: NetworkGraphResponse | null = null;
 
   if (wallet) {
-    // Try Helius first for Solana addresses, then DexScreener
-    result = await fetchHeliusData(wallet);
+    // Try Alchemy Solana first, then DexScreener
+    result = await fetchSolanaGraphData(wallet);
     if (!result) {
       result = await fetchDexScreenerData(wallet);
     }

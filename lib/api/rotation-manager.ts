@@ -3,7 +3,7 @@ import 'server-only';
 /**
  * API Key Rotation Manager
  * Cycles through multiple keys round-robin, skipping any that hit rate limits.
- * Used by Helius (2 keys) and LunarCrush (4 keys).
+ * Used by LunarCrush (4 keys).
  */
 
 export class ApiKeyRotationManager {
@@ -83,11 +83,6 @@ function buildRotation(keys: (string | undefined)[], name: string): ApiKeyRotati
   }
   return new ApiKeyRotationManager(valid);
 }
-
-export const heliusRotation = buildRotation(
-  [process.env.HELIUS_API_KEY_1, process.env.HELIUS_API_KEY_2],
-  'Helius'
-);
 
 export const lunarCrushRotation = buildRotation(
   [

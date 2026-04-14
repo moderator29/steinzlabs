@@ -19,7 +19,7 @@ interface ApiEndpoint {
 }
 
 const API_LIST: ApiEndpoint[] = [
-  { name: 'Helius RPC (Solana)',        url: 'https://mainnet.helius-rpc.com', category: 'Blockchain', status: 'active',   latencyMs: 42,  uptime: 99.97, lastChecked: Date.now() - 30_000 },
+  { name: 'Alchemy (Solana)',            url: 'https://solana-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active',   latencyMs: 42,  uptime: 99.97, lastChecked: Date.now() - 30_000 },
   { name: 'Alchemy (Ethereum)',          url: 'https://eth-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 68,  uptime: 99.95, lastChecked: Date.now() - 30_000 },
   { name: 'Alchemy (Base)',              url: 'https://base-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 55,  uptime: 99.92, lastChecked: Date.now() - 30_000 },
   { name: 'DexScreener',                url: 'https://api.dexscreener.com', category: 'Market Data', status: 'active', latencyMs: 120, uptime: 99.80, lastChecked: Date.now() - 30_000 },

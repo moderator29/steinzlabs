@@ -5,8 +5,8 @@ import {
   getSolanaWalletTokens,
   getSolanaTransactions,
   getSolanaTokenMetaBatch,
-  type HeliusTransaction,
-} from './helius';
+  type SolanaTransaction,
+} from './alchemy-solana';
 import { getMultiTokenPrices, getBirdeyeTokenOverview } from './birdeye';
 import { getTokensMulti } from './dexscreener';
 import { getTokenPrice } from './coingecko';
@@ -99,7 +99,7 @@ export interface SolanaWalletIntelligence {
     hasBlueChips: boolean;
     memeTokenPercent: number;
   };
-  dataSource: 'helius+birdeye+dexscreener';
+  dataSource: 'alchemy+birdeye+dexscreener';
 }
 
 // ─── Whale Classification ─────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ function classifyWhale(totalUSD: number): SolanaWalletIntelligence['whaleScore']
 
 function normalizeTxType(
   raw: string,
-  transfers: HeliusTransaction['tokenTransfers'],
+  transfers: SolanaTransaction['tokenTransfers'],
   walletAddress: string
 ): SolanaWalletTx['type'] {
   const t = raw?.toUpperCase() ?? '';
@@ -143,7 +143,7 @@ function normalizeTxType(
 }
 
 export function normalizeSolanaTransactions(
-  txns: HeliusTransaction[],
+  txns: SolanaTransaction[],
   walletAddress: string
 ): SolanaWalletTx[] {
   return txns.slice(0, 25).map(tx => {
@@ -204,7 +204,7 @@ async function enrichTokensBatch(
   const mints = rawTokens.map(t => t.mint);
 
   // Step 1: Parallel — Helius metadata + Birdeye multi-price + DexScreener logos
-  const [heliusMeta, birdeyePrices, dexPairs] = await Promise.all([
+  const [solanaMeta, birdeyePrices, dexPairs] = await Promise.all([
     getSolanaTokenMetaBatch(mints),
     getMultiTokenPrices(mints, 'solana'),
     getTokensMulti(mints),
@@ -215,7 +215,7 @@ async function enrichTokensBatch(
 
   for (const raw of rawTokens) {
     const mint = raw.mint;
-    const meta = heliusMeta.get(mint);
+    const meta = solanaMeta.get(mint);
     const birdeyePrice = birdeyePrices[mint];
     const dexPair = dexPairs.get(mint.toLowerCase());
 
@@ -413,7 +413,7 @@ export async function buildSolanaWalletIntelligence(
       hasBlueChips: blueChipValue > totalBalanceUSD * 0.1,
       memeTokenPercent: Math.round(memeTokenPercent),
     },
-    dataSource: 'helius+birdeye+dexscreener',
+    dataSource: 'alchemy+birdeye+dexscreener',
   };
 
   cache.set(cacheKey, intelligence, TTL.WALLET_BALANCE);

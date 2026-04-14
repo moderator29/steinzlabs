@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest } from 'next/server';
 import { getUserWallets } from '@/lib/services/supabase';
 import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
-import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/helius';
+import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getTokenPrices } from '@/lib/services/jupiter';
 import { getContractPrice } from '@/lib/services/coingecko';
 

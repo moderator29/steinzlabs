@@ -10,7 +10,7 @@ export * from './goplus';
 export * from './coingecko';
 export * from './dexscreener';
 export * from './alchemy';
-export * from './helius';
+export * from './alchemy-solana';
 export * from './lunarcrush';
 export * from './arkham';
 export * from './jupiter';
