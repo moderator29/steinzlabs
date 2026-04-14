@@ -188,10 +188,10 @@ export default function WhitepaperPage() {
             <FeatureGrid items={[
               { icon: Layers, color: '#0A1EFF', title: 'Intelligence Layer', desc: 'VTX AI engine, Context Feed, Trading DNA, Wallet Classification, Trend Detection' },
               { icon: Shield, color: '#10B981', title: 'Security Layer', desc: 'Trust Score engine, Shadow Guardian, Contract Analyzer, Domain Shield, Approval Manager' },
-              { icon: Repeat, color: '#F59E0B', title: 'Execution Layer', desc: 'DEX aggregation (Jupiter + 1inch), Copy Trading, Sniper Bot, Limit Orders' },
+              { icon: Repeat, color: '#F59E0B', title: 'Execution Layer', desc: 'DEX aggregation (Jupiter + 0x Protocol), Copy Trading, Sniper Bot, Limit Orders' },
               { icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer', desc: 'Portfolio Tracker, Prediction Markets, Research Lab, Whale Tracker, Smart Money' },
             ]} />
-            <p>Data sources include Birdeye, Helius, Alchemy, DexScreener, DeFiLlama, GoPlus, Arkham Intelligence, CoinGecko, LunarCrush, Jupiter, and 1inch. Each source is abstracted behind a typed service layer with automatic fallback, rate limit management, and response caching.</p>
+            <p>Data sources include Birdeye, Alchemy, DexScreener, DeFiLlama, GoPlus, Arkham Intelligence, CoinGecko, LunarCrush, Jupiter, and 0x Protocol. Each source is abstracted behind a typed service layer with automatic fallback, rate limit management, and response caching.</p>
           </WpSection>
 
           {/* Section 05 — Intelligence */}
@@ -236,7 +236,7 @@ export default function WhitepaperPage() {
           <WpSection id="trading" n="07" title="Trading Suite">
             <p>STEINZ LABS provides a complete set of trading tools — from simple swaps to fully automated execution. Every tool is designed with security-first principles: no trade executes without a pre-flight safety check.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Multi-Chain Swap Engine</h3>
-            <p>Powered by Jupiter (Solana) and 1inch (EVM), the swap engine routes each trade across all available DEX liquidity to find the best execution price. Users swap directly from the STEINZ LABS interface without leaving the platform. Each swap is preceded by a Trust Score check on the destination token.</p>
+            <p>Powered by Jupiter (Solana) and 0x Protocol (EVM), the swap engine routes each trade across all available DEX liquidity to find the best execution price. Users swap directly from the STEINZ LABS interface without leaving the platform. Each swap is preceded by a Trust Score check on the destination token.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Copy Trading</h3>
             <p>Copy trading lets users mirror the on-chain activity of any tracked wallet. Users configure a copy size (absolute or percentage), a maximum per-trade cap, and optional safety filters (skip tokens below a Trust Score threshold). Copies execute automatically when the source wallet buys; users retain control over exits.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Sniper Bot</h3>
