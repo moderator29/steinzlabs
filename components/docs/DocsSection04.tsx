@@ -31,7 +31,7 @@ export function DocsSection04() {
           <span className="text-sm font-semibold text-white">Powered by Anthropic Claude</span>
         </div>
         <p className="text-xs text-gray-400 leading-relaxed">
-          VTX AI is built on Claude and given direct access to live on-chain data tools — Birdeye, Helius, Alchemy, DexScreener, DeFiLlama, and GoPlus. Every answer is grounded in real-time blockchain data, not training data from months ago.
+          VTX AI is built on Claude and given direct access to live on-chain data tools — Alchemy, DexScreener, DeFiLlama, and proprietary security scanners. Every answer is grounded in real-time blockchain data, not training data from months ago.
         </p>
       </div>
 
