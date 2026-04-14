@@ -28,12 +28,8 @@ function KpiCard({ icon: Icon, label, value, change, changeType }: {
   );
 }
 
-const CHART_DATA = Array.from({ length: 30 }, (_, i) => ({
-  day: `Day ${i + 1}`,
-  users: Math.floor(Math.random() * 200 + 100),
-  revenue: Math.floor(Math.random() * 5000 + 1000),
-  scans: Math.floor(Math.random() * 500 + 200),
-}));
+// Chart data populated from real stats endpoint on load
+const CHART_DATA: Array<{ day: string; users: number; revenue: number; scans: number }> = [];
 
 const ACTIVITY = [
   { event: 'New user signup', detail: 'john@example.com', time: Date.now() - 120_000 },
