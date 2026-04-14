@@ -1,0 +1,226 @@
+# PART 5: SECURITY FEATURES AUDIT
+
+## 5.1 SECURITY CENTER OVERVIEW
+
+The Steinz Labs Security Center consists of 7 features across 7 API routes. All are backed by real external APIs (GoPlus, Alchemy, Arkham) with the single critical exception of approval revocation, which is a stub.
+
+---
+
+## 5.2 RISK SCANNER / CONTRACT ANALYZER
+
+### Route: app/api/security/contract-analyzer/route.ts
+
+### Architecture
+Runs 3 parallel calls:
+1. `getTokenSecurity(address, chain)` — GoPlus token scan
+2. `getAddressSecurity(address, chain)` — GoPlus address intelligence
+3. `searchPairs(address)` — DexScreener for market data
+
+Computes an `overallScore` starting at 100, deducting points for each risk flag:
+- Honeypot detected: -45
+- Source code unverified: -15
+- Mintable supply: -10
+- Hidden owner: -12
+- Owner can reclaim contract: -15
+- Owner can modify balances: -15
+- Self-destruct function: -10
+- External calls: -5
+- Cannot buy: -20
+- Cannot sell all: -15
+- Buy tax > 15%: -12
+- Sell tax > 15%: -12
+- Malicious address: -30
+- Phishing detected: -25
+- Linked to mixer: -15
+- Blacklisted: -20
+
+Verdict thresholds:
+- >= 75: SAFE (green)
+- >= 55: CAUTION (amber)
+- >= 35: WARNING (orange)
+- < 35: DANGER (red)
+
+AI analysis via `vtxAnalyze()` appended (non-blocking, uses max 280 tokens).
+
+### Assessment: A-
+This is one of the best-implemented features in the platform. The parallel data fetching, comprehensive flag scoring, and AI synthesis are all production quality. The scoring deductions are logical and defensible.
+
+### Issues
+- No Etherscan ABI decode — contract function analysis relies on GoPlus only
+- AI analysis capped at 280 tokens — may truncate detailed analysis
+- `verdictColor` is returned from the server — this should be a frontend concern
+- No caching on individual scans — repeated scans of the same contract re-call all 3 APIs
+
+### Recommendations
+1. **MEDIUM** — Add 5-minute cache for contract analysis results keyed by address+chain
+2. **MEDIUM** — Increase AI analysis token limit to 500 for more detailed explanations
+3. **LOW** — Move verdictColor computation to the frontend
+4. **LOW** — Add Etherscan ABI decode to identify dangerous functions by name (not just by GoPlus flags)
+5. **LOW** — Add holder concentration as an additional scoring factor (from Birdeye or Etherscan holder data)
+
+---
+
+## 5.3 DOMAIN SHIELD
+
+### Route: app/api/security/domain-shield/route.ts
+### Service: lib/security/goplusService.ts — getDomainSecurity()
+
+### Architecture
+1. Normalizes URL (adds https:// if missing)
+2. Calls `getDomainSecurity(url)` which calls GoPlus `/phishing_site` API endpoint
+3. Returns verdict, confidenceScore, isPhishing, isMalicious, description, signals
+
+Fallback (if GoPlus unavailable): `heuristicDomainScan()` — keyword matching for patterns:
+- Checks for "wallet", "connect", "verify", "claim", "metamask" in subdomain or path
+- Checks for homograph characters (Cyrillic lookalikes: а, е, о, р, с, х)
+- Checks for known phishing brand names (metamask, uniswap, coinbase, binance, etc.)
+- Checks for excessive subdomain depth (> 3 dots in hostname)
+
+### Assessment: A
+GoPlus domain scanning is a legitimate and widely-used phishing database. The heuristic fallback is genuinely useful and covers the most common phishing patterns. The URL normalization handles user input well.
+
+### Issues
+- No rate limiting on this endpoint — could be abused to check large lists of domains
+- GoPlus phishing database may have coverage gaps for very new phishing sites
+- No caching — same URL scanned multiple times hits GoPlus each time
+
+### Recommendations
+1. **MEDIUM** — Add 10-minute cache for domain scan results
+2. **MEDIUM** — Add rate limiting (max 10 scans per IP per minute)
+3. **LOW** — Add Google Safe Browsing API as a second opinion for confirmed dangerous results
+4. **LOW** — Add Punycode decoding check — phishing sites often use internationalized domain names that look identical to legitimate ones
+
+---
+
+## 5.4 SIGNATURE INSIGHT
+
+### Route: app/api/security/signature-insight/route.ts
+### Service: lib/security/goplusService.ts — getSignatureDecode()
+
+### Architecture
+1. Validates that input is hexadecimal
+2. Adds 0x prefix if missing
+3. Calls GoPlus signature decode API with the hex data and chain
+4. Returns decoded function name, parameters, risk flags, description
+
+### Assessment: B+
+Solid implementation. Hex validation prevents garbage input. GoPlus provides function selector decoding plus risk assessment for known malicious signatures.
+
+### Issues
+- Input size capped at 10,000 characters (correct)
+- No validation that data is at least 10 hex chars (function selector = 4 bytes = 8 hex chars minimum)
+- No fallback for unknown function selectors — if GoPlus doesn't recognize the selector, no decoding
+
+### Recommendations
+1. **MEDIUM** — Add a secondary 4-byte lookup via 4byte.directory API (public, free) for function selector decoding when GoPlus doesn't recognize the selector
+2. **LOW** — Add minimum length validation: reject hex data shorter than 10 characters (can't be a valid function call)
+3. **LOW** — Add ABI parameter decoding for common ERC-20/ERC-721 function signatures locally without API call
+
+---
+
+## 5.5 APPROVAL MANAGER
+
+### Route: app/api/security/approvals/route.ts
+
+### Architecture
+1. Validates EVM address format (regex: 0x + 40 hex chars)
+2. Calls `alchemy.getTokenApprovals(address, chain)` — reads Approval event logs
+3. For each approval, calls `alchemy.allowance()` for current remaining allowance
+4. Enriches each approval with token metadata (symbol, name)
+5. Runs GoPlus address security check on each spender
+6. Classifies against KNOWN_SPENDERS dictionary (14 protocol addresses)
+7. Risk classification: danger (malicious spender) > warning (unlimited allowance) > safe
+
+### Critical Issue: Revocation Is a Stub
+`walletManager.revokeApproval()` returns `{ txHash: 'pending_signature' }` — no transaction is ever built or executed. This is detailed in Part 2.
+
+### Assessment: B- (read side), F (write/revoke side)
+The approval reading and classification pipeline is genuinely strong. The revocation is a complete stub that gives users false confidence.
+
+### Recommendations
+1. **CRITICAL** — Implement approval revocation (see Part 2, Recommendation 1)
+2. **MEDIUM** — Add per-chain KNOWN_SPENDERS maps (current list is Ethereum mainnet only)
+3. **MEDIUM** — Add Permit2 signature approval tracking — Permit2 approvals don't show up as traditional ERC-20 Approval events
+4. **LOW** — Add a "revoke all unlimited" batch option
+5. **LOW** — Add historical revocation log to Supabase so users can see past revocations
+
+---
+
+## 5.6 SHADOW GUARDIAN (PRE-TRADE SCANNER)
+
+### Route: app/api/security/scan-trade/route.ts
+### Service: lib/security/shadowGuardian.ts
+
+### Architecture
+1. Runs GoPlus security + Arkham holder scan in parallel
+2. Hard block conditions:
+   - GoPlus honeypot = true → BLOCKED
+   - Sell tax > 50% → BLOCKED
+   - Arkham holder list empty → BLOCKED (cannot verify)
+3. For each holder in top 20: checks Arkham labels for 'scammer' or 'rug_puller'
+4. For any scammer found: fetches Arkham address intel to get scam history
+5. If any scammer detected in top holders → BLOCKED
+6. Gets wallet connections for top holder, checks for mixer connections
+7. If > 10 mixer connections for top holder → BLOCKED
+8. Runs VTX AI analysis (200 tokens max) for final risk score 0-10
+9. If AI risk >= 7 → BLOCKED
+
+### Assessment: A-
+The Shadow Guardian is one of the most sophisticated security features in the platform. Multi-source verification (GoPlus + Arkham + AI) with hard blocking on clear danger signals. The progressive logic (GoPlus first, then Arkham, then AI) is efficient and well-layered.
+
+### Issues
+- UNABLE_TO_VERIFY block when holder list is empty is too aggressive — legitimate new tokens have no Arkham data yet. This will block many new legitimate tokens.
+- Mixer connection threshold (>10) for top holder is high — even 3-4 mixer connections in a top holder's network is significant
+- AI analysis capped at 200 tokens — may produce superficial risk assessment
+- No caching — every trade scan re-runs all API calls
+
+### Recommendations
+1. **HIGH** — Replace UNABLE_TO_VERIFY hard block with a CAUTION warning for tokens with no Arkham data. Fall through to AI-only assessment for new tokens.
+2. **MEDIUM** — Lower mixer connection threshold from >10 to >5 for stronger protection
+3. **MEDIUM** — Add 5-minute cache for scan results per token address to avoid redundant API calls on rapid trading
+4. **LOW** — Increase AI analysis token limit to 300 for more meaningful risk assessment
+5. **LOW** — Add DexScreener liquidity as a factor: tokens with < $5k liquidity should receive automatic CAUTION regardless of other signals
+
+---
+
+## 5.7 WALLET SECURITY CHECK
+
+### Route: app/api/security/check-wallet/route.ts
+### Service: lib/security/walletReputation.ts
+
+Detailed in Part 2 (Section 2.6). Assessment: B. Real Arkham integration, accurate scoring, minor issues with score cap and access threshold.
+
+---
+
+## 5.8 THREATS
+
+### Route: app/api/security/threats/route.ts
+
+### Architecture
+Simple Supabase query: reads `threats` table filtered by wallet_address and acknowledged=false.
+
+**No threat generation logic exists in the codebase reviewed.** The threats table is read but nothing writes to it automatically. Threats would need to be inserted externally (admin action, webhook, or a background job not reviewed).
+
+### Assessment: C
+The read endpoint is fine. The missing piece is the threat generation pipeline that should populate the table from sources like GoPlus, on-chain anomaly detection, or Arkham alerts.
+
+### Recommendations
+1. **HIGH** — Implement threat generation: when Shadow Guardian blocks a trade, insert a threat record. When Context Feed detects a whale moving out of a token the user holds, insert a threat.
+2. **MEDIUM** — Add WebSocket/SSE push for real-time threats to active users
+3. **LOW** — Add threat severity levels (LOW/MEDIUM/HIGH/CRITICAL) to the table schema
+
+---
+
+## 5.9 SECURITY FEATURES — OVERALL MATRIX
+
+| Feature | Data Source | Real? | Assessment |
+|---------|------------|-------|-----------|
+| Contract Analyzer | GoPlus + DexScreener + AI | YES | A- |
+| Domain Shield | GoPlus + heuristic fallback | YES | A |
+| Signature Insight | GoPlus | YES | B+ |
+| Approval Manager (read) | Alchemy ERC-20 Approval events | YES | B+ |
+| Approval Manager (revoke) | STUB — pending_signature | NO | F |
+| Shadow Guardian | GoPlus + Arkham + AI | YES | A- |
+| Wallet Reputation | Arkham | YES | B |
+| Threats Feed | Supabase read — no write pipeline | PARTIAL | C |
+| MEV Protection | Helius/Alchemy + algorithmic | YES | B+ |

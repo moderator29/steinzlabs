@@ -1,0 +1,268 @@
+# PART 3: INTELLIGENCE FEATURES AUDIT
+
+## 3.1 DNA ANALYZER
+
+### Route: app/api/dna-analyzer/route.ts (also app/api/dna-analysis/route.ts)
+
+### Architecture
+The DNA Analyzer does NOT fetch on-chain data independently. It receives the following from the frontend via POST body:
+- walletAddress
+- holdings (array of token positions)
+- totalBalance (USD value)
+- txCount (transaction count)
+
+This data is passed directly to `vtxAnalyze()`, which calls Claude claude-sonnet-4-6 with a system prompt to generate:
+- tradingStyle
+- riskProfile
+- overallScore (0-100)
+- portfolioGrade (A/B/C/D/F)
+- topInsight (string)
+- metrics (object)
+
+### Critical Finding
+The AI's analysis quality depends entirely on what the frontend sends. If the frontend sends empty holdings or a stale snapshot, the AI is analyzing nothing meaningful. There is no server-side re-verification of the holdings data. The AI cannot detect if the frontend is sending fabricated data.
+
+### What This Means in Practice
+- A user with a $50,000 portfolio who connects their wallet but the wallet-intelligence fetch partially fails will receive a DNA analysis based on whatever subset of holdings loaded
+- The AI follows the VTX system prompt rule: "Never invent, estimate, or hallucinate any numbers" — meaning it will correctly say "Data unavailable" if holdings are empty, but this looks like a failure to the user rather than a data pipeline issue
+
+### Assessment: C+
+Real AI synthesis, but the input pipeline is fragile. Fix: Have the DNA analyzer route call `buildSolanaWalletIntelligence()` or the Zerion API server-side to get fresh holdings before passing to the AI.
+
+### Recommendations
+1. **HIGH** — Call wallet intelligence pipeline server-side in dna-analyzer route rather than trusting frontend-supplied data
+2. **HIGH** — Add a minimum holdings threshold check before AI analysis — if holdings array is empty, return an error rather than passing empty data to Claude
+3. **MEDIUM** — Cache the DNA analysis per wallet with a 5-minute TTL to prevent redundant Claude API calls
+4. **MEDIUM** — Add the wallet's chain (SOL vs EVM) to the prompt so the AI can tailor recommendations
+5. **LOW** — Return the data sources used in the response so the frontend can display "Analysis based on 47 holdings from Birdeye" etc.
+
+---
+
+## 3.2 WALLET INTELLIGENCE
+
+### Route: app/api/wallet-intelligence/route.ts
+
+### Architecture — EVM Path
+1. Calls `zerion.getPositions()` — full multi-chain positions with USD values
+2. Calls `zerion.getPortfolio()` — total portfolio summary with PnL
+3. If Zerion fails: falls back to `alchemy.getTokenBalances()` — returns token list without USD prices
+4. Runs GoPlus security scan on top 5 EVM holdings (non-blocking, errors ignored)
+5. Returns combined profile
+
+### Architecture — Solana Path
+1. Calls `buildSolanaWalletIntelligence()` from `lib/services/solana-intelligence.ts`
+2. Inside that function:
+   - Helius: SOL balance + SPL token accounts + recent transactions (parallel)
+   - Helius: batch token metadata (up to 100 mints per call)
+   - Birdeye: multi-price batch for all held tokens
+   - DexScreener: token pairs for logos and liquidity
+   - Dust filter: skip tokens under $0.50 value (except BTC, ETH, SOL, BNB, USDC, USDT)
+   - Whale classification: MEGA ($1M+), LARGE ($100K+), MEDIUM ($10K+), SMALL ($1K+)
+
+### What Is Missing
+- No EVM DCA/position history — Zerion provides current positions only, not historical cost basis per entry
+- No cross-chain aggregation view — EVM and Solana are separate API calls, the frontend must merge them
+- EVM Alchemy fallback sets `change24h: 0` — no price change data in fallback mode
+- Arkham entity enrichment not run on wallet intelligence route (only run in holderAnalysis pipeline and shadowGuardian)
+
+### Assessment: B+
+Solid dual-chain coverage. Zerion is genuinely excellent for EVM. Helius+Birdeye pipeline for Solana is production-quality. The fallback degradation is transparent and acceptable.
+
+### Recommendations
+1. **HIGH** — Fix Alchemy fallback to fetch USD prices from CoinGecko/DexScreener for the token list
+2. **MEDIUM** — Add Arkham entity lookup for the wallet address itself (not just its holdings) to identify if the wallet is a known entity
+3. **MEDIUM** — Add cross-chain portfolio total — sum Solana + EVM balances into a single total_usd figure
+4. **LOW** — Increase GoPlus scan coverage beyond top 5 holdings to top 10
+5. **LOW** — Add PnL data from Zerion to the response object (it is fetched but may not be fully surfaced)
+
+---
+
+## 3.3 WALLET CLUSTERS
+
+### Route: app/api/wallet-clusters/route.ts
+
+### Architecture
+1. Checks Supabase `wallet_clusters` cache (20 most recent) — returns if fresh
+2. If no cache or refresh=1 requested:
+   - If `tokenAddress` given: fetches top 50 Birdeye holders
+   - Otherwise: loads addresses from Supabase `smart_money_wallets` table (40 max)
+3. For each address (batch of 15): fetches Helius SWAP txs + TRANSFER txs (20 each)
+4. Builds `transfers[]` and `trades[]` arrays
+5. Calls `detectCluster()` from `lib/services/cluster-detection.ts`
+
+### Cluster Detection Algorithm — lib/services/cluster-detection.ts
+6 signals with weights (total possible: 130 points):
+- coordinated_buy_block: weight 28 — multiple addresses buy the same token within 5 blocks
+- direct_fund_flow: weight 25 — wallet A sends funds directly to wallet B
+- sequential_buy: weight 22 — addresses buy same token within 10 minutes of each other
+- timing_correlation: weight 20 — Pearson correlation coefficient of trade timestamps
+- shared_counterparties: weight 20 — same DEX router addresses used
+- repeated_co_trading: weight 15 — addresses repeatedly appear in same token trades
+
+Behavior classification: accumulation, distribution, pump, wash_trading, unknown
+Coordination score = weighted sum / max_possible * 100
+
+### Key Limitations
+- Batch size capped at 15 addresses from Helius — for tokens with many holders, this gives limited coverage
+- Helius SWAP/TRANSFER data limited to last 20 txs per address — misses historical coordination
+- SOL transfer amounts in lamports divided by 1e9 (correct) but value is in native SOL, not USD — no USD conversion applied to transfers
+- Only Solana clusters — no EVM cluster detection (no equivalent Helius-style enhanced tx API used for EVM)
+
+### Assessment: B
+The algorithm is technically sound. The 6-signal approach with Pearson correlation is genuinely sophisticated. The limitation is data depth: 20 txs per address is shallow for detecting subtle long-term coordination patterns.
+
+### Recommendations
+1. **HIGH** — Increase Helius transaction limit from 20 to 100 per address for deeper pattern detection
+2. **HIGH** — Add EVM cluster detection using Alchemy asset transfers (already available)
+3. **MEDIUM** — Add USD conversion to transfer values using live SOL price
+4. **MEDIUM** — Persist cluster detection results to Supabase automatically after live detection (currently only saved if POST with admin secret)
+5. **LOW** — Add a minimum coordination score threshold for reporting — clusters scoring under 25 add noise
+6. **LOW** — Expose Pearson correlation coefficient in the response for transparency
+
+---
+
+## 3.4 ON-CHAIN TRENDS
+
+### Route: app/api/intelligence/on-chain-trends/route.ts
+
+### Data Sources
+- DefiLlama: global TVL history (last 90 days) — REAL
+- DefiLlama: per-chain TVL (Ethereum, BSC, Solana, Arbitrum, Polygon, Base, Optimism, Avalanche) — REAL
+- DefiLlama: stablecoin market caps — REAL
+- 5-minute in-memory cache
+
+### What Is Missing
+Despite the feature being labeled "On-Chain Trends", the following metrics are NOT implemented:
+- TPS (transactions per second) — no data source integrated
+- Gas price — no Alchemy/Etherscan gas API call
+- Active address count — no data source
+- Block time — no data source
+- DEX volume trends — no aggregator connected
+
+The interface type definition likely includes fields for these metrics, but they are populated with 0 or null.
+
+### Assessment: C+
+TVL and stablecoin data are genuinely real and useful. Everything else is missing. The feature name overpromises what is actually delivered.
+
+### Recommendations
+1. **HIGH** — Add Alchemy `eth_gasPrice` or EIP-1559 `eth_feeHistory` for real-time gas tracking
+2. **HIGH** — Add Helius `getRecentPerformanceSamples()` for Solana TPS — already in lib/services/helius.ts
+3. **MEDIUM** — Add DexScreener 24h aggregate volume across all pairs as a DEX volume metric
+4. **MEDIUM** — Add Alchemy `eth_getBlockByNumber` to derive block time
+5. **LOW** — Add historical chain dominance chart using per-chain TVL over time
+
+---
+
+## 3.5 SMART MONEY
+
+### Route: app/api/smart-money/route.ts
+
+### Architecture
+**Solana:** Calls `birdeye.getTopTraders()` — returns real PnL data, win rates, volume from Birdeye's top trader index. Legitimate.
+
+**Ethereum:** Calls Alchemy `getAssetTransfers` for last 200 blocks. Groups transfers by sender address. Returns top 10 by total volume. These are large ETH transfer senders — in practice mostly CEX hot wallets, DEX routers, and bridging contracts, NOT smart money traders.
+
+**DexScreener fallback:** Creates "wallet" objects from high-volume DEX pair addresses. These are pair contract addresses, not wallets. This data is fundamentally misleading.
+
+### Critical Issues
+- `winRate: 0` hardcoded for all EVM wallets — no win rate data available from transfer history
+- `pnl: 'N/A'` for all EVM wallets
+- ETH price hardcoded: `const volumeUsd = w.totalVolume * 2500`
+- DexScreener "wallets" are pair addresses — presenting them as wallet addresses is incorrect
+- No persistence — top smart money wallets are recomputed each request
+
+### Assessment: D
+Solana side is legitimate (Birdeye). EVM side is fundamentally broken — it does not track smart money, it tracks large transfer senders. The DexScreener fallback returns pair addresses labeled as smart money wallets. This feature needs a complete rethink for EVM.
+
+### Recommendations
+1. **CRITICAL** — Replace EVM smart money with a proper data source. Options: Nansen API (smart money labels), Arkham smart money entities, or build a proprietary tracked-wallets table in Supabase populated by curated research
+2. **HIGH** — Remove DexScreener fallback entirely — pair addresses are not wallets
+3. **HIGH** — Fix hardcoded ETH price — use live price from CoinGecko
+4. **HIGH** — Add win rate calculation — requires tracking trade outcomes, not just transfers. This requires a proper historical trade DB or a provider like Nansen
+5. **MEDIUM** — Persist curated smart money wallets in `smart_money_wallets` Supabase table with source attribution
+6. **LOW** — Add a `data_quality` field in the response so the frontend can indicate "Solana: verified PnL data" vs "EVM: estimated volume data"
+
+---
+
+## 3.6 NETWORK METRICS
+
+### Referenced as part of On-Chain Trends / Context Feed
+
+Network metrics (active addresses, block time, TPS, gas) are NOT implemented as a dedicated module. They appear as empty fields in the on-chain-trends response.
+
+### Assessment: F
+Not implemented. The data types exist but the sources are not connected.
+
+---
+
+## 3.7 WHALE TRACKER
+
+### Route: app/api/whale-tracker/route.ts
+
+### Architecture
+
+**Solana:**
+- Calls `birdeye.getTopTraders()` — real PnL, win rate, volume
+- Calls `birdeye.qualifyAsActiveTrader()` to filter genuine active traders
+- Solid implementation
+
+**EVM (Ethereum):**
+- Calls Alchemy `getAssetTransfers` for last 500 blocks
+- Filters: transfers between $20,000 and $5,000,000 USD
+- Groups by sender address, returns top 10 by total volume
+- ETH price hardcoded: `const ETH_USD = 3000`
+- `winRate: 0` for all EVM whales
+
+**BSC:**
+- Calls public BSC RPC `eth_getLogs` — only gets active addresses
+- Volume data set to 0 for all BSC whales — no actual volume calculation
+
+**Live Feed:**
+- Alchemy last 10 blocks, transfers > $50,000
+- 90-second in-memory cache
+
+### Assessment: C+
+Solana is legitimate. EVM is an approximation (large transfer senders, not necessarily traders). BSC has no volume data. Hardcoded ETH price is a real data quality issue.
+
+### Recommendations
+1. **HIGH** — Fix ETH_USD hardcoded price — use `coingecko.getTokenPrice('ethereum')` fetched once per request
+2. **HIGH** — Implement BSC volume calculation — use BscScan API or Alchemy BNB endpoint for asset transfer values
+3. **MEDIUM** — Add Arkham entity lookup for top EVM whales to identify if they are known entities (funds, exchanges)
+4. **MEDIUM** — Add a `data_source` field per whale entry ("Birdeye/verified" vs "Alchemy/estimated")
+5. **LOW** — Add 24h PnL tracking for EVM whales using Zerion historical positions API
+
+---
+
+## 3.8 BUBBLE MAP
+
+### Routes: app/api/bubble-map/route.ts and app/api/intelligence/bubblemaps/route.ts
+
+### Architecture
+1. Calls `buildContractIntelligence(token, chain)` from `lib/services/contract-intelligence.ts`
+2. contract-intelligence.ts runs in parallel:
+   - EVM: Etherscan (contract source + holder list) + GoPlus (security) + DexScreener (pairs) + Birdeye (overview) + Arkham (enrichment for top 10 holders)
+   - SOL: Helius (token meta) + GoPlus + DexScreener + Birdeye (overview + holders) + Helius largest accounts
+3. Builds holder nodes with color coding by type (exchange, whale, contract, dex, team, scammer)
+4. Builds links based on mode:
+   - `holders` mode: all holders link to center token node
+   - `network` mode: center links to top 20 + wallet connections by type and holding similarity
+   - `clusters` mode: holders grouped by entity type with cluster metadata
+
+### Connection Logic (buildWalletConnections)
+Links are created between holders if:
+- Same non-whale, non-unknown entity type (e.g., two exchange addresses)
+- OR holding percentage difference < 0.3% and both hold > 0.5%
+
+This is a heuristic approximation of coordination — it does NOT use actual on-chain transfer data between holders.
+
+### Key Limitation
+The "potential coordination" detection based on similar holding size (<0.3% diff) is statistically weak — many unrelated wallets can hold similar percentages by coincidence.
+
+### Assessment: B+
+The data pipeline is genuinely strong — parallel queries across 4-5 sources, Arkham enrichment on top holders, GoPlus security overlay. The connection/link logic is heuristic-only for the coordination detection, but the holder visualization itself is real and data-backed.
+
+### Recommendations
+1. **MEDIUM** — Replace holding-similarity heuristic with actual on-chain transfer detection between top holders for coordination links
+2. **MEDIUM** — Add scammer percentage as a first-class metric in the response — currently computed but not prominently surfaced
+3. **LOW** — Cache `buildContractIntelligence()` results for longer (currently uses TTL.GENERAL, add 5-min explicit TTL)
+4. **LOW** — Add a `data_completeness` field indicating which sources returned successfully vs failed
