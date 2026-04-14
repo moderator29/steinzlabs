@@ -191,7 +191,7 @@ export default function WhitepaperPage() {
               { icon: Repeat, color: '#F59E0B', title: 'Execution Layer', desc: 'DEX aggregation (Jupiter + 0x Protocol), Copy Trading, Sniper Bot, Limit Orders' },
               { icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer', desc: 'Portfolio Tracker, Prediction Markets, Research Lab, Whale Tracker, Smart Money' },
             ]} />
-            <p>Data sources include Birdeye, Alchemy, DexScreener, DeFiLlama, GoPlus, Arkham Intelligence, CoinGecko, LunarCrush, Jupiter, and 0x Protocol. Each source is abstracted behind a typed service layer with automatic fallback, rate limit management, and response caching.</p>
+            <p>Data sources include Birdeye, Alchemy, DexScreener, DeFiLlama, Arkham Intelligence, CoinGecko, LunarCrush, Jupiter, and 0x Protocol. Each source is abstracted behind a typed service layer with automatic fallback, rate limit management, and response caching.</p>
           </WpSection>
 
           {/* Section 05 — Intelligence */}

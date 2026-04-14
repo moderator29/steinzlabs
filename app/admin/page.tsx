@@ -1007,7 +1007,7 @@ export default function AdminPanel() {
                     { label: 'AI Engine', value: 'VTX Intelligence Engine', status: 'Connected' },
                     { label: 'Solana Trading', value: 'Jupiter Aggregator', status: 'Connected' },
                     { label: 'EVM Trading', value: '0x Protocol', status: 'Connected' },
-                    { label: 'Token Security', value: 'GoPlus Labs', status: 'Connected' },
+                    { label: 'Token Security', value: 'Security Scanner', status: 'Connected' },
                     { label: 'Social Auth', value: 'Firebase (Google/Apple)', status: 'Connected' },
                   ].map((source, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0 text-[11px]">
