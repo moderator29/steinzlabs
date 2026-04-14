@@ -916,7 +916,7 @@ export default function AdminPanel() {
                   <div className="space-y-2">
                     {[
                       { label: 'Jupiter Aggregator (Solana)', status: 'Live', color: 'text-[#10B981]' },
-                      { label: '1inch Router (EVM)', status: 'Live', color: 'text-[#10B981]' },
+                      { label: '0x Protocol (EVM)', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Arkham Intelligence', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Money Radar (Copy Trade)', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'VTX Intelligence Engine', status: 'Live', color: 'text-[#10B981]' },
@@ -1006,7 +1006,7 @@ export default function AdminPanel() {
                     { label: 'On-chain Intel', value: 'Arkham Intelligence', status: 'Connected' },
                     { label: 'AI Engine', value: 'VTX Intelligence Engine', status: 'Connected' },
                     { label: 'Solana Trading', value: 'Jupiter Aggregator', status: 'Connected' },
-                    { label: 'EVM Trading', value: '1inch Router', status: 'Connected' },
+                    { label: 'EVM Trading', value: '0x Protocol', status: 'Connected' },
                     { label: 'Token Security', value: 'GoPlus Labs', status: 'Connected' },
                     { label: 'Social Auth', value: 'Firebase (Google/Apple)', status: 'Connected' },
                   ].map((source, i) => (

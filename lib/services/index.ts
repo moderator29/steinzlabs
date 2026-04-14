@@ -24,6 +24,7 @@ export * from './zerion';
 export * from './solana-intelligence';
 export * from './etherscan';
 export * from './contract-intelligence';
+export * from './zerox';
 
 // ─── Shared Error Types ────────────────────────────────────────────────────────
 

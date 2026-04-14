@@ -2,11 +2,11 @@ import { Repeat, Shield, Crosshair, BarChart3, Zap, AlertTriangle } from 'lucide
 
 const SWAP_CHAINS = [
   { name: 'Solana', note: 'Jupiter DEX aggregator — best route across all Solana DEXes' },
-  { name: 'Ethereum', note: '1inch — best execution across Uniswap, Curve, Balancer, and more' },
-  { name: 'Base', note: '1inch — optimized routing across Base DEX ecosystem' },
-  { name: 'Arbitrum', note: '1inch — sub-second finality, low fees' },
-  { name: 'Polygon', note: '1inch — mature DEX ecosystem, high liquidity' },
-  { name: 'BSC', note: '1inch — PancakeSwap and major BSC DEXes' },
+  { name: 'Ethereum', note: '0x Protocol — best execution across Uniswap, Curve, Balancer, and more' },
+  { name: 'Base', note: '0x Protocol — optimized routing across Base DEX ecosystem' },
+  { name: 'Arbitrum', note: '0x Protocol — sub-second finality, low fees' },
+  { name: 'Polygon', note: '0x Protocol — mature DEX ecosystem, high liquidity' },
+  { name: 'BSC', note: '0x Protocol — PancakeSwap and major BSC DEXes' },
 ];
 
 const SNIPER_STEPS = [
