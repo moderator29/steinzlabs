@@ -326,7 +326,7 @@ export default function PortfolioPage() {
     symbol: t.symbol,
     name: t.name,
     unrealized: t.valueUsd * (t.change24h / 100),
-    realized: t.valueUsd * ((t.change24h + Math.random() * 10 - 5) / 100),
+    realized: 0,
     pct: t.change24h,
     valueUsd: t.valueUsd,
     color: COLORS[i % COLORS.length],

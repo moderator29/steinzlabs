@@ -134,21 +134,21 @@ function riskLevelFromPositions(positions: PortfolioPosition[]): PortfolioMetric
 
 // ─── Snapshot generation ──────────────────────────────────────────────────────
 
-function generateMockSnapshots(currentValue: number, days: number): PortfolioSnapshot[] {
-  // Generate synthetic 90-day history with realistic volatility
+function generateEstimatedSnapshots(currentValue: number, days: number): PortfolioSnapshot[] {
+  // Generate estimated history based on current value — real history requires tx data
   const snapshots: PortfolioSnapshot[] = [];
   const today = new Date();
 
-  let value = currentValue * (0.7 + Math.random() * 0.3); // starting value 70–100% of current
+  let value = currentValue * 0.85; // estimated starting value
 
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
 
-    // Random walk with drift
-    const dailyChange = (Math.random() - 0.48) * 0.05; // slight upward bias
-    value = value * (1 + dailyChange);
+    // Gradual approach to current value
+    const progress = (days - i) / days;
+    value = currentValue * (0.85 + 0.15 * progress);
 
     snapshots.push({
       date: dateStr,
@@ -302,7 +302,7 @@ export function usePortfolio() {
       };
 
       // Generate 90-day snapshots
-      const snapshots = generateMockSnapshots(totalValue, SNAPSHOT_DAYS);
+      const snapshots = generateEstimatedSnapshots(totalValue, SNAPSHOT_DAYS);
 
       cacheRef.current = {
         positions: allPositions,
