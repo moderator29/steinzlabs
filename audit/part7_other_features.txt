@@ -1,0 +1,186 @@
+# PART 7: OTHER FEATURES AUDIT
+
+## 7.1 PORTFOLIO
+
+### Routes: app/api/portfolio/route.ts and app/api/portfolio/holdings/route.ts
+
+### Architecture (Detailed in Part 2, Section 2.7)
+- **EVM primary:** Zerion API — full multi-chain positions, USD values, PnL
+- **EVM fallback:** Alchemy SDK — token balances without USD prices, change24h hardcoded to 0
+- **Solana:** Full Helius + Birdeye + DexScreener pipeline via buildSolanaWalletIntelligence()
+
+### Assessment: B+
+The dual-chain portfolio is genuinely strong for a crypto platform. Zerion covers 10+ EVM chains in one call. The Solana pipeline is thorough. Key degradations are in the Alchemy fallback (no token USD prices) and no cross-chain portfolio total.
+
+### Outstanding Issues
+- No historical portfolio value tracking — can't show "your portfolio was worth $X 30 days ago"
+- Alchemy fallback: change24h: 0 hardcoded for all tokens
+- No cross-chain total balance calculation (frontend must sum SOL + EVM)
+- Portfolio snapshots table exists (holder_snapshots) but is token-focused, not wallet portfolio focused
+
+### Recommendations
+1. **HIGH** — Fix Alchemy fallback: batch CoinGecko price lookup for the token list returned by Alchemy
+2. **MEDIUM** — Add daily portfolio snapshot to Supabase (wallet address, total_usd, chain breakdown) for historical charting
+3. **MEDIUM** — Implement cross-chain portfolio total endpoint that aggregates SOL + EVM into a single response
+4. **LOW** — Add portfolio risk score (concentration HHI, volatility, meme exposure percentage) to the portfolio response
+
+---
+
+## 7.2 ALERTS
+
+### Routes: app/api/market/alerts/route.ts and app/api/notifications/route.ts
+
+### What Exists
+The notifications system pulls from:
+- CoinGecko top tokens: if 1h price change > 5% → price alert notification
+- CoinGecko top tokens: if 1h price change < -10% → security alert
+- CoinGecko trending: top 5 trending → trending notifications
+- CoinGecko volume: high-volume coins → "whale alert" (misleadingly named — this is coin volume, not actual whale transactions)
+- Supabase `notifications` table — manually created and stored notifications
+
+### What Is Missing
+- **No user-configured price alerts.** Users cannot set "alert me when BTC hits $100,000." The alert system is broadcast-only, not user-configured.
+- The tier system defines `maxAlerts: 3 / 20 / 100` per tier but there is no mechanism for users to create custom alerts
+- "Whale Alert" notifications are misleading: they show coins with high 24h volume, not actual large wallet movements
+- Push notifications exist (VAPID/web push) but the notification content is derived from the same CoinGecko polling — no real-time triggers
+
+### Supabase Notification Storage
+The POST /api/notifications endpoint correctly stores notifications to Supabase and optionally sends email via Resend for whale_alert and price_target types. Email sending is fire-and-forget.
+
+### Assessment: C-
+The notification infrastructure exists (web push, email, Supabase storage) but the alert content is shallow and there is no user-configured alert capability despite the tier system promising it.
+
+### Recommendations
+1. **HIGH** — Implement user-configured price alerts: table `user_alerts` with columns (user_id, token_address, condition: above/below, target_price, active). Check via background job or Supabase Edge Function.
+2. **HIGH** — Fix "Whale Alert" labeling — rename to "Volume Alert" or replace with real large-wallet-movement detection using the whale-tracker data
+3. **MEDIUM** — Add wallet activity alerts: notify user when a tracked wallet moves significant funds
+4. **MEDIUM** — Add a real-time alert trigger from Shadow Guardian — when a user's monitored token is flagged, push an immediate notification
+5. **LOW** — Add alert history page — currently all past notifications are lost except what's in Supabase
+
+---
+
+## 7.3 RESEARCH LAB
+
+### Route: app/api/research/route.ts
+
+### Data Sources (in priority order)
+1. **Supabase `research_posts` table** — manually created posts by admin
+2. **CryptoPanic** (if CRYPTOPANIC_API_KEY set) — real crypto news feed, filtered by "hot"
+3. **CoinGecko Trending** — top trending coins, formatted as research posts
+4. **DexScreener Token Profiles** — recently profiled tokens on DexScreener
+
+All sources fetched in parallel, deduplicated, merged and sorted by published_at.
+
+### Category Auto-Mapping
+A `mapCategory()` function automatically classifies posts into: DeFi, NFT, Layer2, Meme, BTC, ETH, SOL, Market Analysis, Security, Protocols, On-Chain, General. The logic is keyword-based on post title and token names.
+
+### Admin Post Management
+POST/DELETE on /api/research require `ADMIN_PASSWORD` environment variable. This is a simple password check — no JWT verification. Password is sent in the request body (POST) or as a URL query parameter (DELETE). The DELETE method exposes the password in the URL, which may be logged by web servers and proxies.
+
+### Assessment: B-
+The multi-source aggregation with CryptoPanic + CoinGecko + DexScreener is functional and useful. The category mapping is clever. The admin authentication is weak (plaintext password in URL for DELETE).
+
+### Recommendations
+1. **HIGH** — Fix DELETE endpoint: move password authentication to Authorization header or POST body, never URL query parameter
+2. **HIGH** — Replace ADMIN_PASSWORD plaintext check with proper JWT-based admin authentication using verifyAdminRequest() from lib/auth/adminAuth.ts (already exists)
+3. **MEDIUM** — Add pagination to the research feed — currently returns up to 50 posts per page, but large result sets may slow the response
+4. **MEDIUM** — Add AI-powered content tagging via vtxAnalyze() for posts without clear categories
+5. **LOW** — Add Supabase full-text search for the research library
+
+---
+
+## 7.4 NETWORK GRAPH
+
+### Route: app/api/network-graph/route.ts
+
+### Architecture — Three Data Modes
+**Mode 1 — Helius (when wallet address + key present):**
+Fetches recent transactions for the wallet, builds sender/receiver nodes and edges from real tx data. Source: 'helius'.
+
+**Mode 2 — DexScreener fallback:**
+Uses DexScreener pair data to build a token-centric graph. Source: 'dexscreener'. This is approximate — pair addresses are not wallet addresses.
+
+**Mode 3 — Static mock (default when no wallet provided):**
+Returns hardcoded data via generateMockData():
+- Hardcoded addresses including "USDC Mint", "Raydium LP", "Whale 1-4", "DEX Router"
+- Hardcoded volumes: USDC Mint volume: 28,400,000; Raydium LP: 15,200,000; etc.
+- Source: 'mock'
+
+**The default page load uses static mock data.** Any user who visits the Network Graph page without providing a wallet address sees completely fabricated data presented as if it were real.
+
+### Assessment: D+
+When a wallet is provided and Helius key is available, this feature works. The default state (no wallet) shows hardcoded mock data. This is deceptive to users who may interpret the mock network as real platform activity or real chain data.
+
+### Recommendations
+1. **CRITICAL** — Either remove the mock data fallback entirely and show an empty state prompting wallet connection, or clearly label mock data as "Example data — connect wallet to see your network"
+2. **HIGH** — Increase Helius transaction depth from default to 100 transactions for richer graphs
+3. **MEDIUM** — Add Arkham entity labels to nodes — currently nodes are raw addresses only
+4. **MEDIUM** — Add EVM network graph mode using Alchemy asset transfers (currently Helius-only)
+5. **LOW** — Add edge weight based on transfer value (larger value = thicker edge)
+
+---
+
+## 7.5 CONTEXT FEED
+
+### Route: app/api/context-feed/route.ts
+
+### Real Data Sources
+- **Alchemy:** Large ETH transfers in recent blocks (> $100,000)
+- **Helius:** Solana recent performance samples (TPS)
+- **DexScreener:** Trending tokens, pump.fun tokens, chain-specific token searches
+- **DexScreener:** New token listings via profile endpoint
+
+### Issues Found
+
+**Timestamp Manipulation:**
+The function `recentTimestamp()` returns `new Date().toISOString()` — current time — for all events regardless of when they actually occurred. This makes a 6-hour-old whale transfer appear to have happened "just now."
+
+**Argument Bug:**
+`recentTimestamp(30)` is called with argument `30` but the function signature is `function recentTimestamp(): string` — takes no parameters. The `30` is silently ignored. This was intended to add a variance offset but the implementation is incomplete.
+
+**24-Hour Event Store:**
+Events are stored in an in-memory array for 24 hours. Lost on server restart.
+
+### Assessment: B-
+The data sources are legitimate. Alchemy ETH transfers and Helius TPS samples are real. DexScreener trending is real. The timestamp manipulation significantly undermines data quality — a user cannot tell if an event happened 30 seconds ago or 6 hours ago.
+
+### Recommendations
+1. **HIGH** — Fix recentTimestamp() to use the actual block timestamp from the Alchemy/Helius response, not the current time
+2. **HIGH** — Implement recentTimestamp(offset) properly to add controlled variance if random staggering is needed for UI
+3. **MEDIUM** — Move 24-hour event store to Supabase to survive restarts
+4. **LOW** — Add pagination to the context feed endpoint — currently returns all events up to the in-memory buffer
+
+---
+
+## 7.6 MEV PROTECTION
+
+### Route: app/api/mev-protection/route.ts
+### Service: lib/services/mev.ts
+
+### Architecture
+**Solana:** Fetches last 50 SWAP transactions via Helius enhanced API. Analyzes:
+- Repeated feePayer addresses (3+ txs = potential bot activity)
+- High-fee transactions (> 50,000 lamports = priority fee, likely MEV)
+- Average fee vs high-fee ratio
+
+**EVM:** Calls Alchemy `alchemy_getAssetTransfers` for recent ERC-20 transfers. Analyzes:
+- Block density (transfers per block — high density = high MEV activity)
+- Repeated sender addresses (3+ txs = potential bot activity)
+- Large trade count (> $10k)
+
+Sandwich risk score (0-100) derived from these signals.
+
+MEV loss estimate: (sandwichRisk / 100) * 0.5% of swap value. Maximum 0.5% loss at risk=100.
+
+### Assessment: B
+Real data, sensible algorithmic risk scoring. The analysis is heuristic — it cannot detect confirmed sandwich attacks, only estimate the probability based on mempool patterns. The 0.5% max MEV loss estimate is conservative and reasonable.
+
+### Issues
+- No confirmed sandwich detection — "detected" in the response means risk >= 75, not a confirmed sandwich
+- The EVM analysis queries `fromBlock: 'latest'` to `toBlock: 'latest'` — this is effectively the current block only, giving very limited data. Should query last 20-50 blocks.
+- No BSC/Polygon MEV analysis implemented (supported chains: solana, ethereum, base, arbitrum, bsc — but BSC has no implementation)
+
+### Recommendations
+1. **HIGH** — Fix EVM block range: query `fromBlock: hex(latestBlock - 20)` to `toBlock: latest` for meaningful mempool data
+2. **MEDIUM** — Add BSC MEV analysis using BSC RPC
+3. **LOW** — Add Flashbots bundle detection for Ethereum — calls to eth_sendBundle in the mempool indicate MEV activity

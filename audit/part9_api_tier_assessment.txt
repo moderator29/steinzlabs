@@ -1,0 +1,309 @@
+# PART 9: API TIER ASSESSMENT
+
+Every external API used in the platform — current tier, known limits, upgrade cost, and assessment.
+
+---
+
+## 9.1 ANTHROPIC (Claude AI)
+
+**Used In:** lib/services/anthropic.ts — all AI features
+**Current Integration:** claude-sonnet-4-6 (executor) + claude-opus-4-6 (advisor via beta header)
+**Auth:** ANTHROPIC_API_KEY (Bearer token)
+
+**Pricing (as of 2026):**
+- claude-sonnet-4-6: $3/MTok input, $15/MTok output
+- claude-opus-4-6: $15/MTok input, $75/MTok output (advisor uses this)
+- Advisor strategy ~80-90% cost saving vs full Opus per request
+
+**Rate Limits:** Based on API tier — default limits increase with usage history
+**Context Window:** 200,000 tokens (claude-sonnet-4-6 and claude-opus-4-6)
+**Max Output Tokens:** 8,192 by default (platform uses 4,096)
+
+**Current Usage Pattern:**
+- VTX Agent: tool loop up to 5 iterations, each calling Sonnet + up to 2x Opus advisor
+- DNA Analyzer: vtxAnalyze() — single call, 1,500 tokens max
+- Shadow Guardian: vtxAnalyze() — single call, 200 tokens max
+- Sniper Execute: vtxAnalyze() — single call, 200 tokens max
+- Contract Analyzer: vtxAnalyze() — single call, 280 tokens max
+
+**Assessment:** Correct and cost-efficient. Advisor strategy is smart. No issues.
+
+---
+
+## 9.2 HELIUS (Solana)
+
+**Used In:** lib/services/helius.ts, lib/agents/, app/api/wallet-clusters, app/api/network-graph, app/api/mev-protection, app/api/context-feed
+**Auth:** HELIUS_API_KEY_1 and HELIUS_API_KEY_2 (query param or header, 2-key rotation)
+
+**APIs Used:**
+- `getTokenAccountsByOwner` — Solana RPC
+- `getBalance` — Solana RPC
+- `getTokenSupply` — Solana RPC
+- `getTokenLargestAccounts` — Solana RPC
+- `/token-metadata` (Helius Enhanced API) — batch token metadata
+- `/addresses/{address}/transactions` (Helius Enhanced API) — enhanced tx history
+
+**Free Tier:** 1M credits/month (each enhanced tx = ~1 credit; raw RPC calls = smaller fractions)
+**Developer Plan:** $49/month — 30M credits, 50 req/sec
+**Business Plan:** $499/month — 500M credits, 500 req/sec
+**Enterprise:** Custom
+
+**Current Usage Risk:** Two-key rotation doubles effective free tier. At scale (1000+ active users), the wallet intelligence pipeline alone (parallel Helius calls per wallet analysis) will exhaust free tier rapidly.
+**Recommendation:** Developer Plan ($49/mo) at minimum for production. Monitor credit consumption from day one.
+
+---
+
+## 9.3 BIRDEYE (Solana)
+
+**Used In:** lib/services/birdeye.ts — Solana prices, wallet tokens, top traders, OHLCV, holders, trending, new listings
+**Auth:** BIRDEYE_API_KEY (header: X-API-KEY)
+
+**APIs Used:**
+- `/defi/price` — single token price
+- `/defi/multi_price` — batch up to 100 tokens
+- `/defi/token_overview` — full token overview
+- `/defi/token_holders` — holder list
+- `/defi/ohlcv` — OHLCV data
+- `/defi/token_list` — top tokens
+- `/defi/wallet/token_list` — wallet holdings (expensive)
+- `/defi/wallet/transaction_list` — wallet tx history (expensive)
+- `/trader/gainers-losers` — top traders PnL
+
+**Free Tier:** Limited — 1 req/sec, limited endpoints
+**Starter Plan:** ~$50/month — most endpoints, higher rate limits
+**Professional Plan:** ~$200/month — all endpoints, higher limits
+**Business Plan:** ~$500/month
+
+**Critical:** `getWalletTokenList()` and `getWalletTransactions()` are marked as expensive endpoints in Birdeye pricing. These are used in every wallet intelligence request and DNA analyzer pipeline. Free tier will exhaust quickly.
+**Recommendation:** Professional Plan ($200/mo) for production.
+
+---
+
+## 9.4 COINGECKO
+
+**Used In:** lib/services/coingecko.ts — market data, trending, global stats, OHLCV
+**Auth:** COINGECKO_API_KEY (query param: x_cg_pro_api_key)
+**Fallback:** Public API on 429 error
+
+**Current Setup:** Pro API key with public fallback on rate limit errors. Well-implemented.
+
+**Free (Public) API:** 30 calls/min, limited endpoints, no 1h price changes
+**Pro API:** ~$129/month — 500 calls/min, 1h price change data, full OHLCV history
+**Analyst API:** ~$499/month — 2,000 calls/min
+
+**Why Pro Matters:** Notifications route needs `price_change_percentage_1h_in_currency` which requires Pro API. Portfolio route needs OHLCV history for charts.
+**Recommendation:** Pro API required for production — public fallback is insufficient at scale.
+
+---
+
+## 9.5 ALCHEMY (EVM Multi-chain)
+
+**Used In:** lib/services/alchemy.ts — ETH, Polygon, Base, Arbitrum, Optimism, BNB
+**Auth:** ALCHEMY_API_KEY (single key for all chains)
+**SDK:** alchemy-sdk v3.2.0
+
+**APIs Used:**
+- getTokenBalances() — EVM token list
+- getAssetTransfers() — transfer history
+- getTokenMetadata() — token symbol/name/decimals
+- getOwnersForContract() (if implemented)
+- Approval event log queries
+- Custom JSON-RPC methods (alchemy_getAssetTransfers)
+
+**Free Tier:** 300M compute units/month (varies by method — getAssetTransfers = 150 CU/call)
+**Growth Plan:** $49/month — 400M CU, higher rate limits
+**Scale Plan:** $299/month — 1.5B CU, dedicated support
+
+**Note:** Currently using a single API key for all chains. Consider chain-specific keys to avoid one chain's usage affecting others.
+**Recommendation:** Growth Plan ($49/mo) minimum for production EVM features.
+
+---
+
+## 9.6 ZERION (EVM Portfolio)
+
+**Used In:** lib/services/zerion.ts — EVM positions, portfolio totals, transaction history
+**Auth:** ZERION_API_KEY (Basic auth: base64(apiKey:))
+**API Version:** v1
+
+**APIs Used:**
+- `/v1/wallets/{address}/positions/` — all token positions across chains
+- `/v1/wallets/{address}/portfolio/` — total value, PnL summary
+- `/v1/wallets/{address}/transactions/` — transaction history
+
+**Free Tier:** Limited — rate limited, may not include all chains
+**Starter:** $49/month
+**Professional:** $149/month — full multi-chain, historical data
+
+**Assessment:** Zerion is the best single source for EVM portfolio data. Worth every cent.
+**Recommendation:** Professional Plan ($149/mo) for production.
+
+---
+
+## 9.7 GOPLUS SECURITY
+
+**Used In:** lib/security/goplusService.ts — token security, address security, domain scan, signature decode
+**Auth:** GOPLUS_API_KEY (likely query param or header — exact auth mechanism in goplusService.ts not fully read)
+
+**APIs Used:**
+- `/api/v1/token_security/{chainId}` — token security scan
+- `/api/v1/address_security/{address}` — address intelligence
+- `/api/v1/phishing_site` — domain/URL phishing check
+- `/api/v1/signature_decode` — transaction data decode
+- `/api/v1/approval_security` — approval check
+- `/api/v1/degen_check` — EVM simulation (body bug prevents use)
+
+**Free Tier:** 5,000 queries/month
+**Pro Plan:** $299/month — 100,000 queries/month
+**Enterprise:** Custom
+
+**Current Usage Risk:** Every contract analysis = 2 GoPlus calls (token + address). Every shadow guardian scan = 1 call. Every swap has a pre-check. At scale, free tier exhausts in hours.
+**Recommendation:** Pro Plan ($299/mo) for production.
+
+---
+
+## 9.8 ARKHAM INTELLIGENCE
+
+**Used In:** lib/services/arkham.ts — entity labels, address intel, wallet connections, token holders, entity portfolio
+**Auth:** ARKHAM_API_KEY (header)
+
+**APIs Used:**
+- `/api/v1/address/{address}` — address intelligence
+- `/api/v1/entity/{id}` — entity details
+- `/api/v1/token-holders/{token}` — token holder labels
+- `/api/v1/transfers` — wallet transfer history
+- `/api/v1/connections/{address}` — wallet network connections
+- `/api/v1/entity/{id}/portfolio` — entity portfolio
+- `/api/v1/entity/{id}/performance` — entity performance (win rate, avg gain)
+- `/api/v1/search` — entity search
+
+**Current Usage:** Heavy — called for every wallet intelligence request, every Shadow Guardian scan, every holder analysis enrichment
+
+**Pricing:** Arkham does not publish public API pricing. Enterprise agreements required for high-volume API access.
+**Recommendation:** Contact Arkham for enterprise API tier. Current architecture is heavily Arkham-dependent.
+
+---
+
+## 9.9 LUNARCRUSH
+
+**Used In:** lib/services/lunarcrush.ts — social sentiment, galaxy score, trending rank
+**Auth:** 4 API keys in rotation (LUNARCRUSH_API_KEY_1..4)
+**Rotation:** Round-robin via ApiKeyRotationManager
+
+**APIs Used:**
+- `/public/coins/{symbol}/v1` — coin social metrics
+- Social volume, sentiment, galaxy score, influencer activity
+
+**Free Tier:** 10,000 points/month (each request = variable points)
+**Pro Plan:** $49/month — 1M points
+**Business Plan:** $499/month — unlimited
+
+**Current Setup:** 4-key rotation effectively quadruples free tier allowance. Smart implementation.
+**Recommendation:** Pro Plan ($49/mo) once social features are heavily used.
+
+---
+
+## 9.10 DEXSCREENER
+
+**Used In:** lib/services/dexscreener.ts — pairs, token search, new listings, token profiles
+**Auth:** None required (public API)
+**Rate Limits:** 300 requests/minute (public)
+
+**Assessment:** No cost, no key required, generous rate limits. DexScreener is one of the best free APIs in crypto.
+**Recommendation:** No action required. Monitor rate limits as usage scales.
+
+---
+
+## 9.11 DEFILLAMA
+
+**Used In:** lib/services/defillama.ts — TVL, chain TVL, stablecoin data, token prices
+**Auth:** None required (public API)
+**Rate Limits:** Generous, no documented limit
+
+**Assessment:** Free, no key, excellent data quality. No issues.
+**Recommendation:** No action required.
+
+---
+
+## 9.12 1INCH
+
+**Used In:** lib/trading/oneinch.ts — EVM swap routing
+**Auth:** ONEINCH_API_KEY (Bearer token)
+
+**APIs Used:**
+- `/swap/v6.0/{chainId}/quote` — get swap quote
+- `/swap/v6.0/{chainId}/swap` — build swap transaction
+
+**Pricing:** 1inch Aggregation Protocol API requires Dev Portal account. Pricing not publicly listed — contact 1inch sales.
+**Recommendation:** Register on 1inch Developer Portal and obtain API key. Required for EVM swap fallback.
+
+---
+
+## 9.13 ETHERSCAN (and chain variants)
+
+**Used In:** lib/services/etherscan.ts — contract source verification, token info, top holders
+**Auth:** ETHERSCAN_API_KEY
+
+**API variants needed:**
+- Etherscan (Ethereum): etherscan.io
+- BscScan (BSC): bscscan.com
+- PolygonScan: polygonscan.com
+- BaseScan: basescan.org
+- ArbiScan: arbiscan.io
+
+**Free Tier:** 5 calls/second, 100,000 calls/day per key
+**Pro Plan:** $199/month — higher limits, priority API
+
+**Assessment:** Free tier is generous for current usage. Pro needed only at high scale.
+**Recommendation:** Free tier sufficient initially. Each chain explorer needs its own key.
+
+---
+
+## 9.14 STRIPE
+
+**Used In:** Subscription billing (STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+**Pricing:** 2.9% + $0.30 per successful card charge (standard processing fees)
+**Assessment:** Standard Stripe integration. No issues at the API level.
+
+---
+
+## 9.15 RESEND (Email)
+
+**Used In:** Transactional email (RESEND_API_KEY)
+**Free Tier:** 3,000 emails/month
+**Pro Plan:** $20/month — 50,000 emails/month
+**Assessment:** Free tier sufficient for a growing platform. Upgrade when approaching 3,000 monthly email triggers.
+
+---
+
+## 9.16 CRYPTOPANIC
+
+**Used In:** app/api/research/route.ts — crypto news feed
+**Auth:** CRYPTOPANIC_API_KEY (optional)
+**Free Tier:** 500 requests/day
+**Paid Plan:** ~$10-50/month depending on volume
+
+**Assessment:** Optional feature. Free tier sufficient for news feed that refreshes every 5 minutes (revalidate: 300).
+
+---
+
+## 9.17 MONTHLY API COST ESTIMATE FOR PRODUCTION
+
+| Service | Minimum Plan | Monthly Cost |
+|---------|-------------|-------------|
+| Anthropic | Usage-based | $200-500 est. based on VTX usage |
+| Helius | Developer | $49 |
+| Birdeye | Professional | $200 |
+| CoinGecko | Pro | $129 |
+| Alchemy | Growth | $49 |
+| Zerion | Professional | $149 |
+| GoPlus | Pro | $299 |
+| Arkham | Enterprise | Unknown — contact sales |
+| LunarCrush | Pro | $49 |
+| 1inch | Developer | TBD |
+| Etherscan (multi-chain) | Free | $0 |
+| DexScreener | Free | $0 |
+| DefiLlama | Free | $0 |
+| Stripe | Per transaction | 2.9% + $0.30 |
+| Resend | Free to start | $0 |
+| **TOTAL (excl. Arkham, Anthropic variable)** | | **~$924/mo minimum** |
+| **With estimated Anthropic at $300/mo and Arkham at $500/mo** | | **~$1,724/mo** |

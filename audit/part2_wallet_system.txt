@@ -1,0 +1,220 @@
+# PART 2: WALLET SYSTEM AUDIT
+
+## 2.1 OVERVIEW
+
+The Steinz Labs wallet system is a **read-only, non-custodial, browser-extension-only** architecture. The platform never holds private keys, never stores seed phrases, and never generates wallets. All signing is delegated to MetaMask (EVM) or Phantom (Solana) browser extensions installed by the user. The server stores only public wallet addresses.
+
+---
+
+## 2.2 WALLET CONNECTION — lib/wallet.ts
+
+### How It Works
+- Detects `window.ethereum` (MetaMask) for EVM chains
+- Detects `window.solana` (Phantom) for Solana
+- Calls `eth_requestAccounts` (EVM) or `connect()` (Solana) to get the connected address
+- Stores `wallet_address` and `wallet_provider` in `localStorage`
+- No private keys, no seed phrases, no signing keys ever touch the server
+
+### What Is Stored in localStorage
+```
+wallet_address: "0x..." or base58 Solana address
+wallet_provider: "metamask" | "phantom"
+```
+
+### Auto-Connect — lib/wallet/autoConnect.ts
+- On page load, reads `wallet_address` from localStorage
+- Checks if the browser wallet still has the same address connected
+- If session is older than 48 hours, clears and requires manual reconnect
+- **No server-side session persistence** — this is a purely client-side mechanism
+
+### Cross-Device Behavior
+- **No cross-device recovery exists.** If a user connects on Device A, Device B has no knowledge of the wallet. The localStorage entry does not exist on Device B.
+- There is no QR code pairing, no cloud session sync, and no wallet-connect v2 integration.
+
+---
+
+## 2.3 WALLET ACCOUNT STORAGE — lib/wallet/walletManager.ts
+
+### Supabase Storage
+- When a wallet connects, `addWalletProfile()` inserts the address into the `wallet_accounts` table
+- Columns stored: `userId`, `address`, `chain`, `label`
+- This is the only server-side persistence of wallet identity
+
+### Multiple Wallets
+- FREE tier: 1 wallet maximum
+- PRO tier: 3 wallets maximum
+- PREMIUM tier: 10 wallets maximum
+- `getUserWallets()` queries Supabase to retrieve all registered wallets for a user
+
+### Wallet Labeling
+- Users can label wallets (e.g. "Main Wallet", "Trading Wallet")
+- Labels stored in Supabase `wallet_accounts` table
+
+---
+
+## 2.4 APPROVAL REVOCATION — CRITICAL STUB
+
+### File: lib/wallet/walletManager.ts — revokeApproval()
+
+**This function is a stub.** It returns:
+```
+{ txHash: 'pending_signature' }
+```
+
+No ERC-20 approval revocation transaction is ever built. No `approve(spender, 0)` call is constructed. The function does nothing on-chain.
+
+**Impact:** Users who click "Revoke" in the Approval Manager UI will receive a response indicating success, but their on-chain approval remains active. This is a false sense of security — arguably the most dangerous UX failure in the security module.
+
+**Fix Required:** Construct and return a proper `approve(spender, 0)` transaction payload using ethers.js or viem, return it as base64 for client-side signing, then submit via the connected wallet.
+
+---
+
+## 2.5 APPROVAL MANAGER — app/api/security/approvals/route.ts
+
+### What Is Real
+- Reads Alchemy ERC-20 `Approval` event logs for the wallet address
+- For each approval, calls `allowance()` to get current remaining allowance
+- Enriches each approval with token metadata (symbol, name) via Alchemy
+- Runs GoPlus address security check on each spender
+- Classifies known spenders against a hardcoded dictionary of 14 protocol addresses (Uniswap v2, v3, 1inch v3/v4/v5, SushiSwap, Permit2, ParaSwap, OpenSea Seaport)
+- Sorts results: danger first, then warning, then safe
+
+### What Is Incomplete
+- **Revocation is a stub** (see 2.4 above)
+- Only covers EVM chains — no Solana SPL token approval equivalent
+- Known spender list is hardcoded in the route file — not fetched from any live source
+- KNOWN_SPENDERS map covers only Ethereum mainnet addresses — polygon/base/arbitrum versions of the same protocols are not in the list
+
+### Risk Classification Logic
+- `danger`: spender is flagged malicious or phishing by GoPlus
+- `warning`: allowance is unlimited (max uint256)
+- `safe`: specific allowance, clean spender
+
+---
+
+## 2.6 WALLET REPUTATION — lib/security/walletReputation.ts
+
+### How It Works
+1. Calls `getAddressIntel()` from Arkham
+2. Checks labels array for: `scammer`, `rug_puller`, `phishing` → returns DANGEROUS, score=0, allowAccess=false
+3. Checks for `mixer`, `tornado_cash`, `mule` → returns SUSPICIOUS, score=15, allowAccess=false
+4. If Arkham entity is verified → returns VERIFIED, score=95, allowAccess=true
+5. Gets wallet connections from Arkham (first 20)
+6. Counts connections to mixer/mule/scammer addresses
+7. If >5 suspicious connections → SUSPICIOUS, score=25
+8. Otherwise scores based on transaction count + entity presence
+
+### Scoring Formula
+```
+score = min(50 + txCount * 0.1 + (arkhamEntity ? 20 : 0), 85)
+```
+
+A wallet with 100 transactions and no Arkham entity scores: min(50 + 10 + 0, 85) = 60 (UNKNOWN). A verified entity scores 95. This is reasonable but:
+
+**Issues:**
+- Score cap of 85 for non-entity wallets means even the most active legitimate wallet never scores above 85
+- The `allowAccess: true` even for SUSPICIOUS wallets with <5 connections — only >5 suspicious connections triggers the flag. A wallet with exactly 5 mixer connections is allowed full access.
+- Relies entirely on Arkham data. If ARKHAM_API_KEY is missing, all wallets return score=50/UNKNOWN/allowAccess=true
+
+---
+
+## 2.7 WALLET-TO-PORTFOLIO CONNECTION
+
+**Solana path:**
+```
+wallet_address → lib/services/solana-intelligence.ts
+  → helius.getBalance() + getTokenAccountsByOwner()
+  → helius.getSolanaTokenMetaBatch() (up to 100 mints)
+  → birdeye.getMultiTokenPrices()
+  → dexscreener.getTokenPairs() (logos, liquidity)
+  → dust filter: skip < $0.50 unless blue chip
+  → whale classification: MEGA / LARGE / MEDIUM / SMALL
+```
+
+**EVM path:**
+```
+wallet_address → app/api/portfolio/route.ts
+  → zerion.getPositions() [primary]
+  → zerion.getPortfolio() [PnL, totals]
+  → if Zerion fails: alchemy.getTokenBalances() [fallback, no USD prices for tokens]
+```
+
+**Key limitation:** EVM Alchemy fallback sets `change24h: 0` hardcoded — no price change data without Zerion.
+
+---
+
+## 2.8 WALLET-TO-MARKET / SWAP CONNECTION
+
+### Swap Execution Path
+```
+User initiates swap (UI)
+  → POST /api/trade/quote (get quote)
+  → POST /api/trade/execute (build TX)
+    → shadowGuardian.scanTrade() [security pre-check]
+    → if Solana: jupiter.buildSwapTransaction() → returns base64 TX
+    → if EVM: uniswap.buildSwapTx() → returns unsigned TX data
+  → TX returned to client
+  → Client signs with MetaMask/Phantom
+  → Client broadcasts to network
+  → Server logs fee revenue (0.15% platform fee) to swap_logs + fee_revenue tables
+```
+
+This is a **correct and secure architecture** for a non-custodial platform. The server never holds funds.
+
+---
+
+## 2.9 WALLET-TO-INTELLIGENCE CONNECTION
+
+### DNA Analyzer
+- Frontend sends wallet holdings + balance + txCount to `/api/dna-analyzer`
+- Server does NOT re-fetch on-chain data independently
+- Quality depends entirely on what the frontend sends
+- **If the frontend sends empty or partial holdings, the AI analysis is based on nothing**
+
+### Wallet Intelligence
+- Full pipeline: Zerion (EVM) or Helius+Birdeye+DexScreener (Solana)
+- GoPlus security scan run on top 5 EVM token holdings (non-blocking, does not affect response if fails)
+
+### Wallet Clusters
+- Takes holder addresses from Birdeye (Solana) or Supabase smart_money_wallets table
+- Fetches SWAP and TRANSFER transactions from Helius per address (batch of 15 max)
+- Runs cluster detection algorithm
+
+---
+
+## 2.10 SECURITY ISSUES — SPECIFIC TO WALLET SYSTEM
+
+| # | Issue | File | Risk | Fix |
+|---|-------|------|------|-----|
+| 1 | Approval revocation is a stub — returns pending_signature but executes nothing | lib/wallet/walletManager.ts:revokeApproval() | HIGH — users believe approvals are revoked when they are not | Build approve(spender, 0) TX payload in ethers.js, return base64 for client signing |
+| 2 | JWT middleware does not verify cryptographic signature | middleware.ts:verifySupabaseJWT() | HIGH — a crafted JWT with valid structure but invalid signature would pass | Use Supabase's auth.getUser(token) for proper server-side verification, or use jose library with the JWT secret |
+| 3 | localStorage wallet session — no server binding | lib/wallet/autoConnect.ts | MEDIUM — localStorage can be read by any XSS payload | Combine with HttpOnly cookie for server-side session binding |
+| 4 | No cross-device wallet sync | lib/wallet.ts | LOW — UX issue more than security | Not required for non-custodial; acceptable limitation |
+| 5 | Known spenders map covers Ethereum mainnet only | app/api/security/approvals/route.ts:KNOWN_SPENDERS | LOW — polygon/base/arbitrum protocol addresses not labeled | Add per-chain spender dictionaries or use a protocol address registry API |
+| 6 | walletReputation score capped at 85 for non-entity wallets | lib/security/walletReputation.ts:53 | LOW — unfair scoring, not a security risk | Raise cap to 95 or remove cap for high-activity clean wallets |
+| 7 | Supabase URL hardcoded in notifications route | app/api/notifications/route.ts:127 | LOW — hardcodes phvewrldcdxupsnakddx.supabase.co — should use env var | Replace with process.env.NEXT_PUBLIC_SUPABASE_URL |
+| 8 | FREE tier users can access wallet intelligence endpoint with no tier check confirmed | app/api/wallet-intelligence/route.ts | MEDIUM — could not confirm tier enforcement in this specific route | Add tier verification at route entry point |
+
+---
+
+## 2.11 RECOMMENDATIONS — WALLET SYSTEM
+
+1. **IMMEDIATE — Fix revokeApproval() stub.** Build the approve(spender, 0) transaction payload using ethers.js Contract interface. Return the unsigned TX as a hex string. Let the client sign and broadcast. Log the attempt to Supabase. This is a functional security feature that currently does nothing.
+
+2. **IMMEDIATE — Fix JWT verification in middleware.** The current base64 decode of the JWT payload checks expiry and role but does not verify the cryptographic signature. Switch to `supabase.auth.getUser(token)` in middleware or use the `jose` library with the Supabase JWT secret (`process.env.SUPABASE_JWT_SECRET`).
+
+3. **HIGH — Add Content-Security-Policy header.** The middleware applies 5 security headers but omits CSP. Without CSP, XSS attacks can exfiltrate localStorage (wallet address, session data). Add a strict CSP restricting script-src to self.
+
+4. **HIGH — Replace hardcoded Supabase URL in notifications/route.ts.** The string `phvewrldcdxupsnakddx.supabase.co` is hardcoded on line 127. Use `process.env.NEXT_PUBLIC_SUPABASE_URL` instead to avoid breakage on project migration.
+
+5. **MEDIUM — Add ETH live price to whale-tracker and smart-money routes.** Two routes hardcode ETH price ($3000 and $2500). Import `getTokenMarketData()` from coingecko.ts and fetch the live price once at the top of each request handler.
+
+6. **MEDIUM — Implement WalletConnect v2 for cross-device support.** The current MetaMask/Phantom only approach prevents mobile wallet users from connecting. WalletConnect v2 supports 300+ wallets and enables mobile QR pairing.
+
+7. **MEDIUM — Add tier enforcement verification to wallet-intelligence route.** Confirm that premium features (deep Arkham enrichment, GoPlus scans) are gated behind PRO/PREMIUM checks before serving.
+
+8. **LOW — Expand KNOWN_SPENDERS to cover multi-chain.** The current Uniswap/1inch/etc address list covers Ethereum mainnet. Each chain has different contract addresses for the same protocols. Fetch from a protocol registry or maintain per-chain tables.
+
+9. **LOW — Cap cleanup in walletReputation scoring.** Remove the hard cap at 85 for non-entity wallets. A wallet with 10,000 transactions and zero red flags deserves a score above 85.
+
+10. **LOW — Consider WalletConnect session persistence in Supabase.** Currently, auto-reconnect state is entirely in localStorage with a 48-hour timeout. Storing the last-connected wallet server-side (already done via wallet_accounts table) is sufficient for a smooth reconnect UX across sessions.
