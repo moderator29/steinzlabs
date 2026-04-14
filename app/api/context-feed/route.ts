@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
-const HELIUS_KEY = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
+const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
+  || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
 
 interface WhaleEvent {
   id: string;
@@ -204,11 +205,11 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
   }
 }
 
-async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
-  if (!HELIUS_KEY) return [];
+async function fetchSolanaNetworkActivity(): Promise<WhaleEvent[]> {
+  if (!SOLANA_RPC) return [];
   try {
     await fetchPrices();
-    const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`, {
+    const res = await fetch(SOLANA_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getRecentPerformanceSamples', params: [5] }),
@@ -231,7 +232,6 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
         value: txCount,
         valueUsd: Math.round(txCount * 0.01 * priceCache.sol),
         chain: 'solana',
-        // Network-level data from Helius validators is high-trust by definition
         trustScore: txCount > 5000 ? 95 : txCount > 2000 ? 90 : 85,
         txHash: `slot-${slot}`,
         blockNumber: slot,
@@ -242,8 +242,7 @@ async function fetchHeliusTransactions(): Promise<WhaleEvent[]> {
         platform: 'Solana Mainnet',
       };
     });
-  } catch (error) {
-
+  } catch {
     return [];
   }
 }
@@ -614,9 +613,9 @@ export async function GET(request: Request) {
     const sources: string[] = [];
 
     if (chain === 'all') {
-      const [alchemyEvents, heliusEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex] = await Promise.all([
         fetchAlchemyTransfers(),
-        fetchHeliusTransactions(),
+        fetchSolanaNetworkActivity(),
         fetchPumpFunTokens(),
         fetchDexScreenerTrending(),
         fetchEthereumDexEvents(),
@@ -626,9 +625,9 @@ export async function GET(request: Request) {
         fetchAvalancheDexEvents(),
       ]);
 
-      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...pumpEvents, ...alchemyEvents, ...heliusEvents];
+      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
-      if (heliusEvents.length > 0) sources.push('helius');
+      if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
       if (pumpEvents.length > 0) sources.push('pumpfun');
       if (dexTrending.length > 0) sources.push('dexscreener');
       if (ethDex.length > 0) sources.push('dex-ethereum');
@@ -638,14 +637,14 @@ export async function GET(request: Request) {
       if (avalancheDex.length > 0) sources.push('dex-avalanche');
 
     } else if (chain === 'solana') {
-      const [heliusEvents, pumpEvents, solDex] = await Promise.all([
-        fetchHeliusTransactions(),
+      const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
+        fetchSolanaNetworkActivity(),
         fetchPumpFunTokens(),
         fetchSolanaDexEvents(),
       ]);
 
-      events = [...solDex, ...pumpEvents, ...heliusEvents];
-      if (heliusEvents.length > 0) sources.push('helius');
+      events = [...solDex, ...pumpEvents, ...solanaNetEvents];
+      if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
       if (pumpEvents.length > 0) sources.push('pumpfun');
       if (solDex.length > 0) sources.push('dexscreener');
 

@@ -9,7 +9,7 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { getTokenDetail, getTopTokens } from '@/lib/services/coingecko';
 import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
-import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/helius';
+import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 

@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/helius';
+import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getEthBalance, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
 
 interface Holding {
