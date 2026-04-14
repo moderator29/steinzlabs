@@ -1,20 +1,20 @@
 import 'server-only';
 import { getQuote, buildSwapTransaction, SOL_MINT, JupiterQuote } from './jupiter';
-import { getUniswapV3Quote, buildUniswapV3SwapTx } from './uniswap';
+import { getSwapQuote as get0xQuote, getChainId } from './zerox';
 import { isHighRisk } from './goplus';
 import { getSupabaseAdmin } from '../supabaseAdmin';
 
 /**
  * Unified Swap Router
  * - Solana: Jupiter Aggregator
- * - EVM: Alchemy tx builder (Uniswap-compatible)
- * Platform fee: 0.15% applied to all swaps
+ * - EVM: 0x Protocol (replaces Uniswap V3 direct)
+ * Platform fee: 0.4% applied to all swaps
  * Security pre-check: blocks swaps on high-risk tokens (risk > 70)
  * Logs: swap_logs + fee_revenue tables
  */
 
-// Platform fee: 0.15%
-export const PLATFORM_FEE_BPS = 15; // 15 / 10000 = 0.0015
+// Platform fee: 0.4%
+export const PLATFORM_FEE_BPS = 40; // 40 / 10000 = 0.004
 
 export interface SwapRequest {
   chain: 'solana' | string;     // 'solana' or EVM chain name
@@ -108,41 +108,45 @@ export async function getSwapQuote(req: SwapRequest): Promise<SwapResult> {
     };
   }
 
-  // ── EVM — Uniswap v3 ────────────────────────────────────────────────────────
-  const amountInWei = BigInt(Math.floor(inputAmount * Math.pow(10, inputDecimals)));
-  const uniQuote = await getUniswapV3Quote({
-    tokenIn: inputToken,
-    tokenOut: outputToken,
-    amountIn: amountInWei,
-    chain,
-  });
-
-  if (!uniQuote) {
-    return { ok: false, error: 'Uniswap v3: no route found for this pair', code: 'NO_ROUTE' };
+  // ── EVM — 0x Protocol ────────────────────────────────────────────────────────
+  const chainId = getChainId(chain);
+  if (!chainId) {
+    return { ok: false, error: `Unsupported chain: ${chain}`, code: 'UNSUPPORTED_CHAIN' };
   }
 
-  const swapTx = buildUniswapV3SwapTx({
-    quote: uniQuote,
-    recipient: userAddress,
-    slippageBps: slippageBps,
-  });
+  const amountInSmallest = Math.floor(inputAmount * Math.pow(10, inputDecimals)).toString();
 
-  if (!swapTx) {
-    return { ok: false, error: 'Failed to build Uniswap v3 swap transaction', code: 'TX_BUILD_FAILED' };
+  try {
+    const zxQuote = await get0xQuote({
+      chainId,
+      sellToken: inputToken,
+      buyToken: outputToken,
+      sellAmount: amountInSmallest,
+      taker: userAddress,
+    });
+
+    return {
+      ok: true,
+      quote: {
+        to: zxQuote.transaction.to,
+        value: zxQuote.transaction.value,
+        data: zxQuote.transaction.data,
+        chainId,
+        gasLimit: zxQuote.transaction.gas,
+      },
+      chain,
+      inputToken,
+      outputToken,
+      inputAmount,
+      estimatedOutput: parseInt(zxQuote.buyAmount) / Math.pow(10, 18),
+      priceImpact: 0,
+      platformFeeBps: PLATFORM_FEE_BPS,
+      securityWarning,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '0x: quote failed';
+    return { ok: false, error: msg, code: 'QUOTE_FAILED' };
   }
-
-  return {
-    ok: true,
-    quote: swapTx,
-    chain,
-    inputToken,
-    outputToken,
-    inputAmount,
-    estimatedOutput: Number(uniQuote.amountOut),
-    priceImpact: uniQuote.priceImpact,
-    platformFeeBps: PLATFORM_FEE_BPS,
-    securityWarning,
-  };
 }
 
 /**
