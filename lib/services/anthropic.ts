@@ -11,8 +11,8 @@ import Anthropic from '@anthropic-ai/sdk';
  * This delivers near-Opus quality at ~80-90% Sonnet cost.
  */
 
-const API_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS || '600000', 10);
-const STREAM_IDLE_TIMEOUT_MS = parseInt(process.env.CLAUDE_STREAM_IDLE_TIMEOUT_MS || '300000', 10);
+const API_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS || '900000', 10);
+const STREAM_IDLE_TIMEOUT_MS = parseInt(process.env.CLAUDE_STREAM_IDLE_TIMEOUT_MS || '600000', 10);
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
