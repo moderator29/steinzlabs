@@ -56,7 +56,7 @@ export default function ApiHealthPage() {
     setTimeout(() => {
       setApis(prev => prev.map(api => ({
         ...api,
-        latencyMs: Math.max(20, api.latencyMs + Math.floor((Math.random() - 0.5) * 40)),
+        latencyMs: api.latencyMs,
         lastChecked: Date.now(),
       })));
       setLastRefresh(new Date());
