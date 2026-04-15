@@ -436,7 +436,7 @@ export default function DNAAnalyzerPage() {
               </div>
               <h2 className="text-2xl font-heading font-bold mb-2">Deep Network Analysis</h2>
               <p className="text-gray-400 text-sm">
-                Decode the complete DNA of any wallet — identity profile, portfolio bubbles, trading patterns, partner wallets, and AI intelligence.
+                Decode the complete DNA of any wallet — identity profile, trading patterns, partner wallets, and AI intelligence.
               </p>
             </div>
 
@@ -896,57 +896,6 @@ export default function DNAAnalyzerPage() {
                   </div>
                 </div>
 
-                {/* coins worth watching */}
-                {trendingCoins.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Award className="w-4 h-4 text-[#F59E0B]" />
-                      <span className="font-bold text-sm">Coins Worth Watching</span>
-                      <span className="text-[10px] text-gray-600 ml-auto">Based on your chain activity</span>
-                    </div>
-                    <div className="space-y-2">
-                      {trendingCoins.map((coin, i) => {
-                        const isPos = coin.change24h >= 0;
-                        return (
-                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#0A1EFF]/30 transition-all">
-                            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-                              {coin.imageUri
-                                ? <img src={coin.imageUri} alt={coin.symbol} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0, 2)}</span>
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-white">{coin.name}</div>
-                              <div className="text-[10px] text-gray-500">${parseFloat(coin.price) < 0.001 ? parseFloat(coin.price).toFixed(8) : parseFloat(coin.price).toFixed(4)}</div>
-                            </div>
-                            <div className={`text-xs font-bold flex items-center gap-0.5 flex-shrink-0 ${isPos ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                              {isPos ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              {isPos ? '+' : ''}{coin.change24h.toFixed(2)}%
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => { navigator.clipboard.writeText(coin.address).catch(() => {}); setCopiedCA(coin.address); setTimeout(() => setCopiedCA(null), 1500); }}
-                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                title="Copy CA"
-                              >
-                                {copiedCA === coin.address
-                                  ? <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
-                                  : <Copy className="w-3.5 h-3.5 text-gray-400" />
-                                }
-                              </button>
-                              {coin.dexUrl && (
-                                <a href={coin.dexUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                                  <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[10px] text-gray-600 mt-2 text-center">DYOR / NFA — Always verify before investing</p>
-                  </div>
-                )}
 
                 {/* market outlook */}
                 {dna.aiAnalysis.marketOutlook && (
