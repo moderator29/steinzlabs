@@ -108,7 +108,7 @@ export function addAlertHistory(entry: Omit<AlertHistoryEntry, 'id'>): void {
   if (typeof window === 'undefined') return;
   try {
     const history = loadAlertHistory();
-    const newEntry: AlertHistoryEntry = { ...entry, id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
+    const newEntry: AlertHistoryEntry = { ...entry, id: `hist-${Date.now()}-${crypto.randomUUID().slice(0, 8)}` };
     history.unshift(newEntry);
     localStorage.setItem(ALERT_HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
   } catch {}

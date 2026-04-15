@@ -85,7 +85,7 @@ function timeAgo(ts: number): string {
 }
 
 function genId(): string {
-  return `alert-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  return `alert-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // ── Delete Confirm ───────────────────────────────────────────────────────────

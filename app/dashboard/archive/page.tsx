@@ -38,65 +38,31 @@ const CHAIN_FILTERS = [
   { key: 'polygon', label: 'MATIC', color: '#8247E5' },
 ];
 
-function generateArchivedEvents(): ArchivedEvent[] {
-  const events: ArchivedEvent[] = [];
-  const types = ['whale_transfer', 'price_alert', 'liquidity_change', 'governance_vote', 'contract_deployment', 'large_swap'];
-  const chains = ['Ethereum', 'Solana', 'Base', 'BSC', 'Polygon'];
-  const tokens = ['ETH', 'SOL', 'BTC', 'USDC', 'LINK', 'UNI', 'AAVE', 'ARB', 'OP', 'PEPE'];
-
-  for (let i = 0; i < 50; i++) {
-    const type = types[i % types.length];
-    const chain = chains[i % chains.length];
-    const token = tokens[i % tokens.length];
-    const hoursAgo = 24 + Math.floor(Math.random() * 168);
-    const daysAgo = Math.floor(hoursAgo / 24);
-
-    let title = '';
-    let description = '';
-
-    switch (type) {
-      case 'whale_transfer':
-        title = `Whale moved ${(Math.random() * 10000 + 500).toFixed(0)} ${token}`;
-        description = `Large transfer detected on ${chain}. Value: $${(Math.random() * 5000000 + 100000).toFixed(0)}`;
-        break;
-      case 'price_alert':
-        title = `${token} ${Math.random() > 0.5 ? 'surged' : 'dropped'} ${(Math.random() * 15 + 2).toFixed(1)}%`;
-        description = `Significant price movement detected for ${token} on ${chain}`;
-        break;
-      case 'liquidity_change':
-        title = `$${(Math.random() * 2000000 + 50000).toFixed(0)} liquidity ${Math.random() > 0.5 ? 'added' : 'removed'}`;
-        description = `${token}/USDC pool on ${chain}`;
-        break;
-      case 'governance_vote':
-        title = `${token} governance proposal ${Math.random() > 0.5 ? 'passed' : 'active'}`;
-        description = `Community vote on protocol upgrade`;
-        break;
-      case 'contract_deployment':
-        title = `New contract deployed on ${chain}`;
-        description = `Verified contract with ${(Math.random() * 1000).toFixed(0)} initial transactions`;
-        break;
-      case 'large_swap':
-        title = `${(Math.random() * 5000 + 100).toFixed(0)} ${token} swapped`;
-        description = `DEX swap on ${chain} via ${chain === 'Solana' ? 'Raydium' : chain === 'Ethereum' ? 'Uniswap' : 'PancakeSwap'}`;
-        break;
-    }
-
-    events.push({
-      id: `archive-${i}`,
-      type,
-      title,
-      description,
-      chain: chain.toLowerCase(),
-      timestamp: new Date(Date.now() - hoursAgo * 3600000).toISOString(),
-      timeAgo: daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`,
-      significance: Math.floor(Math.random() * 10) + 1,
-      tokenSymbol: token,
-      priceChange: type === 'price_alert' ? (Math.random() * 30 - 15) : undefined,
-      volume: `$${(Math.random() * 10000000 + 10000).toFixed(0)}`,
+function loadArchivedEvents(): ArchivedEvent[] {
+  // Load real swap history from localStorage (saved by swap page)
+  if (typeof window === 'undefined') return [];
+  try {
+    const swapHistory = JSON.parse(localStorage.getItem('steinz_swap_history') || '[]');
+    const events: ArchivedEvent[] = swapHistory.map((tx: Record<string, unknown>, i: number) => {
+      const ts = tx.timestamp as number || Date.now();
+      const hoursAgo = Math.floor((Date.now() - ts) / 3600000);
+      const daysAgo = Math.floor(hoursAgo / 24);
+      return {
+        id: (tx.id as string) || `archive-${i}`,
+        type: 'large_swap',
+        title: `Swapped ${tx.fromAmount} ${tx.from} to ${tx.to}`,
+        description: `${tx.chain || 'ethereum'} swap via 0x Protocol`,
+        chain: (tx.chain as string) || 'ethereum',
+        timestamp: new Date(ts).toISOString(),
+        timeAgo: hoursAgo < 1 ? 'Just now' : daysAgo >= 1 ? `${daysAgo}d ago` : `${hoursAgo}h ago`,
+        significance: 5,
+        tokenSymbol: (tx.to as string) || '',
+      };
     });
+    return events;
+  } catch {
+    return [];
   }
-
-  return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 function getEventIcon(type: string) {
@@ -137,7 +103,10 @@ export default function ArchivePage() {
         }));
         setEvents(mapped);
       })
-      .catch(() => setEvents([]))
+      .catch(() => {
+        // Fallback: load real swap history from localStorage
+        setEvents(loadArchivedEvents());
+      })
       .finally(() => setLoading(false));
   }, []);
 

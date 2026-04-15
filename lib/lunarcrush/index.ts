@@ -210,7 +210,7 @@ export async function getCoinPosts(symbol: string, limit = 10): Promise<SocialPo
   const data = await lunarFetch(`/topic/${symbol.toLowerCase()}/posts/v1?limit=${limit}`);
   if (!data?.data) return [];
   return data.data.slice(0, limit).map((p: any) => ({
-    id: String(p.id || p.post_id || Math.random()),
+    id: String(p.id || p.post_id || `lc-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`),
     type: (p.post_type || p.type || 'tweet').toLowerCase() as SocialPost['type'],
     title: p.post_title || p.title || p.body?.slice(0, 100) || '',
     body: p.body || p.post_body || undefined,
