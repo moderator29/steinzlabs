@@ -33,6 +33,26 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [lastPoll, setLastPoll] = useState(new Date());
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // Load current settings from Supabase on mount
+  useEffect(() => {
+    const token = sessionStorage.getItem('admin_token') ?? '';
+    fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.flags && typeof data.flags === 'object') {
+          // data.flags is { key: enabled } map from the GET endpoint
+          const serverFlags = data.flags as Record<string, boolean>;
+          setFlags(prev => prev.map(f => ({
+            ...f,
+            enabled: serverFlags[f.key] !== undefined ? serverFlags[f.key] : f.enabled,
+          })));
+        }
+      })
+      .catch(err => console.error('[Admin Settings] Load failed:', err))
+      .finally(() => setLoadingSettings(false));
+  }, []);
 
   const filtered = category === 'All' ? flags : flags.filter(f => f.category === category);
 

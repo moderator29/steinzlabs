@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { verifyAdminRequest as verifyAdmin } from '@/lib/auth/adminAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-function verifyAdminRequest(request: NextRequest): boolean {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  return !!token && token === process.env.ADMIN_BEARER_TOKEN;
-}
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase credentials missing');
-  return createClient(url, key, { auth: { persistSession: false } });
+async function isAdmin(request: NextRequest): Promise<boolean> {
+  return !!(await verifyAdmin(request));
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!verifyAdminRequest(request)) {
+  if (!(await isAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -44,7 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!verifyAdminRequest(request)) {
+  if (!(await isAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
