@@ -363,6 +363,10 @@ export default function VtxAiPage() {
           language: settings.language,
           depth: settings.depth,
           riskAppetite: settings.riskAppetite,
+          context: {
+            walletAddress: typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null,
+            currentPage: 'vtx-ai',
+          },
         }),
       });
       const data = await response.json();

@@ -670,6 +670,10 @@ export default function VtxAiTab() {
           autoCharts: settings.autoCharts,
           focusMode: settings.focusMode,
           defaultChain: settings.defaultChain,
+          context: {
+            walletAddress: typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null,
+            currentPage: 'vtx-tab',
+          },
         }),
       });
 
