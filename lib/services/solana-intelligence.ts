@@ -59,7 +59,7 @@ export interface SolanaEnrichedToken {
 
 export interface SolanaWalletTx {
   hash: string;
-  type: 'buy' | 'sell' | 'transfer' | 'swap' | 'mint' | 'burn' | 'other';
+  type: 'buy' | 'sell' | 'transfer' | 'swap' | 'mint' | 'burn' | 'failed' | 'other';
   timestamp: string;       // ISO
   timestampUnix: number;
   tokenSymbol: string;
@@ -324,8 +324,22 @@ export async function buildSolanaWalletIntelligence(
   // ── STEP 3: Enrich tokens (Helius meta + Birdeye prices + DexScreener logos)
   const enrichedTokens = await enrichTokensBatch(nonZeroTokens);
 
-  // ── STEP 4: Normalize transactions ────────────────────────────────────────
-  const transactions = normalizeSolanaTransactions(rawTxns, address);
+  // ── STEP 4: Normalize transactions (use signature-level data for display)
+  const recentSigs = rawTxns.slice(0, 20);
+  const transactions: SolanaWalletTx[] = recentSigs.map(tx => ({
+    hash: tx.signature,
+    type: tx.type === 'FAILED' ? 'failed' : 'transfer',
+    timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
+    timestampUnix: tx.timestamp ?? 0,
+    tokenSymbol: 'SOL',
+    tokenMint: null,
+    amount: '',
+    amountRaw: 0,
+    valueUSD: null,
+    counterparty: null,
+    direction: 'self' as const,
+    fee: (tx.fee ?? 0) / 1e9,
+  }));
 
   // ── STEP 5: Build SOL entry ───────────────────────────────────────────────
   const solEntry: SolanaEnrichedToken = {
