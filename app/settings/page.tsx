@@ -1,19 +1,41 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, User, Shield, Bell, Wallet, Key, Moon, Globe } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Settings, User, Shield, Bell, Wallet, Key, Moon, Globe, Check } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+
+const PREFS_KEY = 'steinz_user_preferences';
+
+function loadPrefs() {
+  if (typeof window === 'undefined') return null;
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); } catch { return null; }
+}
+
+function savePrefs(prefs: Record<string, unknown>) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
+  const [saved, setSaved] = useState(false);
+  const stored = loadPrefs();
   const [notifications, setNotifications] = useState({
-    threats: true,
-    whaleAlerts: true,
-    priceAlerts: true,
-    entityMoves: false,
+    threats: stored?.threats ?? true,
+    whaleAlerts: stored?.whaleAlerts ?? true,
+    priceAlerts: stored?.priceAlerts ?? true,
+    entityMoves: stored?.entityMoves ?? false,
   });
-  const [slippage, setSlippage] = useState('1');
-  const [theme, setTheme] = useState('dark');
+  const [slippage, setSlippage] = useState(stored?.slippage ?? '1');
+  const [theme, setTheme] = useState(stored?.theme ?? 'dark');
+
+  const persist = useCallback(() => {
+    savePrefs({ ...notifications, slippage, theme });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  }, [notifications, slippage, theme]);
+
+  useEffect(() => { persist(); }, [notifications, slippage, theme]);
 
   const sections = [
     { id: 'profile', label: 'Profile', icon: User },
