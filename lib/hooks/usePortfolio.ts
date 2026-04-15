@@ -139,8 +139,6 @@ function generateEstimatedSnapshots(currentValue: number, days: number): Portfol
   const snapshots: PortfolioSnapshot[] = [];
   const today = new Date();
 
-  let value = currentValue * 0.85; // estimated starting value
-
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
@@ -148,12 +146,14 @@ function generateEstimatedSnapshots(currentValue: number, days: number): Portfol
 
     // Gradual approach to current value
     const progress = (days - i) / days;
-    value = currentValue * (0.85 + 0.15 * progress);
+    const value = currentValue * (0.85 + 0.15 * progress);
+    const prevValue = i < days - 1 ? currentValue * (0.85 + 0.15 * ((days - i - 1) / days)) : value;
+    const dailyChangePct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : 0;
 
     snapshots.push({
       date: dateStr,
       valueUsd: parseFloat(value.toFixed(2)),
-      dailyChangePct: parseFloat((dailyChange * 100).toFixed(2)),
+      dailyChangePct: parseFloat(dailyChangePct.toFixed(2)),
     });
   }
 

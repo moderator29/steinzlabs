@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { SwapResult } from '@/lib/market/types';
 import { formatPrice } from '@/lib/market/formatters';
 import { TokenLogo } from './TokenLogo';
+import { useWallet } from '@/lib/hooks/useWallet';
 
 interface BuySellModalProps {
   tokenId: string;
@@ -21,18 +22,53 @@ interface BuySellModalProps {
 const QUICK_AMOUNTS = ['25', '50', '100', 'MAX'];
 
 export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress, userId, onClose }: BuySellModalProps) {
+  const { address: walletAddr } = useWallet();
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
   const [amount, setAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState<SwapResult | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [balanceError, setBalanceError] = useState('');
+
+  const connectedAddress = walletAddr || (typeof window !== 'undefined' ? localStorage.getItem('steinz_active_wallet_address') : null);
+
+  // Fetch wallet balance on mount
+  useEffect(() => {
+    if (!connectedAddress) return;
+    fetch(`/api/wallet-intelligence?address=${connectedAddress}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.holdings) {
+          const sellToken = mode === 'BUY' ? 'USDC' : symbol;
+          const holding = data.holdings.find((h: { symbol?: string }) =>
+            h.symbol?.toUpperCase() === sellToken.toUpperCase()
+          );
+          if (holding) setWalletBalance(parseFloat(holding.balance) || 0);
+        }
+      })
+      .catch(() => {});
+  }, [connectedAddress, mode, symbol]);
 
   const amountNum = parseFloat(amount) || 0;
   const tokenAmount = priceUSD > 0 ? amountNum / priceUSD : 0;
-  const fee = amountNum * 0.002; // 0.2%
+  const fee = amountNum * 0.004; // 0.4% platform fee
 
   const handleExecute = async () => {
     if (!amountNum) return;
+    setBalanceError('');
+
+    if (!connectedAddress) {
+      setResult({ success: false, error: 'Connect a wallet first to trade.' });
+      return;
+    }
+
+    // Balance check for buy mode (checking USDC balance)
+    if (walletBalance !== null && mode === 'BUY' && amountNum > walletBalance) {
+      setBalanceError(`Insufficient balance. You have ${walletBalance.toFixed(4)} ${mode === 'BUY' ? 'USDC' : symbol}.`);
+      return;
+    }
+
     setExecuting(true);
     try {
       const res = await fetch('/api/market/trade/execute', {
@@ -45,15 +81,22 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
           amountIn: amount,
           amountInUSD: amountNum,
           slippage,
-          walletAddress: '',
+          walletAddress: connectedAddress,
           userId,
         }),
       });
       const data = await res.json() as SwapResult & { blocked?: boolean; blockReason?: string };
-      if (data.blocked) setResult({ success: false, blocked: true, blockReason: data.blockReason });
-      else setResult({ success: true, txHash: data.txHash, amountOut: tokenAmount.toFixed(4) });
+      if (data.blocked) {
+        setResult({ success: false, blocked: true, blockReason: data.blockReason });
+      } else if (data.error) {
+        setResult({ success: false, error: data.error });
+      } else {
+        setResult({ success: true, txHash: data.txHash, amountOut: tokenAmount.toFixed(4) });
+        // Dispatch balance refresh
+        window.dispatchEvent(new Event('steinz:balance-changed'));
+      }
     } catch (e: unknown) {
-      setResult({ success: false, error: e instanceof Error ? e.message : 'Failed' });
+      setResult({ success: false, error: e instanceof Error ? e.message : 'Trade failed. Please try again.' });
     } finally {
       setExecuting(false);
     }
@@ -108,12 +151,26 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
 
             <div className="flex gap-2 mb-4">
               {QUICK_AMOUNTS.map((v) => (
-                <button key={v} onClick={() => setAmount(v === 'MAX' ? '9999' : v)}
+                <button key={v} onClick={() => setAmount(v === 'MAX' ? (walletBalance?.toString() || '0') : v)}
                   className="flex-1 text-xs py-1.5 bg-[#141824] border border-[#1E2433] rounded text-gray-400 hover:text-white hover:border-[#0A1EFF]/50 transition-colors">
                   {v === 'MAX' ? 'MAX' : `$${v}`}
                 </button>
               ))}
             </div>
+
+            {!connectedAddress && (
+              <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2 mb-3">
+                <AlertTriangle size={14} className="text-yellow-400 shrink-0" />
+                <span className="text-xs text-yellow-400">Connect a wallet to trade</span>
+              </div>
+            )}
+
+            {balanceError && (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">
+                <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                <span className="text-xs text-red-400">{balanceError}</span>
+              </div>
+            )}
 
             {amountNum > 0 && (
               <div className="bg-[#141824] rounded-lg p-3 text-sm mb-4 space-y-1.5">
@@ -126,7 +183,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
                   <span className="text-white font-mono">{formatPrice(priceUSD)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Fee (0.2%)</span>
+                  <span className="text-gray-400">Fee (0.4%)</span>
                   <span className="text-white font-mono">${fee.toFixed(4)}</span>
                 </div>
                 <div className="flex justify-between">

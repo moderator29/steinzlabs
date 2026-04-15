@@ -14,7 +14,13 @@ export async function verifyAdminRequest(request: Request): Promise<string | nul
     const token = authHeader.slice(7);
     if (!token) return null;
 
-    // Verify token with Supabase
+    // Check static admin bearer token first (admin layout uses this)
+    const adminBearerToken = process.env.ADMIN_BEARER_TOKEN;
+    if (adminBearerToken && token === adminBearerToken) {
+      return 'admin-bearer';
+    }
+
+    // Fallback: verify as Supabase JWT
     const supabase = getSupabaseAdmin();
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return null;
