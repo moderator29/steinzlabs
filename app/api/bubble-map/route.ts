@@ -190,7 +190,7 @@ export async function GET(request: Request) {
         name: intel.name,
         symbol: intel.symbol,
         chain: intel.chain,
-        price: intel.market.priceUSD,
+        price: intel.market.priceUSD ?? 0,
         priceChange24h: intel.market.priceChange24h,
         volume24h: intel.market.volume24h,
         marketCap: intel.market.marketCap,
