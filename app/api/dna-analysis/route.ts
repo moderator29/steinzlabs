@@ -1,11 +1,9 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { vtxAnalyze } from '@/lib/services/anthropic';
-import { getEthBalance, getAssetTransfers, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
-import { getTokenPrice } from '@/lib/services/coingecko';
-import { fetchWalletPositions, fetchWalletTransactions } from '@/lib/services/zerion';
 import { getTrendingByVolume, getTrendingByHolderGrowth } from '@/lib/services/birdeye';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
+import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
 
 // ─── Chain Detection ──────────────────────────────────────────────────────────
 
@@ -79,7 +77,7 @@ async function fetchSolDNA(address: string) {
     symbol: t.symbol,
     name: t.name,
     balance: t.balance,
-    valueUsd: t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
+    valueUsd: t.valueUSD !== null && t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
     contractAddress: t.mintAddress === 'So11111111111111111111111111111111111111112'
       ? null
       : t.mintAddress,
@@ -118,143 +116,55 @@ async function fetchSolDNA(address: string) {
   };
 }
 
-// ─── EVM DNA Fetch ────────────────────────────────────────────────────────────
-// Primary: Zerion (returns pre-priced positions across all EVM chains in one call)
-// Fallback: Alchemy multi-call (no USD values on tokens, fragile)
+// ─── EVM DNA Fetch (uses shared evm-intelligence.ts) ─────────────────────────
+// Primary: Alchemy (paginated, with DexScreener/CoinGecko prices)
+// Fallback: Zerion (multi-chain, pre-priced)
 
 async function fetchEvmDNA(address: string) {
-  // ── Try Zerion first ──────────────────────────────────────────────────────
-  if (process.env.ZERION_API_KEY) {
-    try {
-      const [zerionPositions, zerionTxns] = await Promise.all([
-        fetchWalletPositions(address),
-        fetchWalletTransactions(address, 100),
-      ]);
+  const intel = await buildEvmWalletIntelligence(address, 'ethereum');
 
-      if (zerionPositions.length > 0) {
-        const holdings: Holding[] = zerionPositions.map(p => ({
-          symbol: p.symbol,
-          name: p.name,
-          balance: p.balance,
-          valueUsd: p.valueUsd > 0 ? p.valueUsd.toFixed(2) : null,
-          contractAddress: p.isNative ? null : p.contractAddress,
-          logoUrl: p.logo,
-        }));
+  const holdings: Holding[] = intel.tokens.map(t => ({
+    symbol: t.symbol,
+    name: t.name,
+    balance: t.balance,
+    valueUsd: t.valueUSD !== null && t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
+    contractAddress: t.contractAddress,
+    logoUrl: t.logoUrl,
+  }));
 
-        const totalBalance = zerionPositions.reduce((s, p) => s + p.valueUsd, 0);
+  const totalBalance = intel.totalBalanceUSD ?? 0;
 
-        const blueChipValue = holdings
-          .filter(h => BLUE_CHIP.has(h.symbol.toUpperCase()))
-          .reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
-        const blueChipPercent = totalBalance > 0 ? (blueChipValue / totalBalance) * 100 : 0;
-        const memePercent = Math.max(0, 100 - blueChipPercent);
-        const hhi = holdings.reduce((sum, h) => {
-          const share = totalBalance > 0 ? parseFloat(h.valueUsd || '0') / totalBalance : 0;
-          return sum + share * share;
-        }, 0);
-
-        const txCount = zerionTxns.length;
-        const txPerWeek = txCount / 4;
-
-        // Extract timestamps from Zerion transactions
-        const timestamps = zerionTxns
-          .map(tx => new Date(tx.timestamp).getTime() / 1000)
-          .filter(t => t > 0)
-          .sort((a, b) => a - b);
-        const firstSeen = timestamps.length > 0
-          ? new Date(timestamps[0] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-          : null;
-        const lastActive = timestamps.length > 0
-          ? new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-          : null;
-
-        const totalBuys = zerionTxns.filter(tx => tx.transfers.some(t => t.direction === 'in')).length;
-        const totalSells = zerionTxns.filter(tx => tx.transfers.some(t => t.direction === 'out')).length;
-        const archetype = computeArchetype(txCount, txPerWeek, memePercent, holdings.length);
-
-        return {
-          chain: 'EVM (Multi-chain)', address, holdings, totalBalanceUsd: totalBalance,
-          txCount, firstSeen, lastActive,
-          txPerWeek: Math.round(txPerWeek * 10) / 10, totalBuys, totalSells,
-          blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
-          diversificationScore: Math.round((1 - hhi) * 100), archetype,
-          archetypeDescription: archetypeDescription(archetype),
-          dataSource: 'zerion',
-          recentTxs: zerionTxns.slice(0, 25).map(tx => ({
-            hash: tx.hash, type: tx.type,
-            asset: tx.transfers[0]?.symbol || 'ETH',
-            amount: tx.transfers[0]?.amount ? tx.transfers[0].amount.toFixed(4) : '—',
-            from: tx.from, to: tx.to || '',
-            blockTime: tx.timestamp,
-          })),
-        };
-      }
-    } catch (err) {
-      console.warn('[DNA] Zerion EVM failed, falling back to Alchemy:', err);
-    }
-  }
-
-  // ── Alchemy fallback ──────────────────────────────────────────────────────
-  const [ethBalStr, fromTxs, toTxs, ethPrice] = await Promise.all([
-    getEthBalance(address, 'ethereum').catch(() => '0'),
-    getAssetTransfers(address, 'ethereum', 'from', 100).catch(() => []),
-    getAssetTransfers(address, 'ethereum', 'to', 100).catch(() => []),
-    getTokenPrice('ethereum').catch(() => 3500),
-  ]);
-
-  const ethBalance = parseFloat(ethBalStr);
-  const ethValueUsd = ethBalance * ethPrice;
-  let tokenHoldings: Holding[] = [];
-
-  try {
-    const rawBalances = await getTokenBalances(address, 'ethereum');
-    const nonZero = rawBalances.filter(b => b.tokenBalance && b.tokenBalance !== '0');
-    const metaResults = await Promise.allSettled(
-      nonZero.map(async b => {
-        try {
-          const meta = await getTokenMetadata(b.contractAddress, 'ethereum');
-          const decimals = meta.decimals ?? 18;
-          const balance = Number(BigInt(b.tokenBalance)) / Math.pow(10, decimals);
-          if (balance <= 0) return null;
-          return {
-            symbol: meta.symbol || 'UNKNOWN', name: meta.name || 'Unknown Token',
-            balance: balance > 1000 ? balance.toFixed(0) : balance.toFixed(4),
-            valueUsd: null as string | null, contractAddress: b.contractAddress, logoUrl: null,
-          } as Holding;
-        } catch { return null; }
-      })
-    );
-    tokenHoldings = metaResults
-      .filter((r): r is PromiseFulfilledResult<Holding> => r.status === 'fulfilled' && r.value !== null)
-      .map(r => r.value as Holding);
-  } catch {}
-
-  const holdings: Holding[] = [
-    { symbol: 'ETH', name: 'Ethereum', balance: ethBalance.toFixed(4), valueUsd: ethValueUsd.toFixed(2), contractAddress: null },
-    ...tokenHoldings,
-  ];
-  const totalBalance = ethValueUsd + tokenHoldings.reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
-
-  const seen = new Set<string>();
-  const allTxs = [...fromTxs, ...toTxs].filter(t => { if (seen.has(t.hash)) return false; seen.add(t.hash); return true; });
-
-  const blueChipValue = holdings.filter(h => BLUE_CHIP.has(h.symbol.toUpperCase())).reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
+  const blueChipValue = holdings
+    .filter(h => BLUE_CHIP.has(h.symbol.toUpperCase()))
+    .reduce((s, h) => s + parseFloat(h.valueUsd || '0'), 0);
   const blueChipPercent = totalBalance > 0 ? (blueChipValue / totalBalance) * 100 : 0;
   const memePercent = Math.max(0, 100 - blueChipPercent);
-  const hhi = holdings.reduce((sum, h) => { const share = totalBalance > 0 ? parseFloat(h.valueUsd || '0') / totalBalance : 0; return sum + share * share; }, 0);
-  const txPerWeek = allTxs.length / 4;
-  const archetype = computeArchetype(allTxs.length, txPerWeek, memePercent, holdings.length);
+  const hhi = holdings.reduce((sum, h) => {
+    const share = totalBalance > 0 ? parseFloat(h.valueUsd || '0') / totalBalance : 0;
+    return sum + share * share;
+  }, 0);
+
+  const txCount = intel.txCount;
+  const txPerWeek = txCount / 4;
+
+  const totalBuys = Math.floor(txCount * 0.6);
+  const totalSells = Math.floor(txCount * 0.4);
+  const archetype = computeArchetype(txCount, txPerWeek, memePercent, holdings.length);
 
   return {
-    chain: 'Ethereum', address, holdings, totalBalanceUsd: totalBalance,
-    txCount: allTxs.length, firstSeen: null as string | null, lastActive: null as string | null,
-    txPerWeek: Math.round(txPerWeek * 10) / 10, totalBuys: Math.floor(allTxs.length * 0.6), totalSells: Math.floor(allTxs.length * 0.4),
+    chain: intel.chainName, address, holdings, totalBalanceUsd: totalBalance,
+    txCount, firstSeen: intel.firstSeen, lastActive: intel.lastActive,
+    txPerWeek: Math.round(txPerWeek * 10) / 10, totalBuys, totalSells,
     blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
-    diversificationScore: Math.round((1 - hhi) * 100), archetype, archetypeDescription: archetypeDescription(archetype),
-    dataSource: 'alchemy',
-    recentTxs: allTxs.slice(0, 25).map(tx => ({
-      hash: tx.hash, type: 'transfer', asset: tx.asset || 'ETH',
-      amount: tx.value ? parseFloat(tx.value).toFixed(4) : '—', from: tx.from, to: tx.to, blockTime: null as string | null,
+    diversificationScore: Math.round((1 - hhi) * 100), archetype,
+    archetypeDescription: archetypeDescription(archetype),
+    dataSource: intel.dataSource,
+    recentTxs: intel.transactions.slice(0, 25).map(tx => ({
+      hash: tx.hash, type: tx.type,
+      asset: tx.asset || 'ETH',
+      amount: tx.value ? parseFloat(tx.value).toFixed(4).toString() : '—',
+      from: tx.from, to: tx.to || '',
+      blockTime: tx.blockTime,
     })),
   };
 }
@@ -264,7 +174,7 @@ async function fetchEvmDNA(address: string) {
 async function buildAIAnalysis(data: {
   address: string; chain: string; holdings: Holding[]; totalBalanceUsd: number;
   txCount: number; firstSeen: string | null; lastActive: string | null;
-  archetype: WalletArchetype; txPerWeek: number; totalBuys: number; totalSells: number;
+  archetype: WalletArchetype; archetypeDescription: string; txPerWeek: number; totalBuys: number; totalSells: number;
   blueChipPercent: number; memePercent: number; diversificationScore: number;
 }) {
   const holdingsText = data.holdings.length > 0
