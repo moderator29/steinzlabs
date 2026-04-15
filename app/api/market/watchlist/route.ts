@@ -1,10 +1,17 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
   if (!userId) return NextResponse.json({ watchlist: [] });
+
+  // Validate that the request comes from an authenticated user
+  const authedUser = await getAuthenticatedUser(req).catch(() => null);
+  if (authedUser && authedUser.id !== userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
   const db = getSupabaseAdmin();
   const { data } = await db.from('watchlist').select('token_id, added_at').eq('user_id', userId);
   return NextResponse.json({ watchlist: data ?? [] });
