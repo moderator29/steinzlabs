@@ -343,16 +343,29 @@ export default function SwapPage() {
 
   useEffect(() => {
     const symbol = searchParams.get('symbol');
+    const buyToken = searchParams.get('buyToken');
+    const sellToken = searchParams.get('sellToken');
     const chainParam = searchParams.get('chain');
     if (chainParam) {
       setChain(chainParam);
       const c = CHAINS.find(ch => ch.id === chainParam);
-      if (c) setFromToken(c.symbol);
+      if (c && !sellToken) setFromToken(c.symbol);
     }
-    if (symbol) {
+    if (sellToken) {
+      const upper = sellToken.toUpperCase();
+      if (upper === 'NATIVE') {
+        const c = CHAINS.find(ch => ch.id === (chainParam || chain));
+        if (c) setFromToken(c.symbol);
+      } else {
+        setFromToken(upper);
+      }
+    }
+    if (buyToken) {
+      setToToken(buyToken.toUpperCase());
+    } else if (symbol) {
       setToToken(symbol.toUpperCase());
     }
-  }, [searchParams]);
+  }, [searchParams, chain]);
 
   const activeChain = CHAINS.find(c => c.id === chain) || CHAINS[0];
   const [gaslessEnabled, setGaslessEnabled] = useState(true);
