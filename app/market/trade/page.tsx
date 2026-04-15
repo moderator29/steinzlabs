@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useMarketData } from '@/hooks/market/useMarketData';
-import { useChartData } from '@/hooks/market/useChartData';
 import { useRecentTrades } from '@/hooks/market/useRecentTrades';
-import { CandlestickChart } from '@/components/market/CandlestickChart';
+import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 import { TimeframeSelector } from '@/components/market/TimeframeSelector';
 import { TokenLogo } from '@/components/market/TokenLogo';
 import { PriceChangeDisplay } from '@/components/market/PriceChangeDisplay';
@@ -24,8 +23,7 @@ export default function TradePage() {
   const [showModal, setShowModal] = useState(false);
 
   const token = selected ?? tokens[0] ?? null;
-  const { candles, volume, loading: chartLoading } = useChartData(token?.id ?? null, timeframe);
-  const { trades } = useRecentTrades(null); // no pair address available from CoinGecko IDs
+  const { trades } = useRecentTrades(null);
 
   const md = token ? { price: token.current_price, change: token.price_change_percentage_24h } : null;
   const amountNum = parseFloat(amount) || 0;
@@ -70,7 +68,11 @@ export default function TradePage() {
           </div>
         )}
         <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-4" style={{ minHeight: 440 }}>
-          <CandlestickChart data={candles} volumeData={volume} height={400} loading={chartLoading} enableFullscreen />
+          {token ? (
+            <TradingViewChart symbol={getTradingViewSymbol(token.symbol.toUpperCase()) || `BINANCE:${token.symbol.toUpperCase()}USDT`} height={400} />
+          ) : (
+            <div className="flex items-center justify-center h-[400px] text-gray-500 text-sm">Select a token to view chart</div>
+          )}
         </div>
         <RecentTradesFeed trades={trades} symbol={token?.symbol} />
       </div>
@@ -88,7 +90,7 @@ export default function TradePage() {
           ))}
         </div>
 
-        <OrderBook data={{ buyersPercent: 58, sellersPercent: 42, buyCount: 1240, sellCount: 890 }} />
+        {/* OrderBook removed — hardcoded data replaced. Will be re-added with live data feed */}
 
         <div>
           <label className="text-xs text-gray-500 block mb-1.5">Amount (USD)</label>
@@ -96,7 +98,7 @@ export default function TradePage() {
             className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]" />
           <div className="flex gap-1.5 mt-2">
             {['25', '50', '100', 'MAX'].map((v) => (
-              <button key={v} onClick={() => setAmount(v === 'MAX' ? '9999' : v)}
+              <button key={v} onClick={() => setAmount(v === 'MAX' ? '0' : v)}
                 className="flex-1 text-xs py-1 bg-[#141824] border border-[#1E2433] rounded text-gray-400 hover:text-white transition-colors">
                 {v === 'MAX' ? 'MAX' : `$${v}`}
               </button>
@@ -107,7 +109,7 @@ export default function TradePage() {
         {amountNum > 0 && token && (
           <div className="bg-[#141824] rounded-lg p-3 text-xs space-y-1.5">
             <div className="flex justify-between"><span className="text-gray-400">You&apos;ll receive</span><span className="text-white font-mono">{tokenAmount.toFixed(4)} {token.symbol.toUpperCase()}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Fee (0.2%)</span><span className="text-white font-mono">${(amountNum * 0.002).toFixed(4)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Fee (0.4%)</span><span className="text-white font-mono">${(amountNum * 0.004).toFixed(4)}</span></div>
           </div>
         )}
 
