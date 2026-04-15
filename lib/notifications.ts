@@ -22,9 +22,12 @@ export function getLocalNotifications(): LocalNotification[] {
 }
 
 export function addLocalNotification(notif: Omit<LocalNotification, 'id' | 'timestamp' | 'read'>): LocalNotification {
+  const randomPart = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Date.now().toString(36);
   const newNotif: LocalNotification = {
     ...notif,
-    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `notif-${Date.now()}-${randomPart}`,
     timestamp: Date.now(),
     read: false,
   };
@@ -36,8 +39,9 @@ export function addLocalNotification(notif: Omit<LocalNotification, 'id' | 'time
   localStorage.setItem(STORAGE_KEY, JSON.stringify(existing.slice(0, MAX_NOTIFICATIONS)));
   window.dispatchEvent(new CustomEvent('steinz_notification', { detail: newNotif }));
 
-  // Also persist to API (fire-and-forget)
+  // Also persist to API (fire-and-forget, include userId)
   try {
+    const userId = localStorage.getItem('steinz_user_id') || undefined;
     fetch('/api/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,6 +49,7 @@ export function addLocalNotification(notif: Omit<LocalNotification, 'id' | 'time
         type: notif.type,
         title: notif.title,
         message: notif.message,
+        userId,
       }),
     }).catch(() => {});
   } catch {}
