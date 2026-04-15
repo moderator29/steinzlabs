@@ -177,101 +177,6 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
   );
 }
 
-// ─── Portfolio Bubble Map ─────────────────────────────────────────────────────
-
-function PortfolioBubbleMap({ holdings }: { holdings: TokenHolding[] }) {
-  const [selectedToken, setSelectedToken] = useState<any | null>(null);
-
-  const filtered = holdings
-    .map((h) => ({ ...h, usdVal: parseFloat(h.valueUsd || '0') }))
-    .filter((h) => h.usdVal > 0 || parseFloat(h.balance) > 0)
-    .sort((a, b) => b.usdVal - a.usdVal)
-    .slice(0, 20);
-
-  if (filtered.length === 0) {
-    return (
-      <div className="text-center text-gray-500 text-sm py-8">
-        No token holdings with value detected.
-      </div>
-    );
-  }
-
-  const maxVal = Math.max(...filtered.map((t) => t.usdVal), 1);
-
-  return (
-    <div>
-      {/* Bubble grid */}
-      <div className="flex flex-wrap items-center justify-center gap-2 py-4 min-h-[160px]">
-        {filtered.map((token) => {
-          const size = Math.max(44, Math.min(140, (token.usdVal / maxVal) * 140));
-          const isSelected = selectedToken?.contractAddress === token.contractAddress
-            && selectedToken?.symbol === token.symbol;
-          const change = token.change24h ?? 0;
-          const bg = change > 0 ? '#22c55e' : change < 0 ? '#ef4444' : '#6b7280';
-          return (
-            <div
-              key={`${token.symbol}-${token.contractAddress}`}
-              onClick={() => setSelectedToken(isSelected ? null : token)}
-              style={{
-                width: size,
-                height: size,
-                backgroundColor: bg,
-                borderRadius: '50%',
-                opacity: isSelected ? 1 : 0.82,
-                boxShadow: isSelected ? `0 0 0 3px white, 0 0 16px ${bg}` : 'none',
-                flexShrink: 0,
-              }}
-              className="flex items-center justify-center cursor-pointer hover:opacity-100 transition-all m-1"
-            >
-              <span
-                className="font-bold text-white text-center leading-tight px-1 select-none"
-                style={{ fontSize: Math.max(9, Math.min(14, size * 0.22)) }}
-              >
-                {token.symbol}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Token detail card */}
-      {selectedToken && (
-        <div className="mt-2 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1.5 text-xs animate-fadeInUp">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-white text-sm">{selectedToken.symbol}</span>
-            <span className="text-gray-400">{selectedToken.name}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400">Amount Held</span>
-            <span className="text-white font-semibold">{parseFloat(selectedToken.balance).toLocaleString()}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400">USD Value</span>
-            <span className="text-white font-semibold">{fmtUsd(selectedToken.valueUsd)}</span>
-          </div>
-          {selectedToken.contractAddress && (
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Contract</span>
-              <div className="flex items-center gap-1">
-                <span className="text-white font-mono">{shortAddr(selectedToken.contractAddress)}</span>
-                <CopyButton text={selectedToken.contractAddress} />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-gray-400">
-        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" /><span>Positive 24h</span></div>
-        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" /><span>Negative 24h</span></div>
-        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#6b7280]" /><span>Neutral</span></div>
-        <div className="flex items-center gap-1 ml-auto"><span className="italic">Bubble size = USD value</span></div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Sector Pie (simple CSS) ──────────────────────────────────────────────────
 
 function SectorPie({ breakdown }: { breakdown: SectorBreakdown }) {
@@ -531,7 +436,7 @@ export default function DNAAnalyzerPage() {
               </div>
               <h2 className="text-2xl font-heading font-bold mb-2">Deep Network Analysis</h2>
               <p className="text-gray-400 text-sm">
-                Decode the complete DNA of any wallet — identity profile, portfolio bubbles, trading patterns, partner wallets, and AI intelligence.
+                Decode the complete DNA of any wallet — identity profile, trading patterns, partner wallets, and AI intelligence.
               </p>
             </div>
 
@@ -751,19 +656,7 @@ export default function DNAAnalyzerPage() {
               </div>
             </div>
 
-            {/* ── Section 2: Portfolio Holdings Bubble Map ─────────────────── */}
-            <div className="glass rounded-xl p-5 border border-white/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Map className="w-4 h-4 text-[#0A1EFF]" />
-                <span className="font-bold text-sm">Portfolio Holdings Bubble Map</span>
-              </div>
-              {dna.holdings && dna.holdings.length > 0
-                ? <PortfolioBubbleMap holdings={dna.holdings} />
-                : <div className="text-center text-gray-500 text-sm py-8">No holdings found for this wallet.</div>
-              }
-            </div>
-
-            {/* ── Section 3: Trading DNA Profile ──────────────────────────── */}
+            {/* ── Section 2: Trading DNA Profile ──────────────────────────── */}
             <div className="glass rounded-xl p-5 border border-white/10 space-y-4">
               <div className="flex items-center gap-2 mb-1">
                 <Activity className="w-4 h-4 text-[#7C3AED]" />
@@ -1003,57 +896,6 @@ export default function DNAAnalyzerPage() {
                   </div>
                 </div>
 
-                {/* coins worth watching */}
-                {trendingCoins.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Award className="w-4 h-4 text-[#F59E0B]" />
-                      <span className="font-bold text-sm">Coins Worth Watching</span>
-                      <span className="text-[10px] text-gray-600 ml-auto">Based on your chain activity</span>
-                    </div>
-                    <div className="space-y-2">
-                      {trendingCoins.map((coin, i) => {
-                        const isPos = coin.change24h >= 0;
-                        return (
-                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#0A1EFF]/30 transition-all">
-                            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-                              {coin.imageUri
-                                ? <img src={coin.imageUri} alt={coin.symbol} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0, 2)}</span>
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-white">{coin.name}</div>
-                              <div className="text-[10px] text-gray-500">${parseFloat(coin.price) < 0.001 ? parseFloat(coin.price).toFixed(8) : parseFloat(coin.price).toFixed(4)}</div>
-                            </div>
-                            <div className={`text-xs font-bold flex items-center gap-0.5 flex-shrink-0 ${isPos ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                              {isPos ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              {isPos ? '+' : ''}{coin.change24h.toFixed(2)}%
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => { navigator.clipboard.writeText(coin.address).catch(() => {}); setCopiedCA(coin.address); setTimeout(() => setCopiedCA(null), 1500); }}
-                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                title="Copy CA"
-                              >
-                                {copiedCA === coin.address
-                                  ? <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
-                                  : <Copy className="w-3.5 h-3.5 text-gray-400" />
-                                }
-                              </button>
-                              {coin.dexUrl && (
-                                <a href={coin.dexUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                                  <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[10px] text-gray-600 mt-2 text-center">DYOR / NFA — Always verify before investing</p>
-                  </div>
-                )}
 
                 {/* market outlook */}
                 {dna.aiAnalysis.marketOutlook && (
@@ -1135,14 +977,6 @@ export default function DNAAnalyzerPage() {
                 >
                   <Bell className="w-4 h-4 text-gray-400" />
                   <span className="text-xs font-semibold">Track in Alerts</span>
-                </button>
-
-                <button
-                  onClick={() => router.push(`/dashboard/bubble-map?ca=${encodeURIComponent(dna.address)}`)}
-                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-lg py-3 px-3 text-sm hover:bg-white/10 transition-colors"
-                >
-                  <Map className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-semibold">View Bubble Map</span>
                 </button>
 
                 <button

@@ -41,7 +41,7 @@ const COMING_INTEGRATIONS = [
   { name: 'Jupiter', color: '#9945FF' },
   { name: 'PancakeSwap', color: '#F3BA2F' },
   { name: 'Curve', color: '#3498DB' },
-  { name: '1inch', color: '#1B314F' },
+  { name: '0x Protocol', color: '#1B314F' },
   { name: 'Orca', color: '#00C2D4' },
 ];
 

@@ -10,7 +10,7 @@ export * from './goplus';
 export * from './coingecko';
 export * from './dexscreener';
 export * from './alchemy';
-export * from './helius';
+export * from './alchemy-solana';
 export * from './lunarcrush';
 export * from './arkham';
 export * from './jupiter';
@@ -24,6 +24,7 @@ export * from './zerion';
 export * from './solana-intelligence';
 export * from './etherscan';
 export * from './contract-intelligence';
+export * from './zerox';
 
 // ─── Shared Error Types ────────────────────────────────────────────────────────
 

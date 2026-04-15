@@ -5,7 +5,7 @@ import { formatUSD, formatLargeNumber } from '@/lib/formatters';
 
 const COST_BREAKDOWN = [
   { service: 'Anthropic Claude API',   cost: 4280, calls: 24800, avgCost: 0.17 },
-  { service: 'Helius RPC',             cost: 1200, calls: 890000, avgCost: 0.001 },
+  { service: 'Alchemy Solana RPC',     cost: 0,    calls: 890000, avgCost: 0 },
   { service: 'Alchemy',                cost: 980,  calls: 520000, avgCost: 0.002 },
   { service: 'DexScreener',            cost: 0,    calls: 180000, avgCost: 0 },
   { service: 'CoinGecko Pro',          cost: 499,  calls: 320000, avgCost: 0.002 },

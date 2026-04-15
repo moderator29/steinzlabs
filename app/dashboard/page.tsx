@@ -6,7 +6,7 @@ import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, Bar
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
-import NotificationBell from '@/components/NotificationBell';
+
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 
@@ -234,7 +234,6 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <NotificationBell />
           </div>
         </div>
       </div>

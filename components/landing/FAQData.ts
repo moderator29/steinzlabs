@@ -31,7 +31,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What blockchains does Steinz Labs support?',
-    a: 'Steinz Labs supports 12+ chains including Ethereum, Solana, BNB Chain, Base, Arbitrum, Optimism, Polygon, and Avalanche. The swap engine covers Solana via Jupiter/Raydium, and EVM chains via Uniswap v3/v4, 1inch, and Alchemy routing. New chains are added regularly.',
+    a: 'Steinz Labs supports 12+ chains including Ethereum, Solana, BNB Chain, Base, Arbitrum, Optimism, Polygon, and Avalanche. The swap engine covers Solana via Jupiter/Raydium, and EVM chains via Uniswap v3/v4, 0x Protocol, and Alchemy routing. New chains are added regularly.',
   },
   {
     q: 'How does the Bubble Map work?',
@@ -51,7 +51,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What chains does the swap engine support and how does routing work?',
-    a: 'The swap engine supports Solana (via Jupiter aggregator and Raydium), Ethereum, Base, Arbitrum, BNB Chain, and Polygon (via Uniswap v3/v4 and 1inch routing). For each swap, the engine queries multiple routes simultaneously, compares output amounts after fees and slippage, then executes on the best path. A security scan runs automatically before any route is shown to you.',
+    a: 'The swap engine supports Solana (via Jupiter aggregator and Raydium), Ethereum, Base, Arbitrum, BNB Chain, and Polygon (via Uniswap v3/v4 and 0x Protocol routing). For each swap, the engine queries multiple routes simultaneously, compares output amounts after fees and slippage, then executes on the best path. A security scan runs automatically before any route is shown to you.',
   },
   {
     q: 'How do price alerts work?',

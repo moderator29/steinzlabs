@@ -11,8 +11,9 @@ const supabase = createClient(
 );
 
 async function fetchTransferData(addresses: string[]): Promise<{ transfers: TransferEdge[]; trades: TokenTradeEvent[] }> {
-  const key = process.env.HELIUS_API_KEY_1 ?? process.env.HELIUS_API_KEY_2 ?? '';
-  if (!key) return { transfers: [], trades: [] };
+  const rpc = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
+    || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
+  if (!rpc) return { transfers: [], trades: [] };
 
   const transfers: TransferEdge[] = [];
   const trades: TokenTradeEvent[] = [];
@@ -20,25 +21,47 @@ async function fetchTransferData(addresses: string[]): Promise<{ transfers: Tran
 
   await Promise.allSettled(batch.map(async addr => {
     try {
-      const [swapRes, txRes] = await Promise.all([
-        fetch(`https://api.helius.xyz/v0/addresses/${addr}/transactions?api-key=${key}&type=SWAP&limit=20`),
-        fetch(`https://api.helius.xyz/v0/addresses/${addr}/transactions?api-key=${key}&type=TRANSFER&limit=20`),
-      ]);
-      if (swapRes.ok) {
-        const swaps = await swapRes.json() as Array<{ signature: string; timestamp: number; slot: number; tokenTransfers?: Array<{ fromUserAccount: string; toUserAccount: string; mint: string; tokenAmount: number }> }>;
-        for (const tx of swaps) {
-          for (const t of tx.tokenTransfers ?? []) {
-            trades.push({ address: addr, tokenAddress: t.mint, side: t.fromUserAccount === addr ? 'sell' : 'buy', valueUsd: t.tokenAmount, timestamp: tx.timestamp * 1000, blockNumber: tx.slot, txHash: tx.signature });
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [addr, { limit: 40 }] }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (!res.ok) return;
+      const data = await res.json() as { result?: Array<{ signature: string; blockTime: number | null; slot: number }> };
+      const sigs = data.result ?? [];
+      for (const sig of sigs) {
+        const txRes = await fetch(rpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!txRes.ok) continue;
+        const txData = await txRes.json() as { result?: Record<string, unknown> };
+        const tx = txData.result;
+        if (!tx) continue;
+        const meta = tx.meta as Record<string, unknown> | undefined;
+        const preBalances = (meta?.preBalances as number[]) ?? [];
+        const postBalances = (meta?.postBalances as number[]) ?? [];
+        const accountKeys = ((tx.transaction as Record<string, unknown>)?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string }> ?? [];
+        for (let i = 0; i < accountKeys.length; i++) {
+          const diff = ((postBalances[i] ?? 0) - (preBalances[i] ?? 0)) / 1e9;
+          if (Math.abs(diff) > 0.001 && accountKeys[i]?.pubkey !== addr) {
+            if (diff > 0) {
+              transfers.push({ from: addr, to: accountKeys[i].pubkey, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
+            } else {
+              transfers.push({ from: accountKeys[i].pubkey, to: addr, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
+            }
           }
         }
-      }
-      if (txRes.ok) {
-        const txs = await txRes.json() as Array<{ signature: string; timestamp: number; nativeTransfers?: Array<{ fromUserAccount: string; toUserAccount: string; amount: number }> }>;
-        for (const tx of txs) {
-          for (const t of tx.nativeTransfers ?? []) {
-            if (addresses.includes(t.toUserAccount)) {
-              transfers.push({ from: t.fromUserAccount, to: t.toUserAccount, valueUsd: t.amount / 1e9, timestamp: tx.timestamp * 1000, txHash: tx.signature });
-            }
+        const preTokens = (meta?.preTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
+        const postTokens = (meta?.postTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
+        for (const pt of postTokens) {
+          const pre = preTokens.find(p => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
+          const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
+          if (Math.abs(diff) > 0) {
+            trades.push({ address: addr, tokenAddress: pt.mint, side: diff > 0 ? 'buy' : 'sell', valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, blockNumber: sig.slot, txHash: sig.signature });
           }
         }
       }

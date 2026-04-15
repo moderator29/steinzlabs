@@ -287,7 +287,7 @@ async function getEvmData(address: string, chain: string) {
 
 // ─── Solana Data Fetcher ──────────────────────────────────────────────────────
 // Uses the canonical Solana intelligence pipeline:
-// Helius (authoritative balances + txns) → Birdeye (prices) → DexScreener (logos)
+// Alchemy Solana (authoritative balances + txns) → Birdeye (prices) → DexScreener (logos)
 
 async function getSolData(address: string) {
   const intel = await buildSolanaWalletIntelligence(address);

@@ -52,7 +52,7 @@ export default function SwapPage() {
       <div className="max-w-lg mx-auto">
         <PageHeader
           title="Swap"
-          description="Instant multi-chain token swaps powered by Jupiter & 1inch"
+          description="Instant multi-chain token swaps powered by Jupiter & 0x Protocol"
         />
 
         <div className="bg-[#141824] rounded-2xl p-6 border border-[#1E2433]">

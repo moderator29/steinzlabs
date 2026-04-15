@@ -3,6 +3,7 @@ import "./globals.css";
 import "@/styles/rtl.css";
 import AuthProvider from "@/components/providers/AuthProvider";
 import { ToastProvider } from "@/components/Toast";
+import { WalletProvider } from "@/context/WalletContext";
 
 export const metadata: Metadata = {
   title: "STEINZ LABS - On-Chain Intelligence Platform",
@@ -25,9 +26,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
         <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <WalletProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </WalletProvider>
         </AuthProvider>
       </body>
     </html>
