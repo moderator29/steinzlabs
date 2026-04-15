@@ -183,8 +183,16 @@ export default function WalletClustersPage() {
       if (token.trim()) params.set('token', token.trim());
       if (refresh) params.set('refresh', '1');
       const res = await fetch(`/api/wallet-clusters?${params.toString()}`);
-      if (res.ok) setData(await res.json() as ClusterData);
-    } catch { /* ignore */ } finally { setLoading(false); }
+      if (res.ok) {
+        const json = await res.json();
+        setData(json as ClusterData);
+        if (json.message && json.clusters?.length === 0) {
+          console.info('[Wallet Clusters]', json.message);
+        }
+      }
+    } catch (err) {
+      console.error('[Wallet Clusters] Fetch failed:', err);
+    } finally { setLoading(false); }
   }, [searchToken]);
 
   useEffect(() => { fetchClusters(); }, []);  // load on mount
