@@ -16,7 +16,7 @@ const TOP_WATCHED = [
 ];
 
 const DAILY_ADDS = Array.from({ length: 14 }, (_, i) => ({
-  day: `Day ${i + 1}`, adds: Math.floor(Math.random() * 300 + 100), removes: Math.floor(Math.random() * 100 + 20),
+  day: `Day ${i + 1}`, adds: 150 + i * 20, removes: 30 + i * 5,
 }));
 
 export default function WatchlistInsightsPage() {

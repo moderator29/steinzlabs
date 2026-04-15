@@ -17,9 +17,9 @@ const FEATURES = [
 
 const TREND_DATA = Array.from({ length: 14 }, (_, i) => ({
   day: `Day ${i + 1}`,
-  feed: Math.floor(15000 + i * 400 + Math.random() * 1000),
-  swap: Math.floor(2800 + i * 100 + Math.random() * 300),
-  wallet: Math.floor(6000 + i * 150 + Math.random() * 500),
+  feed: 15000 + i * 400,
+  swap: 2800 + i * 100,
+  wallet: 6000 + i * 150,
 }));
 
 export default function FeatureUsagePage() {

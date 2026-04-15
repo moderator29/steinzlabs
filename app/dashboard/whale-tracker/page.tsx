@@ -650,8 +650,8 @@ export default function WhaleTrackerPage() {
             )}
             {!loading && whales.length === 0 && (
               <div className="flex flex-col items-center py-10 gap-2">
-                <Fish className="w-8 h-8 text-gray-700" /><p className="text-sm text-gray-500">Loading whale data…</p>
-                <button onClick={() => fetchData('discover')} className="text-xs px-3 py-1.5 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-lg text-[#4D6BFF] hover:bg-[#0A1EFF]/20 transition-colors">Retry</button>
+                <Fish className="w-8 h-8 text-gray-700" /><p className="text-sm text-gray-500">Whale tracker is scanning wallets across multiple chains. Large movements will appear as they are detected.</p>
+                <button onClick={() => fetchData('discover')} className="text-xs px-3 py-1.5 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-lg text-[#4D6BFF] hover:bg-[#0A1EFF]/20 transition-colors mt-2">Refresh</button>
               </div>
             )}
           </>

@@ -27,7 +27,7 @@ const RECENT_SEARCHES = [
 ];
 
 const HOURLY = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i}:00`, searches: Math.floor(Math.random() * 500 + 100),
+  hour: `${i}:00`, searches: 200 + i * 15,
 }));
 
 export default function SearchLogsPage() {

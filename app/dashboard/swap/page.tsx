@@ -337,6 +337,8 @@ export default function SwapPage() {
   }, [searchParams]);
 
   const activeChain = CHAINS.find(c => c.id === chain) || CHAINS[0];
+  const [gaslessEnabled, setGaslessEnabled] = useState(true);
+  const isGaslessAvailable = chain !== 'solana' && !['ETH', 'MATIC', 'BNB', 'AVAX'].includes(fromToken);
   const [quoteData, setQuoteData] = useState<any>(null);
 
   const simulateQuote = useCallback((amount: string, from?: string, to?: string, ch?: string) => {
@@ -660,6 +662,31 @@ export default function SwapPage() {
               </div>
             )}
           </div>
+
+          {/* Gasless Toggle */}
+          {chain !== 'solana' && (
+            <div className="mt-3 flex items-center justify-between bg-[#0f1320] rounded-xl px-4 py-3 border border-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                <div>
+                  <span className="text-xs font-medium text-white">Gasless Mode</span>
+                  <p className="text-[10px] text-gray-500">
+                    {gaslessEnabled && isGaslessAvailable
+                      ? 'No gas fees — cost absorbed into trade'
+                      : !isGaslessAvailable && gaslessEnabled
+                        ? `Not available for native tokens. Standard swap.`
+                        : 'Standard swap — you pay network gas'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setGaslessEnabled(!gaslessEnabled)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${gaslessEnabled ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gaslessEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+          )}
 
           <div className="mt-3">
             {/* Transaction Status Overlay */}

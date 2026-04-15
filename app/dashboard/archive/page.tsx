@@ -120,11 +120,25 @@ export default function ArchivePage() {
   const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setEvents(generateArchivedEvents());
-      setLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
+    fetch('/api/context-feed?archived=true&limit=100')
+      .then(r => r.json())
+      .then(data => {
+        const mapped = (data.events || []).map((e: Record<string, unknown>) => ({
+          id: e.id as string || String(Date.now()),
+          type: e.type as string || 'whale_transfer',
+          title: e.title as string || '',
+          description: e.summary as string || '',
+          chain: e.chain as string || 'ethereum',
+          timestamp: e.timestamp as string || new Date().toISOString(),
+          timeAgo: '',
+          significance: (e.trustScore as number) ? Math.ceil((e.trustScore as number) / 10) : 5,
+          priceChange: e.tokenPriceChange24h as number || undefined,
+          volume: e.tokenVolume24h ? `$${(e.tokenVolume24h as number).toLocaleString()}` : undefined,
+        }));
+        setEvents(mapped);
+      })
+      .catch(() => setEvents([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredEvents = events.filter(e => {

@@ -6,7 +6,7 @@ import 'server-only';
  * estimates MEV loss, and provides mitigation recommendations.
  *
  * Data sources:
- *  - Helius Enhanced Transactions API (Solana mempool signals)
+ *  - Alchemy Solana RPC (Solana mempool signals)
  *  - Alchemy Mempool API (EVM chains)
  *  - On-chain DEX pool reserves for impact calculation
  */
@@ -99,34 +99,61 @@ function buildRecommendations(
   return recs;
 }
 
-// ─── Solana MEV Analysis via Helius ──────────────────────────────────────────
+// ─── Solana MEV Analysis via Alchemy ─────────────────────────────────────────
 
 async function analyseSolanaMev(
   tokenAddress: string,
   swapAmountUsd: number,
 ): Promise<Partial<MevAnalysis>> {
-  const heliusKey = process.env.HELIUS_API_KEY_1 || process.env.HELIUS_API_KEY_2;
-  if (!heliusKey) return {};
+  const solanaRpc = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
+    || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
+  if (!solanaRpc) return {};
 
   try {
-    // Get recent enhanced transactions for this token
-    const res = await fetch(
-      `https://api.helius.xyz/v0/addresses/${tokenAddress}/transactions?api-key=${heliusKey}&limit=50&type=SWAP`,
-      { next: { revalidate: 30 } },
+    const sigRes = await fetch(solanaRpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [tokenAddress, { limit: 50 }] }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!sigRes.ok) return {};
+    const sigData = await sigRes.json() as { result?: Array<{ signature: string }> };
+    const sigs = sigData.result ?? [];
+    if (sigs.length === 0) return {};
+
+    // Fetch a sample of transaction details
+    const txDetails = await Promise.allSettled(
+      sigs.slice(0, 20).map(async (sig) => {
+        const r = await fetch(solanaRpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!r.ok) return null;
+        const d = await r.json() as { result?: Record<string, unknown> };
+        return d.result;
+      })
     );
 
-    if (!res.ok) return {};
+    const txs = txDetails
+      .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled' && r.value !== null)
+      .map(r => {
+        const tx = r.value as Record<string, unknown>;
+        const meta = tx.meta as Record<string, unknown> | undefined;
+        const msg = tx.transaction as Record<string, unknown> | undefined;
+        const accountKeys = (msg?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string; signer: boolean }> ?? [];
+        return {
+          signature: '',
+          fee: (meta?.fee as number) ?? 0,
+          feePayer: accountKeys[0]?.pubkey ?? '',
+          nativeTransfers: [] as Array<{ amount: number }>,
+          tokenTransfers: [] as Array<{ mint: string; tokenAmount: number }>,
+          timestamp: 0,
+        };
+      });
 
-    const txs: Array<{
-      signature: string;
-      fee: number;
-      feePayer: string;
-      nativeTransfers?: Array<{ amount: number }>;
-      tokenTransfers?: Array<{ mint: string; tokenAmount: number }>;
-      timestamp: number;
-    }> = await res.json();
-
-    if (!Array.isArray(txs) || txs.length === 0) return {};
+    if (txs.length === 0) return {};
 
     // Identify MEV signals: fee spikes, repeated feePayer across sequential txs
     const feePayerCounts: Record<string, number> = {};

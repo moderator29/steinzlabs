@@ -9,7 +9,7 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { getTokenDetail, getTopTokens } from '@/lib/services/coingecko';
 import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
-import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/helius';
+import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 
@@ -123,6 +123,8 @@ function detectArkhamIntent(message: string): {
 
 const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by STEINZ LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
+CRITICAL DATA RULE: You MUST use ONLY the prices and numbers from the REAL-TIME DATA section below. NEVER use any price, volume, market cap, or balance from your training data. If the data section says SOL is $83.69, you say $83.69 — not $85 or any other number. If data is missing for something the user asked, say "I don't have current data for that" rather than guessing.
+
 PERSONALITY: {personality}
 
 CAPABILITIES:
@@ -188,7 +190,7 @@ SECURITY FLAGS:
 [CHART:portfolio]
 
 BRANDING RULES:
-Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, Helius, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
+Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
 
 ABSOLUTE FORMATTING RULES:
 No **, no *, no ##, no -- , no bullet dashes. Clean plain text only.
@@ -887,7 +889,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: `VTX Error: ${msg}` }, { status: 500 });
+    const isDev = process.env.NODE_ENV === 'development';
+    console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+
+    // Surface specific errors
+    if (msg.includes('API key')) {
+      return NextResponse.json({ error: 'AI service not configured. ANTHROPIC_API_KEY missing.' }, { status: 500 });
+    }
+    if (msg.includes('rate_limit') || msg.includes('429')) {
+      return NextResponse.json({ error: 'AI service is busy. Please try again in a moment.' }, { status: 429 });
+    }
+    if (msg.includes('overloaded') || msg.includes('529')) {
+      return NextResponse.json({ error: 'AI service is temporarily overloaded. Please try again shortly.' }, { status: 503 });
+    }
+
+    return NextResponse.json({
+      error: isDev ? `VTX Error: ${msg}` : 'AI service temporarily unavailable. Please try again.',
+    }, { status: 500 });
   }
 }
 

@@ -69,7 +69,7 @@ function archetypeDescription(a: WalletArchetype): string {
 
 // ─── Solana DNA Fetch ─────────────────────────────────────────────────────────
 // Uses the canonical Solana intelligence pipeline:
-// Helius (authoritative) → Birdeye (prices) → DexScreener (logos/identity)
+// Alchemy Solana (authoritative) → Birdeye (prices) → DexScreener (logos/identity)
 
 async function fetchSolDNA(address: string) {
   const intel = await buildSolanaWalletIntelligence(address);

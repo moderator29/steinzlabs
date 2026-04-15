@@ -4,7 +4,7 @@ import { getContractSource, getContractCreation, getERC20TokenInfo, getTopERC20H
 import { getTokenSecurity } from './goplus';
 import { getTokenPairs, getTokensMulti } from './dexscreener';
 import { getBirdeyeTokenOverview, getBirdeyeHolders } from './birdeye';
-import { getSolanaTokenHolders, getSolanaTokenMeta } from './helius';
+import { getSolanaTokenHolders, getSolanaTokenMeta } from './alchemy-solana';
 import { getTokenHolders as getArkhamHolders, getAddressIntel } from './arkham';
 
 // ─── Chain Detection ───────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ async function buildSolContractIntelligence(
   address: string
 ): Promise<ContractIntelligence> {
   // STEP 1: Parallel — all sources at once
-  const [heliusMetaResult, goPlusResult, dexPairsResult, birdeyeResult, birdeyeHoldersResult, solanaHoldersResult] =
+  const [solanaMetaResult, goPlusResult, dexPairsResult, birdeyeResult, birdeyeHoldersResult, solanaHoldersResult] =
     await Promise.allSettled([
       getSolanaTokenMeta(address),
       getTokenSecurity(address, 'solana'),
@@ -280,7 +280,7 @@ async function buildSolContractIntelligence(
       getSolanaTokenHolders(address),
     ]);
 
-  const heliusMeta = heliusMetaResult.status === 'fulfilled' ? heliusMetaResult.value : null;
+  const solanaMeta = solanaMetaResult.status === 'fulfilled' ? solanaMetaResult.value : null;
   const security = goPlusResult.status === 'fulfilled' ? goPlusResult.value : null;
   const dexPairs = dexPairsResult.status === 'fulfilled' ? dexPairsResult.value : [];
   const birdeye = birdeyeResult.status === 'fulfilled' ? birdeyeResult.value : null;
@@ -290,9 +290,9 @@ async function buildSolContractIntelligence(
   const bestPair = dexPairs.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0] ?? null;
 
   // Name / symbol resolution: DexScreener > Birdeye > Helius
-  const name = bestPair?.baseToken?.name || birdeye?.name || heliusMeta?.name || 'Unknown Token';
-  const symbol = bestPair?.baseToken?.symbol || birdeye?.symbol || heliusMeta?.symbol || '';
-  const decimals = birdeye?.decimals || heliusMeta?.decimals || 0;
+  const name = bestPair?.baseToken?.name || birdeye?.name || solanaMeta?.name || 'Unknown Token';
+  const symbol = bestPair?.baseToken?.symbol || birdeye?.symbol || solanaMeta?.symbol || '';
+  const decimals = birdeye?.decimals || solanaMeta?.decimals || 0;
 
   const market: ContractMarket = {
     priceUSD: bestPair ? parseFloat(bestPair.priceUsd || '0') : (birdeye?.price ?? 0),
@@ -304,7 +304,7 @@ async function buildSolContractIntelligence(
     pairAddress: bestPair?.pairAddress ?? null,
     dexId: bestPair?.dexId ?? null,
     pairCreatedAt: bestPair?.pairCreatedAt ?? null,
-    logoURI: bestPair?.info?.imageUrl ?? birdeye?.logoURI ?? heliusMeta?.logoUrl ?? null,
+    logoURI: bestPair?.info?.imageUrl ?? birdeye?.logoURI ?? solanaMeta?.logoUrl ?? null,
   };
 
   // GoPlus Solana security
@@ -384,7 +384,7 @@ async function buildSolContractIntelligence(
       holderCount: birdeye?.holder ?? holders.length,
       topHolderConcentration: Math.round(topHolderConcentration * 100) / 100,
       lastUpdated: new Date().toISOString(),
-      dataSource: 'helius+goplus+dexscreener+birdeye',
+      dataSource: 'alchemy+goplus+dexscreener+birdeye',
     },
   };
 }

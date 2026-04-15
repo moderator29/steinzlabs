@@ -1,24 +1,34 @@
 'use client';
 
-import { Radio, ArrowLeft, Activity, Cpu, HardDrive, Zap, Globe } from 'lucide-react';
+import { Radio, ArrowLeft, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface ChainMetrics { gas: string; tps: string; blocks: string }
 
 export default function NetworkMetricsPage() {
   const router = useRouter();
   const [selectedChain, setSelectedChain] = useState('Ethereum');
+  const [metrics, setMetrics] = useState<Record<string, ChainMetrics>>({});
+  const [loading, setLoading] = useState(true);
 
-  const chains = ['Ethereum', 'Solana', 'BSC', 'Polygon', 'Arbitrum'];
+  const chains = ['Ethereum', 'Solana', 'Base', 'Polygon', 'Arbitrum'];
 
-  const metrics: Record<string, { gas: string; tps: string; validators: string; tvl: string; blocks: string; pendingTx: string }> = {
-    Ethereum: { gas: '24 Gwei', tps: '15.2', validators: '895K', tvl: '$48.2B', blocks: '19,451,823', pendingTx: '142K' },
-    Solana: { gas: '0.00025 SOL', tps: '4,200', validators: '1,847', tvl: '$4.8B', blocks: '248,912,445', pendingTx: '2.1K' },
-    BSC: { gas: '3 Gwei', tps: '68', validators: '29', tvl: '$5.1B', blocks: '35,892,112', pendingTx: '8.4K' },
-    Polygon: { gas: '45 Gwei', tps: '32', validators: '100', tvl: '$1.2B', blocks: '52,341,678', pendingTx: '12K' },
-    Arbitrum: { gas: '0.1 Gwei', tps: '42', validators: 'N/A', tvl: '$2.8B', blocks: '178,234,567', pendingTx: '3.2K' },
-  };
+  const fetchMetrics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/network-metrics');
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.error) setMetrics(data);
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
 
-  const m = metrics[selectedChain];
+  useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
+
+  const m = metrics[selectedChain] || { gas: '—', tps: '—', blocks: '—' };
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
@@ -56,8 +66,8 @@ export default function NetworkMetricsPage() {
           {[
             { icon: Zap, label: 'Gas Price', value: m.gas, color: '#F59E0B' },
             { icon: Activity, label: 'TPS', value: m.tps, color: '#10B981' },
-            { icon: Cpu, label: 'Validators', value: m.validators, color: '#7C3AED' },
-            { icon: HardDrive, label: 'TVL', value: m.tvl, color: '#0A1EFF' },
+            { icon: HardDrive, label: 'Latest Block', value: m.blocks, color: '#0A1EFF' },
+            { icon: Globe, label: 'Status', value: loading ? 'Fetching...' : 'Live', color: '#10B981' },
           ].map((item) => (
             <div key={item.label} className="glass rounded-xl p-3 border border-white/10">
               <div className="flex items-center gap-1.5 mb-1">
@@ -77,8 +87,8 @@ export default function NetworkMetricsPage() {
               <span className="text-xs font-mono font-semibold">{m.blocks}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-white/5">
-              <span className="text-xs text-gray-400">Pending Transactions</span>
-              <span className="text-xs font-semibold">{m.pendingTx}</span>
+              <span className="text-xs text-gray-400">Data Source</span>
+              <span className="text-xs font-semibold text-[#4D6BFF]">Alchemy RPC (Live)</span>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-xs text-gray-400">Network Health</span>

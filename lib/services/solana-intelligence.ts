@@ -5,8 +5,9 @@ import {
   getSolanaWalletTokens,
   getSolanaTransactions,
   getSolanaTokenMetaBatch,
-  type HeliusTransaction,
-} from './helius';
+  getSolanaAssetsByOwner,
+  type SolanaTransaction,
+} from './alchemy-solana';
 import { getMultiTokenPrices, getBirdeyeTokenOverview } from './birdeye';
 import { getTokensMulti } from './dexscreener';
 import { getTokenPrice } from './coingecko';
@@ -58,7 +59,7 @@ export interface SolanaEnrichedToken {
 
 export interface SolanaWalletTx {
   hash: string;
-  type: 'buy' | 'sell' | 'transfer' | 'swap' | 'mint' | 'burn' | 'other';
+  type: 'buy' | 'sell' | 'transfer' | 'swap' | 'mint' | 'burn' | 'failed' | 'other';
   timestamp: string;       // ISO
   timestampUnix: number;
   tokenSymbol: string;
@@ -99,7 +100,7 @@ export interface SolanaWalletIntelligence {
     hasBlueChips: boolean;
     memeTokenPercent: number;
   };
-  dataSource: 'helius+birdeye+dexscreener';
+  dataSource: 'alchemy+birdeye+dexscreener';
 }
 
 // ─── Whale Classification ─────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ function classifyWhale(totalUSD: number): SolanaWalletIntelligence['whaleScore']
 
 function normalizeTxType(
   raw: string,
-  transfers: HeliusTransaction['tokenTransfers'],
+  transfers: SolanaTransaction['tokenTransfers'],
   walletAddress: string
 ): SolanaWalletTx['type'] {
   const t = raw?.toUpperCase() ?? '';
@@ -143,7 +144,7 @@ function normalizeTxType(
 }
 
 export function normalizeSolanaTransactions(
-  txns: HeliusTransaction[],
+  txns: SolanaTransaction[],
   walletAddress: string
 ): SolanaWalletTx[] {
   return txns.slice(0, 25).map(tx => {
@@ -204,7 +205,7 @@ async function enrichTokensBatch(
   const mints = rawTokens.map(t => t.mint);
 
   // Step 1: Parallel — Helius metadata + Birdeye multi-price + DexScreener logos
-  const [heliusMeta, birdeyePrices, dexPairs] = await Promise.all([
+  const [solanaMeta, birdeyePrices, dexPairs] = await Promise.all([
     getSolanaTokenMetaBatch(mints),
     getMultiTokenPrices(mints, 'solana'),
     getTokensMulti(mints),
@@ -215,7 +216,7 @@ async function enrichTokensBatch(
 
   for (const raw of rawTokens) {
     const mint = raw.mint;
-    const meta = heliusMeta.get(mint);
+    const meta = solanaMeta.get(mint);
     const birdeyePrice = birdeyePrices[mint];
     const dexPair = dexPairs.get(mint.toLowerCase());
 
@@ -245,9 +246,7 @@ async function enrichTokensBatch(
 
     const valueUSD = raw.uiAmount * priceUSD;
 
-    // Skip dust (< $0.50 value) — unless it's a blue chip we just haven't priced
-    if (valueUSD < 0.5 && !BLUE_CHIP_MINTS.has(mint)) continue;
-
+    // Show all tokens regardless of USD value — user expects to see everything
     const liquidity = dexPair?.liquidity?.usd ?? 0;
     const volume24h = dexPair?.volume?.h24 ?? 0;
     const marketCap = dexPair?.fdv ?? 0;
@@ -288,13 +287,32 @@ export async function buildSolanaWalletIntelligence(
   const cached = cache.get<SolanaWalletIntelligence>(cacheKey);
   if (cached) return cached;
 
-  // ── STEP 1: Helius — authoritative wallet data in parallel ────────────────
-  const [solBalance, rawTokens, rawTxns, solPrice] = await Promise.all([
+  // ── STEP 1: Alchemy Solana — authoritative wallet data in parallel ────────
+  const [solBalance, rawTokens, rawTxns, solPrice, assetsByOwner] = await Promise.all([
     getSolanaSOLBalance(address),
     getSolanaWalletTokens(address),
-    getSolanaTransactions(address, 25),
+    getSolanaTransactions(address, 1000),
     getTokenPrice('solana').catch(() => 170),
+    getSolanaAssetsByOwner(address).catch(() => ({ items: [] })),
   ]);
+
+  // Merge getAssetsByOwner fungible tokens with getTokenAccountsByOwner
+  const assetItems = ((assetsByOwner as Record<string, unknown>)?.items as unknown[]) ?? [];
+  const existingMints = new Set(rawTokens.map(t => t.mint));
+  for (const item of assetItems) {
+    const r = item as Record<string, unknown>;
+    if (r.interface !== 'FungibleToken' && r.interface !== 'FungibleAsset') continue;
+    const id = r.id as string;
+    if (!id || existingMints.has(id)) continue;
+    const tokenInfo = r.token_info as Record<string, unknown> | undefined;
+    const balance = (tokenInfo?.balance as number) ?? 0;
+    const decimals = (tokenInfo?.decimals as number) ?? 0;
+    const uiAmount = decimals > 0 ? balance / Math.pow(10, decimals) : balance;
+    if (uiAmount > 0) {
+      rawTokens.push({ mint: id, amount: balance, decimals, uiAmount });
+      existingMints.add(id);
+    }
+  }
 
   const solValueUSD = solBalance * solPrice;
 
@@ -306,8 +324,22 @@ export async function buildSolanaWalletIntelligence(
   // ── STEP 3: Enrich tokens (Helius meta + Birdeye prices + DexScreener logos)
   const enrichedTokens = await enrichTokensBatch(nonZeroTokens);
 
-  // ── STEP 4: Normalize transactions ────────────────────────────────────────
-  const transactions = normalizeSolanaTransactions(rawTxns, address);
+  // ── STEP 4: Normalize transactions (use signature-level data for display)
+  const recentSigs = rawTxns.slice(0, 20);
+  const transactions: SolanaWalletTx[] = recentSigs.map(tx => ({
+    hash: tx.signature,
+    type: tx.type === 'FAILED' ? 'failed' : 'transfer',
+    timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
+    timestampUnix: tx.timestamp ?? 0,
+    tokenSymbol: 'SOL',
+    tokenMint: null,
+    amount: '',
+    amountRaw: 0,
+    valueUSD: null,
+    counterparty: null,
+    direction: 'self' as const,
+    fee: (tx.fee ?? 0) / 1e9,
+  }));
 
   // ── STEP 5: Build SOL entry ───────────────────────────────────────────────
   const solEntry: SolanaEnrichedToken = {
@@ -413,7 +445,7 @@ export async function buildSolanaWalletIntelligence(
       hasBlueChips: blueChipValue > totalBalanceUSD * 0.1,
       memeTokenPercent: Math.round(memeTokenPercent),
     },
-    dataSource: 'helius+birdeye+dexscreener',
+    dataSource: 'alchemy+birdeye+dexscreener',
   };
 
   cache.set(cacheKey, intelligence, TTL.WALLET_BALANCE);
