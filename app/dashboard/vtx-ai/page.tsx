@@ -4,6 +4,7 @@ import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Co
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 
 interface TokenCardData {
   symbol: string;
@@ -650,7 +651,7 @@ export default function VtxAiPage() {
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10 overflow-hidden">
-                <img src="/steinz-logo-128.png" alt="VTX Agent" className="w-10 h-10" style={{ objectFit: 'contain' }} />
+                <SteinzLogo size={40} animated={false} />
               </div>
               <h2 className="text-lg font-bold mb-1">Ask me about crypto</h2>
               <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis. Powered by STEINZ LABS.</p>
@@ -699,7 +700,7 @@ export default function VtxAiPage() {
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
               {msg.role === 'assistant' && (
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
-                  <img src="/steinz-logo-128.png" alt="" className="w-4.5 h-4.5" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                  <SteinzLogo size={18} animated={false} />
                 </div>
               )}
               <div className={`max-w-[82%] min-w-0 rounded-2xl px-4 py-3 text-xs leading-relaxed relative overflow-hidden ${
@@ -753,7 +754,7 @@ export default function VtxAiPage() {
           {loading && (
             <div className="flex justify-start">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
-                <img src="/steinz-logo-128.png" alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                <SteinzLogo size={18} animated={false} />
               </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
                 <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Steinz Intelligence...'} />
