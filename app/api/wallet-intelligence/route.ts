@@ -1,11 +1,8 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { getEthBalance, getTokenBalances, getTokenMetadata, getAssetTransfers } from '@/lib/services/alchemy';
-import { getTokenPrice } from '@/lib/services/coingecko';
-import { getTokenPairs } from '@/lib/services/dexscreener';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { fetchWalletPositions, fetchWalletTransactions } from '@/lib/services/zerion';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
+import { buildEvmWalletIntelligence, EVM_CHAIN_CONFIG, KNOWN_TOKEN_LOGOS } from '@/lib/services/evm-intelligence';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,35 +27,7 @@ export interface ContractSecurity {
   flags: SecurityFlag[];
 }
 
-// ─── Chain Config ─────────────────────────────────────────────────────────────
-
-const EVM_CHAIN_CONFIG: Record<string, {
-  nativeSymbol: string;
-  chainName: string;
-  explorerUrl: string;
-  priceId: string;
-  fallbackPrice: number;
-}> = {
-  ethereum: { nativeSymbol: 'ETH', chainName: 'Ethereum', explorerUrl: 'https://etherscan.io', priceId: 'ethereum', fallbackPrice: 3500 },
-  base:     { nativeSymbol: 'ETH', chainName: 'Base',     explorerUrl: 'https://basescan.org', priceId: 'ethereum', fallbackPrice: 3500 },
-  polygon:  { nativeSymbol: 'MATIC', chainName: 'Polygon', explorerUrl: 'https://polygonscan.com', priceId: 'matic-network', fallbackPrice: 0.7 },
-  avalanche:{ nativeSymbol: 'AVAX', chainName: 'Avalanche', explorerUrl: 'https://snowtrace.io', priceId: 'avalanche-2', fallbackPrice: 35 },
-  arbitrum: { nativeSymbol: 'ETH', chainName: 'Arbitrum', explorerUrl: 'https://arbiscan.io', priceId: 'ethereum', fallbackPrice: 3500 },
-  bsc:      { nativeSymbol: 'BNB', chainName: 'BNB Chain', explorerUrl: 'https://bscscan.com', priceId: 'binancecoin', fallbackPrice: 600 },
-};
-
-const KNOWN_TOKEN_LOGOS: Record<string, string> = {
-  ETH:  'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-  WETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-  SOL:  'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-  BTC:  'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
-  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
-  USDT: 'https://assets.coingecko.com/coins/images/325/small/tether.png',
-  MATIC:'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
-  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
-  BNB:  'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
-};
+// Chain config and logos imported from evm-intelligence.ts (single source of truth)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,184 +73,59 @@ function toContractSecurity(sec: TokenSecurityResult): ContractSecurity {
   };
 }
 
-async function resolveLogoFromDex(contractAddress: string): Promise<string | null> {
-  try {
-    const pairs = await getTokenPairs(contractAddress);
-    return pairs[0]?.info?.imageUrl ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// ─── EVM Data Fetcher ─────────────────────────────────────────────────────────
-// Primary: Zerion (multi-chain, pre-priced, single call)
-// Fallback: Alchemy (Ethereum only, no token USD values)
+// ─── EVM Data Fetcher (uses shared evm-intelligence.ts) ──────────────────────
+// Primary: Alchemy (paginated, with DexScreener/CoinGecko prices)
+// Fallback: Zerion (multi-chain, pre-priced)
 
 async function getEvmData(address: string, chain: string) {
+  const intel = await buildEvmWalletIntelligence(address, chain);
   const cfg = EVM_CHAIN_CONFIG[chain] ?? EVM_CHAIN_CONFIG.ethereum;
 
-  // ── Try Zerion first ──────────────────────────────────────────────────────
-  if (process.env.ZERION_API_KEY) {
-    try {
-      const [zerionPositions, zerionTxns] = await Promise.all([
-        fetchWalletPositions(address),
-        fetchWalletTransactions(address, 30),
-      ]);
+  const holdings = intel.tokens.map(t => ({
+    symbol: t.symbol,
+    name: t.name,
+    balance: t.balance,
+    valueUsd: t.valueUSD !== null ? t.valueUSD.toFixed(2) : null,
+    contractAddress: t.contractAddress,
+    logoUrl: t.logoUrl,
+  }));
 
-      if (zerionPositions.length > 0) {
-        const holdings = zerionPositions.map(p => ({
-          symbol: p.symbol,
-          name: p.name,
-          balance: p.balance,
-          valueUsd: p.valueUsd > 0 ? p.valueUsd.toFixed(2) : null,
-          contractAddress: p.isNative ? null : p.contractAddress,
-          logoUrl: p.logo ?? KNOWN_TOKEN_LOGOS[p.symbol.toUpperCase()] ?? null,
-        }));
+  const totalBalanceUsd = intel.totalBalanceUSD !== null ? intel.totalBalanceUSD.toFixed(2) : null;
+  const nativeValueUsd = intel.nativeValueUSD !== null ? intel.nativeValueUSD.toFixed(2) : null;
 
-        const totalValue = zerionPositions.reduce((s, p) => s + p.valueUsd, 0);
-        const nativePos = zerionPositions.find(p => p.isNative);
-        const nativeBalance = nativePos ? parseFloat(nativePos.balance) : 0;
-        const nativeValueUsd = nativePos?.valueUsd ?? 0;
+  const recentTransactions = intel.transactions.map(tx => ({
+    hash: tx.hash,
+    blockTime: tx.blockTime,
+    status: tx.status,
+    type: tx.type,
+    asset: tx.asset,
+    value: tx.value,
+    from: tx.from,
+    to: tx.to,
+  }));
 
-        const recentTransactions = zerionTxns.map(tx => ({
-          hash: tx.hash,
-          blockTime: tx.timestamp,
-          status: tx.status,
-          type: tx.type,
-          asset: tx.transfers[0]?.symbol || cfg.nativeSymbol,
-          value: tx.transfers[0]?.amount?.toString() ?? null,
-          from: tx.from,
-          to: tx.to,
-        }));
-
-        const txCount = zerionTxns.length;
-        const aiAnalysisContext = buildAiAnalysisContext(address, cfg.chainName, holdings, totalValue.toFixed(2), txCount);
-
-        return {
-          chain: cfg.chainName,
-          address,
-          nativeBalance: nativeBalance.toFixed(4),
-          nativeValueUsd: nativeValueUsd.toFixed(2),
-          totalBalanceUsd: totalValue.toFixed(2),
-          txCount,
-          holdings,
-          tokenCount: holdings.filter(h => h.contractAddress).length,
-          explorerUrl: cfg.explorerUrl,
-          ...(cfg.nativeSymbol === 'ETH' ? {
-            ethBalance: nativeBalance.toFixed(4),
-            ethValueUsd: nativeValueUsd.toFixed(2),
-          } : {}),
-          aiAnalysisContext,
-          recentTransactions,
-          dataSource: 'zerion',
-        };
-      }
-    } catch (err) {
-      console.warn('[WalletIntel] Zerion EVM failed, falling back to Alchemy:', err);
-    }
-  }
-
-  // ── Alchemy fallback ──────────────────────────────────────────────────────
-  const [nativeBalStr, fromTxs, toTxs, nativePrice] = await Promise.all([
-    getEthBalance(address, chain).catch(() => '0'),
-    getAssetTransfers(address, chain, 'from', 100).catch(() => []),
-    getAssetTransfers(address, chain, 'to', 100).catch(() => []),
-    getTokenPrice(cfg.priceId).catch(() => cfg.fallbackPrice),
-  ]);
-
-  const nativeBalance = parseFloat(nativeBalStr);
-  const nativeValueUsd = nativeBalance * nativePrice;
-
-  let tokenDetails: Array<{
-    symbol: string; name: string; balance: number;
-    valueUsd: string | null; contractAddress: string; logoUrl: string | null;
-  }> = [];
-
-  try {
-    const rawBalances = await getTokenBalances(address, chain);
-    const nonZero = rawBalances.filter(b => b.tokenBalance && b.tokenBalance !== '0');
-
-    const metaResults = await Promise.allSettled(
-      nonZero.map(async b => {
-        try {
-          const meta = await getTokenMetadata(b.contractAddress, chain);
-          const decimals = meta.decimals ?? 18;
-          const balance = Number(BigInt(b.tokenBalance)) / Math.pow(10, decimals);
-          if (balance <= 0) return null;
-          return {
-            symbol: meta.symbol || 'UNKNOWN',
-            name: meta.name || 'Unknown Token',
-            balance,
-            valueUsd: null as string | null,
-            contractAddress: b.contractAddress,
-            logoUrl: meta.logo || KNOWN_TOKEN_LOGOS[(meta.symbol || '').toUpperCase()] || null,
-          };
-        } catch { return null; }
-      })
-    );
-    tokenDetails = metaResults
-      .filter((r): r is PromiseFulfilledResult<NonNullable<typeof tokenDetails[number]>> =>
-        r.status === 'fulfilled' && r.value !== null)
-      .map(r => r.value);
-  } catch {}
-
-  await Promise.allSettled(
-    tokenDetails
-      .filter(t => !t.logoUrl)
-      .map(async t => {
-        const logo = await resolveLogoFromDex(t.contractAddress);
-        if (logo) t.logoUrl = logo;
-      })
+  const txCount = intel.txCount;
+  const aiAnalysisContext = buildAiAnalysisContext(
+    address, intel.chainName, holdings, totalBalanceUsd ?? '0', txCount
   );
 
-  const allTxs = [...fromTxs, ...toTxs];
-  const seenHashes = new Set<string>();
-  const dedupedTxs = allTxs.filter(t => {
-    if (seenHashes.has(t.hash)) return false;
-    seenHashes.add(t.hash);
-    return true;
-  });
-
-  const recentTransactions = dedupedTxs
-    .sort((a, b) => (b.blockNum || '').localeCompare(a.blockNum || ''))
-    .slice(0, 30)
-    .map(t => ({
-      hash: t.hash, blockTime: null as string | null,
-      status: 'success', type: 'transfer',
-      asset: t.asset || cfg.nativeSymbol,
-      value: t.value, from: t.from, to: t.to,
-    }));
-
-  const holdings = [
-    {
-      symbol: cfg.nativeSymbol, name: cfg.chainName,
-      balance: nativeBalance.toFixed(4), valueUsd: nativeValueUsd.toFixed(2),
-      contractAddress: null, logoUrl: KNOWN_TOKEN_LOGOS[cfg.nativeSymbol] || null,
-    },
-    ...tokenDetails.map(t => ({
-      symbol: t.symbol, name: t.name,
-      balance: t.balance > 1000 ? t.balance.toFixed(0) : t.balance.toFixed(4),
-      valueUsd: t.valueUsd, contractAddress: t.contractAddress, logoUrl: t.logoUrl,
-    })),
-  ];
-
-  const txCount = dedupedTxs.length;
-  const aiAnalysisContext = buildAiAnalysisContext(address, cfg.chainName, holdings, nativeValueUsd.toFixed(2), txCount);
-
   return {
-    chain: cfg.chainName, address,
-    nativeBalance: nativeBalance.toFixed(4),
-    nativeValueUsd: nativeValueUsd.toFixed(2),
-    totalBalanceUsd: nativeValueUsd.toFixed(2),
-    txCount, holdings,
-    tokenCount: tokenDetails.length,
-    explorerUrl: cfg.explorerUrl,
+    chain: intel.chainName,
+    address,
+    nativeBalance: intel.nativeBalance.toFixed(4),
+    nativeValueUsd,
+    totalBalanceUsd,
+    txCount,
+    holdings,
+    tokenCount: holdings.filter(h => h.contractAddress).length,
+    explorerUrl: intel.explorerUrl,
     ...(cfg.nativeSymbol === 'ETH' ? {
-      ethBalance: nativeBalance.toFixed(4),
-      ethValueUsd: nativeValueUsd.toFixed(2),
+      ethBalance: intel.nativeBalance.toFixed(4),
+      ethValueUsd: nativeValueUsd,
     } : {}),
-    aiAnalysisContext, recentTransactions,
-    dataSource: 'alchemy',
+    aiAnalysisContext,
+    recentTransactions,
+    dataSource: intel.dataSource,
   };
 }
 
@@ -297,7 +141,7 @@ async function getSolData(address: string) {
     symbol: t.symbol,
     name: t.name,
     balance: t.balance,
-    valueUsd: t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
+    valueUsd: t.valueUSD !== null && t.valueUSD > 0 ? t.valueUSD.toFixed(2) : null,
     contractAddress: t.mintAddress === 'So11111111111111111111111111111111111111112'
       ? null
       : t.mintAddress,
@@ -325,7 +169,7 @@ async function getSolData(address: string) {
     chain: 'Solana',
     address,
     solBalance: intel.solBalance.toFixed(4),
-    solValueUsd: intel.solValueUSD.toFixed(2),
+    solValueUsd: intel.solValueUSD !== null ? intel.solValueUSD.toFixed(2) : null,
     totalBalanceUsd: totalBalanceUsd.toFixed(2),
     txCount: intel.metadata.txCount,
     firstSeen: intel.metadata.firstSeen,

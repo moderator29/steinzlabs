@@ -1,5 +1,5 @@
 import 'server-only';
-import { Alchemy, Network, TokenMetadataResponse, AssetTransfersCategory } from 'alchemy-sdk';
+import { Alchemy, Network, TokenMetadataResponse, AssetTransfersCategory, TokenBalanceType } from 'alchemy-sdk';
 import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
 
 /**
@@ -102,11 +102,24 @@ export async function getTokenBalances(
   const key = cacheKey('alchemy', 'balances', { walletAddress: walletAddress.toLowerCase(), chain });
   return withCache(key, TTL.WALLET_BALANCE, async () => {
     const alchemy = getAlchemy(chain);
-    const result = await alchemy.core.getTokenBalances(walletAddress);
-    return result.tokenBalances.map(b => ({
-      contractAddress: b.contractAddress,
-      tokenBalance: b.tokenBalance ?? '0',
-    }));
+    const allBalances: TokenBalance[] = [];
+    let pageKey: string | undefined;
+
+    // Paginate through ALL token balances (Alchemy returns ~100 per page)
+    do {
+      const result = pageKey
+        ? await alchemy.core.getTokenBalances(walletAddress, { type: TokenBalanceType.ERC20, pageKey })
+        : await alchemy.core.getTokenBalances(walletAddress);
+
+      allBalances.push(...result.tokenBalances.map(b => ({
+        contractAddress: b.contractAddress,
+        tokenBalance: b.tokenBalance ?? '0',
+      })));
+
+      pageKey = (result as unknown as { pageKey?: string }).pageKey;
+    } while (pageKey);
+
+    return allBalances;
   });
 }
 

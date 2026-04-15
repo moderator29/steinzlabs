@@ -70,7 +70,7 @@ export interface ContractSecurity {
 }
 
 export interface ContractMarket {
-  priceUSD: number;
+  priceUSD: number | null;
   priceChange24h: number;
   liquidity: number;
   volume24h: number;
@@ -153,9 +153,11 @@ async function buildEvmContractIntelligence(
   const symbol = bestPair?.baseToken?.symbol || tokenInfo?.symbol || '';
   const decimals = tokenInfo?.decimals ?? 18;
 
-  // STEP 5: Market data — DexScreener primary, Birdeye fallback
+  // STEP 5: Market data — DexScreener primary > Birdeye secondary > null (never $0)
+  const dexPriceEvm = bestPair ? parseFloat(bestPair.priceUsd || '0') : 0;
+  const birdPriceEvm = birdeye?.price ?? 0;
   const market: ContractMarket = {
-    priceUSD: bestPair ? parseFloat(bestPair.priceUsd || '0') : (birdeye?.price ?? 0),
+    priceUSD: dexPriceEvm > 0 ? dexPriceEvm : birdPriceEvm > 0 ? birdPriceEvm : null,
     priceChange24h: bestPair?.priceChange?.h24 ?? birdeye?.priceChange24hPercent ?? 0,
     liquidity: bestPair?.liquidity?.usd ?? birdeye?.liquidity ?? 0,
     volume24h: bestPair?.volume?.h24 ?? birdeye?.volume24h ?? 0,
@@ -198,7 +200,7 @@ async function buildEvmContractIntelligence(
     const intelResults = await Promise.allSettled(top10.map(addr => getAddressIntel(addr)));
     top10.forEach((addr, i) => {
       const r = intelResults[i];
-      if (r.status === 'fulfilled') {
+      if (r.status === 'fulfilled' && r.value) {
         const intel = r.value;
         arkhamIntelMap.set(addr.toLowerCase(), {
           entityName: intel.arkhamEntity?.name ?? null,
@@ -294,8 +296,11 @@ async function buildSolContractIntelligence(
   const symbol = bestPair?.baseToken?.symbol || birdeye?.symbol || solanaMeta?.symbol || '';
   const decimals = birdeye?.decimals || solanaMeta?.decimals || 0;
 
+  // Price: DexScreener primary > Birdeye secondary > null (never $0)
+  const dexPriceSol = bestPair ? parseFloat(bestPair.priceUsd || '0') : 0;
+  const birdPriceSol = birdeye?.price ?? 0;
   const market: ContractMarket = {
-    priceUSD: bestPair ? parseFloat(bestPair.priceUsd || '0') : (birdeye?.price ?? 0),
+    priceUSD: dexPriceSol > 0 ? dexPriceSol : birdPriceSol > 0 ? birdPriceSol : null,
     priceChange24h: bestPair?.priceChange?.h24 ?? birdeye?.priceChange24hPercent ?? 0,
     liquidity: bestPair?.liquidity?.usd ?? birdeye?.liquidity ?? 0,
     volume24h: bestPair?.volume?.h24 ?? birdeye?.volume24h ?? 0,

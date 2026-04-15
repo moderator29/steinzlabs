@@ -46,8 +46,8 @@ export interface SolanaEnrichedToken {
   balance: string;       // display string
   rawAmount: number;     // uiAmount
   decimals: number;
-  priceUSD: number;
-  valueUSD: number;
+  priceUSD: number | null;
+  valueUSD: number | null;
   logoURI: string | null;
   liquidity: number;
   volume24h: number;
@@ -76,7 +76,7 @@ export interface SolanaWalletIntelligence {
   address: string;
   chain: 'solana';
   solBalance: number;
-  solValueUSD: number;
+  solValueUSD: number | null;
   totalBalanceUSD: number;
   tokens: SolanaEnrichedToken[];
   transactions: SolanaWalletTx[];
@@ -239,12 +239,12 @@ async function enrichTokensBatch(
       KNOWN_LOGOS[mint] ||
       null;
 
-    // Price: Birdeye primary (multi-price batch) > DexScreener fallback > 0
-    const priceUSD =
-      birdeyePrice?.value ||
-      (dexPair ? parseFloat(dexPair.priceUsd || '0') : 0);
+    // Price: DexScreener primary (free) > Birdeye secondary > null (never $0)
+    const dexPrice = dexPair ? parseFloat(dexPair.priceUsd || '0') : 0;
+    const birdPrice = birdeyePrice?.value ?? 0;
+    const priceUSD: number | null = dexPrice > 0 ? dexPrice : birdPrice > 0 ? birdPrice : null;
 
-    const valueUSD = raw.uiAmount * priceUSD;
+    const valueUSD: number | null = priceUSD !== null ? raw.uiAmount * priceUSD : null;
 
     // Show all tokens regardless of USD value — user expects to see everything
     const liquidity = dexPair?.liquidity?.usd ?? 0;
@@ -275,7 +275,7 @@ async function enrichTokensBatch(
     });
   }
 
-  return enriched.sort((a, b) => b.valueUSD - a.valueUSD);
+  return enriched.sort((a, b) => (b.valueUSD ?? 0) - (a.valueUSD ?? 0));
 }
 
 // ─── Main Pipeline ────────────────────────────────────────────────────────────
@@ -292,8 +292,11 @@ export async function buildSolanaWalletIntelligence(
     getSolanaSOLBalance(address),
     getSolanaWalletTokens(address),
     getSolanaTransactions(address, 1000),
-    getTokenPrice('solana').catch(() => 170),
-    getSolanaAssetsByOwner(address).catch(() => ({ items: [] })),
+    getTokenPrice('solana').catch(() => null as number | null),
+    getSolanaAssetsByOwner(address).catch((err) => {
+      console.error('[solana-intelligence] DAS getAssetsByOwner failed:', err?.message ?? err);
+      return { items: [] };
+    }),
   ]);
 
   // Merge getAssetsByOwner fungible tokens with getTokenAccountsByOwner
@@ -314,7 +317,7 @@ export async function buildSolanaWalletIntelligence(
     }
   }
 
-  const solValueUSD = solBalance * solPrice;
+  const solValueUSD: number | null = solPrice !== null ? solBalance * solPrice : null;
 
   // ── STEP 2: Filter zero-balance tokens ────────────────────────────────────
   const nonZeroTokens = rawTokens.filter(
@@ -349,7 +352,7 @@ export async function buildSolanaWalletIntelligence(
     balance: solBalance.toFixed(4),
     rawAmount: solBalance,
     decimals: 9,
-    priceUSD: solPrice,
+    priceUSD: solPrice ?? null,
     valueUSD: solValueUSD,
     logoURI: KNOWN_LOGOS['So11111111111111111111111111111111111111112'],
     liquidity: 0,
@@ -362,17 +365,17 @@ export async function buildSolanaWalletIntelligence(
 
   // ── STEP 6: Totals and derived stats ─────────────────────────────────────
   const allTokens = [solEntry, ...enrichedTokens];
-  const totalBalanceUSD = allTokens.reduce((s, t) => s + t.valueUSD, 0);
-  const activeTokens = allTokens.filter(t => t.valueUSD >= 1).length;
+  const totalBalanceUSD = allTokens.reduce((s, t) => s + (t.valueUSD ?? 0), 0);
+  const activeTokens = allTokens.filter(t => (t.valueUSD ?? 0) >= 1).length;
 
   // Token distribution (top 10 for display)
   const tokenDistribution = allTokens
-    .filter(t => t.valueUSD > 0)
+    .filter(t => (t.valueUSD ?? 0) > 0)
     .slice(0, 10)
     .map(t => ({
       symbol: t.symbol,
-      valueUSD: t.valueUSD,
-      percentage: totalBalanceUSD > 0 ? Math.round((t.valueUSD / totalBalanceUSD) * 10000) / 100 : 0,
+      valueUSD: t.valueUSD ?? 0,
+      percentage: totalBalanceUSD > 0 ? Math.round(((t.valueUSD ?? 0) / totalBalanceUSD) * 10000) / 100 : 0,
     }));
 
   // Transaction stats
@@ -400,16 +403,16 @@ export async function buildSolanaWalletIntelligence(
   // Cluster hints
   const topToken = allTokens[0];
   const topTokenPercent = totalBalanceUSD > 0 && topToken
-    ? (topToken.valueUSD / totalBalanceUSD) * 100
+    ? ((topToken.valueUSD ?? 0) / totalBalanceUSD) * 100
     : 0;
   const blueChipValue = allTokens
     .filter(t => BLUE_CHIP_MINTS.has(t.mintAddress))
-    .reduce((s, t) => s + t.valueUSD, 0);
+    .reduce((s, t) => s + (t.valueUSD ?? 0), 0);
   const memeTokenPercent = totalBalanceUSD > 0
     ? Math.max(0, 100 - (blueChipValue / totalBalanceUSD) * 100)
     : 0;
   const hhi = allTokens.reduce((sum, t) => {
-    const share = totalBalanceUSD > 0 ? t.valueUSD / totalBalanceUSD : 0;
+    const share = totalBalanceUSD > 0 ? (t.valueUSD ?? 0) / totalBalanceUSD : 0;
     return sum + share * share;
   }, 0);
   const concentrationScore = Math.round(hhi * 100); // 0-100, higher = more concentrated

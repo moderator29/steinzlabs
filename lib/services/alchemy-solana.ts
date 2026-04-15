@@ -98,23 +98,53 @@ export async function getSolanaWalletTokens(walletAddress: string): Promise<Sola
   const key = cacheKey('solana', 'wallet_tokens', { walletAddress });
   return withCache(key, TTL.WALLET_BALANCE, async () => {
     try {
-      const result = await solanaRpc('getTokenAccountsByOwner', [
-        walletAddress,
-        { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
-        { encoding: 'jsonParsed' },
-      ]) as { value: unknown[] };
+      const SPL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+      const TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 
-      return (result?.value ?? []).map((acc: unknown) => {
-        const parsed = (acc as Record<string, unknown>).account as Record<string, unknown>;
-        const info = ((parsed?.data as Record<string, unknown>)?.parsed as Record<string, unknown>)?.info as Record<string, unknown>;
-        const tokenAmount = info?.tokenAmount as Record<string, unknown>;
-        return {
-          mint: info?.mint as string ?? '',
-          amount: tokenAmount?.amount as number ?? 0,
-          decimals: tokenAmount?.decimals as number ?? 0,
-          uiAmount: tokenAmount?.uiAmount as number ?? 0,
-        };
-      }).filter(b => b.uiAmount > 0);
+      // Fetch from BOTH SPL Token and Token-2022 programs in parallel
+      const [splResult, token2022Result] = await Promise.all([
+        solanaRpc('getTokenAccountsByOwner', [
+          walletAddress,
+          { programId: SPL_TOKEN_PROGRAM },
+          { encoding: 'jsonParsed' },
+        ]).catch((err) => {
+          console.error('[alchemy-solana] SPL token fetch failed:', err?.message ?? err);
+          return { value: [] };
+        }),
+        solanaRpc('getTokenAccountsByOwner', [
+          walletAddress,
+          { programId: TOKEN_2022_PROGRAM },
+          { encoding: 'jsonParsed' },
+        ]).catch((err) => {
+          console.error('[alchemy-solana] Token-2022 fetch failed:', err?.message ?? err);
+          return { value: [] };
+        }),
+      ]);
+
+      const allAccounts = [
+        ...((splResult as { value: unknown[] })?.value ?? []),
+        ...((token2022Result as { value: unknown[] })?.value ?? []),
+      ];
+
+      // Deduplicate by mint address
+      const seen = new Set<string>();
+      return allAccounts
+        .map((acc: unknown) => {
+          const parsed = (acc as Record<string, unknown>).account as Record<string, unknown>;
+          const info = ((parsed?.data as Record<string, unknown>)?.parsed as Record<string, unknown>)?.info as Record<string, unknown>;
+          const tokenAmount = info?.tokenAmount as Record<string, unknown>;
+          return {
+            mint: info?.mint as string ?? '',
+            amount: tokenAmount?.amount as number ?? 0,
+            decimals: tokenAmount?.decimals as number ?? 0,
+            uiAmount: tokenAmount?.uiAmount as number ?? 0,
+          };
+        })
+        .filter(b => {
+          if (b.uiAmount <= 0 || !b.mint || seen.has(b.mint)) return false;
+          seen.add(b.mint);
+          return true;
+        });
     } catch {
       return [];
     }
