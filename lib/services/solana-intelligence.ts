@@ -5,6 +5,7 @@ import {
   getSolanaWalletTokens,
   getSolanaTransactions,
   getSolanaTokenMetaBatch,
+  getSolanaAssetsByOwner,
   type SolanaTransaction,
 } from './alchemy-solana';
 import { getMultiTokenPrices, getBirdeyeTokenOverview } from './birdeye';
@@ -245,9 +246,7 @@ async function enrichTokensBatch(
 
     const valueUSD = raw.uiAmount * priceUSD;
 
-    // Skip dust (< $0.50 value) — unless it's a blue chip we just haven't priced
-    if (valueUSD < 0.5 && !BLUE_CHIP_MINTS.has(mint)) continue;
-
+    // Show all tokens regardless of USD value — user expects to see everything
     const liquidity = dexPair?.liquidity?.usd ?? 0;
     const volume24h = dexPair?.volume?.h24 ?? 0;
     const marketCap = dexPair?.fdv ?? 0;
@@ -288,13 +287,32 @@ export async function buildSolanaWalletIntelligence(
   const cached = cache.get<SolanaWalletIntelligence>(cacheKey);
   if (cached) return cached;
 
-  // ── STEP 1: Helius — authoritative wallet data in parallel ────────────────
-  const [solBalance, rawTokens, rawTxns, solPrice] = await Promise.all([
+  // ── STEP 1: Alchemy Solana — authoritative wallet data in parallel ────────
+  const [solBalance, rawTokens, rawTxns, solPrice, assetsByOwner] = await Promise.all([
     getSolanaSOLBalance(address),
     getSolanaWalletTokens(address),
-    getSolanaTransactions(address, 25),
+    getSolanaTransactions(address, 1000),
     getTokenPrice('solana').catch(() => 170),
+    getSolanaAssetsByOwner(address).catch(() => ({ items: [] })),
   ]);
+
+  // Merge getAssetsByOwner fungible tokens with getTokenAccountsByOwner
+  const assetItems = ((assetsByOwner as Record<string, unknown>)?.items as unknown[]) ?? [];
+  const existingMints = new Set(rawTokens.map(t => t.mint));
+  for (const item of assetItems) {
+    const r = item as Record<string, unknown>;
+    if (r.interface !== 'FungibleToken' && r.interface !== 'FungibleAsset') continue;
+    const id = r.id as string;
+    if (!id || existingMints.has(id)) continue;
+    const tokenInfo = r.token_info as Record<string, unknown> | undefined;
+    const balance = (tokenInfo?.balance as number) ?? 0;
+    const decimals = (tokenInfo?.decimals as number) ?? 0;
+    const uiAmount = decimals > 0 ? balance / Math.pow(10, decimals) : balance;
+    if (uiAmount > 0) {
+      rawTokens.push({ mint: id, amount: balance, decimals, uiAmount });
+      existingMints.add(id);
+    }
+  }
 
   const solValueUSD = solBalance * solPrice;
 
