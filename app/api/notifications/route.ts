@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     }
     const now = new Date().toISOString();
     const notification: NotificationItem = {
-      id: `user-${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `user-${type}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       type, title, message, time: 'Just now', read: false, createdAt: now, metadata: metadata || {},
     };
     let supabaseId: string | null = null;
