@@ -1,8 +1,20 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { getTopTraders } from '@/lib/services/birdeye';
+import { getTokenPrice } from '@/lib/services/coingecko';
 import { getExplorerUrl } from '@/lib/chain-explorer';
 export { getExplorerUrl };
+
+// Cache ETH price for 60s to avoid repeated CoinGecko calls within a single request cycle
+let ethPriceCache: { price: number; ts: number } = { price: 0, ts: 0 };
+async function getEthUsdPrice(): Promise<number> {
+  if (Date.now() - ethPriceCache.ts < 60_000 && ethPriceCache.price > 0) return ethPriceCache.price;
+  try {
+    const price = await getTokenPrice('ethereum');
+    if (price > 0) { ethPriceCache = { price, ts: Date.now() }; return price; }
+  } catch {}
+  return ethPriceCache.price > 0 ? ethPriceCache.price : 2500; // last-resort fallback
+}
 
 export type WhaleTier = 'MEGA' | 'LARGE' | 'MID' | 'SMALL';
 
@@ -244,8 +256,7 @@ async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
 
     const transfers = txData.result?.transfers ?? [];
 
-    // ETH price estimate (rough — no live price needed for scoring)
-    const ETH_USD = 3000;
+    const ETH_USD = await getEthUsdPrice();
 
     const addrMap = new Map<string, EvmAddrData>();
 
@@ -422,7 +433,7 @@ async function getLiveFeedEvents(): Promise<WhaleFeedEvent[]> {
         };
       };
 
-      const ETH_USD = 3000;
+      const ETH_USD = await getEthUsdPrice();
 
       for (const tx of (txData.result?.transfers ?? [])) {
         const usdVal = (tx.value ?? 0) * (tx.asset === 'ETH' || tx.asset === 'WETH' ? ETH_USD : 1);
