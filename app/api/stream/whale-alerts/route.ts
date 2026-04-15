@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
         }));
 
         if (alerts.length > 0) {
-          send('whale_alert', { alerts, ts: Date.now() });
+          send('whale-alert', { alerts, ts: Date.now() });
         }
       };
 
