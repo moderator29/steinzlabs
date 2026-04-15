@@ -873,6 +873,33 @@ export async function POST(request: NextRequest) {
     // ── Usage Info ──────────────────────────────────────────────────────────
     const currentUsage = isPro ? null : getRateLimitInfo(ip);
 
+    // ── Build token card if a specific token was discussed ─────────────────
+    let tokenCard: Record<string, unknown> | null = null;
+    if (tokenDetected || chartPayload?.address) {
+      try {
+        const tokenAddr = tokenDetected || chartPayload?.address || '';
+        const pairs = await searchPairs(tokenAddr);
+        if (pairs.length > 0) {
+          const p = pairs[0];
+          tokenCard = {
+            symbol: p.baseToken.symbol,
+            name: p.baseToken.name,
+            address: p.baseToken.address,
+            chain: p.chainId,
+            price: parseFloat(p.priceUsd || '0'),
+            change24h: p.priceChange?.h24 ?? 0,
+            volume24h: p.volume?.h24 ?? 0,
+            marketCap: p.marketCap ?? p.fdv ?? 0,
+            liquidity: p.liquidity?.usd ?? 0,
+            fdv: p.fdv ?? 0,
+            pairAddress: p.pairAddress,
+            dexId: p.dexId,
+            logo: p.info?.imageUrl || null,
+          };
+        }
+      } catch {}
+    }
+
     return NextResponse.json({
       reply: finalReply,
       tier: isPro ? 'pro' : 'free',
@@ -885,6 +912,7 @@ export async function POST(request: NextRequest) {
       },
       chart: chartPayload,
       chartType: finalChartType,
+      tokenCard,
       ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address } : {}),
     });
   } catch (err) {
