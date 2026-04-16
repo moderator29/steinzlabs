@@ -18,10 +18,10 @@ export interface FeeCalculation {
 }
 
 const FEE_CONFIG: FeeConfiguration = {
-  swapFeeBps: 50,
+  swapFeeBps: 40,
   copyTradeFeeBps: 100,
-  limitOrderFeeBps: 50,
-  dcaFeeBps: 50,
+  limitOrderFeeBps: 40,
+  dcaFeeBps: 40,
   treasuryWalletEvm: process.env.TREASURY_WALLET_EVM || '0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4',
   treasuryWalletSolana: process.env.TREASURY_WALLET_SOLANA || 'Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy',
 };

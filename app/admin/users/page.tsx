@@ -65,23 +65,20 @@ function UserDrawer({ user, onClose, onBan }: { user: AdminUser; onClose: () => 
   );
 }
 
-const MOCK_USERS: AdminUser[] = Array.from({ length: 20 }, (_, i) => ({
-  id: `usr_${i.toString().padStart(4, '0')}`,
-  email: `user${i}@example.com`,
-  username: `user${i}`,
-  first_name: ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Hank', 'Iris', 'Jack'][i % 10],
-  last_name: ['Smith', 'Jones', 'Lee', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas'][i % 10],
-  created_at: new Date(Date.now() - i * 86400_000 * 3).toISOString(),
-  is_banned: i === 5,
-  subscription: i % 3 === 0 ? 'Pro' : 'Free',
-  last_active: new Date(Date.now() - i * 3600_000).toISOString(),
-}));
-
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>(MOCK_USERS);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('admin_token') ?? '';
+    fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { users: [] })
+      .then(data => setUsers(data.users ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = users.filter(u =>
     [u.email, u.username, u.first_name, u.last_name].some(f => f.toLowerCase().includes(query.toLowerCase()))

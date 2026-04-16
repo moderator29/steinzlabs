@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const safeName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
   try {
     const supabase = getSupabaseAdmin();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Crosshair, AlertTriangle, Power, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { formatUSD, formatTimeAgo } from '@/lib/formatters';
@@ -32,6 +32,41 @@ const STATUS_COLOR: Record<string, string> = {
 export default function SniperOversightPage() {
   const [jobs, setJobs] = useState(MOCK_JOBS);
   const [killSwitch, setKillSwitch] = useState(false);
+  const [killSwitchLoading, setKillSwitchLoading] = useState(false);
+
+  // Load kill switch state from Supabase platform_settings on mount
+  useEffect(() => {
+    const token = sessionStorage.getItem('admin_token') ?? '';
+    fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.flags) {
+          const sniperFlag = data.flags.find?.((f: { key: string; enabled: boolean }) => f.key === 'sniper_enabled');
+          if (sniperFlag !== undefined) {
+            // killSwitch = true means sniper is DISABLED
+            setKillSwitch(sniperFlag.enabled === false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleKillSwitch = useCallback(async () => {
+    setKillSwitchLoading(true);
+    const newValue = !killSwitch;
+    try {
+      const token = sessionStorage.getItem('admin_token') ?? '';
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ flags: { sniper_enabled: !newValue } }),
+      });
+      setKillSwitch(newValue);
+    } catch (err) {
+      console.error('[Sniper] Kill switch toggle failed:', err);
+    }
+    setKillSwitchLoading(false);
+  }, [killSwitch]);
 
   const toggleJob = (id: string) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: j.status === 'active' ? 'paused' : 'active' } : j));
@@ -53,10 +88,11 @@ export default function SniperOversightPage() {
             </span>
           )}
           <button
-            onClick={() => setKillSwitch(prev => !prev)}
-            className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all ${killSwitch ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white'}`}>
+            onClick={toggleKillSwitch}
+            disabled={killSwitchLoading}
+            className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all disabled:opacity-50 ${killSwitch ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white'}`}>
             <Power className="w-4 h-4" />
-            {killSwitch ? 'Resume All' : 'Kill Switch'}
+            {killSwitchLoading ? 'Saving...' : killSwitch ? 'Resume All' : 'Kill Switch'}
           </button>
         </div>
       </div>

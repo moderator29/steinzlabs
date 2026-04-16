@@ -76,7 +76,9 @@ export default function NotificationBell() {
     // Merge with API notifications
     try {
       setApiLoading(true);
-      const res = await fetch('/api/notifications');
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('steinz_user_id') || '' : '';
+      const params = userId ? `?userId=${userId}` : '';
+      const res = await fetch(`/api/notifications${params}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.notifications)) {

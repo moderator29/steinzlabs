@@ -33,6 +33,22 @@ export async function POST(req: NextRequest) {
   const { address, chain, amount, userId, slippage } = parsed.data;
   const steps: { step: number; label: string; passed: boolean; detail: string }[] = [];
 
+  // ── Step 0: Check kill switch from platform_settings ────────────────────
+  try {
+    const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin');
+    const db = getSupabaseAdmin();
+    const { data: setting } = await db.from('platform_settings').select('enabled').eq('key', 'sniper_enabled').single();
+    if (setting && setting.enabled === false) {
+      return NextResponse.json({ blocked: true, reason: 'Sniper bot is currently disabled by admin.', steps });
+    }
+  } catch {}
+
+  // ── Step 0b: Budget cap per snipe ($500 max) ───────────────────────────
+  const MAX_SNIPE_AMOUNT = 500;
+  if (amount > MAX_SNIPE_AMOUNT) {
+    return NextResponse.json({ blocked: true, reason: `Maximum snipe amount is $${MAX_SNIPE_AMOUNT}. You requested $${amount}.`, steps });
+  }
+
   // ── Step 1: GoPlus security ───────────────────────────────────────────────
   let sec;
   try {
