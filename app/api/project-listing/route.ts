@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Token name, symbol, contract address, chain, and email are required' }, { status: 400 });
     }
 
-    const id = Math.random().toString(36).slice(2, 10);
+    const id = crypto.randomUUID().slice(0, 10);
     const listing: TokenListing = {
       id,
       tokenName,

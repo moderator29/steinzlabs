@@ -25,7 +25,7 @@ STEINZ LABS is a full-stack on-chain intelligence operating system that gives tr
 - **Risk Scanner** — Portfolio-level risk scoring with exposure breakdown by chain, sector, and concentration.
 
 ### Trading
-- **Multi-Chain Swap** — Trade across 12+ chains inside the intelligence layer. Safety check runs before every swap. Best price routing via Jupiter (Solana) and 1inch (EVM).
+- **Multi-Chain Swap** — Trade across 12+ chains inside the intelligence layer. Safety check runs before every swap. Best price routing via Jupiter (Solana) and 0x Protocol (EVM).
 - **Copy Trading** — One-click wallet mirroring with configurable size limits and token filters.
 - **Sniper** — Automated entry on new token launches with configurable trust score gates.
 - **Trading Suite** — Advanced order types, position tracking, and cross-chain P&L dashboard.
@@ -63,11 +63,11 @@ STEINZ LABS is a full-stack on-chain intelligence operating system that gives tr
 | Forms | React Hook Form + Zod |
 | Email | Resend |
 | EVM Data | Alchemy SDK, Ethers.js |
-| Solana Data | Helius, @solana/web3.js |
+| Solana Data | Alchemy Solana RPC, @solana/web3.js |
 | Market Data | CoinGecko API, DexScreener API |
 | On-chain Intel | Arkham Intelligence API |
 | Token Security | GoPlus Labs |
-| EVM Trading | 1inch Router |
+| EVM Trading | 0x Protocol (Swap + Gasless) |
 | Solana Trading | Jupiter Aggregator |
 | AI Engine | VTX Intelligence Engine |
 | Bot Protection | Cloudflare Turnstile |
@@ -94,8 +94,7 @@ NEXT_PUBLIC_BASE_URL=
 ALCHEMY_API_KEY=
 NEXT_PUBLIC_ALCHEMY_API_KEY=
 NEXT_PUBLIC_ALCHEMY_RPC=
-HELIUS_API_KEY=
-HELIUS_KEY_1=
+NEXT_PUBLIC_ALCHEMY_SOLANA_RPC=
 SOLANA_RPC_URL=
 
 # Market & Intelligence Data

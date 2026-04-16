@@ -59,6 +59,24 @@ function getTokenInfo(symbol: string): TokenInfo {
   return TOKEN_LIST.find(t => t.symbol === symbol) || { symbol, name: symbol, color: '#6B7280', decimals: 18 };
 }
 
+const NATIVE_TOKEN_0X = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
+  USDC: { ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', arbitrum: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', polygon: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
+  USDT: { ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7', bsc: '0x55d398326f99059fF775485246999027B3197955', arbitrum: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', polygon: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' },
+  WBTC: { ethereum: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', arbitrum: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f' },
+  LINK: { ethereum: '0x514910771AF9Ca656af840dff83E8264EcF986CA' },
+  UNI: { ethereum: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984' },
+  AAVE: { ethereum: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9' },
+  DAI: { ethereum: '0x6B175474E89094C44Da98b954EedeAC495271d0F' },
+};
+
+function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: string): { sellToken: string; buyToken: string } {
+  const nativeTokens = ['ETH', 'MATIC', 'BNB', 'AVAX', 'SOL'];
+  const sellToken = nativeTokens.includes(sellSymbol) ? NATIVE_TOKEN_0X : (TOKEN_ADDRESSES[sellSymbol]?.[chainId] || sellSymbol);
+  const buyToken = nativeTokens.includes(buySymbol) ? NATIVE_TOKEN_0X : (TOKEN_ADDRESSES[buySymbol]?.[chainId] || buySymbol);
+  return { sellToken, buyToken };
+}
+
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   const token = getTokenInfo(symbol);
   const [imgError, setImgError] = useState(false);
@@ -325,16 +343,29 @@ export default function SwapPage() {
 
   useEffect(() => {
     const symbol = searchParams.get('symbol');
+    const buyToken = searchParams.get('buyToken');
+    const sellToken = searchParams.get('sellToken');
     const chainParam = searchParams.get('chain');
     if (chainParam) {
       setChain(chainParam);
       const c = CHAINS.find(ch => ch.id === chainParam);
-      if (c) setFromToken(c.symbol);
+      if (c && !sellToken) setFromToken(c.symbol);
     }
-    if (symbol) {
+    if (sellToken) {
+      const upper = sellToken.toUpperCase();
+      if (upper === 'NATIVE') {
+        const c = CHAINS.find(ch => ch.id === (chainParam || chain));
+        if (c) setFromToken(c.symbol);
+      } else {
+        setFromToken(upper);
+      }
+    }
+    if (buyToken) {
+      setToToken(buyToken.toUpperCase());
+    } else if (symbol) {
       setToToken(symbol.toUpperCase());
     }
-  }, [searchParams]);
+  }, [searchParams, chain]);
 
   const activeChain = CHAINS.find(c => c.id === chain) || CHAINS[0];
   const [gaslessEnabled, setGaslessEnabled] = useState(true);
@@ -354,17 +385,38 @@ export default function SwapPage() {
     if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
     quoteTimeout.current = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ from: f, to: t, amount, chain: c, slippage });
-        const res = await fetch(`/api/swap?${params}`);
+        const tokenAddresses = getTokenAddresses(f, t, c);
+        const decimals = getTokenInfo(f).decimals;
+        const rawAmount = BigInt(Math.round(parseFloat(amount) * (10 ** decimals))).toString();
+        const params = new URLSearchParams({
+          chain: c,
+          sellToken: tokenAddresses.sellToken,
+          buyToken: tokenAddresses.buyToken,
+          sellAmount: rawAmount,
+        });
+        if (connectedAddress) params.set('taker', connectedAddress);
+        const res = await fetch(`/api/swap/price?${params}`);
         const data = await res.json();
-        if (res.ok) {
-          setToAmount(data.toAmount.toString());
-          setQuoteData(data);
+        if (res.ok && data.buyAmount) {
+          const buyDecimals = getTokenInfo(t).decimals;
+          const toAmt = Number(BigInt(data.buyAmount)) / (10 ** buyDecimals);
+          setToAmount(toAmt.toFixed(6));
+          setQuoteData({
+            ...data,
+            toAmount: toAmt,
+            fromAmountUsd: null,
+            toAmountUsd: null,
+            priceImpact: data.estimatedPriceImpact || '0.01',
+            gasEstimateUsd: data.gas ? Number(data.gas) * 30 / 1e9 : 2.4,
+            minReceived: (toAmt * (1 - parseFloat(slippage) / 100)).toFixed(6),
+          });
         }
-      } catch {}
+      } catch (err) {
+        console.error('[Swap] Price fetch failed:', err);
+      }
       setFetchingQuote(false);
     }, 400);
-  }, [fromToken, toToken, chain, slippage]);
+  }, [fromToken, toToken, chain, slippage, connectedAddress]);
 
   const handleFromAmountChange = (val: string) => {
     setFromAmount(val);
@@ -402,72 +454,190 @@ export default function SwapPage() {
     setSwapping(true);
     setTxStatus('pending');
     try {
-      // Step 1: Get swap transaction data from API
-      const params = new URLSearchParams({ from: fromToken, to: toToken, amount: fromAmount, chain, slippage, execute: 'true' });
-      const res = await fetch(`/api/swap?${params}`);
+      if (!connectedAddress) throw new Error('Please connect a wallet to execute swaps.');
+
+      // Step 1: Get firm swap quote from 0x API
+      const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
+      const decimals = getTokenInfo(fromToken).decimals;
+      const rawAmount = BigInt(Math.round(parseFloat(fromAmount) * (10 ** decimals))).toString();
+      const quoteParams = new URLSearchParams({
+        chain,
+        sellToken: tokenAddresses.sellToken,
+        buyToken: tokenAddresses.buyToken,
+        sellAmount: rawAmount,
+        taker: connectedAddress,
+      });
+      const useGasless = gaslessEnabled && isGaslessAvailable;
+      const quoteEndpoint = useGasless ? '/api/gasless/quote' : '/api/swap/quote';
+      const res = await fetch(`${quoteEndpoint}?${quoteParams}`);
       const swapData = await res.json();
 
-      if (!res.ok) throw new Error(swapData.error || 'Failed to get swap data');
+      if (!res.ok) throw new Error(swapData.error || 'Failed to get swap quote');
 
       let hash = '';
 
-      // Step 2: Send transaction to wallet
+      // Step 2: Send transaction via connected wallet
       const win = typeof window !== 'undefined' ? (window as any) : null;
-      if (swapData.txData && win?.ethereum && detectedWallet === 'ethereum') {
-        // EVM wallet (MetaMask etc)
+
+      if (useGasless && swapData.trade) {
+        // Gasless flow: EIP-712 signature + submit
+        if (!win?.ethereum) throw new Error('Gasless swaps require MetaMask or compatible EVM wallet.');
         const accounts: string[] = await win.ethereum.request({ method: 'eth_accounts' });
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
-        const txParams = { from: accounts[0], ...swapData.txData };
+        // Sign the trade typed data
+        const tradeSignature = await win.ethereum.request({
+          method: 'eth_signTypedData_v4',
+          params: [accounts[0], JSON.stringify(swapData.trade)],
+        });
+        // Sign approval if needed
+        let approvalSignature: string | undefined;
+        if (swapData.approval) {
+          approvalSignature = await win.ethereum.request({
+            method: 'eth_signTypedData_v4',
+            params: [accounts[0], JSON.stringify(swapData.approval)],
+          });
+        }
+        // Submit to 0x gasless endpoint
+        const submitRes = await fetch('/api/gasless/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trade: swapData.trade,
+            tradeSignature,
+            ...(approvalSignature ? { approval: swapData.approval, approvalSignature } : {}),
+          }),
+        });
+        const submitData = await submitRes.json();
+        if (!submitRes.ok) throw new Error(submitData.error || 'Gasless submission failed');
+        // Poll for status
+        const tradeHash = submitData.tradeHash;
+        let attempts = 0;
+        while (attempts < 30) {
+          await new Promise(r => setTimeout(r, 2000));
+          const statusRes = await fetch(`/api/gasless/status?tradeHash=${tradeHash}`);
+          const statusData = await statusRes.json();
+          if (statusData.status === 'confirmed' && statusData.txHash) { hash = statusData.txHash; break; }
+          if (statusData.status === 'failed') throw new Error('Gasless transaction failed on-chain');
+          attempts++;
+        }
+        if (!hash) throw new Error('Gasless transaction timed out. Check your wallet for status.');
+      } else if (swapData.transaction && win?.ethereum && detectedWallet === 'ethereum') {
+        // EVM wallet (MetaMask etc) — standard swap
+        const accounts: string[] = await win.ethereum.request({ method: 'eth_accounts' });
+        if (!accounts.length) throw new Error('No Ethereum wallet connected');
+        const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
         hash = await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
-      } else if (swapData.txData && win?.solana && detectedWallet === 'solana') {
+      } else if (win?.solana && detectedWallet === 'solana') {
         // Solana wallet (Phantom etc)
-        const { Transaction } = await import('@solana/web3.js');
-        const txBytes = Buffer.from(swapData.txData, 'base64');
-        const tx = Transaction.from(txBytes);
-        const signed = await win.solana.signAndSendTransaction(tx);
-        hash = signed.signature;
-      } else {
-        // Builtin wallet: sign via ethers with stored key
+        if (swapData.swapTransaction) {
+          const { Transaction } = await import('@solana/web3.js');
+          const txBytes = Buffer.from(swapData.swapTransaction, 'base64');
+          const tx = Transaction.from(txBytes);
+          const signed = await win.solana.signAndSendTransaction(tx);
+          hash = signed.signature;
+        } else {
+          throw new Error('No Solana transaction data received from API.');
+        }
+      } else if (detectedWallet === 'builtin') {
+        // Builtin wallet: sign via ethers with stored encrypted key
         const storedWallets = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
         const activeAddr = localStorage.getItem('steinz_active_wallet_address') || connectedAddress;
-        const storedWallet = storedWallets.find((w: any) => w.address?.toLowerCase() === activeAddr?.toLowerCase());
-        if (storedWallet && swapData.txData) {
-          const { ethers } = await import('ethers');
-          const pwd = localStorage.getItem('steinz_wallet_session_key') || '';
-          const dec = (encoded: string, pw: string) => {
-            const text = atob(encoded);
-            let r = '';
-            for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pw.charCodeAt(i % pw.length));
-            return r;
-          };
-          const pk = dec(storedWallet.encryptedKey, pwd);
-          const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
-          const signer = new ethers.Wallet(pk, provider);
-          const tx = await signer.sendTransaction(swapData.txData);
-          hash = tx.hash;
-        } else {
-          // Fallback: simulate for demo (no real keys available in session)
-          await new Promise(resolve => setTimeout(resolve, 1800));
-          hash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+        const storedWallet = storedWallets.find((w: { address?: string }) => w.address?.toLowerCase() === activeAddr?.toLowerCase());
+        if (!storedWallet || !swapData.transaction) {
+          throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
         }
+        const { ethers } = await import('ethers');
+        const pwd = localStorage.getItem('steinz_wallet_session_key') || '';
+        if (!pwd || !storedWallet.encryptedKey) {
+          throw new Error('Wallet session expired. Please unlock your wallet.');
+        }
+        // AES-GCM decryption for stored keys
+        let pk: string;
+        try {
+          if (storedWallet.iv) {
+            // New AES-GCM format
+            const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
+            const cryptoKey = await crypto.subtle.importKey('raw', keyMaterial, 'AES-GCM', false, ['decrypt']);
+            const iv = Uint8Array.from(atob(storedWallet.iv), c => c.charCodeAt(0));
+            const encrypted = Uint8Array.from(atob(storedWallet.encryptedKey), c => c.charCodeAt(0));
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
+            pk = new TextDecoder().decode(decrypted);
+          } else {
+            // Legacy XOR format — decrypt and warn
+            const text = atob(storedWallet.encryptedKey);
+            let r = '';
+            for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pwd.charCodeAt(i % pwd.length));
+            pk = r;
+          }
+        } catch {
+          throw new Error('Failed to decrypt wallet key. Wrong password or corrupted data.');
+        }
+        const chainRpcs: Record<string, string> = {
+          ethereum: 'https://eth.llamarpc.com',
+          base: 'https://mainnet.base.org',
+          arbitrum: 'https://arb1.arbitrum.io/rpc',
+          polygon: 'https://polygon-rpc.com',
+          bsc: 'https://bsc-dataseed.binance.org',
+          avalanche: 'https://api.avax.network/ext/bc/C/rpc',
+          optimism: 'https://mainnet.optimism.io',
+        };
+        const rpcUrl = chainRpcs[chain] || 'https://eth.llamarpc.com';
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const signer = new ethers.Wallet(pk, provider);
+        const tx = await signer.sendTransaction(swapData.transaction);
+        hash = tx.hash;
+      } else {
+        throw new Error('Please connect a wallet (MetaMask, Phantom, or built-in) to execute swaps.');
       }
+
+      if (!hash) throw new Error('Transaction was not signed. Please try again.');
 
       setTxHash(hash);
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
       setSwapSuccess(true);
-      setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 8000);
+      setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 10000);
+
+      // Save amounts before clearing
+      const savedFromAmount = fromAmount;
+      const savedToAmount = toAmount;
       setFromAmount('');
       setToAmount('');
       setQuoteData(null);
 
+      // Dispatch global balance refresh event
+      window.dispatchEvent(new Event('steinz:balance-changed'));
+
+      // Log to Supabase (non-blocking)
+      try {
+        await fetch('/api/swap/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress: connectedAddress,
+            txHash: hash,
+            chain,
+            fromToken,
+            toToken,
+            fromAmount: parseFloat(savedFromAmount),
+            toAmount: parseFloat(savedToAmount),
+            platformFeeBps: 40,
+            swapType: useGasless ? 'gasless' : 'standard',
+            status: 'confirmed',
+          }),
+        });
+      } catch (logErr) {
+        console.error('[Swap] Failed to log to Supabase:', logErr);
+      }
+
+      // Also save to localStorage as backup
       const txRecord = {
         id: `swap-${Date.now()}`,
         type: 'swap',
         from: fromToken,
         to: toToken,
-        fromAmount: parseFloat(fromAmount),
-        toAmount: parseFloat(toAmount),
+        fromAmount: parseFloat(savedFromAmount),
+        toAmount: parseFloat(savedToAmount),
         chain,
         txHash: hash,
         timestamp: Date.now(),
@@ -582,7 +752,7 @@ export default function SwapPage() {
             <div className="p-4 sm:p-5 bg-[#0D1117]/60">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You receive</span>
-                <span className="text-xs text-gray-600">Balance: 0.00</span>
+                <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[toToken]?.toFixed(4) || '0.00') : '--'}</span>
               </div>
               <div className="flex items-center gap-3">
                 {fetchingQuote ? (

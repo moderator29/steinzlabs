@@ -104,13 +104,9 @@ function FeedItem({ ev }: { ev: WhaleFeedEvent }) {
 }
 
 function CopyTradeFlow({ whale, onClose }: { whale: WhaleProfile; onClose: () => void }) {
-  const [countdown, setCountdown] = useState(15);
-  const [confirmed, setConfirmed] = useState(false);
-  useEffect(() => {
-    if (confirmed || countdown <= 0) return;
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [countdown, confirmed]);
+  const router = useRouter();
+  const chainMap: Record<string, string> = { ethereum: 'ethereum', solana: 'solana', polygon: 'polygon', arbitrum: 'arbitrum', base: 'base', bsc: 'bsc', optimism: 'optimism' };
+  const whaleChain = chainMap[whale.chain?.toLowerCase()] || 'ethereum';
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -119,44 +115,29 @@ function CopyTradeFlow({ whale, onClose }: { whale: WhaleProfile; onClose: () =>
           <span className="text-sm font-bold">Copy Trade — {whale.name}</span>
           <button onClick={onClose}><X className="w-4 h-4 text-gray-500" /></button>
         </div>
-        {!confirmed ? (
-          <>
-            <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl p-3 mb-4 text-[11px] text-[#EF4444]">
-              ⚠️ Copy trading carries significant risk. You may lose your entire position. Not financial advice.
+        <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl p-3 mb-4 text-[11px] text-[#EF4444]">
+          Copy trading carries significant risk. You may lose your entire position. Not financial advice.
+        </div>
+        <div className="space-y-2 mb-4">
+          {[['Volume (7d)', whale.volumeStr], ['Win Rate', `${whale.winRate}%`], ['PnL', whale.pnlStr], ['Trades', `${whale.trades}`]].map(([k, v]) => (
+            <div key={k} className="flex justify-between text-xs">
+              <span className="text-gray-500">{k}</span><span className="font-semibold">{v}</span>
             </div>
-            <div className="space-y-2 mb-4">
-              {[['Volume (7d)', whale.volumeStr], ['Win Rate', `${whale.winRate}%`], ['PnL', whale.pnlStr], ['Trades', `${whale.trades}`]].map(([k, v]) => (
-                <div key={k} className="flex justify-between text-xs">
-                  <span className="text-gray-500">{k}</span><span className="font-semibold">{v}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 flex-shrink-0">
-                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                  <circle cx="24" cy="24" r="20" fill="none" stroke="#ffffff10" strokeWidth="3" />
-                  <circle cx="24" cy="24" r="20" fill="none" stroke="#10B981" strokeWidth="3"
-                    strokeDasharray={`${2 * Math.PI * 20}`}
-                    strokeDashoffset={`${2 * Math.PI * 20 * (1 - countdown / 15)}`}
-                    className="transition-all duration-1000" />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{countdown}</span>
-              </div>
-              <button disabled={countdown > 0} onClick={() => setConfirmed(true)}
-                className="flex-1 py-3 bg-[#10B981] rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                {countdown > 0 ? `Confirm in ${countdown}s` : 'Confirm Copy Trade'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 bg-[#10B981]/20 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Check className="w-6 h-6 text-[#10B981]" />
-            </div>
-            <div className="text-sm font-bold text-[#10B981] mb-1">Copy Trade Active</div>
-            <div className="text-[11px] text-gray-500">Paper-tracking {whale.shortAddress}</div>
-            <button onClick={onClose} className="mt-4 text-xs text-gray-500 hover:text-gray-300">Close</button>
-          </div>
+          ))}
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button
+            onClick={() => {
+              const topToken = whale.topTokens?.[0] || '';
+              const params = new URLSearchParams({ chain: whaleChain, sellToken: 'native' });
+              if (topToken) params.set('buyToken', topToken);
+              router.push(`/dashboard/swap?${params}`);
+            }}
+            className="flex-1 py-3 bg-[#10B981] hover:bg-[#059669] rounded-xl text-sm font-bold transition-colors">
+            Open Swap
+          </button>
+        </div>
         )}
       </div>
     </div>
@@ -411,7 +392,14 @@ export default function WhaleTrackerPage() {
   const toggleWatch = useCallback((id: string) => {
     setWatching(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      try { localStorage.setItem('vtx_whale_watching', JSON.stringify(next)); } catch { /* ignore */ }
+      try { localStorage.setItem('vtx_whale_watching', JSON.stringify(next)); } catch {}
+      // Also persist to Supabase whale follow API (non-blocking)
+      const isNowWatching = next.includes(id);
+      fetch('/api/moneyRadar/follow', {
+        method: isNowWatching ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whaleId: id }),
+      }).catch(() => {});
       return next;
     });
   }, []);
@@ -455,7 +443,10 @@ export default function WhaleTrackerPage() {
     // Also fetch initial batch of feed events via REST
     fetchData('live-feed');
 
-    const es = new EventSource('/api/stream/whale-alerts');
+    const walletAddr = localStorage.getItem('wallet_address') || '';
+    const sseParams = new URLSearchParams();
+    if (walletAddr) sseParams.set('wallet', walletAddr);
+    const es = new EventSource(`/api/stream/whale-alerts?${sseParams}`);
     sseRef.current = es;
     es.onopen = () => setLiveConnected(true);
     es.onerror = () => {

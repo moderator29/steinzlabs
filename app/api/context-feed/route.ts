@@ -56,7 +56,7 @@ function recentTimestamp(): string {
   return new Date().toISOString();
 }
 
-const priceCache: { eth: number; sol: number; bnb: number; matic: number; avax: number; ts: number } = { eth: 3500, sol: 180, bnb: 600, matic: 0.5, avax: 35, ts: 0 };
+const priceCache: { eth: number; sol: number; bnb: number; matic: number; avax: number; ts: number } = { eth: 0, sol: 0, bnb: 0, matic: 0, avax: 0, ts: 0 };
 
 const responseCache: Record<string, { data: WhaleEvent[]; ts: number; sources: string[] }> = {};
 const CACHE_TTL = 5000;

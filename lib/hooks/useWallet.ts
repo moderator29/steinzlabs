@@ -5,12 +5,45 @@ import { supabase } from '@/lib/supabase';
 import { connectMetaMask, connectPhantom, clearStoredWallet } from '@/lib/wallet';
 
 const WALLET_CHANGE_EVENT = 'steinz_wallet_changed';
+const BALANCE_CHANGE_EVENT = 'steinz:balance-changed';
+
+export interface WalletBalance {
+  totalUsd: number;
+  tokens: Record<string, number>;
+  loading: boolean;
+}
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<WalletBalance>({ totalUsd: 0, tokens: {}, loading: false });
+
+  const fetchBalance = useCallback(async (addr: string) => {
+    if (!addr) return;
+    setBalance(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await fetch(`/api/wallet-intelligence?address=${addr}`);
+      if (res.ok) {
+        const data = await res.json();
+        const tokens: Record<string, number> = {};
+        if (data.holdings) {
+          data.holdings.forEach((h: { symbol?: string; balance?: string | number }) => {
+            if (h.symbol) tokens[h.symbol.toUpperCase()] = parseFloat(String(h.balance)) || 0;
+          });
+        }
+        setBalance({ totalUsd: data.totalBalanceUsd || 0, tokens, loading: false });
+      }
+    } catch {
+      setBalance(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
+
+  const refreshBalance = useCallback(async () => {
+    const addr = address || localStorage.getItem('wallet_address');
+    if (addr) await fetchBalance(addr);
+  }, [address, fetchBalance]);
 
   useEffect(() => {
     const stored = localStorage.getItem('wallet_address');
@@ -18,6 +51,7 @@ export function useWallet() {
     if (stored) {
       setAddress(stored);
       setProvider(storedProvider);
+      fetchBalance(stored);
     }
 
     const handleChange = () => {
@@ -25,16 +59,24 @@ export function useWallet() {
       const prov = localStorage.getItem('wallet_provider');
       setAddress(addr);
       setProvider(prov);
+      if (addr) fetchBalance(addr);
+    };
+
+    const handleBalanceChange = () => {
+      const addr = localStorage.getItem('wallet_address');
+      if (addr) fetchBalance(addr);
     };
 
     window.addEventListener(WALLET_CHANGE_EVENT, handleChange);
     window.addEventListener('storage', handleChange);
+    window.addEventListener(BALANCE_CHANGE_EVENT, handleBalanceChange);
 
     return () => {
       window.removeEventListener(WALLET_CHANGE_EVENT, handleChange);
       window.removeEventListener('storage', handleChange);
+      window.removeEventListener(BALANCE_CHANGE_EVENT, handleBalanceChange);
     };
-  }, []);
+  }, [fetchBalance]);
 
   const notifyChange = useCallback(() => {
     window.dispatchEvent(new Event(WALLET_CHANGE_EVENT));
@@ -152,6 +194,8 @@ export function useWallet() {
     connecting,
     error,
     isConnected: !!address,
+    balance,
+    refreshBalance,
     connectEVM,
     connectSolana,
     connectAuto,

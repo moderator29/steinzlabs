@@ -94,15 +94,46 @@ export async function GET(request: Request) {
   // Fetch fresh addresses
   let addresses: string[] = [];
   if (tokenAddress) {
-    const holders = await getBirdeyeHolders(tokenAddress, 50, 'solana');
-    addresses = holders.map(h => h.owner).filter(Boolean);
+    // Detect if input is a wallet address or token address
+    const isWalletAddress = tokenAddress.length >= 32 && tokenAddress.length <= 44 && !tokenAddress.startsWith('0x');
+    const isEvmAddress = tokenAddress.startsWith('0x') && tokenAddress.length === 42;
+
+    if (isWalletAddress || isEvmAddress) {
+      // Treat as WALLET address — fetch its transactions to find counterparty addresses
+      try {
+        const walletTransfers = await fetchTransferData([tokenAddress]);
+        const counterparties = new Set<string>();
+        for (const tx of walletTransfers.transfers) {
+          if (tx.from.toLowerCase() !== tokenAddress.toLowerCase()) counterparties.add(tx.from);
+          if (tx.to.toLowerCase() !== tokenAddress.toLowerCase()) counterparties.add(tx.to);
+        }
+        addresses = [tokenAddress, ...Array.from(counterparties).slice(0, 49)];
+      } catch (err) {
+        console.error('[Wallet Clusters] Failed to fetch wallet transfers:', err);
+        addresses = [tokenAddress];
+      }
+    } else {
+      // Treat as TOKEN address — get top holders
+      const holders = await getBirdeyeHolders(tokenAddress, 50, 'solana');
+      addresses = holders.map(h => h.owner).filter(Boolean);
+    }
   } else {
+    // No input — try smart_money_wallets, fallback to whale_addresses
     const { data } = await supabase.from('smart_money_wallets').select('address').limit(40);
     addresses = (data ?? []).map((r: { address: string }) => r.address).filter(Boolean);
+    if (addresses.length < 3) {
+      const { data: whales } = await supabase.from('whale_addresses').select('address').limit(40);
+      addresses = (whales ?? []).map((r: { address: string }) => r.address).filter(Boolean);
+    }
   }
 
   if (addresses.length < 3) {
-    return NextResponse.json({ clusters: [], members: [], source: 'live', message: 'Insufficient wallets to detect clusters' });
+    return NextResponse.json({
+      clusters: [], members: [], source: 'live',
+      message: addresses.length === 0
+        ? 'Enter a wallet or token address to analyze'
+        : `Only ${addresses.length} addresses found. Need at least 3 for cluster detection.`,
+    });
   }
 
   const { transfers, trades } = await fetchTransferData(addresses);
