@@ -138,7 +138,6 @@ function CopyTradeFlow({ whale, onClose }: { whale: WhaleProfile; onClose: () =>
             Open Swap
           </button>
         </div>
-        )}
       </div>
     </div>
   );
