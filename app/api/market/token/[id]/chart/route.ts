@@ -45,9 +45,9 @@ function intervalFor(days: string): number {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   const days = req.nextUrl.searchParams.get('days') ?? '1';
 
   const url = new URL(`${BASE}/coins/${id}/market_chart`);
