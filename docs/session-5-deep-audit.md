@@ -1777,3 +1777,280 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Time slider shows 30-day evolution; URL captures state; CSV export functional; mobile shows tabular fallback.
 
 ---
+
+## Feature 13 — Smart Money
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/smart-money/page.tsx](../app/dashboard/smart-money/page.tsx) — 662 lines
+- [app/api/smart-money/route.ts](../app/api/smart-money/route.ts) — 349 lines (Alchemy + DexScreener fan-out, archetype detection, convergence detection, risers)
+- [supabase/seeds/smart_money_wallets.sql](../supabase/seeds/smart_money_wallets.sql) — 15 seeded entities
+
+**Data sources:** Alchemy `alchemy_getAssetTransfers` for large transfers (≥50 ETH), DexScreener for token resolution, hardcoded entity list (Binance, Jump, DWF, a16z, Paradigm, etc).
+
+**Architecture pattern:**
+- **Single-shot aggregator** producing 4 outputs: `wallets[]`, `recentMoves[]`, `convergence[]`, `weeklyRisers[]`.
+- **Archetype detection** via `detectArchetype(winRate, trades, pnlChange, avgHold)` → DIAMOND_HANDS / SCALPER / DEGEN / WHALE_FOLLOWER / HOLDER / INACTIVE / NEW_WALLET.
+- **Convergence**: when ≥2 wallets buy the same token, surface.
+- **Weekly Risers**: top movers by `weeklyPnlChange`.
+- **Page polls every 60s.**
+- **In-page convergence notifications** — new convergences fire `addLocalNotification`.
+- **60s `Cache-Control` header** with `s-maxage=60, stale-while-revalidate=30`.
+
+**Performance characteristics:**
+- 60s poll fine for the cadence.
+- Alchemy fan-out per request is the bottleneck (~1–3s).
+- No reads from the seeded `smart_money_wallets` table — the whale set is computed live from large transfers.
+
+**UX quality: 7/10.** The page is dense and informative. Convergence cards are clear. Archetype badges look right. Riser cards work.
+
+**Backend quality: 6/10.** The aggregation is real and correctly classified. **Major issue:** the seeded `smart_money_wallets` table (15 named entities) is **not used by the live page** — the page computes a fresh set every minute from large transfers. So the whales we surface are anonymous addresses, not the labeled funds we seeded. Disconnect between data layer and UI.
+
+**What works well:**
+- 4 distinct outputs (wallets, moves, convergence, risers) make the page feel rich.
+- Archetype taxonomy is interesting.
+- Convergence detection is a real edge.
+- Notifications fire on convergence signals.
+
+**What is weak or missing:**
+- **Seeded `smart_money_wallets` table not used.** Anonymous wallet addresses surface instead of labeled entities (Jump, a16z).
+- **PnL is computed but unverified.** `winRate` and `pnlChange` come from rough heuristics, not real position-by-position accounting.
+- **Convergence signals don't include time window.** Two wallets buying the same token a week apart isn't really convergence.
+- **No "follow this whale" inline.** Despite Whale Tracker having follow, this page doesn't.
+- **No archetype filter.** Can't see "all SCALPER wallets active today."
+- **No drilldown to wallet intelligence.**
+- **No leaderboard view** — top 100 by 30d PnL.
+- **No tier gate.** Smart-money signals are arguably premium content.
+- **No watchlist integration** — a token bought by 3 smart-money wallets isn't auto-added to watchlist suggestions.
+- **No backtest / historical convergence** — "convergences from 30 days ago and what they predicted."
+
+**What feels half-built:**
+- Riser detection has the data plumbing but the UI section feels small.
+- The seeded table existing but unused suggests intent that was never closed.
+- `INACTIVE` and `NEW_WALLET` archetypes are defined but rarely surface — the page filters them out implicitly.
+
+### B) Industry Standard Comparison
+
+**Nansen Smart Money:** The category leader. Curated lists ("Smart NFT Trader," "Stablecoin Whale," "Top 100 SOL traders"). Per-list view. Per-token "smart money flows" ("smart money is net buying $WIF"). Massive value to users.
+
+**Arkham Funds:** Per-fund pages (Polychain, Multicoin, Paradigm) with full position history. Identity-first.
+
+**LookOnchain:** Manual curation of high-quality moves. Editorial flavor.
+
+**Pattern:** Curation + identity + per-token flow. We have algorithmic detection + anonymous wallets + per-wallet pages. Different angle — could differentiate by leaning into algorithmic, but we should at least USE the seed data we created.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Use the seeded `smart_money_wallets` table.** Join detected wallets against the seed; render entity name + tier when matched.
+2. **Per-token smart-money flow.** "Smart money net flow on $TOKEN over 24h: +$2.3M (3 buyers, 1 seller)."
+3. **Curated lists.** "DeFi Smart Money," "Memecoin Hunters," "Stablecoin Whales."
+4. **Real PnL per wallet** — depends on Wallet Intelligence (F8) PnL work.
+5. **Time-windowed convergence** — only count buys in same 24h window.
+6. **Follow + alert wiring.**
+7. **Tier gating** — surface basic smart-money to free users; lists, real PnL, and historical convergences to Pro/Max.
+
+**Backend changes:**
+- Join `smart_money_wallets` in `app/api/smart-money/route.ts` aggregator.
+- New `smart_money_lists` table + curated rows.
+- Per-token flow aggregation endpoint.
+- Convergence time window enforcement.
+
+**Frontend changes:**
+- Lists tab.
+- Per-token flow widget on token detail page.
+- Follow button on each smart-money card.
+- Archetype filter pills.
+
+**Mobile:**
+- Card grid → list view.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Better than most platforms; below Nansen.
+- **Effort to 9/10: Medium (2 weeks).**
+- **Approach: Connect seed data + add lists + leverage F8 PnL work.**
+- **Blocks other features?** No.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Use seeded smart_money_wallets | `app/api/smart-money/route.ts` join | Existing seed |
+| Per-token flow | `app/api/smart-money/flow/[token]/route.ts` (new), widget on token detail | None |
+| Curated lists | `app/dashboard/smart-money/lists/[id]/page.tsx` (new) | `smart_money_lists` table |
+| Time-windowed convergence | Algorithm in `app/api/smart-money/route.ts` | None |
+| Follow + alert wiring | Reuse F10 follow infra | None |
+| Tier gating | Read tier in route | Existing |
+
+**Acceptance criteria:** Detected wallets show entity name when matched in seed; per-token flow widget appears on token detail page; ≥3 curated lists live; convergences only count moves within configurable time window.
+
+---
+
+## Feature 14 — Network Metrics
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/network-metrics/page.tsx](../app/dashboard/network-metrics/page.tsx) — 102 lines (smallest dashboard page on the platform)
+- [app/api/network-metrics/route.ts](../app/api/network-metrics/route.ts) — backend
+
+**Data sources:** Per-chain RPCs (gas price, block time, TPS).
+
+**Architecture pattern:** Page fetches `/api/network-metrics` once on mount → renders `gas`, `tps`, `blocks` for the selected chain. 5 chains: Ethereum, Solana, Base, Polygon, Arbitrum.
+
+**Performance characteristics:** Single endpoint, fast.
+
+**UX quality: 4/10.** Three stats per chain, no chart, no comparison, no historical context. Looks like a placeholder. The 102-line page is the **smallest user-facing page on the platform** — it shows.
+
+**Backend quality: 4/10.** Pulls live values; doesn't store, doesn't trend, doesn't compare.
+
+**What works well:** Multi-chain selector. Live values.
+
+**What is weak or missing:**
+- **No charts.** Gas history over 24h is a one-line ask.
+- **No comparison view** — Ethereum gas vs Base gas vs Polygon gas side-by-side.
+- **No "best chain to swap right now"** decision aid.
+- **No mempool stats.**
+- **No fee market for L2s** (block-builder fees, sequencer fees).
+- **No alert** ("notify me when ETH gas drops below 20 gwei").
+- **No correlation** ("gas spikes when X token launches").
+
+**What feels half-built:** The page itself feels half-built. 102 lines is not a feature.
+
+### B) Industry Standard Comparison
+
+**Etherscan Gas Tracker:** Slow / Average / Fast tiers. Last-blocks chart. Per-action gas estimates ("Uniswap swap: 45 gwei = $2.40").
+
+**ETH Gas Station / Blocknative:** Mempool-based fee predictions. Push notifications.
+
+**L2Beat:** Per-L2 stats with TVL, TPS, sequencer health, fees.
+
+**Pattern:** Network metrics is a utility page. Etherscan Gas Tracker sets the bar — chart + tier + alert.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Add 24h gas chart per chain.**
+2. **Tier display (Slow / Avg / Fast) with USD cost for common actions** (swap, transfer, NFT mint).
+3. **"Best chain right now" badge.**
+4. **Alert on gas threshold.**
+5. **Mempool depth + pending tx count.**
+
+**Backend changes:** `network_metrics_history` table populated by 1-min cron. Time-series queries.
+
+**Frontend changes:** Add chart, action-cost grid, alert button.
+
+### D) Priority and Effort
+
+- **Current score: 4/10.** Underbuilt.
+- **Effort to 9/10: Medium (1 week).**
+- **Approach: Build out — currently a stub.**
+- **Blocks other features?** No.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Gas history time series | `app/api/network-metrics/history/route.ts` (new), 1-min cron | `network_metrics_history` table |
+| Gas chart UI | `components/network/GasChart.tsx` (new) | None |
+| Action-cost grid | `components/network/ActionCostGrid.tsx` (new) | None |
+| Best-chain badge | `lib/network/bestChain.ts` (new) | None |
+| Gas alert | Reuse alerts | None |
+| Mempool depth | `lib/services/mempool.ts` (new), Blocknative API | API key |
+
+**Acceptance criteria:** Gas chart for each chain over 24h; per-action USD cost grid; "best chain to swap right now" badge; gas alert can be created.
+
+---
+
+## Feature 15 — Network Graph
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/network-graph/page.tsx](../app/dashboard/network-graph/page.tsx) — 771 lines
+- [app/api/network-graph/route.ts](../app/api/network-graph/route.ts) — backend
+- d3.js for force-directed visualization
+
+**Data sources:** Alchemy asset transfers, classified into node types: high-activity / bridge / usdc / usdt / regular.
+
+**Architecture pattern:**
+- **Force-directed graph** of recent transfer activity.
+- **Node typing** by behavior heuristic.
+- **Filterable by node type.**
+- Page accepts an optional address; without one, shows aggregate network activity.
+
+**Performance characteristics:** d3 force on 100+ nodes is heavy on weaker devices. Server fan-out to Alchemy is moderate (1–3s).
+
+**UX quality: 6/10.** Solid graph rendering. Legend is clear. The 5-node-type taxonomy works.
+
+**Backend quality: 5/10.** Live computation; no persistence; no historical query.
+
+**What works well:**
+- Force layout with 5 typed colors.
+- Legend.
+- Filterable by type.
+
+**What is weak or missing:**
+- **No persistence** — every refresh recomputes.
+- **No time-axis playback** — same as Bubble Map gap.
+- **No entity overlay.**
+- **No path-finding** — "show me how Alice and Bob are connected."
+- **No save/share view state.**
+- **No mobile fallback.**
+- **Overlap with Bubble Map** in concept and code — should share more.
+- **No alert** ("notify me when this network's hub wallet moves").
+- **No drilldown to wallet intel.**
+
+**What feels half-built:**
+- The 771-line page is mostly d3 plumbing; the analytical surface is thin.
+- Path-finding is the natural "killer feature" of a network graph and it's not there.
+
+### B) Industry Standard Comparison
+
+**Arkham entity graph:** Identity-first, manually labeled, supports path-finding (shortest path between two entities).
+
+**Breadcrumbs / Chainalysis Reactor:** Compliance-grade. Path-finding, taint analysis, mixer detection.
+
+**Maltego:** General-purpose graph intel. Pluggable transforms. Used by investigators.
+
+**Pattern:** Graph products differentiate by **path-finding + identity + taint analysis**. We have rendering; not these.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Path-finding** between two addresses.
+2. **Entity overlay** (Arkham labels).
+3. **Taint analysis** — trace funds from a known scam address to current holders.
+4. **Persistence** + URL-shareable state.
+5. **Time-axis playback.**
+6. **Mobile fallback (table).**
+
+**Backend changes:**
+- `address_graph_snapshots` table.
+- Shortest-path algorithm via Dijkstra over transfer graph.
+- Taint propagation algorithm.
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Visualization-only.
+- **Effort to 9/10: Large (2.5–3 weeks).** Path-finding + taint = real algorithmic work.
+- **Approach: Add analytical layer; share visualization code with Bubble Map.**
+- **Blocks other features?** No.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Path-finding | `lib/graph/shortestPath.ts` (new), `app/api/network-graph/path/route.ts` (new) | None |
+| Entity overlay | Reuse Arkham service | Existing |
+| Taint analysis | `lib/graph/taintTrace.ts` (new) | `flagged_addresses` table for sources |
+| Persist snapshots | `address_graph_snapshots` table | New table |
+| URL-shareable | Sync state to query | None |
+| Time playback | Slider component | Reuse from F12 |
+| Mobile table | `components/network-graph/PathTable.tsx` (new) | None |
+
+**Acceptance criteria:** Path-finding returns shortest transfer path between any two addresses in <2s; entity labels rendered for matched nodes; taint trace from scam source highlights current holders; URL captures view state.
+
+---
