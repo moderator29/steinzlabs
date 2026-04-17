@@ -1131,3 +1131,160 @@ The two-tab design (Context Feed / Markets) is OK but feels like a leftover from
 **Acceptance criteria:** Per-user memory injected and visibly improves response quality (e.g., "based on your tracked wallets..."); rate limit shared across instances; every fact in VTX response is citable to a tool call; image input accepts a chart screenshot and Claude responds with pattern analysis; proactive nudge delivered for at least one followed-wallet event; saved answers pinnable and shareable.
 
 ---
+
+## Feature 8 — Wallet Intelligence (EVM and Solana)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/wallet-intelligence/page.tsx](../app/dashboard/wallet-intelligence/page.tsx) — 1,120 lines
+- [app/api/wallet/route.ts](../app/api/wallet/route.ts) — main wallet intel endpoint (likely)
+- [app/api/wallet/approvals/](../app/api/wallet/approvals/), [history/](../app/api/wallet/history/) — sub-endpoints
+- [lib/services/evm-intelligence.ts](../lib/services/evm-intelligence.ts) — `buildEvmWalletIntelligence` aggregator
+- [lib/services/solana-intelligence.ts](../lib/services/solana-intelligence.ts) — `buildSolanaWalletIntelligence` + `normalizeSolanaTransactions`
+- [lib/services/alchemy.ts](../lib/services/alchemy.ts) — token balances, transfers, contract code
+- [lib/services/alchemy-solana.ts](../lib/services/alchemy-solana.ts) — SPL meta + supply
+
+**Data sources:** Alchemy (EVM token balances, asset transfers, contract code, ETH balance), Alchemy Solana (SOL balance, SPL holdings), CoinGecko (USD prices), Etherscan/Bscscan/Basescan (tx history fallback), DexScreener (price refs for long-tail tokens), Arkham (entity labels).
+
+**Architecture pattern:**
+- **One unified UI** for both EVM and Solana — chain auto-detected from address format. Same `WalletData` shape rendered for both.
+- **Server-side aggregation** in `buildEvmWalletIntelligence` / `buildSolanaWalletIntelligence` — fans out to balance, holdings, transfers, USD pricing in parallel.
+- **Client-side state** for `WalletData` plus an "expanded transactions" toggle.
+- **Tabbed view**: Wallet | Contract (so the same page also handles contract addresses).
+- **Recent transactions** rendered with type, asset, value, from/to.
+
+**Performance characteristics:**
+- A wallet with 30+ tokens fans out to 30+ price lookups; without batching this is slow (3–6s).
+- Token logos are URL strings from CoinGecko + Alchemy enrichment — hit-or-miss; unknown tokens show generic placeholder.
+- No caching — every search retrieves fresh data, even if the same address was queried 10 seconds ago.
+- Transaction history limited to 15–50 most recent.
+
+**UX quality: 6/10.** The page is information-dense and looks credible. The chain auto-detection is nice. The holdings table renders well. **Weaknesses:** no PnL view, no portfolio over time chart, no realized vs. unrealized breakdown, no comparison ("show this wallet's behavior vs. a benchmark wallet"), no copy-trade button, no "follow this wallet" inline action, no entity label display ("this is Binance Hot Wallet 14"), no smart-money badge, no risk score, no related wallets.
+
+**Backend quality: 6/10.** The aggregation pattern is correct. Multi-chain support is real. Two real issues: (1) **no caching layer** — the same wallet is re-fetched on every page view, costing Alchemy compute units; (2) **no historical snapshots** — we can show "current portfolio" but not "this wallet's PnL over 30 days" because we don't snapshot.
+
+**What works well:**
+- One unified UI for EVM + Solana.
+- Real Alchemy data (not mock).
+- Token logo enrichment via CoinGecko + Alchemy.
+- Transaction list with type/asset detection.
+- Contract tab as a secondary mode.
+- Multiple chains supported (ETH, Base, Polygon, Avalanche, BSC, Solana).
+
+**What is weak or missing:**
+- **No PnL.** Cannot tell from the wallet view whether this wallet is up or down on its positions. This is table-stakes for Nansen, Arkham, DeBank, Zerion.
+- **No portfolio history chart.** Just the snapshot.
+- **No transaction labeling.** Transfers don't say "swapped on Uniswap" or "received from Coinbase."
+- **No entity label integration.** Arkham labels are integrated into VTX but not into Wallet Intelligence.
+- **No DeFi position discovery.** Wallets with positions in Aave, Curve, Compound, Pendle, EigenLayer show only token balances, not the actual underlying position.
+- **No NFT holdings.** Crypto-native users have meaningful NFT positions that we ignore.
+- **No staked/locked balance.** ETH staked via Lido, Solana staked via JitoSOL — not shown.
+- **No "follow this wallet" inline action.**
+- **No "copy this trade" inline action.** Should connect to swap.
+- **No related wallets** ("this wallet has high transfer activity with 0xABC, 0xDEF").
+- **No alert creation from wallet view** ("alert me when this wallet sends > $10k").
+- **No DNA badge** linking to the DNA Analyzer for that wallet.
+- **No smart-money badge** even when the wallet is in `smart_money_wallets`.
+- **No counterparty visualization.**
+- **Search-only flow.** Cannot browse a list of "wallets I'm tracking."
+- **No saved searches / recent searches.**
+- **No comparison view** ("this wallet vs. that wallet").
+
+**What feels half-built:**
+- The "Contract" tab is present but is essentially a duplicate of Contract Analyzer functionality.
+- The 1,120-line page does a lot but every interesting action ends in a dead end (no follow, no alert, no copy-trade).
+- Transactions list shows raw transfer data without trade-DNA classification (despite DNA Analyzer existing as a separate feature).
+
+### B) Industry Standard Comparison
+
+**Nansen Wallet Profiler:** Real PnL across all positions, normalized to USD over time. Per-token entry/exit prices. Holding-period analysis. Trade DNA classification. Entity labels. Counterparty graph. "Follow" button that wires into their alert system. The reference standard.
+
+**Arkham Wallet:** Identity attribution at the top ("This wallet is owned by Jane Smith of Polychain Capital"). Position list with PnL. Network of related wallets visualized. Transaction history with full counterparty entity labels. One-click "subscribe to alerts."
+
+**DeBank:** Multi-chain aggregation across 60+ chains. DeFi protocol position discovery (Aave deposits, Curve LP, etc). Net worth chart over time. Realized/unrealized PnL. NFT holdings. Multi-wallet aggregation under one user.
+
+**Zerion:** Best mobile UX. All EVM chains. NFT-native. Per-protocol breakdown. PnL chart.
+
+**Etherscan/Solscan:** Best block explorer view. Comprehensive but raw — no PnL, no analysis layer. Free.
+
+**Pattern:** The leaders all have (a) PnL, (b) DeFi position discovery, (c) NFT support, (d) historical chart, (e) entity labels, (f) action buttons (follow, alert, copy). We have none of these. We are essentially "Etherscan with a CoinGecko price overlay" right now — credible but not differentiated.
+
+### C) Next-Gen Recommendations
+
+This is one of the most under-realized features on the platform given the data we already have access to.
+
+**Highest leverage:**
+
+1. **Portfolio history snapshots** — daily cron snapshots `(wallet_address, date, holdings_json, total_usd)` into `wallet_portfolio_snapshots`. Power a 30/90/365-day chart.
+2. **PnL calculation** — for each token in current holdings, find acquisition price from transaction history, compute current value, derive realized + unrealized PnL.
+3. **DeFi position discovery** — integrate Zerion API or DeBank API (yes, paid) for protocol position discovery. Or build per-protocol adapters for the top 10 (Aave, Compound, Curve, Lido, Pendle, EigenLayer, Uniswap V3 LPs, Maker, Convex, Yearn).
+4. **NFT holdings** — Alchemy NFT API (free up to a point) or Reservoir API. Show top 5 collections + total floor value.
+5. **Entity label overlay** — wire Arkham labels at the top: "This wallet is labeled: Binance 14 (Exchange Hot Wallet)."
+6. **Transaction labeling** — classify each tx via heuristics or via VTX: "Swap (Uniswap V3): 1 ETH → 2,400 USDC at $2,400/ETH."
+7. **Action buttons** — Follow, Alert, Copy Trade, Open in Bubble Map, Open in Network Graph. Wire to existing infrastructure.
+8. **Smart-money badge + DNA archetype display** — when wallet is in `smart_money_wallets` or `wallet_dna_archetypes`, surface that.
+9. **Tracked wallets list** — left panel with user's followed wallets, click to load each.
+10. **Wallet comparison** — split-pane view of two wallets side-by-side.
+
+**Backend changes:**
+- New `wallet_portfolio_snapshots` table — keyed `(wallet_address, snapshot_date)`. Cron job populates daily for tracked wallets only (not every queried wallet, that's too expensive).
+- New `wallet_pnl` table — pre-computed per-(wallet, token) realized/unrealized.
+- New `lib/services/zerion.ts` (already partially exists) for DeFi positions.
+- New `lib/services/alchemyNfts.ts` for NFT holdings.
+- New `lib/jobs/wallet-snapshot-daily.ts` cron job.
+- Cache wallet intelligence results in Redis for 60s — same wallet queried twice in a minute should not re-fan-out.
+
+**Frontend changes:**
+- New tab structure: Overview | Holdings | DeFi | NFTs | History | Activity.
+- Portfolio chart at the top of Overview tab.
+- Entity badge under wallet address.
+- Action button row: Follow • Alert • Copy Trade • Bubble Map • Network Graph • DNA.
+- Tracked wallets sidebar.
+- Each transaction row gets a labeled type ("Swap", "LP Deposit", "Lend", "Stake", "NFT Mint", etc).
+
+**New sub-features:**
+- **"Mirror this portfolio"** — generate swap recipe to replicate this wallet's allocation, scaled to the user's budget.
+- **"Find similar wallets"** — query `wallet_dna_archetypes` for wallets with same archetype + similar holdings.
+- **"Counterparty network"** — graph of top 10 counterparties this wallet has transferred to/from.
+- **Public shareable wallet pages** — `/w/<address>` SEO-friendly entry, free traffic from "[ADDR] etherscan" searches.
+
+**Performance:**
+- 60s Redis cache.
+- Pre-compute snapshots only for tracked wallets — don't snapshot every querying user's random search.
+- Multi-chain aggregation should `Promise.all` per-chain, not sequential.
+
+**Mobile:**
+- Tabs become a horizontal scroll on mobile.
+- Portfolio chart sized to a 16:9 aspect ratio.
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Functional but generic. The data is there, the actionability is not.
+- **Effort to 9/10: Large (3–4 weeks).** PnL + portfolio history + DeFi + NFTs + entity labels + action wiring is a substantial build. PnL alone is multi-day work because acquisition-cost calculation is non-trivial.
+- **Approach: Layer on without rewriting the page.** Add tabs, add backing data, wire actions.
+- **Blocks other features?** Yes. Portfolio (Feature 28) cannot be world-class without this. Smart Money (Feature 13) wallet drill-down ends here. Network Graph (Feature 15) and Bubble Map (Feature 12) refer back. This is plumbing for the rest of the intelligence suite.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Daily portfolio snapshot cron | `lib/jobs/wallet-snapshot-daily.ts` (new), Vercel cron | `wallet_portfolio_snapshots` |
+| PnL calculation | `lib/services/pnl.ts` (new) | `wallet_pnl` table |
+| Portfolio history chart | `components/wallet/PortfolioChart.tsx` (new) | None |
+| DeFi position discovery | `lib/services/defiPositions.ts` (Zerion or per-protocol) | Zerion API key |
+| NFT holdings | `lib/services/alchemyNfts.ts` (new) | None |
+| Entity label overlay | `app/dashboard/wallet-intelligence/page.tsx` — call `getEntityLabel` from arkham service | Existing |
+| Transaction labeling | `lib/services/txClassifier.ts` (new) | None (heuristics + VTX call) |
+| Action buttons (Follow/Alert/Copy Trade) | `components/wallet/WalletActions.tsx` (new) | Reuse `wallet_follows`, `alerts`, `/dashboard/swap` |
+| Smart-money + DNA badge | Render badge when wallet in `smart_money_wallets` or `wallet_dna_archetypes` | Existing tables |
+| Tracked wallets sidebar | `components/wallet/TrackedWalletsSidebar.tsx` (new) | `wallet_follows` |
+| Wallet comparison view | `app/dashboard/wallet-intelligence/compare/page.tsx` (new) | None |
+| 60s Redis cache | `app/api/wallet/route.ts` middleware | Redis |
+| Mirror portfolio | `lib/services/mirrorPortfolio.ts` (new) | None |
+| Counterparty graph | `components/wallet/CounterpartyGraph.tsx` (new) | None (uses existing graph lib) |
+| Public shareable wallet page | `app/w/[address]/page.tsx` (new, SSR) | None |
+
+**Acceptance criteria:** Wallet view shows 30-day PnL chart with realized + unrealized; Aave/Lido/Curve positions discovered for top 10 protocols; entity label rendered when known (e.g. "Binance 14"); Follow / Alert / Copy Trade buttons functional and wire to existing infrastructure; tracked wallets sidebar lists followed wallets with quick-load.
+
+---
