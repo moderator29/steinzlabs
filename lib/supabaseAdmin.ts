@@ -2,9 +2,12 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
 export function getSupabaseAdmin() {
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
   const serviceKey = ((process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY) || '').trim();
 
+  if (!SUPABASE_URL) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not available');
+  }
   if (!serviceKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not available');
   }

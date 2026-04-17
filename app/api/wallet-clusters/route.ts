@@ -1,14 +1,21 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { detectCluster } from '@/lib/services/cluster-detection';
 import { getBirdeyeHolders } from '@/lib/services/birdeye';
 import type { TransferEdge, TokenTradeEvent } from '@/lib/services/cluster-detection';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
-);
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (_supabase) return _supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase env vars missing: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY) are required');
+  }
+  _supabase = createClient(url, key);
+  return _supabase;
+}
 
 async function fetchTransferData(addresses: string[]): Promise<{ transfers: TransferEdge[]; trades: TokenTradeEvent[] }> {
   const rpc = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
@@ -72,6 +79,7 @@ async function fetchTransferData(addresses: string[]): Promise<{ transfers: Tran
 }
 
 export async function GET(request: Request) {
+  const supabase = getSupabase();
   const { searchParams } = new URL(request.url);
   const tokenAddress = searchParams.get('token');
   const refresh = searchParams.get('refresh') === '1';

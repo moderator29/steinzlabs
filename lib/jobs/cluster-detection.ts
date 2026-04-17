@@ -1,13 +1,20 @@
 import 'server-only';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getBirdeyeHolders } from '@/lib/services/birdeye';
 import { detectCluster } from '@/lib/services/cluster-detection';
 import type { TransferEdge, TokenTradeEvent } from '@/lib/services/cluster-detection';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
-);
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (_supabase) return _supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase env vars missing: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY) are required');
+  }
+  _supabase = createClient(url, key);
+  return _supabase;
+}
 
 // ─── Alchemy Solana helpers ──────────────────────────────────────────────────
 
@@ -113,6 +120,7 @@ export async function runClusterDetectionJob(tokenAddress?: string): Promise<Clu
     addresses = holders.map(h => h.owner).filter(Boolean);
   } else {
     // Pull known whale wallets from Supabase
+    const supabase = getSupabase();
     const { data } = await supabase.from('smart_money_wallets').select('address').limit(50);
     addresses = (data ?? []).map((r: { address: string }) => r.address).filter(Boolean);
   }
@@ -131,6 +139,7 @@ export async function runClusterDetectionJob(tokenAddress?: string): Promise<Clu
   }
 
   const cluster = result.cluster;
+  const supabase = getSupabase();
   const { data: clusterRow } = await supabase.from('wallet_clusters').insert({
     name: `Cluster ${cluster.clusterId.slice(-8)}`,
     chain: 'solana',

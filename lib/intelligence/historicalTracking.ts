@@ -27,6 +27,21 @@ export interface LiquidityAnalysis {
   };
 }
 
+export interface EntityHistoryEvent {
+  id: string;
+  entityId: string;
+  eventType: string;
+  description: string;
+  metadata: Record<string, unknown>;
+  occurredAt: Date;
+}
+
+export interface EntityHistory {
+  entityId: string;
+  events: EntityHistoryEvent[];
+  totalEvents: number;
+}
+
 export interface PatternMatchingResults {
   similarTokens: {
     address: string;
@@ -139,6 +154,39 @@ export async function analyzeLiquidity(
       locked: false,
       depth: { buy2Percent: '$0', sell2Percent: '$0' },
     };
+  }
+}
+
+export async function getEntityHistory(
+  entityId: string,
+  limit: number = 50
+): Promise<EntityHistory> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+      .from('entity_history')
+      .select('id, entity_id, event_type, description, metadata, occurred_at')
+      .eq('entity_id', entityId)
+      .order('occurred_at', { ascending: false })
+      .limit(limit);
+
+    if (error || !data) {
+      return { entityId, events: [], totalEvents: 0 };
+    }
+
+    const events: EntityHistoryEvent[] = data.map(d => ({
+      id: d.id,
+      entityId: d.entity_id,
+      eventType: d.event_type,
+      description: d.description,
+      metadata: d.metadata || {},
+      occurredAt: new Date(d.occurred_at),
+    }));
+
+    return { entityId, events, totalEvents: events.length };
+  } catch (err) {
+    console.error('[getEntityHistory] failed:', err);
+    return { entityId, events: [], totalEvents: 0 };
   }
 }
 
