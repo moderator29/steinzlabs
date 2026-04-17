@@ -257,8 +257,7 @@ export default function ProfileTab() {
   const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
-  const [loginActivity] = useState(() => {
-    // Reconstruct login activity from localStorage
+  const [loginActivity, setLoginActivity] = useState<Array<{ device: string; time: string; location: string; current?: boolean }>>(() => {
     const sessions = [];
     try {
       const token = localStorage.getItem('steinz-auth-token');
@@ -271,6 +270,25 @@ export default function ProfileTab() {
     } catch { /* Malformed JSON — return default */ }
     return sessions;
   });
+
+  useEffect(() => {
+    // Pull real login history from Supabase
+    if (!user?.id) return;
+    fetch(`/api/account/login-activity?userId=${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (Array.isArray(data?.sessions) && data.sessions.length > 0) {
+          const mapped = data.sessions.map((s: { user_agent?: string; created_at: string; ip?: string; current?: boolean }) => ({
+            device: s.user_agent?.split('(')[0]?.trim() || 'Unknown device',
+            time: new Date(s.created_at).toLocaleString(),
+            location: s.ip || 'Unknown',
+            current: s.current,
+          }));
+          setLoginActivity(mapped);
+        }
+      })
+      .catch(err => console.error('[ProfileTab] login activity fetch failed:', err));
+  }, [user?.id]);
 
   const displayName = user?.username
     ? user.username
