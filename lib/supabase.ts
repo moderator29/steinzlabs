@@ -8,6 +8,11 @@ let _supabase: SupabaseClient | null = null;
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
+  // IMPORTANT: do NOT pass a custom `storageKey` here.
+  // @supabase/ssr writes session cookies named `sb-<projectref>-auth-token.*`
+  // and the server middleware in middleware.ts reads them by that exact name.
+  // Overriding `storageKey` causes a name mismatch — middleware never sees the
+  // session and redirects authenticated users back to /login. (Production bug 2026-04-17.)
   _supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -16,7 +21,6 @@ function getClient(): SupabaseClient {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
-        storageKey: 'steinz-auth-token',
         flowType: 'pkce',
       },
     }
