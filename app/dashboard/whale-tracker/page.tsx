@@ -385,13 +385,13 @@ export default function WhaleTrackerPage() {
 
   // Load watchlist from localStorage on mount
   useEffect(() => {
-    try { setWatching(JSON.parse(localStorage.getItem('vtx_whale_watching') ?? '[]')); } catch { /* ignore */ }
+    try { setWatching(JSON.parse(localStorage.getItem('vtx_whale_watching') ?? '[]')); } catch { /* Malformed JSON — return default */ }
   }, []);
 
   const toggleWatch = useCallback((id: string) => {
     setWatching(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      try { localStorage.setItem('vtx_whale_watching', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('vtx_whale_watching', JSON.stringify(next)); } catch { /* localStorage unavailable — silently ignore */ }
       // Also persist to Supabase whale follow API (non-blocking)
       const isNowWatching = next.includes(id);
       fetch('/api/moneyRadar/follow', {
@@ -426,7 +426,9 @@ export default function WhaleTrackerPage() {
           });
         }
       }
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch (err) {
+      console.error('[whale-tracker] Fetch whales failed:', err);
+    } finally { setLoading(false); }
   }, [tab, chainFilter]);
 
   useEffect(() => { fetchData('discover'); }, []);
@@ -455,13 +457,13 @@ export default function WhaleTrackerPage() {
       try {
         const ev = JSON.parse(e.data) as WhaleFeedEvent;
         setFeed(prev => [ev, ...prev].slice(0, 100));
-      } catch { /* ignore */ }
+      } catch { /* Malformed JSON — return default */ }
     });
     es.onmessage = (e: MessageEvent) => {
       try {
         const ev = JSON.parse(e.data) as WhaleFeedEvent;
         setFeed(prev => [ev, ...prev].slice(0, 100));
-      } catch { /* ignore */ }
+      } catch { /* Malformed JSON — return default */ }
     };
     return () => { es.close(); setLiveConnected(false); };
   }, [tab]);

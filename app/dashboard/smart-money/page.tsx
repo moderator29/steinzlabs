@@ -71,13 +71,15 @@ export default function SmartMoneyPage() {
     try {
       const stored = localStorage.getItem('smart-money-watching');
       if (stored) setWatching(JSON.parse(stored));
-    } catch {}
+    } catch {
+      // Malformed JSON — return default
+    }
   }, []);
 
   const toggleWatch = (id: string) => {
     setWatching(prev => {
       const next = prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id];
-      try { localStorage.setItem('smart-money-watching', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('smart-money-watching', JSON.stringify(next)); } catch { /* localStorage unavailable — silently ignore */ }
       return next;
     });
   };

@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const PLATFORM_FEE_BPS = 40; // 0.4% — canonical fee rate
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, feeUsd });
   } catch (error) {
     console.error('[Swap Log] Unexpected error:', error);
+    Sentry.captureException(error);
     return NextResponse.json({ error: 'Failed to log swap' }, { status: 500 });
   }
 }

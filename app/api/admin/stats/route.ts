@@ -53,7 +53,9 @@ export async function GET(request: Request) {
       if (engRes.ok) {
         engagementTotals = await engRes.json();
       }
-    } catch {}
+    } catch (err) {
+      console.error('[admin/stats] Engagement fetch failed:', err);
+    }
 
     return NextResponse.json({
       users: {

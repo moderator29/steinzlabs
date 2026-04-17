@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is already verified. You can sign in.' }, { status: 400 });
     }
 
-    const token = generateVerifyToken(user.id, cleanEmail);
+    const token = await generateVerifyToken(user.id, cleanEmail);
     const confirmUrl = `${getSiteUrl()}/api/auth/verify-email?token=${token}&uid=${user.id}`;
 
     const firstName = user.user_metadata?.first_name || 'there';

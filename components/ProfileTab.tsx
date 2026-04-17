@@ -141,7 +141,7 @@ export default function ProfileTab() {
   useEffect(() => {
     const saved = localStorage.getItem('steinz_support_chat');
     if (saved) {
-      try { setChatMessages(JSON.parse(saved)); } catch {}
+      try { setChatMessages(JSON.parse(saved)); } catch { /* Malformed JSON — return default */ }
     }
   }, []);
 
@@ -217,15 +217,15 @@ export default function ProfileTab() {
   useEffect(() => {
     const savedNotifs = localStorage.getItem('steinz_notifications');
     if (savedNotifs) {
-      try { setNotifications(JSON.parse(savedNotifs)); } catch {}
+      try { setNotifications(JSON.parse(savedNotifs)); } catch { /* Malformed JSON — return default */ }
     }
     const savedPrivacy = localStorage.getItem('steinz_privacy');
     if (savedPrivacy) {
-      try { setPrivacySettings(JSON.parse(savedPrivacy)); } catch {}
+      try { setPrivacySettings(JSON.parse(savedPrivacy)); } catch { /* Malformed JSON — return default */ }
     }
     const savedPrefs = localStorage.getItem('steinz_preferences');
     if (savedPrefs) {
-      try { setPreferences(JSON.parse(savedPrefs)); } catch {}
+      try { setPreferences(JSON.parse(savedPrefs)); } catch { /* Malformed JSON — return default */ }
     }
     setNotifPrefs(getNotificationPrefs());
   }, []);
@@ -257,8 +257,7 @@ export default function ProfileTab() {
   const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
-  const [loginActivity] = useState(() => {
-    // Reconstruct login activity from localStorage
+  const [loginActivity, setLoginActivity] = useState<Array<{ device: string; time: string; location: string; current?: boolean }>>(() => {
     const sessions = [];
     try {
       const token = localStorage.getItem('steinz-auth-token');
@@ -268,9 +267,28 @@ export default function ProfileTab() {
           sessions.push({ device: 'Current Session', time: 'Now', location: 'Current Device', current: true });
         }
       }
-    } catch {}
+    } catch { /* Malformed JSON — return default */ }
     return sessions;
   });
+
+  useEffect(() => {
+    // Pull real login history from Supabase
+    if (!user?.id) return;
+    fetch(`/api/account/login-activity?userId=${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (Array.isArray(data?.sessions) && data.sessions.length > 0) {
+          const mapped = data.sessions.map((s: { user_agent?: string; created_at: string; ip?: string; current?: boolean }) => ({
+            device: s.user_agent?.split('(')[0]?.trim() || 'Unknown device',
+            time: new Date(s.created_at).toLocaleString(),
+            location: s.ip || 'Unknown',
+            current: s.current,
+          }));
+          setLoginActivity(mapped);
+        }
+      })
+      .catch(err => console.error('[ProfileTab] login activity fetch failed:', err));
+  }, [user?.id]);
 
   const displayName = user?.username
     ? user.username
@@ -298,7 +316,7 @@ export default function ProfileTab() {
     // Clear session-related localStorage entries
     try {
       ['steinz_privacy', 'steinz_preferences', 'steinz_notifications', 'steinz_read_notifs', 'steinz_support_chat', 'steinz_portfolio_wallet', 'wallet_address', 'wallet_provider'].forEach(k => localStorage.removeItem(k));
-    } catch {}
+    } catch { /* localStorage unavailable — silently ignore */ }
     window.location.href = '/login';
   };
 
@@ -334,7 +352,9 @@ export default function ProfileTab() {
     setPrivacySaving(true);
     try {
       await supabase.auth.updateUser({ data: { [`privacy_${key}`]: value } });
-    } catch {} finally { setPrivacySaving(false); }
+    } catch (err) {
+      console.error('[ProfileTab] Save privacy setting failed:', err);
+    } finally { setPrivacySaving(false); }
   };
 
   // Profile photo + cover photo + username edit state
@@ -360,28 +380,30 @@ export default function ProfileTab() {
           const meta = authUser?.user_metadata || {};
           if (meta.avatar_url) {
             setAvatarUrl(meta.avatar_url);
-            try { localStorage.setItem('steinz_avatar_url', meta.avatar_url); } catch {}
+            try { localStorage.setItem('steinz_avatar_url', meta.avatar_url); } catch { /* localStorage unavailable — silently ignore */ }
           } else {
             const saved = localStorage.getItem('steinz_avatar_url');
             if (saved) setAvatarUrl(saved);
           }
           if (meta.cover_url) {
             setCoverUrl(meta.cover_url);
-            try { localStorage.setItem('steinz_cover_url', meta.cover_url); } catch {}
+            try { localStorage.setItem('steinz_cover_url', meta.cover_url); } catch { /* localStorage unavailable — silently ignore */ }
           } else {
             const savedCover = localStorage.getItem('steinz_cover_url');
             if (savedCover) setCoverUrl(savedCover);
           }
           return;
         }
-      } catch {}
+      } catch (err) {
+        console.error('[ProfileTab] Load photos from Supabase failed:', err);
+      }
       // Fallback to localStorage only
       try {
         const saved = localStorage.getItem('steinz_avatar_url');
         if (saved) setAvatarUrl(saved);
         const savedCover = localStorage.getItem('steinz_cover_url');
         if (savedCover) setCoverUrl(savedCover);
-      } catch {}
+      } catch { /* localStorage unavailable — silently ignore */ }
     };
     loadPhotos();
   }, []);
@@ -403,13 +425,15 @@ export default function ProfileTab() {
     reader.onload = async (ev) => {
       const url = ev.target?.result as string;
       setAvatarUrl(url);
-      try { localStorage.setItem('steinz_avatar_url', url); } catch {}
+      try { localStorage.setItem('steinz_avatar_url', url); } catch { /* localStorage unavailable — silently ignore */ }
       // Persist to Supabase user_metadata so it works across all devices/URLs
       try {
         if (supabase) {
           await supabase.auth.updateUser({ data: { avatar_url: url } });
         }
-      } catch {}
+      } catch (err) {
+        console.error('[ProfileTab] Persist avatar to Supabase failed:', err);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -422,13 +446,15 @@ export default function ProfileTab() {
     reader.onload = async (ev) => {
       const url = ev.target?.result as string;
       setCoverUrl(url);
-      try { localStorage.setItem('steinz_cover_url', url); } catch {}
+      try { localStorage.setItem('steinz_cover_url', url); } catch { /* localStorage unavailable — silently ignore */ }
       // Persist to Supabase user_metadata so it works across all devices/URLs
       try {
         if (supabase) {
           await supabase.auth.updateUser({ data: { cover_url: url } });
         }
-      } catch {}
+      } catch (err) {
+        console.error('[ProfileTab] Persist cover to Supabase failed:', err);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -676,7 +702,7 @@ export default function ProfileTab() {
           </div>
           {coverUrl && (
             <button
-              onClick={() => { setCoverUrl(''); try { localStorage.removeItem('steinz_cover_url'); } catch {} }}
+              onClick={() => { setCoverUrl(''); try { localStorage.removeItem('steinz_cover_url'); } catch { /* localStorage unavailable — silently ignore */ } }}
               className="mt-1.5 text-[10px] text-[#EF4444] hover:text-[#EF4444]/80 transition-colors"
             >
               Remove cover photo
@@ -713,7 +739,7 @@ export default function ProfileTab() {
               </button>
               {avatarUrl && (
                 <button
-                  onClick={async () => { setAvatarUrl(''); try { localStorage.removeItem('steinz_avatar_url'); } catch {} try { if (supabase) await supabase.auth.updateUser({ data: { avatar_url: '' } }); } catch {} }}
+                  onClick={async () => { setAvatarUrl(''); try { localStorage.removeItem('steinz_avatar_url'); } catch { /* localStorage unavailable — silently ignore */ } try { if (supabase) await supabase.auth.updateUser({ data: { avatar_url: '' } }); } catch (err) { console.error('[ProfileTab] Clear avatar in Supabase failed:', err); } }}
                   className="text-[10px] text-[#EF4444] hover:text-[#EF4444]/80 transition-colors"
                 >
                   Remove photo

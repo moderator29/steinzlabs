@@ -191,6 +191,9 @@ export default function SignUpPage() {
         return;
       }
       showToast('Account created! Check your email to verify.', 'success');
+      import('@/lib/posthog').then(({ track }) => {
+        track('user_signed_up', { username: form.username.trim().toLowerCase() });
+      }).catch(() => { /* PostHog not configured */ });
       router.push('/login?confirmed=pending');
     } catch (err: any) {
       const msg = err?.message || '';

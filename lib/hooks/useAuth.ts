@@ -131,6 +131,10 @@ export function useAuthProvider(): AuthContextType {
             setLoading(false);
             // Fetch full profile (name, username) in background — non-blocking
             fetchProfile(session.user);
+            // PostHog identify (non-blocking)
+            import('@/lib/posthog').then(({ identify }) => {
+              identify(session.user.id, { email: session.user.email });
+            }).catch(() => { /* PostHog not configured */ });
           } else {
             setUser(null);
             setSupabaseUser(null);
@@ -147,7 +151,7 @@ export function useAuthProvider(): AuthContextType {
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
-      try { subscription?.unsubscribe(); } catch {}
+      try { subscription?.unsubscribe(); } catch (err) { console.error('[useAuth] Unsubscribe failed:', err); }
     };
   }, [fetchProfile]);
 
@@ -158,7 +162,11 @@ export function useAuthProvider(): AuthContextType {
       }
       setUser(null);
       setSupabaseUser(null);
-    } catch {}
+      const { resetUser } = await import('@/lib/posthog');
+      resetUser();
+    } catch (err) {
+      console.error('[useAuth] Sign out failed:', err);
+    }
   }, []);
 
   return { user, supabaseUser, loading, signOut, refreshProfile };

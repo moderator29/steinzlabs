@@ -12,7 +12,9 @@ async function getEthUsdPrice(): Promise<number> {
   try {
     const price = await getTokenPrice('ethereum');
     if (price > 0) { ethPriceCache = { price, ts: Date.now() }; return price; }
-  } catch {}
+  } catch (err) {
+    console.error('[whale-tracker] ETH price fetch failed:', err);
+  }
   return ethPriceCache.price > 0 ? ethPriceCache.price : 2500; // last-resort fallback
 }
 

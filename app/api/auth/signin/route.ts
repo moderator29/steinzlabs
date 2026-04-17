@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const maxDuration = 15; // seconds — prevents Vercel cutting off before our timeout
@@ -70,7 +71,30 @@ export async function POST(request: Request) {
         .eq('id', data.user?.id)
         .single();
       profile = profileData;
-    } catch {}
+    } catch (err) {
+      console.error('[signin] Profile fetch failed:', err);
+      Sentry.captureException(err);
+    }
+
+    // Log login activity (non-blocking)
+    if (data.user?.id) {
+      try {
+        const admin = getSupabaseAdmin();
+        const userAgent = request.headers.get('user-agent') || 'Unknown';
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+          || request.headers.get('x-real-ip')
+          || 'Unknown';
+        admin.from('login_activity').insert({
+          user_id: data.user.id,
+          user_agent: userAgent,
+          ip,
+        }).then(({ error }) => {
+          if (error) console.error('[signin] login_activity insert failed:', error.message);
+        });
+      } catch (err) {
+        console.error('[signin] login activity logging failed:', err);
+      }
+    }
 
     return NextResponse.json({
       access_token: data.access_token,
@@ -80,7 +104,8 @@ export async function POST(request: Request) {
       profile,
     });
   } catch (err: any) {
-
+    console.error('[signin] failed:', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Sign in failed. Please try again.' }, { status: 500 });
   }
 }

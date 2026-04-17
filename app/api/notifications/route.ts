@@ -117,11 +117,11 @@ async function fetchWhaleAlerts(): Promise<NotificationItem[]> {
 
 async function fetchSupabaseNotifications(userId?: string): Promise<NotificationItem[]> {
   try {
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
     if (!serviceKey) return [];
     const { createClient } = await import('@supabase/supabase-js');
     const adminClient = createClient(
-      'https://phvewrldcdxupsnakddx.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
       serviceKey,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
     };
     let supabaseId: string | null = null;
     try {
-      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
       if (serviceKey) {
         const { createClient } = await import('@supabase/supabase-js');
         const adminClient = createClient('https://phvewrldcdxupsnakddx.supabase.co', serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -209,7 +209,9 @@ export async function POST(req: NextRequest) {
           .select('id').single();
         if (!error && data) { supabaseId = data.id; notification.id = `sb-${data.id}`; }
       }
-    } catch {}
+    } catch (err) {
+      console.error('[notifications POST] Supabase persist failed:', err);
+    }
     const emailAlertTypes = ['whale_alert', 'price_target'];
     if (emailAlertTypes.includes(type) && userEmail) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';

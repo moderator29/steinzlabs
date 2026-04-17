@@ -168,7 +168,7 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
     return () => {
       mounted = false;
       if (widgetRef.current) {
-        try { widgetRef.current.remove?.(); } catch {}
+        try { widgetRef.current.remove?.(); } catch { /* Widget already destroyed — ignore */ }
         widgetRef.current = null;
       }
     };

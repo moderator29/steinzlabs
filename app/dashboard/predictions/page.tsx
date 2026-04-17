@@ -251,7 +251,8 @@ function PredictionModal({
       onConfirm(numAmount);
       setSuccess(true);
       setTimeout(() => onClose(), 1500);
-    } catch {
+    } catch (err) {
+      console.error('[predictions] Confirm prediction failed:', err);
       setConfirming(false);
     }
   };
@@ -578,7 +579,8 @@ export default function PredictionsPage() {
       const data: ApiResponse = await res.json();
       setPredictions(data.predictions || []);
       setStats(data.stats || { activePredictions: 0, totalPoolVolume: 0, resolvedCount: 0 });
-    } catch {
+    } catch (err) {
+      console.error('[predictions] Fetch predictions failed:', err);
       setPredictions([]);
     } finally {
       setLoading(false);
@@ -627,7 +629,9 @@ export default function PredictionsPage() {
           potentialPayout: data.payout?.potentialPayout || amount,
         },
       }));
-    } catch {}
+    } catch (err) {
+      console.error('[predictions] Handle confirm prediction failed:', err);
+    }
   };
 
   const filteredPredictions = useMemo(() => {

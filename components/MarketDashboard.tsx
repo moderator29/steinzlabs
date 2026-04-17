@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface CoinRow {
   id: string;
@@ -102,8 +103,15 @@ export default function MarketDashboard() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('steinz_watchlist');
-      setWatchlist(stored ? JSON.parse(stored) : []);
-    } catch { setWatchlist([]); }
+      if (stored) setWatchlist(JSON.parse(stored));
+    } catch { /* ignore */ }
+    supabase.from('watchlist').select('token_id').then(({ data }) => {
+      if (data && data.length > 0) {
+        const ids = data.map((r: { token_id: string }) => r.token_id);
+        setWatchlist(ids);
+        try { localStorage.setItem('steinz_watchlist', JSON.stringify(ids)); } catch { /* ignore */ }
+      }
+    }).catch(err => console.error('[MarketDashboard] Watchlist load failed:', err instanceof Error ? err.message : err));
   }, []);
 
   const fetchCoins = useCallback(async () => {
@@ -191,15 +199,25 @@ export default function MarketDashboard() {
   }, [coins, searchResults, search, filters, tab, watchlistCoins]);
 
   const handleCoinTap = (coin: CoinRow) => {
-    try { localStorage.setItem('steinz_last_tab', 'markets'); } catch {}
+    try { localStorage.setItem('steinz_last_tab', 'markets'); } catch { /* localStorage unavailable — silently ignore */ }
     router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
   const toggleWatchlist = (e: React.MouseEvent, coinId: string) => {
     e.stopPropagation();
     setWatchlist(prev => {
-      const next = prev.includes(coinId) ? prev.filter(id => id !== coinId) : [...prev, coinId];
-      try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch {}
+      const isAdding = !prev.includes(coinId);
+      const next = isAdding ? [...prev, coinId] : prev.filter(id => id !== coinId);
+      try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch { /* ignore */ }
+      if (isAdding) {
+        supabase.from('watchlist').insert({ token_id: coinId }).catch(err =>
+          console.error('[MarketDashboard] Watchlist add failed:', err instanceof Error ? err.message : err)
+        );
+      } else {
+        supabase.from('watchlist').delete().eq('token_id', coinId).catch(err =>
+          console.error('[MarketDashboard] Watchlist remove failed:', err instanceof Error ? err.message : err)
+        );
+      }
       return next;
     });
   };
@@ -210,7 +228,7 @@ export default function MarketDashboard() {
     (filters.sortBy !== 'market_cap' ? 1 : 0);
 
   const filterModal = showFilters ? (
-    <div className="fixed inset-0 z-[9999] flex items-end">
+    <div className="fixed inset-0 z-40 flex items-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFilters(false)} />
       <div className="relative w-full bg-[#111827] rounded-t-2xl p-6 z-10 border-t border-white/[0.06] max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">

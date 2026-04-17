@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/auth/callback'];
 
@@ -18,44 +19,6 @@ function applyHeaders(response: NextResponse) {
   return response;
 }
 
-async function verifySupabaseJWT(token: string): Promise<boolean> {
-  if (!token) return false;
-
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const payload = JSON.parse(atob(parts[1]));
-    if (!payload.sub) return false;
-    if (payload.role === 'anon' || payload.role === 'service_role') return false;
-    if (payload.exp && payload.exp * 1000 < Date.now()) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function extractTokenFromCookies(request: NextRequest): string | null {
-  const steinzCookie = request.cookies.get('steinz_session')?.value;
-  if (steinzCookie) return steinzCookie;
-
-  // Check Supabase SSR auth token cookies (sb-<ref>-auth-token)
-  const sbCookie = request.cookies.getAll().find(c =>
-    c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
-  );
-  if (sbCookie?.value) {
-    try {
-      // Supabase SSR stores as JSON array or object
-      const parsed = JSON.parse(sbCookie.value);
-      if (Array.isArray(parsed) && parsed[0]) return parsed[0];
-      if (parsed?.access_token) return parsed.access_token;
-    } catch {
-      return sbCookie.value;
-    }
-  }
-
-  return null;
-}
-
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
@@ -63,30 +26,43 @@ export async function middleware(request: NextRequest) {
   const isAdminRoute = path.startsWith('/admin');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
-  if ((isProtectedDashboard || isAdminRoute) && !isPublic) {
-    const token = extractTokenFromCookies(request);
-    const isValid = await verifySupabaseJWT(token ?? '');
+  if (path === '/auth') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return applyHeaders(NextResponse.redirect(url));
+  }
 
-    if (!isValid) {
+  if ((isProtectedDashboard || isAdminRoute) && !isPublic) {
+    const response = NextResponse.next();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({ name, value: '', ...options });
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (!user || error) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('from', path);
       return applyHeaders(NextResponse.redirect(url));
     }
 
-    // Admin routes require a valid session — role check happens in the page/API
-    // Non-authenticated users are silently redirected to /dashboard
-    if (isAdminRoute && !isValid) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return applyHeaders(NextResponse.redirect(url));
-    }
-  }
-
-  if (path === '/auth') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return applyHeaders(NextResponse.redirect(url));
+    return applyHeaders(response);
   }
 
   return applyHeaders(NextResponse.next());

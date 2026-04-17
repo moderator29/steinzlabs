@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, Plus, Trash2, Eye, EyeOff, Calendar } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Bell, Plus, Trash2, Eye, EyeOff, Calendar, RefreshCw } from 'lucide-react';
 
 type AnnType = 'info' | 'warning' | 'maintenance' | 'feature';
 
@@ -23,29 +23,101 @@ const TYPE_STYLES: Record<AnnType, string> = {
   feature:     'text-green-400 bg-green-400/10 border-green-400/20',
 };
 
-const MOCK_ANN: Announcement[] = [
-  { id: '1', title: 'New Swap Engine Live', body: 'Uniswap v3 routing is now live across all EVM chains.', type: 'feature', active: true, createdAt: Date.now() - 86400_000, targetAudience: 'All' },
-  { id: '2', title: 'Scheduled Maintenance', body: 'Database maintenance window: 2-4am UTC Saturday.', type: 'maintenance', active: true, createdAt: Date.now() - 3600_000, expiresAt: Date.now() + 86400_000, targetAudience: 'All' },
-  { id: '3', title: 'CoinGecko API Degraded', body: 'Some price data may be delayed. Working on a fix.', type: 'warning', active: false, createdAt: Date.now() - 172800_000, targetAudience: 'All' },
-];
-
 const BLANK: Omit<Announcement, 'id' | 'createdAt'> = { title: '', body: '', type: 'info', active: true, targetAudience: 'All' };
 
+function authHeader() {
+  const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_token') ?? '' : '';
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
 export default function AnnouncementsPage() {
-  const [items, setItems] = useState(MOCK_ANN);
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...BLANK });
 
-  const save = () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/announcements', { headers: authHeader() });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.announcements)) {
+          setItems(data.announcements.map((a: Record<string, unknown>) => ({
+            id: a.id as string,
+            title: a.title as string,
+            body: (a.body as string) || (a.message as string) || '',
+            type: (a.type as AnnType) || 'info',
+            active: a.active !== false,
+            createdAt: new Date((a.created_at as string) || Date.now()).getTime(),
+            expiresAt: a.expires_at ? new Date(a.expires_at as string).getTime() : undefined,
+            targetAudience: (a.target_audience as string) || 'All',
+          })));
+        }
+      }
+    } catch (err) {
+      console.error('[announcements] Load failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
     if (!form.title.trim()) return;
-    const entry: Announcement = { ...form, id: Date.now().toString(), createdAt: Date.now() };
-    setItems(prev => [entry, ...prev]);
-    setForm({ ...BLANK });
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/announcements', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          title: form.title,
+          body: form.body,
+          type: form.type,
+          active: form.active,
+          target_audience: form.targetAudience,
+          expires_at: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+        }),
+      });
+      if (res.ok) {
+        setForm({ ...BLANK });
+        setShowForm(false);
+        await load();
+      }
+    } catch (err) {
+      console.error('[announcements] Save failed:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggle = (id: string) => setItems(prev => prev.map(a => a.id === id ? { ...a, active: !a.active } : a));
-  const remove = (id: string) => setItems(prev => prev.filter(a => a.id !== id));
+  const toggle = async (id: string) => {
+    const ann = items.find(a => a.id === id);
+    if (!ann) return;
+    setItems(prev => prev.map(a => a.id === id ? { ...a, active: !a.active } : a));
+    try {
+      await fetch(`/api/admin/announcements?id=${id}`, {
+        method: 'PATCH',
+        headers: authHeader(),
+        body: JSON.stringify({ active: !ann.active }),
+      });
+    } catch (err) {
+      console.error('[announcements] Toggle failed:', err);
+      setItems(prev => prev.map(a => a.id === id ? { ...a, active: ann.active } : a));
+    }
+  };
+
+  const remove = async (id: string) => {
+    setItems(prev => prev.filter(a => a.id !== id));
+    try {
+      await fetch(`/api/admin/announcements?id=${id}`, { method: 'DELETE', headers: authHeader() });
+    } catch (err) {
+      console.error('[announcements] Delete failed:', err);
+      load();
+    }
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -54,10 +126,15 @@ export default function AnnouncementsPage() {
           <h1 className="text-xl font-bold text-white">In-App Announcements</h1>
           <p className="text-xs text-gray-500 mt-0.5">Banner and notification announcements shown to users</p>
         </div>
-        <button onClick={() => setShowForm(p => !p)}
-          className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium">
-          <Plus className="w-3.5 h-3.5" /> New Announcement
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => setShowForm(p => !p)}
+            className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium">
+            <Plus className="w-3.5 h-3.5" /> New Announcement
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -78,9 +155,26 @@ export default function AnnouncementsPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={save} className="bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors">Save</button>
+            <button onClick={save} disabled={saving} className="bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
             <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white text-xs px-4 py-2 rounded-lg hover:bg-[#1E2433] transition-colors">Cancel</button>
           </div>
+        </div>
+      )}
+
+      {loading && items.length === 0 && (
+        <div className="flex items-center justify-center py-12 gap-2">
+          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <span className="text-xs text-gray-500">Loading announcements...</span>
+        </div>
+      )}
+
+      {!loading && items.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Bell className="w-8 h-8 text-gray-700 mb-2" />
+          <p className="text-sm text-gray-400">No announcements yet</p>
+          <p className="text-xs text-gray-600 mt-1">Create one to display banners or notifications to users</p>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { sendPushToUser } from '@/lib/services/webpush';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
 );
 
 // POST /api/notifications/test — Admin only, sends test push to a user

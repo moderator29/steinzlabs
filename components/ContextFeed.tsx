@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, SlidersHorizontal, Zap, TrendingUp, BarChart2, Info } from 'lucide-react';
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
+import { supabase } from '@/lib/supabase';
 
 interface EngagementData {
   views: number;
@@ -224,21 +225,45 @@ export default function ContextFeed() {
   ];
 
   useEffect(() => {
+    // Local first (instant)
     try {
       const stored = localStorage.getItem('steinz_bookmarks');
       if (stored) setBookmarks(new Set(JSON.parse(stored)));
-    } catch {}
+    } catch { /* Malformed JSON — return default */ }
+    // Then merge from Supabase
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('bookmarks').select('event_id').eq('user_id', user.id).then(({ data, error }) => {
+        if (error || !data) return;
+        const remoteIds = data.map((r: { event_id: string }) => r.event_id);
+        setBookmarks(prev => {
+          const merged = new Set([...prev, ...remoteIds]);
+          try { localStorage.setItem('steinz_bookmarks', JSON.stringify(Array.from(merged))); } catch { /* localStorage unavailable — silently ignore */ }
+          return merged;
+        });
+      });
+    });
   }, []);
 
   const toggleBookmark = useCallback((eventId: string) => {
     setBookmarks(prev => {
       const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
-        next.add(eventId);
-      }
-      try { localStorage.setItem('steinz_bookmarks', JSON.stringify(Array.from(next))); } catch {}
+      const adding = !next.has(eventId);
+      if (adding) next.add(eventId); else next.delete(eventId);
+      try { localStorage.setItem('steinz_bookmarks', JSON.stringify(Array.from(next))); } catch { /* localStorage unavailable — silently ignore */ }
+      // Sync to Supabase
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        if (adding) {
+          supabase.from('bookmarks').insert({ user_id: user.id, event_id: eventId }).then(({ error }) => {
+            if (error) console.error('[ContextFeed] Bookmark insert failed:', error.message);
+          });
+        } else {
+          supabase.from('bookmarks').delete().eq('user_id', user.id).eq('event_id', eventId).then(({ error }) => {
+            if (error) console.error('[ContextFeed] Bookmark delete failed:', error.message);
+          });
+        }
+      });
       return next;
     });
   }, []);

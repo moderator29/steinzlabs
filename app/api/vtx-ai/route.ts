@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import * as Sentry from '@sentry/nextjs';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
@@ -783,9 +784,10 @@ export async function POST(request: NextRequest) {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: value })}\n\n`));
             }
             // Final event with scrubbed full text
-            const scrubbed = scrubBranding(fullText);
+            const scrubbed = sanitizeVtxResponse(scrubBranding(fullText));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
-          } catch {
+          } catch (streamErr) {
+            console.error('[VTX-AI] Stream error:', streamErr instanceof Error ? streamErr.message : streamErr);
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
           } finally {
             controller.close();
@@ -897,7 +899,9 @@ export async function POST(request: NextRequest) {
             logo: p.info?.imageUrl || null,
           };
         }
-      } catch {}
+      } catch (err) {
+        console.error('[vtx-ai] Token card build failed:', err);
+      }
     }
 
     return NextResponse.json({
@@ -919,6 +923,7 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     const isDev = process.env.NODE_ENV === 'development';
     console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+    Sentry.captureException(err);
 
     // Surface specific errors
     if (msg.includes('API key')) {
@@ -951,4 +956,14 @@ function scrubBranding(text: string): string {
     .replace(/\bLunarCrush\b/gi, 'Steinz Intelligence')
     .replace(/\bMoralis\b/gi, 'Steinz Intelligence')
     .replace(/\bJupiter\b/gi, 'Steinz Router');
+}
+
+function sanitizeVtxResponse(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/—/g, '-')
+    .replace(/^#+\s*/gm, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\n\n\n+/g, '\n\n');
 }

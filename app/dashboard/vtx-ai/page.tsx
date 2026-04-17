@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { supabase } from '@/lib/supabase';
 
 interface TokenCardData {
   symbol: string;
@@ -63,14 +64,30 @@ function loadHistory(): Message[] {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return [
     { role: 'assistant', content: 'VTX Agent online. I pull live market data, on-chain intelligence, and security analysis before every response. What do you need?', timestamp: Date.now() },
   ];
 }
 
 function saveHistory(messages: Message[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50))); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50))); } catch { /* localStorage unavailable — silently ignore */ }
+}
+
+async function syncHistoryToSupabase(messages: Message[]) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const recent = messages.slice(-50);
+    const title = recent.find(m => m.role === 'user')?.content?.slice(0, 60) || 'VTX Conversation';
+    await fetch('/api/vtx/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, messages: recent }),
+    });
+  } catch (err) {
+    console.error('[VTX] Failed to sync history to Supabase:', err instanceof Error ? err.message : err);
+  }
 }
 
 function getUserTier(): string {
@@ -81,12 +98,12 @@ function getDailyUsage(): { used: number; limit: number; remaining: number } {
   try {
     const stored = localStorage.getItem(USAGE_KEY);
     if (stored) { const p = JSON.parse(stored); if (p && typeof p.used === 'number') return p; }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return { used: 0, limit: 25, remaining: 25 };
 }
 
 function saveDailyUsage(u: { used: number; limit: number; remaining: number }) {
-  try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch {}
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 function parseTokenCards(content: string): TokenCardData[] {
@@ -207,7 +224,7 @@ function loadSettings(): AgentSettings {
       const parsed = JSON.parse(s);
       return { ...DEFAULT_PAGE_SETTINGS, ...parsed };
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return { ...DEFAULT_PAGE_SETTINGS };
 }
 
@@ -226,11 +243,11 @@ function playPageChime() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.3);
-  } catch {}
+  } catch { /* Provider rejected — silently ignore */ }
 }
 
 function saveSettings(s: AgentSettings) {
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {}
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 const QUICK_ACTIONS = [
@@ -282,14 +299,35 @@ export default function VtxAiPage() {
         const sessions = localStorage.getItem(HISTORY_INDEX_KEY);
         if (sessions) {
           const parsed = JSON.parse(sessions);
-          // support both old format (title/preview only) and new format (with messages)
           if (Array.isArray(parsed)) setChatSessions(parsed);
         }
-      } catch {}
+      } catch { /* Malformed JSON — return default */ }
+      // Background: load conversation history from Supabase
+      fetch('/api/vtx/conversations')
+        .then(r => r.json())
+        .then(({ conversations }) => {
+          if (conversations && conversations.length > 0) {
+            const entries: ChatHistoryEntry[] = conversations.map((c: { id: string; title: string; messages: Message[]; updated_at: string }) => ({
+              id: c.id,
+              date: c.updated_at,
+              messages: c.messages || [],
+              preview: c.title || 'VTX Conversation',
+            }));
+            setChatSessions(entries);
+          }
+        })
+        .catch(err => console.error('[VTX] Failed to load Supabase history:', err instanceof Error ? err.message : err));
     }
   }, []);
 
-  useEffect(() => { if (initialized.current && messages.length > 0) saveHistory(messages); }, [messages]);
+  useEffect(() => {
+    if (!initialized.current || messages.length === 0) return;
+    saveHistory(messages);
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === 'assistant') {
+      syncHistoryToSupabase(messages);
+    }
+  }, [messages]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const isPro = tier === 'pro';
@@ -317,7 +355,7 @@ export default function VtxAiPage() {
       const updated = [session, ...chatSessions].slice(0, 30);
       setChatSessions(updated);
       localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(updated));
-    } catch {}
+    } catch { /* localStorage unavailable — silently ignore */ }
   };
 
   const loadChatSession = (entry: ChatHistoryEntry) => {
