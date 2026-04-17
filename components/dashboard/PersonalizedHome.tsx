@@ -2,11 +2,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Send, Eye, Bell, TrendingUp, TrendingDown, MessageSquare, Wallet } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Send,
+  Eye,
+  Bell,
+  Wallet,
+} from "lucide-react";
 import { NakaLoader } from "@/components/brand/NakaLoader";
+import { MiniVtxPanel } from "@/components/dashboard/MiniVtxPanel";
 
 interface HomepageData {
-  user: { id: string; email: string };
+  user: { id: string; email: string; displayName: string; tier: string };
   wallets: Array<{ address: string; chain: string }>;
   watchlist: Array<{ token_id: string; chain: string }>;
   alertsToday: Array<{ id: string; name?: string; triggered_at?: string; type?: string }>;
@@ -34,7 +41,7 @@ export function PersonalizedHome() {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    (async () => {
       try {
         const res = await fetch("/api/dashboard/homepage", { credentials: "include" });
         if (!res.ok) return;
@@ -43,8 +50,7 @@ export function PersonalizedHome() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-    load();
+    })();
     return () => {
       cancelled = true;
     };
@@ -52,149 +58,86 @@ export function PersonalizedHome() {
 
   if (loading) return <NakaLoader size={40} text="Loading your dashboard..." />;
 
-  const username = data?.user.email?.split("@")[0] ?? "trader";
+  const displayName = data?.user.displayName ?? "there";
+  const walletsCount = data?.wallets.length ?? 0;
+  const watchlistCount = data?.watchlist.length ?? 0;
 
   return (
-    <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Greeting */}
-      <div className="mb-6">
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-white">
-          {greeting()}, <span className="text-blue-400">{username}</span>
+          {greeting()}, <span className="text-blue-400">{displayName}</span>
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          {data?.wallets.length ?? 0} wallet{data?.wallets.length === 1 ? "" : "s"} tracked ·{" "}
-          {data?.watchlist.length ?? 0} tokens watched
+          {walletsCount} wallet{walletsCount === 1 ? "" : "s"} tracked · {watchlistCount} token
+          {watchlistCount === 1 ? "" : "s"} watched
         </p>
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <QuickAction icon={<ArrowLeftRight size={18} />} label="Swap" onClick={() => router.push("/dashboard/swap")} />
         <QuickAction icon={<Send size={18} />} label="Send" onClick={() => router.push("/dashboard/wallet-page?action=send")} />
         <QuickAction icon={<Eye size={18} />} label="Track Wallet" onClick={() => router.push("/dashboard/wallet-intelligence")} />
         <QuickAction icon={<Bell size={18} />} label="Set Alert" onClick={() => router.push("/dashboard/alerts")} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main column */}
-        <div className="lg:col-span-2 space-y-6">
-          <Section title="Alerts Today" count={data?.alertsCount ?? 0}>
-            {(data?.alertsToday.length ?? 0) === 0 ? (
-              <EmptyState
-                message="No alerts triggered in the last 24 hours."
-                cta={{ label: "Create an alert", href: "/dashboard/alerts" }}
-              />
-            ) : (
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {data!.alertsToday.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex-shrink-0 w-64 p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 transition"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bell size={14} className="text-amber-400" />
-                      <span className="text-xs uppercase text-amber-400 tracking-wide">{a.type ?? "Alert"}</span>
-                    </div>
-                    <p className="text-sm text-white line-clamp-2">{a.name ?? "Alert triggered"}</p>
-                    {a.triggered_at && (
-                      <p className="text-xs text-slate-500 mt-2">{new Date(a.triggered_at).toLocaleTimeString()}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+      {/* Mini VTX panel */}
+      <MiniVtxPanel
+        displayName={displayName}
+        recentSessions={(data?.recentVtx ?? []).map((c) => ({
+          id: c.id,
+          title: c.title,
+          updatedAt: c.updatedAt,
+        }))}
+      />
 
-          <Section title="Watchlist Movers" count={data?.watchlist.length ?? 0}>
-            {(data?.watchlist.length ?? 0) === 0 ? (
-              <EmptyState
-                message="Your watchlist is empty."
-                cta={{ label: "Browse markets", href: "/market" }}
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {data!.watchlist.slice(0, 3).map((w) => (
-                  <Link
-                    key={`${w.chain}:${w.token_id}`}
-                    href={`/market/prices/${w.token_id}`}
-                    className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 transition block"
-                  >
-                    <p className="text-xs uppercase text-slate-500 tracking-wide">{w.chain}</p>
-                    <p className="text-sm text-white font-medium mt-1 truncate">{w.token_id}</p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          <Section title="Smart Money Digest">
-            {(data?.follows.length ?? 0) === 0 ? (
-              <EmptyState
-                message="Follow whales to see their moves here."
-                cta={{ label: "Explore smart money", href: "/dashboard/smart-money" }}
-              />
-            ) : (
-              <div className="space-y-2">
-                {data!.follows.slice(0, 3).map((f) => (
-                  <Link
-                    key={f.whale_address}
-                    href={`/dashboard/wallet-intelligence?address=${f.whale_address}`}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 transition"
-                  >
-                    <Wallet size={16} className="text-blue-400" />
-                    <code className="text-xs text-slate-300 font-mono truncate flex-1">{f.whale_address}</code>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Section>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Section title="Recent VTX Chats">
-            {(data?.recentVtx.length ?? 0) === 0 ? (
-              <EmptyState
-                message="No recent chats yet."
-                cta={{ label: "Ask VTX", href: "/dashboard/vtx-ai" }}
-              />
-            ) : (
-              <div className="space-y-2">
-                {data!.recentVtx.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/dashboard/vtx-ai?c=${c.id}`}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 transition"
-                  >
-                    <MessageSquare size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{c.title ?? "Untitled conversation"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {new Date(c.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Section>
-        </div>
+      {/* Insights Row — 3 compact cards side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <InsightCard
+          title="Alerts Today"
+          count={data?.alertsCount ?? 0}
+          countLabel={`${data?.alertsCount ?? 0} triggered`}
+          preview={
+            (data?.alertsToday ?? []).slice(0, 2).map((a) => ({
+              id: a.id,
+              label: a.name ?? "Alert triggered",
+              sub: a.type ?? undefined,
+            }))
+          }
+          emptyMessage="No alerts in the last 24 h"
+          link={{ label: "View all", href: "/dashboard/alerts" }}
+          accent="amber"
+        />
+        <InsightCard
+          title="Watchlist"
+          count={watchlistCount}
+          countLabel={`${watchlistCount} token${watchlistCount === 1 ? "" : "s"}`}
+          preview={(data?.watchlist ?? []).slice(0, 2).map((w) => ({
+            id: `${w.chain}:${w.token_id}`,
+            label: w.token_id,
+            sub: w.chain.toUpperCase(),
+          }))}
+          emptyMessage="Watchlist is empty"
+          link={{ label: "View all", href: "/market/watchlist" }}
+          accent="blue"
+        />
+        <InsightCard
+          title="Smart Money"
+          count={data?.follows.length ?? 0}
+          countLabel={`${data?.follows.length ?? 0} followed`}
+          preview={(data?.follows ?? []).slice(0, 2).map((f) => ({
+            id: f.whale_address,
+            label: `${f.whale_address.slice(0, 6)}…${f.whale_address.slice(-4)}`,
+            sub: "wallet",
+          }))}
+          emptyMessage="Follow wallets to track"
+          link={{ label: "Explore", href: "/dashboard/smart-money" }}
+          accent="purple"
+        />
       </div>
     </div>
-  );
-}
-
-function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
-  return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm uppercase tracking-wide text-slate-500">{title}</h2>
-        {typeof count === "number" && count > 0 && (
-          <span className="text-xs text-slate-600">{count}</span>
-        )}
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -210,12 +153,58 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
   );
 }
 
-function EmptyState({ message, cta }: { message: string; cta: { label: string; href: string } }) {
+interface PreviewItem {
+  id: string;
+  label: string;
+  sub?: string;
+}
+
+function InsightCard({
+  title,
+  count,
+  countLabel,
+  preview,
+  emptyMessage,
+  link,
+  accent,
+}: {
+  title: string;
+  count: number;
+  countLabel: string;
+  preview: PreviewItem[];
+  emptyMessage: string;
+  link: { label: string; href: string };
+  accent: "amber" | "blue" | "purple";
+}) {
+  const accentMap = {
+    amber: "text-amber-400 border-amber-500/30 bg-amber-500/5",
+    blue: "text-blue-400 border-blue-500/30 bg-blue-500/5",
+    purple: "text-purple-400 border-purple-500/30 bg-purple-500/5",
+  } as const;
+
   return (
-    <div className="p-6 rounded-xl bg-slate-900/30 border border-dashed border-slate-800 text-center">
-      <p className="text-sm text-slate-500 mb-3">{message}</p>
-      <Link href={cta.href} className="inline-block text-xs text-blue-400 hover:text-blue-300">
-        {cta.label} →
+    <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition flex flex-col min-h-[160px]">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{title}</h3>
+        {count > 0 && (
+          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${accentMap[accent]}`}>{countLabel}</span>
+        )}
+      </div>
+      <div className="flex-1 space-y-1.5">
+        {preview.length === 0 ? (
+          <p className="text-xs text-slate-600 italic">{emptyMessage}</p>
+        ) : (
+          preview.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 text-xs">
+              <Wallet size={10} className="text-slate-600 flex-shrink-0" />
+              <span className="text-slate-300 truncate flex-1">{p.label}</span>
+              {p.sub && <span className="text-slate-600 text-[10px]">{p.sub}</span>}
+            </div>
+          ))
+        )}
+      </div>
+      <Link href={link.href} className="text-xs text-blue-400 hover:text-blue-300 mt-3 inline-block">
+        {link.label} →
       </Link>
     </div>
   );

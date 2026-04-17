@@ -22,6 +22,16 @@ export async function GET(request: NextRequest) {
   const cacheKey = `dashboard:home:${userId}`;
 
   try {
+    // Fetch full auth user for metadata (not cached — cheap + always current)
+    const { data: fullAuthUser } = await supabase.auth.admin.getUserById(userId);
+    const meta = (fullAuthUser?.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName =
+      (typeof meta.display_name === "string" && meta.display_name) ||
+      (typeof meta.username === "string" && meta.username) ||
+      (user.email && user.email.split("@")[0]) ||
+      "there";
+    const tier = typeof meta.subscription_tier === "string" ? meta.subscription_tier : "free";
+
     const data = await cacheWithFallback(cacheKey, 30, async () => {
       const [walletsR, watchlistR, alertsR, followsR, vtxR] = await Promise.all([
         supabase.from("wallet_identities").select("address, chain").eq("user_id", userId),
@@ -39,7 +49,7 @@ export async function GET(request: NextRequest) {
           .select("id, title, updated_at, messages")
           .eq("user_id", userId)
           .order("updated_at", { ascending: false })
-          .limit(3),
+          .limit(10),
       ]);
 
       const recentVtx = ((vtxR.data as VtxConversation[] | null) ?? []).map((c) => {
@@ -53,7 +63,7 @@ export async function GET(request: NextRequest) {
       });
 
       return {
-        user: { id: userId, email: user.email },
+        user: { id: userId, email: user.email, displayName, tier },
         wallets: walletsR.data ?? [],
         watchlist: watchlistR.data ?? [],
         alertsToday: alertsR.data ?? [],
