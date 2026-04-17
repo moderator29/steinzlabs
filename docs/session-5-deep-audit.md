@@ -468,3 +468,168 @@ The two-tab design (Context Feed / Markets) is OK but feels like a leftover from
 **Acceptance criteria:** Logged-in homepage shows total portfolio value + today's PnL + 3 personalized sections (smart-money digest, watchlist movers, alerts) above the fold; market stats sourced from server-cached endpoint; no direct browser → CoinGecko calls; global search box returns mixed-type results in <300ms.
 
 ---
+
+## Feature 4 — Context Feed
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/ContextFeed.tsx](../components/ContextFeed.tsx) — 709 lines (the largest single component on the platform)
+- [app/api/context-feed/route.ts](../app/api/context-feed/route.ts) — 703 lines (the largest single API route)
+- [lib/hooks/useContextFeed.ts](../lib/hooks/useContextFeed.ts) — 169 lines (data hook)
+- [components/ChainIcons.tsx](../components/ChainIcons.tsx) — chain badge components
+- [app/api/engagement/](../app/api/engagement/) — likes/views/shares persistence
+
+**Data sources (all aggregated server-side in one route):**
+- Alchemy `alchemy_getAssetTransfers` (Ethereum large transfers)
+- Solana RPC `getSignaturesForAddress` for known whale wallets (network activity)
+- pump.fun frontend API (`frontend-api.pump.fun/coins?sort=created_timestamp`) for new Solana token launches
+- DexScreener trending (`/latest/dex/tokens/trending`)
+- DexScreener token-profiles per chain (Ethereum, Solana, BSC, Avalanche, Polygon)
+- DexScreener search-pairs by keyword
+- CoinGecko `/simple/price` for ETH/SOL/BNB/MATIC/AVAX USD prices
+- 24h supplemental fetch loop that re-pulls each source every 5s with results merged into an in-process `eventStore` Map
+
+**Architecture pattern:**
+- **Server-side fan-out aggregator.** Single GET endpoint fans out to ~10 upstream sources via `Promise.all`. Returns up to 200 normalized `WhaleEvent` objects.
+- **In-process cache** with two layers:
+  - `priceCache` — ETH/SOL/BNB/MATIC/AVAX prices, 60s TTL.
+  - `responseCache` — full payload keyed by chain filter, 5s TTL.
+  - `eventStore` Map — sticky 72h dedup so events don't disappear on refresh.
+- **Client-side hook** (`useContextFeed`) polls the route every ~30s.
+- **Client-side filtering** by chain (Solana/Ethereum/BSC/Polygon/Avalanche/Bookmarks/Archive) and by event type (new_coins/volume/trending/info).
+- **Engagement persistence** — likes/shares/views go to `/api/engagement` and persist in Supabase.
+- **Bookmarks** — local-first then Supabase sync (added Session 4).
+
+**Performance characteristics:**
+- Cold cache request: 600ms–2s depending on upstream latency. The 10-source fan-out includes pump.fun which is reliably slow (~1s).
+- Warm cache (within 5s): ~10ms.
+- 30s client poll = ~2,800 requests per user per 24h. With 1k DAU = 2.8M backend calls/day before factoring in cache hit rate.
+- The in-process cache means each Vercel edge instance has its own state — under load, the cache hit rate drops significantly.
+- The `eventStore` Map grows unboundedly within a single instance (only pruned at 72h cutoff inside `storeEvents`); under sustained traffic it can leak memory.
+
+**UX quality: 7/10.** Solid execution. The chain filter + type filter combo is good. Like/share/bookmark interactions feel responsive. Animation on like is satisfying. The "share to X" popup is clean. Empty states are decent. The chain icon system gives strong visual differentiation.
+
+**Backend quality: 6/10.** The aggregator does a lot of work but the architecture is shaky. Issues:
+- 10 upstream sources hit synchronously on every cache miss. One slow source (pump.fun) blocks the response.
+- In-process cache and `eventStore` are per-Vercel-instance — at scale they fragment, costing 5–10x the upstream traffic.
+- No distinction between "sources that updated" and "sources that errored" — a CoinGecko outage silently zeros the prices and the page renders with no USD values.
+- Hard 5s cache TTL is not aligned with each source's natural cadence (pump.fun new tokens are interesting at 30s freshness, DexScreener trending at 5min).
+
+**What works well:**
+- Single normalized `WhaleEvent` shape — clients don't care which source produced it.
+- Chain badges are universal and fast.
+- Engagement system (likes/views) is wired through to Supabase.
+- Bookmarks now sync server-side.
+- Sentiment classification — events get tagged BULLISH/BEARISH/HYPE/NEUTRAL which feeds the filter.
+
+**What is weak or missing:**
+- **No real-time push.** Polls every 30s. For a "feed" this is the wrong model — leaders use SSE or WebSocket for instant updates.
+- **No "since last visit" marker.** User can't tell what's new vs. what they already saw.
+- **No event grouping.** Three different sources reporting the same whale move show as three rows. Should merge into one event with multiple confidences.
+- **No "follow this token/wallet" inline.** The card has a Like button but not a Follow button.
+- **No infinite scroll.** Hard 200-event ceiling per fetch.
+- **No pagination cursor.** Can't go back further than the current window.
+- **No personalization.** A free user with no follows sees the same feed as a Max user with 50 followed wallets.
+- **No "explain this event" inline VTX call.** Wasted integration opportunity.
+- **No filter persistence per-user** — chain filter resets to "all" on every reload.
+- **`fetchSolanaNetworkActivity` queries hardcoded whale wallets** rather than the seeded `smart_money_wallets` table.
+- **In-process `eventStore` is not durable** — Vercel cold start = empty feed for 5s.
+- **Filter UI has 6 chain pills + 4 type filters but no search.** Can't find "BONK events from yesterday."
+- **No archive query interface** — `archive` mode shows events from `useArchivedFeed` but no date pickers, no source filters.
+
+**What feels half-built:**
+- The "Bookmarks" tab is a chain filter but renders the bookmark Set against the current feed — if your bookmarked event aged out of the 200-event window, it disappears. Bookmarks should be queried directly from Supabase by ID.
+- The "Archive" tab pulls from `useArchivedFeed` — separate hook, different shape — feels bolted on.
+- The synthetic `recentTimestamp()` function returns `new Date().toISOString()` — not actually used for randomization anymore but still in the file.
+- `priceCache` has fields for matic/avax that are populated but never displayed in the UI.
+
+### B) Industry Standard Comparison
+
+**Nansen "Wallet Profiler" feed:** Real-time stream of moves by tracked wallets, with sub-second updates. Each event is grouped by wallet — if the same wallet does 5 trades in a minute, you see one collapsed entry. "Mark all read" + per-event "track this wallet."
+
+**Arkham real-time feed:** WebSocket-driven, live. Filters by entity type (exchange / fund / dev / scammer). Each event has a one-click "open in graph" that takes you to the entity-relationship view.
+
+**DeBank feed:** Personalized to your followed addresses. No global feed. Updates every 30s.
+
+**Twitter/X for crypto:** Asymmetric — most users follow 50–500 accounts, see only what's relevant. Algorithmic ranking on top. We have neither.
+
+**TradingView idea stream:** Algorithmically ranked combination of "most viewed in 24h" + "from people you follow" + "from people who agree with your bias." Heavy use of recommender system.
+
+**Pattern:** The leaders all converge on **personalized + real-time + grouped**. We are global + polling + ungrouped. We are 1.5–2 generations behind on this surface.
+
+### C) Next-Gen Recommendations
+
+**Make it a real feed, not a polling dump.**
+
+**Highest leverage:**
+
+1. **Server-Sent Events (SSE).** Convert `/api/context-feed` to stream new events as they're discovered. Client reads via `EventSource`, no polling. The aggregator fan-out continues server-side on a background worker, pushes deltas via SSE channel.
+2. **Per-user "for you" ranking.** A simple scoring heuristic: `score = log(valueUsd) + 5*isFollowedWallet + 3*isWatchlistToken + 2*isBookmarkedEvent + freshness_decay`. Initially heuristic; later a real recommender.
+3. **Event grouping.** When two events share `(wallet, token, ±5min window)`, collapse to one card with "5 trades, +$2.3M net." Done client-side from the event stream.
+4. **"Since last visit" cursor.** Persist `last_seen_event_id` per user; show divider line + count.
+5. **Inline VTX "Explain this."** Each event gets a small "?" icon that opens a VTX side panel pre-loaded with `Explain why this event matters: <event JSON>`.
+6. **Real bookmarks query.** Bookmarks tab fetches directly from `bookmarks` table joined with `whale_events_archive` (a new persistent table for archived events), not filtered against the current 200-window.
+
+**Backend changes:**
+- Convert per-instance `eventStore` Map to **Redis stream** (Upstash). Solves both the per-instance fragmentation and the cold-start emptiness.
+- Convert per-instance `responseCache` and `priceCache` to Redis with proper TTLs.
+- Persistent `whale_events_archive` table in Supabase — keep 30 days, indexed by `(chain, type, timestamp DESC)` for archive queries.
+- Background worker (Vercel cron + serverless) that runs every 60s, fans out to upstreams, writes new events to Redis stream + Supabase.
+- SSE endpoint reads from Redis stream and pushes to subscribed clients.
+- Per-user score computation via a `feed_personalization` function that joins user follows + watchlist + bookmarks.
+
+**Frontend changes:**
+- `EventSource` hook replacing the polling `useContextFeed`.
+- "X new events" floating pill at the top when stream produces while user has scrolled down.
+- "Mark all read" button updates `last_seen_event_id`.
+- Inline "? Explain" → opens drawer with VTX response.
+- Persist filter choice per user via `user_preferences.context_feed_filter` JSON.
+- Infinite scroll with cursor-based pagination (`?before=<event_id>`).
+
+**New sub-features:**
+- **"Follow this wallet from event"** — one-click creates a `wallet_follows` row.
+- **"Mute this token"** — hide all events for a token.
+- **Daily digest email** — top 10 events per day for users who don't open the app.
+- **Mobile push** for high-value events from followed wallets.
+- **Embed widget** — public/`/embed/feed?chain=solana` for partners (cf. DeFiLlama embed).
+
+**Performance:**
+- Drop the 5s `responseCache` once SSE is in place.
+- pump.fun fetch should be moved to a separate background poll (every 30s) and pushed into the stream, not fetched per request.
+- All upstream calls should have per-source `AbortSignal.timeout(2000)` — the worst source is currently the floor for the whole response.
+
+**Mobile:**
+- Card layout already responsive but the chain filter pills wrap awkwardly on narrow screens — convert to horizontal scroll with `overflow-x-auto`.
+- Like/Share buttons too small (`w-3 h-3`) — bump to `w-4 h-4` minimum for touch targets.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** It works and feels alive — but it's not personalized, not real-time, not grouped. By the standards of Nansen / Arkham this is mid-tier.
+- **Effort to 9/10: Large (3 weeks).** SSE infrastructure + Redis + per-user ranking + grouping is a real project. The component itself is healthy; the backend aggregation needs an architectural upgrade.
+- **Approach: Hybrid.** Keep the component shell. Replace the data layer (polling → SSE, in-process cache → Redis) and add ranking on top.
+- **Blocks other features?** Soft yes. The real-time + Redis infrastructure work here unlocks Whale Tracker real-time, Sniper Bot live detection, and Notifications push. Worth building once.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Provision Redis (Upstash) | infra | `UPSTASH_REDIS_URL` env var |
+| Background event worker | `app/api/cron/context-feed-poll/route.ts` (new), Vercel cron config | Writes to Redis stream `events:context-feed` |
+| Persistent event archive | `lib/jobs/archive-events.ts` (new) | `whale_events_archive` table |
+| SSE feed endpoint | `app/api/context-feed/stream/route.ts` (new) | Reads Redis stream |
+| EventSource client hook | `lib/hooks/useContextFeedStream.ts` (new) | None |
+| Per-user ranking | `lib/feed/personalize.ts` (new) | Joins `wallet_follows`, `watchlist`, `bookmarks` |
+| Event grouping client-side | `components/ContextFeed.tsx` — add `groupEvents` reducer | None |
+| "Since last visit" cursor | `app/api/feed/last-seen/route.ts` (new) | `feed_last_seen` table |
+| Inline VTX explain | `components/ContextFeed.tsx` — add Explain button + drawer | Reuse `/api/vtx-ai` |
+| Real Bookmarks query | `app/api/bookmarks/list/route.ts` (new), refactor `ContextFeed.tsx` bookmarks tab | `bookmarks` join `whale_events_archive` |
+| Infinite scroll cursor | `useContextFeedStream.ts` — add `?before=<id>` param | None |
+| Per-user filter persistence | Read/write to `user_preferences.context_feed_filter` | Existing `user_preferences` table |
+| Daily digest email job | `lib/jobs/daily-event-digest.ts` (new) | Resend template |
+| Embed widget | `app/embed/feed/page.tsx` (new) | None |
+| Move pump.fun to background poll | Update worker | None |
+
+**Acceptance criteria:** Feed updates appear within 5s of upstream event without page refresh; events from followed wallets / watchlist tokens rank in top 10 of feed for that user; "since last visit" divider appears with accurate count; bookmarks tab works for events older than current window; no direct upstream calls from the SSE endpoint (all reads from Redis stream).
+
+---
