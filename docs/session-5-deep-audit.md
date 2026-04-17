@@ -3258,3 +3258,339 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** KB articles editable without deploy; user can see their support history; "escalate" creates admin ticket; help pages publicly indexable; thumbs feedback persists.
 
 ---
+
+## Feature 31 — Settings (All Sub-Sections)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/settings/page.tsx](../app/settings/page.tsx) — 383 lines (Profile, Security, Notifications, Trading sections)
+- [app/settings/notifications/page.tsx](../app/settings/notifications/page.tsx) — 298 lines (push subscription mgmt)
+- Profile sub-content embedded in [components/ProfileTab.tsx](../components/ProfileTab.tsx) — 1,480 lines
+
+**Data sources:** Supabase Auth (`updateUser`), `user_preferences` table, `login_activity` table.
+
+**Architecture pattern:**
+- **Tab-style nav** within `/settings`: Profile / Security / Notifications / Trading.
+- **Profile tab** — display name save (auth.updateUser metadata), email (read-only).
+- **Security tab** — password change (Session 4), account delete with DELETE confirmation, browser push toggle (Session 4).
+- **Notifications tab** — toggles for whale/price/threats/entityMoves email alerts.
+- **Trading tab** — default slippage selector.
+- **Debounced sync** to `user_preferences` table on change.
+- **Push subscription page** at `/settings/notifications` — separate page for VAPID subscription mgmt.
+
+**Performance characteristics:** Debounced 1s upsert.
+
+**UX quality: 6/10.** The 4-tab layout works. Password change + delete account are present (Session 4). Push notifications toggle is present. **Missing:** real 2FA enrollment (button is dead), real session revoke list, no language/timezone selector, no theme selector despite the data field existing.
+
+**Backend quality: 6/10.** Real `user_preferences` upsert. Account delete API works. Real push subscription mgmt.
+
+**What works well:**
+- Real Supabase persistence.
+- Account delete with confirmation.
+- Push subscription wired.
+- Login activity (Session 4) integrated to profile.
+- Debounced sync.
+
+**What is weak or missing:**
+- **2FA enrollment is a dead button** (called out in F2).
+- **No session revoke list.** Login activity is read-only.
+- **No language selector** despite `next-intl` in deps.
+- **No timezone selector.**
+- **No theme selector** (only dark exists).
+- **No connected wallets list.**
+- **No "delete my data" GDPR-style export.**
+- **No notification quiet hours.**
+- **No API key management for power users.**
+- **Notifications tab and `/settings/notifications` are split** — confusing.
+- **No subscription management** in settings (link to pricing tier mgmt).
+
+**What feels half-built:** Most of the "Security" surface. 2FA toggle dead. No session list. No connected accounts.
+
+### B) Industry Standard Comparison
+
+**Coinbase Settings:** 2FA, session revoke, API keys, tax export, language, currency, withdraw addresses, devices, subscription billing.
+
+**Phantom Settings:** Multi-account, theme, currency, network selector, transaction defaults, connected dApps revoke.
+
+**Pattern:** Comprehensive surface; we have ~40% coverage.
+
+### C) Next-Gen Recommendations
+
+See F2 (Auth) for 2FA + session list — same scope.
+
+**Highest leverage:**
+1. **Session list with revoke** (F2 wiring).
+2. **Real 2FA enrollment.**
+3. **Language + timezone + theme.**
+4. **GDPR data export.**
+5. **API key mgmt** for Pro/Max users.
+6. **Subscription management** inline.
+7. **Merge Settings → Notifications and `/settings/notifications` into one tab.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.**
+- **Effort to 9/10: Medium (1.5 weeks, much shared with F2).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| 2FA + sessions (F2 share) | See F2 | Same |
+| Language / timezone / theme | `app/settings/preferences/page.tsx` (new) | Schema additions |
+| GDPR data export | `app/api/account/export/route.ts` (new) | Background job + email |
+| API key mgmt | `app/settings/api-keys/page.tsx` (new) | `api_keys` table |
+| Subscription mgmt | `app/settings/subscription/page.tsx` (new) | Stripe / crypto-payment integration |
+| Merge notif tabs | Consolidate routes | None |
+
+**Acceptance criteria:** Sessions revocable; 2FA enrolled; theme/language/timezone settable and applied; GDPR export deliverable in <24h; API keys creatable for Pro+ users.
+
+---
+
+## Feature 32 — Profile
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/ProfileTab.tsx](../components/ProfileTab.tsx) — **1,480 lines** (the largest single component on the platform after ContextFeed)
+- [app/dashboard/profile/page.tsx](../app/dashboard/profile/page.tsx) — 30 lines (just mounts the tab)
+
+**Data sources:** `useAuth`, `useWallet`, `notifications`, `login_activity`, `vtx_conversations`, etc.
+
+**Architecture pattern:**
+- **Single mega-component** with sub-pages controlled by `SubPage` state: privacy / help / preferences / ai-support / security / edit-profile.
+- **Acts as both profile display and a mini-settings hub.**
+- **Login activity** rendered (Session 4).
+- **Privacy settings** stored locally + Supabase.
+- **AI support entry** embedded.
+
+**Performance characteristics:** 1,480-line component is expensive to render; lazy-loaded from dashboard.
+
+**UX quality: 6/10.** Mobile-first design — works on phones. Desktop feels cramped. Subpage navigation via state (not routes) means no deep-linking, no browser back-button support.
+
+**Backend quality: 5/10.** Mostly client-side state with Supabase reads. The 1,480-line monolith is a maintenance hazard.
+
+**What works well:**
+- Mobile-first.
+- Login activity integration.
+- All-in-one for mobile users.
+
+**What is weak or missing:**
+- **Massive component** should be decomposed.
+- **No real routes** for sub-pages — back button breaks.
+- **Duplicates Settings page** functionality without clear delineation.
+- **No user public profile** (`/u/<username>`).
+- **No achievements / badges** (sniped first token, 100 swaps, etc).
+- **No referral system surface.**
+
+### B) Industry Standard Comparison
+
+**Twitter/X profile:** Public profile, followers, posts.
+
+**Discord profile:** Avatar, badges, custom status, About Me.
+
+**Pattern:** Public profile + identity. We have a private settings dashboard.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Decompose the 1,480-line monolith.**
+2. **Real routes** for sub-pages (`/profile/privacy`, etc) — fixes deep-link + back button.
+3. **Public profile** (`/u/<username>`) for identity + sharing.
+4. **Achievements / badges.**
+5. **Referral system.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.**
+- **Effort to 9/10: Medium (2 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Decompose ProfileTab | New `components/profile/*.tsx` (8+ files) | None |
+| Real sub-routes | `app/dashboard/profile/{privacy,security,...}/page.tsx` | None |
+| Public profile | `app/u/[username]/page.tsx` (new, SSR) | `profiles.is_public` flag |
+| Achievements | `user_achievements` table | New |
+| Referral system | `referrals` table | New |
+
+**Acceptance criteria:** Profile decomposed into ≤10 components; sub-pages have unique URLs; public profile renders; ≥5 achievement types unlockable.
+
+---
+
+## Feature 33 — Pricing Page
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/pricing/page.tsx](../app/dashboard/pricing/page.tsx) — 4 tiers: Free, Mini ($5), Pro ($9 Most Popular), Max ($15)
+
+**Data sources:** Hardcoded tier definitions; reads current user tier from Supabase metadata.
+
+**Architecture pattern:** Static page with subscribe buttons that show "coming soon" toast. No actual payment integration.
+
+**Performance characteristics:** Pure static.
+
+**UX quality: 7/10.** 4 tiers, popular badge on Pro, current-plan badge, clear features. Good design.
+
+**Backend quality: 3/10.** **No actual payment integration.** Subscribe buttons are decorative.
+
+**What works well:**
+- Clean tier visualization.
+- Current-plan indication.
+- Features listed.
+- Pro called out as Most Popular.
+
+**What is weak or missing:**
+- **No payment.** This is the headline issue. We have a pricing page and no way to pay.
+- **No subscription management** (cancel, upgrade, downgrade).
+- **No promo codes.**
+- **No annual / monthly toggle.**
+- **No team/org pricing.**
+- **No comparison table** beyond the per-tier feature list.
+
+### B) Industry Standard Comparison
+
+Every SaaS in 2026 has Stripe + crypto checkout. Coinbase Commerce, Stripe Crypto, Helio, Solana Pay all viable. We have nothing.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Stripe Checkout** for credit-card subs.
+2. **Crypto checkout** via Helio (Solana) or Coinbase Commerce.
+3. **Annual / monthly toggle** with discount.
+4. **Comparison table.**
+5. **Promo code field.**
+6. **Team pricing.**
+
+### D) Priority and Effort
+
+- **Current score: 5/10** (visual only).
+- **Effort to 9/10: Medium-Large (2.5 weeks).** Payment is real engineering.
+- **Approach: Stripe first, crypto later.**
+- **Blocks revenue.**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Stripe Checkout | `lib/services/stripe.ts` (new), `app/api/billing/checkout/route.ts` (new), webhook | Stripe API |
+| Crypto checkout | `lib/services/helio.ts` or `coinbaseCommerce.ts` (new) | Helio account |
+| Subscription mgmt | `app/settings/subscription/page.tsx` (new) | `subscriptions` table |
+| Annual toggle | UI + Stripe price IDs | None |
+| Promo codes | Stripe Coupons + `promo_codes` table | New |
+| Team pricing | `team_subscriptions` table | New |
+
+**Acceptance criteria:** Free → Pro upgrade via Stripe checkout in <60s; subscription manageable in settings; annual toggle 2-month discount; promo codes apply.
+
+---
+
+## Feature 34 — Admin Panel (Per Page)
+
+### A) Current State Deep Dive
+
+The admin panel comprises **19 pages** under `app/admin/`. Aggregate audit:
+
+**Page-by-page:**
+
+| Page | LOC | Status | Notes |
+|---|---|---|---|
+| `/admin/dashboard` | 144 | ✅ Real | Session 4 — real KPIs from `/api/admin/stats`, recent signups feed |
+| `/admin/treasury` | 160 | ✅ Real | Session 4 — real Alchemy balances per chain |
+| `/admin/security-analytics` | 263 | ✅ Real | Session 4 — real `flagged_tokens` table |
+| `/admin/sniper-oversight` | 183 | ✅ Real | Session 4 — real executions + kill switch |
+| `/admin/users` | 151 | ✅ Real | Real Supabase user list with ban/verify actions |
+| `/admin/announcements` | 216 | ✅ Real | Session 4 — full CRUD on `announcements` |
+| `/admin/featured-tokens` | 266 | ✅ Real | Session 4 — full CRUD on `featured_tokens` |
+| `/admin/wallet-labels` | 274 | ✅ Real | Session 4 — full CRUD on `whale_addresses` |
+| `/admin/support` | 240 | ✅ Real | Session 4 — `support_conversations` + reply |
+| `/admin/email-templates` | 325 | ✅ Real | Session 4 — full CRUD on `email_templates` |
+| `/admin/research` | 426 | ✅ Real | CMS for research posts with image upload |
+| `/admin/broadcast` | 125 | ⚠️ Partial | Newsletter sender (Session 4) but UI thin |
+| `/admin/revenue` | 187 | ⚠️ Partial | Reads `swap_logs` integrator fee — but no Stripe revenue (no payments) |
+| `/admin/search-logs` | 120 | ⚠️ Partial | Logs query feed — no analytics |
+| `/admin/feature-usage` | 138 | ✅ Real | Session 4 — fallback to per-table aggregation |
+| `/admin/vtx-analytics` | 148 | ✅ Real | Session 4 — `vtx_conversations` aggregation |
+| `/admin/watchlist-insights` | 145 | ✅ Real | Session 4 — distinct watchers per token |
+| `/admin/settings` | 139 | ⚠️ Partial | Platform settings + flag toggles |
+| `/admin/api-health` | 163 | ✅ Real | Session 4 — live HEAD pings |
+
+**Architecture pattern:**
+- **`verifyAdminRequest` gate** — static `ADMIN_BEARER_TOKEN` OR Supabase JWT + `profiles.role='admin'`.
+- **Common authHeader pattern** — `sessionStorage.getItem('admin_token')`.
+- **Per-page CRUD** with optimistic updates and revert-on-fail.
+
+**UX quality: 7/10.** Consistent design language across all pages — sidebar nav, card-based layouts, refresh button, loading + empty states. Session 4 brought all these to a shippable state.
+
+**Backend quality: 7/10.** Real Supabase data everywhere now. RLS bypass via service-role key. Admin auth gate works. **Major gaps:** no audit trail of admin actions, no role hierarchy (single binary admin/not-admin), no granular permissions.
+
+**What works well:**
+- 13/19 pages on real Supabase data (Session 4 work).
+- Consistent pattern across pages.
+- Optimistic UI with revert.
+- Admin gate enforced.
+- Auto-refresh + loading + empty states everywhere.
+
+**What is weak or missing:**
+- **No admin audit log** — can't see "Alice deleted announcement #5 yesterday."
+- **No role hierarchy** — every admin can do everything (no "support agent" vs "ops" vs "engineer").
+- **No 2FA-required-for-admin** — admin login is the same as user login.
+- **No bulk actions on most pages.**
+- **No admin alerting** — can't alert admin team via Slack on user signup spikes, error spikes, etc.
+- **`/admin/broadcast` thin** — no segmentation, no schedule, no preview.
+- **`/admin/revenue` empty without payments.**
+- **Admin pages are mobile-broken** — assumes desktop.
+- **No admin-side analytics** — Plausible / PostHog dashboard embedded would help.
+- **No staging/prod toggle** — admin actions go straight to prod.
+
+**What feels half-built:** `/admin/broadcast` (no segmentation), `/admin/search-logs` (no analytics layer), `/admin/settings` (flag toggle only).
+
+### B) Industry Standard Comparison
+
+**Stripe Dashboard:** Multi-role, audit log, bulk actions, mobile-friendly.
+
+**Linear admin:** Clean, fast, role-based.
+
+**Internal tools (Retool, Plasmic):** Generated CRUD with permissions baked in.
+
+**Pattern:** Audit log + roles + bulk + mobile. We have CRUD without these.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Admin audit log table.**
+2. **Role hierarchy** (`admin`, `ops`, `support`, `read_only`).
+3. **Mandatory 2FA for admin.**
+4. **Bulk actions.**
+5. **Slack alerting on admin events.**
+6. **Mobile-friendly admin layout.**
+
+**Backend changes:**
+- `admin_audit_log` table — every write logged with admin id, action, target, before/after JSON.
+- `admin_roles` table.
+- 2FA enforcement on admin route.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.**
+- **Effort to 9/10: Medium (2 weeks).**
+- **Approach: Wrap existing CRUD with audit + role checks.**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Admin audit log | `lib/admin/audit.ts` (new), wire in every admin POST/PATCH/DELETE | `admin_audit_log` |
+| Role hierarchy | `lib/auth/adminAuth.ts` extend | `admin_roles` |
+| 2FA for admin | Reuse F2 2FA enforcement | Same |
+| Bulk actions | UI + endpoint per resource | None |
+| Slack alerting | `lib/services/slack.ts` (new) | Slack webhook |
+| Mobile-friendly | Refactor `app/admin/layout.tsx` | None |
+| Broadcast segmentation | Extend `/admin/broadcast` | `broadcast_segments` |
+| Embed Plausible/PostHog | iframe in admin dashboard | None |
+
+**Acceptance criteria:** Every admin write logged; role-gated actions enforced; admin requires 2FA; bulk-delete works on featured-tokens; Slack alert fires on >100 signups in 1h.
+
+---
