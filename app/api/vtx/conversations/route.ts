@@ -18,10 +18,22 @@ function getSupabase() {
   );
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = getSupabase();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const id = request.nextUrl.searchParams.get('id');
+  if (id) {
+    const { data, error } = await supabase
+      .from('vtx_conversations')
+      .select('id, title, messages, created_at, updated_at')
+      .eq('user_id', user.id)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ conversation: data });
+  }
 
   const { data, error } = await supabase
     .from('vtx_conversations')
