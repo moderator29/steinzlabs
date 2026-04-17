@@ -1,11 +1,9 @@
 import { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import FloatingBackButton from '@/components/FloatingBackButton';
 import AlertMonitorProvider from '@/components/AlertMonitorProvider';
 import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import FloatingNotificationBell from '@/components/FloatingNotificationBell';
-import { FloatingSupportButton } from '@/components/support/FloatingSupportButton';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -21,8 +19,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <PlatformEventMonitor />
       <FloatingNotificationBell />
       {children}
-      <FloatingBackButton />
-      <FloatingSupportButton />
     </div>
   );
 }
