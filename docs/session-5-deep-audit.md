@@ -788,3 +788,167 @@ The two-tab design (Context Feed / Markets) is OK but feels like a leftover from
 **Acceptance criteria:** No browser → CoinGecko/DexScreener calls; token detail SSRs price + market cap; CandlestickChart supports 6 timeframes + 4 indicators + trendline draw + click-to-alert; TradeTerminal renamed and shows real liquidity data; the "Trading Suite" marketing page is gone.
 
 ---
+
+## Feature 6 — Swap (EVM Standard, EVM Gasless, Solana Jupiter)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/swap/page.tsx](../app/dashboard/swap/page.tsx) — 1,049 lines (the largest dashboard page)
+- [app/swap/page.tsx](../app/swap/page.tsx) — public swap entry point
+- [app/api/swap/quote/route.ts](../app/api/swap/quote/route.ts) — 32 lines (0x v2 Allowance Holder)
+- [app/api/swap/price/route.ts](../app/api/swap/price/route.ts) — 29 lines (0x indicative)
+- [app/api/swap/log/route.ts](../app/api/swap/log/route.ts) — 84 lines (post-swap persistence)
+- [app/api/gasless/quote/](../app/api/gasless/quote/) + [submit](../app/api/gasless/submit/) + [status](../app/api/gasless/status/) + [price](../app/api/gasless/price/) — 0x gasless flow
+- [lib/services/zerox.ts](../lib/services/zerox.ts) — 0x v2 client (price, quote, gasless price/quote/submit/status, swap-trades, gasless-trades)
+- [lib/services/jupiter.ts](../lib/services/jupiter.ts) — Jupiter v6 client (quote, build swap tx, token prices)
+- [lib/services/swap.ts](../lib/services/swap.ts) — unified service (`PLATFORM_FEE_BPS = 40`, ~0.4% take rate, getSwapQuote, buildSolanaSwapTx, recordSwapCompletion)
+
+**Data sources / providers:** 0x Protocol v2 API (EVM standard + gasless), Jupiter v6 API (Solana), CoinGecko (price refs), Alchemy (balance reads + EVM tx broadcast).
+
+**Architecture pattern:**
+- **Three execution paths:**
+  1. **EVM Standard** — get quote from 0x, prompt MetaMask for `eth_sendTransaction`, broadcast on-chain.
+  2. **EVM Gasless** — get gasless quote from 0x, sign EIP-712 typed data with MetaMask, submit to 0x relay, poll `/gasless/status` until `confirmed`. Currently enabled for all EVM chains except `solana`, and disabled for native `ETH/MATIC/BNB/AVAX` sells (gas-token can't be gasless).
+  3. **Solana** — get Jupiter v6 quote, build swap tx, sign with Phantom (`signAndSendTransaction`).
+- **Three wallet sources:**
+  1. External EVM wallet (MetaMask) — `window.ethereum`.
+  2. External Solana wallet (Phantom) — `window.solana`.
+  3. Built-in wallet — encrypted in `user_wallets` table (AES-GCM, Session 4), unlocked with the in-memory `walletSession` key.
+- **Platform fee** — 0.4% (40 bps) integrator fee taken via 0x's `integrator_fee` mechanism (revenue tracked in `app/api/analytics/admin/route.ts`).
+- **Post-swap logging** — `/api/swap/log` writes to `swap_logs` table.
+- **PostHog event** — `track('swap_executed', { from_token, to_token, chain, from_amount, tx_hash })` (Session 4 wiring).
+- **PriceImpact / slippage controls** in the UI; defaults to 1% slippage.
+
+**Performance characteristics:**
+- 0x quote: ~400–900ms typical.
+- Jupiter quote: ~150–400ms (faster than 0x).
+- Gasless flow: quote (500ms) → user signs (~3–10s human) → submit (200ms) → poll status until confirmed (5–60s typical).
+- Standard EVM swap: quote → user signs → tx broadcast → block confirmation (~12–60s).
+- Built-in wallet: AES-GCM decrypt (~50ms with PBKDF2 100k iters) + tx sign + broadcast.
+
+**UX quality: 7/10.** This is one of the strongest pages on the platform. The chain selector + token picker + "From / To" layout is familiar (cf. Uniswap, Jupiter front-ends). Gasless toggle with explanatory copy is good. Auto-detection of which wallet to use (external EVM / Phantom / built-in) is smart. Price impact warning, slippage editor, gas estimate, and refresh button are all present. The success animation is satisfying.
+
+**Backend quality: 7/10.** Honest assessment: this is one of our most professionally-built features. The 0x v2 Allowance Holder pattern is correctly implemented. Gasless flow with EIP-712 + relay polling is correctly implemented. Jupiter v6 integration is clean. The `swap.ts` unification gives us one API surface across chains. The `recordSwapCompletion` writes to a real audit table.
+
+**What works well:**
+- Real 0x v2 + Jupiter v6 — current generation routing.
+- Gasless that actually works (most competitors don't have this).
+- Three wallet sources cleanly switched at runtime.
+- AES-GCM for built-in wallet (Session 4 hardening).
+- 0.4% integrator fee — reasonable revenue model.
+- Sentry instrumentation in catch blocks (Session 4).
+- PostHog track on success.
+- Chain-aware gasless availability check (correctly disables for native gas-token sells).
+- Tx hash + status link to explorer post-confirmation.
+
+**What is weak or missing:**
+- **No multi-hop visualization.** 0x and Jupiter both return route plans (token A → B → C through 3 DEXes). We don't surface this — users can't see whether they're going through Uniswap V3 or Curve.
+- **No "best price comparison" UI.** Show quotes from 0x AND 1inch AND Jupiter AND Kyber side-by-side; let user pick. Aggregator-of-aggregators.
+- **No MEV protection messaging.** Flashbots Protect is in our `lib/services/mev.ts` but isn't surfaced in the UI for standard EVM swaps. Users at risk of sandwich attacks.
+- **No price/quote auto-refresh.** Quote expires; user clicks "Swap" with stale price; tx fails or under-fills. Should auto-refresh every 15s with visible countdown.
+- **No simulated execution preview.** Tenderly or Anvil-fork sim could show "you'll receive X tokens, this is the actual outcome" before signing. Industry standard at top tier.
+- **No batch swaps.** Can't dollar-cost-buy 5 tokens in one transaction.
+- **No swap history visible inside the swap page.** Users have to navigate to `/dashboard/transactions`.
+- **No "swap from this wallet" preselection** — if a user clicks on a wallet from Wallet Intelligence, the swap page doesn't carry that context.
+- **No EIP-2612 permit support.** When a permit is available, we should use it instead of approve+swap (saves a tx).
+- **No NFT sweeping support.** Reservoir / OpenSea API integration.
+- **No fiat on-ramp.** Can't fund the built-in wallet with a credit card. Moonpay / Stripe Crypto would close the loop.
+- **Built-in wallet flow** for swap is gated by the in-memory wallet session key; if the user reloaded since unlocking, the swap silently fails with a generic "wallet session expired" error. Should re-prompt for password inline.
+- **Slippage default of 1%** is fine for liquid pairs; should auto-adjust for low-liq tokens (suggest 3–5%).
+- **No Solana priority fee tuning.** Jupiter v6 supports `priorityLevelWithMaxLamports` for fast inclusion; we don't use it.
+
+**What feels half-built:**
+- The "Solana" support across the broader app suggests SPL token approval / revoke functionality, but the swap doesn't surface this.
+- The gasless toggle copy ("Gas paid by us in supported swaps") is misleading — gas isn't paid by us, it's deducted from the trade output.
+- `quoteData.gasEstimateUsd` falls back to hardcoded numbers (`$0.001` for Solana, `$0.02` for Base, `$2.40` for ETH) when the quote doesn't include gas — these are stale.
+
+### B) Industry Standard Comparison
+
+**Uniswap web app:** Native L1 routing via Universal Router. Real-time quote auto-refresh every 30s. MEV protection via UniswapX (RFQ + intent-based). Simulation in tenderly built in for pre-execution display. Fiat on-ramp via Moonpay.
+
+**Jupiter (jup.ag):** Best-in-class Solana DEX aggregator UI. Routes shown visually (5 hops through 3 AMMs visualized). Versioned transactions, priority fee selector. Smart wallet integration. Fast (sub-200ms quotes). Limit orders, DCA, and vault accounts all integrated.
+
+**1inch:** Aggregator of aggregators effectively — they show price comparison vs. Uniswap, Sushi, etc. CHI gas tokens used for gas savings. Fusion mode for MEV-protected swaps.
+
+**KyberSwap:** Routes shown as a flow diagram. Per-hop slippage. Gasless swaps via meta-tx.
+
+**Phantom in-wallet swap:** Uses Jupiter under the hood. Polished UI, clear fee display, slippage auto-calc.
+
+**Pattern:** The leaders (a) show routes visually, (b) provide MEV protection by default, (c) auto-refresh quotes with visible countdown, (d) offer pre-execution simulation, (e) offer fiat on-ramp. We have (a) data but not visualization, (b) capability but not UI, (c) no auto-refresh, (d) no sim, (e) no on-ramp.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+
+1. **Multi-aggregator quote comparison.** New `/api/swap/quotes-multi` route that fans out to 0x, 1inch v6, Kyber, OpenOcean, ParaSwap. Returns 5 quotes, UI shows a table sorted by output amount. User picks; we route through the chosen aggregator. **This makes us strictly better than any single-aggregator UI.**
+2. **MEV protection toggle.** When enabled on EVM, route through Flashbots Protect RPC. Show a green shield icon. Auto-enable for swaps > $10k.
+3. **Quote auto-refresh.** 15s countdown with visible progress; swap button disabled in last 3s of countdown.
+4. **Tenderly simulation pre-execution.** Server-side simulate, return `expected_received` + `actual_outcome_match`. Show user "Simulated outcome: 1234 USDC (0.02% deviation from quote)."
+5. **Visual route display.** Component `<RouteFlow>` that renders the multi-hop path with DEX logos.
+6. **Solana priority fee selector.** Three buttons: "Slow / Normal / Fast" mapping to dynamic priority lamports.
+7. **EIP-2612 permit support.** Detect token permit support, use signature-based approval instead of two transactions.
+8. **Fiat on-ramp.** Moonpay or Stripe Crypto integration → buy USDC with credit card → flow into swap.
+9. **Inline swap history.** Last 5 swaps shown below the swap form, click to repeat.
+
+**Backend changes:**
+- `app/api/swap/quotes-multi/route.ts` — fan-out aggregator.
+- `app/api/swap/simulate/route.ts` — Tenderly integration with API key in env.
+- `lib/services/oneinch.ts`, `lib/services/kyber.ts`, `lib/services/openocean.ts`, `lib/services/paraswap.ts` — new clients.
+- `lib/services/flashbots.ts` — Protect RPC wrapper.
+- `lib/services/moonpay.ts` — fiat on-ramp.
+- Rate-limit guard on `/api/swap/quote` per user — currently unbounded, expensive.
+
+**Frontend changes:**
+- Replace single quote display with quote comparison table (collapsed by default, expandable).
+- Add MEV shield toggle next to gasless toggle.
+- Add countdown timer ring around the "Swap" button.
+- Add `<RouteFlow>` component showing path.
+- Add priority fee selector (Solana only).
+- Re-prompt for wallet password inline when built-in session expired.
+- Show last 5 swaps inline.
+
+**New sub-features:**
+- **Swap recipes** — "Buy these 3 tokens at this allocation" → batch into 1 click.
+- **Repeat swap** — "do it again with same params."
+- **Reverse swap** — "sell what I just bought."
+- **Limit orders via Jupiter or 0x.** Both APIs support it; we don't expose it.
+- **DCA** via Jupiter Vaults integration on Solana, or 0x scheduled-orders on EVM.
+
+**Performance:**
+- Cache token metadata (decimals, logo) in Redis for 24h. Currently every swap re-fetches.
+- Prefetch `/api/swap/price` on amount change with debounce 300ms; only fetch `/api/swap/quote` (heavier) when user clicks Swap.
+
+**Mobile:**
+- Token picker modal currently overflows on iPhone SE — needs `max-h-[80vh] overflow-y-auto`.
+- Slippage editor "Custom" input keyboard should be `inputMode="decimal"`.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Genuinely solid. The 3-path architecture, gasless, AES-GCM built-in wallet, integrator fee — these are all done correctly.
+- **Effort to 9/10: Medium-Large (2.5–3 weeks).** Multi-aggregator comparison + MEV + sim + visual route = bulk of the work.
+- **Approach: Layer on, don't rebuild.** The execution path is correct. Add the comparison layer, the protection layer, the visualization layer.
+- **Blocks other features?** No — but the platform fee revenue depends on swap volume, which depends on UX quality. This is a revenue feature.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Multi-aggregator quote comparison | `app/api/swap/quotes-multi/route.ts` (new), `lib/services/oneinch.ts`, `kyber.ts`, `openocean.ts`, `paraswap.ts` (all new) | 1inch, Kyber, OpenOcean, ParaSwap API keys |
+| MEV protection toggle | `app/dashboard/swap/page.tsx`, `lib/services/flashbots.ts` (new) | Flashbots Protect RPC config |
+| Quote auto-refresh | `app/dashboard/swap/page.tsx` — countdown timer + interval | None |
+| Tenderly simulation | `app/api/swap/simulate/route.ts` (new), `lib/services/tenderly.ts` (new) | Tenderly API key |
+| Visual route display | `components/swap/RouteFlow.tsx` (new) | None |
+| Solana priority fee selector | `app/dashboard/swap/page.tsx` | Jupiter v6 already supports it |
+| EIP-2612 permit support | `lib/services/permit.ts` (new), wire into swap flow | None |
+| Fiat on-ramp | `lib/services/moonpay.ts` (new), `components/swap/FiatOnRamp.tsx` (new) | Moonpay API key |
+| Re-prompt wallet password inline | `app/dashboard/swap/page.tsx`, modal component | None |
+| Inline swap history | `app/dashboard/swap/page.tsx` — query `swap_logs` for last 5 | Existing `swap_logs` |
+| Limit orders | `app/dashboard/swap/limit/page.tsx` (new) | Jupiter limit-order or 0x scheduled-orders |
+| DCA orders | `app/dashboard/swap/dca/page.tsx` (new) | Jupiter Vaults |
+| Per-user quote rate limit | `app/api/swap/quote/route.ts` middleware | Redis |
+| Token metadata cache | `lib/cache/tokenMetadata.ts` (new) | Redis 24h |
+
+**Acceptance criteria:** Multi-aggregator comparison functional with at least 3 sources; MEV-protected EVM swap routes through Flashbots when enabled; quote auto-refreshes every 15s with countdown; Tenderly simulation result shown before signing; multi-hop route visually rendered; Solana priority fee selector functional; EIP-2612 permits used when token supports them.
+
+---
