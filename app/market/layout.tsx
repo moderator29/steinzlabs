@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { MarketSubNav } from '@/components/market/MarketSubNav';
 
 export const metadata: Metadata = {
-  title: 'Market — Steinz Labs',
+  title: 'Market — Naka Labs',
   description: 'Real-time prices, live charts, and on-chain intelligence across all chains.',
 };
 

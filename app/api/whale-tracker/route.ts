@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { getTopTraders } from '@/lib/services/birdeye';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { getExplorerUrl } from '@/lib/chain-explorer';
-export { getExplorerUrl };
 
 // Cache ETH price for 60s to avoid repeated CoinGecko calls within a single request cycle
 let ethPriceCache: { price: number; ts: number } = { price: 0, ts: 0 };

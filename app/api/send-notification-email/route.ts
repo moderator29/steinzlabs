@@ -30,7 +30,7 @@ function buildEmailHtml(title: string, message: string, type: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.5px;">STEINZ LABS</span>
+                    <span style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.5px;">NAKA LABS</span>
                     <span style="display:block;font-size:11px;color:#6B7280;margin-top:2px;letter-spacing:2px;text-transform:uppercase;">Crypto Intelligence Platform</span>
                   </td>
                   <td align="right">
@@ -47,7 +47,7 @@ function buildEmailHtml(title: string, message: string, type: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <a href="https://steinzlabs.com/dashboard" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,${color},#7C3AED);border-radius:10px;font-size:13px;font-weight:700;color:#FFFFFF;text-decoration:none;">
+                    <a href="https://nakalabs.com/dashboard" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,${color},#7C3AED);border-radius:10px;font-size:13px;font-weight:700;color:#FFFFFF;text-decoration:none;">
                       View Dashboard
                     </a>
                   </td>
@@ -58,8 +58,8 @@ function buildEmailHtml(title: string, message: string, type: string): string {
           <tr>
             <td style="padding:16px 32px;border-top:1px solid rgba(255,255,255,0.06);">
               <p style="margin:0;font-size:11px;color:#4B5563;line-height:1.5;">
-                You're receiving this because you have alerts enabled on STEINZ LABS.
-                <br />To manage your notification preferences, visit your <a href="https://steinzlabs.com/dashboard" style="color:${color};text-decoration:none;">profile settings</a>.
+                You're receiving this because you have alerts enabled on NAKA LABS.
+                <br />To manage your notification preferences, visit your <a href="https://nakalabs.com/dashboard" style="color:${color};text-decoration:none;">profile settings</a>.
               </p>
             </td>
           </tr>
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: userEmail }] }],
-          from: { email: 'alerts@steinz.app', name: 'STEINZ LABS' },
+          from: { email: 'alerts@steinz.app', name: 'NAKA LABS' },
           subject: title,
           content: [{ type: 'text/html', value: htmlBody }],
         }),

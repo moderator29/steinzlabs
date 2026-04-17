@@ -57,7 +57,7 @@ export interface ClusterAgentReport {
 
 // ─── Agent System Prompt ──────────────────────────────────────────────────────
 
-const CLUSTER_SYSTEM_PROMPT = `You are the Steinz Labs Cluster Analysis Agent.
+const CLUSTER_SYSTEM_PROMPT = `You are the Naka Labs Cluster Analysis Agent.
 
 Your mission: Identify and analyse coordinated wallet clusters with precision.
 

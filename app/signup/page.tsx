@@ -9,6 +9,8 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CoinIcon } from '@/components/landing/CoinIcon';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { SignInWithWallet } from '@/components/auth/SignInWithWallet';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 const MAX_ATTEMPTS = 5;
@@ -296,7 +298,7 @@ export default function SignUpPage() {
           <div className="flex flex-col items-center mb-7">
             <SteinzLogo size={48} animated={true} />
             <p className="mt-2 text-[10px] font-bold tracking-[6px] uppercase" style={{ color: '#1a2855', letterSpacing: 6 }}>
-              STEINZ LABS
+              NAKA LABS
             </p>
           </div>
 
@@ -310,6 +312,16 @@ export default function SignUpPage() {
               strategy="afterInteractive"
             />
           )}
+
+          <div className="flex flex-col gap-3 mb-5">
+            <GoogleSignInButton />
+            <SignInWithWallet />
+            <div className="flex items-center gap-3 my-1">
+              <div className="flex-1 h-px bg-slate-700/40" />
+              <span className="text-[10px] uppercase tracking-widest text-slate-500">or email</span>
+              <div className="flex-1 h-px bg-slate-700/40" />
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* First + Last Name row */}

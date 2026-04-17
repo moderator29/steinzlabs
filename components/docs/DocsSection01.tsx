@@ -2,7 +2,7 @@ import { CheckCircle, ArrowRight, Zap, Globe, Shield, Brain, TrendingUp, Star } 
 import Link from 'next/link';
 
 const STEPS = [
-  { n: '01', title: 'Create your account', desc: 'Sign up at steinzlabs.com with your email. Verify to activate — no credit card required for the free tier.' },
+  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.com with your email. Verify to activate — no credit card required for the free tier.' },
   { n: '02', title: 'Connect your wallets', desc: 'Go to Portfolio and link up to 10 wallets across Ethereum, Base, Solana, Arbitrum, Polygon, and BSC for automatic tracking.' },
   { n: '03', title: 'Explore the Context Feed', desc: 'Your personalized real-time intelligence stream activates immediately — showing whale moves, smart money signals, and on-chain alerts.' },
   { n: '04', title: 'Run your first scan', desc: 'Paste any token address into the search bar or Security Center for an instant Trust Score, holder analysis, and risk breakdown.' },
@@ -24,7 +24,7 @@ export function DocsSection01() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Getting Started</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        STEINZ LABS is a browser-based on-chain intelligence platform. No installation, no node setup, no command line. Everything you need to analyze wallets, track smart money, detect risks, and trade safely is in one unified dashboard.
+        NAKA LABS is a browser-based on-chain intelligence platform. No installation, no node setup, no command line. Everything you need to analyze wallets, track smart money, detect risks, and trade safely is in one unified dashboard.
       </p>
 
       {/* What you can do */}
@@ -69,7 +69,7 @@ export function DocsSection01() {
           {[
             'Modern browser — Chrome 90+, Firefox 88+, Safari 14+, Edge 90+',
             'A Web3 wallet for on-chain trading (MetaMask, Phantom, Coinbase Wallet, etc.)',
-            'An email address to create your STEINZ LABS account',
+            'An email address to create your NAKA LABS account',
           ].map((req, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-gray-400">
               <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />

@@ -24,7 +24,7 @@ export function DocsSection07() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Trading Suite</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        STEINZ LABS gives you a complete trading toolkit — from instant multi-chain swaps to automated sniper bots and copy trading. Every trade is security-checked before execution.
+        NAKA LABS gives you a complete trading toolkit — from instant multi-chain swaps to automated sniper bots and copy trading. Every trade is security-checked before execution.
       </p>
 
       {/* Multi-Chain Swap */}

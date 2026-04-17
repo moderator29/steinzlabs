@@ -50,7 +50,7 @@ export function DocsSection06() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Security Center</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        Every interaction on-chain carries risk. STEINZ LABS Security Center gives you six tools to assess, verify, and protect yourself before moving any funds — from token safety scores to real-time phishing detection.
+        Every interaction on-chain carries risk. NAKA LABS Security Center gives you six tools to assess, verify, and protect yourself before moving any funds — from token safety scores to real-time phishing detection.
       </p>
 
       {/* Trust Score */}
@@ -106,7 +106,7 @@ export function DocsSection06() {
           <span className="text-sm font-semibold text-white">Important</span>
         </div>
         <p className="text-xs text-gray-400 leading-relaxed">
-          STEINZ LABS security tools are advisory and based on on-chain data analysis. They do not guarantee safety. Always do your own research before investing. Never invest more than you can afford to lose.
+          NAKA LABS security tools are advisory and based on on-chain data analysis. They do not guarantee safety. Always do your own research before investing. Never invest more than you can afford to lose.
         </p>
       </div>
     </section>

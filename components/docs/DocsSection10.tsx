@@ -23,7 +23,7 @@ export function DocsSection10() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Alerts & Notifications</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        STEINZ LABS keeps you informed without keeping you glued to a screen. Configure price alerts, whale movement notifications, security events, and trend signals — delivered via push notification, in-app, or email.
+        NAKA LABS keeps you informed without keeping you glued to a screen. Configure price alerts, whale movement notifications, security events, and trend signals — delivered via push notification, in-app, or email.
       </p>
 
       {/* Alert types */}

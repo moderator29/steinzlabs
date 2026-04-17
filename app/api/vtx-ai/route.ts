@@ -19,15 +19,40 @@ import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 const FREE_TIER_LIMIT = 25;
 const MAX_TOOL_ITERATIONS = 5;
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// ─── Rate Limiting (Redis-backed, in-process fallback) ──────────────────────
 
+import { getRedis } from "@/lib/cache/redis";
+
+// Fallback store when Upstash is not configured
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-function getRateLimitInfo(ip: string): { remaining: number; total: number; resetAt: number } {
+function todayKey(ip: string): string {
+  const today = new Date().toISOString().split("T")[0];
+  return `vtx:rate:${ip}:${today}`;
+}
+
+async function getRateLimitInfo(ip: string): Promise<{ remaining: number; total: number; resetAt: number }> {
   const now = Date.now();
+  const msUntilMidnight = 24 * 60 * 60 * 1000 - (now % (24 * 60 * 60 * 1000));
+  const resetAt = now + msUntilMidnight;
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const key = todayKey(ip);
+      const count = (await redis.get<number>(key)) ?? 0;
+      return {
+        remaining: Math.max(0, FREE_TIER_LIMIT - count),
+        total: FREE_TIER_LIMIT,
+        resetAt,
+      };
+    } catch (err) {
+      console.error("[vtx.rateLimit.get]", err);
+    }
+  }
+
   const entry = rateLimitStore.get(ip);
   if (!entry || now > entry.resetAt) {
-    const resetAt = now + 24 * 60 * 60 * 1000;
     rateLimitStore.set(ip, { count: 0, resetAt });
     return { remaining: FREE_TIER_LIMIT, total: FREE_TIER_LIMIT, resetAt };
   }
@@ -38,7 +63,19 @@ function getRateLimitInfo(ip: string): { remaining: number; total: number; reset
   };
 }
 
-function incrementUsage(ip: string): void {
+async function incrementUsage(ip: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const key = todayKey(ip);
+      const count = await redis.incr(key);
+      if (count === 1) await redis.expire(key, 86400);
+      return;
+    } catch (err) {
+      console.error("[vtx.rateLimit.incr]", err);
+    }
+  }
+
   const now = Date.now();
   const entry = rateLimitStore.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -122,7 +159,7 @@ function detectArkhamIntent(message: string): {
 
 // ─── VTX System Prompt Template ───────────────────────────────────────────────
 
-const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by STEINZ LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
+const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by NAKA LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
 CRITICAL DATA RULE: You MUST use ONLY the prices and numbers from the REAL-TIME DATA section below. NEVER use any price, volume, market cap, or balance from your training data. If the data section says SOL is $83.69, you say $83.69 — not $85 or any other number. If data is missing for something the user asked, say "I don't have current data for that" rather than guessing.
 
@@ -669,10 +706,10 @@ export async function POST(request: NextRequest) {
     const isPro = tier === 'pro';
 
     if (!isPro && !skipRateLimit) {
-      const rateInfo = getRateLimitInfo(ip);
+      const rateInfo = await getRateLimitInfo(ip);
       if (rateInfo.remaining <= 0) {
         return NextResponse.json({
-          error: 'Daily message limit reached. Upgrade to STEINZ Pro for unlimited messages.',
+          error: 'Daily message limit reached. Upgrade to Naka Pro for unlimited messages.',
           rateLimited: true,
           usage: { used: rateInfo.total, limit: rateInfo.total, remaining: 0 },
         }, { status: 429 });
@@ -794,7 +831,7 @@ export async function POST(request: NextRequest) {
           }
         },
       });
-      if (!isPro && !skipRateLimit) incrementUsage(ip);
+      if (!isPro && !skipRateLimit) await incrementUsage(ip);
       return new Response(sseStream, {
         headers: {
           'Content-Type': 'text/event-stream',
@@ -862,7 +899,7 @@ export async function POST(request: NextRequest) {
       .replace(/\*\*/g, '').replace(/\*/g, '')
       .replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
-    if (!isPro && !skipRateLimit) incrementUsage(ip);
+    if (!isPro && !skipRateLimit) await incrementUsage(ip);
 
     // ── Chart Payload ───────────────────────────────────────────────────────
     const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
@@ -873,7 +910,7 @@ export async function POST(request: NextRequest) {
     } : null;
 
     // ── Usage Info ──────────────────────────────────────────────────────────
-    const currentUsage = isPro ? null : getRateLimitInfo(ip);
+    const currentUsage = isPro ? null : await getRateLimitInfo(ip);
 
     // ── Build token card if a specific token was discussed ─────────────────
     let tokenCard: Record<string, unknown> | null = null;
@@ -946,16 +983,16 @@ export async function POST(request: NextRequest) {
 
 function scrubBranding(text: string): string {
   return text
-    .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
-    .replace(/\bArkham\b/gi, 'Steinz Intelligence')
+    .replace(/\bArkham\s*Intelligence\b/gi, 'Naka Intelligence')
+    .replace(/\bArkham\b/gi, 'Naka Intelligence')
     .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
     .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
-    .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
-    .replace(/\bHelius\b/gi, 'Steinz Intelligence')
-    .replace(/\bGoPlus\b/gi, 'Steinz Intelligence')
-    .replace(/\bLunarCrush\b/gi, 'Steinz Intelligence')
-    .replace(/\bMoralis\b/gi, 'Steinz Intelligence')
-    .replace(/\bJupiter\b/gi, 'Steinz Router');
+    .replace(/\bAlchemy\b/gi, 'Naka Intelligence')
+    .replace(/\bHelius\b/gi, 'Naka Intelligence')
+    .replace(/\bGoPlus\b/gi, 'Naka Intelligence')
+    .replace(/\bLunarCrush\b/gi, 'Naka Intelligence')
+    .replace(/\bMoralis\b/gi, 'Naka Intelligence')
+    .replace(/\bJupiter\b/gi, 'Naka Router');
 }
 
 function sanitizeVtxResponse(text: string): string {

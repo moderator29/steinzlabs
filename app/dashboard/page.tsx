@@ -9,6 +9,9 @@ import SidebarMenu from '@/components/SidebarMenu';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { CompactKpiBar } from '@/components/dashboard/CompactKpiBar';
+import { GlobalSearch } from '@/components/dashboard/GlobalSearch';
+import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
@@ -124,7 +127,7 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('home');
-  const [activeTab, setActiveTab] = useState<'context' | 'markets'>('context');
+  const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>('overview');
 
   // Restore market tab when navigating back from a coin detail page
   useEffect(() => {
@@ -203,7 +206,8 @@ export default function Dashboard() {
   const renderContent = () => {
     if (activeNav === 'home') {
       if (activeTab === 'markets') return <MarketDashboard />;
-      return <ContextFeed />;
+      if (activeTab === 'context') return <ContextFeed />;
+      return <PersonalizedHome />;
     }
     if (activeNav === 'vtxai') return <VtxAiTab />;
     if (activeNav === 'wallet') return <WalletTab />;
@@ -237,12 +241,16 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
+          <div className="hidden md:flex items-center gap-2 flex-1 justify-center max-w-md mx-4">
+            <GlobalSearch />
+          </div>
           <div className="flex items-center gap-2">
           </div>
         </div>
+        <CompactKpiBar />
       </div>
 
-      <div className="pt-[68px] px-3 lg:px-6 max-w-7xl mx-auto">
+      <div className="pt-[120px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
@@ -258,9 +266,10 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Context Feed / Market tab toggle */}
+            {/* Overview / Context Feed / Market tab toggle */}
             <div className="flex gap-1 p-1 bg-[#111827] border border-white/[0.06] rounded-xl mb-4">
               {([
+                { id: 'overview', label: 'Overview' },
                 { id: 'context', label: 'Context Feed' },
                 { id: 'markets', label: 'Market' },
               ] as const).map((tab) => (

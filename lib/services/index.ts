@@ -1,5 +1,5 @@
 /**
- * Steinz Labs — Unified Service Layer
+ * Naka Labs — Unified Service Layer
  *
  * All external API calls route through this layer.
  * Components and pages NEVER call external APIs directly.

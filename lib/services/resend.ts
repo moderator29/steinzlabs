@@ -4,12 +4,12 @@ import { Resend } from 'resend';
 /**
  * Resend Email Delivery Service
  * Handles: broadcast emails, price alerts, security alerts, notifications.
- * FROM address: alerts@steinzlabs.com (or configured via RESEND_FROM_EMAIL)
+ * FROM address: alerts@nakalabs.com (or configured via RESEND_FROM_EMAIL)
  */
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@steinzlabs.com';
-const FROM_NAME = process.env.RESEND_FROM_NAME || 'Steinz Labs';
+const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.com';
+const FROM_NAME = process.env.RESEND_FROM_NAME || 'Naka Labs';
 
 export interface EmailResult {
   ok: boolean;
@@ -74,7 +74,7 @@ export async function sendPriceAlert(params: {
       ${changePart}
       <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
       <p style="font-size:12px;color:#475569">
-        You're receiving this because you set a price alert on Steinz Labs.
+        You're receiving this because you set a price alert on Naka Labs.
         <a href="#" style="color:#a855f7">Manage alerts</a>
       </p>
     </div>
@@ -131,7 +131,7 @@ export async function sendSecurityAlert(params: {
       ` : ''}
       <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
       <p style="font-size:12px;color:#475569">
-        Steinz Labs Wallet Intelligence — <a href="#" style="color:#a855f7">Manage notifications</a>
+        Naka Labs Wallet Intelligence — <a href="#" style="color:#a855f7">Manage notifications</a>
       </p>
     </div>
   `;
@@ -175,7 +175,7 @@ export async function sendWhaleAlert(params: {
       ` : ''}
       <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
       <p style="font-size:12px;color:#475569">
-        Steinz Labs Whale Alerts — <a href="#" style="color:#a855f7">Manage alerts</a>
+        Naka Labs Whale Alerts — <a href="#" style="color:#a855f7">Manage alerts</a>
       </p>
     </div>
   `;
@@ -240,7 +240,7 @@ export async function sendSniperNotification(params: {
       </div>` : ''}
       <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
       <p style="font-size:12px;color:#475569">
-        Steinz Labs Sniper Engine — <a href="#" style="color:#a855f7">View Dashboard</a>
+        Naka Labs Sniper Engine — <a href="#" style="color:#a855f7">View Dashboard</a>
       </p>
     </div>
   `;
@@ -281,14 +281,14 @@ export async function sendResearchNotification(params: {
         <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7">${summary}</p>
       </div>
       <div style="text-align:center;margin-bottom:16px">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://steinzlabs.com'}/research/${slug}"
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.com'}/research/${slug}"
            style="display:inline-block;background:${categoryColor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
           Read Full Research
         </a>
       </div>
       <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
       <p style="font-size:12px;color:#475569;text-align:center">
-        Steinz Labs Research — <a href="#" style="color:#a855f7">Manage notifications</a>
+        Naka Labs Research — <a href="#" style="color:#a855f7">Manage notifications</a>
       </p>
     </div>
   `;

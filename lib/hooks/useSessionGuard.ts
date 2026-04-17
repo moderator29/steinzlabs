@@ -7,23 +7,17 @@ import { supabase } from '@/lib/supabase';
 // 1 hour idle timeout
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
 const ACTIVITY_KEY = 'steinz_last_activity';
-const SESSION_COOKIE = 'steinz_session';
-
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function clearSessionCookie() {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-}
 
 /**
  * Enforces session expiry rules:
- * 1. If the session cookie is gone while Supabase thinks user is still logged in → sign out
- * 2. If the user has been idle for > 30 minutes → sign out
+ * 1. Supabase session is the source of truth. If it is gone, redirect to /login.
+ * 2. If the user has been idle for > 60 minutes → sign out and redirect.
+ *
+ * NOTE (2026-04-17): previously this hook also required a legacy
+ * `steinz_session` cookie. That cookie is no longer issued by the email/password
+ * flow (only by `/auth/callback` for OAuth). Demanding it caused a 10-second
+ * redirect loop where authenticated users were kicked back to /login. The
+ * cookie check has been removed — @supabase/ssr cookies are authoritative.
  *
  * Must be used inside a component that is mounted only for authenticated users
  * (e.g. dashboard layout).
@@ -34,7 +28,6 @@ export function useSessionGuard() {
   const activityBound = useRef(false);
 
   const signOutAndRedirect = useCallback(async () => {
-    clearSessionCookie();
     if (typeof localStorage !== 'undefined') localStorage.removeItem(ACTIVITY_KEY);
     try {
       if (supabase) await supabase.auth.signOut();
@@ -51,24 +44,16 @@ export function useSessionGuard() {
   }, []);
 
   const checkSession = useCallback(async () => {
-    // 1. Cookie gone? → expired
-    const cookie = getCookie(SESSION_COOKIE);
-    if (!cookie) {
-      // Verify Supabase still has an active session before logging out
-      if (supabase) {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          // Session token was cleared externally — enforce sign-out
-          await signOutAndRedirect();
-          return;
-        }
-      }
-      // No supabase session either — just redirect silently
+    if (!supabase) return;
+
+    // Supabase session is the source of truth.
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
       router.replace('/login');
       return;
     }
 
-    // 2. Idle timeout check
+    // Idle timeout check — only if we have recorded activity.
     if (typeof localStorage !== 'undefined') {
       const last = parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10);
       const idleMs = Date.now() - last;
@@ -79,18 +64,15 @@ export function useSessionGuard() {
   }, [signOutAndRedirect, router]);
 
   useEffect(() => {
-    // Record initial activity
     updateActivity();
 
-    // Bind activity listeners once
     if (!activityBound.current) {
       activityBound.current = true;
       const events = ['mousemove', 'keydown', 'pointerdown', 'scroll', 'touchstart'];
       const handler = () => updateActivity();
       events.forEach(ev => window.addEventListener(ev, handler, { passive: true }));
 
-      // Also check on window focus (user returning to tab)
-      const onFocus = () => checkSession();
+      const onFocus = () => { void checkSession(); };
       window.addEventListener('focus', onFocus);
 
       return () => {
@@ -101,12 +83,13 @@ export function useSessionGuard() {
   }, [updateActivity, checkSession]);
 
   useEffect(() => {
-    // Run an initial check immediately
-    checkSession();
+    // Defer the initial check so @supabase/ssr has time to write cookies
+    // after a fresh sign-in redirect (hard navigation race window ~500ms).
+    const initialTimer = setTimeout(() => { void checkSession(); }, 2000);
 
-    // Then check every 2 minutes
-    checkIntervalRef.current = setInterval(checkSession, 2 * 60 * 1000);
+    checkIntervalRef.current = setInterval(() => { void checkSession(); }, 2 * 60 * 1000);
     return () => {
+      clearTimeout(initialTimer);
       if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
     };
   }, [checkSession]);
