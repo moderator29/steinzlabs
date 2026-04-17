@@ -1,11 +1,18 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
-);
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (_supabase) return _supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase env vars missing: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY) are required');
+  }
+  _supabase = createClient(url, key);
+  return _supabase;
+}
 
 function auth(req: Request) {
   const h = req.headers.get('authorization') ?? '';
@@ -13,6 +20,7 @@ function auth(req: Request) {
 }
 
 export async function GET(request: Request) {
+  const supabase = getSupabase();
   const token = auth(request);
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -42,6 +50,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const supabase = getSupabase();
   const token = auth(request);
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
