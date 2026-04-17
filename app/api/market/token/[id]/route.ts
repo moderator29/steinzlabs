@@ -14,9 +14,9 @@ function cgHeaders() {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   const url = new URL(`${BASE}/coins/${id}`);
   url.searchParams.set('localization', 'false');
   url.searchParams.set('tickers', 'false');

@@ -899,7 +899,7 @@ export async function POST(request: NextRequest) {
       .replace(/\*\*/g, '').replace(/\*/g, '')
       .replace(/^#{1,6}\s/gm, '').replace(/^[-•]\s/gm, '').replace(/^—\s/gm, '');
 
-    if (!isPro && !skipRateLimit) incrementUsage(ip);
+    if (!isPro && !skipRateLimit) await incrementUsage(ip);
 
     // ── Chart Payload ───────────────────────────────────────────────────────
     const finalChartType = replyChartSignal.chartType || userChartSignal.chartType || null;
