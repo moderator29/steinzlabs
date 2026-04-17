@@ -1,86 +1,242 @@
-'use client';
+"use client";
 
-import { Users, Bell, ArrowRight, Copy } from 'lucide-react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Loader2, Power, Shield, Trash2 } from "lucide-react";
+import { SecurityBadge } from "@/components/security/SecurityBadge";
+import { toast } from "sonner";
+
+interface CopyRule {
+  id: string;
+  whale_address: string;
+  chain: string;
+  max_per_trade_usd: number;
+  daily_cap_usd: number;
+  min_liquidity_usd: number;
+  max_slippage_bps: number;
+  enabled: boolean;
+}
+
+interface CopyTrade {
+  id: string;
+  source_whale: string;
+  chain: string | null;
+  token_symbol: string | null;
+  action: "buy" | "sell";
+  amount_usd: number | null;
+  status: string;
+  failure_reason: string | null;
+  security_score: number | null;
+  pnl_usd: number | null;
+  created_at: string;
+}
+
+interface Stats {
+  total: number;
+  executed: number;
+  blocked: number;
+  totalInvested: number;
+  totalPnl: number;
+}
+
+function fmtUsd(n: number): string {
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
 
 export default function CopyTradingPage() {
+  const [rules, setRules] = useState<CopyRule[]>([]);
+  const [trades, setTrades] = useState<CopyTrade[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"rules" | "trades">("rules");
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [r, t] = await Promise.all([
+        fetch("/api/copy-trading/rules").then((r) => r.json()),
+        fetch("/api/copy-trading/trades").then((r) => r.json()),
+      ]);
+      setRules(r.rules ?? []);
+      setTrades(t.trades ?? []);
+      setStats(t.stats ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function toggleRule(rule: CopyRule) {
+    const res = await fetch(`/api/copy-trading/rules/${rule.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: !rule.enabled }),
+    });
+    if (res.ok) load();
+    else toast.error("Failed");
+  }
+
+  async function deleteRule(rule: CopyRule) {
+    const res = await fetch(`/api/copy-trading/rules/${rule.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Rule removed");
+      load();
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
-      <div className="max-w-4xl mx-auto text-center">
-        <div className="w-24 h-24 bg-gradient-to-br from-[#10B981] to-[#0A1EFF] rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <Copy className="w-12 h-12" />
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Copy Trading</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Every copy trade passes GoPlus security checks (token + whale address) and your safety rules before it ever reaches the relayer.
+            </p>
+          </div>
         </div>
 
-        <div className="inline-block px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-full mb-6">
-          <span className="text-[#F59E0B] text-sm font-semibold">COMING SOON</span>
-        </div>
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <StatCard label="Rules" value={rules.filter((r) => r.enabled).length.toString()} sub={`${rules.length} total`} />
+            <StatCard label="Copied trades" value={stats.executed.toString()} sub={`${stats.total} attempts`} />
+            <StatCard label="Blocked" value={stats.blocked.toString()} sub="security + rule guards" tone="warn" />
+            <StatCard
+              label="Net PnL"
+              value={fmtUsd(stats.totalPnl)}
+              sub={`on ${fmtUsd(stats.totalInvested)} invested`}
+              tone={stats.totalPnl >= 0 ? "up" : "down"}
+            />
+          </div>
+        )}
 
-        <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
-          Copy Trading Protocol
-        </h1>
-
-        <p className="text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto">
-          Automatically mirror the trades of proven whale wallets and top traders. Set it and forget it - let the pros trade for you.
-        </p>
-
-        <div className="grid md:grid-cols-2 gap-6 mb-12 text-left">
-          {[
-            { title: 'Follow Top Whales', desc: 'Copy wallets with proven track records. Filter by win rate, total profit, and trading style.' },
-            { title: 'Instant Execution', desc: "Trades execute within seconds of the whale's transaction. No manual work required." },
-            { title: 'Custom Settings', desc: 'Set allocation amounts, stop-loss limits, and risk parameters for each trader you copy.' },
-            { title: 'Non-Custodial', desc: 'Your funds stay in your wallet. We never have access to your private keys.' },
-          ].map((f) => (
-            <div key={f.title} className="glass rounded-xl p-6 border border-white/10">
-              <h3 className="font-bold text-lg mb-2">{f.title}</h3>
-              <p className="text-sm text-gray-400">{f.desc}</p>
-            </div>
+        <div className="flex gap-1 border-b border-slate-800 mb-4">
+          {(["rules", "trades"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-3 py-2 text-xs uppercase tracking-wide transition ${
+                tab === t ? "text-blue-300 border-b-2 border-blue-500/60" : "text-slate-500 hover:text-white"
+              }`}
+            >
+              {t === "rules" ? "Rules" : "Trades"}
+            </button>
           ))}
         </div>
 
-        <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
-          <h3 className="font-bold text-2xl mb-6">How It Works</h3>
-          <div className="grid md:grid-cols-3 gap-6 text-left">
-            {[
-              { step: '1', title: 'Choose Trader', desc: 'Browse verified traders, filter by performance, and select who to copy' },
-              { step: '2', title: 'Set Allocation', desc: 'Decide how much to allocate and configure risk settings' },
-              { step: '3', title: 'Auto-Pilot', desc: 'System automatically mirrors their trades in real-time' },
-            ].map((s) => (
-              <div key={s.step}>
-                <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center mb-3">
-                  <span className="text-[#0A1EFF] font-bold">{s.step}</span>
+        {loading ? (
+          <div className="py-12 flex items-center justify-center">
+            <Loader2 size={16} className="animate-spin text-blue-400" />
+          </div>
+        ) : tab === "rules" ? (
+          rules.length === 0 ? (
+            <div className="py-12 text-center text-sm text-slate-500">
+              No copy rules yet. Open a whale from the{" "}
+              <Link href="/dashboard/whale-tracker" className="text-blue-400">
+                whale tracker
+              </Link>{" "}
+              and add one.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {rules.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <code className="text-xs font-mono text-white truncate">{r.whale_address.slice(0, 8)}…{r.whale_address.slice(-4)}</code>
+                      <span className="text-[10px] uppercase text-slate-500">{r.chain}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                      <span>Max/trade {fmtUsd(r.max_per_trade_usd)}</span>
+                      <span>Daily cap {fmtUsd(r.daily_cap_usd)}</span>
+                      <span>Min liq {fmtUsd(r.min_liquidity_usd)}</span>
+                      <span>Slip {(r.max_slippage_bps / 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleRule(r)}
+                    title={r.enabled ? "Disable" : "Enable"}
+                    className={`p-1.5 rounded transition ${r.enabled ? "text-green-400 hover:bg-green-500/10" : "text-slate-500 hover:bg-white/5"}`}
+                  >
+                    <Power size={13} />
+                  </button>
+                  <button onClick={() => deleteRule(r)} className="p-1.5 rounded text-slate-500 hover:text-red-400 transition">
+                    <Trash2 size={13} />
+                  </button>
                 </div>
-                <h4 className="font-semibold mb-2">{s.title}</h4>
-                <p className="text-sm text-gray-400">{s.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+          )
+        ) : trades.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500">No copy trades yet</div>
+        ) : (
+          <div className="rounded-xl border border-slate-800 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+                <tr>
+                  <th className="text-left px-3 py-2">When</th>
+                  <th className="text-left px-3 py-2">Whale</th>
+                  <th className="text-left px-3 py-2">Token</th>
+                  <th className="text-left px-3 py-2">Action</th>
+                  <th className="text-left px-3 py-2">Amount</th>
+                  <th className="text-left px-3 py-2">Security</th>
+                  <th className="text-left px-3 py-2">Status</th>
+                  <th className="text-left px-3 py-2">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trades.map((t) => (
+                  <tr key={t.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
+                    <td className="px-3 py-2 text-slate-500">{new Date(t.created_at).toLocaleString()}</td>
+                    <td className="px-3 py-2 font-mono text-slate-300">{t.source_whale.slice(0, 8)}…</td>
+                    <td className="px-3 py-2 font-mono text-white">{t.token_symbol ?? "?"}</td>
+                    <td className={`px-3 py-2 uppercase text-[10px] ${t.action === "buy" ? "text-green-400" : "text-red-400"}`}>{t.action}</td>
+                    <td className="px-3 py-2 font-mono">{t.amount_usd ? fmtUsd(t.amount_usd) : "—"}</td>
+                    <td className="px-3 py-2">
+                      {t.security_score !== null ? <SecurityBadge score={t.security_score} size="sm" compact /> : <span className="text-slate-600">—</span>}
+                    </td>
+                    <td className={`px-3 py-2 text-[10px] uppercase ${
+                      t.status === "success" ? "text-green-400" :
+                      t.status === "pending" ? "text-amber-400" :
+                      t.status.startsWith("blocked") ? "text-red-400" : "text-slate-500"
+                    }`}>
+                      {t.status}
+                    </td>
+                    <td className="px-3 py-2 text-slate-500 truncate max-w-[140px]">{t.failure_reason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
 
-        <div className="glass rounded-2xl p-8 border border-[#0A1EFF]/30 max-w-md mx-auto">
-          <Bell className="w-8 h-8 text-[#0A1EFF] mx-auto mb-4" />
-          <h3 className="font-bold text-xl mb-3">Get Early Access</h3>
-          <p className="text-sm text-gray-400 mb-4">
-            Copy Trading launches next month for Max tier users. Join the waitlist now.
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#0A1EFF]/50 text-sm"
-            />
-            <button className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
-              Join Waitlist
-            </button>
+        <div className="mt-8 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-3">
+          <Shield size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-[11px] text-amber-200/80 leading-relaxed">
+            <p className="font-semibold text-amber-300 mb-1">Auto-Copy is deferred to Session 5C.</p>
+            Manual One-Click copy is live and gated by every rule above plus GoPlus security checks. Fully autonomous copy execution (no user tap) goes through a separate safety review before it ships.
           </div>
-        </div>
-
-        <div className="mt-8">
-          <a href="/dashboard/pricing">
-            <button className="glass px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors inline-flex items-center gap-2">
-              Upgrade to Max Tier <ArrowRight className="w-4 h-4" />
-            </button>
-          </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "up" | "down" | "warn" }) {
+  return (
+    <div className="rounded-xl bg-slate-900/50 border border-slate-800 p-3">
+      <p className="text-[9px] uppercase text-slate-500 tracking-wide mb-1">{label}</p>
+      <p className={`text-lg font-mono ${
+        tone === "up" ? "text-green-400" : tone === "down" ? "text-red-400" : tone === "warn" ? "text-amber-400" : "text-white"
+      }`}>
+        {value}
+      </p>
+      {sub && <p className="text-[10px] text-slate-600 mt-0.5">{sub}</p>}
     </div>
   );
 }
