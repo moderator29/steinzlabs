@@ -2962,3 +2962,299 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Multiple named watchlists; bulk alert per list; shareable public list; per-token notes.
 
 ---
+
+## Feature 27 — Bookmarks
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/ContextFeed.tsx](../components/ContextFeed.tsx) lines 222-265 (toggle + persist + Supabase sync added Session 4)
+- DB table: `bookmarks (user_id, event_id)`
+
+**Data sources:** Local storage primary; `bookmarks` table Supabase sync.
+
+**Architecture pattern:** Local-first set, then merge from Supabase. Toggle writes to both.
+
+**Performance characteristics:** Fast.
+
+**UX quality: 5/10.** Bookmarks tab in Context Feed shows bookmarked events filtered against current 200-event window. **Major issue** (already noted in F4): if a bookmarked event aged out of the 200-window, it disappears from the bookmarks tab.
+
+**Backend quality: 6/10.** Persistence is correct; the lookup is wrong (filter against window, not query DB).
+
+**What works well:**
+- Synced across devices.
+- Local-first.
+
+**What is weak or missing:**
+- **Doesn't query the bookmarks table directly** — relies on filtering current feed.
+- **No bookmark categories.**
+- **No notes on bookmarks.**
+- **No bookmark export.**
+- **No bookmark of a token / wallet** — only events.
+- **No public bookmark feed.**
+
+### B) Industry Standard Comparison
+
+**Twitter/X bookmarks:** Direct query, categorized, searchable.
+
+**Pocket:** Cross-domain bookmarks with full-text search.
+
+**Pattern:** Direct query + categories + search.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Direct DB query** — Bookmarks tab queries `bookmarks` joined with `whale_events_archive` (depends on F4 archive).
+2. **Bookmark anything** — tokens, wallets, alerts, VTX answers, not just events.
+3. **Categories.**
+4. **Full-text search.**
+
+### D) Priority and Effort
+
+- **Current score: 5/10.**
+- **Effort to 9/10: Small (4–5 days).** Mostly query refactor.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Direct DB query | `app/api/bookmarks/list/route.ts` (new), update `ContextFeed.tsx` | `whale_events_archive` |
+| Generalize to any object | Add `target_type` + `target_id` to `bookmarks` schema | Schema migration |
+| Categories | `bookmark_categories` table | New |
+| Search | Full-text index | Schema |
+
+**Acceptance criteria:** Bookmark of an event from 60 days ago still visible; tokens / wallets bookmarkable; categories functional; search works.
+
+---
+
+## Feature 28 — Portfolio / Transaction History
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/portfolio/page.tsx](../app/dashboard/portfolio/page.tsx) — 804 lines (multi-wallet portfolio with security overlay)
+- [app/dashboard/transactions/page.tsx](../app/dashboard/transactions/page.tsx) — 195 lines (Session 4 — combines `swap_logs` + `sniper_executions`)
+
+**Data sources:** Wallet Intelligence (per-wallet holdings + USD), GoPlus per-token security, `swap_logs` + `sniper_executions` Supabase tables.
+
+**Architecture pattern:**
+- **Portfolio page** — connected wallet → holdings → per-token security overlay.
+- **Transactions page** — query Supabase for user's swap + sniper rows, display with explorer links.
+
+**Performance characteristics:** Portfolio page does N+1 GoPlus lookups for security overlay (slow; needs caching).
+
+**UX quality: 6/10.** Portfolio renders OK; transactions page is clean. **No PnL anywhere — same gap as Wallet Intelligence (F8).**
+
+**Backend quality: 5/10.** No portfolio history snapshots. Transactions page is just a Supabase select.
+
+**What works well:**
+- Per-token security overlay (creative).
+- Multi-wallet support.
+- Transactions sourced from Supabase.
+
+**What is weak or missing:**
+- **No PnL.** Same critical gap as F8.
+- **No portfolio chart over time.**
+- **No realized vs unrealized.**
+- **No DeFi positions.**
+- **No NFTs.**
+- **No tax export.**
+- **No CSV export of transactions.**
+- **No filter on transactions** (date range, chain).
+- **No transaction-level annotations.**
+- **No multi-wallet aggregation** (sum across all my linked wallets).
+
+### B) Industry Standard Comparison
+
+**DeBank Portfolio:** Multi-wallet aggregated, full DeFi, NFT, daily PnL chart.
+
+**Zerion:** Mobile-first, very polished, real PnL.
+
+**Cointracker / Koinly:** Tax export, transaction labeling, cost basis.
+
+**Pattern:** Aggregation + PnL + DeFi + tax. We have basic.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Same as F8 — PnL + history snapshots + DeFi + NFT.** Largely shared infrastructure.
+2. **Multi-wallet aggregation.**
+3. **Tax CSV export.**
+4. **Per-tx annotations.**
+5. **Filter + search on transactions.**
+
+### D) Priority and Effort
+
+- **Current score: 5/10.** Snapshot-only.
+- **Effort to 9/10: Large (3 weeks, shared with F8).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Reuse F8 snapshots + PnL | Read from `wallet_portfolio_snapshots` + `wallet_pnl` | Same |
+| Multi-wallet aggregation | `lib/portfolio/aggregate.ts` (new) | None |
+| Tax CSV export | `lib/portfolio/taxExport.ts` (new), Koinly-compatible CSV | None |
+| Per-tx annotations | `transaction_notes` table | New |
+| Transactions filter UI | `app/dashboard/transactions/page.tsx` | None |
+
+**Acceptance criteria:** Multi-wallet aggregated portfolio with 30/90/365d PnL chart; tax CSV downloadable in Koinly format; transaction filter by chain + date range.
+
+---
+
+## Feature 29 — Research Lab
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/research/page.tsx](../app/dashboard/research/page.tsx) — 558 lines
+- [app/admin/research/page.tsx](../app/admin/research/page.tsx) — 426 lines (admin CMS for posts)
+- [app/api/admin/research/route.ts](../app/api/admin/research/route.ts) + `upload/route.ts` — backend
+
+**Data sources:** Internal CMS — `research_posts` table populated by admin.
+
+**Architecture pattern:**
+- **Editorial CMS** — admins write posts via `/admin/research`; users read at `/dashboard/research`.
+- **Categories**: DeFi, NFT, Layer2, Meme, BTC, ETH, SOL, Market Analysis, Security, Protocols, On-Chain, General.
+
+**Performance characteristics:** Standard DB read.
+
+**UX quality: 7/10.** Looks like a clean blog. Filters by category + sort by latest/popular.
+
+**Backend quality: 6/10.** Real CMS, real Supabase persistence. No external content ingestion.
+
+**What works well:**
+- Real editorial CMS.
+- Image upload.
+- Category taxonomy.
+- Tags.
+
+**What is weak or missing:**
+- **No external feed ingestion** — can't auto-pull from Substack, Mirror, Paragraph.
+- **No subscription model** — can't subscribe to specific categories.
+- **No comments / discussion.**
+- **No author profile pages.**
+- **No analytics surface for authors.**
+- **No SEO** — not SSR.
+- **No newsletter integration** despite the newsletter sender existing.
+
+### B) Industry Standard Comparison
+
+**Messari Research:** Premium gated content, weekly reports.
+
+**Delphi Digital:** Long-form thesis, paywalled.
+
+**Substack crypto-newsletters (Bankless, Thoughts of a Lateral Soul):** Free + paid tiers.
+
+**Pattern:** Premium content + newsletter + author profiles.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **External feed ingestion** — Substack/Mirror/Paragraph RSS adapters.
+2. **SSR + SEO.**
+3. **Newsletter integration.**
+4. **Comments via VTX-moderated thread.**
+5. **Premium gated content** for Pro/Max.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.**
+- **Effort to 9/10: Medium (1.5 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| External feed ingestion | `lib/jobs/research-feed-ingest.ts` (new) | None |
+| SSR research pages | Convert to RSC | None |
+| Newsletter integration | Reuse Resend + `/api/admin/newsletter` | Existing |
+| Comments | `research_comments` table | New |
+| Premium gating | `is_premium` column + tier check | Schema |
+
+**Acceptance criteria:** External feed posts ingested; research pages SSR-ed for SEO; newsletter campaign linkable to a research post; comments functional with VTX moderation.
+
+---
+
+## Feature 30 — AI Customer Support
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/support/AISupportChat.tsx](../components/support/AISupportChat.tsx) — 181 lines
+- [components/support/FloatingSupportButton.tsx](../components/support/FloatingSupportButton.tsx) — global trigger
+- [app/api/support/route.ts](../app/api/support/route.ts) — 96 lines (Claude Sonnet 4.6 with carefully-crafted platform-knowledge system prompt)
+- DB table: `support_conversations`
+
+**Data sources:** Anthropic Claude with a static platform-knowledge system prompt.
+
+**Architecture pattern:**
+- **Floating button** in dashboard layout opens a chat drawer.
+- **Category buttons** (Account, Wallet, Trading, Features, Billing, Bug Report) at the top of the chat.
+- **Streaming SSE response** from Claude, sanitized to plain text.
+- **System prompt** is a one-page description of the platform features, pricing, wallet model, etc.
+
+**Performance characteristics:** Streaming Claude — first token in 600ms, full response in 3–8s.
+
+**UX quality: 8/10.** Floating button is right approach. Category buttons help users frame questions. Streaming feels responsive. Admin support inbox (Session 4) gives fallback for hard cases.
+
+**Backend quality: 7/10.** Real Claude with thoughtful system prompt. Sanitizer for plain text. Lacks: per-conversation persistence with history, escalation to human queue, knowledge-base versioning.
+
+**What works well:**
+- Always-available floating button.
+- Streaming.
+- Category framing.
+- Admin support inbox to receive escalations.
+- Plain-text output enforced.
+
+**What is weak or missing:**
+- **System prompt is hardcoded.** Every product change requires a code deploy to update the AI's knowledge.
+- **No conversation persistence to user account** — close the drawer, history gone (admin gets the record, user doesn't).
+- **No "escalate to human" button** — user is stuck with AI even if it can't help.
+- **No KB articles** — would help SEO and reduce support volume if surfaced as `/help/*` pages.
+- **No feedback loop** ("was this answer helpful?").
+- **No multilingual** despite international users.
+- **No file/screenshot attachment** for bug reports.
+- **No proactive support** ("we noticed you tried 3 swaps that failed; can we help?").
+
+### B) Industry Standard Comparison
+
+**Intercom + Fin:** AI first, human escalation. Knowledge base auto-extracted.
+
+**Linear support / Plain.com:** Modern, fast, integrated.
+
+**Phantom support:** Email-only, slow but accurate.
+
+**Pattern:** AI + human + KB + feedback loop. We have AI + admin inbox.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Knowledge base in DB** — ingest from `support_articles` table; auto-update VTX context. Decouple from code.
+2. **Conversation persistence** to user account.
+3. **Escalate-to-human** button → creates `support_conversations` row, admin receives.
+4. **Public KB pages** (`/help/<slug>`) — SEO + self-service.
+5. **Feedback thumbs.**
+6. **Proactive support hooks** (failed swap → support nudge).
+7. **File attachment** for bug reports.
+
+### D) Priority and Effort
+
+- **Current score: 8/10.** Solid for a Session 4 addition.
+- **Effort to 9/10: Medium (1.5 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| KB in DB | `support_articles` table; loader injects into prompt | New |
+| Conversation persistence | Save to `support_conversations` per user | Existing |
+| Escalate-to-human | Add button + Slack notification to admin | None |
+| Public KB pages | `app/help/[slug]/page.tsx` (new, SSR) | None |
+| Feedback thumbs | `support_feedback` table | New |
+| Proactive support | Hook into swap failure events | None |
+| File attachment | `app/api/support/upload/route.ts` (new) | Vercel Blob |
+
+**Acceptance criteria:** KB articles editable without deploy; user can see their support history; "escalate" creates admin ticket; help pages publicly indexable; thumbs feedback persists.
+
+---
