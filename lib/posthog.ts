@@ -26,3 +26,15 @@ export function initPostHog(): PostHogType | null {
 export function getPostHog(): PostHogType | null {
   return posthogInstance;
 }
+
+export function track(event: string, properties?: Record<string, unknown>): void {
+  posthogInstance?.capture(event, properties);
+}
+
+export function identify(userId: string, properties?: Record<string, unknown>): void {
+  posthogInstance?.identify(userId, properties);
+}
+
+export function resetUser(): void {
+  posthogInstance?.reset();
+}

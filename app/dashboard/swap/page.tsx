@@ -601,6 +601,15 @@ export default function SwapPage() {
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
       setSwapSuccess(true);
+      import('@/lib/posthog').then(({ track }) => {
+        track('swap_executed', {
+          from_token: fromToken.symbol,
+          to_token: toToken.symbol,
+          chain,
+          from_amount: fromAmount,
+          tx_hash: hash,
+        });
+      }).catch(() => { /* PostHog not configured */ });
       setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 10000);
 
       // Save amounts before clearing
