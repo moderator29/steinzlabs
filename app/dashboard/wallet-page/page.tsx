@@ -89,21 +89,56 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana'];
 const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche'];
 
-function simpleEncrypt(text: string, password: string): string {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
-  }
-  return btoa(result);
+async function encryptPrivateKey(plaintext: string, password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plaintext));
+  return JSON.stringify({
+    v: 2,
+    data: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+    iv: btoa(String.fromCharCode(...iv)),
+    salt: btoa(String.fromCharCode(...salt)),
+  });
 }
 
-function simpleDecrypt(encoded: string, password: string): string {
-  const text = atob(encoded);
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+async function decryptPrivateKey(encoded: string, password: string): Promise<string> {
+  // Backward compatibility — old XOR format had no JSON wrapper
+  let parsed: { v?: number; data: string; iv: string; salt: string };
+  try {
+    parsed = JSON.parse(encoded);
+    if (parsed.v !== 2) throw new Error('Unsupported encryption version');
+  } catch {
+    // Legacy XOR-encrypted wallet — decrypt with old algorithm
+    const text = atob(encoded);
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+      result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+    }
+    return result;
   }
-  return result;
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const salt = Uint8Array.from(atob(parsed.salt), c => c.charCodeAt(0));
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const iv = Uint8Array.from(atob(parsed.iv), c => c.charCodeAt(0));
+  const data = Uint8Array.from(atob(parsed.data), c => c.charCodeAt(0));
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+  return new TextDecoder().decode(decrypted);
 }
 
 function CoinLogo({ symbol, size = 40, className = '' }: { symbol: string; size?: number; className?: string }) {
@@ -791,8 +826,8 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
     } finally { setCreating(false); }
   };
 
-  const confirmAndSave = () => {
-    const encrypted = simpleEncrypt(privateKey, password);
+  const confirmAndSave = async () => {
+    const encrypted = await encryptPrivateKey(privateKey, password);
     onCreated({ address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
   };
 
@@ -922,7 +957,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
       let wallet: any;
       if (method === 'phrase') { wallet = ethers.Wallet.fromPhrase(input.trim()); }
       else { wallet = new ethers.Wallet(input.trim()); }
-      const encrypted = simpleEncrypt(wallet.privateKey, password);
+      const encrypted = await encryptPrivateKey(wallet.privateKey, password);
       onImported({ address: wallet.address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
     } catch (e: any) { setError(e.message || 'Invalid input. Check your recovery phrase or private key.'); }
     finally { setImporting(false); }
@@ -993,7 +1028,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     setStatus('sending'); setError('');
     try {
       const ethers = await import('ethers');
-      const decryptedKey = simpleDecrypt(wallet.encryptedKey, password);
+      const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
       const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC || 'https://eth.llamarpc.com');
       const signer = new ethers.Wallet(decryptedKey, provider);
       const tx = await signer.sendTransaction({ to, value: ethers.parseEther(amount) });

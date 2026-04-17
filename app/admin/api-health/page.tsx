@@ -51,18 +51,36 @@ export default function ApiHealthPage() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
-      setApis(prev => prev.map(api => ({
-        ...api,
-        latencyMs: api.latencyMs,
-        lastChecked: Date.now(),
-      })));
-      setLastRefresh(new Date());
-      setLoading(false);
-    }, 800);
-  }, []);
+    const updated = await Promise.all(
+      apis.map(async (api) => {
+        const start = Date.now();
+        try {
+          const res = await fetch(`/api/admin/api-health/ping?url=${encodeURIComponent(api.url)}`, {
+            signal: AbortSignal.timeout(10000),
+          });
+          const latency = Date.now() - start;
+          if (res.ok) {
+            const data = await res.json();
+            return {
+              ...api,
+              status: (data.status || 'active') as ApiStatus,
+              latencyMs: data.latencyMs ?? latency,
+              lastChecked: Date.now(),
+              errorMsg: data.errorMsg,
+            };
+          }
+          return { ...api, status: 'error' as ApiStatus, latencyMs: latency, lastChecked: Date.now(), errorMsg: `HTTP ${res.status}` };
+        } catch (err) {
+          return { ...api, status: 'error' as ApiStatus, latencyMs: Date.now() - start, lastChecked: Date.now(), errorMsg: err instanceof Error ? err.message : 'Timeout' };
+        }
+      })
+    );
+    setApis(updated);
+    setLastRefresh(new Date());
+    setLoading(false);
+  }, [apis]);
 
   useEffect(() => {
     const interval = setInterval(refresh, 60_000);
