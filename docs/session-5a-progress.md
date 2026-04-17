@@ -41,3 +41,15 @@ Internal identifiers (file paths, package name, CSS vars `--steinz-*`, env vars 
 **User actions required before deploy:**
 1. Enable Google provider in Supabase Dashboard → Authentication → Providers → Google (set authorized redirect URIs)
 2. Run `supabase/migrations/2026_session5a_auth.sql` in Supabase SQL Editor
+
+## Phase 4 — Dashboard Redesign
+
+- [x] `components/dashboard/CompactKpiBar.tsx`: 4-pill live global stats bar, auto-refreshes every 2 min
+- [x] `app/api/dashboard/market-globals/route.ts`: CoinGecko aggregator with Redis cache (120s)
+- [x] `app/api/dashboard/homepage/route.ts`: per-user aggregator (wallets, watchlist, alerts, follows, vtx) with 30s cache
+- [x] `components/dashboard/PersonalizedHome.tsx`: greeting, quick actions (Swap/Send/Track/Alert), alerts today, watchlist movers, smart money digest, recent VTX, all with proper empty states
+- [x] `components/dashboard/GlobalSearch.tsx`: Cmd+K focus, 300ms debounce, EVM/Solana address detection, click-outside close
+- [x] `app/api/dashboard/search/route.ts`: unified search (wallet address detection + CoinGecko tokens), Redis-cached
+- [x] `app/dashboard/page.tsx` integration: new `overview` tab defaults on, `CompactKpiBar` in sticky header, `GlobalSearch` in top nav
+- [x] Typecheck passes for all new Phase 4 files (pre-existing errors elsewhere unrelated)
+
