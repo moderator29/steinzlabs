@@ -1424,3 +1424,139 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Same wallet analyzed twice within 7 days returns cached result instantly; OG share card renders on Twitter/X with the wallet's archetype + grade; `/dna/<address>` is publicly indexable and SSR; leaderboard shows top 10 wallets per archetype this week.
 
 ---
+
+## Feature 10 — Whale Tracker
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/whale-tracker/page.tsx](../app/dashboard/whale-tracker/page.tsx) — 718 lines
+- [app/api/whale-tracker/route.ts](../app/api/whale-tracker/route.ts) — backend (~700 LOC inferred)
+- [app/api/moneyRadar/](../app/api/moneyRadar/) — follow/unfollow API (used in whale-tracker page)
+
+**Data sources:** Etherscan/Bscscan/Basescan (large EVM transfer history), Solana RPC (large signature history), DexScreener (token/pair pricing), CoinGecko (USD reference). Filters out known CEX, contract, and DEX router addresses via `KNOWN_NON_HUMAN_PREFIXES` and `KNOWN_CEX_PATTERNS`.
+
+**Architecture pattern:**
+- **Server-side aggregation** of recent large transfers across multiple chains (ETH, Base, BSC, Polygon, Arbitrum, Optimism, Avalanche, Solana, Sui, Ton).
+- **Whale tier classification**: MEGA (>$5M), LARGE (>$1M), MID (>$100k), SMALL (else).
+- **Human-vs-bot heuristic** — excludes known router/contract/CEX addresses.
+- **Two views:** `WhaleProfile` (per-wallet) and `WhaleFeedEvent` (per-transaction).
+- **Follow/unfollow** persists to Supabase via `/api/moneyRadar/follow` (Session 2 work).
+- **Client-side filtering** by chain, by tier.
+- **Notifications** wired — when a followed whale moves, fires `addLocalNotification`.
+
+**Performance characteristics:**
+- Multi-chain fan-out — slow if any single explorer is slow.
+- Polls every 60s.
+- Etherscan free tier rate-limited (5 req/sec); under load this becomes a real bottleneck.
+
+**UX quality: 7/10.** The whale-feed list with tier badges and chain pills is good. The follow/unfollow UX is clean. Filtering by chain and tier feels right. Notification on followed-whale move is the right behavior.
+
+**Backend quality: 6/10.** Sensible aggregation; the human-vs-bot filter is needed and works. Major gaps: no real-time push (60s polling), no historical archive (events disappear after the window), no Arkham entity-label integration (despite Arkham being available — labels would massively improve the view), no per-event "explain" via VTX, no DEX/CEX leg classification (a "transfer to Coinbase" should be labeled as "deposit to exchange").
+
+**What works well:**
+- Multi-chain coverage including Solana (rare for products in this category).
+- Tier classification with clean visual badges.
+- Human heuristic filtering.
+- Follow + alert wiring.
+- Tracked-whale alerts route to notifications.
+
+**What is weak or missing:**
+- **No real-time push** — polling every 60s.
+- **No entity labels overlay** — Arkham labels would tell us "this is Andreessen Horowitz" instead of `0x4f3...`.
+- **No CEX deposit/withdraw classification.**
+- **No exchange-flow analysis** — net inflow/outflow to CEX over 24h is a key signal we don't compute.
+- **No DEX-specific labeling** — a swap on Uniswap V3 vs Curve has different signal value.
+- **No "explain this whale move" inline VTX call.**
+- **No multi-event sequencing** — wallet doing 3 trades in 5 minutes shows as 3 separate cards, not a strategy.
+- **No portfolio context** — when a whale buys ETH, we don't show "this is now 30% of their portfolio."
+- **No counterparty graph** — who did the whale receive from / send to.
+- **No historical archive** — events older than the polling window vanish.
+- **No alert thresholds.** Currently all events for a followed whale fire a notification; should be configurable ("alert me only on > $1M moves").
+- **No "whale leaderboard."**
+- **No social context** — when a whale ape's into a token at the same time other whales do, that convergence isn't surfaced.
+
+**What feels half-built:**
+- The 10-chain support is broad but most chains use the same Etherscan-API-pattern with no chain-specific optimization.
+- The `WhaleProfile` view has a "featured" flag but no clear UI for it.
+- The `recentTokens` array is computed but used inconsistently.
+- The `tags` array exists on `WhaleProfile` but is never populated meaningfully.
+
+### B) Industry Standard Comparison
+
+**Whale Alert (whalealert.io):** The category leader on Twitter (>2M followers) but the website is bare-bones. Real-time WebSocket push of >$1M moves. CEX classification. Token labeling. No personalization.
+
+**Arkham Real-time Feed:** Entity-labeled, real-time, filterable. "All exchange withdrawals > $5M" is one click. They have years of entity labeling.
+
+**Nansen Alerts:** Per-wallet alerts with thresholds. Telegram + email + push. Smart-money labeling.
+
+**Lookonchain (Twitter @lookonchain):** Manual curation of high-quality whale moves. Sub-1-hour latency from event to tweet. Editorial.
+
+**Pattern:** **Real-time + entity labels + actionable filtering** is the table stakes. We have actionable filtering, weak on entity labels, no real-time.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+
+1. **WebSocket / SSE real-time push.** Replace 60s polling. Re-use the Redis stream infrastructure recommended for Context Feed (Feature 4).
+2. **Arkham entity overlay.** Every whale address checked against Arkham; render the label inline.
+3. **CEX flow classification.** Detect transfers to/from CEX-tagged addresses; render as "deposit to Coinbase" / "withdrawal from Binance."
+4. **Whale leaderboard.** Top 100 wallets by 30-day net flow, by win rate, by activity.
+5. **Convergence detection.** When 3+ whales buy the same token in 1h, surface as a "Convergence" event.
+6. **Configurable alert thresholds.** Per-followed-whale: min USD, action filter (buy only / sell only / both), chain filter.
+7. **VTX "explain this" inline.**
+8. **Historical archive.** Persistent `whale_events_archive` table (shared with Context Feed archive).
+
+**Backend changes:**
+- Background worker that ingests large transfers continuously, writes to Redis stream + `whale_events_archive`.
+- SSE endpoint reading from Redis stream.
+- Entity label join (Arkham) at write time so we don't re-fetch on every read.
+- CEX address registry table `cex_addresses (address, exchange_name, chain)`.
+- Convergence detection job — every 5min, query for tokens bought by ≥3 distinct whales.
+
+**Frontend changes:**
+- `EventSource` hook replacing polling.
+- Entity label overlay on every whale address.
+- CEX flow icon (deposit / withdraw).
+- "Convergence" event card.
+- Per-whale alert config drawer.
+
+**New sub-features:**
+- **CEX flow dashboard** — 24h net inflow/outflow to top 10 exchanges, line chart.
+- **Whale × Token matrix** — what % of token X supply is held by whales over time.
+- **Insider detection** — whales that consistently buy 1–24h before price pumps.
+- **Alpha leaderboard** — whales with best 30/90d win rates.
+
+**Performance:**
+- Etherscan/Bscscan calls to be replaced with Alchemy webhook subscriptions where possible — push instead of poll.
+- Cache CEX address registry in memory per-instance (small, doesn't change often).
+
+**Mobile:**
+- Card layout fine; filter pills could collapse into a single dropdown on narrow screens.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Solid execution; lacks the real-time + entity + convergence layer that defines the category leaders.
+- **Effort to 9/10: Medium-Large (2–3 weeks).** SSE infrastructure (shared with Feature 4) + entity labels + convergence detection + leaderboard.
+- **Approach: Layer enhancements.** Don't rewrite the page; add real-time data layer + entity overlay.
+- **Blocks other features?** No — but shares infrastructure with Context Feed and Smart Money. Building the real-time stream once benefits all three.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| SSE real-time feed | `app/api/whale-tracker/stream/route.ts` (new), reuse Redis stream from F4 | Redis |
+| Arkham entity overlay | Update `app/api/whale-tracker/route.ts` to join with Arkham labels | Existing arkham service |
+| CEX address registry | `cex_addresses` table seeded from public lists | New table |
+| CEX flow classification | `lib/services/cexFlow.ts` (new) — checks every event source/dest | None |
+| Convergence detection | `lib/jobs/whale-convergence.ts` (new), Vercel cron 5min | `whale_convergence_events` table |
+| Configurable alert thresholds | `wallet_follows` table — add `alert_min_usd`, `alert_actions`, `alert_chains` JSON | Schema migration |
+| VTX explain inline | Reuse VTX explain pattern from F4 | None |
+| Whale leaderboard | `app/dashboard/whale-tracker/leaderboard/page.tsx` (new) | DB view |
+| Insider detection | `lib/jobs/insider-detection.ts` (new) — cross-correlates whale buys with subsequent price moves | `insider_signals` table |
+| CEX flow dashboard | `app/dashboard/whale-tracker/cex-flows/page.tsx` (new) | None |
+| Alpha leaderboard | Per-wallet 30/90d win rate aggregate | `wallet_pnl` (from F8) |
+
+**Acceptance criteria:** Whale events push within 5s of upstream block confirmation; entity labels rendered for >50% of events; CEX deposit/withdraw classified; convergence event card appears when ≥3 whales buy the same token in 1h; per-followed-whale alert thresholds configurable.
+
+---
