@@ -26,3 +26,18 @@ Internal identifiers (file paths, package name, CSS vars `--steinz-*`, env vars 
 
 **User action required before deploy:** add `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `CRON_SECRET` (generate 32-char random) to Vercel env vars. Code falls back gracefully until then.
 
+
+## Phase 3 — Auth Upgrades
+
+- [x] `app/api/auth/signin/route.ts`: uses env vars (no hardcoded credentials)
+- [x] `components/auth/GoogleSignInButton.tsx`: Supabase OAuth Google flow
+- [x] `components/auth/SignInWithWallet.tsx`: EVM (MetaMask) + Solana (Phantom) SIWE with typed providers
+- [x] `app/api/auth/wallet-nonce/route.ts`: issues signed-message nonce (5 min TTL)
+- [x] `app/api/auth/wallet-verify/route.ts`: viem `verifyMessage` for EVM, tweetnacl for Solana, creates Supabase user + magic-link session
+- [x] `supabase/migrations/2026_session5a_auth.sql`: auth_wallet_nonces, wallet_identities, user_telegram_links + RLS
+- [x] Login page: Google + Wallet buttons wired, explicit Turnstile render with polling (mobile fix), `size: 'flexible'`, hard navigation after sign-in (fixes cookie race)
+- [x] Signup page: Google + Wallet buttons wired above email form, same Turnstile config
+
+**User actions required before deploy:**
+1. Enable Google provider in Supabase Dashboard → Authentication → Providers → Google (set authorized redirect URIs)
+2. Run `supabase/migrations/2026_session5a_auth.sql` in Supabase SQL Editor
