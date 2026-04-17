@@ -1288,3 +1288,139 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Wallet view shows 30-day PnL chart with realized + unrealized; Aave/Lido/Curve positions discovered for top 10 protocols; entity label rendered when known (e.g. "Binance 14"); Follow / Alert / Copy Trade buttons functional and wire to existing infrastructure; tracked wallets sidebar lists followed wallets with quick-load.
 
 ---
+
+## Feature 9 — DNA Analyzer
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/dna-analyzer/page.tsx](../app/dashboard/dna-analyzer/page.tsx) — 997 lines
+- [app/api/dna-analyzer/route.ts](../app/api/dna-analyzer/route.ts) — backend
+- Upstream service shape inferred from page: `AIAnalysis` interface with `personalityProfile`, `tradingStyle`, `riskProfile`, `overallScore`, `portfolioGrade`, `strengths/weaknesses/recommendations` arrays, `personalityTraits[]`, `marketOutlook`, `topInsight`, `sectorBreakdown`, `metrics: { diversification, timing, riskManagement, consistency, conviction }`.
+
+**Data sources:** Uses Wallet Intelligence as input (`buildEvmWalletIntelligence` / `buildSolanaWalletIntelligence`), then calls Anthropic Claude to generate the personality + grading analysis.
+
+**Architecture pattern:**
+- **AI-augmented wallet profiler.** The "DNA" is essentially a structured Claude analysis of the wallet's tx history.
+- Page accepts an address (auto-fills from connected wallet via `useWallet`) and renders a multi-section result: hero score + portfolio grade + 5 metrics radar, sector breakdown pie, partner wallets table, AI-generated text sections, recommendations.
+- Server fan-out: holdings + transactions + sector classification + Claude call.
+
+**Performance characteristics:**
+- Claude call dominates latency (~5–15s for a deep analysis).
+- Sector classification is naive — substring matching on token symbols probably.
+- No streaming; user waits for the full response before anything renders.
+
+**UX quality: 7/10.** Visually impressive — the radar chart of 5 metrics, the portfolio grade letter, the "personality traits" pills are all good design. The flow (paste address → wait → see your wallet's "personality") is fun and shareable.
+
+**Backend quality: 6/10.** Uses our existing wallet intel + Claude — sound architecture. But: no caching (every analysis re-runs Claude, expensive), no persistence (the analysis isn't saved, so the user can't return to it), no comparison ("how does my DNA compare to other wallets?"), the grading rubric isn't versioned (today's "B+" might be tomorrow's "A" if the prompt changes).
+
+**What works well:**
+- Concept is unique to the platform (Nansen has trader-archetype, but not the "DNA" framing).
+- AI personality profile is genuinely fun.
+- Radar chart visualization.
+- Recommendations actionable in spirit.
+- Auto-fills connected wallet.
+
+**What is weak or missing:**
+- **No persistence.** Run the analysis, close the page, it's gone. Should save to `wallet_dna_archetypes` table and return cached if already analyzed in last 7 days.
+- **No comparison.** "How does my DNA compare to BlackRock's wallet" would be killer.
+- **No leaderboard.** "Top 10 DIAMOND_HANDS wallets this week" would drive engagement.
+- **No social sharing.** "I'm a Diamond Hand! Find your DNA" tweet card with OG image. Would drive virality.
+- **No streaming.** User sits and watches a spinner for 10s.
+- **No "DNA over time"** — wallets evolve; should snapshot DNA monthly.
+- **Sector breakdown is shallow.** Memecoin / DeFi / Stable / L1L2 — but no NFT, no perps, no LP, no staking.
+- **No actionable feedback loop.** "Your timing score is 4/10" — OK, but how do I improve?
+- **No tier gating.** The DNA Analyzer should arguably be a Pro feature (Claude calls are expensive), but currently any user can run it.
+- **No batch DNA runs.** Can't analyze "all my followed wallets" in one click.
+- **Doesn't surface in Wallet Intelligence.** When viewing a wallet, there's no badge/link "see this wallet's DNA."
+- **No "DNA-similar wallets"** — given my DNA, find others with similar archetype + sector profile.
+
+**What feels half-built:**
+- The recommendations array is generated but not persisted; the user can't act on them later.
+- The portfolio grade is a single letter with no rubric explanation visible.
+- "Partner Wallets" table is generated but unclear how the relationship is computed.
+- The page is a 997-line monolith — should be decomposed into sub-components.
+
+### B) Industry Standard Comparison
+
+**Nansen "Wallet Profiler"** has trader-archetype tagging (Hodler, Trader, Diamond Hands). But it's a tag, not a 5-axis score with AI commentary.
+
+**Trader Joe / GMX leaderboard:** PnL-focused, no personality. Shows top traders by ROI.
+
+**Compass.fish / DUNE dashboards:** Custom analytics — power users build queries. Not a productized DNA.
+
+**Twitter/X "@arkham_intel" engagement-driven posts:** Anecdotally gets 100k+ impressions on "this wallet is up X%." Personality framing would fit naturally.
+
+**Strava DNA / Spotify Wrapped analogies:** The shareable annual "you're a Punk Indie listener" frame from Spotify Wrapped is the model. We should aim for that virality.
+
+**Pattern:** No one in crypto has done a "Wrapped"-quality wallet personality product. **This is an open opportunity** — and we're 60% of the way there.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+
+1. **Persist + cache.** Save every analysis to `wallet_dna_archetypes (wallet_address, dna_json, generated_at, expires_at)`. Return cached if < 7 days. Massive cost saving + faster response.
+2. **Streaming response.** Send sections as they generate (Personality first, then Strengths, then Weaknesses, then Recommendations).
+3. **Shareable OG image card.** New `app/api/dna/og/[address]/route.tsx` that generates a Twitter/X-friendly "I'm a Diamond Hand" card. Drives organic traffic.
+4. **Public DNA pages.** `/dna/<address>` — SEO-friendly, indexable. Free traffic from "0xABC etherscan analyze" searches.
+5. **DNA leaderboards.** `/dna/leaderboard` — top wallets in each archetype this week/month.
+6. **DNA-similar wallets.** "5 wallets that share your DNA" — drives cross-discovery.
+7. **DNA over time.** Monthly snapshot, render evolution line.
+8. **Improve recommendations to be actionable.** "Increase your stablecoin allocation by 10%" → button that opens a swap recipe.
+9. **Tier gate behind Pro.** Free users get 1 analysis/month, Pro/Max unlimited.
+10. **Surface DNA badge in Wallet Intelligence and Smart Money pages.**
+
+**Backend changes:**
+- New `wallet_dna_archetypes` table (referenced in seed; verify schema).
+- Streaming endpoint via SSE.
+- OG image generator using `next/og`.
+- Public DNA page route.
+- Leaderboard backed by daily-aggregated view.
+
+**Frontend changes:**
+- Decompose the 997-line page into `<DNAHeader>`, `<DNARadar>`, `<DNATraits>`, `<DNARecommendations>`, `<DNASectorBreakdown>`, `<DNAPartnerWallets>`.
+- Add streaming reveal of each section.
+- Add "Share to X" button with the OG image preview.
+- Add "Compare to" input box.
+- Add "Find similar wallets" button.
+
+**New sub-features:**
+- **DNA matchmaking** — "find wallets with complementary DNA to mine" (for diversification).
+- **DNA-driven alerts** — "alert me when a Whale Follower wallet enters BONK."
+- **Annual "Steinz Wrapped"** — December summary of the user's followed wallets' year.
+
+**Performance:**
+- 7-day cache.
+- Stream sections.
+- Use Haiku for the sector classification (cheap), Sonnet for the personality + recommendations (deep).
+
+**Mobile:**
+- Radar chart responsive.
+- Share-to-X is prime mobile use case — make sure the share intent works.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Genuinely interesting product — undercooked.
+- **Effort to 9/10: Medium (1.5–2 weeks).** Persistence + streaming + OG card + public pages + leaderboards. Not technically hard, just unbuilt.
+- **Approach: Layer on, plus a viral-loop sub-feature investment.** This is one of our best growth-loop opportunities.
+- **Blocks other features?** No — but enables Smart Money cross-linking, Wallet Intelligence enrichment, and serves as a marketing vector.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Persist DNA + cache 7d | `app/api/dna-analyzer/route.ts` — read/write `wallet_dna_archetypes` | Existing table |
+| Stream DNA sections via SSE | `app/api/dna-analyzer/route.ts` rewrite, `lib/hooks/useDnaStream.ts` (new) | None |
+| Shareable OG image | `app/dna/og/[address]/route.tsx` (new) | None |
+| Public DNA page | `app/dna/[address]/page.tsx` (new, SSR) | None |
+| DNA leaderboards | `app/dashboard/dna-analyzer/leaderboard/page.tsx` (new), `app/api/dna/leaderboard/route.ts` (new) | DB view aggregating archetype counts |
+| DNA-similar wallets | `app/api/dna/similar/route.ts` (new) | Cosine similarity over DNA vector |
+| DNA over time | Monthly snapshot job `lib/jobs/dna-monthly-snapshot.ts` | `wallet_dna_history` table |
+| Actionable recommendations | Recommendation rows get "Apply" button → swap recipe | Reuse swap |
+| Tier gating | Read tier in `app/api/dna-analyzer/route.ts`, return 403 if free w/ usage > 1/month | `dna_usage` table |
+| Decompose 997-line page | `components/dna/*.tsx` | None |
+| Surface DNA badge elsewhere | `wallet-intelligence/page.tsx`, `smart-money/page.tsx` | Existing |
+
+**Acceptance criteria:** Same wallet analyzed twice within 7 days returns cached result instantly; OG share card renders on Twitter/X with the wallet's archetype + grade; `/dna/<address>` is publicly indexable and SSR; leaderboard shows top 10 wallets per archetype this week.
+
+---
