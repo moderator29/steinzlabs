@@ -20,12 +20,7 @@ export default function SteinzLogoSpinner({ size = 40, message, className = '' }
             animationDuration: '1.2s',
           }}
         />
-        {/* Dark background circle */}
-        <div
-          className="absolute rounded-full bg-[#060A12]"
-          style={{ inset: 3 }}
-        />
-        {/* Centered SVG logo */}
+        {/* Centered SVG logo (no dark fill — logo.png is transparent) */}
         <div
           className="absolute"
           style={{
