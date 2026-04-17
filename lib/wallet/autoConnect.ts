@@ -14,7 +14,9 @@ export function saveWalletConnection(wallet: StoredWallet): void {
   try {
     localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(wallet));
     localStorage.setItem(WALLET_CHAIN_KEY, wallet.chain);
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in private browsing; silently skip
+  }
 }
 
 export function getStoredWallet(): StoredWallet | null {
@@ -37,7 +39,9 @@ export function clearWalletConnection(): void {
   try {
     localStorage.removeItem(WALLET_STORAGE_KEY);
     localStorage.removeItem(WALLET_CHAIN_KEY);
-  } catch {}
+  } catch {
+    // localStorage may be unavailable; silently skip
+  }
 }
 
 export function getPreferredChain(): string {
@@ -53,27 +57,31 @@ export async function attemptAutoConnect(): Promise<StoredWallet | null> {
   if (!stored) return null;
 
   if (stored.chain === 'ethereum' || stored.chain === 'polygon' || stored.chain === 'arbitrum' || stored.chain === 'base') {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum) {
       try {
-        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts && accounts.length > 0) {
           const currentAddress = accounts[0].toLowerCase();
           if (currentAddress === stored.address.toLowerCase()) {
             return stored;
           }
         }
-      } catch {}
+      } catch {
+        // Wallet provider not connected or request rejected; fall through
+      }
     }
   }
 
   if (stored.chain === 'solana') {
-    if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
+    if (typeof window !== 'undefined' && window.solana?.isPhantom) {
       try {
-        const resp = await (window as any).solana.connect({ onlyIfTrusted: true });
+        const resp = await window.solana.connect({ onlyIfTrusted: true });
         if (resp.publicKey.toString() === stored.address) {
           return stored;
         }
-      } catch {}
+      } catch {
+        // Phantom not trusted or user rejected; fall through
+      }
     }
   }
 

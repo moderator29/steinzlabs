@@ -4,8 +4,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-// 30 minutes idle timeout
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+// 1 hour idle timeout
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
 const ACTIVITY_KEY = 'steinz_last_activity';
 const SESSION_COOKIE = 'steinz_session';
 
@@ -38,7 +38,9 @@ export function useSessionGuard() {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(ACTIVITY_KEY);
     try {
       if (supabase) await supabase.auth.signOut();
-    } catch {}
+    } catch (err) {
+      console.error('[useSessionGuard] Sign out failed:', err);
+    }
     router.replace('/login?session=expired');
   }, [router]);
 

@@ -60,7 +60,7 @@ export default function NotificationBell() {
     // Local notifications first (instant)
     const local = getLocalNotifications();
     const readIds: string[] = (() => {
-      try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { return []; }
+      try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { /* Malformed JSON — return default */ return []; }
     })();
 
     const localMapped: DisplayNotification[] = local.map(n => ({
@@ -96,7 +96,9 @@ export default function NotificationBell() {
           setNotifications(merged);
         }
       }
-    } catch {} finally {
+    } catch (err) {
+      console.error('[NotificationBell] Fetch notifications failed:', err);
+    } finally {
       setApiLoading(false);
     }
   }, []);
@@ -135,7 +137,7 @@ export default function NotificationBell() {
     );
     // Persist to read-ids list
     const readIds: string[] = (() => {
-      try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { return []; }
+      try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { /* Malformed JSON — return default */ return []; }
     })();
     if (!readIds.includes(id)) {
       readIds.push(id);
@@ -166,7 +168,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-[#111827] border border-white/10 rounded-xl shadow-2xl z-[200] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-[#111827] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">

@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
     if (setting && setting.enabled === false) {
       return NextResponse.json({ blocked: true, reason: 'Sniper bot is currently disabled by admin.', steps });
     }
-  } catch {}
+  } catch (err) {
+    console.error('[Sniper] Kill switch DB check failed:', err);
+    return NextResponse.json({ blocked: true, reason: 'Safety system unavailable. Snipe blocked for protection.' });
+  }
 
   // ── Step 0b: Budget cap per snipe ($500 max) ───────────────────────────
   const MAX_SNIPE_AMOUNT = 500;

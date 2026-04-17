@@ -64,7 +64,9 @@ export default function Predictions() {
       const data = await res.json();
       if (data.predictions) setPredictions(data.predictions.slice(0, 10));
       if (data.stats) setStats(data.stats);
-    } catch {}
+    } catch (err) {
+      console.error('[Predictions] Fetch predictions failed:', err);
+    }
     setLoading(false);
   }, []);
 

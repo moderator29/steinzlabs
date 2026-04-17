@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Users, Copy, TrendingUp, Shield, Award, BarChart3, Signal, UserCheck, Trophy } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const PLANNED_FEATURES = [
   {
@@ -111,8 +114,51 @@ export default function SocialTradingPage() {
           <p className="text-xs text-gray-500 max-w-md mx-auto">
             Social Trading will launch first to STEINZ private beta members. Stay tuned for early access announcements.
           </p>
+          <WaitlistForm feature="social-trading" />
         </div>
       </div>
     </div>
+  );
+}
+
+function WaitlistForm({ feature }: { feature: string }) {
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || loading) return;
+    setLoading(true);
+    try {
+      await supabase.from('waitlist').insert({ email: email.trim().toLowerCase(), feature, created_at: new Date().toISOString() });
+      setSubmitted(true);
+      toast.success('You\'re on the waitlist!');
+    } catch (err) {
+      console.error('[Waitlist] Submit failed:', err instanceof Error ? err.message : err);
+      toast.error('Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return <p className="text-green-400 text-sm mt-4">You are on the waitlist. We will notify you when this launches.</p>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2 mt-4 max-w-sm mx-auto">
+      <input
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        className="flex-1 bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/50"
+      />
+      <button type="submit" disabled={loading}
+        className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+        Notify Me
+      </button>
+    </form>
   );
 }

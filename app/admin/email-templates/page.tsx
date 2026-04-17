@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Mail, Plus, Save, Eye, Code, Trash2, Check } from 'lucide-react';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 type TemplateType = 'transactional' | 'marketing' | 'system';
 
@@ -194,11 +195,11 @@ export default function EmailTemplatesPage() {
                   <>
                     <div className="bg-[#0A0E1A] rounded-lg p-3">
                       <div className="text-[10px] text-gray-500 mb-1">Subject</div>
-                      <div className="text-sm text-white" dangerouslySetInnerHTML={{ __html: selected.subject.replace(/\{\{(\w+)\}\}/g, (_, v) => `<span class="bg-yellow-400/20 text-yellow-300 px-1 rounded">[${v}]</span>`) }} />
+                      <div className="text-sm text-white" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.subject.replace(/\{\{(\w+)\}\}/g, (_, v) => `<span class="bg-yellow-400/20 text-yellow-300 px-1 rounded">[${v}]</span>`)) }} />
                     </div>
                     <div className="bg-[#0A0E1A] rounded-lg p-3">
                       <div className="text-[10px] text-gray-500 mb-2">Body preview</div>
-                      <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: previewBody }} />
+                      <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewBody) }} />
                     </div>
                   </>
                 )}

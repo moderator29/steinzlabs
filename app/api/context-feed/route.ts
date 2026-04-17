@@ -123,7 +123,9 @@ async function fetchPrices(): Promise<void> {
     priceCache.matic = data?.['matic-network']?.usd || priceCache.matic;
     priceCache.avax = data?.['avalanche-2']?.usd || priceCache.avax;
     priceCache.ts = Date.now();
-  } catch {}
+  } catch (err) {
+    console.error('[context-feed] Fetch prices from CoinGecko failed:', err);
+  }
 }
 
 async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
