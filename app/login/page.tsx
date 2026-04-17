@@ -38,25 +38,55 @@ function LoginPageInner() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaReady, setCaptchaReady] = useState(false);
   const submitting = useRef(false);
-  // Ref so the Turnstile callback always has a fresh setter without re-registering
-  const setCaptchaTokenRef = useRef(setCaptchaToken);
-  setCaptchaTokenRef.current = setCaptchaToken;
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
-  // Register global callback BEFORE the script loads so Turnstile can call it
+  // Explicit Turnstile render — implicit auto-render is unreliable on mobile
+  // Safari when the script loads after hydration. (Production bug 2026-04-17.)
   useEffect(() => {
-    (window as any).onTurnstileSuccess = (token: string) => {
-      setCaptchaTokenRef.current(token);
+    if (!TURNSTILE_SITE_KEY) return;
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const tryRender = () => {
+      if (cancelled) return;
+      const ts = (window as any).turnstile;
+      if (!ts || !turnstileRef.current) return false;
+      if (widgetIdRef.current) return true;
+      try {
+        widgetIdRef.current = ts.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: 'dark',
+          size: 'flexible',
+          callback: (token: string) => setCaptchaToken(token),
+          'expired-callback': () => setCaptchaToken(''),
+          'error-callback': () => setCaptchaToken(''),
+        });
+        setCaptchaReady(true);
+        return true;
+      } catch (err) {
+        console.error('[login] Turnstile render failed:', err);
+        return false;
+      }
     };
-    (window as any).onTurnstileExpired = () => {
-      setCaptchaTokenRef.current('');
-    };
-    (window as any).onTurnstileError = () => {
-      setCaptchaTokenRef.current('');
-    };
+
+    if (!tryRender()) {
+      pollTimer = setInterval(() => {
+        if (tryRender() && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }, 200);
+    }
+
     return () => {
-      delete (window as any).onTurnstileSuccess;
-      delete (window as any).onTurnstileExpired;
-      delete (window as any).onTurnstileError;
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
+      const ts = (window as any).turnstile;
+      if (ts && widgetIdRef.current) {
+        try { ts.remove(widgetIdRef.current); } catch { /* widget already gone */ }
+        widgetIdRef.current = null;
+      }
     };
   }, []);
 
@@ -120,8 +150,9 @@ function LoginPageInner() {
           showToast('Security check failed. Please try again.', 'error');
           setErrors({ captcha: 'Security verification failed' });
           // Reset widget
-          if (typeof (window as any).turnstile?.reset === 'function') {
-            (window as any).turnstile.reset();
+          const ts = (window as any).turnstile;
+          if (ts && widgetIdRef.current && typeof ts.reset === 'function') {
+            try { ts.reset(widgetIdRef.current); } catch { /* ignore */ }
           }
           setCaptchaToken('');
           return;
@@ -188,17 +219,25 @@ function LoginPageInner() {
 
       if (!data.session) { showToast('Sign in failed. Please try again.', 'error'); return; }
 
+      // @supabase/ssr writes session cookies automatically — do NOT set
+      // a custom `steinz_session` cookie; middleware ignores it.
       if (typeof window !== 'undefined') {
-        const maxAge = `; max-age=${60 * 60 * SESSION_HOURS}`;
-        const isSecure = window.location.protocol === 'https:';
-        document.cookie = `steinz_session=${data.session.access_token}; path=/; SameSite=Lax${maxAge}${isSecure ? '; Secure' : ''}`;
-        // Store last activity for idle timeout enforcement
         localStorage.setItem('steinz_last_activity', Date.now().toString());
+      }
+
+      // Force a session refresh so the cookies are flushed before navigation.
+      // Without this, `window.location.href` can race the cookie write and
+      // middleware sees no session → redirects back to /login.
+      try {
+        await supabase.auth.getSession();
+      } catch (refreshErr) {
+        console.error('[login] getSession after sign-in failed:', refreshErr);
       }
 
       showToast('Welcome back!', 'success');
       const destination = searchParams.get('from') || '/dashboard';
-      window.location.href = destination;
+      // Hard navigation guarantees the cookies are sent with the new request.
+      window.location.assign(destination);
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
@@ -334,24 +373,18 @@ function LoginPageInner() {
               {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
             </div>
 
-            {/* Turnstile CAPTCHA */}
+            {/* Turnstile CAPTCHA — explicit render via window.turnstile */}
             {TURNSTILE_SITE_KEY && (
               <div>
-                {/* Script loads with afterInteractive so it's ready early */}
+                {/* Load the script with `?render=explicit` so it does not try
+                    to auto-render `.cf-turnstile` before our ref mount. */}
                 <Script
-                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                  src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
                   strategy="afterInteractive"
-                  onReady={() => setCaptchaReady(true)}
                 />
                 <div
-                  className="cf-turnstile"
-                  data-sitekey={TURNSTILE_SITE_KEY}
-                  data-callback="onTurnstileSuccess"
-                  data-expired-callback="onTurnstileExpired"
-                  data-error-callback="onTurnstileError"
-                  data-theme="dark"
-                  data-size="flexible"
-                  style={{ minHeight: 65, colorScheme: 'dark' }}
+                  ref={turnstileRef}
+                  style={{ minHeight: 65, colorScheme: 'dark', width: '100%' }}
                 />
                 {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
               </div>

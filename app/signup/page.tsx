@@ -61,25 +61,55 @@ export default function SignUpPage() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaReady, setCaptchaReady] = useState(false);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
-  // Ref so Turnstile callback always has fresh setter
-  const setCaptchaTokenRef = useRef(setCaptchaToken);
-  setCaptchaTokenRef.current = setCaptchaToken;
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
-  // Register global Turnstile callbacks BEFORE the script loads
+  // Explicit Turnstile render — implicit auto-render is unreliable on mobile
+  // Safari when the script loads after hydration. (Production bug 2026-04-17.)
   useEffect(() => {
-    (window as any).onTurnstileSignupSuccess = (token: string) => {
-      setCaptchaTokenRef.current(token);
+    if (!TURNSTILE_SITE_KEY) return;
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const tryRender = () => {
+      if (cancelled) return;
+      const ts = (window as any).turnstile;
+      if (!ts || !turnstileRef.current) return false;
+      if (widgetIdRef.current) return true;
+      try {
+        widgetIdRef.current = ts.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: 'dark',
+          size: 'flexible',
+          callback: (token: string) => setCaptchaToken(token),
+          'expired-callback': () => setCaptchaToken(''),
+          'error-callback': () => setCaptchaToken(''),
+        });
+        setCaptchaReady(true);
+        return true;
+      } catch (err) {
+        console.error('[signup] Turnstile render failed:', err);
+        return false;
+      }
     };
-    (window as any).onTurnstileSignupExpired = () => {
-      setCaptchaTokenRef.current('');
-    };
-    (window as any).onTurnstileSignupError = () => {
-      setCaptchaTokenRef.current('');
-    };
+
+    if (!tryRender()) {
+      pollTimer = setInterval(() => {
+        if (tryRender() && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }, 200);
+    }
+
     return () => {
-      delete (window as any).onTurnstileSignupSuccess;
-      delete (window as any).onTurnstileSignupExpired;
-      delete (window as any).onTurnstileSignupError;
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
+      const ts = (window as any).turnstile;
+      if (ts && widgetIdRef.current) {
+        try { ts.remove(widgetIdRef.current); } catch { /* widget already gone */ }
+        widgetIdRef.current = null;
+      }
     };
   }, []);
 
@@ -154,8 +184,9 @@ export default function SignUpPage() {
         if (!captchaData.success) {
           showToast('Security check failed. Please try again.', 'error');
           setErrors(prev => ({ ...prev, captcha: 'Security verification failed' }));
-          if (typeof (window as any).turnstile?.reset === 'function') {
-            (window as any).turnstile.reset();
+          const ts = (window as any).turnstile;
+          if (ts && widgetIdRef.current && typeof ts.reset === 'function') {
+            try { ts.reset(widgetIdRef.current); } catch { /* ignore */ }
           }
           setCaptchaToken('');
           setLoading(false);
@@ -272,12 +303,11 @@ export default function SignUpPage() {
           <h2 className="text-[26px] font-bold text-white mb-1">Create your account.</h2>
           <p className="text-sm mb-7" style={{ color: '#1e2e50' }}>Start with institutional intelligence. Free forever.</p>
 
-          {/* Turnstile script — afterInteractive so callback is set before it runs */}
+          {/* Turnstile script — explicit render so widget mounts reliably on mobile */}
           {TURNSTILE_SITE_KEY && (
             <Script
-              src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
               strategy="afterInteractive"
-              onReady={() => setCaptchaReady(true)}
             />
           )}
 
@@ -409,18 +439,12 @@ export default function SignUpPage() {
               {errors.confirm && <p className="text-red-400 text-xs mt-1">{errors.confirm}</p>}
             </div>
 
-            {/* Turnstile CAPTCHA */}
+            {/* Turnstile CAPTCHA — explicit render via window.turnstile */}
             {TURNSTILE_SITE_KEY && (
               <div>
                 <div
-                  className="cf-turnstile"
-                  data-sitekey={TURNSTILE_SITE_KEY}
-                  data-callback="onTurnstileSignupSuccess"
-                  data-expired-callback="onTurnstileSignupExpired"
-                  data-error-callback="onTurnstileSignupError"
-                  data-theme="dark"
-                  data-size="flexible"
-                  style={{ minHeight: 65, colorScheme: 'dark' }}
+                  ref={turnstileRef}
+                  style={{ minHeight: 65, colorScheme: 'dark', width: '100%' }}
                 />
                 {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
               </div>
