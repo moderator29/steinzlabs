@@ -1,3 +1,9 @@
+# Vercel Cron Schedule — Pending Pro Upgrade
+
+Removed from repo root 2026-04-17 because Vercel Hobby plan does not allow sub-daily crons.
+Restore `vercel.json` at the repo root with the JSON below after upgrading to Vercel Pro.
+
+```json
 {
   "crons": [
     { "path": "/api/cron/context-feed-poll", "schedule": "*/2 * * * *" },
@@ -13,3 +19,6 @@
     { "path": "/api/cron/daily-digest", "schedule": "0 9 * * *" }
   ]
 }
+```
+
+Endpoint handlers remain in `app/api/cron/*/route.ts`. They are callable manually or via external scheduler in the meantime. Also set `CRON_SECRET` in Vercel env vars before re-enabling.
