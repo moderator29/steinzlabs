@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import * as Sentry from '@sentry/nextjs';
 import { createServerClient } from '@supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -40,12 +41,14 @@ export async function POST() {
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error('[account/delete] Auth delete failed:', deleteError);
+      Sentry.captureException(deleteError);
       return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[account/delete] Failed:', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
   }
 }
