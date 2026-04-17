@@ -8,5 +8,5 @@ export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
-  return cronResponse("trends-aggregator", startedAt);
+  return cronResponse("stop-loss-monitor", startedAt);
 }
