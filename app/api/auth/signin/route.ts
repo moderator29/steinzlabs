@@ -70,7 +70,9 @@ export async function POST(request: Request) {
         .eq('id', data.user?.id)
         .single();
       profile = profileData;
-    } catch {}
+    } catch (err) {
+      console.error('[signin] Profile fetch failed:', err);
+    }
 
     return NextResponse.json({
       access_token: data.access_token,

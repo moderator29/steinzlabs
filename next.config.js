@@ -1,6 +1,22 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
+let withSentryConfig = (config) => config;
+try {
+  const { withSentryConfig: sentryConfig } = require('@sentry/nextjs');
+  withSentryConfig = (config) => sentryConfig(config, {
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+  }, {
+    widenClientFileUpload: true,
+    transpileClientSDK: true,
+    tunnelRoute: '/monitoring',
+    hideSourceMaps: true,
+    disableLogger: true,
+  });
+} catch { /* Sentry not installed yet */ }
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -64,4 +80,4 @@ const nextConfig = {
   ],
 }
 
-module.exports = withNextIntl(nextConfig)
+module.exports = withSentryConfig(withNextIntl(nextConfig))

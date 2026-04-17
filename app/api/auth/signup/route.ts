@@ -113,7 +113,7 @@ export async function POST(request: Request) {
 
     }
 
-    const token = generateVerifyToken(newUser.user.id, cleanEmail);
+    const token = await generateVerifyToken(newUser.user.id, cleanEmail);
     const confirmUrl = `${getSiteUrl()}/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
 
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());

@@ -147,7 +147,7 @@ export function useAuthProvider(): AuthContextType {
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
-      try { subscription?.unsubscribe(); } catch {}
+      try { subscription?.unsubscribe(); } catch (err) { console.error('[useAuth] Unsubscribe failed:', err); }
     };
   }, [fetchProfile]);
 
@@ -158,7 +158,9 @@ export function useAuthProvider(): AuthContextType {
       }
       setUser(null);
       setSupabaseUser(null);
-    } catch {}
+    } catch (err) {
+      console.error('[useAuth] Sign out failed:', err);
+    }
   }, []);
 
   return { user, supabaseUser, loading, signOut, refreshProfile };

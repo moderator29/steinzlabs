@@ -97,7 +97,9 @@ export function useWallet() {
           username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
         });
       }
-    } catch {}
+    } catch (err) {
+      console.error('[useWallet] User upsert failed:', err);
+    }
   }, []);
 
   const performConnect = useCallback(async (type: 'evm' | 'solana'): Promise<string | null> => {
@@ -105,7 +107,7 @@ export function useWallet() {
     setError(null);
     try {
       if (type === 'evm') {
-        const hasProvider = typeof window !== 'undefined' && typeof (window as any).ethereum !== 'undefined';
+        const hasProvider = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
         if (!hasProvider) {
           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           if (isMobile) {
@@ -123,7 +125,7 @@ export function useWallet() {
         notifyChange();
         return wallet.address;
       } else {
-        const hasProvider = typeof window !== 'undefined' && typeof (window as any).solana !== 'undefined';
+        const hasProvider = typeof window !== 'undefined' && typeof window.solana !== 'undefined';
         if (!hasProvider) {
           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           if (isMobile) {
@@ -157,8 +159,8 @@ export function useWallet() {
   const connectSolana = useCallback(() => performConnect('solana'), [performConnect]);
 
   const connectAuto = useCallback(async (): Promise<string | null> => {
-    const hasEthereum = typeof window !== 'undefined' && typeof (window as any).ethereum !== 'undefined';
-    const hasSolana = typeof window !== 'undefined' && typeof (window as any).solana !== 'undefined';
+    const hasEthereum = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+    const hasSolana = typeof window !== 'undefined' && typeof window.solana !== 'undefined';
 
     if (hasEthereum) {
       return performConnect('evm');

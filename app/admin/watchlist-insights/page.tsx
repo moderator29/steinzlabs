@@ -77,11 +77,11 @@ export default function WatchlistInsightsPage() {
         </div>
       </div>
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
+      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
         <div className="px-4 py-3 border-b border-[#1E2433]">
           <h3 className="text-sm font-semibold text-white">Top Watched Tokens</h3>
         </div>
-        <table className="w-full text-xs">
+        <table className="w-full text-xs min-w-[700px]">
           <thead className="border-b border-[#1E2433]">
             <tr>{['#', 'Token', 'Chain', 'Watchlist Count', '7d Change'].map(h => (
               <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>

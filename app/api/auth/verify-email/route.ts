@@ -3,9 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateVerifyToken } from '@/lib/authTokens';
 import { getSiteUrl } from '@/lib/siteUrl';
 
-const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodmV3cmxkY2R4dXBzbmFrZGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDA0NjMsImV4cCI6MjA5MDc3NjQ2M30.xHGPMphDjMsPN566gRcGle5Mp8mEBxGiI1HXDX9M7ZU';
-
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -23,7 +20,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${getSiteUrl()}/login?error=user_not_found`);
     }
 
-    const expectedToken = generateVerifyToken(userId, user.email || '');
+    const expectedToken = await generateVerifyToken(userId, user.email || '');
     if (token !== expectedToken) {
       return NextResponse.redirect(`${getSiteUrl()}/login?error=invalid_token`);
     }

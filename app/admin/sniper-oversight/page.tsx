@@ -30,25 +30,44 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function SniperOversightPage() {
-  const [jobs, setJobs] = useState(MOCK_JOBS);
+  const [jobs, setJobs] = useState<SniperJob[]>([]);
   const [killSwitch, setKillSwitch] = useState(false);
   const [killSwitchLoading, setKillSwitchLoading] = useState(false);
+  const [jobsLoading, setJobsLoading] = useState(true);
 
-  // Load kill switch state from Supabase platform_settings on mount
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token') ?? '';
+    // Load kill switch state
     fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.flags) {
           const sniperFlag = data.flags.find?.((f: { key: string; enabled: boolean }) => f.key === 'sniper_enabled');
-          if (sniperFlag !== undefined) {
-            // killSwitch = true means sniper is DISABLED
-            setKillSwitch(sniperFlag.enabled === false);
-          }
+          if (sniperFlag !== undefined) setKillSwitch(sniperFlag.enabled === false);
         }
       })
-      .catch(() => {});
+      .catch(err => console.error('[sniper-oversight] Settings load failed:', err));
+
+    // Load real sniper executions
+    fetch('/api/admin/sniper-executions', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (Array.isArray(data?.executions)) {
+          setJobs(data.executions.map((e: Record<string, unknown>) => ({
+            id: e.id as string,
+            token: (e.token_symbol as string) || 'UNKNOWN',
+            chain: ((e.chain as string) || 'ETH').toUpperCase(),
+            targetPrice: (e.target_price as number) || 0,
+            currentPrice: (e.entry_price as number) || 0,
+            walletAddress: ((e.wallet_address as string) || '').slice(0, 6) + '...' + ((e.wallet_address as string) || '').slice(-4),
+            createdAt: new Date((e.created_at as string) || Date.now()).getTime(),
+            status: (e.status as SniperJob['status']) || 'active',
+            pnl: (e.pnl_usd as number) || undefined,
+          })));
+        }
+      })
+      .catch(err => console.error('[sniper-oversight] Executions load failed:', err))
+      .finally(() => setJobsLoading(false));
   }, []);
 
   const toggleKillSwitch = useCallback(async () => {
@@ -116,8 +135,8 @@ export default function SniperOversightPage() {
         ))}
       </div>
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
+        <table className="w-full text-xs min-w-[800px]">
           <thead className="border-b border-[#1E2433]">
             <tr>{['Token', 'Chain', 'Target', 'Current', 'Wallet', 'Created', 'Status', 'PnL', 'Action'].map(h => (
               <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>

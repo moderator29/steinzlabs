@@ -37,7 +37,7 @@ export function VTXSection() {
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5 }}
         >
-          <p className="text-[9px] font-bold uppercase tracking-[5px] mb-4" style={{ color: '#1a2855' }}>
+          <p className="text-[9px] font-bold uppercase tracking-[5px] mb-4" style={{ color: '#8899cc' }}>
             VTX AI
           </p>
           <h2 className="text-4xl md:text-[36px] font-black text-white leading-tight mb-4">
@@ -77,7 +77,7 @@ export function VTXSection() {
 
                 <div>
                   <h3 className="text-[17px] font-bold text-white mb-2">{step.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: '#2a3a60' }}>{step.body}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: '#7788bb' }}>{step.body}</p>
                 </div>
 
                 {step.pills && (

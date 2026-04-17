@@ -63,9 +63,8 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
       return;
     }
 
-    // Balance check for buy mode (checking USDC balance)
-    if (walletBalance !== null && mode === 'BUY' && amountNum > walletBalance) {
-      setBalanceError(`Insufficient balance. You have ${walletBalance.toFixed(4)} ${mode === 'BUY' ? 'USDC' : symbol}.`);
+    if (walletBalance !== null && amountNum > walletBalance) {
+      setBalanceError(`Insufficient ${mode === 'BUY' ? 'balance' : symbol}. You have ${walletBalance.toFixed(4)} available.`);
       return;
     }
 

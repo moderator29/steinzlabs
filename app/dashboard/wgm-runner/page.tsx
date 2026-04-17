@@ -72,7 +72,9 @@ function removeDarkBg(img: HTMLImageElement): HTMLCanvasElement {
       else if (brightness < 55) { px[i + 3] = Math.floor((brightness - 30) / 25 * 255); }
     }
     cx.putImageData(data, 0, 0);
-  } catch {}
+  } catch (err) {
+    console.error('[wgm-runner] Canvas image pixel manipulation failed (cross-origin taint?):', err);
+  }
   return c;
 }
 
@@ -341,7 +343,7 @@ export default function STZRunnerPage() {
     const savedBest = localStorage.getItem('stz_runner_best');
     if (savedBest) setPersonalBestScore(parseInt(savedBest) || 0);
     const savedUnlocked = localStorage.getItem('stz_runner_unlocked');
-    if (savedUnlocked) { try { setUnlockedSkins(JSON.parse(savedUnlocked)); } catch {} }
+    if (savedUnlocked) { try { setUnlockedSkins(JSON.parse(savedUnlocked)); } catch { /* Malformed JSON — return default */ } }
     const firstTime = !localStorage.getItem('stz_runner_played');
     setIsFirstTime(firstTime);
     const savedSound = localStorage.getItem('stz_runner_sound');
@@ -369,7 +371,9 @@ export default function STZRunnerPage() {
       const data = await res.json();
       setLeaderboard(data.leaderboard || []);
       setStats({ totalPlayers: data.totalPlayers, totalGamesPlayed: data.totalGamesPlayed, highestScore: data.highestScore, topPlayer: data.topPlayer });
-    } catch {}
+    } catch (err) {
+      console.error('[wgm-runner] Fetch leaderboard failed:', err);
+    }
   };
 
   const submitScore = async (score: number, coins: number, distance: number) => {
@@ -388,7 +392,9 @@ export default function STZRunnerPage() {
       const data = await res.json();
       setRank(data.rank);
       setPersonalBest(data.personalBest);
-    } catch {}
+    } catch (err) {
+      console.error('[wgm-runner] Submit score failed:', err);
+    }
   };
 
   const startGame = useCallback(() => {

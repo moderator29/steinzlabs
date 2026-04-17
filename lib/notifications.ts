@@ -51,8 +51,10 @@ export function addLocalNotification(notif: Omit<LocalNotification, 'id' | 'time
         message: notif.message,
         userId,
       }),
-    }).catch(() => {});
-  } catch {}
+    }).catch(err => console.error('[addLocalNotification] API sync failed:', err));
+  } catch (err) {
+    console.error('[addLocalNotification] Failed to dispatch notification:', err);
+  }
 
   return newNotif;
 }
@@ -186,7 +188,9 @@ export function getNotificationPrefs(): NotificationPrefs {
   try {
     const stored = localStorage.getItem(PREFS_KEY);
     if (stored) return { emailWhaleAlerts: true, emailPriceAlerts: true, browserPush: false, ...JSON.parse(stored) };
-  } catch {}
+  } catch {
+    // Malformed JSON — return default
+  }
   return { emailWhaleAlerts: true, emailPriceAlerts: true, browserPush: false };
 }
 

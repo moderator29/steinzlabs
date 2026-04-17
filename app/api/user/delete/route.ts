@@ -6,7 +6,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
     );
 
     const authHeader = request.headers.get('Authorization');

@@ -91,7 +91,9 @@ export function saveSmartAlerts(alerts: SmartAlert[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts));
-  } catch {}
+  } catch (err) {
+    console.error('[saveSmartAlerts] Failed to persist alerts:', err);
+  }
 }
 
 export function loadAlertHistory(): AlertHistoryEntry[] {
@@ -111,7 +113,9 @@ export function addAlertHistory(entry: Omit<AlertHistoryEntry, 'id'>): void {
     const newEntry: AlertHistoryEntry = { ...entry, id: `hist-${Date.now()}-${crypto.randomUUID().slice(0, 8)}` };
     history.unshift(newEntry);
     localStorage.setItem(ALERT_HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
-  } catch {}
+  } catch (err) {
+    console.error('[addAlertHistory] Failed to persist alert history:', err);
+  }
 }
 
 function fireAlert(alert: SmartAlert, message: string): void {
@@ -160,7 +164,9 @@ async function checkPriceAlerts(alerts: SmartAlert[]): Promise<void> {
         updateAlert(alert.id, { active: false, lastTriggered: Date.now(), triggerCount: alert.triggerCount + 1 } as Partial<PriceAlert>);
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error('[checkPriceAlerts] Price check failed:', err);
+  }
 }
 
 // ── Whale / Wallet Activity Monitor ─────────────────────────────────────────
@@ -214,7 +220,9 @@ async function checkEVMWallet(alert: WhaleAlert | WalletActivityAlert): Promise<
 
     // Update lastChecked even if no trigger
     updateAlert(alert.id, { lastChecked: Date.now() } as Partial<WhaleAlert>);
-  } catch {}
+  } catch (err) {
+    console.error('[checkEVMWallet] EVM wallet check failed:', err);
+  }
 }
 
 async function checkSolanaWallet(alert: WhaleAlert | WalletActivityAlert): Promise<void> {
@@ -257,7 +265,9 @@ async function checkSolanaWallet(alert: WhaleAlert | WalletActivityAlert): Promi
     } else {
       updateAlert(alert.id, { lastChecked: Date.now() } as Partial<WhaleAlert>);
     }
-  } catch {}
+  } catch (err) {
+    console.error('[checkSolanaWallet] Solana wallet check failed:', err);
+  }
 }
 
 async function checkWalletAlerts(alerts: SmartAlert[]): Promise<void> {
@@ -328,7 +338,9 @@ async function checkLaunchAlerts(alerts: SmartAlert[]): Promise<void> {
         }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error('[checkLaunchAlerts] Launch check failed:', err);
+  }
 }
 
 // ── Main Hook ────────────────────────────────────────────────────────────────
@@ -342,7 +354,7 @@ export function useAlertMonitor() {
     // Price alerts: every 30 seconds
     const runPriceCheck = () => {
       const alerts = loadSmartAlerts();
-      checkPriceAlerts(alerts).catch(() => {});
+      checkPriceAlerts(alerts).catch(err => console.error('[useAlertMonitor] Price check error:', err));
     };
     runPriceCheck();
     priceIntervalRef.current = setInterval(runPriceCheck, 30_000);
@@ -350,7 +362,7 @@ export function useAlertMonitor() {
     // Wallet alerts: every 60 seconds
     const runWalletCheck = () => {
       const alerts = loadSmartAlerts();
-      checkWalletAlerts(alerts).catch(() => {});
+      checkWalletAlerts(alerts).catch(err => console.error('[useAlertMonitor] Wallet check error:', err));
     };
     runWalletCheck();
     walletIntervalRef.current = setInterval(runWalletCheck, 60_000);
@@ -358,7 +370,7 @@ export function useAlertMonitor() {
     // Launch alerts: every 60 seconds
     const runLaunchCheck = () => {
       const alerts = loadSmartAlerts();
-      checkLaunchAlerts(alerts).catch(() => {});
+      checkLaunchAlerts(alerts).catch(err => console.error('[useAlertMonitor] Launch check error:', err));
     };
     runLaunchCheck();
     launchIntervalRef.current = setInterval(runLaunchCheck, 60_000);

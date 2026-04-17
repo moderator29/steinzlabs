@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 
 const SESSION_COOKIE = 'steinz_session';
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+const SESSION_MAX_AGE = 60 * 60; // 1 hour
 
 function getSecret() {
   const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;

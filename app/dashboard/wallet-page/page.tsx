@@ -222,7 +222,9 @@ export default function WalletPage() {
         }
         setPrices(priceMap);
       }
-    } catch {} finally { setPricesLoading(false); }
+    } catch (err) {
+      console.error('[wallet-page] Fetch prices failed:', err);
+    } finally { setPricesLoading(false); }
   };
 
   const saveWallets = (w: StoredWallet[]) => {
@@ -245,9 +247,13 @@ export default function WalletPage() {
             localStorage.setItem('wallet_provider', 'builtin');
             window.dispatchEvent(new CustomEvent('steinz_wallet_changed'));
           }
-        } catch {}
+        } catch {
+          // Malformed JSON — return default
+        }
       }
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error('[wallet-page] Fetch balances failed:', err);
+    } finally { setLoading(false); }
   }, []);
 
   const fetchMultiChainBalances = useCallback(async (address: string) => {

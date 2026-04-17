@@ -6,6 +6,7 @@ import {
   RefreshCw, Loader2, Search, Globe, Upload, Image, FileText,
 } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/formatters';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
@@ -399,7 +400,7 @@ export default function AdminResearchPage() {
                 ) : (
                   <div className="flex-1 overflow-y-auto p-6 bg-[#080C18]">
                     {form.content
-                      ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(form.content) }} />
+                      ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(form.content)) }} />
                       : <p className="text-gray-600 text-sm italic">Nothing to preview yet.</p>}
                   </div>
                 )}
