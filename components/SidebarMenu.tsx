@@ -8,7 +8,7 @@ import {
   ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
   Wallet, CandlestickChart, Archive, Circle, FileCode,
   FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network,
-  Globe
+  Globe, History
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -41,6 +41,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
+      { icon: History, label: 'Transactions', path: '/dashboard/transactions' },
     ],
   },
   {
