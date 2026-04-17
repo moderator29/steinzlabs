@@ -1,5 +1,31 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { applyContextFilter, type PersonalContext } from '@/lib/contextFeed/filter';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+
+async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
+  try {
+    const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
+    if (!user) return undefined;
+    const supabase = getSupabaseAdmin();
+    const [watchlistR, followsR] = await Promise.all([
+      supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
+      supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
+    ]);
+    const watchlistSymbols = new Set<string>();
+    (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
+      if (w.token_id) watchlistSymbols.add(w.token_id.toUpperCase());
+    });
+    const followedAddresses = new Set<string>();
+    (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
+      if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
+    });
+    return { watchlistSymbols, followedAddresses };
+  } catch {
+    return undefined;
+  }
+}
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 const COINGECKO_KEY = process.env.COINGECKO_API_KEY;
@@ -685,10 +711,12 @@ export async function GET(request: Request) {
     storeEvents(events);
 
     const liveEvents = getLiveEvents(chain);
+    const personal = await buildPersonalContext(request);
+    const filtered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal });
 
     return NextResponse.json({
-      events: liveEvents.slice(0, limit),
-      total: liveEvents.length,
+      events: filtered.slice(0, limit),
+      total: filtered.length,
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,
