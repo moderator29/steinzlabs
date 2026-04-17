@@ -1,8 +1,8 @@
 'use client';
 
 import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { supabase } from '@/lib/supabase';
@@ -268,8 +268,9 @@ const TOOLS = [
   { icon: Network, label: 'Network Intel', desc: 'Chain activity & gas analysis', query: 'Compare the current activity across Ethereum, Solana, Base, and other L2s. Which chains show the most growth?' },
 ];
 
-export default function VtxAiPage() {
+function VtxAiPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -317,8 +318,26 @@ export default function VtxAiPage() {
           }
         })
         .catch(err => console.error('[VTX] Failed to load Supabase history:', err instanceof Error ? err.message : err));
+
+      // Seamless continuation from Mini VTX Panel: ?q= sends immediately,
+      // ?conversation=<id> loads an existing session.
+      const q = searchParams.get('q');
+      const conversationId = searchParams.get('conversation');
+      if (conversationId) {
+        fetch(`/api/vtx/conversations?id=${encodeURIComponent(conversationId)}`)
+          .then(r => r.json())
+          .then(({ conversation }) => {
+            if (conversation?.messages && Array.isArray(conversation.messages)) {
+              setMessages(conversation.messages);
+            }
+          })
+          .catch(() => { /* fall through to normal state */ });
+      } else if (q) {
+        // Defer send until state is mounted
+        setTimeout(() => { void handleSend(q); }, 50);
+      }
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!initialized.current || messages.length === 0) return;
@@ -849,5 +868,13 @@ export default function VtxAiPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VtxAiPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+      <VtxAiPageInner />
+    </Suspense>
   );
 }
