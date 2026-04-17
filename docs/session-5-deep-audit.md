@@ -3594,3 +3594,203 @@ The admin panel comprises **19 pages** under `app/admin/`. Aggregate audit:
 **Acceptance criteria:** Every admin write logged; role-gated actions enforced; admin requires 2FA; bulk-delete works on featured-tokens; Slack alert fires on >100 signups in 1h.
 
 ---
+
+## Feature 35 — Built-in Wallet (Create, Import, Manage, Send, Receive)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/wallet-page/page.tsx](../app/dashboard/wallet-page/page.tsx) — **1,454 lines** (the largest dashboard page)
+- [lib/wallet/walletSession.ts](../lib/wallet/walletSession.ts) — in-memory session key (Session 1)
+- [lib/wallet/wallet-storage.ts](../lib/wallet/wallet-storage.ts) — AES-GCM encrypt/decrypt + Supabase migration
+- [lib/wallet/walletManager.ts](../lib/wallet/walletManager.ts) — types: `WalletAccount`, `TransactionHistory`, `TokenApproval`, `Contact`
+- [lib/wallet/autoConnect.ts](../lib/wallet/autoConnect.ts) — last-connected wallet restoration
+- DB table: `user_wallets` (encrypted)
+
+**Data sources:** `ethers` for EVM key generation + signing, `@solana/web3.js` for SOL, Alchemy for balance reads, CoinGecko for USD pricing.
+
+**Architecture pattern:**
+- **Inline views** within one page: main / create / import / send / receive / add-token / wallet-settings.
+- **Create flow**: password → 12-word phrase display → confirm phrase → AES-GCM encrypt → save to localStorage + Supabase.
+- **Import flow**: BIP39 phrase OR private key → derive → encrypt → save.
+- **Send flow**: token select → recipient → amount → password (if session expired) → sign + broadcast.
+- **Receive flow**: QR code + copy address.
+- **AES-256-GCM with PBKDF2 100k iters** (Session 4 hardening).
+- **Backward-compat XOR decrypt** for legacy wallets.
+- **Session key** in module memory (`walletSession.ts`), cleared on `beforeunload`.
+- **Live balance fetch** for connected wallet — multi-chain.
+- **Up to MAX_WALLETS** allowed.
+
+**Performance characteristics:** Encryption ~50ms; balance fetch ~1–3s per chain; tx broadcast as fast as the chain.
+
+**UX quality: 7/10.** The 1,454-line page does a lot. Create flow with 12-word reveal + confirm is correct UX. Multi-wallet selector. Multi-chain balance display. Send / Receive work. Compared to industry leaders the UX is professional but mobile-cramped.
+
+**Backend quality: 7/10.** AES-GCM encryption + memory-only session key + Supabase persistence — the right architecture (Session 1 + 4). Key never leaves the user's browser. Backward-compat decrypt for legacy.
+
+**What works well:**
+- Real seed-phrase generation + import.
+- AES-GCM encryption.
+- Memory-only session key.
+- Multi-chain (EVM + Solana).
+- Multi-wallet.
+- Send / Receive functional.
+- Live balance display.
+
+**What is weak or missing:**
+- **No hardware wallet support** (Ledger, Trezor).
+- **No multisig.**
+- **No social recovery** (Argent-style).
+- **No transaction speed-up / cancel** for stuck EVM tx.
+- **No fee estimation customization** (the swap page has slippage but the send flow has no priority-fee slider).
+- **No address book** — `Contact` type defined in walletManager but no UI.
+- **No batch send.**
+- **No NFT view / send.**
+- **No DeFi-position display** (held in same wallet).
+- **No token visibility toggle** (hide spam airdrop tokens).
+- **No spam/scam token detection.**
+- **No backup reminder** ("you haven't backed up your wallet").
+- **The 1,454-line page is a maintenance hazard** — should be decomposed.
+- **No iCloud / Google Drive backup** (encrypted).
+- **No biometric unlock on mobile.**
+- **No confirm-on-amount > $X.**
+
+**What feels half-built:**
+- `WalletAccount` interface in walletManager.ts implies a server-side wallet model that doesn't appear to be fully wired.
+- Address book contacts exist in types, no UI.
+- The 1,454-line page is 6+ feature surfaces glued together.
+
+### B) Industry Standard Comparison
+
+**Phantom:** Best-in-class non-custodial. Hardware wallet, biometric unlock, multi-account, social recovery (newer). Mobile-first. NFT-native. Address book.
+
+**MetaMask:** EVM-only canonical. Hardware wallet, snaps for extensibility. Desktop-first.
+
+**Rainbow:** Polished mobile EVM. Social features.
+
+**Argent:** Smart-contract wallet with social recovery + spending limits.
+
+**Pattern:** Hardware support + biometric + NFT + recovery + address book are table stakes. We have core wallet without these.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Hardware wallet (Ledger via WebUSB).**
+2. **Biometric unlock on mobile** (WebAuthn).
+3. **Address book.**
+4. **NFT view + send.**
+5. **Spam/scam token filter.**
+6. **Encrypted iCloud / Google Drive backup.**
+7. **Tx speed-up / cancel.**
+8. **Decompose the 1,454-line page.**
+
+**Backend changes:**
+- `wallet_contacts` table for address book.
+- Spam token blocklist (community feed).
+
+**Frontend changes:**
+- Decompose into `<CreateWallet>`, `<ImportWallet>`, `<SendFlow>`, `<ReceiveFlow>`, `<WalletSettings>`, `<TokenList>`, `<NFTList>`.
+- Hardware wallet integration via `@ledgerhq/connect-kit` or `@ledgerhq/hw-app-eth`.
+- WebAuthn biometric prompt before unlock.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Solid foundation post-Session 4.
+- **Effort to 9/10: Large (3 weeks).**
+- **Approach: Decompose first; then add hardware + biometric + address book.**
+- **Blocks other features?** Improvements here improve Swap (F6), Send/Receive flows, and overall trust.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Decompose page | `components/wallet/{CreateWallet,ImportWallet,SendFlow,ReceiveFlow,WalletSettings,TokenList,NFTList}.tsx` | None |
+| Ledger via WebUSB | `lib/wallet/ledger.ts` (new) | `@ledgerhq/connect-kit` |
+| Biometric unlock | `lib/wallet/webauthn.ts` (new) | None |
+| Address book | `app/dashboard/wallet-page/contacts/page.tsx` (new) | `wallet_contacts` table |
+| NFT view + send | `components/wallet/NFTList.tsx` + Reservoir API | None |
+| Spam token filter | `lib/wallet/spamFilter.ts` (new) | Community blocklist |
+| Encrypted cloud backup | `lib/wallet/cloudBackup.ts` (new) | iCloud / Google Drive scopes |
+| Tx speed-up / cancel | `lib/wallet/txReplace.ts` (new) | None |
+
+**Acceptance criteria:** Ledger device connectable + signs; biometric unlock works on iOS Safari + Chrome desktop; address book CRUD functional; NFT view shows holdings; spam tokens hidden by default with opt-in show.
+
+---
+
+## Feature 36 — External Wallet Connect (MetaMask, Phantom)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [lib/hooks/useWallet.ts](../lib/hooks/useWallet.ts) — `useWallet()` hook (207 lines)
+- [lib/wallet/autoConnect.ts](../lib/wallet/autoConnect.ts) — `attemptAutoConnect()` (94 lines)
+- [types/globals.d.ts](../types/globals.d.ts) — typed `window.ethereum` and `window.solana`
+- [context/WalletContext.tsx](../context/WalletContext.tsx) — global wallet state provider
+
+**Data sources:** `window.ethereum` (MetaMask + EVM-compatible), `window.solana` (Phantom + Solana-compatible).
+
+**Architecture pattern:**
+- **Direct provider integration** — no WalletConnect, no Reown/AppKit. Just `window.ethereum.request({ method: 'eth_requestAccounts' })` and `window.solana.connect()`.
+- **Auto-reconnect** on page load via `attemptAutoConnect` checking the last-used wallet (localStorage `steinz_connected_wallet`).
+- **Global context** in `WalletContext` makes `address`, `chain`, `connected` available everywhere.
+- **48-hour persistence** before requiring re-connect.
+
+**Performance characteristics:** Fast — direct provider calls.
+
+**UX quality: 6/10.** Connect button works. Auto-reconnect across sessions feels good. **Two big issues:** (1) Only MetaMask + Phantom — no WalletConnect for the long tail (Rainbow, Coinbase Wallet, Trust, Solflare, Backpack, etc); (2) On mobile, neither extension is available — user is locked out.
+
+**Backend quality: 7/10.** No backend needed; the typed globals (Session 1) make the integration safe.
+
+**What works well:**
+- Auto-reconnect.
+- Typed window globals (no `any`).
+- 48h persistence.
+- Both EVM + Solana from one hook.
+
+**What is weak or missing:**
+- **No WalletConnect / Reown AppKit** — locks out 50%+ of crypto-native wallets.
+- **Mobile broken** — extensions don't exist on mobile browsers; need WalletConnect deep links.
+- **No Coinbase Wallet, Solflare, Backpack support** specifically.
+- **No "wallets list" picker** — auto-detects MetaMask or Phantom; doesn't show options.
+- **No EIP-6963 multi-wallet detection** (modern standard for browser extensions).
+- **No SIWE binding to user account** (covered in F2).
+- **No "wallet not detected" install link.**
+
+### B) Industry Standard Comparison
+
+**Reown AppKit / WalletConnect:** Universal connector — supports 300+ wallets, mobile deep linking, recently rebranded. The standard.
+
+**RainbowKit:** Best-in-class React wrapper for EVM wallets.
+
+**Solana Wallet Adapter:** Equivalent for Solana; supports Phantom, Solflare, Backpack, Glow, Coin98.
+
+**Pattern:** Universal connector + multi-wallet picker. We have hardcoded 2-wallet support.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Reown AppKit (formerly WalletConnect)** — single integration, 300+ wallets, mobile deep links.
+2. **EIP-6963 detection** for browser extensions.
+3. **Solana Wallet Adapter** for Solana wallets beyond Phantom.
+4. **Wallet picker modal** with logos + install links.
+5. **SIWE binding** (F2 share).
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Two-wallet hardcoded.
+- **Effort to 9/10: Medium (1.5 weeks).** Reown AppKit + Solana Wallet Adapter are well-documented.
+- **Approach: Replace direct integrations with adapters.**
+- **Blocks other features?** Mobile users are locked out of swap + sniper without this.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Reown AppKit | `lib/wallet/appkit.ts` (new), wire into `WalletContext` | Reown project ID |
+| Solana Wallet Adapter | `lib/wallet/solanaAdapter.ts` (new) | None |
+| EIP-6963 detection | Browser-native API | None |
+| Wallet picker modal | `components/wallet/ConnectModal.tsx` (new) | None |
+| Mobile deep-link handling | Adapter handles | None |
+
+**Acceptance criteria:** ≥10 wallets connectable; mobile deep-link to MetaMask/Phantom apps works; EIP-6963 lists all installed extensions; wallet picker modal styled to platform.
+
+---
