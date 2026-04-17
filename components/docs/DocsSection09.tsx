@@ -81,7 +81,7 @@ export function DocsSection09() {
           <span className="text-sm font-semibold text-white">Research Lab</span>
         </div>
         <p className="text-xs text-gray-400 leading-relaxed">
-          In-depth protocol analysis, sector reports, and on-chain thesis write-ups. The Research Lab houses STEINZ LABS original research and allows Pro users to submit their own findings for community review.
+          In-depth protocol analysis, sector reports, and on-chain thesis write-ups. The Research Lab houses NAKA LABS original research and allows Pro users to submit their own findings for community review.
         </p>
       </div>
     </section>

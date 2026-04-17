@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       ].join('\n') : 'Address intelligence unavailable.',
     ].join('\n');
 
-    const prompt = `You are a senior DeFi security analyst at STEINZ LABS. Analyze this token contract security data and provide a clear, honest risk assessment for retail investors.
+    const prompt = `You are a senior DeFi security analyst at NAKA LABS. Analyze this token contract security data and provide a clear, honest risk assessment for retail investors.
 
 ${secCtx}
 

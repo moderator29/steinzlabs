@@ -17,9 +17,9 @@ interface DexPair {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { pair: string } }
+  context: { params: Promise<{ pair: string }> }
 ) {
-  const { pair } = params;
+  const { pair } = await context.params;
   const chain = req.nextUrl.searchParams.get('chain') ?? 'ethereum';
 
   try {

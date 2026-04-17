@@ -82,7 +82,7 @@ export function AISupportChat({ onClose }: Props) {
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          content: 'Sorry, I could not connect to support right now. Please try again or email support@steinzlabs.com.',
+          content: 'Sorry, I could not connect to support right now. Please try again or email support@nakalabs.com.',
         };
         return updated;
       });
@@ -117,7 +117,7 @@ export function AISupportChat({ onClose }: Props) {
           <div className="space-y-4">
             <div className="bg-[#141824] rounded-lg p-4 border border-[#1E2433]">
               <p className="text-gray-300 text-sm">
-                Welcome to Steinz Labs support. I can help you with questions about your account, wallet, trading features, and more.
+                Welcome to Naka Labs support. I can help you with questions about your account, wallet, trading features, and more.
               </p>
               <p className="text-gray-400 text-sm mt-2">What can I help you with today?</p>
             </div>

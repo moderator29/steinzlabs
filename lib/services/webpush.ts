@@ -8,7 +8,7 @@ import { SignJWT, importPKCS8 } from 'jose';
 
 const VAPID_PUBLIC  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:support@steinzlabs.com';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:support@nakalabs.com';
 const TIMEOUT = parseInt(process.env.API_TIMEOUT_MS || '600000');
 
 export interface PushSubscription {

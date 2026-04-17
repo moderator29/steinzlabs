@@ -100,19 +100,19 @@ function ResetPasswordInner() {
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">
           <SteinzLogo size={32} />
-          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
+          <span className="text-base font-bold tracking-tight">NAKA LABS</span>
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Set your new<br /><span className="text-[#0A1EFF]">password</span></h1>
           <p className="text-gray-400 text-sm leading-relaxed">Choose a strong password to secure your account.</p>
         </div>
-        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
+        <p className="text-xs text-gray-600">&copy; 2026 NAKA LABS. All rights reserved.</p>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center mb-8">
-            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
+            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">NAKA LABS</span></Link>
           </div>
 
           <div className="text-center mb-8">

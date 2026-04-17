@@ -15,7 +15,7 @@ export default function CommunityPage() {
         </div>
 
         <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
-          Steinz Community Dashboard
+          Naka Community Dashboard
         </h1>
 
         <p className="text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto">

@@ -807,7 +807,7 @@ export default function DNAAnalyzerPage() {
               <div className="glass rounded-xl p-5 border border-[#7C3AED]/30 bg-gradient-to-br from-[#7C3AED]/5 to-transparent space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Brain className="w-4 h-4 text-[#7C3AED]" />
-                  <span className="font-bold text-sm">Steinz Intelligence Analysis</span>
+                  <span className="font-bold text-sm">Naka Intelligence Analysis</span>
                   <span className="ml-auto text-[10px] px-2 py-0.5 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-bold border border-[#7C3AED]/30">AI</span>
                 </div>
 

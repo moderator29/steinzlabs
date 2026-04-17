@@ -66,7 +66,7 @@ export default function DocsPage() {
             <span className="hidden sm:block w-px h-4 bg-white/[0.08]" />
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#0A1EFF]" />
-              <span className="text-sm font-semibold text-white">STEINZ LABS Docs</span>
+              <span className="text-sm font-semibold text-white">NAKA LABS Docs</span>
             </div>
             <span className="lg:hidden text-[10px] text-gray-500 ml-1">— {currentLabel}</span>
           </div>
@@ -120,9 +120,9 @@ export default function DocsPage() {
               <BookOpen className="w-3 h-3" />
               Platform Documentation
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">STEINZ LABS</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">NAKA LABS</h1>
             <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-2xl">
-              The complete reference for every feature in STEINZ LABS — your institutional-grade on-chain intelligence operating system. Navigate using the menu to explore any section.
+              The complete reference for every feature in NAKA LABS — your institutional-grade on-chain intelligence operating system. Navigate using the menu to explore any section.
             </p>
             <div className="flex flex-wrap gap-2 mt-4">
               {['Intelligence', 'Security', 'Trading', 'Portfolio', 'AI'].map(tag => (
@@ -144,7 +144,7 @@ export default function DocsPage() {
 
           <div className="mt-16 pt-8 border-t border-white/[0.06]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <span className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</span>
+              <span className="text-xs text-gray-600">&copy; 2026 NAKA LABS. All rights reserved.</span>
               <div className="flex items-center gap-4">
                 <Link href="/whitepaper" className="flex items-center gap-1 text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">
                   <ExternalLink className="w-3 h-3" />View Whitepaper

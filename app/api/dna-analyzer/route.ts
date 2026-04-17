@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       ? holdings.map(h => `${h.symbol}: $${h.valueUsd} (${h.balance})`).join(', ')
       : 'No on-chain holdings detected';
 
-    const prompt = `You are a senior crypto intelligence analyst for STEINZ LABS — a professional on-chain analytics platform. Analyze this wallet comprehensively and produce a detailed intelligence report.
+    const prompt = `You are a senior crypto intelligence analyst for NAKA LABS — a professional on-chain analytics platform. Analyze this wallet comprehensively and produce a detailed intelligence report.
 
 Wallet: ${walletAddress}
 Total Portfolio Value: $${totalBalance || 0}

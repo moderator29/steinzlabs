@@ -36,7 +36,7 @@ export function LandingFooter() {
           <div className="flex flex-col gap-5 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
               <SteinzLogo size={22} animated={false} />
-              <span className="text-white font-bold text-base tracking-[3px]" style={{ letterSpacing: 3 }}>STEINZ LABS</span>
+              <span className="text-white font-bold text-base tracking-[3px]" style={{ letterSpacing: 3 }}>NAKA LABS</span>
             </Link>
             <p className="text-white/40 text-sm leading-relaxed max-w-xs">
               Institutional-grade crypto intelligence for every trader. On-chain data, AI analysis, and real-time market intelligence.
@@ -97,7 +97,7 @@ export function LandingFooter() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8"
           style={{ borderTop: '1px solid rgba(255,255,255,.06)' }}>
           <p className="text-[11px]" style={{ color: '#080e20' }}>
-            &copy; {new Date().getFullYear()} Steinz Labs. All rights reserved.
+            &copy; {new Date().getFullYear()} Naka Labs. All rights reserved.
           </p>
           <div className="flex items-center gap-3 text-[11px]" style={{ color: '#080e20' }}>
             <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>

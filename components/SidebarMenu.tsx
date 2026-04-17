@@ -108,7 +108,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <SteinzLogo size={28} animated={false} />
-            <span className="text-sm font-heading font-bold tracking-tight text-white">STEINZ LABS</span>
+            <span className="text-sm font-heading font-bold tracking-tight text-white">NAKA LABS</span>
           </div>
           <button
             onClick={onClose}
@@ -142,7 +142,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         </div>
 
         <div className="px-4 py-3 border-t border-white/[0.06] flex-shrink-0">
-          <div className="text-[10px] text-gray-600 font-mono">STEINZ LABS v1.0.0-beta</div>
+          <div className="text-[10px] text-gray-600 font-mono">NAKA LABS v1.0.0-beta</div>
         </div>
       </div>
     </>

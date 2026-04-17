@@ -1,0 +1,15 @@
+{
+  "crons": [
+    { "path": "/api/cron/context-feed-poll", "schedule": "*/2 * * * *" },
+    { "path": "/api/cron/whale-activity-poll", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/smart-money-ranking", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/cluster-analysis", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/network-metrics", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/trends-aggregator", "schedule": "*/2 * * * *" },
+    { "path": "/api/cron/narrative-detection", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/fear-greed-index", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/alert-monitor", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/market-stats-snapshot", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/daily-digest", "schedule": "0 9 * * *" }
+  ]
+}

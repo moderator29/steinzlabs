@@ -5,7 +5,7 @@ import { Resend } from 'resend';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 
-const FROM_ADDRESS = 'Steinz Labs <hello@steinzlabs.com>';
+const FROM_ADDRESS = 'Naka Labs <hello@nakalabs.com>';
 const BATCH_SIZE = 50;
 
 type Audience = 'all' | 'pro' | 'free';

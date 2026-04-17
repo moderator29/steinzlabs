@@ -49,7 +49,7 @@ export function FAQSection() {
           FAQ
         </div>
         <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Common questions</h2>
-        <p className="text-white/50 max-w-xl mx-auto">Everything you need to know about Steinz Labs.</p>
+        <p className="text-white/50 max-w-xl mx-auto">Everything you need to know about Naka Labs.</p>
       </motion.div>
 
       <div className="flex flex-col gap-3">

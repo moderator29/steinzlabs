@@ -1,5 +1,5 @@
 /**
- * STEINZ LABS — LunarCrush Social Intelligence Client
+ * NAKA LABS — LunarCrush Social Intelligence Client
  *
  * LunarCrush tracks social media activity (Twitter/X, Reddit, TikTok, YouTube,
  * news) for every crypto asset and turns it into quantifiable signals.

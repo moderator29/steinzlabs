@@ -100,7 +100,7 @@ export default function PricingPage() {
 
   const handleSubscribe = (tierId: string) => {
     if (tierId === 'free') return;
-    toast.info('Crypto payment integration coming soon. Join our waitlist at support@steinzlabs.com');
+    toast.info('Crypto payment integration coming soon. Join our waitlist at support@nakalabs.com');
   };
 
   return (

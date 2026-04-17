@@ -75,7 +75,7 @@ export default function StatsPage() {
           </button>
           <div>
             <h1 className="text-xl font-bold">Platform Stats</h1>
-            <p className="text-xs text-gray-400">Real-time trading activity on Steinz Labs</p>
+            <p className="text-xs text-gray-400">Real-time trading activity on Naka Labs</p>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import { ArrowLeft, Star, Bell, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTokenDetail } from '@/hooks/market/useTokenDetail';
@@ -16,9 +16,9 @@ import { ErrorState } from '@/components/market/ErrorState';
 import { formatPrice, formatLargeNumber, formatPercent } from '@/lib/market/formatters';
 import { Timeframe } from '@/lib/market/types';
 
-export default function TokenDetailPage({ params }: { params: { tokenId: string } }) {
+export default function TokenDetailPage({ params }: { params: Promise<{ tokenId: string }> }) {
   const router = useRouter();
-  const { tokenId } = params;
+  const { tokenId } = use(params);
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [showBuy, setShowBuy] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
