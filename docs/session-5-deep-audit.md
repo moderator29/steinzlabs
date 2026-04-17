@@ -1560,3 +1560,220 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Whale events push within 5s of upstream block confirmation; entity labels rendered for >50% of events; CEX deposit/withdraw classified; convergence event card appears when ≥3 whales buy the same token in 1h; per-followed-whale alert thresholds configurable.
 
 ---
+
+## Feature 11 — Wallet Clusters
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/wallet-clusters/page.tsx](../app/dashboard/wallet-clusters/page.tsx) — 370 lines
+- [app/api/wallet-clusters/route.ts](../app/api/wallet-clusters/route.ts) — backend
+- [lib/services/cluster-detection.ts](../lib/services/cluster-detection.ts) — `detectCluster` algorithm + types
+- [lib/jobs/cluster-detection.ts](../lib/jobs/cluster-detection.ts) — background job that ingests transfers, applies clustering, persists results
+- DB tables: `wallet_clusters`, `wallet_cluster_members`
+
+**Data sources:** Birdeye holders (Solana), Alchemy asset transfers (EVM), `smart_money_wallets` seeded entities, internal cluster detection algorithm.
+
+**Architecture pattern:**
+- **Background job pulls candidate addresses** (token holders or seeded smart-money wallets) → fetches transfer history → runs clustering algorithm → persists clusters with members + signals + risk score.
+- **Page reads from `wallet_clusters` + `wallet_cluster_members` tables** (cached) with optional fresh-detection trigger.
+- **Behavior classification**: `accumulation | distribution | pump | wash_trading | unknown`.
+- **Coordination score**: 0-100 metric; `≥60 = high risk`, `40-59 = medium`, `<40 = low`.
+
+**Performance characteristics:**
+- Detection job is heavy — fans out to N transfer-history queries, runs graph algorithm, multi-second.
+- Cached reads are fast.
+- No real-time — depends on the cron schedule.
+
+**UX quality: 5/10.** The visualization is largely tabular — clusters listed with members. Lacks a graph view despite the page being literally about networks. The risk-level color coding works. The signals breakdown is informative when populated.
+
+**Backend quality: 6/10.** The clustering algorithm is custom and correctly persists results. Tables are normalized. **Big issue:** the algorithm is a black box — no documentation of the heuristics, no test coverage, no way for users to understand why two wallets clustered. Also: depends on Birdeye for Solana holders which is paid + rate-limited.
+
+**What works well:**
+- Real persistent clusters (not on-the-fly).
+- Multi-signal scoring (timing, value, transfer graph).
+- Risk classification.
+- Token-scoped clustering (analyze clusters for a specific token).
+
+**What is weak or missing:**
+- **No graph visualization** of cluster members + their transfer relationships. This is THE feature for this page.
+- **No cluster confidence explanation.** "Why are these wallets clustered? What signals fired?"
+- **No timeline view.** When did the cluster form? When did it act?
+- **No comparison to known scams.** "This pattern matches 3 historical rugs" (uses our `flagged_tokens` history).
+- **No alerting.** When a high-risk cluster is detected on a token in the user's watchlist, no notification.
+- **No "investigate this address" entry point** — users can't easily ask "is this wallet part of a cluster?"
+- **Birdeye-only for Solana holders** — single point of failure.
+- **No cross-chain clustering.** A wallet that funded EVM addresses from a Solana CEX withdrawal isn't tracked.
+- **Minimal UI density** at 370 lines — most of this surface is unbuilt.
+
+**What feels half-built:**
+- Page reads cluster data but the visualization is mostly text.
+- "Refresh" triggers a re-detection but with no feedback on progress.
+- The `transfers` array in `ClusterData` is fetched but barely visualized.
+
+### B) Industry Standard Comparison
+
+**Bubblemaps.io:** The reference standard. Visual graph of holders + transfers + clusters as colored bubbles. Free tier on basic tokens, paid for advanced. Used by Solana ecosystem extensively.
+
+**Arkham Intelligence Clusters:** Auto-detected and labeled (e.g. "Alameda Research Cluster" with 47 wallets). Confidence scores and supporting evidence. Manual analyst review queue.
+
+**Breadcrumbs.app / Chainalysis Reactor:** Compliance-grade. Used by exchanges and law enforcement. Very deep tracing.
+
+**Pattern:** Visual-first, evidence-transparent, multi-chain. We have backend, no viz, no transparency.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Graph visualization** using d3 force-directed (already used in Bubble Map page) — render members as nodes, transfers as edges, cluster as a colored hull.
+2. **Signal evidence panel.** When user clicks a cluster, show "These wallets cluster because: 8 wallets transferred from a single funding wallet within 30 minutes; 6 wallets bought the same token within a 5-block window."
+3. **Historical pattern matching.** Compare this cluster's signature to past rugs (use `flagged_tokens` archive); show "67% similarity to [past rug X]."
+4. **Cluster alerting.** When a high-risk cluster touches a watchlist token, notify user.
+5. **Reverse lookup** — paste an address, see all clusters it belongs to.
+6. **Cross-chain clustering** — bridge transfer detection.
+
+**Backend changes:**
+- Add `cluster_signals_evidence` column to `wallet_clusters` (JSONB) explaining each signal.
+- Pattern library `historical_cluster_patterns` table for similarity matching.
+- Add `address → clusters` index for reverse lookup.
+- Bridge detection in `lib/services/bridgeDetection.ts`.
+
+**Frontend changes:**
+- Replace tabular cluster view with d3 force graph (re-use Bubble Map components).
+- Evidence side panel.
+- Address-search reverse lookup.
+
+**New sub-features:**
+- "Similar clusters across history" — find 5 historical clusters with comparable signatures.
+- "Track this cluster" — alert when any member moves.
+
+**Performance:**
+- Move Birdeye to background; cache holder snapshots.
+- Limit graph to 50 nodes by default; expand on demand.
+
+**Mobile:**
+- d3 force graph painful on mobile; provide a list fallback.
+
+### D) Priority and Effort
+
+- **Current score: 5/10.** Backend exists; UI undersells it.
+- **Effort to 9/10: Medium (2 weeks).** Graph viz + evidence + pattern library.
+- **Approach: Layer visualization + evidence on existing data layer.**
+- **Blocks other features?** No — but enriches Bubble Map (F12) and Risk Scanner (F22).
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Force-directed cluster graph | `components/clusters/ClusterGraph.tsx` (new), reuse d3 from Bubble Map | None |
+| Signal evidence panel | `components/clusters/EvidencePanel.tsx` (new) | Add `signal_evidence` JSONB column |
+| Pattern library | `historical_cluster_patterns` table; matcher in `lib/cluster/matchHistorical.ts` | New table |
+| Cluster alerting | `lib/jobs/cluster-watch-alerts.ts` (new) | Reuse alerts |
+| Reverse lookup | `app/api/wallet-clusters/by-address/[addr]/route.ts` (new) | Index on `wallet_cluster_members.wallet_address` |
+| Cross-chain clustering | `lib/services/bridgeDetection.ts` (new) | None |
+
+**Acceptance criteria:** Graph view renders cluster members + edges with risk-colored hull; clicking a cluster shows evidence panel with named signals; historical similarity score displayed; reverse lookup returns all clusters for a given address.
+
+---
+
+## Feature 12 — Bubble Map
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/bubble-map/page.tsx](../app/dashboard/bubble-map/page.tsx) — 594 lines
+- [app/api/intelligence/bubblemaps/[token]/route.ts](../app/api/intelligence/bubblemaps/[token]/route.ts) — backend
+- [lib/intelligence/holderAnalysis.ts](../lib/intelligence/holderAnalysis.ts) — `loadHolderIntelligence` aggregator
+- d3.js for the visualization
+
+**Data sources:** Alchemy/Birdeye holder lists, Arkham entity labels, internal cluster detection, `smart_money_wallets`, `flagged_tokens`/`scammer` lists.
+
+**Architecture pattern:**
+- **Three view modes:** Holders / Network / Clusters.
+- **`BubbleNode` typed:** token / exchange / whale / contract / unknown / scammer / dex / team.
+- **`BubbleLink` typed** with direction (in / out / both).
+- **Server returns** holder intelligence including: `bubbleMapData`, `composition` (token type breakdown), `safetyAnalysis`, `smartMoneyPresence`, `scammerAnalysis`, `lastUpdated`.
+
+**Performance characteristics:**
+- d3 force-directed simulation for ~50 holders is smooth on desktop, sluggish on low-end mobile.
+- Multi-source aggregation makes initial load 2–4s.
+- No streaming/progressive rendering — page locks until data ready.
+
+**UX quality: 7/10.** Visually impressive — colored bubbles, force layout, clean transitions. Three view modes give flexibility. Entity labeling is integrated. Smart-money + scammer overlays add value. **Weakness:** no time-axis (the bubble map is always "now"; no playback of how holdings changed); no zoom-to-cluster; no "hide < $X" filter; no node search-and-highlight.
+
+**Backend quality: 7/10.** `loadHolderIntelligence` does meaningful aggregation. Multi-signal output. Composition breakdown is actually useful.
+
+**What works well:**
+- Three view modes.
+- Real entity labels.
+- Smart money + scammer overlays.
+- d3 force layout solid.
+- Composition breakdown.
+
+**What is weak or missing:**
+- **No time-axis playback** — can't see how holdings changed over 30 days.
+- **No exportable snapshot** — can't share or save a static image.
+- **No "explain this concentration" inline VTX call.**
+- **No comparison to peers** — "this token is 4x more concentrated than the average DeFi token."
+- **Limited node count** — if a token has 10k holders, we show top 50; no "expand."
+- **No mobile support practical** — d3 force on a 375px screen is unusable.
+- **No url-shareable state** — can't link to "this token, network view, cluster X selected."
+- **No CSV export of holder list.**
+- **No "track this concentration" alert** — when top-10 holding crosses 50%, alert me.
+
+**What feels half-built:**
+- The 594-line page implies a lot of UI; the simpler tabular fallback is missing.
+- "Maximize" / "Minimize" buttons exist but the fullscreen behavior is minimal.
+
+### B) Industry Standard Comparison
+
+**Bubblemaps.io:** The category creator. Their viz is more refined; they have time playback (premium feature); they have a brand. We are a credible competitor on functionality.
+
+**Arkham entity graph:** Different framing — entity-relationship instead of token-holder. More general-purpose.
+
+**Pattern:** Bubblemaps owns the holder-bubble-map UI; we shouldn't try to outdo them on aesthetics. We should differentiate via integration (one-click "explain via VTX," "alert on concentration change," "compare to peers").
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Time-axis playback** — slider showing holder distribution over the last 30 days.
+2. **VTX-explain integration.**
+3. **Concentration peer comparison.**
+4. **URL-shareable view state.**
+5. **CSV export.**
+6. **Alert on concentration change.**
+
+**Backend changes:**
+- `holder_snapshots` table (already in schema — verify) populated daily for tracked tokens.
+- Concentration metric calculator.
+
+**Frontend changes:**
+- Time slider component.
+- Export button.
+- VTX explain button.
+- Search-and-highlight.
+
+**Mobile:**
+- Tabular fallback for narrow screens.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Strong feature, undersells via missing time + integrations.
+- **Effort to 9/10: Medium (1.5 weeks).**
+- **Approach: Layer time + integrations.**
+- **Blocks other features?** No.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Time-axis slider | `components/bubble-map/TimeSlider.tsx` (new) | `holder_snapshots` |
+| VTX explain inline | Reuse pattern | None |
+| Peer comparison | `lib/services/concentrationPeers.ts` (new) | None |
+| URL-shareable state | `app/dashboard/bubble-map/page.tsx` — sync state to query params | None |
+| CSV export | Client-side | None |
+| Concentration alert | Reuse alerts | None |
+| Mobile fallback | `components/bubble-map/HolderTable.tsx` (new) | None |
+
+**Acceptance criteria:** Time slider shows 30-day evolution; URL captures state; CSV export functional; mobile shows tabular fallback.
+
+---
