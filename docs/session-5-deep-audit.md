@@ -313,3 +313,158 @@ The pattern across the leaders: **the landing page either is the product, or sho
 **Acceptance criteria:** SIWE works for EVM + Solana with signature verified server-side; Google OAuth button signs users in; TOTP 2FA enrollment + verification + recovery codes functional; sessions list in Settings shows real `login_activity` rows with working "Sign out" action per row.
 
 ---
+
+## Feature 3 — Dashboard Homepage
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/page.tsx](../app/dashboard/page.tsx) — 304 lines (composition root, top nav, bottom nav, 4 KPI cards, two tabs)
+- [app/dashboard/layout.tsx](../app/dashboard/layout.tsx) — 27 lines (mounts SessionGuard, AlertMonitor, PlatformEventMonitor, FloatingNotificationBell, FloatingBackButton, FloatingSupportButton)
+- [components/SidebarMenu.tsx](../components/SidebarMenu.tsx) — left-side categorized nav (Trading, Intelligence, Security, Tools, Account)
+- [components/ContextFeed.tsx](../components/ContextFeed.tsx) — 709 lines, the default landing tab
+- [components/MarketDashboard.tsx](../components/MarketDashboard.tsx) — alternate tab
+- [components/VtxAiTab.tsx](../components/VtxAiTab.tsx) — embedded VTX Agent in the bottom-nav "VTX Agent" tab
+- [components/WalletTab.tsx](../components/WalletTab.tsx) — embedded wallet view in the bottom-nav "Wallet" tab
+- [components/ProfileTab.tsx](../components/ProfileTab.tsx) — embedded profile in the bottom-nav "Profile" tab
+- [components/AlertMonitorProvider.tsx](../components/AlertMonitorProvider.tsx), [components/SessionGuardProvider.tsx](../components/SessionGuardProvider.tsx), [components/PlatformEventMonitor.tsx](../components/PlatformEventMonitor.tsx) — silent background services
+
+**Data sources:** CoinGecko `/global` endpoint (total market cap, 24h volume, BTC dominance), Supabase (via embedded sub-tabs).
+
+**Architecture pattern:**
+- **Pure client component** — `'use client'` with `useAuth` gate and `router.replace('/login?from=/dashboard')` if no session.
+- **Lazy-loaded sub-tabs** via `React.lazy(() => import(...))` — ContextFeed, MarketDashboard, VtxAiTab, WalletTab, ProfileTab are all code-split. Excellent.
+- **Per-tab error boundary** that catches a child error and shows a spinner that auto-resets after 800ms. Clever, but suspicious — silently swallowing errors and pretending to load again is **not** what production code should do; the user never learns the page is broken.
+- **Mobile-first bottom-nav** (Home / VTX Agent / Wallet / Profile) plus a hamburger that opens [SidebarMenu](../components/SidebarMenu.tsx) for the "real" navigation tree (35+ pages). The bottom nav is decorative for desktop, primary for mobile.
+- **Two top-level tabs on home:** Context Feed (default) and Markets.
+- **Welcome notification** fired once per user via `maybeNotifyWelcome(user.email)`.
+- **Market stats poll** every 120s direct from the browser to `api.coingecko.com/api/v3/global`. Bypasses our backend.
+
+**Performance characteristics:**
+- Direct browser → CoinGecko call exposes our app to CoinGecko's free-tier rate limiting (10–50 req/min per IP) and CORS. Already we're seeing intermittent failures in production.
+- 120s poll is fine for `/global` data (changes slowly).
+- Lazy-loading the 5 sub-tabs is a real win — initial JS payload is small.
+- Error boundary auto-reset masks chunk-load failures (good for UX) but also masks real crashes (bad for diagnostics — Sentry won't see it because the boundary catches it).
+- localStorage `steinz_last_tab` restore is a nice touch but eats up to 5ms of main-thread time on every dashboard mount.
+
+**UX quality: 6/10.** Honest read: the dashboard shape is fine but the **density** is wrong for a "homepage." When a logged-in user lands on `/dashboard`, they see 4 generic global crypto stats (market cap, 24h volume, BTC dominance) and a Context Feed of public events. **They see nothing about themselves.** No portfolio value, no positions, no alerts triggered today, no watchlist movement, no recent VTX queries, no whale wallets they follow. For an "intelligence platform" this is a missed opportunity — every page in Nansen and Arkham starts personalized.
+
+The two-tab design (Context Feed / Markets) is OK but feels like a leftover from when those were the only two features. The bottom nav (Home / VTX / Wallet / Profile) suggests this is being designed mobile-first — which is fine, but on desktop it floats unused at the bottom of the viewport.
+
+**Backend quality: 4/10.** There is essentially **no backend for the dashboard homepage.** The market stats poll goes direct to CoinGecko, the welcome notification is local, the sub-tabs each fetch their own data. There is no `/api/dashboard/homepage` aggregation endpoint that returns a single payload of "everything the user needs above the fold." This is a missed opportunity for caching, personalization, and reducing cold-start fan-out.
+
+**What works well:**
+- Lazy-loading sub-tabs — modern, fast initial paint.
+- Error boundary keeps the page from going white.
+- LIVE badge with pulsing green dot is a nice subtle reassurance.
+- Bottom nav makes mobile usable.
+- Sticky top nav with backdrop blur looks premium.
+
+**What is weak or missing:**
+- **No personalization above the fold.** Generic global stats > my own portfolio. This is wrong.
+- **Synthetic market stat changes** — `volumeChange: (mcChange * 0.8).toFixed(1)` is **not** the volume change percentage; it's a derived guess. `dominanceChange` is `(btcDom - 50) * 0.1` — also fabricated. We are showing fake numbers labeled as real.
+- **No "your day at a glance"** — no PnL line, no alert count, no portfolio sparkline.
+- **No surfaced VTX recent queries** ("you asked about $WIF yesterday — here's the update").
+- **No watchlist movement** ("3 of your watchlist tokens moved >5% overnight").
+- **No notifications digest** ("2 whales you follow made moves").
+- **Mobile bottom-nav uses `window.location.href`** for VTX Agent navigation — full page reload instead of soft navigation via `router.push`. Performance regression.
+- **The `<div className="flex items-center gap-2">` on the right side of the top nav is empty** — looks like something was removed and left a hole.
+- **Error boundary auto-reset hides real Sentry-worthy errors** — should `Sentry.captureException` before swallowing.
+- **`maybeNotifyWelcome` runs on every mount even though it's gated internally** — should run once per user lifecycle via `useEffect` with empty deps + a `localStorage.getItem('welcome_shown_v1')` check.
+
+**What feels half-built:**
+- The "Chains Tracked: 12+" KPI card is a hardcoded constant in a list of otherwise dynamic stats. The "Live" change indicator on it is misleading.
+- The empty `<div>` on the top-nav right hints there was once a search box or notification icon that got removed.
+- The Markets tab pulls real data; the Context Feed tab pulls real data; but there is no "Home" tab that aggregates both with personalization. The "Home" pseudo-tab just toggles between Context and Markets.
+
+### B) Industry Standard Comparison
+
+**Nansen:** Dashboard opens to a personalized "Wallet Profiler" stream — addresses you've added are at the top with PnL, recent moves, and aggregated trades from Smart Money you follow. Right-side panel is a global feed of "what's hot." Bottom shows alert digest. The page rewards being logged in.
+
+**Arkham:** The dashboard IS the entity graph. You see the wallets you're tracking, their recent counterparty movement, their portfolio value. There is no "global crypto stats" header — Arkham assumes you already know BTC's price.
+
+**DeBank:** Hyper-personalized. Dashboard is your aggregated portfolio across 60+ wallets and 200+ protocols. Top of page: net worth. Below: per-protocol breakdown. Right: gas tracker. Below: feed of your wallets' recent activity. **Zero generic data.**
+
+**Phantom (mobile app home):** Account selector at top, total portfolio value, quick actions (Send / Receive / Swap / Stake), token list, NFT preview. Personalization first.
+
+**Coinbase (web app home):** Greeting + portfolio value, watchlist movers, recommended products (Earn, Card, Borrow), then a learn section. Half is personalized.
+
+**Pattern:** Every leader in the category opens to **personalized data first.** Generic global stats are decoration, not center stage. Our dashboard inverts this — global first, personal nowhere.
+
+### C) Next-Gen Recommendations
+
+**The "Home" tab should be a personalized digest, not a market data dump.** Specifically:
+
+**Above-the-fold redesign:**
+1. **Greeting + portfolio value** — "Good morning, alice" + total balance across all linked wallets (use SIWE-linked wallets from Feature 2 + manually-tracked addresses).
+2. **Today's PnL** — real number with sparkline.
+3. **Quick actions row** — Send, Swap, Buy, Track Wallet (4 buttons).
+4. **Smart-money digest** — 3 most notable moves from wallets the user follows.
+5. **Watchlist movers** — top 3 by absolute % change in last 24h.
+6. **Alerts triggered today** — count + tap to expand.
+7. **VTX recent context** — "You asked about WIF yesterday. Here's an update." (pulled from `vtx_conversations`).
+
+**Replace synthetic stats with real ones.** The 4 KPI cards should source from a single `/api/dashboard/homepage` aggregator endpoint that returns:
+```typescript
+{
+  marketStats: { totalMarketCap, totalVolume, btcDominance, /* all from CoinGecko cached server-side */ },
+  portfolio: { totalUsd, change24h, sparkline: number[] },
+  alertsTriggered24h: number,
+  watchlistMovers: TokenSnapshot[],
+  smartMoneyDigest: SmartMoveSummary[],
+  vtxRecent: ConversationSnapshot[],
+}
+```
+
+**Backend changes:**
+- Create `app/api/dashboard/homepage/route.ts` that aggregates the above. SSR-friendly, cacheable per-user with `revalidate: 60`.
+- Move CoinGecko `/global` call server-side. Cache 5 minutes in Vercel KV. Saves CORS issues + rate limit.
+- Compute `volumeChange` and `dominanceChange` properly using a 24h-old snapshot from a `market_stats_history` table (cron-populated).
+
+**Frontend changes:**
+- Replace the two-tab header with a personalized scrollable feed.
+- Move "Markets" out of the home page and into its own `/dashboard/markets` route — it's a real product that deserves its own URL.
+- Replace the bottom-nav `window.location.href` with `router.push` for soft navigation.
+- Wire the empty `<div>` on the top-nav right to be a global search box (entity / token / wallet).
+- Replace the silent error-boundary auto-reset with a "this section failed — retry" button + Sentry capture.
+
+**New sub-features:**
+- **Global search bar** in the top nav — type a token symbol, wallet address, or entity name → instant suggestions.
+- **Pinned widgets** — let user customize the homepage like Coinbase pinned cards.
+- **"What's new" inline changelog** — small banner when we ship new features (already have `announcements` table from Session 4 — wire it).
+- **Daily summary email** opt-in — "your day on Steinz" sent at 9am.
+
+**Performance:**
+- Aggregator endpoint should `Promise.all` its fan-out queries with per-source `AbortSignal.timeout(2000)` so a slow CoinGecko call doesn't block the personalized data.
+- Use `next/navigation` `prefetch` on the SidebarMenu items (top 5 most-clicked) so secondary navigation feels instant.
+- Add `Cache-Control: private, max-age=30` on the homepage aggregator endpoint.
+
+**Mobile:**
+- Bottom nav at 4 items is fine but the "Wallet" and "Profile" tabs are both inline embedded components rather than dedicated routes — back-button on mobile gets confusing. Convert all bottom-nav destinations to real routes.
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Functionally fine but strategically wrong — fails the "make logged-in users feel known" test that defines a category-leading product.
+- **Effort to 9/10: Medium (~1.5 weeks).** Mostly UI work + 1 aggregator endpoint + a handful of backing queries.
+- **Approach: Upgrade incrementally.** Keep the layout shell, replace the content with personalized sections. Don't rebuild the whole composition.
+- **Blocks other features?** No, but it influences perception. A user who sees "your portfolio is up 4.2% today, 2 whales moved your favorite token" forms a different impression than one who sees "BTC dominance: 51.4%."
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Personalized homepage aggregator | `app/api/dashboard/homepage/route.ts` (new) | Reads `wallet_identities`, `watchlist`, `alerts`, `vtx_conversations`, `smart_money_wallets` |
+| Replace synthetic market stat changes | `app/dashboard/page.tsx` lines 178–179, new `lib/services/coingecko.ts` server cache | `market_stats_history` table populated by cron edge function |
+| Personalized homepage UI | `app/dashboard/page.tsx` (rewrite home tab) | None |
+| Move Markets to its own route | `app/dashboard/markets/page.tsx` (new), wire SidebarMenu | None |
+| Global search bar | `components/GlobalSearch.tsx` (new), `app/api/search/route.ts` (new) | None (queries DexScreener, Alchemy, Arkham) |
+| Pinned widgets | `lib/dashboardWidgets.ts` (new), reuse drag-drop lib | `user_dashboard_widgets` table |
+| Wire announcements banner | `components/AnnouncementBanner.tsx` (new) | Existing `announcements` table |
+| Daily summary email | `lib/jobs/dailySummaryDigest.ts` (new), Resend template | `email_preferences.daily_summary` flag |
+| Bottom-nav uses router.push | `app/dashboard/page.tsx` BottomNav onClick | None |
+| Sentry capture in error boundary | `app/dashboard/page.tsx` TabErrorBoundary | None |
+| Move CoinGecko call server-side w/ KV cache | `app/api/dashboard/market-global/route.ts` (new) | Vercel KV provisioning |
+
+**Acceptance criteria:** Logged-in homepage shows total portfolio value + today's PnL + 3 personalized sections (smart-money digest, watchlist movers, alerts) above the fold; market stats sourced from server-cached endpoint; no direct browser → CoinGecko calls; global search box returns mixed-type results in <300ms.
+
+---
