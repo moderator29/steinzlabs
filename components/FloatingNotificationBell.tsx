@@ -6,7 +6,7 @@
  * their own headers without a notification bell.
  *
  * Placed in app/dashboard/layout.tsx so it renders on every route under /dashboard.
- * z-index 150 keeps it below full-screen modals (z-50 / inset-0) but above regular content.
+ * z-50 sits above sidebar (z-20) and dropdowns (z-30), below modals (z-40 inset-0).
  */
 
 import NotificationBell from '@/components/NotificationBell';
