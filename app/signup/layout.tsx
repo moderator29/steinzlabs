@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Create Account',
-  description: 'Create your free Steinz Labs account to access on-chain intelligence tools.',
+  description: 'Create your free Naka Labs account to access on-chain intelligence tools.',
   robots: { index: false, follow: false },
 };
 

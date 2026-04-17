@@ -67,9 +67,9 @@ export default function ShortSharePage() {
       <div className="max-w-lg w-full">
         <div className="glass rounded-2xl p-6 border border-white/10">
           <div className="flex items-center gap-3 mb-6">
-            <img src="/steinz-logo-64.png" alt="Steinz Labs" className="w-8 h-8" />
+            <img src="/steinz-logo-64.png" alt="Naka Labs" className="w-8 h-8" />
             <div>
-              <h2 className="text-sm font-bold text-white">Steinz Labs</h2>
+              <h2 className="text-sm font-bold text-white">Naka Labs</h2>
               <p className="text-xs text-gray-400">On-Chain Intelligence</p>
             </div>
           </div>
@@ -93,11 +93,11 @@ export default function ShortSharePage() {
             onClick={() => router.push('/dashboard')}
             className="w-full py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-semibold text-white text-sm"
           >
-            Open in Steinz Labs
+            Open in Naka Labs
           </button>
 
           <p className="text-center text-xs text-gray-500 mt-4">
-            Powered by Steinz Labs — Real-time on-chain intelligence
+            Powered by Naka Labs — Real-time on-chain intelligence
           </p>
         </div>
       </div>

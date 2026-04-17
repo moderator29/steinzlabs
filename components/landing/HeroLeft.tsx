@@ -64,7 +64,7 @@ export function HeroLeft() {
       {/* Wordmark */}
       <p className="mt-3 text-[11px] font-bold uppercase"
         style={{ letterSpacing: 8, color: '#1a2855' }}>
-        STEINZ LABS
+        NAKA LABS
       </p>
 
       {/* Headline */}

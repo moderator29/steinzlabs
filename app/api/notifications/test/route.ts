@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     await sendPushToUser(userId, {
-      title: '✅ Steinz Labs Notifications Active',
+      title: '✅ Naka Labs Notifications Active',
       body: 'Whale alerts, convergence signals, and price alerts will appear here.',
       icon: '/steinz-logo-192.png',
       url: '/dashboard',

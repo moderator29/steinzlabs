@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">
           <SteinzLogo size={32} />
-          <span className="text-base font-bold tracking-tight">STEINZ LABS</span>
+          <span className="text-base font-bold tracking-tight">NAKA LABS</span>
         </Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-tight mb-4">Reset your<br /><span className="text-[#0A1EFF]">password</span></h1>
@@ -75,13 +75,13 @@ export default function ForgotPasswordPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-gray-600">&copy; 2026 STEINZ LABS. All rights reserved.</p>
+        <p className="text-xs text-gray-600">&copy; 2026 NAKA LABS. All rights reserved.</p>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center justify-between mb-8">
-            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">STEINZ LABS</span></Link>
+            <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">NAKA LABS</span></Link>
             <Link href="/login" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back to login</Link>
           </div>
 
@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
                 <Mail className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3" />
                 <p className="text-sm text-gray-300 mb-1">Reset link sent to</p>
                 <p className="text-white font-medium">{email}</p>
-                <p className="text-xs text-gray-500 mt-3">Check your inbox and spam folder for the email from STEINZ LABS.</p>
+                <p className="text-xs text-gray-500 mt-3">Check your inbox and spam folder for the email from NAKA LABS.</p>
               </div>
               <button
                 onClick={() => { setSent(false); setEmail(''); }}

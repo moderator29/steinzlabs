@@ -2,7 +2,7 @@ import 'server-only';
 import { getSupabaseAdmin } from '../supabaseAdmin';
 
 /**
- * Supabase Service — typed query helpers for the Steinz Labs database.
+ * Supabase Service — typed query helpers for the Naka Labs database.
  * All writes use the service-role client (admin).
  * All tables are listed in /scripts/schema-complete.sql
  */

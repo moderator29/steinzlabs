@@ -57,14 +57,14 @@ export async function POST(request: Request) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: 'STEINZ LABS <noreply@steinzlabs.com>',
+              from: 'NAKA LABS <noreply@nakalabs.com>',
               to: email,
               subject,
               html: `
                 <div style="background:#0A0E1A;color:#fff;padding:40px 20px;font-family:system-ui,-apple-system,sans-serif;">
                   <div style="max-width:600px;margin:0 auto;">
                     <div style="text-align:center;margin-bottom:30px;">
-                      <h1 style="color:#0A1EFF;margin:0;font-size:24px;">STEINZ LABS</h1>
+                      <h1 style="color:#0A1EFF;margin:0;font-size:24px;">NAKA LABS</h1>
                       <p style="color:#6B7280;font-size:12px;margin-top:4px;">On-chain Intelligence Platform</p>
                     </div>
                     <div style="background:#111827;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:24px;">
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
                       <div style="color:#D1D5DB;font-size:14px;line-height:1.6;">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}</div>
                     </div>
                     <p style="color:#4B5563;font-size:11px;text-align:center;margin-top:24px;">
-                      STEINZ LABS. The intelligence layer for on-chain alpha.
+                      NAKA LABS. The intelligence layer for on-chain alpha.
                     </p>
                   </div>
                 </div>

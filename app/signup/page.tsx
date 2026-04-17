@@ -296,7 +296,7 @@ export default function SignUpPage() {
           <div className="flex flex-col items-center mb-7">
             <SteinzLogo size={48} animated={true} />
             <p className="mt-2 text-[10px] font-bold tracking-[6px] uppercase" style={{ color: '#1a2855', letterSpacing: 6 }}>
-              STEINZ LABS
+              NAKA LABS
             </p>
           </div>
 

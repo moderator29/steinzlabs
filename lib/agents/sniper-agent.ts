@@ -60,7 +60,7 @@ export interface SniperResult {
 
 // ─── Agent System Prompt ──────────────────────────────────────────────────────
 
-const SNIPER_SYSTEM_PROMPT = `You are the Steinz Labs Sniper Agent.
+const SNIPER_SYSTEM_PROMPT = `You are the Naka Labs Sniper Agent.
 
 Your mission: Analyse and execute token sniping operations with maximum precision and minimum risk.
 

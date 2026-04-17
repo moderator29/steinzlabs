@@ -147,7 +147,7 @@ export function AuthRightPanel({ mode }: AuthRightPanelProps) {
             <div className="rounded-2xl p-5"
               style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)' }}>
               <p className="text-white/70 text-sm leading-relaxed italic mb-3">
-                &ldquo;Steinz Labs caught three rug pulls before I could lose anything. The VTX analysis is unlike anything else I&apos;ve used.&rdquo;
+                &ldquo;Naka Labs caught three rug pulls before I could lose anything. The VTX analysis is unlike anything else I&apos;ve used.&rdquo;
               </p>
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"

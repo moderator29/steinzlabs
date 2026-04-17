@@ -362,13 +362,13 @@ export default function AdminPanel() {
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <div className="text-center">
-                <h1 className="text-lg font-heading font-bold text-white">STEINZ LABS</h1>
+                <h1 className="text-lg font-heading font-bold text-white">NAKA LABS</h1>
                 <p className="text-[11px] text-gray-500 mt-1">Admin Control Panel</p>
               </div>
             </div>
             <div className="space-y-3">
               <p className="text-gray-400 text-sm text-center">
-                Sign in to your Steinz Labs account with admin privileges to access this panel.
+                Sign in to your Naka Labs account with admin privileges to access this panel.
               </p>
               {loginError && <p className="text-[#EF4444] text-xs text-center">{loginError}</p>}
               <button onClick={handleLogin} className="w-full bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
@@ -400,7 +400,7 @@ export default function AdminPanel() {
             <div className="flex items-center gap-2.5">
               <img src="/steinz-logo-128.png" alt="STEINZ" className="w-8 h-8 rounded-lg" style={{ objectFit: 'contain' }} />
               <div>
-                <div className="text-sm font-heading font-bold tracking-tight">STEINZ LABS</div>
+                <div className="text-sm font-heading font-bold tracking-tight">NAKA LABS</div>
                 <div className="text-[9px] text-gray-500 font-medium uppercase tracking-wider">Admin Panel</div>
               </div>
             </div>
@@ -963,8 +963,8 @@ export default function AdminPanel() {
                 <div className="text-xs font-heading font-bold mb-3">Quick Templates</div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {[
-                    { label: 'Scheduled Maintenance', msg: 'STEINZ LABS will undergo scheduled maintenance shortly. Some features may be temporarily unavailable.', icon: Clock, color: 'text-[#F59E0B]' },
-                    { label: 'New Feature', msg: 'New feature available! Check out the latest updates on STEINZ LABS.', icon: Zap, color: 'text-[#0A1EFF]' },
+                    { label: 'Scheduled Maintenance', msg: 'NAKA LABS will undergo scheduled maintenance shortly. Some features may be temporarily unavailable.', icon: Clock, color: 'text-[#F59E0B]' },
+                    { label: 'New Feature', msg: 'New feature available! Check out the latest updates on NAKA LABS.', icon: Zap, color: 'text-[#0A1EFF]' },
                     { label: 'Security Advisory', msg: 'Security advisory: Always verify tokens before trading. Use Shadow Guardian for safety checks.', icon: ShieldAlert, color: 'text-[#EF4444]' },
                     { label: 'Market Alert', msg: 'Significant market movement detected. Check VTX AI for analysis.', icon: TrendingUp, color: 'text-[#10B981]' },
                   ].map((alert, i) => {

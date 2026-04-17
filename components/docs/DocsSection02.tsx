@@ -47,7 +47,7 @@ export function DocsSection02() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Platform Overview</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        STEINZ LABS is built in four integrated layers — Intelligence, Security, Trading, and Analytics — all unified in one dashboard. It pulls from 15+ blockchain data sources and uses AI to surface what matters, when it matters.
+        NAKA LABS is built in four integrated layers — Intelligence, Security, Trading, and Analytics — all unified in one dashboard. It pulls from 15+ blockchain data sources and uses AI to surface what matters, when it matters.
       </p>
 
       <div id="overview-features" className="scroll-mt-20 mb-10">

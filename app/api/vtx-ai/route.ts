@@ -122,7 +122,7 @@ function detectArkhamIntent(message: string): {
 
 // ─── VTX System Prompt Template ───────────────────────────────────────────────
 
-const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by STEINZ LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
+const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by NAKA LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
 CRITICAL DATA RULE: You MUST use ONLY the prices and numbers from the REAL-TIME DATA section below. NEVER use any price, volume, market cap, or balance from your training data. If the data section says SOL is $83.69, you say $83.69 — not $85 or any other number. If data is missing for something the user asked, say "I don't have current data for that" rather than guessing.
 
@@ -946,16 +946,16 @@ export async function POST(request: NextRequest) {
 
 function scrubBranding(text: string): string {
   return text
-    .replace(/\bArkham\s*Intelligence\b/gi, 'Steinz Intelligence')
-    .replace(/\bArkham\b/gi, 'Steinz Intelligence')
+    .replace(/\bArkham\s*Intelligence\b/gi, 'Naka Intelligence')
+    .replace(/\bArkham\b/gi, 'Naka Intelligence')
     .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
     .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
-    .replace(/\bAlchemy\b/gi, 'Steinz Intelligence')
-    .replace(/\bHelius\b/gi, 'Steinz Intelligence')
-    .replace(/\bGoPlus\b/gi, 'Steinz Intelligence')
-    .replace(/\bLunarCrush\b/gi, 'Steinz Intelligence')
-    .replace(/\bMoralis\b/gi, 'Steinz Intelligence')
-    .replace(/\bJupiter\b/gi, 'Steinz Router');
+    .replace(/\bAlchemy\b/gi, 'Naka Intelligence')
+    .replace(/\bHelius\b/gi, 'Naka Intelligence')
+    .replace(/\bGoPlus\b/gi, 'Naka Intelligence')
+    .replace(/\bLunarCrush\b/gi, 'Naka Intelligence')
+    .replace(/\bMoralis\b/gi, 'Naka Intelligence')
+    .replace(/\bJupiter\b/gi, 'Naka Router');
 }
 
 function sanitizeVtxResponse(text: string): string {

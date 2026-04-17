@@ -38,7 +38,7 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
           </tr>
           <tr>
             <td style="padding:16px 32px;border-top:1px solid #1e293b;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#475569;">&copy; 2026 STEINZ LABS. All rights reserved.</p>
+              <p style="margin:0;font-size:11px;color:#475569;">&copy; 2026 NAKA LABS. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -64,7 +64,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'STEINZ LABS <noreply@steinzlabs.com>',
+        from: 'NAKA LABS <noreply@nakalabs.com>',
         to: [to],
         subject,
         html,
@@ -91,7 +91,7 @@ export async function sendVerificationEmail(
   firstName: string
 ): Promise<boolean> {
   const body = `
-    <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#cbd5e1;">Click the button below to verify your email address and activate your STEINZ LABS account.</p>
+    <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#cbd5e1;">Click the button below to verify your email address and activate your NAKA LABS account.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center">
@@ -101,10 +101,10 @@ export async function sendVerificationEmail(
     </table>
     <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If the button doesn't work, copy and paste this link into your browser:</p>
     <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0A1EFF;word-break:break-all;">${confirmUrl}</p>
-    <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If you didn't create a STEINZ LABS account, you can safely ignore this email.</p>`;
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If you didn't create a NAKA LABS account, you can safely ignore this email.</p>`;
 
-  const html = brandedEmailWrapper('Verify your email', `Welcome to STEINZ LABS, ${firstName}`, body);
-  return sendEmail(to, 'Verify your STEINZ LABS account', html);
+  const html = brandedEmailWrapper('Verify your email', `Welcome to NAKA LABS, ${firstName}`, body);
+  return sendEmail(to, 'Verify your NAKA LABS account', html);
 }
 
 export async function sendPasswordResetEmail(
@@ -126,6 +126,6 @@ export async function sendPasswordResetEmail(
     <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0A1EFF;word-break:break-all;">${resetUrl}</p>
     <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#64748b;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>`;
 
-  const html = brandedEmailWrapper('Reset your password', 'STEINZ LABS Account Recovery', body);
-  return sendEmail(to, 'Reset your STEINZ LABS password', html);
+  const html = brandedEmailWrapper('Reset your password', 'NAKA LABS Account Recovery', body);
+  return sendEmail(to, 'Reset your NAKA LABS password', html);
 }

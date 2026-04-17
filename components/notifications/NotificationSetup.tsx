@@ -102,7 +102,7 @@ export default function NotificationSetup({ session, compact = false }: Props) {
           {[
             { n: 1, icon: <Share className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Tap the Share button in Safari' },
             { n: 2, icon: <Smartphone className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Tap "Add to Home Screen"' },
-            { n: 3, icon: <Bell className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Open Steinz Labs from your home screen' },
+            { n: 3, icon: <Bell className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Open Naka Labs from your home screen' },
             { n: 4, icon: <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />, text: 'Come back here to enable notifications' },
           ].map(step => (
             <div key={step.n} className="flex items-center gap-2">
