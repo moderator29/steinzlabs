@@ -2054,3 +2054,270 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Path-finding returns shortest transfer path between any two addresses in <2s; entity labels rendered for matched nodes; taint trace from scam source highlights current holders; URL captures view state.
 
 ---
+
+## Feature 16 — On-Chain Trends
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/trends/page.tsx](../app/dashboard/trends/page.tsx) — 319 lines
+- [app/api/intelligence/on-chain-trends/route.ts](../app/api/intelligence/on-chain-trends/route.ts) — backend with `TrendCard` + `TrendAlertItem` types
+- [lib/services/defillama.ts](../lib/services/defillama.ts) — DefiLlama client
+
+**Data sources:** DefiLlama (TVL per chain, global TVL, stablecoin metrics).
+
+**Architecture pattern:**
+- **TrendCard** model: chain + metric (TVL/Volume/Stablecoins/Gas/Addresses/Transactions) + value + 24h/7d % change + 14-pt sparkline + direction + hot flag + optional alert.
+- **5-min cache** on the response.
+- **Alert generation** when a metric moves significantly.
+- Page polls and renders cards with sparklines.
+
+**Performance characteristics:** DefiLlama API is reliable; 5-min cache amortizes well.
+
+**UX quality: 7/10.** Sparklines look good. The card+alert layout works. The chain filter is functional.
+
+**Backend quality: 6/10.** Source diversity is thin — DefiLlama only. No on-chain raw computation (active addresses, daily transactions).
+
+**What works well:**
+- DefiLlama integration is solid.
+- Sparklines look clean.
+- 5-min cache appropriate.
+
+**What is weak or missing:**
+- **Single source (DefiLlama).** Should incorporate Dune, Token Terminal, Artemis, blockchain-native metrics.
+- **No protocol-level breakdown** — just chain-level.
+- **No "what changed" narrative.** A 12% TVL drop on Solana should auto-explain via VTX.
+- **No alerting.**
+- **No comparison view.**
+- **No historical depth** — just 14 sparkline points (~14 days).
+- **No daily-active-address metric, no daily-tx metric** despite the type allowing them.
+- **No screener** — "find chains with TVL up >20% week-over-week."
+
+**What feels half-built:** The `metric` field allows 6 types but only TVL + Stablecoins are populated. Volume/Gas/Addresses/Transactions are stubs.
+
+### B) Industry Standard Comparison
+
+**Token Terminal:** Best-in-class fundamentals view. Revenue, fees, P/E ratios for protocols. Tier-gated.
+
+**Artemis:** Multi-source aggregation (DefiLlama + Dune + native). Shareable dashboards. Chain comparison.
+
+**DefiLlama:** Source we already use. Their site is more comprehensive than our derived view.
+
+**Dune Dashboards:** Power-user. Custom SQL, fully customizable.
+
+**Pattern:** The leaders aggregate multiple sources and offer protocol-level depth + sharing. We're a thin DefiLlama wrapper.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Add Dune Analytics + Token Terminal as sources.**
+2. **Protocol-level breakdown.**
+3. **VTX narrative explanation.**
+4. **Alert on threshold.**
+5. **Trend screener.**
+
+**Backend changes:**
+- New `lib/services/dune.ts`, `lib/services/tokenTerminal.ts`, `lib/services/artemis.ts`.
+- Persistent `chain_metrics_history` for longer time series.
+
+**Frontend changes:**
+- Per-protocol drilldown.
+- VTX-explain inline on card click.
+- Screener form.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.**
+- **Effort to 9/10: Medium (1.5 weeks).**
+- **Approach: Add sources + protocol depth.**
+- **Blocks other features?** No.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Dune integration | `lib/services/dune.ts` (new) | Dune API key |
+| Token Terminal integration | `lib/services/tokenTerminal.ts` (new) | TT API key |
+| Protocol breakdown | `app/dashboard/trends/protocols/[id]/page.tsx` (new) | None |
+| VTX narrative | Reuse explain pattern | None |
+| Alert threshold | Reuse alerts | Add metric-alert column |
+| Trend screener | `app/dashboard/trends/screener/page.tsx` (new) | None |
+| Persistent history | `chain_metrics_history` table | New table |
+
+**Acceptance criteria:** ≥3 sources contributing; per-protocol drilldown for top 50 protocols; VTX narrative auto-generated on significant moves; threshold alerts functional.
+
+---
+
+## Feature 17 — Security Center
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/security/page.tsx](../app/dashboard/security/page.tsx) — 581 lines
+- `app/api/security/` — 7 sub-routes: approvals, check-wallet, contract-analyzer, domain-shield, scan-trade, signature-insight, threats
+- [lib/security/goplusService.ts](../lib/security/goplusService.ts), [shadowGuardian.ts](../lib/security/shadowGuardian.ts), [walletReputation.ts](../lib/security/walletReputation.ts), [types.ts](../lib/security/types.ts)
+- [lib/services/goplus.ts](../lib/services/goplus.ts) — GoPlus API client
+
+**Data sources:** GoPlus (token security, address security, domain security, signature decode, tx simulation, dust tokens), DexScreener (price/market context).
+
+**Architecture pattern:**
+- **Hub page** at `/dashboard/security` with quick contract scan + sub-feature shortcuts.
+- **`ScanResult` interface** with 25+ fields covering trust score, safety level, tax, ownership flags, LP holders.
+- **Shadow Guardian** — internal service exposed as a singleton (`export const shadowGuardian = new ShadowGuardian()`).
+- **Wallet reputation** — separate service likely scoring wallets for risk.
+
+**Performance characteristics:** GoPlus is the bottleneck (~500ms–2s per scan).
+
+**UX quality: 7/10.** The hub layout works. Quick scan is functional. The 25-field result is comprehensive but information-dense.
+
+**Backend quality: 7/10.** Real GoPlus integration is the right move — they're the best in this space. Multiple sub-routes for different scan types is correct.
+
+**What works well:**
+- Real GoPlus integration.
+- Comprehensive token security scan output.
+- Multi-vector coverage (token, wallet, domain, signature, tx).
+- Shadow Guardian abstraction.
+
+**What is weak or missing:**
+- **No persistent scan history** — every scan stands alone, no "recently scanned" list.
+- **No "this token's security improved/worsened over time"** — single point in time.
+- **No Shadow Guardian gate on swap.** Despite being labeled "AI-powered scam protection on all trades" in Settings, it's not enforced as a pre-swap check.
+- **No allow/deny list** — users can't pre-approve safe tokens to skip scans.
+- **No batch scan** — paste 20 addresses, scan all.
+- **No alert** when a watchlist token's security score drops.
+- **No "report this token"** community feedback loop.
+- **GoPlus single-source dependency.** Quantstamp, Hacken, CertiK exist; GoPlus is fast but not always right.
+- **No phishing-feed integration** — mempool address blacklists from PhishFort, ScamSniffer, etc.
+
+**What feels half-built:**
+- Shadow Guardian exists in code but its policy effects on the rest of the platform are unclear.
+- The sub-features (Contract Analyzer, Domain Shield, Sig Insight, Approval Manager, Risk Scanner) all duplicate hub-page functionality and live as separate pages — feels redundant.
+- Wallet Reputation service exists but isn't surfaced to users.
+
+### B) Industry Standard Comparison
+
+**De.Fi Scanner:** The category leader for retail. Comprehensive scan + simulation. Free tier generous.
+
+**GoPlus (the data source we use):** Comprehensive but UI is basic.
+
+**MetaMask Snaps (security snaps):** In-wallet security. Pre-tx warnings. The bar is "we stop the user before they lose money."
+
+**Wallet Guard / Pocket Universe / Stelo:** Browser-extension security. Pre-sig analysis. Sub-second.
+
+**Pattern:** Best-in-class is **pre-action** (warn before signing); we're **post-action** (let user scan after).
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Make Shadow Guardian a hard pre-swap gate.** Block + warn before user signs a swap of a flagged token.
+2. **Multi-source scanning** — combine GoPlus + De.Fi + community reports.
+3. **Persistent scan history.**
+4. **Alert on watchlist token security drop.**
+5. **Batch scan.**
+6. **Pre-sign simulation** (Tenderly) shared with Swap (F6).
+7. **Phishing-feed ingestion** — auto-flag.
+
+**Backend changes:**
+- Persistent `security_scans` table.
+- New `lib/services/defi.ts` (De.Fi scanner client).
+- Phishing-feed ingestion job.
+- Shadow Guardian policy hook in swap route.
+
+**Frontend changes:**
+- Pre-swap warning modal (block → warn → proceed).
+- Recent scans sidebar.
+- Batch scan input.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.**
+- **Effort to 9/10: Medium-Large (2 weeks).**
+- **Approach: Wire Shadow Guardian into actions; add multi-source.**
+- **Blocks other features?** Connects to Swap, Watchlist, Approval Manager.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Shadow Guardian pre-swap gate | `app/dashboard/swap/page.tsx`, `lib/security/shadowGuardian.ts` | None |
+| Multi-source scanner | `lib/services/defi.ts` (new), aggregator | API key |
+| Persistent scan history | `security_scans` table | New table |
+| Watchlist security alert | Reuse alerts | None |
+| Batch scan | `app/dashboard/security/batch/page.tsx` (new) | None |
+| Phishing-feed ingestion | `lib/jobs/phishing-feed-ingest.ts` (new) | PhishFort feed |
+
+**Acceptance criteria:** Swap blocks (with override) when target token is flagged HIGH RISK; multi-source scan returns combined verdict; recent scans persisted and listed; phishing-feed entries auto-flag in scan results.
+
+---
+
+## Feature 18 — Contract Analyzer
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/contract-analyzer/page.tsx](../app/dashboard/contract-analyzer/page.tsx) — 486 lines
+- [app/api/security/contract-analyzer/route.ts](../app/api/security/contract-analyzer/route.ts) — backend
+- [lib/services/contract-intelligence.ts](../lib/services/contract-intelligence.ts) — Etherscan/Alchemy contract code + ABI
+
+**Data sources:** Etherscan/Alchemy (contract code, verified status, ABI), GoPlus (security flags), Anthropic (AI analysis layer).
+
+**Architecture pattern:** Page accepts a contract address → fetches code + ABI + GoPlus → optionally calls Claude for plain-English analysis.
+
+**Performance characteristics:** Etherscan API + GoPlus + optional Claude — 1–8s depending on whether AI analysis runs.
+
+**UX quality: 6/10.** Useful but feels like a duplicate of Security Center's contract scan.
+
+**Backend quality: 6/10.** Real data, real AI layer.
+
+**What works well:**
+- AI analysis layer reads contract code and explains.
+- Verified status surfaced.
+- Critical functions (mint, owner, fee setter) called out.
+
+**What is weak or missing:**
+- **Overlap with Security Center** — they should be merged or clearly differentiated.
+- **No ABI explorer** ("call this read function with these args").
+- **No diff view** — "this contract differs from standard ERC-20 in these ways."
+- **No proxy-implementation chase** — Etherscan does this, we don't.
+- **No upgrade history** — admin functions called over time.
+- **No public source like Sourcify cross-check.**
+- **No bytecode diff against known templates** (compare to OpenZeppelin baseline).
+
+### B) Industry Standard Comparison
+
+**Etherscan contract page:** ABI explorer, read/write tabs, source code, similar contracts. Free.
+
+**OpenChain ABI decoder:** Decodes any tx via signature DB.
+
+**Tenderly:** Simulation + state inspection.
+
+**Slither / Mythril:** Static analyzers (developer tools).
+
+**Pattern:** Etherscan owns the UI; differentiation is via AI analysis + simulation.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Merge with Security Center contract scan** OR clearly differentiate (Analyzer = developer-grade, Center = retail-grade).
+2. **ABI explorer** (read functions callable in-app).
+3. **Bytecode diff against templates.**
+4. **Proxy chase.**
+5. **VTX-driven explanation streaming.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.**
+- **Effort to 9/10: Medium (1.5 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| ABI explorer | `components/contract/ABIExplorer.tsx` (new) | None |
+| Bytecode diff | `lib/contract/bytecodeDiff.ts` (new) | OpenZeppelin baseline files |
+| Proxy chase | `lib/contract/proxyChase.ts` (new) | None |
+| Merge with Security Center | Decide on architecture | None |
+
+**Acceptance criteria:** ABI read functions callable in-app; proxy implementation traced; bytecode similarity to known templates reported.
+
+---
