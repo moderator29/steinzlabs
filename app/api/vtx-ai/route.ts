@@ -19,15 +19,40 @@ import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 const FREE_TIER_LIMIT = 25;
 const MAX_TOOL_ITERATIONS = 5;
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// ─── Rate Limiting (Redis-backed, in-process fallback) ──────────────────────
 
+import { getRedis } from "@/lib/cache/redis";
+
+// Fallback store when Upstash is not configured
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-function getRateLimitInfo(ip: string): { remaining: number; total: number; resetAt: number } {
+function todayKey(ip: string): string {
+  const today = new Date().toISOString().split("T")[0];
+  return `vtx:rate:${ip}:${today}`;
+}
+
+async function getRateLimitInfo(ip: string): Promise<{ remaining: number; total: number; resetAt: number }> {
   const now = Date.now();
+  const msUntilMidnight = 24 * 60 * 60 * 1000 - (now % (24 * 60 * 60 * 1000));
+  const resetAt = now + msUntilMidnight;
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const key = todayKey(ip);
+      const count = (await redis.get<number>(key)) ?? 0;
+      return {
+        remaining: Math.max(0, FREE_TIER_LIMIT - count),
+        total: FREE_TIER_LIMIT,
+        resetAt,
+      };
+    } catch (err) {
+      console.error("[vtx.rateLimit.get]", err);
+    }
+  }
+
   const entry = rateLimitStore.get(ip);
   if (!entry || now > entry.resetAt) {
-    const resetAt = now + 24 * 60 * 60 * 1000;
     rateLimitStore.set(ip, { count: 0, resetAt });
     return { remaining: FREE_TIER_LIMIT, total: FREE_TIER_LIMIT, resetAt };
   }
@@ -38,7 +63,19 @@ function getRateLimitInfo(ip: string): { remaining: number; total: number; reset
   };
 }
 
-function incrementUsage(ip: string): void {
+async function incrementUsage(ip: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const key = todayKey(ip);
+      const count = await redis.incr(key);
+      if (count === 1) await redis.expire(key, 86400);
+      return;
+    } catch (err) {
+      console.error("[vtx.rateLimit.incr]", err);
+    }
+  }
+
   const now = Date.now();
   const entry = rateLimitStore.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -669,10 +706,10 @@ export async function POST(request: NextRequest) {
     const isPro = tier === 'pro';
 
     if (!isPro && !skipRateLimit) {
-      const rateInfo = getRateLimitInfo(ip);
+      const rateInfo = await getRateLimitInfo(ip);
       if (rateInfo.remaining <= 0) {
         return NextResponse.json({
-          error: 'Daily message limit reached. Upgrade to STEINZ Pro for unlimited messages.',
+          error: 'Daily message limit reached. Upgrade to Naka Pro for unlimited messages.',
           rateLimited: true,
           usage: { used: rateInfo.total, limit: rateInfo.total, remaining: 0 },
         }, { status: 429 });
@@ -794,7 +831,7 @@ export async function POST(request: NextRequest) {
           }
         },
       });
-      if (!isPro && !skipRateLimit) incrementUsage(ip);
+      if (!isPro && !skipRateLimit) await incrementUsage(ip);
       return new Response(sseStream, {
         headers: {
           'Content-Type': 'text/event-stream',
@@ -873,7 +910,7 @@ export async function POST(request: NextRequest) {
     } : null;
 
     // ── Usage Info ──────────────────────────────────────────────────────────
-    const currentUsage = isPro ? null : getRateLimitInfo(ip);
+    const currentUsage = isPro ? null : await getRateLimitInfo(ip);
 
     // ── Build token card if a specific token was discussed ─────────────────
     let tokenCard: Record<string, unknown> | null = null;
