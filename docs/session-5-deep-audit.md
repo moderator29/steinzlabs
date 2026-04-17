@@ -633,3 +633,158 @@ The two-tab design (Context Feed / Markets) is OK but feels like a leftover from
 **Acceptance criteria:** Feed updates appear within 5s of upstream event without page refresh; events from followed wallets / watchlist tokens rank in top 10 of feed for that user; "since last visit" divider appears with accurate count; bookmarks tab works for events older than current window; no direct upstream calls from the SSE endpoint (all reads from Redis stream).
 
 ---
+
+## Feature 5 — Market / Trading Page
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/market/page.tsx](../app/market/page.tsx) — markets index
+- [app/market/layout.tsx](../app/market/layout.tsx) — page metadata
+- [app/market/prices/page.tsx](../app/market/prices/page.tsx) + [app/market/prices/[tokenId]/page.tsx](../app/market/prices/[tokenId]/page.tsx) (189 lines) — token detail
+- [app/market/trade/](../app/market/trade/), [app/market/watchlist/](../app/market/watchlist/) — sub-routes
+- [app/dashboard/trading-suite/page.tsx](../app/dashboard/trading-suite/page.tsx) — 155 lines, **a "coming soon" marketing page**, not a real trading suite
+- [components/MarketDashboard.tsx](../components/MarketDashboard.tsx) — the live markets table embedded in `/dashboard`
+- 27 components in `components/market/` totaling **2,389 LOC** — including TradeTerminal, OrderBook, OrderForm, BuySellModal, AlertModal, CandlestickChart, KeyStatsGrid, PortfolioTable, RecentTradesFeed, TokenDetailHeader, SparklineChart, etc.
+
+**Data sources:** CoinGecko `/coins/markets` for top tokens, DexScreener for pairs/trending, lightweight-charts for OHLCV rendering, Supabase `watchlist` table for user state, our own `useOrderBook` hook (simulated bid/ask depth).
+
+**Architecture pattern:**
+- **Hybrid feed** — tier-1 majors come from CoinGecko, long-tail tokens come from DexScreener, normalized into a single `CoinRow` shape.
+- **Server-rendered shells, client-rendered tables** — the `app/market/*` routes are mostly thin shells that mount client components.
+- **Token detail page** is `app/market/prices/[tokenId]/page.tsx` — client component with category-pill nav + price chart + key stats + holder breakdown + recent trades.
+- **TradeTerminal** mounts OrderBook + OrderForm + RecentTradesFeed. The OrderBook is **synthetic** — `useOrderBook` returns derived bid/ask counts from DexScreener `txns.h1.buys/sells`, not real L2 depth.
+- **`/dashboard/trading-suite/page.tsx`** is a **marketing landing page for a feature that does not exist** — 6 feature tiles labeled "Advanced Charting / Limit Orders / DCA Bots / Auto-Rebalance / P&L Tracking / Smart Alerts" plus a "coming soon integrations" row.
+
+**Performance characteristics:**
+- MarketDashboard loads majors first (10 hardcoded IDs), then DexScreener categories on demand.
+- Sparklines (mini 7d charts) come baked into CoinGecko's response — no extra request, but they're SVG paths, not interactive.
+- Token detail page does ~5 fetches on mount (price, security, holders, trades, OHLCV). Could be parallelized; currently is, but with no loading skeletons per section, the page jumps as each loads.
+- CandlestickChart uses `lightweight-charts` (TradingView's open-source library) — solid choice, ~80KB gzipped, lazy-loaded.
+
+**UX quality: 6/10.** The markets table looks good and responsive. Sparklines are nice. Filters are present (chain, category, search). Token detail page is dense with information. **Two big problems:**
+1. The "Trading Suite" card in the sidebar takes you to a marketing page that says "Coming Q2 2026." Promised features (limit orders, DCA bots, auto-rebalance) don't exist. Users will click this once and never again.
+2. The OrderBook in TradeTerminal looks like a real order book but is fabricated from DexScreener buy/sell counts. Sophisticated users will spot this immediately.
+
+**Backend quality: 5/10.** Most of the "backend" is direct browser-to-CoinGecko/DexScreener fetches. There is no proxy, no caching, no rate-limit guard. We are exposing our users' IPs to upstream rate limits. Token detail fetches do not share a request — visiting BTC then ETH on a slow network refetches everything.
+
+**What works well:**
+- Strong component decomposition — 27 small components are testable and reusable.
+- DexScreener integration covers the long tail well.
+- Watchlist sync to Supabase (Session 2 work).
+- CandlestickChart with fullscreen mode and `lightweight-charts` is pro-grade.
+- BuySellModal correctly checks balance for both BUY and SELL (Session 1 fix).
+- TokenLogo + ChainIcons unified.
+
+**What is weak or missing:**
+- **No real order book** — synthetic from buy/sell counts. Users expecting GMX/Hyperliquid-style depth will be misled.
+- **No real recent trades feed** — the TradeTerminal "RecentTradesFeed" generates synthetic entries from DexScreener volume, not actual trades.
+- **No multi-timeframe analysis** — CandlestickChart shows one timeframe, no 5m/15m/1h/4h/1d toggle.
+- **No drawing tools, no indicators** — CandlestickChart is a passive viewer, not a TA workspace.
+- **No limit orders, no stop-loss, no DCA** — promised on `/trading-suite/page.tsx` but not built.
+- **No portfolio tab integration** — PortfolioTable component exists but isn't wired into a complete view.
+- **No alert creation from chart** — clicking a price level should be able to "set alert at $X."
+- **No comparison view** — can't overlay BTC vs ETH on the same chart.
+- **No historical OHLCV beyond default range.**
+- **No volume profile, no VWAP, no liquidity heatmap.**
+- **No watchlist categorization** — single flat list.
+- **No "trending" surface** — DexScreener trending is fetched but not prominently displayed.
+- **Token detail page has no "wallet positions for this token" tab** — natural integration with portfolio data.
+- **Direct browser-to-upstream calls** — CORS-fragile, IP-leaking, rate-limit-fragile.
+- **No SSR data on token detail page** — the page is client-rendered, hurting SEO for "ETH price" type queries.
+
+**What feels half-built:**
+- `/dashboard/trading-suite/page.tsx` is a feature ad with no underlying feature.
+- TradeTerminal looks fully functional but uses fabricated order book data.
+- AlertModal exists but the alert-creation flow isn't reachable from common entry points.
+- WatchlistGrid + WatchlistEmpty + WatchlistCard suggest a polished watchlist view that isn't fully wired.
+- "Buy/Sell" button on token detail opens BuySellModal which then redirects to `/dashboard/swap` — feels disjointed.
+
+### B) Industry Standard Comparison
+
+**CoinGecko / CoinMarketCap:** Best-in-class read-only market data. CoinGecko has 13k+ tokens, every page has SSR for SEO, cached aggregator endpoints, multi-currency, multi-language. Token pages have wallet activity tabs, news feeds, audits. We are at ~25% of feature parity here.
+
+**DexScreener:** Best-in-class for memecoin discovery. Real-time WebSocket updates, trending feeds, multi-chain, paid promotion slots. Token detail pages have everything: pair info, holder distribution, top traders, security score, transactions stream. **Our DexScreener integration is shallow** — we use them as a data source but never expose their richness.
+
+**TradingView (chart):** The reference standard. 100+ indicators, drawing tools, replay mode, ideas/scripts, multi-monitor layouts. We use their lightweight-charts library but expose ~5% of its capability.
+
+**Hyperliquid / GMX (perps):** Real order books, real trades feed, sub-second WebSocket updates. Our TradeTerminal is positioned to look like this but is not.
+
+**Phantom / Trust Wallet (in-wallet markets):** Mobile-first, simple swap UI, no charts, no order books — they aim for the consumer flow. Different niche.
+
+**Pattern:** There are two distinct categories. We are trying to occupy both — "premium analytics" (CoinGecko/Nansen) AND "trading terminal" (Hyperliquid/GMX) — and currently doing neither well. We need to **pick one identity** and execute it.
+
+### C) Next-Gen Recommendations
+
+**Strategic decision required: are we a market data + intelligence platform, or a trading terminal?** This audit recommends the former. Reasoning: building a real order book + live trades feed + matching engine is years of work; we already have momentum on intelligence + insights via VTX/Whale/Bubble Map.
+
+**Highest leverage (assuming "intelligence + trading-as-output" path):**
+
+1. **Remove the synthetic order book.** Replace TradeTerminal's OrderBook with a "Liquidity Distribution" view — actual data from DexScreener's `liquidity` field, broken down by pool. Honest and informative.
+2. **Replace synthetic recent trades with real DexScreener pair trades.** They expose this in the pair endpoint but we're not reading the actual transaction list. Or accept that DexScreener doesn't expose individual txn lists and instead show a recent block-explorer link.
+3. **Replace `/dashboard/trading-suite` marketing page with a real swap-only entry point** that links to the existing `/dashboard/swap`. Until we build limit orders / DCA / auto-rebalance, the marketing page is a credibility leak.
+4. **Server-side proxy + cache for all market data.** New `app/api/market/*` routes wrapping CoinGecko + DexScreener with 30s–5min TTL via Vercel KV. Drops user-facing IP exposure and protects us from upstream rate limits.
+5. **SSR token detail pages** for SEO — render the price, market cap, and chain info server-side so we rank for "BTC price" / "ETH price" queries.
+6. **Multi-timeframe + indicators on CandlestickChart.** lightweight-charts supports overlays (SMA, EMA, RSI), drawing primitives, and time-scale switches. We use the bare bones.
+7. **"Wallet positions" tab on token detail.** Show top 10 wallets holding this token (from Supabase `positions` table for tracked wallets) — leverages our intelligence advantage.
+
+**Backend changes:**
+- New `app/api/market/list/route.ts` — proxies CoinGecko `/coins/markets`, KV-cached 30s.
+- New `app/api/market/token/[id]/route.ts` — proxies all token detail fetches in one call, KV-cached 60s.
+- New `app/api/market/dex-pairs/[chain]/[address]/route.ts` — proxies DexScreener pair detail, KV-cached 15s.
+- Add `dex_pair_snapshots` table populated by cron — 5-min rolling snapshots so we can compute proper price/volume changes.
+- Move alert creation API to `/api/alerts/create` (already exists from Session 4) and wire CandlestickChart click-to-create-alert.
+
+**Frontend changes:**
+- TokenDetailHeader: add "Wallet Positions" tab querying tracked wallets table.
+- CandlestickChart: timeframe selector (5m/15m/1h/4h/1d/1w), indicator overlay menu (SMA, EMA, RSI, MACD), draw-trendline tool.
+- TradeTerminal: rebrand to "Pair Insights" with Liquidity Distribution + Volume Profile + Top Counterparties.
+- MarketDashboard: add "Trending in Smart Money wallets" filter — tokens being bought by wallets in `smart_money_wallets`.
+- Watchlist: add categorization (groups), add per-watchlist alerts.
+
+**New sub-features:**
+- **Compare mode** — overlay 2–4 tokens on the same chart, normalized.
+- **Alerts inline with chart** — drag a horizontal line, set as alert.
+- **News + social feed per token** — pull from LunarCrush (already integrated for sentiment) + crypto-panic API.
+- **Token screener** — find tokens matching criteria (mcap range, age, holder count, security score).
+- **Watchlist sharing** — public read-only watchlists, share link.
+
+**Performance:**
+- All market data should hit our backend, never the user's browser → upstream.
+- KV cache hit rate target: 90%+.
+- Token detail page should have an SSR-rendered "above the fold" section + client-rendered chart + tabs.
+
+**Mobile:**
+- The TradeTerminal grid breaks on mobile — OrderBook + OrderForm side-by-side becomes cramped. Stack vertically on `<lg`.
+- CandlestickChart needs touch-friendly pan/zoom — currently desktop-mouse-optimized.
+- Watchlist grid → list view on mobile.
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** The component library is rich but the underlying data is partly fabricated and the strategic positioning is unclear.
+- **Effort to 9/10: Large (3–4 weeks).** This is a multi-week build because the right answer involves removing the synthetic trading terminal aesthetic AND adding real intelligence (wallet positions per token, smart-money buy signals, multi-timeframe charts, screener). The component scaffolding is there — what's missing is the conviction.
+- **Approach: Refactor + scope down.** Remove the "Trading Suite" marketing page, replace synthetic data with honest signals, double down on intelligence. Don't try to be Hyperliquid.
+- **Blocks other features?** Yes — the strategic decision blocks Sniper Bot positioning (is it a trading product or an intel product?), Pricing tier definition (Pro = trading? or Pro = intel?), and VTX Agent recommendations (does VTX recommend trades?).
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Server-side market data proxy | `app/api/market/list/route.ts`, `app/api/market/token/[id]/route.ts`, `app/api/market/dex-pairs/[chain]/[address]/route.ts` (all new) | Vercel KV |
+| SSR token detail page | Convert `app/market/prices/[tokenId]/page.tsx` to server component for above-the-fold | None |
+| Replace synthetic OrderBook | `components/market/TradeTerminal.tsx`, new `components/market/LiquidityDistribution.tsx` | None |
+| Replace synthetic RecentTradesFeed | `components/market/RecentTradesFeed.tsx` — show DexScreener pair link OR remove | None |
+| Remove "Trading Suite" marketing page | Delete `app/dashboard/trading-suite/page.tsx`, remove from SidebarMenu | None |
+| Multi-timeframe + indicators on chart | `components/market/CandlestickChart.tsx` rewrite | None (lightweight-charts already in deps) |
+| Wallet Positions tab on token detail | `components/market/WalletPositionsTab.tsx` (new) | Query `positions` table for tracked wallets |
+| "Trending in Smart Money" filter | `components/MarketDashboard.tsx` — add filter, query `smart_money_wallets` recent buys | None |
+| Compare mode | `components/market/CompareMode.tsx` (new) | None |
+| Alerts inline with chart | `components/market/CandlestickChart.tsx` — add alert primitive | Reuse `/api/alerts` |
+| News per token | `lib/services/cryptopanic.ts` (new) | API key env var |
+| Token screener | `app/dashboard/screener/page.tsx` (new) | None |
+| Watchlist categorization | `components/market/WatchlistGrid.tsx` | Add `category` column to `watchlist` |
+| Mobile responsive TradeTerminal | `components/market/TradeTerminal.tsx` | None |
+
+**Acceptance criteria:** No browser → CoinGecko/DexScreener calls; token detail SSRs price + market cap; CandlestickChart supports 6 timeframes + 4 indicators + trendline draw + click-to-alert; TradeTerminal renamed and shows real liquidity data; the "Trading Suite" marketing page is gone.
+
+---
