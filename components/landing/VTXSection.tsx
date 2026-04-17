@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { MessageSquare, Layers, Zap } from 'lucide-react';
 import { staggerContainer, cardReveal } from '@/lib/animations';
+import { FloatingCoins } from './FloatingCoins';
 
 const STEPS = [
   {
@@ -30,8 +31,9 @@ const STEPS = [
 
 export function VTXSection() {
   return (
-    <section className="py-24 px-5" style={{ background: '#04040e' }}>
-      <div className="max-w-5xl mx-auto">
+    <section className="py-24 px-5 relative overflow-hidden" style={{ background: '#04040e' }}>
+      <FloatingCoins section="features" />
+      <div className="max-w-5xl mx-auto relative z-10">
         <motion.div
           className="text-center mb-14"
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
