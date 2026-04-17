@@ -3794,3 +3794,265 @@ The admin panel comprises **19 pages** under `app/admin/`. Aggregate audit:
 **Acceptance criteria:** ≥10 wallets connectable; mobile deep-link to MetaMask/Phantom apps works; EIP-6963 lists all installed extensions; wallet picker modal styled to platform.
 
 ---
+
+# PLATFORM-WIDE ARCHITECTURAL RECOMMENDATIONS
+
+The per-feature audit above covers what each surface needs individually. This section addresses platform-level concerns that no single feature owns but that block all of them from reaching world-class.
+
+## 1. Overall Architectural Debt
+
+**The honest summary:** Steinz Labs is a **mature MVP with strong feature breadth and fundamental scaling debt.** 76,686 LOC, 138 API routes, 36 user-facing features built by what appears to be a small team in a short window. The execution is impressive. The architecture has not yet caught up.
+
+**Top platform-level debt items, ranked:**
+
+1. **In-process state at module scope.** Multiple files used to (now mostly fixed in Session 4) initialize Supabase clients, rate-limit caches, response caches, and event stores at module load. The fan-out across Vercel instances fragments cache hit rate by 5-10x at any meaningful scale. **Critical for ≥1k DAU.**
+2. **Per-tab background services.** `useAlertMonitor` (alerts), polling in Context Feed, polling in Whale Tracker — these run in the user's browser. Closing the tab silently breaks the feature. **Server-side workers are mandatory for the Pro tier.**
+3. **Direct browser → upstream calls.** CoinGecko `/global` from the browser, DexScreener fetches from MarketDashboard, Etherscan from various components. These leak user IPs, hit upstream rate limits, and break with CORS. **All upstream calls should be backend-proxied with KV cache.**
+4. **No shared real-time infrastructure.** Context Feed wants SSE. Whale Tracker wants SSE. Notifications want SSE. Sniper wants WebSocket. We currently use polling everywhere. **A single Redis stream + SSE endpoint pattern would serve all four.**
+5. **No durable event archive.** Events live in 5s response caches and 72h in-process Maps. Bookmarks break when events age out. Historical analysis is impossible. **Need a `whale_events_archive` table partitioned by date.**
+6. **One-page monoliths.** ProfileTab (1,480), Wallet-page (1,454), VtxAiTab (1,135), Wallet Intelligence (1,120), DNA Analyzer (997), Alerts (900), Smart Money (662). Maintenance hazard, slow re-renders, hard to test. **Decomposition pass needed across 7+ files.**
+7. **No shared authentication enforcement layer.** Every API route re-implements user resolution via `getAuthenticatedUser`. Should be a Next.js middleware or a route handler wrapper.
+8. **No background job framework.** We need cron + queues but currently have only Vercel cron + ad-hoc fetches. Inngest, Trigger.dev, or BullMQ + Upstash QStash would formalize this.
+9. **Hardcoded secrets and constants in legacy files.** [app/api/auth/signin/route.ts](../app/api/auth/signin/route.ts) still has hardcoded URL + anon key. There may be others discoverable via `grep -rn "supabase.co" app/`.
+10. **Mobile experience is an afterthought across most pages.** Bottom nav exists; many feature pages assume desktop. d3 force graphs unusable on mobile.
+
+## 2. Shared Infrastructure Needed
+
+**Build once, use across 36 features:**
+
+- **Redis (Upstash):** Cache, rate limit, session, real-time stream backbone. Currently used: 0 places. Should be used: ~15 places.
+- **KV cache layer (`lib/cache/kv.ts`):** Wraps Vercel KV with type-safe `get`/`set`/`mget`/`mset`/`expire`. Replaces the 8+ ad-hoc in-process Maps.
+- **SSE hub (`app/api/stream/[channel]/route.ts`):** One generic endpoint that subscribes a client to a Redis channel. Used by Context Feed, Whale Tracker, Notifications, Sniper detection.
+- **Background worker framework (Inngest or Trigger.dev):** For cron jobs (daily snapshots, ingest, digests, retries) and event-driven jobs (post-swap analytics, post-signup welcome flow).
+- **Webhook router (`app/api/webhooks/[provider]/route.ts`):** Single entry for Stripe, Helio, Helius, Alchemy, etc. Routes to a dispatcher.
+- **Job queue (`upstash/qstash`):** Reliable retry for non-cron deferred work.
+- **Multi-source aggregator (`lib/aggregator/source.ts`):** Generic pattern with per-source timeout, failure isolation, source-attribution metadata.
+- **Entity-label cache:** Arkham labels are queried in 5+ places; should be a per-address cache populated by background job.
+- **Token metadata cache:** Token decimals, logos, basic info — queried in dozens of places.
+- **AI client wrapper (`lib/ai/client.ts`):** Anthropic + OpenAI fallback, prompt versioning, cost tracking, retry logic.
+
+## 3. Common Patterns That Should Be Extracted
+
+**Patterns in the codebase repeated 5+ times that need a shared abstraction:**
+
+- **`useLocal + Supabase merge` hook.** Used in ContextFeed (bookmarks), MarketDashboard (watchlist), VtxAiTab (history), ProfileTab (privacy). Pattern: read local immediately, fetch remote, merge, persist on change. Should be `useSyncedState(key, supabaseTable)`.
+- **`authHeader()` admin helper.** Copy-pasted in every admin page. Move to `lib/admin/authHeader.ts`.
+- **`formatTimeAgo`, `formatUSD`, `formatLargeNumber`, `shortAddr`.** Already in `lib/formatters.ts` — but inline copies still exist in some files. Audit + consolidate.
+- **CRUD admin page template.** 12+ admin pages share the same shape: load list / show + edit modal / delete with confirm / refresh. Extract `<AdminCrudPage<T>>` generic.
+- **API route pattern: admin auth + Supabase admin + try/catch + Sentry capture + structured response.** Repeated in 20+ routes. Extract `withAdminApi(handler)`.
+- **Multi-source aggregator pattern.** Context Feed, Whale Tracker, Smart Money, Trends all do "fan-out N sources, merge, normalize." Shared utility.
+- **Notification dispatch.** `addLocalNotification` + Supabase POST + push. Wrap.
+
+## 4. Monitoring & Observability Gaps
+
+**What we have (Session 4):**
+- Sentry with scrubbing for client + server + edge.
+- 14 `Sentry.captureException` sites.
+- PostHog with `$pageview` + identify/reset + 2 named events (`user_signed_up`, `swap_executed`).
+
+**What's missing:**
+- **Structured logging.** Currently `console.error`/`console.log` everywhere. No request ID, no user ID context. Should use a structured logger (pino) with auto-context.
+- **Distributed tracing.** No request tracing across `/api/swap/quote → 0x → log`. OpenTelemetry would help debug latency spikes.
+- **Per-route latency dashboards.** Vercel Analytics has p50/p95/p99 but no per-route alerting.
+- **PostHog event coverage thin.** Only 2 events tracked. Should be 30+ across signup, swap, sniper, alert, support.
+- **No funnel analytics.** Signup → first connect → first swap → first alert is the conversion funnel; not instrumented.
+- **No error budgets / SLOs.** No alerting on "5xx rate > 0.5% over 5min."
+- **No user-impact triage.** When an error fires, no easy way to see "this affected 47 users in the last hour."
+- **No on-call rotation.** Sentry alerts to whom?
+- **No status page** (`status.steinzlabs.com`).
+- **No synthetic monitoring** (Pingdom / Checkly hitting key endpoints every minute).
+
+**Priority recommendations:**
+1. Pino logger with request ID + user ID auto-context.
+2. PostHog event coverage to 30+ events across auth, swap, alert, sniper, support, settings.
+3. Funnel dashboard for signup → activation.
+4. Status page.
+5. Synthetic monitoring on `/api/swap/price`, `/api/vtx-ai`, `/api/auth/signin`.
+
+## 5. Testing Strategy
+
+**Current state: there are no automated tests.** `npm run lint` is the only CI gate. Build success is the second gate.
+
+This was tolerable for an MVP. **At 76k LOC and a paying user base, it is no longer.** Every Session 4 change carried regression risk that we mitigated only by reading the diff.
+
+**Minimum viable test suite for Session 5:**
+
+1. **Vitest unit tests for `lib/`.** Aim 60% coverage of `lib/services/*`, `lib/auth/*`, `lib/wallet/*`, `lib/security/*`. ~30 test files.
+2. **Vitest contract tests for API routes.** Hit each route with happy + error path. ~50 test files.
+3. **Playwright E2E for the 5 critical flows:**
+   - Signup → email verify → first sign-in.
+   - Connect wallet → swap (mock) → tx confirmation.
+   - Create alert → trigger → notification appears.
+   - Run DNA Analyzer → render result.
+   - Admin login → CRUD an announcement.
+4. **Visual regression** via Playwright screenshots on the 10 most-trafficked pages.
+5. **CI gate**: lint + typecheck + unit + contract on every PR; E2E + visual on main only.
+
+**Effort:** 2 weeks for the suite + 0.5 day per developer per PR thereafter.
+
+**Tooling:** Vitest + Playwright + GitHub Actions. All free.
+
+## 6. Deployment & CI/CD Maturity
+
+**Current state:** Manual `git push origin session-4-production` → Vercel auto-deploys preview. PR merge → Vercel deploys main. Env vars managed in Vercel dashboard.
+
+**Maturity score: 5/10.** It works. It is not robust.
+
+**Gaps:**
+- **No staging environment.** Preview deploys exist but they hit production Supabase + production secrets.
+- **No PR-scoped database branches.** Supabase has DB branching as a paid feature; we don't use it.
+- **No automated smoke tests post-deploy.**
+- **No rollback automation.** If a deploy is bad, manual revert.
+- **No env-var change audit log.**
+- **No infra-as-code.** Vercel + Supabase config is clicked, not committed.
+- **Single-region Vercel deploy** — fine for now.
+- **No canary / progressive rollout.** Every deploy is 100%.
+- **Migration management.** SQL migrations live in `supabase/migrations/` but there's no enforced "always run before deploy" check.
+
+**Priority recommendations:**
+1. **Staging environment.** Separate Supabase project + Vercel preview env vars.
+2. **PR DB branches** via Supabase branching.
+3. **Post-deploy smoke test.** GitHub Action that hits 5 critical endpoints, fails if non-200.
+4. **One-click rollback.** Vercel has it; document the runbook.
+5. **Migration check.** GitHub Action that diffs `supabase/migrations/` vs the deployed DB.
+
+## 7. Background Jobs / Queue Architecture
+
+**Current state:** Almost no background work. Vercel cron config minimally used. Most "scheduled" work is actually triggered by user requests (cache miss → re-fetch).
+
+**What needs to be background:**
+
+| Job | Cadence | Purpose |
+|---|---|---|
+| Context Feed ingestion | 30–60s | Fan out to 10 sources, write to Redis stream |
+| Whale tracker poll | 60s | Detect large transfers, write to stream |
+| Smart money detection | 5m | Update wallet rankings |
+| Sniper webhook handler | event | Helius/Alchemy webhook → detect → notify config holders |
+| Alert evaluation engine | 30s | Server-side alert evaluation |
+| Notification dispatch | event | Multi-channel push |
+| Daily portfolio snapshot | 2am UTC | Per-tracked-wallet snapshot |
+| Daily PnL recompute | 3am UTC | Update `wallet_pnl` |
+| Weekly DNA monthly snapshot | Mon 4am | Snapshot DNA over time |
+| Daily Smart Money digest email | 9am user-local | Per-user digest |
+| Cron: archive cleanup | Daily | Drop events > 90d |
+| Cron: refresh entity labels | Hourly | Re-fetch Arkham labels |
+| Cron: market_stats_history | 5m | Snapshot for change %s |
+| Cron: chain_metrics_history | 1m | Gas + tps snapshot |
+| Cron: api-health pings | 5m | Persist health log |
+| Cron: phishing-feed ingest | 1h | Pull external blocklists |
+
+**Recommendation:** **Inngest** (free tier generous, works with Next.js) for both cron and event-driven jobs. Provides retry logic, observability, and a UI to monitor jobs. ~30 jobs to build.
+
+**Alternative:** Trigger.dev (similar) or pure Upstash QStash + Vercel cron (more DIY).
+
+## 8. Real-Time Infrastructure (WebSocket vs SSE vs Polling)
+
+**Current state:** Polling everywhere. 30s ContextFeed, 60s WhaleTracker, 60s SmartMoney, 30s alert engine (in-tab), 120s NotificationBell.
+
+**Recommendation: Server-Sent Events (SSE) backed by Redis pub/sub.**
+
+**Why SSE over WebSocket:**
+- Unidirectional (server → client) is what we need; no client-to-server messages over the same channel.
+- Works through HTTP/1.1, no separate protocol.
+- Auto-reconnect built into `EventSource`.
+- Simpler infra; no need for sticky sessions.
+
+**Implementation:**
+1. Single endpoint `app/api/stream/[channel]/route.ts` — accepts a channel name (`feed:context`, `feed:whale`, `notif:user-<id>`).
+2. Server reads from Redis subscription on that channel and pushes to client.
+3. Background workers publish to Redis.
+4. Per-user channels for notifications (filtered server-side by user ID).
+
+**Per-feature impact:**
+- Context Feed: F4 — convert polling to EventSource.
+- Whale Tracker: F10.
+- Notifications: F25.
+- Sniper detection: F23.
+- Optionally: market price ticks, gas, watchlist movement.
+
+**Caveat:** Vercel serverless functions have a 60s max duration (300s on Pro). SSE on Vercel is feasible but the connection should be "tail" (re-connect on close) rather than long-lived. Alternative: deploy a small Node service on Fly.io / Railway specifically for SSE.
+
+## 9. Caching Layer Strategy
+
+**Current state:** Ad-hoc in-process Maps in 5+ files; no shared layer; 5s response cache in Context Feed, 60s in market data, 5min in Trends.
+
+**Recommendation: 3-tier cache.**
+
+**L1 — Per-instance memory:** Hot data (5s–60s TTL) — token metadata, USD prices. Sized small, evicted fast.
+
+**L2 — Vercel KV / Upstash Redis:** Shared across instances (60s–24h TTL) — aggregated feeds, entity labels, token security scans, user-specific aggregations.
+
+**L3 — Supabase materialized views:** Long-lived (1h–7d TTL) — daily snapshots, leaderboards, monthly aggregations. Refreshed by cron.
+
+**Implementation:**
+- New `lib/cache/index.ts` exposing `cached(key, ttl, fetcher)` with L1+L2 fallthrough.
+- Per-source `lib/cache/sources/coingecko.ts`, `arkham.ts`, etc., wrapping each upstream with appropriate TTL.
+
+**Cache invalidation strategy:**
+- Time-based for upstream data (TTL).
+- Tag-based for user-owned data (invalidate on write).
+- Event-based for Supabase-derived data (invalidate on table change via triggers).
+
+## 10. Database Scaling Path
+
+**Current state:** Single Supabase project, single region. RLS enabled on most user-owned tables. Service role used by admin routes.
+
+**Scale runway:** Comfortable to ~10k DAU. Beyond that:
+
+**Forecast:**
+- **10k → 100k DAU:** Need read replicas. Supabase supports this on Pro plan.
+- **100k → 1M DAU:** Need multi-region (Supabase global Postgres) or partition by user-id.
+- **High-write tables to watch:** `notifications`, `swap_logs`, `vtx_conversations`, `whale_events_archive` (planned), `login_activity`. Will need partitioning by month.
+
+**Indexes to add now:**
+- `notifications (user_id, created_at DESC)`.
+- `swap_logs (user_id, created_at DESC)`.
+- `vtx_conversations (user_id, created_at DESC)`.
+- `login_activity (user_id, created_at DESC)`.
+- `bookmarks (user_id, event_id)` — composite.
+- `wallet_follows (user_id, wallet_address)` — composite.
+- `flagged_tokens (address, chain)` — composite.
+
+**Long-term:**
+- **Time-series data → TimescaleDB** (Supabase supports the extension) for `holder_snapshots`, `network_metrics_history`, `wallet_portfolio_snapshots`, `whale_events_archive`.
+- **Search → Postgres FTS** for research posts, support KB, transactions notes. Or ElasticSearch when scale demands.
+- **Hot path reads → Read replicas + connection pooling via PgBouncer.**
+
+## 11. Multi-Region & Global User Considerations
+
+**Current state:** Single Vercel region (probably `iad1` US East), single Supabase region.
+
+**User base reality:** Crypto is global. Asia + EU likely >50% of traffic.
+
+**Recommendations:**
+
+- **Vercel edge functions** for auth middleware (already edge by default).
+- **Vercel multi-region** — deploy SSR pages globally. Vercel handles this automatically.
+- **Supabase global** — multi-region read replicas (Pro plan). Requires query rewriting for replica targeting.
+- **CDN for assets** — already via Vercel.
+- **Internationalization** — `next-intl` is in our deps but unused in user-facing pages. Should i18n the landing + key pages.
+- **Localized currencies** — show prices in user's local currency.
+- **Region-aware compliance** — KYC tier triggers (US vs EU vs Asia), GDPR (EU), CCPA (CA).
+- **Localized payment** — Stripe per-region, crypto everywhere.
+
+## Verdict
+
+Steinz Labs has built **36 features in less than a year** with a small team. The product breadth genuinely competes with Nansen on surface area; the depth of any one feature is consistently 1–2 generations behind the leader in that category.
+
+**The platform's three biggest strategic decisions for Session 5:**
+
+1. **Pick an identity.** Are we an intelligence platform (where VTX, Bubble Map, Wallet Intel, DNA, Whale Tracker are the heroes) or a trading terminal (Swap, Sniper, Trading Suite)? The answer determines whether to invest in real order books or in real PnL. Trying to be both has produced a synthetic order book and a non-existent trading suite. **This audit recommends "intelligence platform with trading-as-output."**
+
+2. **Build the shared infrastructure (Sections 2-9 above) before adding more features.** Redis + SSE + background workers + KV cache + audit log + tests. Two engineers × 3-4 weeks. Without these, every Session 5 feature gets harder to ship and harder to operate.
+
+3. **Pick the top 5 features for world-class investment.** Per the per-feature audit, the highest leverage targets:
+   - **VTX Agent (F7)** — already 8/10, smallest distance to 9/10, highest unique-value moat.
+   - **Wallet Intelligence (F8)** — biggest multiplier on every other intelligence feature (PnL, snapshots, DeFi, NFT).
+   - **Swap (F6)** — revenue feature; multi-aggregator + MEV protection lifts conversion.
+   - **Context Feed (F4)** — central engagement surface; SSE infrastructure here serves Whale + Notif + Sniper.
+   - **Authentication (F2)** — SIWE + 2FA + Google OAuth removes the largest friction across the entire funnel.
+
+**Everything else can be incremental.** These five are the platform.
+
+**End of audit.**
+
