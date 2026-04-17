@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const maxDuration = 15; // seconds — prevents Vercel cutting off before our timeout
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       profile = profileData;
     } catch (err) {
       console.error('[signin] Profile fetch failed:', err);
+      Sentry.captureException(err);
     }
 
     return NextResponse.json({
@@ -82,7 +84,8 @@ export async function POST(request: Request) {
       profile,
     });
   } catch (err: any) {
-
+    console.error('[signin] failed:', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Sign in failed. Please try again.' }, { status: 500 });
   }
 }

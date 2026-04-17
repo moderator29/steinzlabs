@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import * as Sentry from '@sentry/nextjs';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
@@ -922,6 +923,7 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     const isDev = process.env.NODE_ENV === 'development';
     console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+    Sentry.captureException(err);
 
     // Surface specific errors
     if (msg.includes('API key')) {
