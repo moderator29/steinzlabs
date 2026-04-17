@@ -2321,3 +2321,284 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** ABI read functions callable in-app; proxy implementation traced; bytecode similarity to known templates reported.
 
 ---
+
+## Feature 19 — Domain Shield
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/domain-shield/page.tsx](../app/dashboard/domain-shield/page.tsx) — 404 lines
+- [app/api/security/domain-shield/route.ts](../app/api/security/domain-shield/route.ts) — backend
+- GoPlus `getDomainSecurity` for the underlying check
+
+**Data sources:** GoPlus domain security API (phishing detection, certificate analysis, registration metadata).
+
+**Architecture pattern:** User pastes URL → server calls GoPlus → returns `verdict: SAFE | SUSPICIOUS | PHISHING` with `confidenceScore`, `signals[]`, AI-generated description.
+
+**Performance characteristics:** GoPlus call ~500ms–1.5s.
+
+**UX quality: 7/10.** Clean verdict UI, clear color-coding, actionable signals.
+
+**Backend quality: 6/10.** Single source (GoPlus); no caching of recently-scanned URLs; no community reporting loop.
+
+**What works well:**
+- Clear verdict with confidence.
+- AI description.
+- 3-tier color-coded result.
+
+**What is weak or missing:**
+- **Not integrated into anything.** Should be a browser extension or a global "URL warner" that intercepts links the user clicks elsewhere on Steinz.
+- **No URL history.**
+- **No community submission** — users can't report a domain as suspicious.
+- **No bulk URL upload.**
+- **Single source.**
+- **No "this is the official URL"** allowlist for top 1k DeFi protocols (anti-typosquatting).
+
+### B) Industry Standard Comparison
+
+**ScamSniffer:** Browser extension with millions of users. Real-time URL scanning + tx warning.
+
+**Wallet Guard / Pocket Universe:** Same browser-extension category.
+
+**MetaMask phishing list:** Maintained by community + automated. Free, very effective.
+
+**Pattern:** Browser extension + community + multi-source. We have a standalone scan page.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Browser extension** (Chrome/Firefox/Brave). Auto-warn on phishing. Long-term project but high-leverage.
+2. **Multi-source scanning** (Pop2Block, ScamSniffer feed, MetaMask blacklist).
+3. **Allowlist of official URLs** for top protocols.
+4. **Community reporting.**
+5. **URL scan history.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Functional but isolated.
+- **Effort to 9/10: Large (3–4 weeks for browser extension; 1 week for multi-source).**
+- **Approach: Add multi-source short-term; plan extension for later.**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Multi-source scanner | `lib/services/scamSniffer.ts`, `metamaskList.ts` (new) | None |
+| Allowlist | `lib/security/officialUrls.ts` (new) | Static list |
+| Community reporting | `app/api/security/domain-shield/report/route.ts` (new) | `domain_reports` table |
+| URL scan history | `domain_scans` table | New table |
+
+**Acceptance criteria:** Multi-source aggregated verdict; typosquatted protocol URLs flagged via allowlist comparison; user reports persist + influence verdict.
+
+---
+
+## Feature 20 — Signature Insight
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/signature-insight/page.tsx](../app/dashboard/signature-insight/page.tsx) — 303 lines
+- [app/api/security/signature-insight/route.ts](../app/api/security/signature-insight/route.ts) — backend
+- GoPlus `getSignatureDecode` underlying
+
+**Data sources:** GoPlus signature decoder + 4byte.directory lookup; Anthropic for plain-English explanation.
+
+**Architecture pattern:** User pastes calldata or signature → decodes function name + params → AI explains in plain English with risk classification.
+
+**Performance characteristics:** GoPlus + Claude → 1–4s.
+
+**UX quality: 7/10.** Function name + params + risk badge layout works.
+
+**Backend quality: 6/10.** Single source for decoding.
+
+**What works well:**
+- Plain-English summary.
+- Risk classification.
+- Multi-chain.
+
+**What is weak or missing:**
+- **Not pre-action.** Like Domain Shield, this is a standalone tool. The actual high-value use case is decoding a signature **before the user signs in MetaMask** — which only a wallet integration or browser extension can do.
+- **No signature history.**
+- **No template detection** ("this looks like a permit2 signature").
+- **No simulator** — what would actually happen if this were executed?
+
+### B) Industry Standard Comparison
+
+**Pocket Universe / Wallet Guard:** Pre-sig decoding inside wallet popup. Industry standard for retail safety.
+
+**Etherscan Decode tab:** Free, comprehensive.
+
+**Tenderly:** Pre-execution simulation.
+
+**Pattern:** Pre-action + simulation. We're post-action analysis only.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Tenderly simulator integration** — paste calldata → see expected state changes.
+2. **Wallet integration** — Wallet Connect mirror or MetaMask Snap.
+3. **Template library** of known signatures (permit2, Uniswap V3 swap, ERC-20 approve).
+4. **Signature history.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.**
+- **Effort to 9/10: Medium (1.5 weeks for sim; large for wallet integration).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Tenderly simulator | Reuse from F6 | Same |
+| Template library | `lib/security/signatureTemplates.ts` (new) | None |
+| Signature history | `signature_decodes` table | New table |
+| MetaMask Snap | `snaps/signature-shield/` (new package) | Long term |
+
+**Acceptance criteria:** Simulation result rendered alongside decode; recognized templates labeled; recent decodes listed.
+
+---
+
+## Feature 21 — Approval Manager
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/approval-manager/page.tsx](../app/dashboard/approval-manager/page.tsx) — 316 lines
+- [app/api/security/approvals/route.ts](../app/api/security/approvals/route.ts) — backend
+- Currently links out to **revoke.cash** for actual revocation
+
+**Data sources:** Alchemy `getTokenApprovals` (we already wrap this in `lib/services/alchemy.ts` line 204), GoPlus address security for spender risk.
+
+**Architecture pattern:** Wallet address → approvals across 5 EVM chains → list with risk scoring → user clicks "Revoke" which opens revoke.cash with the address pre-filled.
+
+**Performance characteristics:** Alchemy approvals fetch ~1s per chain.
+
+**UX quality: 6/10.** The list is informative; the "Revoke via revoke.cash" handoff is honest but ceding the most important action to a competitor.
+
+**Backend quality: 6/10.** Real Alchemy data; risk classification on spender.
+
+**What works well:**
+- Multi-chain.
+- Unlimited-approval flagged.
+- Risk badges.
+
+**What is weak or missing:**
+- **No in-app revocation.** We send users to revoke.cash. We should build this in-app — it's a 50-line viem `writeContract({ functionName: 'approve', args: [spender, 0] })` call.
+- **No batch revoke.**
+- **No revoke history within Steinz.**
+- **No alert on new dangerous approval** ("you just approved an unlimited spend on token X to contract Y — risk: HIGH").
+- **No allowance reduction** (vs. full revoke) — sometimes users want to keep limited allowance.
+- **Solana SPL token approvals not covered** despite the chain support elsewhere.
+- **No risk-source explanation** — why is this spender DANGEROUS? Audit failures? Recent hacks?
+
+**What feels half-built:** The handoff to revoke.cash is the dead giveaway that this feature is unfinished.
+
+### B) Industry Standard Comparison
+
+**revoke.cash:** Best-in-class. Free, in-app revoke, batch, multi-chain, history. We're sending users to them.
+
+**MetaMask Portfolio approvals:** In-wallet, pre-loaded.
+
+**De.Fi Shield:** Premium revoke + alerting.
+
+**Pattern:** Free, in-app, batch. Sending to revoke.cash is unacceptable for a competitor product.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **In-app revoke.** Wire MetaMask + Phantom + Built-in wallet to call `approve(spender, 0)`.
+2. **Batch revoke.**
+3. **Solana SPL approval coverage.**
+4. **Real-time alert on new dangerous approval.**
+5. **Revoke history.**
+6. **VTX explanation of risk-source.**
+
+### D) Priority and Effort
+
+- **Current score: 5/10.** The handoff to a competitor is a credibility leak.
+- **Effort to 9/10: Medium (1.5–2 weeks).**
+- **Approach: In-app revoke is mandatory; everything else is layering.**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| In-app revoke (EVM) | `app/dashboard/approval-manager/page.tsx`, `lib/security/revoke.ts` (new) | None (uses viem) |
+| Batch revoke | UI + multicall | None |
+| Solana approval coverage | `lib/services/solanaApprovals.ts` (new) | None |
+| Alert on new dangerous | Reuse alerts | None |
+| Revoke history | `revoke_history` table | New table |
+
+**Acceptance criteria:** User can revoke approvals without leaving Steinz; batch revoke supported; Solana SPL approvals listed; alert fires within 60s of new dangerous approval.
+
+---
+
+## Feature 22 — Risk Scanner
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/risk-scanner/page.tsx](../app/dashboard/risk-scanner/page.tsx) — 415 lines
+- `analyzeWalletRisks(holdings, totalUsd)` — local risk computation
+
+**Data sources:** Wallet Intelligence (holdings + USD), local heuristic scoring.
+
+**Architecture pattern:** Page accepts a wallet → fetches holdings → applies a rules engine over portfolio (top concentration, low-liquidity tokens, high-risk tokens, etc) → renders risks list with scores.
+
+**Performance characteristics:** Same as Wallet Intelligence (~2–4s).
+
+**UX quality: 6/10.** Risk items + score is intuitive. AI brain icon suggests AI analysis but the underlying compute is mostly heuristic.
+
+**Backend quality: 5/10.** Local heuristics with a thin AI veneer. Top-holding concentration, etc. — these are real signals but limited.
+
+**What works well:**
+- Clear risk/score taxonomy.
+- Wallet auto-fill.
+
+**What is weak or missing:**
+- **Heuristics are very basic** (just top-concentration thresholds).
+- **No GoPlus per-token security check** integrated.
+- **No DeFi protocol risk** (depositing in an unaudited protocol).
+- **No bridge-token risk.**
+- **No correlation risk** (all your tokens are ETH-correlated).
+- **No "if-then" simulation** ("if BTC drops 20%, your portfolio drops 18%").
+- **No alert on new risks** (you bought a low-liq token; risk-score increased).
+- **No tier-aware recommendations** ("for your risk profile, consider X").
+
+### B) Industry Standard Comparison
+
+**Nansen Portfolio Risk:** Per-position risk scoring with concentration + liquidity + correlation.
+
+**DeBank Health Score:** Across-protocol risk including liquidation likelihood for borrows.
+
+**InstaDApp / Argent Vault:** Active risk management with auto-rebalance triggers.
+
+**Pattern:** Multi-vector risk + actionable mitigation. We have basic concentration scoring.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Multi-vector risk model**: concentration + liquidity + correlation + protocol + bridge + chain + smart-contract.
+2. **Per-token GoPlus check** integrated.
+3. **Stress test** ("what if BTC -20%").
+4. **Actionable mitigation** with one-click swap recipes.
+5. **Risk alert.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.** Basic.
+- **Effort to 9/10: Medium-Large (2 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Multi-vector model | `lib/risk/scorer.ts` (new) | None |
+| Per-token security | Reuse GoPlus | None |
+| Stress test | `lib/risk/stressTest.ts` (new) | Historical correlations |
+| Actionable mitigation | Output swap recipes | Reuse swap |
+| Risk alert | Reuse alerts | None |
+
+**Acceptance criteria:** Risk score includes ≥5 vectors; stress test simulates BTC ±20% scenarios; each high-risk item has a one-click mitigation suggestion.
+
+---
