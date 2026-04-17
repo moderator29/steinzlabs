@@ -952,3 +952,182 @@ The two-tab design (Context Feed / Markets) is OK but feels like a leftover from
 **Acceptance criteria:** Multi-aggregator comparison functional with at least 3 sources; MEV-protected EVM swap routes through Flashbots when enabled; quote auto-refreshes every 15s with countdown; Tenderly simulation result shown before signing; multi-hop route visually rendered; Solana priority fee selector functional; EIP-2612 permits used when token supports them.
 
 ---
+
+## Feature 7 — VTX Agent (AI Chat, Token Cards, Swap Cards, Wallet Analysis)
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/vtx-ai/page.tsx](../app/dashboard/vtx-ai/page.tsx) — 853 lines (the dedicated VTX page)
+- [components/VtxAiTab.tsx](../components/VtxAiTab.tsx) — 1,135 lines (embedded VTX in the dashboard bottom nav)
+- [app/api/vtx-ai/route.ts](../app/api/vtx-ai/route.ts) — 969 lines (the largest API route on the platform)
+- [app/api/vtx/conversations/route.ts](../app/api/vtx/conversations/route.ts) — Supabase persistence (Session 4)
+- [components/vtx/TokenCard.tsx](../components/vtx/TokenCard.tsx) + [SwapCard.tsx](../components/vtx/SwapCard.tsx) — rich-output components
+- [lib/services/anthropic.ts](../lib/services/anthropic.ts) — Anthropic SDK wrapper, tool definitions, advisor pattern
+- [lib/services/arkham.ts](../lib/services/arkham.ts), [goplus.ts](../lib/services/goplus.ts), [coingecko.ts](../lib/services/coingecko.ts), [dexscreener.ts](../lib/services/dexscreener.ts), [alchemy.ts](../lib/services/alchemy.ts), [alchemy-solana.ts](../lib/services/alchemy-solana.ts), [lunarcrush.ts](../lib/services/lunarcrush.ts) — data sources VTX queries
+
+**Data sources (via tool use):** GoPlus (token security), CoinGecko (market data), DexScreener (pair search), Alchemy (EVM token meta + holder count + contract code), Alchemy Solana (SPL meta + supply), LunarCrush (social sentiment), Arkham (entity labels + address intel + holders). 9 named tools defined in `VTX_TOOLS`.
+
+**Architecture pattern:**
+- **Anthropic Claude (`claude-sonnet-4-6`) with tool use**, max 5 tool iterations per query (`MAX_TOOL_ITERATIONS = 5`).
+- **Two execution modes**: streaming (`vtxStream`) for real-time UI, non-streaming (`vtxQuery`) for tool-rich completions.
+- **Custom "advisor" sub-tool** named `advisor` (max 2 uses) — appears to be a recursive sub-LLM call for second opinions.
+- **System prompt** is a 100+ line carefully crafted instruction set: defines VTX as "the most advanced crypto intelligence agent," enforces "use ONLY real-time data" rule, sets personality, lists capabilities, defines token-card output format, defines security-analysis format, defines AI-analysis format. The prompt is tier-aware (free/pro/max) and personality-aware (professional/degen/conservative/neutral).
+- **Address detection** — regex-based detectors for EVM (`0x[a-fA-F0-9]{40}`) and Solana (base58 32–44 chars). Routes to `wallet_profile` or `token_security_scan` automatically.
+- **Chart-signal detection** — natural language patterns like "show me the price chart of ETH" produce a `chartType: 'price' | 'bubble' | 'portfolio' | 'holders'` flag; UI renders the appropriate chart component.
+- **Arkham intent detection** — phrases like "who is..." trigger `entity_lookup`.
+- **Rate limiting** — `FREE_TIER_LIMIT = 25` per 24h per IP, **stored in an in-process Map** (broken at scale).
+- **Token cards** — when a token is discussed, the route builds a `tokenCard` object from DexScreener data and returns it alongside the text reply.
+- **Conversation persistence** — Session 4 added `/api/vtx/conversations` to sync chat history to Supabase.
+- **Response sanitizer** — `sanitizeVtxResponse(scrubBranding(fullText))` strips markdown (`**`, `*`, `—`, `#`, backticks) so output is plain text.
+- **Settings** — personality, depth, risk appetite, default chain, language, web search, focus mode, message sound; stored in localStorage `vtx_settings` and synced to `user_display_preferences` (planned).
+
+**Performance characteristics:**
+- Simple query (no tools): 600ms–2s.
+- Token analysis (1–3 tool calls): 3–8s.
+- Deep wallet profile (4–5 tool calls + advisor): 8–20s.
+- Streaming SSE response keeps perceived latency low even for long answers.
+- The 5-iteration tool loop can occasionally hit timeout on Vercel's 60s function limit when one of the underlying APIs (GoPlus, Arkham) is slow.
+
+**UX quality: 8/10.** Honest read: this is the **strongest single feature on the platform**. The chat UI is polished, token cards are visually rich, the chart auto-detection is impressive, the personality presets give it character. The "Web Search," "Focus Mode," and "Auto Charts" toggles feel like a real product. The conversation history with date-grouped sidebar is well-built. Tier gating (free 25/day, pro unlimited) is clean.
+
+**Backend quality: 8/10.** This is genuinely well-engineered. Tool-use orchestration is correct. Multi-source data integration is the right architecture. The system prompt is thoughtful. Sentry capture wraps the top-level catch (Session 4). The chart-signal regex is clever and works. **Two issues prevent a 9:** (1) in-process rate-limit cache fragments across instances (broken at >1 Vercel instance); (2) the 5-iteration cap with no graceful degradation can leave the user with a half-finished answer.
+
+**What works well:**
+- Real Anthropic tool use, not fake "AI."
+- Multi-source data fusion (security + market + entity + social).
+- Address auto-detection routes to the right tool.
+- Streaming SSE keeps UI responsive.
+- Personality presets actually change tone.
+- Tier-aware system prompt.
+- Token card + chart side-rendering.
+- Plain-text output by default (Session 4 — no markdown clutter).
+- Conversation history with Supabase sync (Session 4).
+- Sentry instrumentation.
+
+**What is weak or missing:**
+- **In-process rate limit doesn't scale.** With 2+ Vercel instances, free users effectively get 50/day. Move to Redis.
+- **No conversation memory across sessions.** The system prompt does not include prior conversation summary; user has to re-explain context every time.
+- **No user-specific knowledge.** VTX doesn't know "user follows wallet X, watchlists tokens Y, has $Z portfolio." It's a stateless oracle.
+- **No proactive notifications.** VTX should be able to ping the user: "you asked about WIF yesterday; it just dropped 30% on $WALLET sell pressure."
+- **No "save this answer" / pin / bookmark.** Conversations are scrolling history; you can't surface a great VTX response as a permalink.
+- **No image input.** User can't paste a chart screenshot and ask "what does this look like?"
+- **No file attachment.** User can't drop a CSV of addresses for batch analysis.
+- **No voice input/output** despite Anthropic + ElevenLabs integration being trivial.
+- **No "show me how you got this answer" / source citations.** The token cards show the data but the prose doesn't cite which tool produced which fact.
+- **5-iteration cap with no fallback** — when hit, the user sees an incomplete answer with no explanation.
+- **No A/B testing of system prompts.** We can't measure "did personality=degen produce better engagement?"
+- **No model fallback.** When Claude is down, the entire feature is dead.
+- **No streaming token cards** — token card appears at the very end as a discrete object, not progressively as the LLM mentions tokens.
+- **No "just trades" mode** — VTX always wants to explain; sometimes a user just wants a swap suggestion. Should have a "concise" depth.
+- **No web search tool** despite the `webSearch` toggle in settings — the toggle is decorative.
+- **Swap card / token card is one-way** — user can't say "modify this swap card to use 2x the amount."
+- **Free tier 25/day** is generous-but-IP-based, so a user behind CGNAT shares quota with neighbors.
+
+**What feels half-built:**
+- The "Web Search" setting toggle has no implementation.
+- The "Message Sound" toggle plays a chime but the chime is a Web Audio API beep, not a real notification sound.
+- The `advisor` sub-tool is defined but unclear how often it actually triggers in production.
+- Charts can be rendered inline (`chartType`) but the chart components don't fully match the discussed token in 100% of cases — there's a chart-token vs. discussed-token mismatch on edge cases.
+- Conversation history sidebar lists by date but doesn't search.
+- "Focus Mode" is a setting but not visibly different from default.
+
+### B) Industry Standard Comparison
+
+**ChatGPT-4 with Code Interpreter (general AI):** Tool use, file uploads, image input/output, web browsing, persistent memory across sessions, custom GPTs. The bar is set very high.
+
+**Perplexity Finance:** AI-first finance research. Cites sources inline with footnotes. Streaming with progressive enrichment. Web search built in.
+
+**Bloomberg Terminal AI features:** Constrained to financial data, but very high-quality citations. Pre-canned prompts ("show me earnings surprises this week"). Voice input.
+
+**Nansen "AI summary" (recently launched):** Limited to portfolio summaries. Fast (sub-2s). No tool use; just a wrapper around their data with GPT-4.
+
+**Arkham Intelligence "Ask Arkham" beta:** Conversational search over their entity graph. Returns links to entity pages, not free-form prose. Less ambitious than us, but very accurate.
+
+**Goose / Cursor (dev agents):** Long-running agentic loops with full tool transparency — user sees every tool call, every retry, every failure. Source-cited output by default.
+
+**Pattern:** The leaders in domain-specific AI agents (Perplexity, Bloomberg, Arkham) are **citation-first** and **fast**. The leaders in general AI (ChatGPT, Claude.ai) are **multimodal** (image, file, voice) and **memory-aware**. We currently score above-average on tool use and presentation, below average on multimodal + citations + memory.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+
+1. **Per-user memory.** Maintain a compact "user profile summary" in `user_vtx_memory` (50–500 tokens) auto-updated after every conversation. Inject into system prompt. Suddenly VTX knows: "this user follows ETH whales, watches AI tokens, prefers concise answers." Massive UX upgrade.
+2. **Move rate limit to Redis.** Critical scale fix.
+3. **Source citations.** Every claim VTX makes should be footnoted with the source tool ("Price: $123 [DexScreener, 30s ago]"). Implement by post-processing the streaming output to insert footnote markers when a tool result is referenced.
+4. **Real web search tool.** The setting exists; wire it. Use Brave Search API or Tavily.
+5. **Image input.** Let users paste chart screenshots; route to Claude's vision API. "What pattern is this?" is a killer crypto query.
+6. **File attachment.** Let users drop a CSV of addresses for batch analysis.
+7. **Streaming token cards.** When the LLM mentions a token, immediately fire a side-channel query for the token card and render it inline as it's available — don't wait for end of response.
+8. **Proactive VTX nudges.** Background job that scans yesterday's conversations, finds tokens/wallets the user asked about, checks for material updates (price move > 10%, whale move, security flag change), sends an in-app notification.
+9. **Conversation summaries** for long histories; auto-collapse to summaries after 50 messages.
+10. **Saved answers** — pin button on any assistant message, lives in `vtx_saved_answers`.
+11. **Voice input** via Web Speech API (free, in-browser). Voice output via ElevenLabs (paid) or browser TTS (free).
+12. **A/B test system prompts.** Track per-prompt-variant: response length, user thumbs-up rate, follow-up question rate.
+13. **Model fallback.** When Anthropic is down, fall back to OpenAI GPT-4 with a translated system prompt. Or to a smaller Anthropic model.
+
+**Backend changes:**
+- New `user_vtx_memory` table — `(user_id, summary, last_updated)`.
+- Background job `lib/jobs/vtx-update-memory.ts` — runs nightly, summarizes the user's recent conversations into the memory blob.
+- Move rate limit from `rateLimitStore` Map to Redis with INCR + EXPIRE.
+- New `app/api/vtx-ai/citations/route.ts` — internal helper that converts tool calls to footnote spans.
+- New `lib/services/braveSearch.ts` or `tavily.ts`.
+- New `lib/jobs/vtx-proactive-nudges.ts` — scans `vtx_conversations` for user's followed entities, checks for material updates, dispatches via notification system.
+- `lib/services/anthropicVision.ts` — image input handler.
+
+**Frontend changes:**
+- Drag-drop zone in chat input for images and CSVs.
+- Source-citation inline footnote rendering with hover popover.
+- Saved answers panel in sidebar.
+- Voice input button (mic icon) + voice output toggle.
+- "VTX is thinking…" with visible tool call display ("Calling token_security_scan…").
+- Long conversation auto-collapse with summary.
+- Suggestion chips below input ("Recent: WIF analysis, ETH whales, BONK security").
+
+**New sub-features:**
+- **VTX-curated daily brief** — every morning, VTX generates a personalized 5-bullet brief: market context + your portfolio moves + your followed wallets' actions + your watchlist changes.
+- **VTX-driven swap suggestions** — when the user asks about a token, VTX can proactively offer "want me to draft a swap?" → returns SwapCard.
+- **VTX-driven alert suggestions** — "I noticed you ask about WIF a lot. Want me to set a price alert?"
+- **VTX-as-research-assistant** — "Write me a 1-paragraph thesis on why I should hold this token" → citation-rich.
+- **Public shareable VTX answers** — pin a great answer, share `/vtx/answer/<id>` publicly. SEO + virality.
+
+**Performance:**
+- Pre-warm Anthropic SDK at module load (Vercel cold-start cost ~200ms).
+- Cache tool results for 60s with proper invalidation — same user asking "is BTC bullish?" 3 times shouldn't re-hit GoPlus 3 times.
+- Use `claude-haiku-4-5` for the chart-detection regex pre-check (faster, cheaper); only use sonnet for the main response.
+
+**Mobile:**
+- Conversation sidebar — convert to swipe-from-left drawer.
+- Token cards stack vertically below chat on mobile.
+- Voice input is a huge win on mobile.
+
+### D) Priority and Effort
+
+- **Current score: 8/10.** Genuinely strong feature, our differentiator. Above the median for AI-first crypto products.
+- **Effort to 9/10: Medium (2 weeks).** Per-user memory + Redis rate limit + citations + proactive nudges = the main wins. Voice + image input is another week.
+- **Approach: Layer enhancements on a healthy foundation.** Don't rebuild — extend.
+- **Blocks other features?** No — VTX is the platform's unique advantage. It enables everything else (it can drive swaps, suggest alerts, explain entities). The more we invest here, the more leverage every other feature gets.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Per-user memory | `lib/jobs/vtx-update-memory.ts`, inject into `app/api/vtx-ai/route.ts` system prompt | `user_vtx_memory` table |
+| Move rate limit to Redis | `app/api/vtx-ai/route.ts`, `lib/cache/redis.ts` | Upstash Redis |
+| Source citations | `lib/vtx/citations.ts` (new), wire into streaming response | None |
+| Brave / Tavily web search tool | `lib/services/braveSearch.ts`, add `web_search` to `VTX_TOOLS` | Brave or Tavily API key |
+| Image input (vision) | `lib/services/anthropicVision.ts`, drag-drop UI | None (Anthropic SDK supports it) |
+| File attachment (CSV) | `app/api/vtx-ai/upload/route.ts` (new) | Vercel Blob storage |
+| Streaming token cards | Refactor `app/api/vtx-ai/route.ts` to fire side-channel token-card fetch on first mention | None |
+| Proactive nudges | `lib/jobs/vtx-proactive-nudges.ts` (new), Vercel cron | Reuse notifications system |
+| Saved answers | `vtx_saved_answers` table, `app/api/vtx/saved/route.ts` (new) | New table |
+| Voice input + output | `components/vtx/VoiceInput.tsx`, `lib/services/elevenlabs.ts` (optional) | None for input; ElevenLabs for output |
+| A/B test prompts | `lib/vtx/promptVariants.ts`, log variant in `vtx_conversations.metadata` | Add `prompt_variant` column |
+| Model fallback | `lib/services/anthropic.ts` — try sonnet, on 5xx try opus, on timeout try OpenAI | OpenAI API key |
+| Tool result cache | `lib/cache/toolResults.ts` (new) | Redis |
+| VTX daily brief | `lib/jobs/vtx-daily-brief.ts` (new) | Reuse Resend |
+| Public shareable answers | `app/vtx/answer/[id]/page.tsx` (new) | Reuse `vtx_saved_answers` |
+
+**Acceptance criteria:** Per-user memory injected and visibly improves response quality (e.g., "based on your tracked wallets..."); rate limit shared across instances; every fact in VTX response is citable to a tool call; image input accepts a chart screenshot and Claude responds with pattern analysis; proactive nudge delivered for at least one followed-wallet event; saved answers pinnable and shareable.
+
+---
