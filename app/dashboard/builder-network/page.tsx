@@ -51,7 +51,7 @@ export default function BuilderNetworkPage() {
       const data = await res.json();
       setBuilders(data.builders || []);
     } catch (err) {
-
+      console.error('[builder-network] Fetch builders failed:', err);
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function BuilderNetworkPage() {
         setShowApply(false);
       }
     } catch (err) {
-
+      console.error('[builder-network] Apply as builder failed:', err);
     } finally {
       setApplying(false);
     }
@@ -92,7 +92,9 @@ export default function BuilderNetworkPage() {
         body: JSON.stringify({ action: 'endorse_builder', builderId }),
       });
       fetchBuilders();
-    } catch {}
+    } catch (err) {
+      console.error('[builder-network] Endorse failed:', err);
+    }
   };
 
   const filtered = builders.filter(b => {

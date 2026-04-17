@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
+import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -285,8 +286,8 @@ export default function SwapPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const detectAndFetch = async () => {
-      const win = window as any;
-      if (win.solana?.isPhantom || win.solana?.isConnected) {
+      const win = window;
+      if (win.solana?.isPhantom || (win.solana as { isConnected?: boolean } | undefined)?.isConnected) {
         setDetectedWallet('solana');
         try {
           const resp = await win.solana.connect({ onlyIfTrusted: true });
@@ -300,7 +301,9 @@ export default function SwapPage() {
               setWalletBalance(prev => ({ ...prev, ...balances }));
             }
           }
-        } catch {}
+        } catch (err) {
+          console.error('[swap] Fetch Solana wallet balance failed:', err);
+        }
       } else if (win.ethereum) {
         setDetectedWallet('ethereum');
         try {
@@ -310,7 +313,7 @@ export default function SwapPage() {
             const ethBal = parseInt(hexBal, 16) / 1e18;
             setWalletBalance(prev => ({ ...prev, ETH: ethBal }));
           }
-        } catch {}
+        } catch { /* Provider rejected — silently ignore */ }
       } else if (localStorage.getItem('steinz_active_wallet_address')) {
         setDetectedWallet('builtin');
       }
@@ -336,7 +339,9 @@ export default function SwapPage() {
           }
           setWalletBalance(prev => ({ ...prev, ...balances }));
         }
-      } catch {}
+      } catch (err) {
+        console.error('[swap] Fetch connected wallet balance failed:', err);
+      }
     };
     fetchBalance();
   }, [connectedAddress]);
@@ -477,7 +482,7 @@ export default function SwapPage() {
       let hash = '';
 
       // Step 2: Send transaction via connected wallet
-      const win = typeof window !== 'undefined' ? (window as any) : null;
+      const win = typeof window !== 'undefined' ? window : null;
 
       if (useGasless && swapData.trade) {
         // Gasless flow: EIP-712 signature + submit
@@ -547,7 +552,7 @@ export default function SwapPage() {
           throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
         }
         const { ethers } = await import('ethers');
-        const pwd = localStorage.getItem('steinz_wallet_session_key') || '';
+        const pwd = getWalletSessionKey() || '';
         if (!pwd || !storedWallet.encryptedKey) {
           throw new Error('Wallet session expired. Please unlock your wallet.');
         }
@@ -596,6 +601,15 @@ export default function SwapPage() {
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
       setSwapSuccess(true);
+      import('@/lib/posthog').then(({ track }) => {
+        track('swap_executed', {
+          from_token: fromToken.symbol,
+          to_token: toToken.symbol,
+          chain,
+          from_amount: fromAmount,
+          tx_hash: hash,
+        });
+      }).catch(() => { /* PostHog not configured */ });
       setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 10000);
 
       // Save amounts before clearing

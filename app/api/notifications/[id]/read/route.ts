@@ -15,11 +15,11 @@ export async function PATCH(
   if (id.startsWith('sb-')) {
     const supabaseId = id.replace('sb-', '');
     try {
-      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
       if (serviceKey) {
         const { createClient } = await import('@supabase/supabase-js');
         const adminClient = createClient(
-          'https://phvewrldcdxupsnakddx.supabase.co',
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceKey,
           { auth: { autoRefreshToken: false, persistSession: false } }
         );

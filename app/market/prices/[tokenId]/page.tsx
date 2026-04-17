@@ -46,7 +46,7 @@ export default function TokenDetailPage({ params }: { params: { tokenId: string 
           <button
             onClick={() => {
               // Always return to dashboard market tab — never context feed
-              try { localStorage.setItem('steinz_last_tab', 'markets'); } catch {}
+              try { localStorage.setItem('steinz_last_tab', 'markets'); } catch { /* localStorage unavailable — silently ignore */ }
               router.push('/dashboard');
             }}
             className="p-1.5 text-gray-400 hover:text-white transition-colors"

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
 import { generateVerifyToken } from '@/lib/authTokens';
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
 
     }
 
-    const token = generateVerifyToken(newUser.user.id, cleanEmail);
+    const token = await generateVerifyToken(newUser.user.id, cleanEmail);
     const confirmUrl = `${getSiteUrl()}/api/auth/verify-email?token=${token}&uid=${newUser.user.id}`;
 
     const emailSent = await sendVerificationEmail(cleanEmail, confirmUrl, firstName.trim());
@@ -128,7 +129,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, email: cleanEmail, needsConfirmation: true });
 
   } catch (err: any) {
-
+    console.error('[signup] failed:', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

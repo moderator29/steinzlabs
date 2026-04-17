@@ -1,13 +1,12 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://phvewrldcdxupsnakddx.supabase.co';
-
 export function getSupabaseAdmin() {
-  const serviceKey = (process.env.SUPABASE_SERVICE_KEY || '').trim();
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = ((process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY) || '').trim();
 
   if (!serviceKey) {
-    throw new Error('SUPABASE_SERVICE_KEY is not available');
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not available');
   }
 
   return createClient(SUPABASE_URL, serviceKey, {

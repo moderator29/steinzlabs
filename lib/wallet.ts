@@ -5,17 +5,17 @@ export interface WalletConnection {
 }
 
 export async function connectMetaMask(): Promise<WalletConnection> {
-  if (typeof (window as any).ethereum === 'undefined') {
+  if (typeof window.ethereum === 'undefined') {
     throw new Error('MetaMask not installed. Please install MetaMask to connect.');
   }
 
-  const accounts = await (window as any).ethereum.request({
+  const accounts = await window.ethereum.request({
     method: 'eth_requestAccounts'
   });
 
   const address = accounts[0];
 
-  const chainId = await (window as any).ethereum.request({
+  const chainId = await window.ethereum.request({
     method: 'eth_chainId'
   });
 
@@ -27,11 +27,11 @@ export async function connectMetaMask(): Promise<WalletConnection> {
 }
 
 export async function connectPhantom(): Promise<WalletConnection> {
-  if (typeof (window as any).solana === 'undefined') {
+  if (typeof window.solana === 'undefined') {
     throw new Error('Phantom not installed. Please install Phantom wallet to connect.');
   }
 
-  const response = await (window as any).solana.connect();
+  const response = await window.solana.connect();
   const address = response.publicKey.toString();
 
   return {
@@ -41,11 +41,11 @@ export async function connectPhantom(): Promise<WalletConnection> {
 }
 
 export async function connectWallet(): Promise<WalletConnection> {
-  if (typeof (window as any).ethereum !== 'undefined') {
+  if (typeof window.ethereum !== 'undefined') {
     return connectMetaMask();
   }
 
-  if (typeof (window as any).solana !== 'undefined') {
+  if (typeof window.solana !== 'undefined') {
     return connectPhantom();
   }
 

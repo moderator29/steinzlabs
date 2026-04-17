@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSwapQuote, getChainId } from '@/lib/services/zerox';
 
 export async function GET(request: NextRequest) {
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
     const data = await getSwapQuote({ chainId, sellToken, buyToken, sellAmount, taker });
     return NextResponse.json(data);
   } catch (error: unknown) {
+    console.error('[swap/quote] failed:', error);
+    Sentry.captureException(error);
     const msg = error instanceof Error ? error.message : 'Swap quote failed';
     return NextResponse.json({ error: msg }, { status: 500 });
   }

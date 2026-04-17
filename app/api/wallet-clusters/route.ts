@@ -7,7 +7,7 @@ import type { TransferEdge, TokenTradeEvent } from '@/lib/services/cluster-detec
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
 );
 
 async function fetchTransferData(addresses: string[]): Promise<{ transfers: TransferEdge[]; trades: TokenTradeEvent[] }> {

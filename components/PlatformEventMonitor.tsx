@@ -30,7 +30,7 @@ function loadSeen(): Record<string, number> {
 function saveSeen(seen: Record<string, number>): void {
   try {
     localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 function markSeen(key: string): void {

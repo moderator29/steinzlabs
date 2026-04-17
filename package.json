@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
     "@hookform/resolvers": "^3.3.4",
+    "@sentry/nextjs": "^8.45.0",
     "@solana-program/memo": "^0.11.0",
     "@solana/kit": "^3.0.3",
     "@solana/wallet-adapter-base": "^0.9.27",
@@ -37,6 +38,9 @@
     "next": "^15.0.8",
     "next-intl": "^4.9.1",
     "pg": "^8.20.0",
+    "posthog-js": "^1.198.0",
+    "posthog-node": "^4.4.0",
+    "web-push": "^3.6.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.51.0",
@@ -54,6 +58,7 @@
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^20.19.39",
+    "@types/web-push": "^3.6.4",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "autoprefixer": "^10.4.18",

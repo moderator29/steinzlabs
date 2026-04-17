@@ -71,7 +71,9 @@ export default function HodlRunnerPage() {
           topPlayer: data.topPlayer || 'N/A',
         });
       }
-    } catch {}
+    } catch (err) {
+      console.error('[hodl-runner] Fetch leaderboard failed:', err);
+    }
   };
 
   const submitScore = async (score: number, coins: number, distance: number) => {
@@ -86,7 +88,9 @@ export default function HodlRunnerPage() {
         setRank(data.rank);
         setPersonalBest(data.personalBest);
       }
-    } catch {}
+    } catch (err) {
+      console.error('[hodl-runner] Submit score failed:', err);
+    }
     fetchLeaderboard();
   };
 

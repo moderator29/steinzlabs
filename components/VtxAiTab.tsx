@@ -49,14 +49,14 @@ function loadChatHistory(): Message[] {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return [];
 }
 
 function saveChatHistory(messages: Message[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)));
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 function loadAllHistory(): ChatHistoryEntry[] {
@@ -66,14 +66,14 @@ function loadAllHistory(): ChatHistoryEntry[] {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return [];
 }
 
 function saveAllHistory(entries: ChatHistoryEntry[]) {
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, 30)));
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 const DEFAULT_SETTINGS: VtxSettings = {
@@ -95,7 +95,7 @@ function loadSettings(): VtxSettings {
       const parsed = JSON.parse(stored);
       if (parsed && parsed.personality) return { ...DEFAULT_SETTINGS, ...parsed };
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return { ...DEFAULT_SETTINGS };
 }
 
@@ -114,13 +114,13 @@ function playChime() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.3);
-  } catch {}
+  } catch { /* Provider rejected — silently ignore */ }
 }
 
 function saveSettings(s: VtxSettings) {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 function getUserTier(): string {
@@ -138,14 +138,14 @@ function getDailyUsage(): { used: number; limit: number; remaining: number } {
       const parsed = JSON.parse(stored);
       if (parsed && typeof parsed.used === 'number') return parsed;
     }
-  } catch {}
+  } catch { /* Malformed JSON — return default */ }
   return { used: 0, limit: 15, remaining: 15 };
 }
 
 function saveDailyUsage(usage: { used: number; limit: number; remaining: number }) {
   try {
     localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
 }
 
 // Resolve a token symbol to a TradingView-compatible symbol

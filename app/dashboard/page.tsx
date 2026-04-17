@@ -134,7 +134,9 @@ export default function Dashboard() {
         localStorage.removeItem('steinz_last_tab');
         setActiveTab('markets');
       }
-    } catch {}
+    } catch {
+      // Malformed JSON — return default
+    }
   }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [marketStats, setMarketStats] = useState<{
@@ -177,7 +179,9 @@ export default function Dashboard() {
             dominanceChange: `${btcDom > 50 ? '+' : '-'}${(Math.abs(btcDom - 50) * 0.1).toFixed(1)}%`,
           });
         }
-      } catch {}
+      } catch (err) {
+        console.error('[dashboard] Fetch market stats failed:', err);
+      }
     };
     fetchMarketStats();
     const interval = setInterval(fetchMarketStats, 120000);

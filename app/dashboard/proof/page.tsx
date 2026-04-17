@@ -106,7 +106,9 @@ export default function ViewProofPage() {
       if (stored) {
         setEvent(JSON.parse(stored));
       }
-    } catch {}
+    } catch {
+      // Malformed JSON — return default
+    }
   }, []);
 
   if (!event) {

@@ -84,7 +84,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-[#0A0E1A] p-4 flex flex-col">
+      <div className="fixed inset-0 z-40 bg-[#0A0E1A] p-4 flex flex-col">
         {chartContent}
       </div>
     );

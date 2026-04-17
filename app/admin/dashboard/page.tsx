@@ -28,20 +28,16 @@ function KpiCard({ icon: Icon, label, value, change, changeType }: {
   );
 }
 
-// Chart data populated from real stats endpoint on load
-const CHART_DATA: Array<{ day: string; users: number; revenue: number; scans: number }> = [];
+interface StatsData {
+  users: { total: number; todaySignups: number; weekSignups: number; recentUsers: Array<{ id: string; email: string; username: string; created_at: string }> };
+  platform: { totalScans: number; totalPositions: number; activePositions: number; totalThreats: number; totalAlerts: number };
+}
 
-const ACTIVITY = [
-  { event: 'New user signup', detail: 'john@example.com', time: Date.now() - 120_000 },
-  { event: 'Security scan', detail: '0xAb3f...B12E — Risk: Low', time: Date.now() - 300_000 },
-  { event: 'Swap executed', detail: '1.2 ETH → USDC on Base', time: Date.now() - 600_000 },
-  { event: 'Whale alert', detail: '500 ETH moved by 0x8fa2...', time: Date.now() - 900_000 },
-  { event: 'API rate limit hit', detail: 'IP: 192.168.1.45 — /api/swap/quote', time: Date.now() - 1_200_000 },
-  { event: 'New user signup', detail: 'alice@web3.io', time: Date.now() - 1_800_000 },
-];
+interface ActivityEntry { event: string; detail: string; time: number; }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Record<string, number>>({});
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
@@ -51,10 +47,19 @@ export default function AdminDashboard() {
       const token = sessionStorage.getItem('admin_token') ?? '';
       const res = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
-        const data = await res.json();
+        const data: StatsData = await res.json();
         setStats(data);
+        // Build activity feed from recent signups
+        const recentActivity: ActivityEntry[] = (data.users.recentUsers || []).slice(0, 6).map(u => ({
+          event: 'New user signup',
+          detail: u.email || u.username || u.id.slice(0, 8),
+          time: new Date(u.created_at).getTime(),
+        }));
+        setActivity(recentActivity);
       }
-    } catch { /* use defaults */ } finally {
+    } catch (err) {
+      console.error('[admin/dashboard] Stats load failed:', err);
+    } finally {
       setLoading(false);
       setLastRefresh(new Date());
     }
@@ -79,10 +84,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard icon={Users} label="Total Users" value={formatLargeNumber(stats.totalUsers ?? 50247)} change="+12% this week" changeType="up" />
-        <KpiCard icon={DollarSign} label="Revenue (30d)" value={formatUSD(stats.revenue30d ?? 18420)} change="+8% vs last month" changeType="up" />
-        <KpiCard icon={Activity} label="Scans Today" value={formatLargeNumber(stats.scansToday ?? 4821)} change="+23% vs yesterday" changeType="up" />
-        <KpiCard icon={Shield} label="Threats Blocked" value={formatLargeNumber(stats.threatsBlocked ?? 127)} change="Last 24h" changeType="neutral" />
+        <KpiCard icon={Users} label="Total Users" value={formatLargeNumber(stats?.users.total ?? 0)} change={`+${stats?.users.weekSignups ?? 0} this week`} changeType="up" />
+        <KpiCard icon={DollarSign} label="Revenue (30d)" value={formatUSD(0)} change="Payments not yet live" changeType="neutral" />
+        <KpiCard icon={Activity} label="Total Scans" value={formatLargeNumber(stats?.platform.totalScans ?? 0)} change={`${stats?.platform.activePositions ?? 0} active positions`} changeType="neutral" />
+        <KpiCard icon={Shield} label="Threats Found" value={formatLargeNumber(stats?.platform.totalThreats ?? 0)} change="All time" changeType="neutral" />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
@@ -119,9 +124,12 @@ export default function AdminDashboard() {
       </div>
 
       <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-white mb-4">Live Activity Feed</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">Recent Signups</h3>
         <div className="space-y-2">
-          {ACTIVITY.map((a, i) => (
+          {activity.length === 0 && !loading && (
+            <p className="text-xs text-gray-500 py-4 text-center">No recent activity</p>
+          )}
+          {activity.map((a, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-[#1E2433] last:border-0">
               <StatusDot status="active" size="sm" pulse />
               <span className="text-xs text-white font-medium w-36 flex-shrink-0">{a.event}</span>

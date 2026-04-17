@@ -22,7 +22,7 @@ function persistSession(session: any) {
     };
     localStorage.setItem('steinz-auth-token', JSON.stringify(sessionData));
     localStorage.setItem('steinz_has_session', 'true');
-  } catch {}
+  } catch { /* localStorage unavailable — silently ignore */ }
   document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
 }
 

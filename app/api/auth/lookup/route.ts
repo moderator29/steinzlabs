@@ -36,7 +36,9 @@ export async function POST(request: Request) {
             first_name: match.user_metadata?.first_name || '',
             last_name: match.user_metadata?.last_name || '',
           }, { onConflict: 'id' });
-        } catch {}
+        } catch (err) {
+          console.error('[auth/lookup] Upsert profile to Supabase failed:', err);
+        }
         return NextResponse.json({ email: match.email });
       }
     }

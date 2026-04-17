@@ -21,7 +21,9 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<{ id: 
         if (decoded.sub && decoded.exp > Date.now() / 1000) {
           return { id: decoded.sub, email: decoded.email || '' };
         }
-      } catch {}
+      } catch {
+        // Malformed cookie — ignore and fall through to Supabase auth-token check
+      }
     }
 
     const sbCookies = Array.from(cookies.getAll()).filter(c => c.name.includes('auth-token'));
@@ -36,7 +38,9 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<{ id: 
             return { id: user.id, email: user.email || '' };
           }
         }
-      } catch {}
+      } catch {
+        // Malformed auth-token cookie — skip
+      }
     }
 
     return null;

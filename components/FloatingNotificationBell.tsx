@@ -14,7 +14,7 @@ import NotificationBell from '@/components/NotificationBell';
 export default function FloatingNotificationBell() {
   return (
     <div
-      className="fixed top-3 right-3 z-[150]"
+      className="fixed top-3 right-3 z-50"
       style={{ pointerEvents: 'auto' }}
     >
       <NotificationBell />

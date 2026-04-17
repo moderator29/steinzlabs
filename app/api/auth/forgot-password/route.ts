@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const token = generateResetToken(user.id, cleanEmail);
+    const token = await generateResetToken(user.id, cleanEmail);
     const resetUrl = `${getSiteUrl()}/reset-password?token=${token}&uid=${user.id}`;
 
     const firstName = user.user_metadata?.first_name || 'there';

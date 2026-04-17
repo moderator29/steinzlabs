@@ -34,11 +34,10 @@
   box-sizing: border-box;
 }
 
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color;
-  transition-duration: 0.2s;
+/* Transitions applied only to specific interactive elements, not globally */
+button, a, input, select, textarea {
+  transition-property: background-color, border-color, color, opacity, box-shadow;
+  transition-duration: 0.15s;
   transition-timing-function: ease;
 }
 
