@@ -1,6 +1,6 @@
 import 'server-only';
 /**
- * STEINZ LABS — Social Intelligence API
+ * NAKA LABS — Social Intelligence API
  * Powered by LunarCrush — social data for any crypto asset
  *
  * GET /api/social?coin=BTC                → full social metrics for BTC

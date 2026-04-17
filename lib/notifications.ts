@@ -94,7 +94,7 @@ export function maybeNotifyWelcome(email?: string): void {
 
   addLocalNotification({
     type: 'welcome',
-    title: 'Welcome to Steinz! 🎉',
+    title: 'Welcome to Naka Labs! 🎉',
     message: "You've joined the most advanced crypto intelligence platform. Explore your dashboard, set up your wallet, and let VTX guide your trades.",
   });
 
@@ -104,7 +104,7 @@ export function maybeNotifyWelcome(email?: string): void {
 export function notifyWelcome(email: string): void {
   addLocalNotification({
     type: 'welcome',
-    title: 'Welcome to STEINZ LABS',
+    title: 'Welcome to NAKA LABS',
     message: `Account created for ${email}. Start by creating a wallet to explore on-chain intelligence.`,
   });
 }

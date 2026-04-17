@@ -192,7 +192,7 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
             </div>
 
             <p className="text-center text-[10px] text-gray-600 mt-4">
-              Powered by Steinz Labs
+              Powered by Naka Labs
             </p>
           </>
         )}

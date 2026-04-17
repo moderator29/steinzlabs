@@ -37,11 +37,11 @@ export async function POST(request: Request) {
     const shortId = crypto.randomBytes(4).toString('hex');
     shareStore.set(shortId, payload);
 
-    const host = request.headers.get('host') || 'steinzlabs.com';
+    const host = request.headers.get('host') || 'nakalabs.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const shareUrl = `${protocol}://${host}/s/${shortId}`;
 
-    const shareText = `${title}\n\n${summary}\n\nPowered by Steinz Labs — Real-time on-chain intelligence\n${shareUrl}`;
+    const shareText = `${title}\n\n${summary}\n\nPowered by Naka Labs — Real-time on-chain intelligence\n${shareUrl}`;
 
     return NextResponse.json({
       shareUrl,

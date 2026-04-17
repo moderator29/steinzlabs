@@ -696,7 +696,7 @@ export default function VtxAiPage() {
                 <SteinzLogo size={40} animated={false} />
               </div>
               <h2 className="text-lg font-bold mb-1">Ask me about crypto</h2>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis. Powered by STEINZ LABS.</p>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis. Powered by NAKA LABS.</p>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
@@ -799,7 +799,7 @@ export default function VtxAiPage() {
                 <SteinzLogo size={18} animated={false} />
               </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
-                <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Steinz Intelligence...'} />
+                <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Naka Intelligence...'} />
               </div>
             </div>
           )}

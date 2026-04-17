@@ -31,7 +31,7 @@ export function LandingNav() {
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
             <SteinzLogo size={28} animated={false} />
-            <span className="font-bold text-[14px] tracking-[3px] text-white/90" style={{ letterSpacing: 3 }}>STEINZ LABS</span>
+            <span className="font-bold text-[14px] tracking-[3px] text-white/90" style={{ letterSpacing: 3 }}>NAKA LABS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7">

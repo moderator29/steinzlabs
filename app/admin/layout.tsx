@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">Admin Access</h1>
-              <p className="text-xs text-gray-500">STEINZ LABS Control Panel</p>
+              <p className="text-xs text-gray-500">NAKA LABS Control Panel</p>
             </div>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">

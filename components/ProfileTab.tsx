@@ -890,7 +890,7 @@ export default function ProfileTab() {
         <div className="mt-6 glass rounded-lg p-4 border border-white/10 text-center">
           <p className="text-sm font-semibold mb-1">Still need help?</p>
           <p className="text-xs text-gray-500 mb-3">Contact our support team for personalized assistance.</p>
-          <a href="mailto:support@steinzlabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+          <a href="mailto:support@nakalabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
             <Mail className="w-3 h-3" /> Contact Support
           </a>
         </div>
@@ -909,7 +909,7 @@ export default function ProfileTab() {
             <h2 className="text-lg font-heading font-bold flex items-center gap-2">
               <Bot className="w-5 h-5 text-[#0A1EFF]" /> AI Support
             </h2>
-            <p className="text-xs text-gray-500">Ask anything about STEINZ LABS</p>
+            <p className="text-xs text-gray-500">Ask anything about NAKA LABS</p>
           </div>
           {chatMessages.length > 0 && (
             <button onClick={clearChat} className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors px-2 py-1 rounded border border-white/10 hover:border-white/20">
@@ -1182,7 +1182,7 @@ export default function ProfileTab() {
           {!coverUrl && (
             <div className="absolute inset-0 flex items-center justify-center opacity-20">
               <div className="w-6 h-[1px] bg-white mx-1" />
-              <span className="text-[9px] text-white uppercase tracking-widest">STEINZ LABS</span>
+              <span className="text-[9px] text-white uppercase tracking-widest">NAKA LABS</span>
               <div className="w-6 h-[1px] bg-white mx-1" />
             </div>
           )}
