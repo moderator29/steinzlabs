@@ -2602,3 +2602,363 @@ This is one of the most under-realized features on the platform given the data w
 **Acceptance criteria:** Risk score includes ≥5 vectors; stress test simulates BTC ±20% scenarios; each high-risk item has a one-click mitigation suggestion.
 
 ---
+
+## Feature 23 — Sniper Bot
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/sniper/page.tsx](../app/dashboard/sniper/page.tsx) — 378 lines (Session 4 rewrite, tier-gated for Max plan)
+- [app/api/sniper/route.ts](../app/api/sniper/route.ts) — 180 lines
+- [app/api/sniper/execute/route.ts](../app/api/sniper/execute/route.ts) — execute with fail-closed kill switch (Session 1 fix)
+- DB tables: `sniper_executions`, `platform_settings.sniper_enabled` for kill switch
+
+**Data sources:** Live new-token detection (pump.fun + DexScreener trending), GoPlus security scan per detected token, swap routing via 0x/Jupiter at execute time.
+
+**Architecture pattern:**
+- **Tier-gated** — only Max plan users see the page; others see upgrade screen.
+- **Config persisted** to `sniper_executions`: maxBudget, slippage, minLiquidity, maxRiskScore, autoExecute, chains[].
+- **Live token scanner** — page polls for newly-detected tokens matching config.
+- **Snipe execution** — calls `/api/sniper/execute` which checks kill switch (fail-closed) → applies safety gates → routes through swap.
+- **Admin oversight** — `/admin/sniper-oversight` shows real executions (Session 4 wired).
+
+**Performance characteristics:** Detection cadence ~10s, execute path adds the swap latency.
+
+**UX quality: 7/10.** Config panel is clear. Live detection list with snipe buttons is good. Safety-gates display gives confidence. Execution history visible.
+
+**Backend quality: 7/10.** Fail-closed kill switch + tier gating + admin oversight is the responsible foundation. Real swap execution end-to-end.
+
+**What works well:**
+- Tier gate is hard.
+- Kill switch fail-closed.
+- Real swap execution.
+- Admin oversight.
+- Config persisted.
+- Safety-gate display.
+
+**What is weak or missing:**
+- **No simulator / dry-run mode.** Users should be able to "paper-trade" the sniper for a week before going live.
+- **No backtest** — given a config, what would have happened over the last 30 days?
+- **No copy-snipe** — replicate another user's sniper config.
+- **No pre-execution security gate beyond `maxRiskScore`** — should hard-block honeypots regardless of score.
+- **No max-concurrent-snipes guard** — config could trigger 50 snipes in 1 second.
+- **No daily/weekly volume cap** in addition to per-snipe budget.
+- **No alert when sniped position should be exited** ("token down 50% from entry").
+- **No PnL view per snipe.**
+- **No public leaderboard** ("top snipers this week").
+- **Polling-based detection** — should be real-time push.
+- **No multi-DEX routing within a single snipe.**
+- **No Solana priority-fee tuning** for sniper (often needs aggressive priority fees for new launches).
+
+**What feels half-built:**
+- The 6 safety gates listed in the UI are a mix of real (kill switch, max budget, slippage, liquidity, risk score) and aspirational (admin kill switch is real, but not all gates are individually toggleable).
+- "Auto-execute" toggle exists but the user has limited control over which detected tokens auto-fire.
+
+### B) Industry Standard Comparison
+
+**BONKbot / TrojanBot (Solana Telegram bots):** Telegram-native, sub-second execution, MEV protection, copy-snipe. Multi-million-dollar businesses.
+
+**Maestro (EVM Telegram bot):** Same model on EVM. Limit orders, copy-trade, sniper modes.
+
+**Banana Gun:** Telegram + web. Most polished UI in the space.
+
+**Pattern:** Telegram + sub-second + copy + Mev-protected. We have web + ~10s + manual + no MEV. Significant gap.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Telegram bot wrapper.** Mass-market for sniping.
+2. **Sub-second detection** via Helius/Quicknode webhooks for Solana, Alchemy webhooks for EVM.
+3. **Dry-run / paper-trade mode.**
+4. **Backtest.**
+5. **Hard honeypot block** regardless of risk-score.
+6. **Concurrent + daily caps.**
+7. **Auto-exit alerts.**
+8. **MEV protection** (private mempool / Jito bundles for Solana).
+9. **PnL per snipe.**
+10. **Copy-snipe.**
+
+**Backend changes:**
+- Webhook subscriptions for new-token events.
+- `sniper_dry_runs` table for paper trades.
+- Backtest worker.
+- Jito bundle integration for Solana sniping.
+
+**Frontend changes:**
+- Mode toggle (live / dry-run).
+- Backtest config panel.
+- PnL column on executions.
+- Telegram-link CTA.
+
+### D) Priority and Effort
+
+- **Current score: 7/10.** Built responsibly; needs serious depth to compete.
+- **Effort to 9/10: Large (3–4 weeks).**
+- **Approach: Layer real-time detection + dry-run + Telegram. Cap scope short of full sub-second matching.**
+- **Blocks other features?** No — but is a Max-tier value driver.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Telegram bot | New repo `steinz-tg-bot/` | Telegram Bot API |
+| Webhook detection | `app/api/sniper/webhook-helius/route.ts` (new), `webhook-alchemy/route.ts` (new) | Helius / Alchemy webhook configs |
+| Dry-run mode | `sniper_dry_runs` table, mode toggle | New table |
+| Backtest | `lib/sniper/backtest.ts` (new) | Historical pump.fun / DexScreener data |
+| Hard honeypot block | `app/api/sniper/execute/route.ts` — fail if `isHoneypot` | None |
+| Caps | Config + enforcement | None |
+| Auto-exit alerts | Reuse alerts | None |
+| Jito bundle | `lib/services/jitoBundle.ts` (new) | None |
+| PnL per snipe | Compute in `sniper_executions` view | None |
+| Copy-snipe | `app/dashboard/sniper/copy/page.tsx` (new) | Public configs table |
+
+**Acceptance criteria:** Telegram bot can execute snipes; webhook-driven detection sub-1s for new pump.fun tokens; dry-run mode functional; backtest runs against 30d historical data; honeypot tokens hard-blocked.
+
+---
+
+## Feature 24 — Price Alerts
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [app/dashboard/alerts/page.tsx](../app/dashboard/alerts/page.tsx) — 900 lines (one of the largest pages on the platform)
+- [lib/hooks/useAlertMonitor.ts](../lib/hooks/useAlertMonitor.ts) — 384 lines (the per-tab background monitor)
+- 4 alert types: `whale`, `price`, `launch`, `wallet_activity`
+- DB table: `alerts` (Session 2)
+
+**Data sources:** CoinGecko prices (price alerts), Etherscan/Solana RPC (whale + wallet activity), pump.fun (new launches).
+
+**Architecture pattern:**
+- **Per-tab in-browser monitor.** `useAlertMonitor` hook polls every 30s (price), 60s (whale + launch). When a condition is met, fires `addLocalNotification`.
+- **localStorage primary** with `alerts` table sync.
+- **History** — `loadAlertHistory` shows recent triggered alerts.
+
+**Performance characteristics:** Per-tab polling means a user with 2 tabs open polls every source twice. Battery + bandwidth waste.
+
+**UX quality: 7/10.** Create-alert UI is clear, history is useful, type filter works.
+
+**Backend quality: 5/10.** **Critical issue:** the alert engine runs per-browser-tab. Close the tab, no alerts. Server should run them.
+
+**What works well:**
+- 4 alert types covering most use cases.
+- History view.
+- Sound + browser notification on trigger.
+
+**What is weak or missing:**
+- **No server-side alert engine.** This is the headline gap. If the user closes the browser, no alerts fire. **Industry standard is server-side alert evaluation with multi-channel delivery.**
+- **Polling fragments by tab.**
+- **No multi-channel delivery** (email, SMS, Telegram, push).
+- **No alert templates** ("alert me on any of my watchlist when price moves >5%").
+- **No conditional / compound alerts** ("alert if BTC breaks $100k AND ETH breaks $4k").
+- **No alert sharing** ("share this alert config with friend").
+- **No dedup** — same condition triggers repeatedly.
+- **No once-per-day cap.**
+- **No alert quotas by tier.**
+
+**What feels half-built:** The very existence of a 384-line client-side polling hook in 2026 is the tell — alerts need to be a server-side service.
+
+### B) Industry Standard Comparison
+
+**TradingView Alerts:** Server-side evaluation. Multi-channel (email, SMS, push, webhook). Conditional + script-based.
+
+**3Commas:** Server-side. Multi-platform. DCA + smart trades.
+
+**Coinbase Alerts:** Server-side, push-only.
+
+**Telegram bots:** Server-side, free, instant.
+
+**Pattern:** Universally server-side. We're alone in client-side.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Server-side alert engine.** Background worker evaluates alerts every 30s, dispatches via webhook + email + push + Telegram. Critical fix.
+2. **Multi-channel delivery.**
+3. **Compound alerts.**
+4. **Quotas by tier.**
+5. **Dedup + cooldown.**
+
+**Backend changes:**
+- New worker `lib/jobs/alert-engine.ts` (Vercel cron or dedicated service).
+- New `alert_deliveries` table.
+- Webhook + email + Telegram delivery channels.
+
+**Frontend changes:**
+- Channel preferences per alert.
+- Compound alert builder.
+
+### D) Priority and Effort
+
+- **Current score: 5/10.** Functional in tab; broken when tab closed.
+- **Effort to 9/10: Large (2.5 weeks).** Server engine is the work.
+- **Approach: Build server engine; deprecate client-side hook.**
+- **Blocks other features?** No — but core to Pro tier value.
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Server alert engine | `lib/jobs/alert-engine.ts` (new), Vercel cron 30s | None |
+| Multi-channel delivery | `lib/services/telegram.ts`, `lib/services/email.ts` (extend) | Telegram bot token |
+| Alert deliveries log | `alert_deliveries` table | New |
+| Compound alerts | DSL or builder UI | None |
+| Tier quotas | Read tier in alert insert | None |
+| Dedup + cooldown | Engine logic | None |
+| Deprecate client hook | Remove `useAlertMonitor` after migration | None |
+
+**Acceptance criteria:** Alert fires within 60s of condition with browser closed; multi-channel delivery (email + push); compound alert builder functional; per-tier quota enforced.
+
+---
+
+## Feature 25 — Notifications System
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/NotificationBell.tsx](../components/NotificationBell.tsx) — 255 lines (header bell + dropdown)
+- [components/FloatingNotificationBell.tsx](../components/FloatingNotificationBell.tsx) — global floating wrapper
+- [app/api/notifications/route.ts](../app/api/notifications/route.ts) — 228 lines (CRUD + email dispatch)
+- [lib/notifications.ts](../lib/notifications.ts) — 200 lines (`getLocalNotifications`, `addLocalNotification`, max 100)
+- [lib/services/webpush.ts](../lib/services/webpush.ts) — server push dispatch (Session 4)
+- `app/api/notifications/subscribe/`, `unsubscribe/`, `settings/`, `test/` — push subscription mgmt
+- DB tables: `notifications`, `push_subscriptions`, `push_delivery_log`, `notification_settings`
+
+**Data sources:** Local actions + server-side dispatchers (whale alerts, price targets, etc).
+
+**Architecture pattern:**
+- **Local-first** — notifications added via `addLocalNotification`, persisted to localStorage (max 100).
+- **Server sync** — also POSTed to `/api/notifications`, Supabase persistence.
+- **Bell dropdown** merges local + Supabase.
+- **Push subscription** — Service Worker + VAPID, fully wired.
+- **Read state** persisted both locally and server.
+
+**Performance characteristics:** Bell polls every 120s; push delivery is server-side via webpush.
+
+**UX quality: 7/10.** Bell + count badge + dropdown are standard and functional. Mark-all-read works.
+
+**Backend quality: 7/10.** Real push, real persistence, real delivery log. Solid for Session 4 work.
+
+**What works well:**
+- Push wired end-to-end.
+- Local-first + Supabase merge.
+- Read state.
+- Mark-all-read.
+- Multi-source notifications (alert / swap / security / etc).
+
+**What is weak or missing:**
+- **No notification grouping** — 3 whale events = 3 dropdown items.
+- **No notification archive view** (separate page).
+- **No notification preferences UI** for which types user wants.
+- **No "snooze" / "do not disturb"** schedule.
+- **No SMS or Telegram delivery** beyond browser push.
+- **No notification deep-link** — clicking opens the dropdown but doesn't always navigate.
+- **120s poll** is high latency.
+
+### B) Industry Standard Comparison
+
+**Coinbase notifications:** Real-time push, grouped, deep-linked, multi-channel.
+
+**Discord:** Per-channel mute, snooze, DND schedule.
+
+**Pattern:** Multi-channel + grouping + DND.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Real-time delivery via SSE** instead of 120s poll.
+2. **Grouping** ("3 whale moves").
+3. **DND schedule.**
+4. **Telegram + SMS delivery** (for Pro/Max).
+5. **Per-type preferences UI.**
+6. **Deep-link** click action.
+7. **Notification archive page.**
+
+### D) Priority and Effort
+
+- **Current score: 7/10.**
+- **Effort to 9/10: Medium (1.5 weeks).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| SSE notification stream | `app/api/notifications/stream/route.ts` (new) | None |
+| Grouping | Client-side reducer | None |
+| DND schedule | `notification_settings.dnd_window` | Existing table |
+| Telegram delivery | `lib/services/telegram.ts` (extend) | Bot token |
+| Per-type preferences | `app/settings/notifications/page.tsx` (extend) | Existing |
+| Deep-link | Add `link` field to notification, navigate on click | Schema add |
+| Archive page | `app/dashboard/notifications/page.tsx` (new) | None |
+
+**Acceptance criteria:** Notifications appear within 5s of server dispatch (SSE); grouping reduces dropdown clutter; DND honored; Telegram delivery functional for opted-in users.
+
+---
+
+## Feature 26 — Watchlist
+
+### A) Current State Deep Dive
+
+**Files implementing it:**
+- [components/MarketDashboard.tsx](../components/MarketDashboard.tsx) — toggle + view (lines 86-200ish)
+- [components/market/WatchlistGrid.tsx](../components/market/WatchlistGrid.tsx), [WatchlistCard.tsx](../components/market/WatchlistCard.tsx), [WatchlistEmpty.tsx](../components/market/WatchlistEmpty.tsx)
+- DB table: `watchlist` (Session 2)
+
+**Data sources:** Supabase `watchlist` table + local cache.
+
+**Architecture pattern:** Local-first — load from localStorage immediately, then sync from Supabase. Toggle writes to both.
+
+**Performance characteristics:** Fast.
+
+**UX quality: 6/10.** Star toggle on every market row is good. Watchlist tab in MarketDashboard switches views. Card/grid layout looks fine.
+
+**Backend quality: 7/10.** Local-first + Supabase sync done correctly (Session 2 + 4).
+
+**What works well:**
+- Local-first.
+- Persistent across devices.
+- Toggle-on-row UX.
+
+**What is weak or missing:**
+- **No grouping / lists** ("DeFi watchlist," "Memecoins watchlist").
+- **No alerts wiring** ("alert me on any watchlist token >5% move").
+- **No public sharing.**
+- **No notes per token** ("waiting for $10 to enter").
+- **No movement digest** ("here's how your watchlist did today").
+
+### B) Industry Standard Comparison
+
+**Yahoo Finance:** Multiple watchlists, sharing, notes, alerts.
+
+**TradingView:** Color-coded watchlists, alerts per item.
+
+**CoinMarketCap:** Multiple lists, watchlist sharing.
+
+**Pattern:** Multi-list + alerts + notes + sharing. We have a flat list.
+
+### C) Next-Gen Recommendations
+
+**Highest leverage:**
+1. **Multiple watchlists with names/colors.**
+2. **Bulk alert** ("alert me when any watchlist token moves >10%").
+3. **Daily digest.**
+4. **Notes.**
+5. **Sharing.**
+
+### D) Priority and Effort
+
+- **Current score: 6/10.**
+- **Effort to 9/10: Small-Medium (1 week).**
+
+### E) Session 5 Work Items
+
+| Item | Files | APIs / Tables |
+|---|---|---|
+| Multi-list | Add `category` to `watchlist` schema, UI | Schema |
+| Bulk alert | Reuse alerts engine | None |
+| Daily digest | Reuse email | None |
+| Notes | Add `note` column | Schema |
+| Sharing | `app/w/[slug]/page.tsx` (new) | `watchlist_shares` table |
+
+**Acceptance criteria:** Multiple named watchlists; bulk alert per list; shareable public list; per-token notes.
+
+---
