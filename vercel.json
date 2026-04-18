@@ -15,6 +15,7 @@
     { "path": "/api/cron/dca-executor", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/stop-loss-monitor", "schedule": "*/1 * * * *" },
     { "path": "/api/cron/whale-ranking-refresh", "schedule": "0 */4 * * *" },
-    { "path": "/api/cron/copy-trade-monitor", "schedule": "*/1 * * * *" }
+    { "path": "/api/cron/copy-trade-monitor", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/pending-trades-cleanup", "schedule": "*/5 * * * *" }
   ]
 }
