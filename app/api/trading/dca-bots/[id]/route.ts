@@ -29,7 +29,8 @@ interface PatchBody {
   min_price_usd?: number | null;
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const {
     data: { user },
@@ -54,14 +55,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { error } = await supabase
     .from("dca_bots")
     .update(update)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const {
     data: { user },
@@ -72,7 +74,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
   const { error } = await supabase
     .from("dca_bots")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

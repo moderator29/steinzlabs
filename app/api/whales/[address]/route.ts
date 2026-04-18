@@ -6,8 +6,9 @@ export const runtime = "nodejs";
 
 export const GET = withTierGate("pro", async (
   request: NextRequest,
-  { params }: { params: { address: string } },
+  { params }: { params: Promise<{ address: string }> },
 ) => {
+  const { address } = await params;
   const chain = request.nextUrl.searchParams.get("chain");
   const supabase = getSupabaseAdmin();
 
@@ -15,7 +16,7 @@ export const GET = withTierGate("pro", async (
     let q = supabase
       .from("whales")
       .select("*")
-      .eq("address", params.address)
+      .eq("address", address)
       .eq("is_active", true);
     if (chain) q = q.eq("chain", chain);
     const { data: whale } = await q.maybeSingle();
@@ -26,13 +27,13 @@ export const GET = withTierGate("pro", async (
       supabase
         .from("whale_activity")
         .select("*")
-        .eq("whale_address", params.address)
+        .eq("whale_address", address)
         .order("timestamp", { ascending: false })
         .limit(50),
       supabase
         .from("user_whale_follows")
         .select("user_id", { count: "exact", head: true })
-        .eq("whale_address", params.address),
+        .eq("whale_address", address),
     ]);
 
     return NextResponse.json({
