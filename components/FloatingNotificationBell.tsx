@@ -1,22 +1,15 @@
 'use client';
 
 /**
- * FloatingNotificationBell — renders ONLY on /dashboard and /dashboard/profile
- * per product spec. Every other route returns null (landing, trading, whale
- * tracker, copy trading, clusters, etc.).
+ * FloatingNotificationBell — fixed-position bell shown ONLY on the main
+ * dashboard (/dashboard) and profile (/dashboard/profile, /profile) per
+ * product spec. Any other route renders nothing.
  */
 
 import { usePathname } from 'next/navigation';
 import NotificationBell from '@/components/NotificationBell';
 
-const ALLOWED = new Set([
-  '/dashboard',
-  '/dashboard/',
-  '/dashboard/profile',
-  '/dashboard/profile/',
-  '/profile',
-  '/profile/',
-]);
+const ALLOWED = new Set(['/dashboard', '/dashboard/', '/dashboard/profile', '/dashboard/profile/', '/profile', '/profile/']);
 
 export default function FloatingNotificationBell() {
   const pathname = usePathname();
