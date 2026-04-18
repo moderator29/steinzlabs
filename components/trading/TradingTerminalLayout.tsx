@@ -17,10 +17,23 @@ type BottomTab = "orders" | "history" | "positions" | "dca" | "stop";
 const DEFAULT_CHAIN = "ethereum";
 const DEFAULT_TOKEN = "bitcoin";
 
-export function TradingTerminalLayout() {
-  const [chain, setChain] = useState<string>(DEFAULT_CHAIN);
-  const [token, setToken] = useState<string>(DEFAULT_TOKEN);
-  const [symbol, setSymbol] = useState<string>("BTC");
+interface TradingTerminalLayoutProps {
+  initialChain?: string;
+  initialToken?: string;
+  initialSymbol?: string;
+  /** When false, hides the built-in TokenSelector (used by the /market/[chain]/[address] route where the top bar owns the identity). */
+  showTokenSelector?: boolean;
+}
+
+export function TradingTerminalLayout({
+  initialChain,
+  initialToken,
+  initialSymbol,
+  showTokenSelector = true,
+}: TradingTerminalLayoutProps = {}) {
+  const [chain, setChain] = useState<string>(initialChain ?? DEFAULT_CHAIN);
+  const [token, setToken] = useState<string>(initialToken ?? DEFAULT_TOKEN);
+  const [symbol, setSymbol] = useState<string>(initialSymbol ?? "BTC");
   const [tf, setTf] = useState<Timeframe>("1h");
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [indicators, setIndicators] = useState<IndicatorConfig>({ ema21: true, ema50: true, volume: true });
@@ -29,25 +42,27 @@ export function TradingTerminalLayout() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-[#0A0E1A] text-white">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-800 bg-slate-900/30">
-        <TokenSelector
-          chain={chain}
-          token={token}
-          symbol={symbol}
-          onChange={(c, t, s) => {
-            setChain(c);
-            setToken(t);
-            setSymbol(s);
-          }}
-        />
-        <div className="hidden md:flex items-center gap-4 text-xs font-mono text-slate-400">
-          <Stat label="24h" value="—" />
-          <Stat label="Vol" value="—" />
-          <Stat label="MCap" value="—" />
-          <Stat label="Liq" value="—" />
+      {/* Top bar (hidden when parent owns identity) */}
+      {showTokenSelector && (
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-800 bg-slate-900/30">
+          <TokenSelector
+            chain={chain}
+            token={token}
+            symbol={symbol}
+            onChange={(c, t, s) => {
+              setChain(c);
+              setToken(t);
+              setSymbol(s);
+            }}
+          />
+          <div className="hidden md:flex items-center gap-4 text-xs font-mono text-slate-400">
+            <Stat label="24h" value="—" />
+            <Stat label="Vol" value="—" />
+            <Stat label="MCap" value="—" />
+            <Stat label="Liq" value="—" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main area */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
