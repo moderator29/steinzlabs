@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, cronResponse } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
+import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -156,8 +157,13 @@ export async function GET(request: NextRequest) {
         continue;
       }
       const spentToday = spentMap.get(follower.user_id) ?? 0;
-      const sizeUsd = Math.min(Number(rule.max_per_trade_usd), Math.max(0, Number(rule.daily_cap_usd) - spentToday));
-      if (sizeUsd <= 0) {
+      const sizeUsd = Math.min(
+        Number(rule.max_per_trade_usd),
+        Math.max(0, Number(rule.daily_cap_usd) - spentToday),
+      );
+      // Daily-cap gate only applies to buys (sell exits are independent of
+      // the user's USD buy budget).
+      if (act.action !== "sell" && sizeUsd <= 0) {
         ruleBlocked++;
         continue;
       }
@@ -176,10 +182,37 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Direction: if whale sold, we skip (we only copy buys by default).
-      if (act.action === "sell") {
-        ruleBlocked++;
-        continue;
+      // Direction branch: buy copies the whale; sell exits the user's
+      // position entirely (v1 policy: full exit on whale sell). Sell path
+      // skips when user doesn't hold the token or has no wallet on chain.
+      const isSell = act.action === "sell";
+      let fromTokenAddress: string;
+      let fromTokenSymbol: string | null;
+      let toTokenAddress: string;
+      let toTokenSymbol: string | null;
+      let amountIn: string;
+
+      if (isSell) {
+        const sizing = await sizeCopySell({
+          userId: follower.user_id,
+          chain: act.chain,
+          tokenAddress: act.token_address,
+        });
+        if (!sizing) {
+          ruleBlocked++;
+          continue;
+        }
+        fromTokenAddress = act.token_address;
+        fromTokenSymbol = act.token_symbol;
+        toTokenAddress = usdcAddr;
+        toTokenSymbol = "USDC";
+        amountIn = sizing.amountInRaw;
+      } else {
+        fromTokenAddress = usdcAddr;
+        fromTokenSymbol = "USDC";
+        toTokenAddress = act.token_address;
+        toTokenSymbol = act.token_symbol;
+        amountIn = String(sizeUsd);
       }
 
       const { data: inserted } = await admin
@@ -190,8 +223,8 @@ export async function GET(request: NextRequest) {
           source_tx_hash: act.tx_hash,
           token_address: act.token_address,
           token_symbol: act.token_symbol,
-          action: "buy",
-          amount_usd: sizeUsd,
+          action: isSell ? "sell" : "buy",
+          amount_usd: isSell ? null : sizeUsd,
           status: "pending",
         })
         .select("id")
@@ -201,11 +234,11 @@ export async function GET(request: NextRequest) {
         userId: follower.user_id,
         chain: act.chain,
         walletSource,
-        fromTokenAddress: usdcAddr,
-        fromTokenSymbol: "USDC",
-        toTokenAddress: act.token_address,
-        toTokenSymbol: act.token_symbol,
-        amountIn: String(sizeUsd),
+        fromTokenAddress,
+        fromTokenSymbol,
+        toTokenAddress,
+        toTokenSymbol,
+        amountIn,
         slippageBps: rule.max_slippage_bps ?? 200,
         reason: "copy_trade",
         sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
@@ -213,7 +246,9 @@ export async function GET(request: NextRequest) {
       });
 
       if (result.awaitingUserConfirmation) {
-        spentMap.set(follower.user_id, spentToday + sizeUsd);
+        if (!isSell) {
+          spentMap.set(follower.user_id, spentToday + sizeUsd);
+        }
         triggered++;
       } else if (result.securityBlocked) {
         if (inserted) {
