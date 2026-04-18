@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-export async function GET(request: NextRequest, { params }: { params: { address: string } }) {
+export const GET = withTierGate("pro", async (
+  request: NextRequest,
+  { params }: { params: { address: string } },
+) => {
   const chain = request.nextUrl.searchParams.get("chain");
   const supabase = getSupabaseAdmin();
 
@@ -40,4 +44,4 @@ export async function GET(request: NextRequest, { params }: { params: { address:
     console.error("[api/whales/:addr]", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
-}
+});

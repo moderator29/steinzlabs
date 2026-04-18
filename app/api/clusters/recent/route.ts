@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export const GET = withTierGate("pro", async (_request: NextRequest) => {
   try {
     const edges = await cacheWithFallback("clusters:recent", 60, async () => {
       const supabase = getSupabaseAdmin();
@@ -21,4 +22,4 @@ export async function GET() {
     console.error("[api/clusters/recent]", err);
     return NextResponse.json({ edges: [] });
   }
-}
+});

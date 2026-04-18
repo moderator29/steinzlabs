@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ function getSupabase() {
   );
 }
 
-export async function GET() {
+export const GET = withTierGate("mini", async () => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,7 +32,7 @@ export async function GET() {
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ rules: data ?? [] });
-}
+});
 
 interface RuleBody {
   whale_address: string;
@@ -46,7 +47,7 @@ interface RuleBody {
   enabled?: boolean;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withTierGate("mini", async (request: NextRequest) => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -80,4 +81,4 @@ export async function POST(request: NextRequest) {
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

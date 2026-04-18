@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-export async function GET(request: NextRequest) {
+export const GET = withTierGate("pro", async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
   const chain = sp.get("chain");
   const entityType = sp.get("entity_type");
@@ -38,4 +39,4 @@ export async function GET(request: NextRequest) {
     console.error("[api/whales]", err);
     return NextResponse.json({ error: "Failed to load whales" }, { status: 500 });
   }
-}
+});

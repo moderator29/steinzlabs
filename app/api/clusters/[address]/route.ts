@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: NextRequest, { params }: { params: { address: string } }) {
+export const GET = withTierGate("pro", async (
+  _request: NextRequest,
+  { params }: { params: { address: string } },
+) => {
   const supabase = getSupabaseAdmin();
   const addr = params.address.toLowerCase();
   try {
@@ -79,4 +83,4 @@ export async function GET(_request: NextRequest, { params }: { params: { address
     console.error("[api/clusters]", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
-}
+});
