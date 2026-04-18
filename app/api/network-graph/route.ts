@@ -189,7 +189,6 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
         return d.result ? { ...d.result, timestamp: sig.blockTime } : null;
       })
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const txs = (txDetails as any[])
       .filter((r: any) => r.status === 'fulfilled' && r.value !== null)
       .map((r: any) => r.value);

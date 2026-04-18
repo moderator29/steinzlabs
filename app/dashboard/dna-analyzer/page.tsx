@@ -511,7 +511,7 @@ export default function DNAAnalyzerPage() {
                 <AlertTriangle className="w-5 h-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold text-sm mb-1 text-[#F59E0B]">Use Token Scanner instead</div>
-                  <p className="text-sm text-gray-400">Smart contracts don't have trading behavior or portfolio history. To audit a contract's security and risk factors, use our Token Scanner.</p>
+                  <p className="text-sm text-gray-400">Smart contracts don&apos;t have trading behavior or portfolio history. To audit a contract&apos;s security and risk factors, use our Token Scanner.</p>
                 </div>
               </div>
             </div>

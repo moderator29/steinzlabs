@@ -25,7 +25,7 @@ export function DocsSection05() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Wallet Intelligence</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        NAKA LABS turns raw wallet addresses into complete behavioral profiles. Understand how any wallet trades, how it performs, what category it falls into, and whether it's connected to other known wallets — all from one lookup.
+        NAKA LABS turns raw wallet addresses into complete behavioral profiles. Understand how any wallet trades, how it performs, what category it falls into, and whether it&apos;s connected to other known wallets — all from one lookup.
       </p>
 
       {/* DNA Analyzer */}

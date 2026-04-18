@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { BackButton } from "@/components/ui/BackButton";
 import { NakaLoader } from "@/components/brand/NakaLoader";
@@ -216,12 +217,12 @@ export default function WhaleTrackerPage() {
             </span>
           </div>
           <div className="ml-auto">
-            <a
+            <Link
               href="/dashboard/whale-tracker/submit"
               className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors font-semibold"
             >
               Submit whale
-            </a>
+            </Link>
           </div>
         </div>
 

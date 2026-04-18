@@ -44,7 +44,7 @@ export function DocsSection04() {
             <div key={c.q} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
               <div className="flex items-start gap-2 mb-2">
                 <MessageSquare className="w-3.5 h-3.5 text-[#4D6BFF] flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-white font-medium">"{c.q}"</span>
+                <span className="text-sm text-white font-medium">&quot;{c.q}&quot;</span>
               </div>
               <div className="flex items-start gap-2 ml-5">
                 <Brain className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
@@ -73,7 +73,7 @@ export function DocsSection04() {
           <span className="text-sm font-semibold text-white">Pro tip</span>
         </div>
         <p className="text-xs text-gray-400 leading-relaxed">
-          VTX AI works best with specific questions. Instead of "what should I buy?", try "which wallets with 70%+ win rates have accumulated ETH in the last 48 hours?" — the more specific, the more actionable the answer.
+          VTX AI works best with specific questions. Instead of &quot;what should I buy?&quot;, try &quot;which wallets with 70%+ win rates have accumulated ETH in the last 48 hours?&quot; — the more specific, the more actionable the answer.
         </p>
       </div>
     </section>

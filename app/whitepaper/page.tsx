@@ -117,7 +117,7 @@ export default function WhitepaperPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0A1EFF] to-[#10B981]">Whitepaper</span>
             </h1>
             <p className="text-gray-400 text-base sm:text-lg leading-relaxed max-w-2xl">
-              The institutional-grade on-chain intelligence operating system that puts professional-level crypto research, security, and trading tools in every user's hands.
+              The institutional-grade on-chain intelligence operating system that puts professional-level crypto research, security, and trading tools in every user&apos;s hands.
             </p>
             <div className="flex flex-wrap gap-3 mt-6">
               <a href="#summary" className="inline-flex items-center gap-2 text-sm bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-4 py-2.5 rounded-xl font-semibold transition-colors">
@@ -198,9 +198,9 @@ export default function WhitepaperPage() {
           <WpSection id="intelligence" n="05" title="Intelligence Layer">
             <p>The intelligence layer is the cognitive core of NAKA LABS. It processes thousands of on-chain events per minute and applies AI to surface only the highest-signal information.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Context Feed</h3>
-            <p>A real-time stream of classified on-chain signals — BULLISH, HYPE, BEAR, or NEUTRAL — each carrying a Trust Score from 0–100. The feed is personalized to the user's watched wallets and chains, powered by SSE streaming for true real-time delivery.</p>
+            <p>A real-time stream of classified on-chain signals — BULLISH, HYPE, BEAR, or NEUTRAL — each carrying a Trust Score from 0–100. The feed is personalized to the user&apos;s watched wallets and chains, powered by SSE streaming for true real-time delivery.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">VTX AI Engine</h3>
-            <p>Powered by Anthropic's Claude and given direct tool access to live on-chain data APIs. Users ask questions in plain English and receive answers grounded in real-time blockchain data. VTX AI can analyze wallets, audit contracts, explain transactions, identify trends, and validate investment theses — all without the user needing to understand the underlying data infrastructure.</p>
+            <p>Powered by Anthropic&apos;s Claude and given direct tool access to live on-chain data APIs. Users ask questions in plain English and receive answers grounded in real-time blockchain data. VTX AI can analyze wallets, audit contracts, explain transactions, identify trends, and validate investment theses — all without the user needing to understand the underlying data infrastructure.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Trading DNA Analyzer</h3>
             <p>A complete behavioral fingerprint for any wallet. The analyzer processes every trade a wallet has made and produces: win rate, total P&L, average holding time, best/worst trade, trading archetype classification, and an Alpha Score representing overall quality of decision-making.</p>
             <p>Archetypes: <span className="text-[#F59E0B]">Diamond Hands</span>, <span className="text-[#0A1EFF]">Scalper</span>, <span className="text-[#EF4444]">Degen</span>, <span className="text-[#8B5CF6]">Whale Follower</span>, <span className="text-[#10B981]">Holder</span>, New Wallet, Inactive.</p>
@@ -222,9 +222,9 @@ export default function WhitepaperPage() {
               ))}
             </div>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Shadow Guardian</h3>
-            <p>Before every trade executes, Shadow Guardian simulates the transaction on-chain. If the token's contract prevents selling — the hallmark of a honeypot — the trade is blocked and the user is warned. This simulation runs in under 200ms and has no cost to the user.</p>
+            <p>Before every trade executes, Shadow Guardian simulates the transaction on-chain. If the token&apos;s contract prevents selling — the hallmark of a honeypot — the trade is blocked and the user is warned. This simulation runs in under 200ms and has no cost to the user.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Contract Analyzer</h3>
-            <p>Powered by VTX AI, the Contract Analyzer decodes any smart contract's bytecode and produces a plain-English summary of what the contract does. It flags dangerous functions: mint, pause, blacklist, fee manipulation, proxy upgrades, and backdoor withdrawal mechanisms.</p>
+            <p>Powered by VTX AI, the Contract Analyzer decodes any smart contract&apos;s bytecode and produces a plain-English summary of what the contract does. It flags dangerous functions: mint, pause, blacklist, fee manipulation, proxy upgrades, and backdoor withdrawal mechanisms.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Domain Shield</h3>
             <p>Phishing attacks are responsible for a significant portion of crypto theft. Domain Shield cross-references URLs against known scam databases, checks domain registration age, SSL validity, and pattern similarity to known legitimate sites — warning users before they interact with fraudulent URLs.</p>
             <Callout color="#EF4444" icon={AlertTriangle} title="Security disclaimer">
@@ -253,7 +253,7 @@ export default function WhitepaperPage() {
             <h3 className="text-base font-bold text-white mt-6 mb-3">Convergence Signal</h3>
             <p>When two or more Smart Money wallets buy the same token within a configurable time window, the platform emits a Convergence Signal. Historically, convergence signals have preceded significant price moves in the same direction. Users can set alerts to trigger on any convergence event across their followed chains.</p>
             <h3 className="text-base font-bold text-white mt-6 mb-3">Whale Tracker</h3>
-            <p>Whale wallets are classified into four tiers: MEGA ($10M+ 7-day volume), LARGE ($1M–$10M), MID ($100K–$1M), and SMALL. The Live Feed tab streams their transactions in real time via SSE. From any whale profile, users can initiate a Copy Trade with a built-in 15-second confirmation window to review the whale's track record.</p>
+            <p>Whale wallets are classified into four tiers: MEGA ($10M+ 7-day volume), LARGE ($1M–$10M), MID ($100K–$1M), and SMALL. The Live Feed tab streams their transactions in real time via SSE. From any whale profile, users can initiate a Copy Trade with a built-in 15-second confirmation window to review the whale&apos;s track record.</p>
           </WpSection>
 
           {/* Section 09 — Portfolio */}

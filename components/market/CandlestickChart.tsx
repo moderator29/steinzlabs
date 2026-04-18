@@ -21,8 +21,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
   useEffect(() => {
     if (loading || !data.length || typeof window === 'undefined') return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let chart: any = null;
+    let chart: any = null; // lightweight-charts IChartApi type is incompatible with dynamic import
 
     const init = async () => {
       const { createChart, ColorType, CrosshairMode } = await import('lightweight-charts');
