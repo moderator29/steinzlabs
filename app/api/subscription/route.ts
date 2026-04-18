@@ -12,18 +12,25 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
+    // FIX 5A.1: was reading `subscription_tier` column (doesn't exist) and returning 'FREE' uppercase —
+    // DB column is `tier` with lowercase enum values; mismatch is why paid users saw "Upgrade" button.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('subscription_tier, subscription_status')
+      .select('tier, tier_expires_at, verified_badge')
       .eq('id', user.id)
       .single();
 
-    const tier = profile?.subscription_tier || 'FREE';
-    const features = TIER_FEATURES[tier as keyof typeof TIER_FEATURES] || TIER_FEATURES.FREE;
+    const tier = (profile?.tier || 'free').toLowerCase();
+    const upperTier = tier.toUpperCase();
+    const features =
+      TIER_FEATURES[upperTier as keyof typeof TIER_FEATURES] || TIER_FEATURES.FREE;
 
     return NextResponse.json({
-      tier,
-      status: profile?.subscription_status || 'active',
+      tier: upperTier,
+      status: 'active',
+      tierLower: tier,
+      tierExpiresAt: profile?.tier_expires_at || null,
+      verifiedBadge: profile?.verified_badge || null,
       features,
       pricing: TIER_PRICING,
     });
