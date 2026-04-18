@@ -121,6 +121,12 @@ export function useAuthProvider(): AuthContextType {
           }
 
           if (session?.user) {
+            // FIX 5A.1: was cross-account localStorage leak, now syncs user id
+            // and wipes prior user's wallet/watchlist keys when the id changes.
+            import('@/lib/auth/userScopedStorage').then(({ syncCurrentUser }) => {
+              syncCurrentUser(session.user.id);
+            }).catch(() => {});
+
             setSupabaseUser(session.user);
             // Set basic user immediately so auth guards pass right away
             setUser({
@@ -136,6 +142,10 @@ export function useAuthProvider(): AuthContextType {
               identify(session.user.id, { email: session.user.email });
             }).catch(() => { /* PostHog not configured */ });
           } else {
+            // FIX 5A.1: wipe user-scoped storage on sign-out (prevents leak to next user)
+            import('@/lib/auth/userScopedStorage').then(({ syncCurrentUser }) => {
+              syncCurrentUser(null);
+            }).catch(() => {});
             setUser(null);
             setSupabaseUser(null);
             setLoading(false);
@@ -162,6 +172,11 @@ export function useAuthProvider(): AuthContextType {
       }
       setUser(null);
       setSupabaseUser(null);
+      // FIX 5A.1: wipe user-scoped keys defensively (onAuthStateChange also wipes but this is immediate)
+      try {
+        const { syncCurrentUser } = await import('@/lib/auth/userScopedStorage');
+        syncCurrentUser(null);
+      } catch { /* storage unavailable */ }
       const { resetUser } = await import('@/lib/posthog');
       resetUser();
     } catch (err) {
