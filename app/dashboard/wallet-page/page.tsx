@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported } from '@/lib/notifications';
@@ -201,6 +202,7 @@ function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
 const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_CHAINS[0];
 
 export default function WalletPage() {
+  const router = useRouter();
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
@@ -219,6 +221,15 @@ export default function WalletPage() {
   const [defaultWalletAddress, setDefaultWalletAddress] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [walletToDelete, setWalletToDelete] = useState<string>('');
+  const [assetSearch, setAssetSearch] = useState('');
+  const [assetSort, setAssetSort] = useState<'value' | 'change' | 'alpha' | 'recent'>('value');
+  const [chainFilter, setChainFilter] = useState('all');
+  const [showSecuritySection, setShowSecuritySection] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<{ id: string; type: string; from?: string; to?: string; amount: string; symbol: string; valueUsd: string; timestamp: number; txHash?: string; chain?: string }[]>([]);
+  const [displayBalance, setDisplayBalance] = useState(0);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('steinz_wallets');
@@ -310,6 +321,44 @@ export default function WalletPage() {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
 
+  // CountUp animation: runs whenever walletData changes
+  useEffect(() => {
+    const target = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
+    if (target === 0) { setDisplayBalance(0); return; }
+    const duration = 800;
+    const steps = 40;
+    const step = target / steps;
+    let current = 0;
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= target) { setDisplayBalance(target); clearInterval(interval); }
+      else setDisplayBalance(current);
+    }, duration / steps);
+    return () => clearInterval(interval);
+  }, [walletData]);
+
+  // Load recent activity from localStorage swap history
+  useEffect(() => {
+    const raw = localStorage.getItem('steinz_swap_history');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { id: string; type: string; from: string; to: string; fromAmount: number; toAmount: number; chain: string; txHash: string; timestamp: number; address: string }[];
+        setRecentActivity(parsed.slice(0, 5).map(r => ({
+          id: r.id,
+          type: 'swap',
+          from: r.from,
+          to: r.to,
+          amount: r.fromAmount?.toString() || '0',
+          symbol: r.from || '',
+          valueUsd: '0',
+          timestamp: r.timestamp,
+          txHash: r.txHash,
+          chain: r.chain,
+        })));
+      } catch { /* ignore */ }
+    }
+  }, []);
+
   const MAX_WALLETS = 5;
 
   const handleWalletCreated = (wallet: StoredWallet) => {
@@ -385,384 +434,401 @@ export default function WalletPage() {
     />
   );
 
+  const CHAIN_FILTER_PILLS = [
+    { id: 'all', label: 'All' },
+    { id: 'ethereum', label: 'Ethereum' },
+    { id: 'solana', label: 'Solana' },
+    { id: 'base', label: 'Base' },
+    { id: 'arbitrum', label: 'Arbitrum' },
+    { id: 'polygon', label: 'Polygon' },
+    { id: 'bnb', label: 'BSC' },
+  ];
+
+  const allHoldings = (() => {
+    let tokens = [...(walletData?.holdings || [])];
+    if (assetSearch) tokens = tokens.filter(t => t.symbol.toLowerCase().includes(assetSearch.toLowerCase()) || t.name.toLowerCase().includes(assetSearch.toLowerCase()));
+    if (assetSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+    else if (assetSort === 'alpha') tokens.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    else if (assetSort === 'change') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
+    return tokens;
+  })();
+
+  const pnlAmount = currentBalance * (priceChange / 100);
+  const pnlPositive = priceChange >= 0;
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText(activeWallet?.address || '');
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
+
+  const getExplorerUrl = (txHash: string, chain?: string) => {
+    if (chain === 'solana') return `https://solscan.io/tx/${txHash}`;
+    if (chain === 'base') return `https://basescan.org/tx/${txHash}`;
+    if (chain === 'arbitrum') return `https://arbiscan.io/tx/${txHash}`;
+    return `https://etherscan.io/tx/${txHash}`;
+  };
+
+  const formatTimeAgo = (ts: number) => {
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return `${Math.floor(diff / 86400000)}d ago`;
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-slate-950 text-white pb-28">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 max-w-lg mx-auto px-4">
+
         {wallets.length === 0 ? (
-          <div className="px-4 pt-8">
-            <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center shadow-2xl shadow-[#0A1EFF]/20 border border-[#0A1EFF]/20">
-                <SteinzLogo size={56} />
+          /* ── EMPTY STATE ────────────────────────────────── */
+          <div className="pt-12 text-center">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-600/20 to-violet-600/20 rounded-3xl flex items-center justify-center shadow-2xl border border-blue-500/20">
+              <SteinzLogo size={56} />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Naka Wallet</h1>
+            <p className="text-slate-400 text-sm mb-8">Non-custodial. Your keys, your crypto.</p>
+            <div className="space-y-3 mb-6">
+              <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-blue-600 to-violet-600 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                <Plus className="w-5 h-5" /> Create New Wallet
+              </button>
+              <button onClick={() => setView('import')} className="w-full py-4 bg-slate-900 border border-slate-800 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-slate-800/80">
+                <Download className="w-5 h-5" /> Import Existing Wallet
+              </button>
+            </div>
+            <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-left">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-semibold text-emerald-400">100% Non-Custodial</span>
               </div>
-              <h1 className="text-2xl font-heading font-bold mb-2">STEINZ Wallet</h1>
-              <p className="text-gray-400 text-sm mb-8">Your gateway to multi-chain crypto</p>
-
-              <div className="bg-[#111827] rounded-2xl border border-white/5 p-5 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Globe className="w-4 h-4 text-[#0A1EFF]" />
-                  <span className="text-sm font-bold">12 Chains Supported</span>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {SUPPORTED_CHAINS.map(chain => (
-                    <div key={chain.id} className="flex flex-col items-center gap-1.5 p-2">
-                      <ChainLogo chain={chain} size={32} />
-                      <span className="text-[10px] text-gray-400 text-center leading-tight">{chain.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20">
-                  <Plus className="w-5 h-5" /> Create New Wallet
-                </button>
-                <button onClick={() => setView('import')} className="w-full py-4 bg-[#111827] border border-white/10 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-white/5">
-                  <Download className="w-5 h-5" /> Import Wallet
-                </button>
-              </div>
-
-              <div className="mt-6 p-4 bg-[#10B981]/5 rounded-2xl border border-[#10B981]/10">
-                <div className="flex items-center gap-2 mb-1">
-                  <Shield className="w-4 h-4 text-[#10B981]" />
-                  <span className="text-xs font-semibold text-[#10B981]">Non-Custodial & Secure</span>
-                </div>
-                <p className="text-[11px] text-gray-500">Your keys stay on your device. STEINZ never has access to your private keys or funds.</p>
-              </div>
+              <p className="text-[11px] text-slate-500">Your seed phrase and private keys never leave your device. Naka never has access to your funds.</p>
             </div>
           </div>
         ) : (
           <>
-            <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            {/* ── TOP BAR ─────────────────────────────────── */}
+            <div className="flex items-center justify-between pt-4 pb-5">
+              <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                <ArrowLeft className="w-5 h-5 text-slate-400" />
+              </button>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard" className="p-1.5 hover:bg-white/10 rounded-lg">
-                  <ArrowLeft className="w-4 h-4 text-gray-400" />
-                </Link>
-                <button onClick={() => setView('wallet-settings')} className="p-1.5 hover:bg-white/10 rounded-lg">
-                  <Settings className="w-4 h-4 text-gray-400 hover:text-white transition-colors" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                {wallets.length > 1 ? (
+                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">N</div>
+                <span className="text-base font-bold">Naka Wallet</span>
+                {wallets.length > 1 && (
                   <select
-                    className="bg-transparent text-sm font-bold appearance-none cursor-pointer pr-1"
+                    className="bg-transparent text-sm text-slate-400 appearance-none cursor-pointer max-w-[90px] truncate"
                     value={activeWallet?.address}
-                    onChange={(e) => {
-                      const w = wallets.find(w => w.address === e.target.value);
-                      if (w) setActiveWallet(w);
-                    }}
+                    onChange={(e) => { const w = wallets.find(w => w.address === e.target.value); if (w) setActiveWallet(w); }}
                   >
                     {wallets.map(w => (
-                      <option key={w.address} value={w.address} className="bg-[#111827] text-white">
-                        {w.name}{w.address === defaultWalletAddress ? ' ★' : ''}
-                      </option>
+                      <option key={w.address} value={w.address} className="bg-slate-900 text-white">{w.name}</option>
                     ))}
                   </select>
-                ) : (
-                  <span className="text-sm font-bold flex items-center gap-1">
-                    {activeWallet?.name || 'Wallet'}
-                    {activeWallet?.address === defaultWalletAddress && <span className="text-[10px] text-[#0A1EFF]">★</span>}
-                  </span>
                 )}
-                <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{wallets.length}/{MAX_WALLETS}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setHideBalance(!hideBalance)} className="p-1.5 hover:bg-white/10 rounded-lg">
-                  {hideBalance ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
-                </button>
-                <button onClick={() => { if (activeWallet) fetchBalances(activeWallet.address, activeChain); fetchPrices(); }} disabled={loading} className="p-1.5 hover:bg-white/10 rounded-lg">
-                  <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+              <button onClick={() => setView('wallet-settings')} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                <Settings className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* ── HERO BALANCE CARD ────────────────────────── */}
+            <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950/40 border border-slate-800/50 shadow-[0_0_30px_rgba(59,130,246,0.08)] p-6 mb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Total Balance</p>
+                  <div className="flex items-end gap-2 mb-3">
+                    <span className="text-4xl sm:text-5xl font-bold font-mono text-white leading-none">
+                      {hideBalance ? '••••••' : `$${displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </span>
+                  </div>
+                  {!hideBalance && LIVE_CHAINS.includes(activeChain.id) && (
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
+                      pnlPositive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                    }`}>
+                      {pnlPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                      {pnlPositive ? '+' : ''}{pnlAmount >= 0.01 ? `$${pnlAmount.toFixed(2)} ` : ''}{priceChange !== 0 ? `(${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)` : ''} today
+                    </span>
+                  )}
+                  <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+                    <span className="text-[11px] font-mono text-slate-400">
+                      {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
+                    </span>
+                    {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                  </button>
+                </div>
+                <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ml-2 mt-1">
+                  <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
 
-            <div className="px-4 pt-2 pb-4">
-              <div className="text-center mb-5">
-                <p className="text-4xl font-bold font-mono mb-1">
-                  {hideBalance ? '••••••' : (
-                    !LIVE_CHAINS.includes(activeChain.id) ? '--' :
-                    loading ? '...' :
-                    `$${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  )}
-                </p>
-                {LIVE_CHAINS.includes(activeChain.id) && !hideBalance && (
-                  <div className="flex items-center justify-center gap-1.5">
-                    {priceChange !== 0 && (
-                      <>
-                        {priceChange > 0 ? (
-                          <TrendingUp className="w-3.5 h-3.5 text-[#10B981]" />
-                        ) : (
-                          <TrendingDown className="w-3.5 h-3.5 text-[#EF4444]" />
-                        )}
-                        <span className={`text-sm font-medium ${priceChange > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                          {priceChange > 0 ? '+' : ''}{priceChange.toFixed(2)}%
-                        </span>
-                      </>
-                    )}
-                    <span className="text-xs text-gray-500">24h</span>
-                  </div>
-                )}
+            {/* ── 4 ACTION BUTTONS ─────────────────────────── */}
+            <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 mb-5">
+              {[
+                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: '#0A1EFF', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
+                { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: '#10B981', action: () => setView('receive'), enabled: true },
+                { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap'), enabled: true },
+                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: '#F59E0B', action: () => { /* coming soon */ }, enabled: false },
+              ].map(btn => (
                 <button
-                  onClick={() => { navigator.clipboard.writeText(activeWallet?.address || ''); }}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full hover:bg-white/10 transition-all"
+                  key={btn.label}
+                  onClick={btn.action}
+                  disabled={!btn.enabled}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border min-h-[80px] p-3 transition-all duration-200 ${
+                    btn.enabled
+                      ? 'bg-slate-900/80 border-slate-800 hover:bg-slate-800 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-[0_8px_30px_rgba(59,130,246,0.12)] active:scale-95'
+                      : 'bg-slate-900/40 border-slate-800/40 opacity-40 cursor-not-allowed'
+                  }`}
                 >
-                  <span className="text-[11px] font-mono text-gray-400">
-                    {activeWallet?.address.slice(0, 6)}...{activeWallet?.address.slice(-4)}
-                  </span>
-                  <Copy className="w-3 h-3 text-gray-500" />
+                  <div style={{ color: btn.enabled ? btn.color : '#64748b' }}>{btn.icon}</div>
+                  <span className="text-xs font-medium text-slate-300">{btn.label}</span>
+                  {!btn.enabled && <span className="text-[8px] text-slate-600 -mt-1">Soon</span>}
                 </button>
+              ))}
+            </div>
+
+            {/* ── CHAIN FILTER PILLS ───────────────────────── */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4">
+              {CHAIN_FILTER_PILLS.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = SUPPORTED_CHAINS.find(c => c.id === p.id); if (c) setActiveChain(c); } }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
+                    chainFilter === p.id
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                      : 'bg-slate-900/50 text-slate-400 border-slate-800/60 hover:bg-slate-800 hover:text-slate-300'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── SEARCH + SORT BAR ────────────────────────── */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex-1 flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5">
+                <Search className="w-4 h-4 text-slate-500 shrink-0" />
+                <input
+                  value={assetSearch}
+                  onChange={e => setAssetSearch(e.target.value)}
+                  placeholder="Search assets..."
+                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder-slate-600 text-white"
+                />
               </div>
+              <select
+                value={assetSort}
+                onChange={e => setAssetSort(e.target.value as typeof assetSort)}
+                className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-400 focus:outline-none focus:border-blue-500/40 shrink-0"
+              >
+                <option value="value">By Value</option>
+                <option value="change">By Change</option>
+                <option value="alpha">A–Z</option>
+              </select>
+            </div>
 
-              <div className="flex justify-center gap-4 mb-6">
-                {EVM_LIVE_CHAINS.includes(activeChain.id) ? (
-                  <>
-                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#0A1EFF" onClick={() => setView('send')} />
-                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => setView('receive')} />
-                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
-                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
-                  </>
-                ) : activeChain.id === 'solana' ? (
-                  <>
-                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#9945FF" onClick={() => {}} disabled soon />
-                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => setView('receive')} />
-                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
-                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
-                  </>
-                ) : (
-                  <>
-                    <ActionButton icon={<ArrowUpRight className="w-5 h-5" />} label="Send" color="#627EEA" onClick={() => {}} disabled soon />
-                    <ActionButton icon={<ArrowDownLeft className="w-5 h-5" />} label="Receive" color="#10B981" onClick={() => {}} disabled soon />
-                    <ActionButton icon={<Plus className="w-5 h-5" />} label="Buy" color="#F59E0B" onClick={() => {}} disabled />
-                    <ActionButton icon={<Repeat className="w-5 h-5" />} label="Swap" color="#8B5CF6" onClick={() => {}} disabled />
-                  </>
-                )}
-              </div>
-
-              <div className="flex overflow-x-auto gap-2 mb-4 pb-1 scrollbar-hide">
-                {SUPPORTED_CHAINS.map(chain => (
-                  <button
-                    key={chain.id}
-                    onClick={() => setActiveChain(chain)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                      activeChain.id === chain.id
-                        ? 'text-white border-2 bg-white/5'
-                        : 'bg-[#111827] text-gray-400 border border-white/5 hover:border-white/15'
-                    }`}
-                    style={activeChain.id === chain.id ? { borderColor: chain.color } : {}}
-                  >
-                    <ChainLogo chain={chain} size={18} />
-                    {chain.name}
-                    {!LIVE_CHAINS.includes(chain.id) && <span className="text-[8px] text-gray-500 ml-0.5">soon</span>}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-1 mb-4 bg-[#111827] rounded-xl p-1">
-                {(['crypto', 'nfts', 'activity'] as const).map(tab => (
-                  <button key={tab} onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold capitalize transition-all ${
-                      activeTab === tab ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
-                    }`}>
-                    {tab === 'crypto' ? 'Crypto' : tab === 'nfts' ? 'NFTs' : 'Activity'}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === 'crypto' && (
-                <div className="space-y-1">
-                  {LIVE_CHAINS.includes(activeChain.id) ? (
-                    <>
-                      {/* Toolbar: hide small balances + sort */}
-                      <div className="flex items-center justify-between mb-2">
-                        <button
-                          onClick={() => { const v = !hideSmallBalances; setHideSmallBalances(v); localStorage.setItem('steinz_hide_small', String(v)); }}
-                          className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-white transition-colors"
-                        >
-                          <div className={`w-7 h-3.5 rounded-full transition-colors relative ${hideSmallBalances ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}>
-                            <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform ${hideSmallBalances ? 'right-0.5' : 'left-0.5'}`} />
-                          </div>
-                          Hide &lt;$1
-                        </button>
-                        <select
-                          value={tokenSort}
-                          onChange={(e) => { const v = e.target.value as 'value' | 'name' | 'balance'; setTokenSort(v); localStorage.setItem('steinz_token_sort', v); }}
-                          className="bg-[#111827] border border-white/10 rounded-lg px-2 py-0.5 text-[10px] text-gray-400 focus:outline-none focus:border-[#0A1EFF]/30"
-                        >
-                          <option value="value">Sort: Value</option>
-                          <option value="balance">Sort: Balance</option>
-                          <option value="name">Sort: Name</option>
-                        </select>
-                      </div>
-
-                      {loading ? (
-                        <div className="py-8 text-center">
-                          <RotateCcw className="w-6 h-6 text-gray-500 animate-spin mx-auto mb-2" />
-                          <p className="text-xs text-gray-500">Loading balances...</p>
-                        </div>
-                      ) : walletData?.holdings && walletData.holdings.length > 0 ? (
-                        (() => {
-                          let tokens = [...walletData.holdings];
-                          if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1);
-                          if (tokenSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
-                          else if (tokenSort === 'balance') tokens.sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance));
-                          else tokens.sort((a, b) => a.name.localeCompare(b.name));
-                          return tokens.map((token, i) => (
-                            <TokenRow key={i} token={token} chainSymbol={activeChain.symbol} chainColor={activeChain.color} hideBalance={hideBalance} />
-                          ));
-                        })()
+            {/* ── ASSETS LIST ──────────────────────────────── */}
+            <div className="space-y-2 mb-6">
+              {loading ? (
+                <>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-[68px] bg-slate-900/40 border border-slate-800/30 rounded-xl animate-pulse" />
+                  ))}
+                </>
+              ) : allHoldings.length > 0 ? (
+                allHoldings.map((token, i) => {
+                  const val = parseFloat(token.valueUsd || '0');
+                  const bal = parseFloat(token.balance) || 0;
+                  const logoUrl = (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()];
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => router.push(`/dashboard/market/${activeChain.id}/${token.contractAddress || token.symbol}`)}
+                      className="w-full flex items-center gap-4 p-4 bg-slate-900/40 border border-slate-800/30 rounded-xl hover:bg-slate-900/80 hover:border-slate-800/60 hover:translate-x-0.5 transition-all duration-150 group text-left"
+                    >
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={token.symbol} className="w-11 h-11 rounded-full shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       ) : (
-                        <div className="py-8 text-center">
-                          <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
-                            <ChainLogo chain={activeChain} size={28} />
-                          </div>
-                          <p className="text-sm text-gray-400 mb-1">No tokens found</p>
-                          <p className="text-xs text-gray-600">Fund your wallet to get started</p>
-                        </div>
+                        <div className="w-11 h-11 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold shrink-0">{token.symbol.slice(0, 2)}</div>
                       )}
-
-                      <button onClick={() => setView('add-token')} className="w-full mt-3 py-3 border border-dashed border-white/10 rounded-xl text-xs text-gray-500 hover:text-white hover:border-white/20 flex items-center justify-center gap-2 transition-all">
-                        <Plus className="w-3.5 h-3.5" /> Add Custom Token
-                      </button>
-                    </>
-                  ) : (
-                    <div className="py-8 text-center">
-                      <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
-                        <ChainLogo chain={activeChain} size={28} />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="font-bold text-white text-sm">{token.symbol}</p>
+                        <p className="text-xs text-slate-400 truncate">{token.name}</p>
                       </div>
-                      <p className="text-sm text-gray-400">{activeChain.name} support coming soon</p>
+                      <div className="text-right shrink-0">
+                        <p className="font-mono text-white text-sm">{hideBalance ? '••••' : bal.toLocaleString(undefined, { maximumFractionDigits: 6 })} {token.symbol}</p>
+                        <p className="text-xs text-slate-400 font-mono">{hideBalance ? '••••' : val > 0 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-800">
+                    <Wallet className="w-8 h-8 text-slate-600" />
+                  </div>
+                  <p className="text-slate-300 font-semibold mb-1">No assets yet</p>
+                  <p className="text-slate-500 text-sm mb-4">Your Naka Wallet is ready. Add funds to get started.</p>
+                  <div className="flex gap-2 justify-center">
+                    <button onClick={() => setView('receive')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors">Receive</button>
+                    <button disabled className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-slate-400 opacity-60">Buy (soon)</button>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => setView('add-token')} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                <Plus className="w-3.5 h-3.5" /> Add Custom Token
+              </button>
+            </div>
+
+            {/* ── RECENT ACTIVITY ──────────────────────────── */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-white">Recent Activity</h2>
+                <Link href="/dashboard/transactions" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  View All <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
+                {recentActivity.length > 0 ? recentActivity.map((tx, i) => (
+                  <div key={tx.id} className={`flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors ${i > 0 ? 'border-t border-slate-800/30' : ''}`}>
+                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                      <Repeat className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium truncate">Swapped {tx.amount} {tx.from} → {tx.to}</p>
+                      <p className="text-xs text-slate-500">{formatTimeAgo(tx.timestamp)}</p>
+                    </div>
+                    {tx.txHash && (
+                      <a href={getExplorerUrl(tx.txHash, tx.chain)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 shrink-0">
+                        View <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )) : (
+                  <div className="py-8 text-center">
+                    <p className="text-slate-500 text-sm">No transactions yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── SECURITY SECTION ─────────────────────────── */}
+            <div className="mb-5 bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowSecuritySection(!showSecuritySection)}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-800/20 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-white">Security</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showSecuritySection ? 'rotate-180' : ''}`} />
+              </button>
+              {showSecuritySection && (
+                <div className="border-t border-slate-800/30 divide-y divide-slate-800/20">
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-medium">Back up seed phrase</p>
+                        <p className="text-xs text-slate-500">Store your 12-word phrase safely</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setView('wallet-settings')} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold text-white transition-colors">
+                      Backup
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-medium">2FA Authentication</p>
+                        <p className="text-xs text-slate-500">Coming in Phase 2</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-500 px-3 py-1.5 border border-slate-800 rounded-lg">Soon</span>
+                  </div>
+                  {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
+                    <div className="p-4">
+                      <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-slate-800/60 hover:bg-slate-800 rounded-xl text-xs text-slate-400 hover:text-slate-300 transition-colors">
+                        View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
+                      </a>
                     </div>
                   )}
                 </div>
               )}
+            </div>
 
-              {activeTab === 'nfts' && (
-                <div className="py-8 text-center">
-                  <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
-                    <Layers className="w-6 h-6 text-gray-500" />
-                  </div>
-                  <p className="text-sm text-gray-400">NFT support coming soon</p>
-                </div>
-              )}
-
-              {activeTab === 'activity' && (
-                <ActivityTab address={activeWallet?.address || ''} chain={activeChain} />
-              )}
-
-              {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-                <div className="mt-4 bg-[#111827] rounded-2xl border border-white/5 overflow-hidden">
-                  <button
-                    onClick={() => activeWallet && fetchMultiChainBalances(activeWallet.address)}
-                    disabled={multiChainLoading}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#0A1EFF]" />
-                      <span className="text-sm font-semibold">Multi-Chain Portfolio</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {Object.keys(multiChainBalances).length > 0 && !hideBalance && (
-                        <span className="text-xs font-mono text-[#0A1EFF]">${totalMultiChainUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      )}
-                      {multiChainLoading ? <RotateCcw className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                    </div>
-                  </button>
-                  {Object.keys(multiChainBalances).length > 0 && (
-                    <div className="border-t border-white/5">
-                      {LIVE_CHAINS.map(chainId => {
-                        const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
-                        const data = multiChainBalances[chainId];
-                        if (!chain) return null;
-                        const balance = data ? parseFloat(data.totalBalanceUsd || '0') : 0;
-                        return (
-                          <button key={chainId} onClick={() => setActiveChain(chain)}
-                            className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${activeChain.id === chainId ? 'bg-white/5' : ''}`}>
-                            <div className="flex items-center gap-3">
-                              <ChainLogo chain={chain} size={28} />
-                              <div className="text-left">
-                                <p className="text-xs font-semibold">{chain.name}</p>
-                                <p className="text-[10px] text-gray-500">{chain.symbol}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs font-mono">{hideBalance ? '••••' : `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</p>
-                              {data?.holdings?.[0] && !hideBalance && (
-                                <p className="text-[10px] text-gray-500">{data.holdings[0].balance} {chain.symbol}</p>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {currentPrice && !hideBalance && (
-                <div className="mt-4 bg-[#111827] rounded-2xl border border-white/5 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Market Price</span>
-                    <span className={`text-xs font-medium ${priceChange > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                      {priceChange > 0 ? '+' : ''}{priceChange.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ChainLogo chain={activeChain} size={20} />
-                    <span className="text-lg font-bold font-mono">${currentPrice.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className="text-xs text-gray-500">{activeChain.symbol}</span>
-                  </div>
-                </div>
-              )}
-
-              {wallets.length >= MAX_WALLETS && (
-                <div className="mt-3 p-3 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl">
-                  <p className="text-xs text-[#F59E0B]">Maximum {MAX_WALLETS} wallets reached. Remove a wallet to add a new one.</p>
-                </div>
-              )}
-              <div className="mt-4 flex gap-2">
-                <button onClick={() => setView('create')} disabled={wallets.length >= MAX_WALLETS} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                  <Plus className="w-3.5 h-3.5" /> New Wallet
-                </button>
-                <button onClick={() => setView('import')} disabled={wallets.length >= MAX_WALLETS} className="flex-1 py-3 bg-[#111827] border border-white/5 rounded-xl text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                  <Download className="w-3.5 h-3.5" /> Import
+            {/* ── ADVANCED ─────────────────────────────────── */}
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Advanced</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setView('create')}
+                  disabled={wallets.length >= MAX_WALLETS}
+                  className="flex-1 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Account
                 </button>
                 <button
-                  onClick={() => { if (activeWallet) { setWalletToDelete(activeWallet.address); setShowDeleteConfirm(true); } }}
-                  className="py-3 px-4 bg-[#111827] border border-[#EF4444]/10 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/10 transition-all"
+                  onClick={() => setView('import')}
+                  disabled={wallets.length >= MAX_WALLETS}
+                  className="flex-1 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5" /> Import Wallet
                 </button>
               </div>
-
-              {/* Delete confirmation modal */}
-              {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteConfirm(false)} />
-                  <div className="relative w-full max-w-[320px] mx-4 bg-[#111827] border border-white/10 rounded-2xl p-5 shadow-2xl">
-                    <h3 className="text-sm font-bold mb-2 text-white">Delete Wallet?</h3>
-                    <p className="text-xs text-gray-400 mb-4">
-                      This will remove the wallet from this device. Make sure you have your recovery phrase saved before deleting.
-                    </p>
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-white/5 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/10 transition-colors">
-                        Cancel
-                      </button>
-                      <button onClick={() => removeWallet(walletToDelete)} className="flex-1 py-2.5 bg-[#EF4444]/20 text-[#EF4444] rounded-xl text-xs font-semibold hover:bg-[#EF4444]/30 transition-colors border border-[#EF4444]/20">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-                <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
-                  className="mt-3 w-full py-2.5 bg-[#111827] border border-white/5 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5 block">
-                  View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
-                </a>
+              {wallets.length >= MAX_WALLETS && (
+                <p className="text-xs text-amber-400 mt-2 text-center">Max {MAX_WALLETS} wallets. Remove one to add more.</p>
               )}
             </div>
           </>
         )}
       </div>
+
+      {/* ── DELETE CONFIRM MODAL ─────────────────────────── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative w-full max-w-[320px] mx-4 bg-slate-950 border border-slate-800/50 rounded-2xl p-5 shadow-2xl">
+            <h3 className="text-sm font-bold mb-2 text-white">Delete Wallet?</h3>
+            <p className="text-xs text-slate-400 mb-4">
+              This removes the wallet from this device. Make sure your seed phrase is backed up first.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => removeWallet(walletToDelete)} className="flex-1 py-2.5 bg-red-500/20 text-red-400 rounded-xl text-xs font-semibold hover:bg-red-500/30 transition-colors border border-red-500/20">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MOBILE FLOATING SEND BUTTON ──────────────────── */}
+      {wallets.length > 0 && activeWallet && (EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana') && (
+        <button
+          onClick={() => setView('send')}
+          className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all duration-200 sm:hidden z-40"
+          title="Send"
+        >
+          <ArrowUpRight className="w-6 h-6 text-white" />
+        </button>
+      )}
     </div>
   );
 }
