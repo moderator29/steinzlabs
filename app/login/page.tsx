@@ -91,7 +91,9 @@ function LoginPageInner() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && user) router.replace('/dashboard');
+    // FIX 5A.1: was router.replace (SPA nav preserves prior user's module state & caches),
+    // now hard reload so middleware, SSR, and all in-memory caches reset to new user.
+    if (!authLoading && user) window.location.href = '/dashboard';
   }, [user, authLoading, router]);
 
   useEffect(() => {
