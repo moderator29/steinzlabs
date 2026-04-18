@@ -68,15 +68,18 @@ export const POST = withTierGate('pro', async (
 
   // 2) Copy rules (if applicable)
   if (mode !== 'alerts' && body.copy_rules) {
+    // Phase 10 audit fix: DB columns are `chains_allowed` + `max_slippage_bps` (integer),
+    // not the field names in the UI. Map here rather than asking the UI to know DB internals.
+    const slippagePct = body.copy_rules.slippage_pct ?? null;
     const ruleRow: Record<string, unknown> = {
       user_id: user.id,
       whale_address: address,
       chain: body.chain,
-      mode,
       max_per_trade_usd: body.copy_rules.max_per_trade_usd ?? null,
       daily_cap_usd: body.copy_rules.daily_cap_usd ?? null,
-      slippage_pct: body.copy_rules.slippage_pct ?? null,
-      allowed_chains: body.copy_rules.allowed_chains ?? [body.chain],
+      max_slippage_bps: slippagePct != null ? Math.round(slippagePct * 100) : null,
+      chains_allowed: body.copy_rules.allowed_chains ?? [body.chain],
+      require_confirmation: mode === 'one_click',
       enabled: true,
     };
     const { error: ruleErr } = await supabase
