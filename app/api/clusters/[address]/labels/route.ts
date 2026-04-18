@@ -19,7 +19,8 @@ async function getSupabase() {
   );
 }
 
-export async function POST(request: NextRequest, { params }: { params: { address: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ address: string }> }) {
+  await params; // Next.js 15: params is a Promise
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

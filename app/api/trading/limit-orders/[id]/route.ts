@@ -21,7 +21,8 @@ async function getSupabase() {
   );
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const {
     data: { user },
@@ -32,7 +33,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
   const { error } = await supabase
     .from("limit_orders")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .eq("status", "active");
 

@@ -6,10 +6,11 @@ export const runtime = "nodejs";
 
 export const GET = withTierGate("pro", async (
   _request: NextRequest,
-  { params }: { params: { address: string } },
+  { params }: { params: Promise<{ address: string }> },
 ) => {
+  const { address } = await params;
   const supabase = getSupabaseAdmin();
-  const addr = params.address.toLowerCase();
+  const addr = address.toLowerCase();
   try {
     // BFS over wallet_edges from the root address (depth 2, cap members at 50)
     const visited = new Set<string>([addr]);

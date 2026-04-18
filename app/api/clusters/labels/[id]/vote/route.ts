@@ -31,7 +31,8 @@ function tierFor(points: number) {
   return TIER_THRESHOLDS.find((t) => points >= t.min)?.tier ?? "scout";
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,14 +42,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const admin = getSupabaseAdmin();
   const { error: voteErr } = await admin.from("cluster_label_votes").upsert(
-    { label_id: params.id, user_id: user.id, vote },
+    { label_id: id, user_id: user.id, vote },
     { onConflict: "label_id,user_id" },
   );
   if (voteErr) return NextResponse.json({ error: voteErr.message }, { status: 500 });
 
   // Recompute totals
-  const { data: up } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", params.id).eq("vote", 1);
-  const { data: down } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", params.id).eq("vote", -1);
+  const { data: up } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", id).eq("vote", 1);
+  const { data: down } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", id).eq("vote", -1);
   const upvotes = (up as unknown as { count: number })?.count ?? 0;
   const downvotes = (down as unknown as { count: number })?.count ?? 0;
 
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const { data: label } = await admin
     .from("cluster_labels")
     .update({ upvotes, downvotes, status })
-    .eq("id", params.id)
+    .eq("id", id)
     .select("submitted_by, status")
     .single();
 
