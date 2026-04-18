@@ -1264,6 +1264,47 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   );
 }
 
+function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${on ? 'bg-blue-600' : 'bg-slate-700'}`}>
+      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  );
+}
+
+function SecretReveal({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copy = () => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <div className={`p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono break-all leading-relaxed text-slate-300 select-all min-h-[80px] flex items-center transition-all ${!revealed ? 'blur-md select-none' : ''}`}>
+          {value}
+        </div>
+        {!revealed && (
+          <button onClick={() => setRevealed(true)} className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/40 backdrop-blur-sm">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-xl hover:bg-slate-800 transition-colors">
+              <Eye className="w-4 h-4 text-blue-400" />
+              <span className="text-sm font-semibold text-white">Tap to Reveal</span>
+            </div>
+          </button>
+        )}
+      </div>
+      {revealed && (
+        <div className="flex gap-2">
+          <button onClick={copy} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold border transition-all ${copied ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+            {copied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+          </button>
+          <button onClick={() => setRevealed(false)} className="px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 transition-colors">
+            Hide
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WalletSettingsView({
   onBack,
   wallet,
@@ -1279,17 +1320,37 @@ function WalletSettingsView({
   onRename: (name: string) => void;
   onDelete: () => void;
 }) {
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [editName, setEditName] = useState(wallet.name);
   const [renamed, setRenamed] = useState(false);
-  const [changePwd, setChangePwd] = useState(false);
+
+  // Seed / key reveal
+  const [revealPassword, setRevealPassword] = useState('');
+  const [revealError, setRevealError] = useState('');
+  const [revealLoading, setRevealLoading] = useState(false);
+  const [revealedPhrase, setRevealedPhrase] = useState('');
+  const [revealedKey, setRevealedKey] = useState('');
+
+  // Change password
   const [oldPwd, setOldPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
   const [pwdError, setPwdError] = useState('');
   const [pwdSuccess, setPwdSuccess] = useState(false);
-  const [privacyMode, setPrivacyMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(`steinz_wallet_privacy_${wallet.address}`) === 'true';
-  });
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  // Preferences (persisted to localStorage)
+  const [privacyMode, setPrivacyMode] = useState(() => typeof window !== 'undefined' && localStorage.getItem(`naka_privacy_${wallet.address}`) === 'true');
+  const [hideSmall, setHideSmall] = useState(() => typeof window !== 'undefined' && localStorage.getItem('steinz_hide_small') === 'true');
+  const [currency, setCurrency] = useState(() => (typeof window !== 'undefined' && localStorage.getItem('naka_currency')) || 'USD');
+  const [autoLock, setAutoLock] = useState(() => (typeof window !== 'undefined' && localStorage.getItem('naka_autolock')) || '15');
+  const [showTestnets, setShowTestnets] = useState(() => typeof window !== 'undefined' && localStorage.getItem('naka_testnets') === 'true');
+  const [notifSwap, setNotifSwap] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('naka_notif_swap') !== 'false' : true);
+  const [notifReceive, setNotifReceive] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('naka_notif_receive') !== 'false' : true);
+  const [notifPrice, setNotifPrice] = useState(() => typeof window !== 'undefined' && localStorage.getItem('naka_notif_price') === 'true');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const savePref = (key: string, value: string) => localStorage.setItem(key, value);
 
   const handleRename = () => {
     if (editName.trim() && editName.trim() !== wallet.name) {
@@ -1299,144 +1360,312 @@ function WalletSettingsView({
     }
   };
 
-  const handleChangePassword = () => {
-    if (newPwd.length < 8) { setPwdError('New password must be at least 8 characters'); return; }
+  const handleReveal = async (type: 'phrase' | 'key') => {
+    if (!revealPassword) { setRevealError('Enter your wallet password'); return; }
+    setRevealLoading(true); setRevealError('');
     try {
-      const dec = (encoded: string, pw: string) => {
-        const text = atob(encoded);
-        let r = '';
-        for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pw.charCodeAt(i % pw.length));
-        return r;
-      };
-      const enc = (text: string, pw: string) => {
-        let r = '';
-        for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pw.charCodeAt(i % pw.length));
-        return btoa(r);
-      };
-      const pk = dec(wallet.encryptedKey, oldPwd);
-      if (pk.length < 10) { setPwdError('Incorrect current password'); return; }
-      const newEncrypted = enc(pk, newPwd);
+      const pk = await decryptPrivateKey(wallet.encryptedKey, revealPassword);
+      if (!pk || pk.length < 32) { setRevealError('Wrong password'); setRevealLoading(false); return; }
+      if (type === 'key') {
+        setRevealedKey(pk);
+      } else {
+        // Derive mnemonic from private key using ethers
+        const { Wallet } = await import('ethers');
+        try {
+          const w = new Wallet(pk);
+          // Mnemonic is only available if the wallet was created from one; if not, show private key
+          const mnemonic = (w as { mnemonic?: { phrase: string } }).mnemonic?.phrase || '';
+          if (mnemonic) setRevealedPhrase(mnemonic);
+          else { setRevealError('This wallet was imported from a private key — no seed phrase available. Use Export Private Key instead.'); }
+        } catch { setRevealedKey(pk); setRevealError('Seed phrase unavailable for this wallet type. Private key shown instead.'); }
+      }
+    } catch { setRevealError('Incorrect password. Please try again.'); }
+    setRevealLoading(false);
+  };
+
+  const handleChangePassword = async () => {
+    setPwdError('');
+    if (newPwd.length < 8) { setPwdError('New password must be at least 8 characters'); return; }
+    if (newPwd !== confirmPwd) { setPwdError('Passwords do not match'); return; }
+    setPwdLoading(true);
+    try {
+      const pk = await decryptPrivateKey(wallet.encryptedKey, oldPwd);
+      if (!pk || pk.length < 32) { setPwdError('Current password is incorrect'); setPwdLoading(false); return; }
+      const newEncrypted = await encryptPrivateKey(pk, newPwd);
       const wallets: StoredWallet[] = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
       const updated = wallets.map(w => w.address === wallet.address ? { ...w, encryptedKey: newEncrypted } : w);
       localStorage.setItem('steinz_wallets', JSON.stringify(updated));
-      setPwdSuccess(true); setPwdError('');
-      setOldPwd(''); setNewPwd('');
+      setPwdSuccess(true); setPwdError(''); setOldPwd(''); setNewPwd(''); setConfirmPwd('');
       setTimeout(() => setPwdSuccess(false), 3000);
-    } catch { setPwdError('Failed to change password. Check your current password.'); }
+    } catch { setPwdError('Failed. Check your current password.'); }
+    setPwdLoading(false);
   };
 
+  const SECTIONS = [
+    { id: 'identity', label: 'Identity', icon: <Key className="w-4 h-4" />, color: '#0A1EFF' },
+    { id: 'security', label: 'Security & Backup', icon: <Shield className="w-4 h-4" />, color: '#10B981' },
+    { id: 'password', label: 'Change Password', icon: <Key className="w-4 h-4" />, color: '#F59E0B' },
+    { id: 'preferences', label: 'Preferences', icon: <Settings className="w-4 h-4" />, color: '#8B5CF6' },
+    { id: 'notifications', label: 'Notifications', icon: <Zap className="w-4 h-4" />, color: '#06B6D4' },
+    { id: 'advanced', label: 'Advanced', icon: <Layers className="w-4 h-4" />, color: '#EF4444' },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen bg-slate-950 text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+        {/* Top bar */}
+        <button onClick={onBack} className="flex items-center gap-2 text-slate-400 text-sm mb-6 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Wallet
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-[#0A1EFF]" />
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6 p-4 bg-slate-900/60 border border-slate-800/50 rounded-2xl">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/20 border border-blue-500/20 flex items-center justify-center shrink-0">
+            <SteinzLogo size={32} />
           </div>
-          <div>
-            <h1 className="text-xl font-heading font-bold">Wallet Settings</h1>
-            <p className="text-gray-400 text-xs font-mono">{wallet.address.slice(0, 10)}...{wallet.address.slice(-6)}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-white text-base">{wallet.name}</p>
+            <p className="text-xs font-mono text-slate-400 truncate">{wallet.address.slice(0, 14)}...{wallet.address.slice(-8)}</p>
           </div>
+          {isDefault && <span className="text-[10px] bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-1 rounded-full font-semibold shrink-0">Default</span>}
         </div>
 
-        <div className="space-y-4">
-          {/* Rename */}
-          <div className="bg-[#111827] rounded-xl border border-white/10 p-4">
-            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
-            <div className="flex gap-2">
-              <input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                className="flex-1 bg-[#0A0E1A] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
-                placeholder="My Wallet"
-              />
+        {/* Section Accordion */}
+        <div className="space-y-2">
+          {SECTIONS.map(s => (
+            <div key={s.id} className="bg-slate-900/60 border border-slate-800/50 rounded-2xl overflow-hidden">
               <button
-                onClick={handleRename}
-                disabled={!editName.trim() || editName.trim() === wallet.name}
-                className="px-4 py-2.5 rounded-xl bg-[#0A1EFF] text-xs font-semibold disabled:opacity-40 transition-opacity"
+                onClick={() => setActiveSection(activeSection === s.id ? null : s.id)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors"
               >
-                {renamed ? <Check className="w-4 h-4" /> : 'Save'}
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.color + '18', color: s.color }}>
+                  {s.icon}
+                </div>
+                <span className="flex-1 text-sm font-semibold text-left text-white">{s.label}</span>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${activeSection === s.id ? 'rotate-180' : ''}`} />
               </button>
-            </div>
-          </div>
 
-          {/* Set as Default */}
-          {!isDefault && (
-            <button
-              onClick={() => { onSetDefault(); onBack(); }}
-              className="w-full flex items-center gap-3 bg-[#111827] rounded-xl border border-white/10 p-4 hover:bg-white/5 transition-colors text-left"
-            >
-              <Shield className="w-5 h-5 text-[#10B981]" />
-              <div>
-                <p className="text-sm font-semibold">Set as Default</p>
-                <p className="text-xs text-gray-500">Use this wallet by default for all actions</p>
-              </div>
-            </button>
-          )}
+              {activeSection === s.id && (
+                <div className="border-t border-slate-800/50 p-4 space-y-4">
 
-          {isDefault && (
-            <div className="flex items-center gap-3 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20 p-4">
-              <Shield className="w-5 h-5 text-[#10B981]" />
-              <p className="text-sm font-semibold text-[#10B981]">This is your Default Wallet</p>
-            </div>
-          )}
+                  {/* ── IDENTITY ── */}
+                  {s.id === 'identity' && (
+                    <>
+                      <div>
+                        <label className="text-xs text-slate-400 mb-2 block font-medium">Wallet Name</label>
+                        <div className="flex gap-2">
+                          <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                          <button onClick={handleRename} disabled={!editName.trim() || editName.trim() === wallet.name} className="px-4 py-3 rounded-xl bg-blue-600 text-xs font-bold disabled:opacity-40 hover:bg-blue-500 transition-colors">
+                            {renamed ? <Check className="w-4 h-4" /> : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 mb-2 block font-medium">Wallet Address</label>
+                        <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                          <span className="flex-1 text-xs font-mono text-slate-300 break-all">{wallet.address}</span>
+                          <button onClick={() => navigator.clipboard.writeText(wallet.address)} className="shrink-0 p-1.5 hover:bg-slate-700 rounded-lg transition-colors">
+                            <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1 font-medium">Created</p>
+                        <p className="text-sm text-slate-300">{new Date(wallet.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      </div>
+                      {!isDefault && (
+                        <button onClick={() => { onSetDefault(); onBack(); }} className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm font-semibold text-emerald-400 hover:bg-emerald-500/15 transition-colors">
+                          <Shield className="w-4 h-4" /> Set as Default Wallet
+                        </button>
+                      )}
+                    </>
+                  )}
 
-          {/* Privacy Toggle */}
-          <div className="bg-[#111827] rounded-xl border border-white/10 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Privacy Mode</p>
-              <p className="text-xs text-gray-500">Hide this wallet from your public profile</p>
-            </div>
-            <button
-              onClick={() => {
-                const v = !privacyMode;
-                setPrivacyMode(v);
-                localStorage.setItem(`steinz_wallet_privacy_${wallet.address}`, String(v));
-              }}
-              className={`w-10 h-5 rounded-full transition-colors relative ${privacyMode ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
-            >
-              <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacyMode ? 'right-0.5' : 'left-0.5'}`} />
-            </button>
-          </div>
+                  {/* ── SECURITY & BACKUP ── */}
+                  {s.id === 'security' && (
+                    <>
+                      <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-xs font-bold text-amber-400">Security Warning</span>
+                        </div>
+                        <p className="text-xs text-slate-400">Never share your seed phrase or private key with anyone. Naka support will never ask for these.</p>
+                      </div>
 
-          {/* Change Password */}
-          <div className="bg-[#111827] rounded-xl border border-white/10 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="text-sm font-semibold">Change Password</p>
-                <p className="text-xs text-gray-500">Update your wallet encryption password</p>
-              </div>
-              <button onClick={() => setChangePwd(!changePwd)} className="px-3 py-1 bg-white/5 rounded-lg text-xs font-semibold hover:bg-white/10 transition-colors">
-                {changePwd ? 'Cancel' : 'Change'}
-              </button>
-            </div>
-            {changePwd && (
-              <div className="space-y-3 mt-3">
-                <input type="password" value={oldPwd} onChange={e => { setOldPwd(e.target.value); setPwdError(''); }} placeholder="Current password" className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
-                <input type="password" value={newPwd} onChange={e => { setNewPwd(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
-                {pwdError && <p className="text-[11px] text-[#EF4444]">{pwdError}</p>}
-                {pwdSuccess && <p className="text-[11px] text-[#10B981]">Password changed successfully!</p>}
-                <button onClick={handleChangePassword} disabled={!oldPwd || !newPwd} className="w-full py-2.5 bg-[#0A1EFF] rounded-xl text-sm font-bold disabled:opacity-50">
-                  Update Password
-                </button>
-              </div>
-            )}
-          </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white mb-1">Reveal Seed Phrase</p>
+                        <p className="text-xs text-slate-400 mb-3">Enter your password to reveal your 12-word recovery phrase.</p>
+                        <div className="flex gap-2 mb-3">
+                          <input type="password" value={revealPassword} onChange={e => { setRevealPassword(e.target.value); setRevealError(''); setRevealedPhrase(''); setRevealedKey(''); }} placeholder="Wallet password" className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                          <button onClick={() => handleReveal('phrase')} disabled={revealLoading || !revealPassword} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold disabled:opacity-50 transition-colors">
+                            {revealLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : 'Reveal'}
+                          </button>
+                        </div>
+                        {revealError && <p className="text-xs text-red-400 mb-2">{revealError}</p>}
+                        {revealedPhrase && (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-2 p-4 bg-slate-950 border border-slate-800 rounded-xl">
+                              {revealedPhrase.split(' ').map((word, i) => (
+                                <div key={i} className="flex items-center gap-1.5 py-1.5 px-2 bg-slate-900 border border-slate-800 rounded-lg">
+                                  <span className="text-[9px] text-slate-500 font-mono w-4">{i + 1}.</span>
+                                  <span className="text-xs font-mono text-white">{word}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => { navigator.clipboard.writeText(revealedPhrase); }} className="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors">
+                              <Copy className="w-3.5 h-3.5" /> Copy Seed Phrase
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
-          {/* Delete */}
-          <button
-            onClick={() => { onDelete(); onBack(); }}
-            className="w-full flex items-center gap-3 bg-[#EF4444]/10 rounded-xl border border-[#EF4444]/20 p-4 hover:bg-[#EF4444]/15 transition-colors text-left"
-          >
-            <Trash2 className="w-5 h-5 text-[#EF4444]" />
-            <div>
-              <p className="text-sm font-semibold text-[#EF4444]">Remove Wallet</p>
-              <p className="text-xs text-gray-500">Remove this wallet from the app (keys stay on your device)</p>
+                      <div className="border-t border-slate-800/50 pt-4">
+                        <p className="text-sm font-semibold text-white mb-1">Export Private Key</p>
+                        <p className="text-xs text-slate-400 mb-3">Your raw private key — import directly into MetaMask or any EVM wallet.</p>
+                        <button onClick={() => handleReveal('key')} disabled={revealLoading || !revealPassword} className="w-full py-2.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition-colors disabled:opacity-40">
+                          {revealLoading ? 'Decrypting...' : 'Export Private Key'}
+                        </button>
+                        {revealedKey && (
+                          <div className="mt-3">
+                            <SecretReveal label="Private Key" value={revealedKey} icon={<Key className="w-4 h-4" />} />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── CHANGE PASSWORD ── */}
+                  {s.id === 'password' && (
+                    <>
+                      <p className="text-xs text-slate-400">Your password encrypts your private key locally using AES-256-GCM. It never leaves your device.</p>
+                      <input type="password" value={oldPwd} onChange={e => { setOldPwd(e.target.value); setPwdError(''); }} placeholder="Current password" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                      <input type="password" value={newPwd} onChange={e => { setNewPwd(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                      <input type="password" value={confirmPwd} onChange={e => { setConfirmPwd(e.target.value); setPwdError(''); }} placeholder="Confirm new password" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                      {newPwd.length > 0 && (
+                        <div className="flex gap-1">
+                          {['Length 8+', 'Mixed case', 'Numbers', 'Symbols'].map((req, i) => {
+                            const checks = [newPwd.length >= 8, /[a-z]/.test(newPwd) && /[A-Z]/.test(newPwd), /\d/.test(newPwd), /[^a-zA-Z0-9]/.test(newPwd)];
+                            return <div key={req} className={`flex-1 h-1 rounded-full ${checks[i] ? 'bg-emerald-500' : 'bg-slate-700'}`} />;
+                          })}
+                        </div>
+                      )}
+                      {pwdError && <p className="text-xs text-red-400">{pwdError}</p>}
+                      {pwdSuccess && <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Password changed successfully — re-encrypted with AES-256-GCM</p>}
+                      <button onClick={handleChangePassword} disabled={!oldPwd || !newPwd || !confirmPwd || pwdLoading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold disabled:opacity-50 transition-colors">
+                        {pwdLoading ? 'Re-encrypting...' : 'Update Password'}
+                      </button>
+                    </>
+                  )}
+
+                  {/* ── PREFERENCES ── */}
+                  {s.id === 'preferences' && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Privacy Mode</p>
+                          <p className="text-xs text-slate-400">Hide wallet from public profile</p>
+                        </div>
+                        <ToggleSwitch on={privacyMode} onToggle={() => { const v = !privacyMode; setPrivacyMode(v); savePref(`naka_privacy_${wallet.address}`, String(v)); }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Hide Small Balances</p>
+                          <p className="text-xs text-slate-400">Hide tokens under $1</p>
+                        </div>
+                        <ToggleSwitch on={hideSmall} onToggle={() => { const v = !hideSmall; setHideSmall(v); savePref('steinz_hide_small', String(v)); }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Show Testnets</p>
+                          <p className="text-xs text-slate-400">Display testnet chains and tokens</p>
+                        </div>
+                        <ToggleSwitch on={showTestnets} onToggle={() => { const v = !showTestnets; setShowTestnets(v); savePref('naka_testnets', String(v)); }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white mb-2">Display Currency</p>
+                        <div className="flex gap-2">
+                          {['USD', 'BTC', 'ETH'].map(c => (
+                            <button key={c} onClick={() => { setCurrency(c); savePref('naka_currency', c); }} className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${currency === c ? 'bg-blue-600/20 text-blue-400 border-blue-500/40' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-600'}`}>{c}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white mb-2">Auto-Lock Timer</p>
+                        <select value={autoLock} onChange={e => { setAutoLock(e.target.value); savePref('naka_autolock', e.target.value); }} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60">
+                          <option value="5">5 minutes</option>
+                          <option value="15">15 minutes</option>
+                          <option value="30">30 minutes</option>
+                          <option value="60">1 hour</option>
+                          <option value="0">Never</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── NOTIFICATIONS ── */}
+                  {s.id === 'notifications' && (
+                    <>
+                      <p className="text-xs text-slate-400">Choose which events trigger browser notifications.</p>
+                      {[
+                        { key: 'swap', label: 'Swap Completed', desc: 'When a swap transaction confirms', value: notifSwap, setter: setNotifSwap },
+                        { key: 'receive', label: 'Funds Received', desc: 'When tokens arrive in your wallet', value: notifReceive, setter: setNotifReceive },
+                        { key: 'price', label: 'Price Alerts', desc: 'Significant price movements (±10%)', value: notifPrice, setter: setNotifPrice },
+                      ].map(n => (
+                        <div key={n.key} className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{n.label}</p>
+                            <p className="text-xs text-slate-400">{n.desc}</p>
+                          </div>
+                          <ToggleSwitch on={n.value} onToggle={() => { const v = !n.value; n.setter(v); savePref(`naka_notif_${n.key}`, String(v)); }} />
+                        </div>
+                      ))}
+                      <button onClick={() => { if ('Notification' in window) Notification.requestPermission(); }} className="w-full py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors">
+                        Enable Browser Notifications
+                      </button>
+                    </>
+                  )}
+
+                  {/* ── ADVANCED ── */}
+                  {s.id === 'advanced' && (
+                    <>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
+                        <p className="text-xs font-semibold text-slate-300">Connected DApps</p>
+                        <p className="text-xs text-slate-500">No DApps connected — connection management coming in Phase 2</p>
+                      </div>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                        <p className="text-xs font-semibold text-slate-300 mb-2">Wallet Info</p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs"><span className="text-slate-500">Encryption</span><span className="text-slate-300">AES-256-GCM</span></div>
+                          <div className="flex justify-between text-xs"><span className="text-slate-500">HD Path</span><span className="text-slate-300 font-mono">m/44&apos;/60&apos;/0&apos;/0/0</span></div>
+                          <div className="flex justify-between text-xs"><span className="text-slate-500">Version</span><span className="text-slate-300">v2.0</span></div>
+                        </div>
+                      </div>
+                      {!isDefault && (
+                        <button onClick={() => { onSetDefault(); }} className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600/10 border border-blue-500/20 rounded-xl text-sm font-semibold text-blue-400 hover:bg-blue-600/15 transition-colors">
+                          <Shield className="w-4 h-4" /> Set as Default Wallet
+                        </button>
+                      )}
+                      {!showDeleteConfirm ? (
+                        <button onClick={() => setShowDeleteConfirm(true)} className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/15 transition-colors">
+                          <Trash2 className="w-4 h-4" /> Remove This Wallet
+                        </button>
+                      ) : (
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-3">
+                          <p className="text-sm font-bold text-red-400">Confirm Deletion</p>
+                          <p className="text-xs text-slate-400">This removes the wallet from this device. Back up your seed phrase first — this cannot be undone.</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300">Cancel</button>
+                            <button onClick={() => { onDelete(); onBack(); }} className="flex-1 py-2.5 bg-red-500/20 border border-red-500/30 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/30 transition-colors">Delete</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                </div>
+              )}
             </div>
-          </button>
+          ))}
         </div>
       </div>
     </div>

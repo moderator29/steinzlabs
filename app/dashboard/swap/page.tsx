@@ -383,44 +383,101 @@ export default function SwapPage() {
     }
   }, [searchParams, chain]);
 
+  const [walletConnectError, setWalletConnectError] = useState('');
+
   const handleSelectWalletMode = async (mode: 'naka' | 'metamask' | 'phantom') => {
-    localStorage.setItem('swap_wallet_mode', mode);
-    setWalletMode(mode);
+    setWalletConnectError('');
+    if (mode === 'naka') {
+      localStorage.setItem('swap_wallet_mode', 'naka');
+      setWalletMode('naka');
+      setDetectedWallet('builtin');
+      return;
+    }
     if (mode === 'metamask') {
       const win = typeof window !== 'undefined' ? window : null;
-      if (!win?.ethereum) { alert('MetaMask not detected. Please install MetaMask.'); return; }
+      if (!win?.ethereum) {
+        setWalletConnectError('MetaMask not detected. Install the MetaMask browser extension first.');
+        return;
+      }
       try {
         const accounts = (await win.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-        if (accounts[0]) { setMetamaskAddress(accounts[0]); setMetamaskConnected(true); setDetectedWallet('ethereum'); }
-      } catch { /* user rejected */ }
-    } else if (mode === 'phantom') {
+        if (accounts[0]) {
+          setMetamaskAddress(accounts[0]);
+          setMetamaskConnected(true);
+          setDetectedWallet('ethereum');
+          setWalletMode('metamask');
+          localStorage.setItem('swap_wallet_mode', 'metamask');
+          // Sync chain from MetaMask
+          const chainId = (await win.ethereum.request({ method: 'eth_chainId' })) as string;
+          const chainIdNum = parseInt(chainId, 16);
+          const chainMap: Record<number, string> = { 1: 'ethereum', 8453: 'base', 137: 'polygon', 42161: 'arbitrum', 56: 'bsc', 43114: 'avalanche', 10: 'optimism' };
+          if (chainMap[chainIdNum]) setChain(chainMap[chainIdNum]);
+        }
+      } catch (err: unknown) {
+        const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
+        if (!msg.includes('rejected')) setWalletConnectError('MetaMask connection failed. Try again.');
+      }
+      return;
+    }
+    if (mode === 'phantom') {
       const win = typeof window !== 'undefined' ? window : null;
-      if (!win?.solana?.isPhantom) { alert('Phantom not detected. Please install Phantom.'); return; }
+      if (!win?.solana?.isPhantom) {
+        setWalletConnectError('Phantom not detected. Install the Phantom browser extension first.');
+        return;
+      }
       try {
         const resp = await win.solana!.connect();
         const pk = resp.publicKey?.toString();
-        if (pk) { setPhantomAddress(pk); setPhantomConnected(true); setDetectedWallet('solana'); setChain('solana'); setFromToken('SOL'); }
-      } catch { /* user rejected */ }
-    } else {
-      setDetectedWallet('builtin');
+        if (pk) {
+          setPhantomAddress(pk);
+          setPhantomConnected(true);
+          setDetectedWallet('solana');
+          setWalletMode('phantom');
+          localStorage.setItem('swap_wallet_mode', 'phantom');
+          setChain('solana');
+          setFromToken('SOL');
+        }
+      } catch (err: unknown) {
+        const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
+        if (!msg.includes('rejected')) setWalletConnectError('Phantom connection failed. Try again.');
+      }
     }
   };
 
-  // Check if external wallets are already connected on mount
+  // Check if external wallets are already connected on mount + subscribe to events
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const win = window;
+
+    // MetaMask: check existing connection
     if (win.ethereum) {
       void (win.ethereum.request({ method: 'eth_accounts' }) as Promise<string[]>).then(accs => {
         if (accs[0]) { setMetamaskAddress(accs[0]); setMetamaskConnected(true); }
       }).catch(() => {});
+
+      // Listen for account changes
+      const onAccChange = (accs: unknown) => {
+        const accounts = accs as string[];
+        if (accounts[0]) { setMetamaskAddress(accounts[0]); setMetamaskConnected(true); }
+        else { setMetamaskAddress(''); setMetamaskConnected(false); if (walletMode === 'metamask') setWalletMode('naka'); }
+      };
+      const onChainChange = (chainId: unknown) => {
+        const chainIdNum = parseInt(chainId as string, 16);
+        const chainMap: Record<number, string> = { 1: 'ethereum', 8453: 'base', 137: 'polygon', 42161: 'arbitrum', 56: 'bsc', 43114: 'avalanche', 10: 'optimism' };
+        if (chainMap[chainIdNum] && walletMode === 'metamask') setChain(chainMap[chainIdNum]);
+      };
+      (win.ethereum as unknown as { on: (ev: string, fn: (v: unknown) => void) => void }).on('accountsChanged', onAccChange);
+      (win.ethereum as unknown as { on: (ev: string, fn: (v: unknown) => void) => void }).on('chainChanged', onChainChange);
     }
+
+    // Phantom: check if already connected (eager connection)
     if (win.solana?.isPhantom) {
       try {
         const pk = (win.solana as { publicKey?: { toString(): string } }).publicKey?.toString();
         if (pk) { setPhantomAddress(pk); setPhantomConnected(true); }
       } catch { /* not connected */ }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeChain = CHAINS.find(c => c.id === chain) || CHAINS[0];
@@ -745,6 +802,13 @@ export default function SwapPage() {
           </div>
 
           {/* Wallet Selector Pills */}
+          {walletConnectError && (
+            <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span className="text-xs text-red-400">{walletConnectError}</span>
+              <button onClick={() => setWalletConnectError('')} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-4">
             {([
               { id: 'naka', label: 'Naka Wallet', icon: 'N', connected: !!nakaAddress },
