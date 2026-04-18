@@ -22,8 +22,9 @@ async function getSupabase() {
 
 export const PATCH = withTierGate("mini", async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) => {
+  const { id } = await params;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +38,7 @@ export const PATCH = withTierGate("mini", async (
   const { error } = await supabase
     .from("user_copy_rules")
     .update(update)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
@@ -45,8 +46,9 @@ export const PATCH = withTierGate("mini", async (
 
 export const DELETE = withTierGate("mini", async (
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) => {
+  const { id } = await params;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -54,7 +56,7 @@ export const DELETE = withTierGate("mini", async (
   const { error } = await supabase
     .from("user_copy_rules")
     .delete()
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

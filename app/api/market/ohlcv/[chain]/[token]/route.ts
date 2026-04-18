@@ -8,18 +8,19 @@ const VALID_TF: ReadonlyArray<Timeframe> = ["1m", "5m", "15m", "1h", "4h", "1d",
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { chain: string; token: string } },
+  { params }: { params: Promise<{ chain: string; token: string }> },
 ) {
+  const { chain, token } = await params;
   const tfRaw = request.nextUrl.searchParams.get("tf") ?? "1h";
   const tf = (VALID_TF.includes(tfRaw as Timeframe) ? tfRaw : "1h") as Timeframe;
   const limit = Math.max(50, Math.min(1000, parseInt(request.nextUrl.searchParams.get("limit") ?? "500", 10) || 500));
 
-  const cacheKey = `ohlcv:${params.chain}:${params.token}:${tf}:${limit}`;
+  const cacheKey = `ohlcv:${chain}:${token}:${tf}:${limit}`;
   const ttl = tf === "1m" ? 15 : tf === "5m" ? 30 : 60;
 
   try {
     const candles = await cacheWithFallback(cacheKey, ttl, () =>
-      fetchOhlcv(params.chain, params.token, tf, limit),
+      fetchOhlcv(chain, token, tf, limit),
     );
     return NextResponse.json(
       { candles, tf, count: candles.length },
