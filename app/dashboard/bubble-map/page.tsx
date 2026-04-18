@@ -52,6 +52,7 @@ interface BubbleMapData {
   nodes: BubbleNode[]; links: BubbleLink[]; tokenInfo: TokenInfo;
   risk?: RiskInfo; mode: ViewMode;
   clusters?: ClusterInfo[];
+  error?: string;
 }
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string; timestamp: number }

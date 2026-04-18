@@ -7,8 +7,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +23,7 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
   const body = (await request.json()) as {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     if (body.scan_type === "token") {
       const raw = await getTokenSecurity(body.target, chain);
-      const rawObj = (raw as Record<string, unknown>) ?? {};
+      const rawObj = (raw as unknown as Record<string, unknown>) ?? {};
       const assessment = scoreTokenSecurity(rawObj);
 
       const admin = getSupabaseAdmin();
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (body.scan_type === "address") {
       const raw = await getAddressSecurity(body.target, chain);
-      const rawObj = (raw as Record<string, unknown>) ?? {};
+      const rawObj = (raw as unknown as Record<string, unknown>) ?? {};
       const assessment = scoreAddressSecurity(rawObj);
 
       const admin = getSupabaseAdmin();

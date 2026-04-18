@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,7 +27,7 @@ function getSupabase() {
  * view until on-chain portfolio balances are wired through /lib/wallet.
  */
 export async function GET() {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,

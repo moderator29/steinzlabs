@@ -156,7 +156,7 @@ export default function SmartMoneyPage() {
               <span className="font-medium">Money Radar Active</span>
             </div>
             <p className="text-gray-400 text-sm mt-1">
-              You are now tracking {followed.length} entity/entities. You'll receive alerts when they make significant moves.
+              You are now tracking {followed.length} entity/entities. You&apos;ll receive alerts when they make significant moves.
             </p>
           </div>
         )}

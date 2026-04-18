@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, Network, Search } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 
 interface EdgeRow {
   from_address: string;
@@ -41,6 +42,7 @@ export default function WalletClustersIndexPage() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
+          <BackButton href="/dashboard" />
           <Network size={22} className="text-blue-400" />
           <div>
             <h1 className="text-2xl font-bold">Wallet Clusters</h1>
@@ -48,9 +50,12 @@ export default function WalletClustersIndexPage() {
               5 detection algorithms: direct transfer, common funding, coordinated trading, behavioral fingerprint, sybil pattern.
             </p>
           </div>
+          <span className="ml-auto px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30">
+            PRO
+          </span>
         </div>
 
-        <form onSubmit={explore} className="flex gap-2 mb-8">
+        <form onSubmit={explore} className="flex gap-2 mb-8 rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-2">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
@@ -60,7 +65,7 @@ export default function WalletClustersIndexPage() {
               className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm font-mono focus:outline-none focus:border-blue-500/40"
             />
           </div>
-          <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold transition">
+          <button type="submit" className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0918D0] text-xs font-semibold transition-colors">
             Explore cluster
           </button>
         </form>

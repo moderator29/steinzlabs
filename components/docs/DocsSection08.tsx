@@ -23,7 +23,7 @@ export function DocsSection08() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Smart Money & Whales</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        Track the wallets that consistently outperform the market. NAKA LABS continuously monitors the top-performing wallets across all chains and surfaces their moves in real time — giving you the edge of knowing what professional capital is doing before it's reflected in price.
+        Track the wallets that consistently outperform the market. NAKA LABS continuously monitors the top-performing wallets across all chains and surfaces their moves in real time — giving you the edge of knowing what professional capital is doing before it&apos;s reflected in price.
       </p>
 
       {/* Smart Money */}
@@ -75,7 +75,7 @@ export function DocsSection08() {
             <span className="text-sm font-semibold text-white">Copy Trade Flow</span>
           </div>
           <p className="text-xs text-gray-400 leading-relaxed">
-            From any whale profile, you can initiate a Copy Trade. The platform shows you 15 seconds to review the whale's stats — win rate, volume, P&L — before confirming. This cooldown is intentional: copy trading carries real risk, and you should understand what you're following.
+            From any whale profile, you can initiate a Copy Trade. The platform shows you 15 seconds to review the whale&apos;s stats — win rate, volume, P&L — before confirming. This cooldown is intentional: copy trading carries real risk, and you should understand what you&apos;re following.
           </p>
         </div>
       </div>

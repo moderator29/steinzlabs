@@ -41,6 +41,7 @@ export interface DexPair {
   priceChange: { m5: number; h1: number; h6: number; h24: number };
   liquidity?: { usd: number; base: number; quote: number };
   fdv?: number;
+  marketCap?: number;
   pairCreatedAt?: number;
   info?: { imageUrl?: string; websites?: { label: string; url: string }[] };
 }

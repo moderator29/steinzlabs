@@ -415,7 +415,7 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
       trustScore,
       txHash: tokenAddress || pairAddress || '',
       blockNumber: 0,
-      timestamp: recentTimestamp(30),
+      timestamp: recentTimestamp(),
       tokenName: name,
       tokenSymbol: symbol,
       tokenPrice: fmtPrice(priceUsd),

@@ -26,7 +26,7 @@ export interface AggregatorParams {
 }
 
 async function oneinchToRoute(p: AggregatorParams): Promise<RouteQuote | null> {
-  const q = await getOneInchQuote(p);
+  const q = await getOneInchQuote({ chain: p.chain, fromToken: p.fromToken, toToken: p.toToken, amount: p.amountIn });
   if (!q) return null;
   return {
     provider: "1inch",
@@ -45,7 +45,7 @@ async function oneinchToRoute(p: AggregatorParams): Promise<RouteQuote | null> {
 }
 
 async function kyberToRoute(p: AggregatorParams): Promise<RouteQuote | null> {
-  const q = await getKyberswapQuote(p);
+  const q = await getKyberswapQuote({ chain: p.chain, fromToken: p.fromToken, toToken: p.toToken, amount: p.amountIn });
   if (!q) return null;
   const gasUsd = q.gasUsd ? Number(q.gasUsd) : null;
   const outUsd = q.amountOutUsd ? Number(q.amountOutUsd) : null;
@@ -66,7 +66,7 @@ async function kyberToRoute(p: AggregatorParams): Promise<RouteQuote | null> {
 }
 
 async function openoceanToRoute(p: AggregatorParams): Promise<RouteQuote | null> {
-  const q = await getOpenOceanQuote(p);
+  const q = await getOpenOceanQuote({ chain: p.chain, fromToken: p.fromToken, toToken: p.toToken, amount: p.amountIn });
   if (!q?.outAmount) return null;
   return {
     provider: "openocean",

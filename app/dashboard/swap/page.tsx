@@ -290,7 +290,7 @@ export default function SwapPage() {
       if (win.solana?.isPhantom || (win.solana as { isConnected?: boolean } | undefined)?.isConnected) {
         setDetectedWallet('solana');
         try {
-          const resp = await win.solana.connect({ onlyIfTrusted: true });
+          const resp = await win.solana!.connect();
           const pubkey = resp.publicKey?.toString();
           if (pubkey) {
             const res = await fetch(`/api/wallet-intelligence?address=${pubkey}&chain=solana`);
@@ -307,9 +307,9 @@ export default function SwapPage() {
       } else if (win.ethereum) {
         setDetectedWallet('ethereum');
         try {
-          const accounts: string[] = await win.ethereum.request({ method: 'eth_accounts' });
+          const accounts = await win.ethereum.request({ method: 'eth_accounts' }) as string[];
           if (accounts.length > 0) {
-            const hexBal: string = await win.ethereum.request({ method: 'eth_getBalance', params: [accounts[0], 'latest'] });
+            const hexBal = await win.ethereum.request({ method: 'eth_getBalance', params: [accounts[0], 'latest'] }) as string;
             const ethBal = parseInt(hexBal, 16) / 1e18;
             setWalletBalance(prev => ({ ...prev, ETH: ethBal }));
           }
@@ -487,7 +487,7 @@ export default function SwapPage() {
       if (useGasless && swapData.trade) {
         // Gasless flow: EIP-712 signature + submit
         if (!win?.ethereum) throw new Error('Gasless swaps require MetaMask or compatible EVM wallet.');
-        const accounts: string[] = await win.ethereum.request({ method: 'eth_accounts' });
+        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         // Sign the trade typed data
         const tradeSignature = await win.ethereum.request({
@@ -497,10 +497,10 @@ export default function SwapPage() {
         // Sign approval if needed
         let approvalSignature: string | undefined;
         if (swapData.approval) {
-          approvalSignature = await win.ethereum.request({
+          approvalSignature = (await win.ethereum.request({
             method: 'eth_signTypedData_v4',
             params: [accounts[0], JSON.stringify(swapData.approval)],
-          });
+          })) as string;
         }
         // Submit to 0x gasless endpoint
         const submitRes = await fetch('/api/gasless/submit', {
@@ -528,10 +528,10 @@ export default function SwapPage() {
         if (!hash) throw new Error('Gasless transaction timed out. Check your wallet for status.');
       } else if (swapData.transaction && win?.ethereum && detectedWallet === 'ethereum') {
         // EVM wallet (MetaMask etc) — standard swap
-        const accounts: string[] = await win.ethereum.request({ method: 'eth_accounts' });
+        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
-        hash = await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
+        hash = (await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
       } else if (win?.solana && detectedWallet === 'solana') {
         // Solana wallet (Phantom etc)
         if (swapData.swapTransaction) {
@@ -603,8 +603,8 @@ export default function SwapPage() {
       setSwapSuccess(true);
       import('@/lib/posthog').then(({ track }) => {
         track('swap_executed', {
-          from_token: fromToken.symbol,
-          to_token: toToken.symbol,
+          from_token: fromToken,
+          to_token: toToken,
           chain,
           from_amount: fromAmount,
           tx_hash: hash,

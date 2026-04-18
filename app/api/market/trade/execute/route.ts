@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Security scan on output token
     const security = await getTokenSecurity(tokenOut, chain).catch(() => null);
-    const riskScore = (security as Record<string, unknown>)?.riskScore as number ?? 0;
+    const riskScore = (security as unknown as Record<string, unknown>)?.riskScore as number ?? 0;
 
     if (riskScore > SWAP_RISK_THRESHOLD) {
       return NextResponse.json({
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       output_token: tokenOut,
       input_amount: parseFloat(amountIn),
       status: 'pending',
-    }).then(() => {}).catch(() => {});
+    });  // fire-and-forget insert
 
     return NextResponse.json({
       success: true,

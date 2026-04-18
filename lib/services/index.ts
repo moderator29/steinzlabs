@@ -11,9 +11,13 @@ export * from './coingecko';
 export * from './dexscreener';
 export * from './alchemy';
 export * from './alchemy-solana';
-export * from './lunarcrush';
+// lunarcrush: skip getTrendingTokens (conflicts with coingecko export)
+export { getSocialScore, getSocialTimeline, getInfluencerActivity } from './lunarcrush';
+export type { LunarCrushSocialScore, LunarCrushTrend, SocialDataPoint, InfluencerPost } from './lunarcrush';
 export * from './arkham';
-export * from './jupiter';
+// jupiter: skip getTokenPrice/getTokenPrices (conflicts with coingecko export)
+export { SOL_MINT, USDC_MINT, getQuote as getJupiterQuote, buildSwapTransaction, formatQuoteSummary } from './jupiter';
+export type { JupiterQuote, JupiterRoutePlan, JupiterSwapTransaction, JupiterTokenPrice } from './jupiter';
 export * from './swap';
 export * from './resend';
 export * from './supabase';
@@ -24,7 +28,9 @@ export * from './zerion';
 export * from './solana-intelligence';
 export * from './etherscan';
 export * from './contract-intelligence';
-export * from './zerox';
+// zerox: skip getSwapQuote (re-exported via swap as get0xQuote)
+export { ZX_CHAIN_IDS, isNativeToken, getSwapPrice, getGaslessPrice, getGaslessQuote, submitGasless, getGaslessStatus, getSwapTrades, getGaslessTrades, getChainId, getExplorerUrl } from './zerox';
+export type { ZxPriceResponse, ZxQuoteResponse, ZxGaslessQuoteResponse, ZxTradeRecord } from './zerox';
 
 // ─── Shared Error Types ────────────────────────────────────────────────────────
 

@@ -21,7 +21,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
   useEffect(() => {
     if (loading || !data.length || typeof window === 'undefined') return;
 
-    let chart: { remove: () => void; applyOptions: (o: unknown) => void; addCandlestickSeries: (o?: unknown) => { setData: (d: unknown) => void }; addHistogramSeries: (o?: unknown) => { setData: (d: unknown) => void }; timeScale: () => { fitContent: () => void } } | null = null;
+    let chart: any = null; // lightweight-charts IChartApi type is incompatible with dynamic import
 
     const init = async () => {
       const { createChart, ColorType, CrosshairMode } = await import('lightweight-charts');
@@ -40,7 +40,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
         },
         crosshair: { mode: CrosshairMode.Normal },
         rightPriceScale: { borderVisible: false, textColor: '#6b7280' },
-        timeScale: { borderVisible: false, textColor: '#6b7280', timeVisible: true, secondsVisible: false },
+        timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
       });
 
       const candleSeries = chart.addCandlestickSeries({

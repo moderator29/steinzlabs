@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +23,7 @@ function getSupabase() {
 }
 
 export async function GET() {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,
@@ -55,7 +55,7 @@ interface DcaBody {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,

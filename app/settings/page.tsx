@@ -48,6 +48,7 @@ export default function SettingsPage() {
   }, []);
   const [slippage, setSlippage] = useState(stored?.slippage ?? '1');
   const [theme, setTheme] = useState(stored?.theme ?? 'dark');
+  const [expertMode, setExpertMode] = useState<boolean>(stored?.expertMode ?? false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -119,7 +120,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    savePrefs({ ...notifications, slippage, theme });
+    savePrefs({ ...notifications, slippage, theme, expertMode });
     const timer = setTimeout(() => {
       supabase.from('user_preferences').upsert({
         whale_alerts: notifications.whaleAlerts,
@@ -134,7 +135,7 @@ export default function SettingsPage() {
       });
     }, 1000);
     return () => clearTimeout(timer);
-  }, [notifications, slippage, theme, mounted]);
+  }, [notifications, slippage, theme, expertMode, mounted]);
 
   const sections = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -144,19 +145,19 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <div className="min-h-screen bg-[#0A0E1A] p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
         <PageHeader title="Settings" description="Manage your account, security, and trading preferences" />
 
-        <div className="flex gap-6">
-          {/* Sidebar Nav */}
-          <div className="w-48 flex-shrink-0">
-            <div className="bg-[#141824] rounded-lg p-2 border border-[#1E2433]">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+          {/* Sidebar Nav — horizontal scroll chips on mobile, vertical on md+ */}
+          <div className="w-full md:w-48 md:flex-shrink-0">
+            <div className="bg-[#141824] rounded-lg p-2 border border-[#1E2433] flex md:block gap-1 md:gap-0 overflow-x-auto md:overflow-visible">
               {sections.map((section) => (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === section.id
                       ? 'bg-[#0A1EFF] text-white'
                       : 'text-gray-400 hover:bg-[#1E2433] hover:text-white'
@@ -170,7 +171,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Content */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {activeSection === 'profile' && (
               <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
                 <h3 className="text-white font-bold text-lg mb-6">Profile Settings</h3>
@@ -362,14 +363,19 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
-                    <div>
+                  <div className="flex items-center justify-between gap-4 p-4 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
+                    <div className="min-w-0">
                       <div className="text-white font-medium">Expert Mode</div>
                       <div className="text-gray-400 text-sm">Disable confirmation dialogs</div>
                     </div>
-                    <div className="w-12 h-6 bg-gray-600 rounded-full relative cursor-pointer">
-                      <div className="w-5 h-5 bg-white rounded-full absolute left-0.5 top-0.5" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpertMode((v) => !v)}
+                      aria-pressed={expertMode}
+                      className={`flex-shrink-0 w-12 h-6 rounded-full relative transition-colors ${expertMode ? 'bg-green-500' : 'bg-gray-600'}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${expertMode ? 'right-0.5' : 'left-0.5'}`} />
+                    </button>
                   </div>
                   <p className="text-xs text-gray-500">Preferences are saved automatically.</p>
                 </div>
