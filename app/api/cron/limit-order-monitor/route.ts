@@ -108,6 +108,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (result.awaitingUserConfirmation) {
+      // Gate re-trigger: move order out of 'active' while user confirmation
+      // is pending. Restored to 'active' by reject/cleanup if not confirmed.
+      await admin
+        .from("limit_orders")
+        .update({
+          status: "pending_confirmation",
+          pending_trade_id: result.pendingTradeId ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
       triggered++;
     } else if (result.securityBlocked) {
       await admin

@@ -37,18 +37,21 @@ const REASON_LABEL: Record<PendingTrade["source_reason"], string> = {
 
 const POLL_INTERVAL_MS = 20_000;
 
-async function signAndBroadcast(trade: PendingTrade): Promise<{ txHash: string } | null> {
-  // Client-side signing entry point. Delegates to the user's connected wallet.
-  // The actual wallet provider integration (MetaMask / Phantom / builtin
-  // in-browser signer) is owned by the existing swap flow; we call into it
-  // by dispatching a custom event that the wallet layer listens for and
-  // returns a promise via a registered global handler. This keeps this
-  // component wallet-agnostic.
-  const w = (window as unknown as {
-    __nakaSignPendingTrade?: (t: PendingTrade) => Promise<{ txHash: string } | null>;
-  }).__nakaSignPendingTrade;
+interface InlineSignResult {
+  txHash: string;
+  clientReportedAmountOut?: string;
+  clientReportedPrice?: number;
+}
+
+type InlineSigner = (t: PendingTrade) => Promise<InlineSignResult>;
+
+async function signAndBroadcast(trade: PendingTrade): Promise<InlineSignResult | null> {
+  const w = (window as unknown as { __nakaSignPendingTrade?: InlineSigner })
+    .__nakaSignPendingTrade;
   if (typeof w === "function") return w(trade);
-  // Fallback: navigate user to the swap page pre-filled so they can sign there.
+  // Fallback only if the provider did not mount (shouldn't happen inside
+  // /dashboard/*). Redirect to the swap page with a pendingId so the user
+  // can complete signing there.
   const qs = new URLSearchParams({
     from: trade.from_token_address,
     to: trade.to_token_address,
@@ -60,10 +63,16 @@ async function signAndBroadcast(trade: PendingTrade): Promise<{ txHash: string }
   return null;
 }
 
+interface RowState {
+  error?: string;
+  successTxHash?: string;
+}
+
 export function PendingTradesBanner() {
   const [trades, setTrades] = useState<PendingTrade[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rowState, setRowState] = useState<Record<string, RowState>>({});
 
   const load = useCallback(async () => {
     try {
@@ -85,17 +94,41 @@ export function PendingTradesBanner() {
   const onConfirm = useCallback(
     async (trade: PendingTrade) => {
       setBusyId(trade.id);
+      setRowState((prev) => ({ ...prev, [trade.id]: {} }));
       try {
         const signed = await signAndBroadcast(trade);
         if (!signed) return;
         const res = await fetch(`/api/trading/pending-trades/${trade.id}/confirm`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ txHash: signed.txHash }),
+          body: JSON.stringify({
+            txHash: signed.txHash,
+            clientReportedAmountOut: signed.clientReportedAmountOut,
+            clientReportedPrice: signed.clientReportedPrice,
+          }),
         });
         if (res.ok) {
-          setTrades((prev) => prev.filter((t) => t.id !== trade.id));
+          setRowState((prev) => ({
+            ...prev,
+            [trade.id]: { successTxHash: signed.txHash },
+          }));
+          setTimeout(() => {
+            setTrades((prev) => prev.filter((t) => t.id !== trade.id));
+          }, 3000);
+        } else {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          setRowState((prev) => ({
+            ...prev,
+            [trade.id]: { error: body.error ?? `Server error (${res.status})` },
+          }));
         }
+      } catch (err) {
+        setRowState((prev) => ({
+          ...prev,
+          [trade.id]: {
+            error: err instanceof Error ? err.message : "Signing failed",
+          },
+        }));
       } finally {
         setBusyId(null);
       }
@@ -167,6 +200,16 @@ export function PendingTradesBanner() {
                       {honeypot
                         ? "Honeypot flag present — review before confirming."
                         : `Low trust score ${trade.security_trust_score}/100.`}
+                    </div>
+                  )}
+                  {rowState[trade.id]?.successTxHash && (
+                    <div className="mt-1 text-xs text-emerald-400 font-mono truncate">
+                      Broadcast ✓ {rowState[trade.id].successTxHash}
+                    </div>
+                  )}
+                  {rowState[trade.id]?.error && (
+                    <div className="mt-1 text-xs text-rose-400">
+                      {rowState[trade.id].error}
                     </div>
                   )}
                   <div className="mt-2 flex gap-2">
