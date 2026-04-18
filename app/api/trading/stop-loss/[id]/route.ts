@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,7 +29,7 @@ interface PatchBody {
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,
@@ -60,7 +60,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             removed++;
           }
         }
-      } while (cursor !== "0" && cursor !== 0);
+      } while (cursor !== "0");
     }
 
     const duration = Date.now() - startedAt;

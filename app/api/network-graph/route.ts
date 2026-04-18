@@ -189,9 +189,10 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
         return d.result ? { ...d.result, timestamp: sig.blockTime } : null;
       })
     );
-    const txs = txDetails
-      .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled' && r.value !== null)
-      .map(r => r.value) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const txs = (txDetails as any[])
+      .filter((r: any) => r.status === 'fulfilled' && r.value !== null)
+      .map((r: any) => r.value);
     if (!Array.isArray(txs) || txs.length === 0) return null;
 
     const nodeMap = new Map<string, { volume: number; txCount: number; addresses: Set<string> }>();

@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
  * label edit, min-size threshold used by the notifications pipeline.
  */
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -39,7 +39,7 @@ interface WatchlistBody {
 }
 
 export const GET = withTierGate("pro", async (_request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -57,7 +57,7 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
 });
 
 export const POST = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -94,7 +94,7 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
 });
 
 export const PATCH = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -121,7 +121,7 @@ export const PATCH = withTierGate("pro", async (request: NextRequest) => {
 });
 
 export const DELETE = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();

@@ -47,8 +47,8 @@ interface PerformanceStats {
   totalGasUsd: number;
 }
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -71,7 +71,7 @@ interface Lot {
 }
 
 export async function GET(_request: NextRequest) {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();

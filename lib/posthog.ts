@@ -1,4 +1,4 @@
-import type PostHogType from 'posthog-js';
+import type { PostHog as PostHogType } from 'posthog-js';
 
 let posthogInstance: PostHogType | null = null;
 

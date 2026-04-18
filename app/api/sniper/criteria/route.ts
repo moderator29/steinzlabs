@@ -8,8 +8,8 @@ import { checkTier } from "@/lib/subscriptions/tierCheck";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -48,7 +48,7 @@ interface CriteriaBody {
 }
 
 export const GET = withTierGate("pro", async (_request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { data, error } = await sb
@@ -61,7 +61,7 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
 });
 
 export const POST = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -121,7 +121,7 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
 });
 
 export const PATCH = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as { id: string; enabled?: boolean } | null;
@@ -138,7 +138,7 @@ export const PATCH = withTierGate("pro", async (request: NextRequest) => {
 });
 
 export const DELETE = withTierGate("pro", async (request: NextRequest) => {
-  const sb = getSupabase();
+  const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const id = request.nextUrl.searchParams.get("id");

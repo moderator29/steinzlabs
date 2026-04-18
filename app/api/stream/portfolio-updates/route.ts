@@ -55,7 +55,7 @@ async function buildSolanaPortfolio(address: string): Promise<PortfolioSnapshot>
   ]);
 
   const mints = tokens.map(t => t.mint);
-  const prices = mints.length > 0 ? await getTokenPrices(mints).catch(() => ({})) : {};
+  const prices: Record<string, number> = mints.length > 0 ? await getTokenPrices(mints).catch(() => ({})) : {};
   const solPrice = await getTokenPrices([NATIVE_MINTS.solana]).then(p => p[NATIVE_MINTS.solana] ?? 0).catch(() => 0);
 
   const tokenItems: PortfolioToken[] = tokens.map(t => ({

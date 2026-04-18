@@ -53,9 +53,9 @@ function classifyAllowance(raw: string): { display: string; isUnlimited: boolean
   try {
     const n = BigInt(raw);
     if (n >= UNLIMITED_THRESHOLD) return { display: 'Unlimited', isUnlimited: true };
-    if (n === 0n) return { display: '0', isUnlimited: false };
+    if (n === BigInt(0)) return { display: '0', isUnlimited: false };
     // Format large numbers in human-readable form
-    if (n > 1_000_000_000_000_000_000_000n) return { display: `${(Number(n) / 1e18).toFixed(2)} tokens`, isUnlimited: false };
+    if (n > BigInt("1000000000000000000000")) return { display: `${(Number(n) / 1e18).toFixed(2)} tokens`, isUnlimited: false };
     return { display: n.toString(), isUnlimited: false };
   } catch {
     return { display: raw, isUnlimited: false };

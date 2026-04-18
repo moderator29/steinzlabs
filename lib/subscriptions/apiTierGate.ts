@@ -16,8 +16,8 @@ import { checkTier, type Tier } from "./tierCheck";
  * RouteHandlerConfig validator.
  */
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -38,7 +38,7 @@ export function withTierGate<TCtx>(
   handler: (request: NextRequest, ctx: TCtx) => Promise<Response> | Response,
 ): (request: NextRequest, ctx: TCtx) => Promise<Response> {
   return async (request, ctx) => {
-    const sb = getSupabase();
+    const sb = await getSupabase();
     const {
       data: { user },
     } = await sb.auth.getUser();

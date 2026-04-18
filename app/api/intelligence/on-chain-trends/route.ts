@@ -16,6 +16,7 @@ export interface TrendCard {
   direction: 'up' | 'down' | 'flat';
   hot: boolean;
   alert?: string;
+  insight?: string;
 }
 
 export interface TrendAlertItem {

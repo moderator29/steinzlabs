@@ -11,13 +11,13 @@ export async function connectMetaMask(): Promise<WalletConnection> {
 
   const accounts = await window.ethereum.request({
     method: 'eth_requestAccounts'
-  });
+  }) as string[];
 
   const address = accounts[0];
 
   const chainId = await window.ethereum.request({
     method: 'eth_chainId'
-  });
+  }) as string | undefined;
 
   return {
     address,

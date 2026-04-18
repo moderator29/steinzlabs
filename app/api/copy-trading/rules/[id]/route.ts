@@ -5,8 +5,8 @@ import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,7 +24,7 @@ export const PATCH = withTierGate("mini", async (
   request: NextRequest,
   { params }: { params: { id: string } },
 ) => {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -47,7 +47,7 @@ export const DELETE = withTierGate("mini", async (
   _request: NextRequest,
   { params }: { params: { id: string } },
 ) => {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

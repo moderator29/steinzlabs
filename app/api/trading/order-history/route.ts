@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +23,7 @@ function getSupabase() {
 }
 
 export async function GET() {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const {
     data: { user },
     error: authError,
@@ -86,7 +86,7 @@ export async function GET() {
     });
   }
 
-  for (const d of (dcaR.data ?? []) as Array<{
+  for (const d of (dcaR.data ?? []) as unknown as Array<{
     id: string;
     amount_in: number;
     amount_out: number | null;
