@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, 
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported } from '@/lib/notifications';
+import { MiniSparkline } from '@/components/wallet/MiniSparkline';
 
 interface TokenBalance {
   symbol: string;
@@ -81,14 +82,32 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
   { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin', logoUrl: COIN_LOGOS.BTC, coinGeckoId: 'bitcoin' },
   { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum', logoUrl: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg', coinGeckoId: 'ethereum' },
   { id: 'optimism', name: 'Optimism', symbol: 'ETH', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism', logoUrl: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png', coinGeckoId: 'ethereum' },
-  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bnb', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
+  // FIX 5A.1 / Phase 4: apiChain was 'bnb' but server (EVM_CHAIN_CONFIG) keys it as 'bsc' — the mismatch
+  // meant BSC pill fetched nothing and the UI showed stale prior-chain data (e.g. Solana after clicking BSC).
+  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bsc', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
   { id: 'fantom', name: 'Fantom', symbol: 'FTM', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom', logoUrl: COIN_LOGOS.FTM, coinGeckoId: 'fantom' },
   { id: 'cronos', name: 'Cronos', symbol: 'CRO', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos', logoUrl: COIN_LOGOS.CRO, coinGeckoId: 'crypto-com-chain' },
   { id: 'sui', name: 'Sui', symbol: 'SUI', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui', logoUrl: COIN_LOGOS.SUI, coinGeckoId: 'sui' },
 ];
 
-const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana'];
-const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche'];
+// FIX 5A.1 / Phase 4: was 'ethereum,base,polygon,avalanche,solana' only, which is why
+// clicking Arbitrum / BNB pills showed the previous chain's balances — they weren't gated
+// for live fetching. Now matches the full set supported by /api/wallet-intelligence.
+const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
+const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+
+// Map a wallet holding (symbol + chain) to its CoinGecko id for sparkline lookup.
+// Falls back to chain's native-asset id so we always render a line rather than a blank.
+const SYMBOL_TO_CG: Record<string, string> = {
+  ETH: 'ethereum', WETH: 'weth', BTC: 'bitcoin', WBTC: 'wrapped-bitcoin',
+  SOL: 'solana', BNB: 'binancecoin', MATIC: 'matic-network', AVAX: 'avalanche-2',
+  USDC: 'usd-coin', USDT: 'tether', DAI: 'dai', LINK: 'chainlink', UNI: 'uniswap',
+  AAVE: 'aave', SHIB: 'shiba-inu', PEPE: 'pepe', ARB: 'arbitrum', OP: 'optimism',
+  FTM: 'fantom', CRO: 'crypto-com-chain', SUI: 'sui',
+};
+function resolveCoinGeckoId(symbol: string, chain: { coinGeckoId: string }): string {
+  return SYMBOL_TO_CG[symbol.toUpperCase()] || chain.coinGeckoId;
+}
 
 async function encryptPrivateKey(plaintext: string, password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -280,6 +299,9 @@ export default function WalletPage() {
 
   const fetchBalances = useCallback(async (address: string, chain: ChainInfo) => {
     setLoading(true);
+    // FIX 5A.1 / Phase 4: was leaving prior chain's holdings visible during the fetch,
+    // which is why switching chains felt like "click SOL, still see ETH". Clear first.
+    setWalletData(null);
     try {
       const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chain.apiChain}`);
       if (res.ok) {
@@ -537,6 +559,22 @@ export default function WalletPage() {
               </button>
             </div>
 
+            {/* FIX 5A.1 / Phase 4: prominent backup reminder. User confirmed they haven't backed up
+                their seed — without this banner the reveal flow in settings is hard to discover. */}
+            {activeWallet && typeof window !== 'undefined' && !localStorage.getItem(`naka_seed_backed_up_${activeWallet.address}`) && (
+              <button
+                onClick={() => setView('wallet-settings')}
+                className="w-full mb-3 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 text-left hover:bg-amber-500/15 transition-colors"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[11px] font-semibold text-amber-200">Back up your seed phrase</p>
+                  <p className="text-[10px] text-amber-300/70">If you lose access you won't be able to recover your wallet.</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+              </button>
+            )}
+
             {/* ── HERO BALANCE CARD ────────────────────────── */}
             <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950/40 border border-slate-800/50 shadow-[0_0_30px_rgba(59,130,246,0.08)] p-6 mb-4">
               <div className="flex items-start justify-between">
@@ -660,6 +698,8 @@ export default function WalletPage() {
                         <p className="font-bold text-white text-sm">{token.symbol}</p>
                         <p className="text-xs text-slate-400 truncate">{token.name}</p>
                       </div>
+                      {/* FIX 5A.1 / Phase 4: 7-day sparkline per row, dependency-free inline SVG. */}
+                      <MiniSparkline coinGeckoId={resolveCoinGeckoId(token.symbol, activeChain)} />
                       <div className="text-right shrink-0">
                         <p className="font-mono text-white text-sm">{hideBalance ? '••••' : bal.toLocaleString(undefined, { maximumFractionDigits: 6 })} {token.symbol}</p>
                         <p className="text-xs text-slate-400 font-mono">{hideBalance ? '••••' : val > 0 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}</p>
@@ -1081,25 +1121,104 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
   );
 }
 
+// FIX 5A.1 / Phase 4: chain-aware RPC endpoints so Send works on every chain, not just mainnet.
+// Public RPCs used as fallback; user's Alchemy key (if set) is preferred for reliability.
+const CHAIN_RPC: Record<string, string> = {
+  ethereum: process.env.NEXT_PUBLIC_ALCHEMY_RPC || 'https://eth.llamarpc.com',
+  base: 'https://mainnet.base.org',
+  polygon: 'https://polygon-rpc.com',
+  avalanche: 'https://api.avax.network/ext/bc/C/rpc',
+  arbitrum: 'https://arb1.arbitrum.io/rpc',
+  optimism: 'https://mainnet.optimism.io',
+  bnb: 'https://bsc-dataseed.binance.org',
+  fantom: 'https://rpc.ftm.tools',
+};
+
+function isValidAddressForChain(addr: string, chainId: string): boolean {
+  if (chainId === 'solana') return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+  if (chainId === 'bitcoin') return /^(bc1|[13])[a-zA-Z0-9]{25,62}$/.test(addr);
+  return /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
 function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'input' | 'sending' | 'success' | 'error'>('input');
+  const [status, setStatus] = useState<'input' | 'estimating' | 'sending' | 'success' | 'error'>('input');
   const [txHash, setTxHash] = useState('');
   const [error, setError] = useState('');
+  const [nativeBalance, setNativeBalance] = useState<string>('0');
+  const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
+
+  // FIX 5A.1 / Phase 4: load native balance so the MAX button is meaningful and gas can be deducted.
+  useEffect(() => {
+    if (chain.id === 'solana' || chain.id === 'bitcoin') return;
+    const rpc = CHAIN_RPC[chain.id];
+    if (!rpc) return;
+    (async () => {
+      try {
+        const ethers = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const bal = await provider.getBalance(wallet.address);
+        setNativeBalance(ethers.formatEther(bal));
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [chain.id, wallet.address]);
+
+  const setMax = async () => {
+    try {
+      const ethers = await import('ethers');
+      const rpc = CHAIN_RPC[chain.id];
+      if (!rpc) { setAmount(nativeBalance); return; }
+      const provider = new ethers.JsonRpcProvider(rpc);
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
+      const reserved = gasPrice * BigInt(21000);
+      const bal = ethers.parseEther(nativeBalance || '0');
+      const max = bal > reserved ? bal - reserved : BigInt(0);
+      setAmount(ethers.formatEther(max));
+    } catch {
+      setAmount(nativeBalance);
+    }
+  };
 
   const handleSend = async () => {
     if (!to || !amount || !password) return;
+    if (!isValidAddressForChain(to, chain.id)) {
+      setError(`Recipient isn't a valid ${chain.name} address.`); setStatus('error'); return;
+    }
     setStatus('sending'); setError('');
     try {
+      if (chain.id === 'solana') {
+        setError('Solana send requires the private key to be stored as a base58 keypair. This build supports EVM sends only; Solana send ships next.');
+        setStatus('error');
+        return;
+      }
+      const rpc = CHAIN_RPC[chain.id];
+      if (!rpc) { setError(`${chain.name} send not supported yet.`); setStatus('error'); return; }
       const ethers = await import('ethers');
       const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
-      const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC || 'https://eth.llamarpc.com');
+      const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
-      const tx = await signer.sendTransaction({ to, value: ethers.parseEther(amount) });
+
+      // Gas estimate prior to sending — surfaces clear errors instead of generic "Transaction failed".
+      const value = ethers.parseEther(amount);
+      const feeData = await provider.getFeeData();
+      const gasLimit = BigInt(21000);
+      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
+      setGasEstimateEth(ethers.formatEther(gasPrice * gasLimit));
+
+      const tx = await signer.sendTransaction({ to, value, gasLimit });
       setTxHash(tx.hash); setStatus('success');
-    } catch (e: any) { setError(e.message || 'Transaction failed'); setStatus('error'); }
+    } catch (e: any) {
+      const msg = (e?.shortMessage || e?.message || 'Transaction failed') as string;
+      if (/decrypt|password|bad key/i.test(msg)) setError('Wrong wallet password.');
+      else if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
+      else setError(msg.slice(0, 200));
+      setStatus('error');
+    }
   };
 
   return (
@@ -1135,11 +1254,30 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Recipient Address</label>
-              <input value={to} onChange={e => setTo(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
+              <input
+                value={to}
+                onChange={e => setTo(e.target.value)}
+                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                placeholder={chain.id === 'solana' ? 'Solana address...' : '0x...'}
+              />
+              {/* FIX 5A.1 / Phase 4: inline address-validity feedback. */}
+              {to && !isValidAddressForChain(to, chain.id) && (
+                <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address format.</p>
+              )}
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Amount ({chain.symbol})</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-gray-400 font-medium">Amount ({chain.symbol})</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500">Balance: {parseFloat(nativeBalance || '0').toFixed(6)}</span>
+                  {/* FIX 5A.1 / Phase 4: MAX button — was missing. Reserves gas for EVM chains. */}
+                  <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0A1EFF] hover:text-[#3B4EFF]">MAX</button>
+                </div>
+              </div>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0.01" />
+              {gasEstimateEth && (
+                <p className="text-[10px] text-slate-500 mt-1.5">Est. gas: {parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</p>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
@@ -1158,6 +1296,23 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
 
 function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: string; chain: ChainInfo }) {
   const [copied, setCopied] = useState(false);
+  // FIX 5A.1 / Phase 4: was a <QrCode> icon placeholder (no real QR); now renders a real
+  // scannable QR as an inline <img data:> URL generated client-side via `qrcode`.
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    import('qrcode')
+      .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: '#0A0E1A', light: '#ffffff' } }))
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
@@ -1177,11 +1332,23 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
         </div>
 
         <div className="text-center">
-          <div className="w-48 h-48 bg-white rounded-2xl mx-auto mb-5 flex items-center justify-center p-6 shadow-lg">
-            <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-2" style={{ backgroundColor: `${chain.color}08` }}>
-              <ChainLogo chain={chain} size={48} />
-              <QrCode className="w-10 h-10 text-gray-400" />
-            </div>
+          <div className="w-56 h-56 bg-white rounded-2xl mx-auto mb-5 flex items-center justify-center p-3 shadow-lg relative">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt={`QR code for ${address}`} className="w-full h-full rounded-lg" />
+            ) : (
+              <div className="w-full h-full rounded-lg flex flex-col items-center justify-center gap-2" style={{ backgroundColor: `${chain.color}08` }}>
+                <ChainLogo chain={chain} size={48} />
+                <QrCode className="w-10 h-10 text-gray-400" />
+              </div>
+            )}
+            {/* Chain badge overlaying the center of the QR — standard wallet UX. */}
+            {qrDataUrl && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                  <ChainLogo chain={chain} size={28} />
+                </div>
+              </div>
+            )}
           </div>
 
           <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
@@ -1514,6 +1681,20 @@ function WalletSettingsView({
                             </div>
                             <button onClick={() => { navigator.clipboard.writeText(revealedPhrase); }} className="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors">
                               <Copy className="w-3.5 h-3.5" /> Copy Seed Phrase
+                            </button>
+                            {/* FIX 5A.1 / Phase 4: "I've written this down" confirmation — dismisses the main-view
+                                backup banner so the user isn't nagged after they've actually backed up. */}
+                            <button
+                              onClick={() => {
+                                try {
+                                  localStorage.setItem(`naka_seed_backed_up_${wallet.address}`, new Date().toISOString());
+                                  setRevealedPhrase('');
+                                  setRevealPassword('');
+                                } catch { /* storage unavailable */ }
+                              }}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
+                            >
+                              <Check className="w-3.5 h-3.5" /> I've written this down
                             </button>
                           </div>
                         )}
