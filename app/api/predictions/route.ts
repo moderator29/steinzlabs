@@ -363,7 +363,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
       const symbol = (pair.baseToken?.symbol || '').toUpperCase();
       const name = pair.baseToken?.name || 'Unknown';
       const change24h = pair.priceChange?.h24 || 0;
-      const vol = parseFloat(pair.volume?.h24 || '0');
+      const vol = pair.volume?.h24 ?? 0;
       const dexId = pair.dexId || 'unknown';
       const chainId = pair.chainId || token.chainId;
       const pairAddress = pair.pairAddress || '';
@@ -466,7 +466,7 @@ async function generateDexPredictions(): Promise<Prediction[]> {
       const symbol = (pair.baseToken?.symbol || '').toUpperCase();
       const name = pair.baseToken?.name || 'Unknown';
       const change24h = pair.priceChange?.h24 || 0;
-      const vol = parseFloat(pair.volume?.h24 || '0');
+      const vol = pair.volume?.h24 ?? 0;
       const chainId = pair.chainId || 'ethereum';
       const pairAddress = pair.pairAddress || '';
 

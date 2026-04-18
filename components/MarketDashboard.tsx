@@ -105,13 +105,13 @@ export default function MarketDashboard() {
       const stored = localStorage.getItem('steinz_watchlist');
       if (stored) setWatchlist(JSON.parse(stored));
     } catch { /* ignore */ }
-    supabase.from('watchlist').select('token_id').then(({ data }) => {
+    void Promise.resolve(supabase.from('watchlist').select('token_id')).then(({ data }) => {
       if (data && data.length > 0) {
         const ids = data.map((r: { token_id: string }) => r.token_id);
         setWatchlist(ids);
         try { localStorage.setItem('steinz_watchlist', JSON.stringify(ids)); } catch { /* ignore */ }
       }
-    }).catch(err => console.error('[MarketDashboard] Watchlist load failed:', err instanceof Error ? err.message : err));
+    }).catch((err: unknown) => console.error('[MarketDashboard] Watchlist load failed:', err instanceof Error ? err.message : err));
   }, []);
 
   const fetchCoins = useCallback(async () => {
@@ -210,11 +210,11 @@ export default function MarketDashboard() {
       const next = isAdding ? [...prev, coinId] : prev.filter(id => id !== coinId);
       try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch { /* ignore */ }
       if (isAdding) {
-        supabase.from('watchlist').insert({ token_id: coinId }).catch(err =>
+        void Promise.resolve(supabase.from('watchlist').insert({ token_id: coinId })).catch((err: unknown) =>
           console.error('[MarketDashboard] Watchlist add failed:', err instanceof Error ? err.message : err)
         );
       } else {
-        supabase.from('watchlist').delete().eq('token_id', coinId).catch(err =>
+        void Promise.resolve(supabase.from('watchlist').delete().eq('token_id', coinId)).catch((err: unknown) =>
           console.error('[MarketDashboard] Watchlist remove failed:', err instanceof Error ? err.message : err)
         );
       }

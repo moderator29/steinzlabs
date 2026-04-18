@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(sed -n '21,30p' lib/services/oneinch.ts)",
+      "Bash(sed -n '22,30p' lib/services/kyberswap.ts)",
+      "Bash(sed -n '20,28p' lib/services/openocean.ts)",
+      "Bash(python3 -)"
+    ]
+  }
+}

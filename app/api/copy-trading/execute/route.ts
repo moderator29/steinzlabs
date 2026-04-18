@@ -5,8 +5,8 @@ import { getTokenSecurity, getAddressSecurity } from "@/lib/services/goplus";
 
 export const runtime = "nodejs";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -39,7 +39,7 @@ interface ExecuteBody {
  * (same pattern as the Phase 3 order monitors).
  */
 export async function POST(request: NextRequest) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
   let score = 100;
   const reasons: string[] = [];
   if (tokenSec && typeof tokenSec === "object") {
-    const s = tokenSec as Record<string, unknown>;
+    const s = tokenSec as unknown as Record<string, unknown>;
     if (s.isHoneypot) { score -= 60; reasons.push("honeypot"); }
     if (s.isMintable) { score -= 15; reasons.push("mintable"); }
     if (s.ownerCanChangeBalance) { score -= 25; reasons.push("owner_balance_mutable"); }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     if (sellTax > 10) { score -= 10; reasons.push(`sell_tax_${sellTax}`); }
   }
   if (addrSec && typeof addrSec === "object") {
-    const a = addrSec as Record<string, unknown>;
+    const a = addrSec as unknown as Record<string, unknown>;
     if (a.isScam) { score -= 80; reasons.push("scam_address"); }
     if (a.isBlacklisted) { score -= 50; reasons.push("blacklisted"); }
   }

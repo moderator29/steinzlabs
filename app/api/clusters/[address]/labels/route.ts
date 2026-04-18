@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,7 +20,7 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest, { params }: { params: { address: string } }) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

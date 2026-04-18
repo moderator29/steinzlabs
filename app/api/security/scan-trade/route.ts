@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Log scan result to Supabase — non-critical
     if (userWallet) {
       const admin = getSupabaseAdmin();
-      admin.from('scans').insert({ user_wallet: userWallet, token_address: tokenAddress, scan_result: scanResult, allowed: scanResult.allowed, blocked: scanResult.blocked, risk_score: scanResult.riskScore, reason: scanResult.reason }).then(() => {}).catch(() => {});
+      void Promise.resolve(admin.from('scans').insert({ user_wallet: userWallet, token_address: tokenAddress, scan_result: scanResult, allowed: scanResult.allowed, blocked: scanResult.blocked, risk_score: scanResult.riskScore, reason: scanResult.reason })).catch(() => {});
     }
 
     return NextResponse.json(scanResult);

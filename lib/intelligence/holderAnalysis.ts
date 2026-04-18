@@ -253,6 +253,7 @@ async function enrichHolder(
 
   try {
     const addressIntel = await getAddressIntel(holder.address);
+    if (!addressIntel) throw new Error('No intel');
 
     const isScammer =
       addressIntel.labels?.includes('scammer') ||
@@ -267,12 +268,14 @@ async function enrichHolder(
     if (addressIntel.arkhamEntity?.id) {
       try {
         const entityPerf = await getEntityPerformance(addressIntel.arkhamEntity.id);
-        performance = {
-          winRate: entityPerf.winRate,
-          avgHoldTime: entityPerf.avgHoldTime,
-          totalTrades: entityPerf.totalTrades,
-          avgGain: entityPerf.avgGainOnWinners,
-        };
+        if (entityPerf) {
+          performance = {
+            winRate: entityPerf.winRate,
+            avgHoldTime: entityPerf.avgHoldTime,
+            totalTrades: entityPerf.totalTrades,
+            avgGain: entityPerf.avgGainOnWinners,
+          };
+        }
       } catch {
         // Performance not available
       }

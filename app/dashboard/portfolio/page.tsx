@@ -1,804 +1,613 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RotateCcw, PieChart, ArrowUpRight, ArrowDownRight, Plus, ExternalLink, BarChart3, Download, Clock, DollarSign, ShieldAlert, ShieldCheck, ShieldX, ShieldQuestion, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  ShieldAlert,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { createChart, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
+import { BackButton } from "@/components/ui/BackButton";
+import { TokenLogo } from "@/components/market/TokenLogo";
+import { PriceChangeDisplay } from "@/components/market/PriceChangeDisplay";
+import { formatPrice, formatLargeNumber, formatPercent } from "@/lib/market/formatters";
+import { useAuth } from "@/lib/hooks/useAuth";
 
-interface Token {
+type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
+type TabId = "holdings" | "performance" | "alpha";
+
+interface Holding {
   symbol: string;
   name: string;
   balance: string;
-  price: number;
-  valueUsd: number;
-  change24h: number;
-  contractAddress: string;
-  logo?: string;
+  valueUsd: string | null;
+  contractAddress: string | null;
+  logoUrl?: string;
+  chain?: string;
+  securityScore?: number;
+  change24h?: number;
+  costBasisUsd?: number | null;
 }
 
-interface TokenRisk {
-  contractAddress: string;
-  symbol: string;
-  riskLevel: 'safe' | 'warning' | 'danger' | 'unknown';
-  score: number;
-  flags: string[];
-  details: {
-    isHoneypot: boolean;
-    isMintable: boolean;
-    isProxy: boolean;
-    isBlacklisted: boolean;
-    selfDestruct: boolean;
-    hiddenOwner: boolean;
-    buyTax: number | null;
-    sellTax: number | null;
-    holderCount: number | null;
-    top10HolderPercent: number | null;
-    lpLockedPercent: number | null;
-    creatorPercent: number | null;
-  };
+interface IntelResponse {
+  chain?: string;
+  address?: string;
+  totalBalanceUsd?: string | null;
+  holdings?: Array<{
+    symbol: string;
+    name: string;
+    balance: string;
+    valueUsd: string | null;
+    contractAddress: string | null;
+    logoUrl?: string;
+    change24h?: number;
+  }>;
 }
 
-interface RiskSummary {
-  scanned: number;
-  safe: number;
-  warning: number;
-  danger: number;
-  unknown: number;
-  avgScore: number;
-  portfolioRisk: 'safe' | 'moderate' | 'high' | 'critical';
+interface PerformancePoint {
+  time: number;
+  value: number;
 }
 
-const RISK_CONFIG = {
-  safe:    { color: '#10B981', bg: '#10B98115', label: 'Safe',    Icon: ShieldCheck },
-  warning: { color: '#F59E0B', bg: '#F59E0B15', label: 'Warning', Icon: ShieldAlert },
-  danger:  { color: '#EF4444', bg: '#EF444415', label: 'Danger',  Icon: ShieldX },
-  unknown: { color: '#6B7280', bg: '#6B728015', label: 'Unknown', Icon: ShieldQuestion },
-} as const;
+interface PerformanceStats {
+  winRate: number | null;
+  totalTrades: number;
+  closedTrades: number;
+  bestToken: { symbol: string; pnl: number } | null;
+  worstToken: { symbol: string; pnl: number } | null;
+  avgHoldHours: number | null;
+  totalGasUsd: number;
+}
 
-const PORTFOLIO_RISK_CONFIG = {
-  safe:     { color: '#10B981', label: 'Low Risk',      Icon: ShieldCheck },
-  moderate: { color: '#F59E0B', label: 'Moderate Risk', Icon: ShieldAlert },
-  high:     { color: '#F97316', label: 'High Risk',     Icon: ShieldAlert },
-  critical: { color: '#EF4444', label: 'Critical Risk', Icon: ShieldX },
-} as const;
+interface PerformanceResponse {
+  series: PerformancePoint[];
+  realized: { totalUsd: number; bySymbol: Record<string, number> };
+  stats: PerformanceStats;
+}
 
-type TabId = 'balance' | 'history' | 'unrealized' | 'pnl';
-type PnlRange = '1W' | '2W' | '3W' | '1M' | '3M' | 'All';
-type HistoryRange = '1D' | '1W' | '1M' | '3M' | '1Y' | 'All';
+const DONUT_COLORS = ["#0A1EFF", "#7C3AED", "#10B981", "#F59E0B", "#EF4444", "#06B6D4", "#8B5CF6", "#EC4899"];
 
-const COLORS = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#EC4899'];
+function chainFor(symbol: string | undefined): string {
+  const s = (symbol ?? "").toUpperCase();
+  if (s === "SOL") return "solana";
+  if (s === "BNB") return "bsc";
+  if (s === "AVAX") return "avalanche";
+  if (s === "MATIC") return "polygon";
+  return "ethereum";
+}
 
-const KNOWN_LOGOS: Record<string, string> = {
-  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-  WETH: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
-  BTC: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
-  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
-  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
-  BNB: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
-  MATIC: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
-  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
-  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
-  UNI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-logo.png',
-  AAVE: 'https://assets.coingecko.com/coins/images/12645/small/aave-token-round.png',
-  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
-  ARB: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg',
-  OP: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
-  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
-  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
-  DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
-  XRP: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
-  ADA: 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
-  DOT: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-  CRV: 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
-  MKR: 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png',
-  ATOM: 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',
-};
+export default function PortfolioPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [address, setAddress] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabId>("holdings");
+  const [timeframe, setTimeframe] = useState<Timeframe>("30D");
+  const [intel, setIntel] = useState<IntelResponse | null>(null);
+  const [perf, setPerf] = useState<PerformanceResponse | null>(null);
+  const [loadingIntel, setLoadingIntel] = useState(false);
+  const [loadingPerf, setLoadingPerf] = useState(false);
+  const [intelError, setIntelError] = useState<string | null>(null);
 
-function TokenLogo({ symbol, logo, fallbackColor }: { symbol: string; logo?: string; fallbackColor: string }) {
-  const [imgError, setImgError] = useState(false);
-  const src = logo || KNOWN_LOGOS[symbol.toUpperCase()];
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setAddress(localStorage.getItem("wallet_address"));
+    }
+  }, []);
 
-  if (src && !imgError) {
-    return (
-      <img
-        src={src}
-        alt={symbol}
-        className="w-9 h-9 rounded-full flex-shrink-0 bg-[#111827]"
-        onError={() => setImgError(true)}
-      />
-    );
-  }
+  // Fetch wallet intelligence (holdings).
+  useEffect(() => {
+    if (!address) return;
+    let abort = false;
+    setLoadingIntel(true);
+    setIntelError(null);
+    fetch(`/api/wallet-intelligence?address=${address}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Failed (${r.status})`);
+        return (await r.json()) as IntelResponse;
+      })
+      .then((d) => {
+        if (!abort) setIntel(d);
+      })
+      .catch((e) => {
+        if (!abort) setIntelError(e instanceof Error ? e.message : "Load failed");
+      })
+      .finally(() => {
+        if (!abort) setLoadingIntel(false);
+      });
+    return () => {
+      abort = true;
+    };
+  }, [address]);
+
+  // Fetch performance series + stats + realized PnL.
+  useEffect(() => {
+    if (!user) return;
+    let abort = false;
+    setLoadingPerf(true);
+    fetch(`/api/portfolio/performance`)
+      .then(async (r) => (r.ok ? ((await r.json()) as PerformanceResponse) : null))
+      .then((d) => {
+        if (!abort && d) setPerf(d);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!abort) setLoadingPerf(false);
+      });
+    return () => {
+      abort = true;
+    };
+  }, [user]);
+
+  const totalValueUsd = Number(intel?.totalBalanceUsd ?? 0) || 0;
+  const holdings: Holding[] = useMemo(
+    () =>
+      (intel?.holdings ?? []).map((h) => ({
+        ...h,
+        chain: intel?.chain,
+      })),
+    [intel],
+  );
+
+  const tradeableHoldings = useMemo(
+    () => holdings.filter((h) => (Number(h.valueUsd ?? 0) || 0) > 0),
+    [holdings],
+  );
+
+  const donutData = useMemo(() => {
+    const totals = tradeableHoldings
+      .map((h) => ({ name: h.symbol, value: Number(h.valueUsd ?? 0) || 0 }))
+      .filter((x) => x.value > 0)
+      .sort((a, b) => b.value - a.value);
+    const top = totals.slice(0, 7);
+    const rest = totals.slice(7).reduce((a, b) => a + b.value, 0);
+    if (rest > 0) top.push({ name: "Other", value: rest });
+    return top;
+  }, [tradeableHoldings]);
+
+  const riskyHoldings = useMemo(
+    () => holdings.filter((h) => typeof h.securityScore === "number" && h.securityScore < 50),
+    [holdings],
+  );
+
+  // Today's P&L: last point vs today's start on the cumulative series —
+  // note this is capital deployed, not live mark-to-market. Shown as
+  // "Today's Flow" not to mislead. All-time realized P&L is authoritative.
+  const today = useMemo(() => {
+    if (!perf || perf.series.length === 0) return { delta: 0, pct: null as number | null };
+    const now = perf.series[perf.series.length - 1]?.value ?? 0;
+    const todayStart = Math.floor(Date.now() / 86_400_000) * 86_400;
+    const before = [...perf.series].reverse().find((p) => p.time < todayStart)?.value ?? now;
+    const delta = now - before;
+    const pct = before !== 0 ? (delta / Math.abs(before)) * 100 : null;
+    return { delta, pct };
+  }, [perf]);
+
+  const realizedTotal = perf?.realized.totalUsd ?? 0;
 
   return (
-    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: `${fallbackColor}20`, color: fallbackColor }}>
-      {symbol.slice(0, 2)}
-    </div>
-  );
-}
-
-function fmtUsd(v: number, decimals = 2) {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(2)}K`;
-  return `$${v.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-}
-
-function pctColor(v: number) {
-  return v >= 0 ? '#10B981' : '#EF4444';
-}
-
-function MiniBar({ data }: { data: number[] }) {
-  const max = Math.max(...data.map(Math.abs));
-  return (
-    <div className="flex items-end gap-0.5 h-10">
-      {data.map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-sm"
-          style={{
-            height: `${(Math.abs(v) / (max || 1)) * 100}%`,
-            backgroundColor: v >= 0 ? '#10B981' : '#EF4444',
-            minHeight: '3px',
-            opacity: 0.7 + (i / data.length) * 0.3,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function RiskBadge({ risk }: { risk: TokenRisk | undefined }) {
-  if (!risk) return null;
-  const cfg = RISK_CONFIG[risk.riskLevel];
-  const Icon = cfg.Icon;
-  return (
-    <div
-      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
-      style={{ backgroundColor: cfg.bg, color: cfg.color }}
-      title={risk.flags.join(', ') || 'No issues detected'}
-    >
-      <Icon className="w-3 h-3" />
-      {cfg.label}
-    </div>
-  );
-}
-
-function RiskBanner({
-  summary,
-  riskResults,
-  portfolio,
-  loading,
-  expanded,
-  onToggle,
-  onDismiss,
-  onRescan,
-}: {
-  summary: RiskSummary | null;
-  riskResults: Record<string, TokenRisk>;
-  portfolio: Token[];
-  loading: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-  onDismiss: () => void;
-  onRescan: () => void;
-}) {
-  if (!summary && !loading) return null;
-
-  if (loading) {
-    return (
-      <div className="rounded-xl p-3 border border-white/[0.06] bg-white/[0.02] flex items-center gap-2 text-xs text-gray-400">
-        <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin flex-shrink-0" />
-        Scanning portfolio for security risks...
+    <div className="min-h-screen bg-[#0A0E1A] p-4 sm:p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <BackButton href="/dashboard" />
+        <div>
+          <h1 className="text-2xl font-bold text-white">Portfolio</h1>
+          <p className="text-sm text-slate-400">
+            {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect a wallet to track your holdings"}
+          </p>
+        </div>
       </div>
-    );
-  }
 
-  if (!summary) return null;
-
-  const pRisk = PORTFOLIO_RISK_CONFIG[summary.portfolioRisk];
-  const PRIcon = pRisk.Icon;
-  const flaggedTokens = portfolio.filter(t => {
-    const r = riskResults[t.contractAddress?.toLowerCase()];
-    return r && (r.riskLevel === 'danger' || r.riskLevel === 'warning');
-  });
-
-  return (
-    <div
-      className="rounded-xl border overflow-hidden"
-      style={{ borderColor: `${pRisk.color}30`, backgroundColor: `${pRisk.color}08` }}
-    >
-      {/* Header row */}
-      <div className="flex items-center gap-2 p-3">
-        <PRIcon className="w-4 h-4 flex-shrink-0" style={{ color: pRisk.color }} />
-        <div className="flex-1 min-w-0">
+      {/* HERO */}
+      <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-6">
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+          Total Portfolio Value
+        </div>
+        <div className="flex flex-wrap items-baseline gap-4">
+          <div className="text-4xl sm:text-[56px] font-mono font-bold text-white tabular-nums leading-none">
+            {loadingIntel && !intel ? "—" : formatPrice(totalValueUsd)}
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold" style={{ color: pRisk.color }}>{pRisk.label}</span>
-            <span className="text-xs text-gray-500">•</span>
-            <span className="text-xs text-gray-400">Score {summary.avgScore}/100</span>
-          </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">
-            {summary.scanned} scanned · {summary.safe} safe · {summary.warning} warnings · {summary.danger} critical
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onRescan}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
-            title="Re-scan"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-          {flaggedTokens.length > 0 && (
-            <button
-              onClick={onToggle}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                today.delta >= 0 ? "text-emerald-400 bg-emerald-500/10" : "text-rose-400 bg-rose-500/10"
+              }`}
             >
-              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {today.delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              {today.delta >= 0 ? "+" : ""}
+              {formatPrice(today.delta)}
+              {today.pct != null ? ` (${formatPercent(today.pct)})` : ""}
+            </span>
+            <span className="text-[11px] text-slate-500">today</span>
+          </div>
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
+          All-time realized P&L:{" "}
+          <span className={`font-semibold ${realizedTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {realizedTotal >= 0 ? "+" : ""}
+            {formatPrice(realizedTotal)}
+          </span>
+        </div>
+
+        <PerformanceChart series={perf?.series ?? []} timeframe={timeframe} loading={loadingPerf} />
+
+        <div className="mt-3 flex gap-2">
+          {(["1D", "7D", "30D", "90D", "ALL"] as Timeframe[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                timeframe === t
+                  ? "bg-[#0A1EFF] text-white"
+                  : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900"
+              }`}
+            >
+              {t}
             </button>
-          )}
-          <button
-            onClick={onDismiss}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          ))}
         </div>
       </div>
 
-      {/* Score bar */}
-      <div className="px-3 pb-2">
-        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${summary.avgScore}%`,
-              backgroundColor: pRisk.color,
-            }}
-          />
+      {!address && !loadingIntel && (
+        <div className="rounded-xl border border-slate-800/50 bg-slate-950/60 p-8 text-center text-slate-400">
+          Portfolio tracking begins with your first trade. Connect a wallet to get started.
         </div>
-      </div>
+      )}
 
-      {/* Expanded flagged token list */}
-      {expanded && flaggedTokens.length > 0 && (
-        <div className="border-t border-white/[0.06] divide-y divide-white/[0.04]">
-          {flaggedTokens.map((t, i) => {
-            const r = riskResults[t.contractAddress?.toLowerCase()];
-            if (!r) return null;
-            const cfg = RISK_CONFIG[r.riskLevel];
-            const CfgIcon = cfg.Icon;
-            return (
-              <div key={i} className="p-3">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <CfgIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: cfg.color }} />
-                  <span className="text-sm font-semibold">{t.symbol}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                    {cfg.label}
-                  </span>
-                  <span className="ml-auto text-xs text-gray-500">Score {r.score}/100</span>
-                </div>
-                {r.flags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {r.flags.map((flag, fi) => (
-                      <span key={fi} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-400 border border-white/[0.06]">
-                        {flag}
-                      </span>
+      {intelError && (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4 text-sm text-rose-300">
+          Failed to load holdings: {intelError}
+        </div>
+      )}
+
+      {/* ALLOCATION + RISKY */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-white">Asset Allocation</h2>
+            <span className="text-[11px] text-slate-500">{donutData.length} tokens</span>
+          </div>
+          {donutData.length === 0 ? (
+            <div className="py-12 text-center text-sm text-slate-500">No holdings to show.</div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    stroke="#0A0E1A"
+                  >
+                    {donutData.map((_, i) => (
+                      <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
                     ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0A0E1A",
+                      border: "1px solid rgba(148,163,184,0.2)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                    formatter={(v: number, n: string) => [formatPrice(v), n]}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 11, color: "#94A3B8" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
+
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-5">
+          {riskyHoldings.length > 0 ? (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldAlert size={16} className="text-rose-400" />
+                <h2 className="text-sm font-semibold text-rose-300">Risky holdings</h2>
+              </div>
+              <ul className="space-y-2">
+                {riskyHoldings.map((h) => (
+                  <li
+                    key={h.contractAddress ?? h.symbol}
+                    className="flex items-center justify-between text-xs rounded-lg bg-rose-500/5 border border-rose-500/20 px-3 py-2"
+                  >
+                    <span className="font-semibold text-rose-200">{h.symbol}</span>
+                    <span className="text-rose-300">Score {h.securityScore}/100</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <h2 className="text-sm font-semibold text-white mb-2">Holdings health</h2>
+              <p className="text-xs text-slate-400">
+                No flagged tokens in your wallet. Security scores surface here when any holding drops below 50.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* TABS */}
+      <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl overflow-hidden">
+        <div className="flex items-center border-b border-slate-800/50">
+          {(
+            [
+              ["holdings", "Holdings"],
+              ["performance", "Performance"],
+              ["alpha", "Alpha Intelligence"],
+            ] as Array<[TabId, string]>
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-4 py-3 text-sm transition-colors ${
+                tab === id
+                  ? "text-[#0A1EFF] border-b-2 border-[#0A1EFF] bg-[#0A1EFF]/5"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "holdings" && (
+          <HoldingsTable holdings={tradeableHoldings} loading={loadingIntel} onSelect={router.push} />
+        )}
+        {tab === "performance" && <PerformanceTab stats={perf?.stats ?? null} loading={loadingPerf} />}
+        {tab === "alpha" && (
+          <div className="p-8 text-center text-sm text-slate-400">
+            Wallet DNA available after Phase 9.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PerformanceChart({
+  series,
+  timeframe,
+  loading,
+}: {
+  series: PerformancePoint[];
+  timeframe: Timeframe;
+  loading: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+
+  const filtered = useMemo(() => {
+    if (series.length === 0) return series;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cutoff = (() => {
+      switch (timeframe) {
+        case "1D":
+          return nowSec - 86_400;
+        case "7D":
+          return nowSec - 86_400 * 7;
+        case "30D":
+          return nowSec - 86_400 * 30;
+        case "90D":
+          return nowSec - 86_400 * 90;
+        default:
+          return 0;
+      }
+    })();
+    return series.filter((p) => p.time >= cutoff);
+  }, [series, timeframe]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const chart = createChart(containerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: "#94A3B8",
+        fontSize: 11,
+      },
+      grid: { vertLines: { visible: false }, horzLines: { color: "rgba(148,163,184,0.08)" } },
+      timeScale: { borderColor: "rgba(148,163,184,0.12)", timeVisible: true },
+      rightPriceScale: { borderColor: "rgba(148,163,184,0.12)" },
+      width: containerRef.current.clientWidth,
+      height: 180,
+      autoSize: true,
+    });
+    const areaSeries = chart.addAreaSeries({
+      lineColor: "#00BFFF",
+      topColor: "rgba(0,191,255,0.30)",
+      bottomColor: "rgba(0,191,255,0.02)",
+      lineWidth: 2,
+    });
+    chartRef.current = chart;
+    seriesRef.current = areaSeries;
+    const observer = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        chart.applyOptions({ width: e.contentRect.width });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!seriesRef.current) return;
+    const data = filtered.map((p) => ({ time: p.time as never, value: p.value }));
+    seriesRef.current.setData(data);
+    chartRef.current?.timeScale().fitContent();
+  }, [filtered]);
+
+  return (
+    <div className="mt-4">
+      <div
+        ref={containerRef}
+        className="w-full"
+        style={{ height: 180 }}
+        aria-label="Portfolio performance chart"
+      />
+      {filtered.length === 0 && !loading && (
+        <p className="text-[11px] text-slate-500 text-center mt-2">
+          No trade history yet. Your portfolio chart appears after your first swap.
+        </p>
       )}
     </div>
   );
 }
 
-export default function PortfolioPage() {
-  const router = useRouter();
-  const { address: walletAddress, provider, isConnected, connectAuto, connecting } = useWallet();
-  const [portfolio, setPortfolio] = useState<Token[]>([]);
-  const [totalValue, setTotalValue] = useState(0);
-  const [totalChange, setTotalChange] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [tokenCount, setTokenCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabId>('balance');
-  const [pnlRange, setPnlRange] = useState<PnlRange>('1M');
-  const [historyRange, setHistoryRange] = useState<HistoryRange>('1M');
-  const [riskResults, setRiskResults] = useState<Record<string, TokenRisk>>({});
-  const [riskSummary, setRiskSummary] = useState<RiskSummary | null>(null);
-  const [riskLoading, setRiskLoading] = useState(false);
-  const [riskExpanded, setRiskExpanded] = useState(false);
-  const [riskDismissed, setRiskDismissed] = useState(false);
+function HoldingsTable({
+  holdings,
+  loading,
+  onSelect,
+}: {
+  holdings: Holding[];
+  loading: boolean;
+  onSelect: (path: string) => void;
+}) {
+  if (loading) {
+    return <div className="p-6 text-sm text-slate-500">Loading holdings…</div>;
+  }
+  if (holdings.length === 0) {
+    return (
+      <div className="p-8 text-center text-sm text-slate-400">
+        Portfolio tracking begins with your first trade.
+      </div>
+    );
+  }
 
-  // Generate history data from current portfolio value — real history requires transaction log
-  const historyData = (() => {
-    if (!totalValue || totalValue <= 0) return [];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const now = new Date();
-    const result: { label: string; value: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setMonth(d.getMonth() - i);
-      // Scale value based on portfolio's 24h change trend (extrapolated, not fabricated)
-      const scale = 1 - (i * (totalChange / 100) * 0.15);
-      result.push({ label: months[d.getMonth()], value: Math.max(0, totalValue * Math.max(0.5, scale)) });
-    }
-    return result;
-  })();
-
-  const pnlData = portfolio.map((t, i) => ({
-    symbol: t.symbol,
-    name: t.name,
-    unrealized: t.valueUsd * (t.change24h / 100),
-    realized: 0,
-    pct: t.change24h,
-    valueUsd: t.valueUsd,
-    color: COLORS[i % COLORS.length],
-  }));
-
-  const totalUnrealized = pnlData.reduce((s, t) => s + t.unrealized, 0);
-  const totalRealized = pnlData.reduce((s, t) => s + t.realized, 0);
-
-  useEffect(() => {
-    if (walletAddress) fetchPortfolio(walletAddress);
-  }, [walletAddress]);
-
-  const runRiskScan = async (tokens: Token[]) => {
-    const scannable = tokens.filter(t => t.contractAddress && t.contractAddress !== 'native');
-    if (scannable.length === 0) return;
-    setRiskLoading(true);
-    setRiskDismissed(false);
-    try {
-      const res = await fetch('/api/portfolio-risk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokens: scannable, chainId: '1' }),
-      });
-      const data = await res.json();
-      if (data.results) setRiskResults(data.results);
-      if (data.summary) setRiskSummary(data.summary);
-    } catch {
-      // silent fail
-    } finally {
-      setRiskLoading(false);
-    }
+  const goTo = (h: Holding) => {
+    const chain = h.chain ?? chainFor(h.symbol);
+    const addr = h.contractAddress ?? h.symbol.toLowerCase();
+    onSelect(`/dashboard/market/${chain}/${addr}`);
   };
-
-  const fetchPortfolio = async (address: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/portfolio?address=${address}`);
-      const data = await res.json();
-      if (data.portfolio) {
-        setPortfolio(data.portfolio);
-        setTotalValue(data.totalValue || 0);
-        setTotalChange(data.totalChange || 0);
-        setTokenCount(data.tokenCount || 0);
-        // Auto-run security scan after portfolio loads
-        runRiskScan(data.portfolio);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'balance', label: 'Balance', icon: PieChart },
-    { id: 'history', label: 'History', icon: Clock },
-    { id: 'unrealized', label: 'Unrealized PnL', icon: TrendingUp },
-    { id: 'pnl', label: 'Profit & Loss', icon: DollarSign },
-  ];
-
-  const HIST_RANGES: HistoryRange[] = ['1D', '1W', '1M', '3M', '1Y', 'All'];
-  const PNL_RANGES: PnlRange[] = ['1W', '2W', '3W', '1M', '3M', 'All'];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-8">
-      <div className="fixed top-0 w-full z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="flex items-center px-4 h-14 gap-3">
-          <button onClick={() => router.push('/dashboard')} className="hover:bg-white/10 p-2 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <PieChart className="w-5 h-5 text-[#0A1EFF]" />
-          <h1 className="font-heading font-bold">Portfolio</h1>
-          {walletAddress && (
-            <button
-              onClick={() => fetchPortfolio(walletAddress)}
-              className="ml-auto hover:bg-white/10 p-2 rounded-lg"
-            >
-              <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="pt-20 px-4 max-w-2xl mx-auto">
-        {!walletAddress ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#0A1EFF]/20">
-              <Wallet className="w-10 h-10 text-[#0A1EFF]" />
-            </div>
-            <h2 className="text-2xl font-heading font-bold mb-2">Track Your Portfolio</h2>
-            <p className="text-gray-400 text-sm mb-4 max-w-xs mx-auto">Create or import a wallet in the Wallet tab to see real-time holdings, P&L, and performance analytics across all chains.</p>
-            <button
-              onClick={() => router.push('/dashboard/wallet-page')}
-              className="bg-[#0A1EFF] hover:bg-[#0818CC] px-8 py-3 rounded-xl font-semibold transition-all"
-            >
-              Open STEINZ Wallet
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-2xl p-6 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/[0.06] to-[#7C3AED]/[0.04]">
-              <div className="text-xs text-gray-400 mb-1">Total Portfolio Value</div>
-              <div className="text-3xl font-heading font-bold mb-2 font-mono">
-                {fmtUsd(totalValue)}
-              </div>
-              <div className="flex items-center gap-2">
-                {totalChange >= 0
-                  ? <ArrowUpRight className="w-4 h-4 text-[#10B981]" />
-                  : <ArrowDownRight className="w-4 h-4 text-[#EF4444]" />
-                }
-                <span className="text-sm font-semibold" style={{ color: pctColor(totalChange) }}>
-                  {totalChange >= 0 ? '+' : ''}{totalChange.toFixed(2)}%
-                </span>
-                <span className="text-xs text-gray-500">24h</span>
-                <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
-                  <span className="font-mono">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl p-3 border border-white/[0.06] bg-white/[0.02] text-center">
-                <div className="text-lg font-bold">{tokenCount}</div>
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Assets</div>
-              </div>
-              <div className="rounded-xl p-3 border border-white/[0.06] bg-white/[0.02] text-center">
-                <div className="text-lg font-bold" style={{ color: '#10B981' }}>
-                  {portfolio.filter(t => t.change24h >= 0).length}
-                </div>
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Gainers</div>
-              </div>
-              <div className="rounded-xl p-3 border border-white/[0.06] bg-white/[0.02] text-center">
-                <div className="text-lg font-bold" style={{ color: '#EF4444' }}>
-                  {portfolio.filter(t => t.change24h < 0).length}
-                </div>
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Losers</div>
-              </div>
-            </div>
-
-            <div className="flex gap-0 border border-white/[0.06] bg-white/[0.02] rounded-xl p-1 overflow-x-auto">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-1 justify-center ${
-                      activeTab === tab.id
-                        ? 'bg-[#0A1EFF] text-white'
-                        : 'text-gray-500 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {activeTab === 'balance' && (
-              <div className="space-y-4">
-                {/* Security Risk Banner */}
-                {!riskDismissed && (
-                  <RiskBanner
-                    summary={riskSummary}
-                    riskResults={riskResults}
-                    portfolio={portfolio}
-                    loading={riskLoading}
-                    expanded={riskExpanded}
-                    onToggle={() => setRiskExpanded(p => !p)}
-                    onDismiss={() => setRiskDismissed(true)}
-                    onRescan={() => runRiskScan(portfolio)}
-                  />
-                )}
-
-                {portfolio.length > 0 && totalValue > 0 && (
-                  <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                    <div className="flex items-center gap-2 mb-3">
-                      <PieChart className="w-4 h-4 text-[#0A1EFF]" />
-                      <span className="font-bold text-sm">Allocation</span>
-                    </div>
-                    <div className="flex h-2.5 rounded-full overflow-hidden mb-3">
-                      {portfolio.filter(t => t.valueUsd > 0).map((token, i) => {
-                        const pct = (token.valueUsd / totalValue) * 100;
-                        return (
-                          <div
-                            key={i}
-                            className="h-full"
-                            style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length], minWidth: pct > 0 ? '3px' : '0' }}
-                            title={`${token.symbol}: ${pct.toFixed(1)}%`}
-                          />
-                        );
-                      })}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {portfolio.filter(t => t.valueUsd > 0).slice(0, 6).map((token, i) => {
-                        const pct = (token.valueUsd / totalValue) * 100;
-                        return (
-                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                            {token.symbol} {pct.toFixed(1)}%
-                          </div>
-                        );
-                      })}
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-800/60">
+            <th className="px-4 py-3 text-left">Token</th>
+            <th className="px-4 py-3 text-right">Balance</th>
+            <th className="px-4 py-3 text-right">Current Price</th>
+            <th className="px-4 py-3 text-right">24h</th>
+            <th className="px-4 py-3 text-right">Value</th>
+            <th className="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {holdings.map((h) => {
+            const valueUsd = Number(h.valueUsd ?? 0) || 0;
+            const balNum = Number(h.balance) || 0;
+            const currentPrice = balNum > 0 ? valueUsd / balNum : 0;
+            return (
+              <tr
+                key={h.contractAddress ?? h.symbol}
+                className="border-b border-slate-900/60 hover:bg-slate-900/40 transition-colors cursor-pointer"
+                onClick={() => goTo(h)}
+              >
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <TokenLogo src={h.logoUrl} symbol={h.symbol} size={28} />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white truncate">{h.symbol}</div>
+                      <div className="text-xs text-slate-500 truncate">{h.name}</div>
                     </div>
                   </div>
-                )}
-
-                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                  <div className="flex items-center gap-2 p-4 border-b border-white/[0.06] bg-white/[0.02]">
-                    <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />
-                    <span className="font-bold text-sm">Holdings</span>
-                    <span className="ml-auto text-xs text-gray-500">{portfolio.length} tokens</span>
-                  </div>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-10">
-                      <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
-                    </div>
-                  ) : portfolio.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">No tokens found</div>
-                  ) : (
-                    <div className="divide-y divide-white/[0.04]">
-                      {portfolio.map((token, i) => (
-                        <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <TokenLogo symbol={token.symbol} logo={token.logo} fallbackColor={COLORS[i % COLORS.length]} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold">{token.symbol}</span>
-                              <RiskBadge risk={riskResults[token.contractAddress?.toLowerCase()]} />
-                            </div>
-                            <div className="text-[10px] text-gray-500 truncate">{token.name}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-mono font-semibold">{fmtUsd(token.valueUsd)}</div>
-                            <div className="text-[10px] text-gray-500">{parseFloat(token.balance).toFixed(4)} {token.symbol}</div>
-                          </div>
-                          <div className="w-14 text-right">
-                            {token.change24h !== 0 && (
-                              <div className="flex items-center justify-end gap-0.5">
-                                {token.change24h >= 0
-                                  ? <TrendingUp className="w-3 h-3" style={{ color: pctColor(token.change24h) }} />
-                                  : <TrendingDown className="w-3 h-3" style={{ color: pctColor(token.change24h) }} />
-                                }
-                                <span className="text-xs font-semibold" style={{ color: pctColor(token.change24h) }}>
-                                  {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(1)}%
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <a
-                    href={provider === 'phantom' ? `https://solscan.io/account/${walletAddress}` : `https://etherscan.io/address/${walletAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 rounded-xl p-3 border border-white/[0.06] text-center text-xs text-gray-400 hover:text-[#0A1EFF] transition-colors flex items-center justify-center gap-2"
-                  >
-                    View on Explorer <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <button
-                    onClick={() => router.push('/dashboard/dna-analyzer')}
-                    className="flex-1 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl p-3 text-center text-xs font-semibold flex items-center justify-center gap-2"
-                  >
-                    Analyze DNA <ArrowUpRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'history' && (
-              <div className="space-y-4">
-                <div className="flex gap-1 p-1 bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-x-auto">
-                  {HIST_RANGES.map((r) => (
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                  {balNum < 0.0001 ? balNum.toExponential(2) : balNum.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                  {currentPrice > 0 ? formatPrice(currentPrice) : "—"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {typeof h.change24h === "number" ? <PriceChangeDisplay value={h.change24h} size="sm" /> : <span className="text-slate-500">—</span>}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                  {valueUsd > 0 ? formatLargeNumber(valueUsd) : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
                     <button
-                      key={r}
-                      onClick={() => setHistoryRange(r)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                        historyRange === r ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-white'
-                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goTo(h);
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-[#0A1EFF]/15 text-[#6F7EFF] hover:bg-[#0A1EFF]/25 transition-colors"
                     >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-0.5">Portfolio Value ({historyRange})</div>
-                      <div className="text-xl font-bold font-mono">{fmtUsd(totalValue)}</div>
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: pctColor(totalChange) }}>
-                      {totalChange >= 0 ? '+' : ''}{totalChange.toFixed(2)}%
-                    </span>
-                  </div>
-
-                  <div className="h-32 flex items-end gap-1.5">
-                    {historyData.map((d, i) => {
-                      const maxVal = Math.max(...historyData.map(x => x.value));
-                      const pct = (d.value / maxVal) * 100;
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                          <div
-                            className="w-full rounded-t-sm transition-all"
-                            style={{ height: `${pct}%`, backgroundColor: '#0A1EFF', minHeight: '4px', opacity: 0.5 + (i / historyData.length) * 0.5 }}
-                          />
-                          <span className="text-[9px] text-gray-500">{d.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                  <div className="flex items-center gap-2 p-4 border-b border-white/[0.06] bg-white/[0.02]">
-                    <Clock className="w-4 h-4 text-[#0A1EFF]" />
-                    <span className="font-bold text-sm">Historical Snapshots</span>
-                    <button className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors">
-                      <Download className="w-3 h-3" /> Export
+                      Trade <ArrowRight size={10} className="inline ml-0.5" />
                     </button>
                   </div>
-                  <div className="divide-y divide-white/[0.04]">
-                    {historyData.map((d, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
-                        <div className="text-sm text-gray-400">{d.label} 2026</div>
-                        <div className="font-mono text-sm font-semibold">{fmtUsd(d.value)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-            {activeTab === 'unrealized' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                    <div className="text-xs text-gray-500 mb-1">Total Unrealized</div>
-                    <div className="text-lg font-bold font-mono" style={{ color: pctColor(totalUnrealized) }}>
-                      {totalUnrealized >= 0 ? '+' : ''}{fmtUsd(totalUnrealized)}
-                    </div>
-                  </div>
-                  <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                    <div className="text-xs text-gray-500 mb-1">Open Positions</div>
-                    <div className="text-lg font-bold">{portfolio.length}</div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                  <div className="flex items-center gap-2 p-4 border-b border-white/[0.06] bg-white/[0.02]">
-                    <TrendingUp className="w-4 h-4 text-[#0A1EFF]" />
-                    <span className="font-bold text-sm">Unrealized PnL by Token</span>
-                    <button className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors">
-                      <Download className="w-3 h-3" /> Export
-                    </button>
-                  </div>
-                  {pnlData.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">Connect wallet to see PnL</div>
-                  ) : (
-                    <div className="divide-y divide-white/[0.04]">
-                      {pnlData.sort((a, b) => Math.abs(b.unrealized) - Math.abs(a.unrealized)).map((t, i) => (
-                        <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <TokenLogo symbol={t.symbol} fallbackColor={t.color} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold">{t.symbol}</div>
-                            <div className="text-[10px] text-gray-500">{fmtUsd(t.valueUsd)} position</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-mono font-semibold" style={{ color: pctColor(t.unrealized) }}>
-                              {t.unrealized >= 0 ? '+' : ''}{fmtUsd(t.unrealized)}
-                            </div>
-                            <div className="text-[10px]" style={{ color: pctColor(t.pct) }}>
-                              {t.pct >= 0 ? '+' : ''}{t.pct.toFixed(1)}%
-                            </div>
-                          </div>
-                          <div className="w-16">
-                            <MiniBar data={[t.unrealized * 0.3, t.unrealized * 0.6, t.unrealized * 0.8, t.unrealized]} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'pnl' && (
-              <div className="space-y-4">
-                <div className="flex gap-1 p-1 bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-x-auto">
-                  {PNL_RANGES.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setPnlRange(r)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                        pnlRange === r ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-white'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                    <div className="text-xs text-gray-500 mb-1">Realized PnL ({pnlRange})</div>
-                    <div className="text-lg font-bold font-mono" style={{ color: pctColor(totalRealized) }}>
-                      {totalRealized >= 0 ? '+' : ''}{fmtUsd(totalRealized)}
-                    </div>
-                  </div>
-                  <div className="rounded-xl p-4 border border-white/[0.06] bg-white/[0.02]">
-                    <div className="text-xs text-gray-500 mb-1">Win Rate</div>
-                    <div className="text-lg font-bold" style={{ color: '#10B981' }}>
-                      {portfolio.length > 0 ? Math.round((portfolio.filter(t => t.change24h >= 0).length / portfolio.length) * 100) : 0}%
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                  <div className="flex items-center gap-2 p-4 border-b border-white/[0.06] bg-white/[0.02]">
-                    <DollarSign className="w-4 h-4 text-[#0A1EFF]" />
-                    <span className="font-bold text-sm">Realized P&L Breakdown</span>
-                    <button className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors">
-                      <Download className="w-3 h-3" /> Export CSV
-                    </button>
-                  </div>
-                  {pnlData.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">Connect wallet to see P&L data</div>
-                  ) : (
-                    <div className="divide-y divide-white/[0.04]">
-                      {pnlData.sort((a, b) => Math.abs(b.realized) - Math.abs(a.realized)).map((t, i) => (
-                        <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                          <TokenLogo symbol={t.symbol} fallbackColor={t.color} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold">{t.symbol}</div>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <div
-                                className="h-1 rounded-full"
-                                style={{
-                                  width: `${Math.min(Math.abs(t.realized / (totalRealized || 1)) * 100, 100)}%`,
-                                  backgroundColor: pctColor(t.realized),
-                                  minWidth: '4px',
-                                  maxWidth: '80px',
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-mono font-semibold" style={{ color: pctColor(t.realized) }}>
-                              {t.realized >= 0 ? '+' : ''}{fmtUsd(t.realized)}
-                            </div>
-                            <div className="text-[10px] text-gray-500">realized</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+function PerformanceTab({ stats, loading }: { stats: PerformanceStats | null; loading: boolean }) {
+  if (loading && !stats) {
+    return <div className="p-6 text-sm text-slate-500">Computing performance…</div>;
+  }
+  if (!stats) {
+    return (
+      <div className="p-8 text-center text-sm text-slate-400">
+        Performance metrics appear after your first closed round-trip trade.
       </div>
+    );
+  }
+  return (
+    <div className="p-5 grid gap-3 grid-cols-2 md:grid-cols-3">
+      <Metric label="Win rate" value={stats.winRate != null ? `${stats.winRate.toFixed(1)}%` : "—"} />
+      <Metric label="Closed trades" value={stats.closedTrades.toString()} />
+      <Metric label="Total trades" value={stats.totalTrades.toString()} />
+      <Metric
+        label="Avg hold"
+        value={
+          stats.avgHoldHours != null
+            ? stats.avgHoldHours >= 24
+              ? `${(stats.avgHoldHours / 24).toFixed(1)}d`
+              : `${stats.avgHoldHours.toFixed(1)}h`
+            : "—"
+        }
+      />
+      <Metric
+        label="Best token"
+        value={stats.bestToken ? `${stats.bestToken.symbol} · ${formatPrice(stats.bestToken.pnl)}` : "—"}
+      />
+      <Metric
+        label="Worst token"
+        value={stats.worstToken ? `${stats.worstToken.symbol} · ${formatPrice(stats.worstToken.pnl)}` : "—"}
+      />
+      <Metric label="Total gas" value={formatPrice(stats.totalGasUsd)} />
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800/50 bg-slate-900/30 p-3">
+      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-sm font-semibold text-white mt-1 truncate">{value}</div>
     </div>
   );
 }

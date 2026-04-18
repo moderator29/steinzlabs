@@ -5,7 +5,7 @@ const BASE = 'https://api.llama.fi';
 const COINS = 'https://coins.llama.fi';
 const TIMEOUT = parseInt(process.env.API_TIMEOUT_MS || '600000');
 
-async function get<T>(url: string, ttl = TTL.WALLET_BALANCE): Promise<T> {
+async function get<T>(url: string, ttl: number = TTL.WALLET_BALANCE): Promise<T> {
   const cached = cache.get<T>(url);
   if (cached) return cached;
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });

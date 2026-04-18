@@ -1,13 +1,12 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { Suspense } from "react";
-import { TradingTerminalLayout } from "@/components/trading/TradingTerminalLayout";
-import { NakaLoader } from "@/components/brand/NakaLoader";
-
-export default function TradingSuitePage() {
-  return (
-    <Suspense fallback={<NakaLoader text="Loading trading terminal..." />}>
-      <TradingTerminalLayout />
-    </Suspense>
-  );
+/**
+ * Trading Suite has been unified into the Market terminal:
+ *   /dashboard/market (token list) → click any coin →
+ *   /dashboard/market/[chain]/[address] (full trading terminal for that coin).
+ *
+ * This route redirects any bookmarks / stale links to the market list.
+ */
+export default function TradingSuiteRedirect() {
+  redirect("/dashboard/market");
 }

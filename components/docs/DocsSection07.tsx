@@ -56,7 +56,7 @@ export function DocsSection07() {
           <Zap className="w-4 h-4 text-[#F59E0B]" />Copy Trading
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Mirror the trades of any wallet on the platform. Set your copy trade size as a percentage of the source wallet's position, and your wallet will automatically replicate their buys and sells within your configured limits.
+          Mirror the trades of any wallet on the platform. Set your copy trade size as a percentage of the source wallet&apos;s position, and your wallet will automatically replicate their buys and sells within your configured limits.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[

@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
     const currentSlippageBps = parseInt(searchParams.get('slippage') ?? '50', 10);
 
-    const key = cacheKey('mev', chain, tokenAddress, String(Math.ceil(swapAmountUsd / 1000)));
+    const key = cacheKey('mev', chain, { token: tokenAddress, bucket: Math.ceil(swapAmountUsd / 1000) });
 
     const analysis = await withCache(key, 30_000, () =>
       analyseMevProtection({

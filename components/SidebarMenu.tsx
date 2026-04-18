@@ -39,7 +39,7 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Trading',
     items: [
-      { icon: CandlestickChart, label: 'Trading Suite', path: '/dashboard/trading-suite' },
+      { icon: CandlestickChart, label: 'Market', path: '/dashboard/market' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
       { icon: History, label: 'Transactions', path: '/dashboard/transactions' },
     ],

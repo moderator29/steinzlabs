@@ -59,7 +59,7 @@ export async function attemptAutoConnect(): Promise<StoredWallet | null> {
   if (stored.chain === 'ethereum' || stored.chain === 'polygon' || stored.chain === 'arbitrum' || stored.chain === 'base') {
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
         if (accounts && accounts.length > 0) {
           const currentAddress = accounts[0].toLowerCase();
           if (currentAddress === stored.address.toLowerCase()) {
@@ -75,7 +75,7 @@ export async function attemptAutoConnect(): Promise<StoredWallet | null> {
   if (stored.chain === 'solana') {
     if (typeof window !== 'undefined' && window.solana?.isPhantom) {
       try {
-        const resp = await window.solana.connect({ onlyIfTrusted: true });
+        const resp = await window.solana.connect();
         if (resp.publicKey.toString() === stored.address) {
           return stored;
         }

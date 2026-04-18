@@ -208,7 +208,7 @@ export default function Markets() {
         <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06]">
           {displayCoins.length === 0 && searchQuery.length >= 2 ? (
             <div className="py-10 text-center text-gray-500 text-sm bg-[#111827]">
-              No coins found for "{searchQuery}"
+              No coins found for &quot;{searchQuery}&quot;
             </div>
           ) : (
             displayCoins.map((coin, i) => {

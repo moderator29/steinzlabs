@@ -35,6 +35,12 @@ interface StatsData {
 
 interface ActivityEntry { event: string; detail: string; time: number; }
 
+const CHART_DATA = Array.from({ length: 30 }, (_, i) => ({
+  day: i + 1,
+  users: 0,
+  revenue: 0,
+}));
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);

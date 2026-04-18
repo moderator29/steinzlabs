@@ -20,11 +20,12 @@ export const localeNames: Record<Locale, string> = {
 
 export const rtlLocales: Locale[] = ['ar'];
 
-export default getRequestConfig(async ({ locale }) => {
+export default getRequestConfig(async ({ requestLocale }) => {
+  const locale = await requestLocale;
   const resolvedLocale = (locales as readonly string[]).includes(locale ?? '')
     ? (locale as Locale)
     : defaultLocale;
 
   const messages = (await import(`./messages/${resolvedLocale}.json`)).default;
-  return { messages };
+  return { locale: resolvedLocale, messages };
 });

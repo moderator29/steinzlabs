@@ -2,7 +2,8 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
+import { Loader2, ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 import { Cluster2DGraph } from "@/components/clusters/Cluster2DGraph";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
@@ -99,9 +100,9 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-30 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <Link href="/dashboard/wallet-clusters" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition mb-3">
-            <ArrowLeft size={12} /> Wallet clusters
-          </Link>
+          <div className="mb-3">
+            <BackButton href="/dashboard/wallet-clusters" label="Wallet clusters" />
+          </div>
           <h1 className="text-xl md:text-2xl font-bold">Cluster · {data.memberCount} wallets</h1>
           <p className="text-xs text-slate-500 mt-1">
             Root: <code className="font-mono">{data.rootAddress}</code>

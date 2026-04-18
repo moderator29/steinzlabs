@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       try {
         const res = await getTokenSecurity(token_id, chain);
         if (!res) continue;
-        const { score, level, reasons } = scoreFromResult(res as Record<string, never>);
+        const { score, level, reasons } = scoreFromResult(res as unknown as Record<string, never>);
         await supabase
           .from("token_risk_scores")
           .upsert(

@@ -65,6 +65,7 @@ export default function SmartMoneyPage() {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
   const [activeTab, setActiveTab] = useState<SmartTab>('leaderboard');
+  const [, setShowSettings] = useState(false);
 
   // Load watched wallets from localStorage
   useEffect(() => {
@@ -617,7 +618,7 @@ export default function SmartMoneyPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-sm font-bold text-white">Paper Trade — {paperTrade.name}</div>
-                <div className="text-[10px] text-gray-500 mt-0.5">Simulate copying this wallet's strategy</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">Simulate copying this wallet&apos;s strategy</div>
               </div>
               <button onClick={() => setPaperTrade(null)} className="p-1.5 hover:bg-white/[0.06] rounded-lg">✕</button>
             </div>
