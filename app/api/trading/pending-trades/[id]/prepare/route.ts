@@ -47,7 +47,8 @@ interface PendingRow {
   expires_at: string;
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const supabase = await getSupabase();
     const {
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .select(
         "id,user_id,chain,wallet_source,from_token_address,to_token_address,amount_in,slippage_bps,status,expires_at",
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single<PendingRow>();
 
     if (!pending) return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -46,12 +46,13 @@ function fallback(address: string, activityCount: number): AlphaReport {
   };
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { address: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ address: string }> }) {
+  const { address: rawAddress } = await params;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const address = params.address.toLowerCase();
+  const address = rawAddress.toLowerCase();
   const admin = getSupabaseAdmin();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 

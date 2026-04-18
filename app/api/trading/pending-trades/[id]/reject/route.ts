@@ -23,7 +23,8 @@ async function getSupabase() {
   );
 }
 
-export async function POST(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const {
     data: { user },
@@ -34,7 +35,7 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
   const { data: pending } = await supabase
     .from("pending_trades")
     .select("id,user_id,status,source_order_table,source_order_id")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
   if (!pending) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (pending.user_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
