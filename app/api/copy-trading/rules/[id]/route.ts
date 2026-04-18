@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,10 @@ function getSupabase() {
   );
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = withTierGate("mini", async (
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,9 +41,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = withTierGate("mini", async (
+  _request: NextRequest,
+  { params }: { params: { id: string } },
+) => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,4 +58,4 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

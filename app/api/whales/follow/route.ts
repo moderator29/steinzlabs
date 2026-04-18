@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ function getSupabase() {
   );
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withTierGate("pro", async (request: NextRequest) => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,9 +42,9 @@ export async function POST(request: NextRequest) {
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withTierGate("pro", async (request: NextRequest) => {
   const supabase = getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,4 +62,4 @@ export async function DELETE(request: NextRequest) {
     .eq("chain", chain);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});
