@@ -32,7 +32,8 @@ interface ContextEvent {
   sells24h?: number;
 }
 
-export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'avalanche' | 'bookmarks';
+// FIX 5A.1 / Phase 7: added base/arbitrum/optimism. Server now returns events for these chains.
+export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'avalanche' | 'base' | 'arbitrum' | 'optimism' | 'bookmarks';
 
 const POLL_INTERVAL = 20000;
 const POLL_INTERVAL_HIDDEN = 60000;
