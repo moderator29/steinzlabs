@@ -877,10 +877,20 @@ function VtxAiPageInner() {
               className="flex-1 bg-transparent text-xs placeholder-gray-600 focus:outline-none resize-none leading-relaxed max-h-60 overflow-y-auto"
               disabled={loading || (rateLimited && !isPro)}
             />
+            {/* FIX 5A.1: was no send button (only helper text); now a real tappable Send button,
+                essential on mobile where Enter keys are inconsistent. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!loading && input.trim() && !(rateLimited && !isPro)) void handleSend();
+              }}
+              disabled={loading || !input.trim() || (rateLimited && !isPro)}
+              aria-label="Send message"
+              className="ml-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(10,30,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <Send className="w-4 h-4" />
+            </button>
           </div>
-        </div>
-        <div className="mt-1.5 px-1 text-[10px] text-slate-500">
-          Press Enter to send · Shift + Enter for new line
         </div>
       </div>
     </div>
