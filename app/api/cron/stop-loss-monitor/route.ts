@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
     }
 
     let triggerKind: TriggerKind | null = null;
-    let triggeredStatus: "triggered_sl" | "triggered_tp" | "triggered_trail" | null = null;
 
     // Update trailing-stop high-water mark first.
     if (order.trailing_stop_percent != null) {
@@ -88,7 +87,6 @@ export async function GET(request: NextRequest) {
         const drawdownPct = ((highest - currentPrice) / highest) * 100;
         if (drawdownPct >= Number(order.trailing_stop_percent)) {
           triggerKind = "trail_stop";
-          triggeredStatus = "triggered_trail";
         }
       }
     }
@@ -99,7 +97,6 @@ export async function GET(request: NextRequest) {
       currentPrice <= Number(order.stop_loss_price_usd)
     ) {
       triggerKind = "stop_loss";
-      triggeredStatus = "triggered_sl";
     }
 
     if (
@@ -108,10 +105,9 @@ export async function GET(request: NextRequest) {
       currentPrice >= Number(order.take_profit_price_usd)
     ) {
       triggerKind = "take_profit";
-      triggeredStatus = "triggered_tp";
     }
 
-    if (!triggerKind || !triggeredStatus) {
+    if (!triggerKind) {
       skipped++;
       continue;
     }
@@ -138,11 +134,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (result.awaitingUserConfirmation) {
+      // Intermediate state: re-trigger guard + preserves provisional price/pnl
+      // for UI, but confirm/route.ts is the path that promotes to the real
+      // triggered_* status. Reject/cleanup restores to 'active'.
       await admin
         .from("stop_loss_orders")
         .update({
-          status: triggeredStatus,
-          triggered_at: new Date().toISOString(),
+          status: "pending_confirmation",
+          pending_trade_id: result.pendingTradeId ?? null,
           triggered_price: currentPrice,
           realized_pnl_usd: realizedPnl,
           updated_at: new Date().toISOString(),
