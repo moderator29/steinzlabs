@@ -1,0 +1,266 @@
+"use client";
+
+import { useEffect, useState, use } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
+import { SecurityBadge } from "@/components/security/SecurityBadge";
+import { toast } from "sonner";
+
+type Tab = "overview" | "activity" | "tokens" | "counterparties" | "copy";
+
+interface WhaleDetail {
+  whale: {
+    id: string;
+    address: string;
+    chain: string;
+    label: string | null;
+    entity_type: string | null;
+    portfolio_value_usd: number | null;
+    pnl_7d_usd: number | null;
+    pnl_30d_usd: number | null;
+    pnl_90d_usd: number | null;
+    win_rate: number | null;
+    trade_count_30d: number | null;
+    whale_score: number;
+    x_handle: string | null;
+    verified: boolean;
+    last_active_at: string | null;
+  };
+  activity: Array<{
+    id: string;
+    tx_hash: string;
+    action: string;
+    token_symbol: string | null;
+    token_address: string | null;
+    amount: number | null;
+    value_usd: number | null;
+    counterparty: string | null;
+    counterparty_label: string | null;
+    timestamp: string;
+  }>;
+  followerCount: number;
+}
+
+function fmtUsd(n: number | null): string {
+  if (n === null) return "—";
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+export default function WhaleDetailPage({ params }: { params: Promise<{ address: string }> }) {
+  const { address } = use(params);
+  const sp = useSearchParams();
+  const chain = sp.get("chain") ?? "";
+  const [data, setData] = useState<WhaleDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [following, setFollowing] = useState(false);
+  const [followingLoading, setFollowingLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/whales/${address}?chain=${encodeURIComponent(chain)}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as WhaleDetail;
+        if (!cancelled) setData(json);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chain]);
+
+  async function toggleFollow() {
+    setFollowingLoading(true);
+    try {
+      if (!following) {
+        const res = await fetch("/api/whales/follow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ whale_address: address, chain, label: data?.whale.label }),
+        });
+        if (res.ok) {
+          setFollowing(true);
+          toast.success("Now following whale");
+        } else toast.error("Failed to follow");
+      } else {
+        const res = await fetch(`/api/whales/follow?whale_address=${address}&chain=${chain}`, { method: "DELETE" });
+        if (res.ok) {
+          setFollowing(false);
+          toast.success("Unfollowed");
+        }
+      }
+    } finally {
+      setFollowingLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0E1A]">
+        <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-slate-500 gap-3">
+        <p>Whale not found</p>
+        <Link href="/dashboard/whale-tracker" className="text-blue-400 text-sm">
+          ← Back to whale tracker
+        </Link>
+      </div>
+    );
+  }
+
+  const w = data.whale;
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+      <div className="sticky top-0 z-30 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <Link href="/dashboard/whale-tracker" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition mb-3">
+            <ArrowLeft size={12} /> Whale tracker
+          </Link>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl md:text-2xl font-bold truncate">{w.label ?? "Unlabeled whale"}</h1>
+                {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
+                <SecurityBadge score={w.whale_score} size="md" />
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <code className="font-mono">{w.address}</code>
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(w.address);
+                    toast.success("Copied");
+                  }}
+                  className="hover:text-white transition"
+                >
+                  <Copy size={11} />
+                </button>
+                <span className="uppercase">{w.chain}</span>
+                {w.x_handle && (
+                  <a href={`https://x.com/${w.x_handle}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">
+                    @{w.x_handle} <ExternalLink size={9} />
+                  </a>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={toggleFollow}
+              disabled={followingLoading}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+                following ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-blue-600 hover:bg-blue-500 text-white"
+              }`}
+            >
+              {followingLoading ? <Loader2 size={11} className="animate-spin" /> : following ? "Following" : "Follow"}
+            </button>
+          </div>
+
+          <div className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto">
+            {(["overview", "activity", "tokens", "counterparties", "copy"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
+                  tab === t ? "text-blue-300 border-b-2 border-blue-500/60" : "text-slate-500 hover:text-white"
+                }`}
+              >
+                {t === "copy" ? "Copy rules" : t}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {tab === "overview" && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <StatCard label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} />
+            <StatCard label="7d PnL" value={fmtUsd(w.pnl_7d_usd)} tone={(w.pnl_7d_usd ?? 0) >= 0 ? "up" : "down"} />
+            <StatCard label="30d PnL" value={fmtUsd(w.pnl_30d_usd)} tone={(w.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
+            <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
+            <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
+            <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
+            <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
+            <StatCard label="Score" value={w.whale_score.toString()} />
+          </div>
+        )}
+
+        {tab === "activity" && (
+          <div className="rounded-xl border border-slate-800 overflow-hidden">
+            {data.activity.length === 0 ? (
+              <div className="py-12 text-center text-sm text-slate-500">
+                No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
+              </div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+                  <tr>
+                    <th className="text-left px-3 py-2">Action</th>
+                    <th className="text-left px-3 py-2">Token</th>
+                    <th className="text-left px-3 py-2">Amount</th>
+                    <th className="text-left px-3 py-2">USD</th>
+                    <th className="text-left px-3 py-2">Counterparty</th>
+                    <th className="text-left px-3 py-2">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.activity.map((a) => (
+                    <tr key={a.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
+                      <td className="px-3 py-2 uppercase text-[10px] text-slate-400">{a.action}</td>
+                      <td className="px-3 py-2 font-mono text-white">{a.token_symbol ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-slate-300">{fmtUsd(a.value_usd)}</td>
+                      <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-500">{new Date(a.timestamp).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {tab === "tokens" && (
+          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+            Token holdings will populate as the on-chain indexer ships in Session 5B-2.
+          </div>
+        )}
+
+        {tab === "counterparties" && (
+          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+            Counterparty graph requires wallet_edges data. Run the cluster-analysis cron to populate.
+          </div>
+        )}
+
+        {tab === "copy" && (
+          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+            Configure copy rules from <Link href="/dashboard/copy-trading" className="text-blue-400">/dashboard/copy-trading</Link>.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
+  return (
+    <div className="rounded-xl bg-slate-900/50 border border-slate-800 p-3">
+      <p className="text-[9px] uppercase text-slate-500 tracking-wide mb-1">{label}</p>
+      <p className={`text-base font-mono ${tone === "up" ? "text-green-400" : tone === "down" ? "text-red-400" : "text-white"}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
