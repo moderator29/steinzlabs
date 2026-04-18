@@ -278,9 +278,20 @@ export default function SwapPage() {
   const [txStatus, setTxStatus] = useState<TxStatus>('idle');
   const [txHash, setTxHash] = useState('');
   const [detectedWallet, setDetectedWallet] = useState<'solana' | 'ethereum' | 'builtin' | null>(null);
+  const [walletMode, setWalletMode] = useState<'naka' | 'metamask' | 'phantom'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('swap_wallet_mode') as 'naka' | 'metamask' | 'phantom') || 'naka';
+    }
+    return 'naka';
+  });
+  const [metamaskConnected, setMetamaskConnected] = useState(false);
+  const [phantomConnected, setPhantomConnected] = useState(false);
+  const [metamaskAddress, setMetamaskAddress] = useState('');
+  const [phantomAddress, setPhantomAddress] = useState('');
   const quoteTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const connectedAddress = walletAddress || (typeof window !== 'undefined' ? localStorage.getItem('steinz_active_wallet_address') : null);
+  const nakaAddress = walletAddress || (typeof window !== 'undefined' ? localStorage.getItem('steinz_active_wallet_address') : null);
+  const connectedAddress = walletMode === 'metamask' ? metamaskAddress : walletMode === 'phantom' ? phantomAddress : nakaAddress;
 
   // Detect wallet provider and fetch native balance
   useEffect(() => {
@@ -371,6 +382,46 @@ export default function SwapPage() {
       setToToken(symbol.toUpperCase());
     }
   }, [searchParams, chain]);
+
+  const handleSelectWalletMode = async (mode: 'naka' | 'metamask' | 'phantom') => {
+    localStorage.setItem('swap_wallet_mode', mode);
+    setWalletMode(mode);
+    if (mode === 'metamask') {
+      const win = typeof window !== 'undefined' ? window : null;
+      if (!win?.ethereum) { alert('MetaMask not detected. Please install MetaMask.'); return; }
+      try {
+        const accounts = (await win.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
+        if (accounts[0]) { setMetamaskAddress(accounts[0]); setMetamaskConnected(true); setDetectedWallet('ethereum'); }
+      } catch { /* user rejected */ }
+    } else if (mode === 'phantom') {
+      const win = typeof window !== 'undefined' ? window : null;
+      if (!win?.solana?.isPhantom) { alert('Phantom not detected. Please install Phantom.'); return; }
+      try {
+        const resp = await win.solana!.connect();
+        const pk = resp.publicKey?.toString();
+        if (pk) { setPhantomAddress(pk); setPhantomConnected(true); setDetectedWallet('solana'); setChain('solana'); setFromToken('SOL'); }
+      } catch { /* user rejected */ }
+    } else {
+      setDetectedWallet('builtin');
+    }
+  };
+
+  // Check if external wallets are already connected on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const win = window;
+    if (win.ethereum) {
+      void (win.ethereum.request({ method: 'eth_accounts' }) as Promise<string[]>).then(accs => {
+        if (accs[0]) { setMetamaskAddress(accs[0]); setMetamaskConnected(true); }
+      }).catch(() => {});
+    }
+    if (win.solana?.isPhantom) {
+      try {
+        const pk = (win.solana as { publicKey?: { toString(): string } }).publicKey?.toString();
+        if (pk) { setPhantomAddress(pk); setPhantomConnected(true); }
+      } catch { /* not connected */ }
+    }
+  }, []);
 
   const activeChain = CHAINS.find(c => c.id === chain) || CHAINS[0];
   const [gaslessEnabled, setGaslessEnabled] = useState(true);
@@ -693,6 +744,36 @@ export default function SwapPage() {
             </button>
           </div>
 
+          {/* Wallet Selector Pills */}
+          <div className="flex items-center gap-2 mb-4">
+            {([
+              { id: 'naka', label: 'Naka Wallet', icon: 'N', connected: !!nakaAddress },
+              { id: 'metamask', label: 'MetaMask', icon: '🦊', connected: metamaskConnected },
+              { id: 'phantom', label: 'Phantom', icon: '👻', connected: phantomConnected },
+            ] as const).map(w => (
+              <button
+                key={w.id}
+                onClick={() => handleSelectWalletMode(w.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                  walletMode === w.id
+                    ? 'bg-[#0A1EFF]/15 text-blue-400 border-[#0A1EFF]/40'
+                    : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
+                }`}
+              >
+                <span className={w.id === 'naka' ? 'w-4 h-4 rounded-full bg-[#0A1EFF] text-white flex items-center justify-center text-[9px] font-black' : 'text-sm'}>
+                  {w.icon}
+                </span>
+                {w.label}
+                {walletMode === w.id && !w.connected && (
+                  <span className="text-[9px] text-amber-400 font-normal ml-0.5">Connect</span>
+                )}
+                {w.connected && walletMode === w.id && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
+                )}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
             {CHAINS.map(c => (
               <button
@@ -915,15 +996,29 @@ export default function SwapPage() {
               <div className="mb-3 rounded-2xl p-4 bg-[#0f1320] border border-white/[0.06] flex items-center gap-3">
                 <Wallet className="w-5 h-5 text-gray-500 shrink-0" />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-gray-300">No wallet connected</p>
-                  <p className="text-[10px] text-gray-600 mt-0.5">Connect MetaMask, Phantom, or create a wallet</p>
+                  <p className="text-xs font-semibold text-gray-300">
+                    {walletMode === 'metamask' ? 'MetaMask not connected' : walletMode === 'phantom' ? 'Phantom not connected' : 'No Naka Wallet found'}
+                  </p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">
+                    {walletMode === 'naka' ? 'Create or import a wallet to swap' : `Click the ${walletMode === 'metamask' ? 'MetaMask 🦊' : 'Phantom 👻'} pill above to connect`}
+                  </p>
                 </div>
-                <button
-                  onClick={() => router.push('/dashboard/wallet-page')}
-                  className="shrink-0 px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
-                >
-                  Connect
-                </button>
+                {walletMode === 'naka' && (
+                  <button
+                    onClick={() => router.push('/dashboard/wallet-page')}
+                    className="shrink-0 px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                  >
+                    Create
+                  </button>
+                )}
+                {walletMode !== 'naka' && (
+                  <button
+                    onClick={() => handleSelectWalletMode(walletMode)}
+                    className="shrink-0 px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                  >
+                    Connect
+                  </button>
+                )}
               </div>
             )}
 
