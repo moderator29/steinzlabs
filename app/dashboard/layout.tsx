@@ -5,6 +5,7 @@ import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import FloatingNotificationBell from '@/components/FloatingNotificationBell';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
+import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <AlertMonitorProvider />
       <PlatformEventMonitor />
       <FloatingNotificationBell />
+      <PendingSignerProvider />
       <PendingTradesBanner />
       {children}
     </div>
