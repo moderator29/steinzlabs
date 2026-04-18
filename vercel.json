@@ -16,6 +16,7 @@
     { "path": "/api/cron/stop-loss-monitor", "schedule": "*/1 * * * *" },
     { "path": "/api/cron/whale-ranking-refresh", "schedule": "0 */4 * * *" },
     { "path": "/api/cron/copy-trade-monitor", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/pending-trades-cleanup", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/security-monitor", "schedule": "0 */2 * * *" },
     { "path": "/api/cron/token-popularity-aggregator", "schedule": "0 * * * *" },
     { "path": "/api/cron/watchlist-refresh", "schedule": "*/10 * * * *" },
