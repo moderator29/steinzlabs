@@ -5,6 +5,7 @@ import { WalletReputation } from './types';
 export async function getWalletReputation(walletAddress: string): Promise<WalletReputation> {
   try {
     const intel = await getAddressIntel(walletAddress);
+    if (!intel) throw new Error('No intel');
 
     const dangerLabels = ['scammer', 'rug_puller', 'phishing'];
     if (intel.labels?.some(l => dangerLabels.includes(l))) {

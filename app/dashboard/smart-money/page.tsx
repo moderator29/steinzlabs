@@ -65,6 +65,7 @@ export default function SmartMoneyPage() {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
   const [activeTab, setActiveTab] = useState<SmartTab>('leaderboard');
+  const [, setShowSettings] = useState(false);
 
   // Load watched wallets from localStorage
   useEffect(() => {

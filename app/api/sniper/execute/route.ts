@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
   // ── All checks passed — log to Supabase ──────────────────────────────────
   if (userId) {
-    createSniperExecution({ userId, tokenAddress: address, chain, amountIn: amount, slippage, status: 'pending', txHash: null, amountOut: null, priceUsd: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null }).catch(() => {});
+    createSniperExecution({ user_id: userId, token_address: address, chain, buy_amount_usd: amount, tx_hash: null, status: 'queued' }).catch(() => {});
   }
 
   return NextResponse.json({ blocked: false, approved: true, steps, liquidity: liq, pair: pairs[0]?.pairAddress ?? null, price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null });

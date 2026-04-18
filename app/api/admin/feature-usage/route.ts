@@ -30,7 +30,7 @@ async function aggregateFromTable(
 
     const uniqueUsers = new Set<string>();
     for (const r of usersData || []) {
-      const uid = (r as Record<string, unknown>)[userField];
+      const uid = (r as unknown as Record<string, unknown>)[userField];
       if (typeof uid === 'string' && uid) uniqueUsers.add(uid);
     }
 

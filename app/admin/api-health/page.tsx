@@ -110,7 +110,7 @@ export default function ApiHealthPage() {
           { label: 'Down', count: down, status: 'error' as const },
         ].map(s => (
           <div key={s.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
-            <StatusDot status={s.status} size="lg" pulse={s.status !== 'inactive'} />
+            <StatusDot status={s.status} size="lg" pulse={s.status !== 'error'} />
             <div>
               <div className="text-2xl font-bold text-white">{s.count}</div>
               <div className="text-xs text-gray-400">{s.label}</div>
