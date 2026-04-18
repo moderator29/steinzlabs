@@ -495,15 +495,7 @@ function VtxAiPageInner() {
           </div>
 
           <div className="flex items-center gap-1">
-            {!isPro && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.03] rounded-lg border border-white/[0.06]">
-                <span className="text-[10px] text-gray-500 font-mono">{dailyUsage.remaining}</span>
-                <div className="w-8 h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0A1EFF]'}`} style={{ width: `${((dailyUsage.limit - dailyUsage.used) / dailyUsage.limit) * 100}%` }} />
-                </div>
-              </div>
-            )}
-            <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="New chat">
+            <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title={!isPro ? `New chat · ${dailyUsage.remaining}/${dailyUsage.limit} messages left today` : "New chat"}>
               <MessageSquarePlus className="w-4 h-4 text-gray-500" />
             </button>
             <button onClick={() => setShowHistory(!showHistory)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Chat history">
@@ -714,7 +706,7 @@ function VtxAiPageInner() {
               <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10 overflow-hidden">
                 <SteinzLogo size={40} animated={false} />
               </div>
-              <h2 className="text-lg font-bold mb-1">Ask me about crypto</h2>
+              <h2 className="text-lg font-bold mb-1">What do you need analyzed?</h2>
               <p className="text-xs text-gray-500 max-w-xs mx-auto">Real-time market data, on-chain intelligence, and security analysis. Powered by NAKA LABS.</p>
             </div>
 
@@ -726,12 +718,20 @@ function VtxAiPageInner() {
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {TOOLS.slice(0, 4).map((tool) => (
-                <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-left p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
-                  <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
-                  <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
-                  <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                { label: 'Top whale moves last 24h', icon: TrendingUp, query: 'What are the top whale moves in the last 24 hours?' },
+                { label: 'Scan a token for rugpull risk', icon: Shield, query: 'Scan a token for rugpull risk. I\'ll give you the address.' },
+                { label: 'Trending narratives today', icon: Sparkles, query: 'What narratives are trending in crypto today?' },
+                { label: 'Analyze my portfolio', icon: BarChart3, query: 'Analyze my connected wallet portfolio and give me an overview.' },
+              ].map((card) => (
+                <button
+                  key={card.label}
+                  onClick={() => handleSend(card.query)}
+                  className="text-left p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0A1EFF]/30 hover:bg-slate-900/80 transition-all group"
+                >
+                  <card.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
+                  <p className="text-xs font-semibold text-gray-200">{card.label}</p>
                 </button>
               ))}
             </div>
@@ -841,30 +841,46 @@ function VtxAiPageInner() {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/20 text-[#0A1EFF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
             <Wrench className="w-4 h-4" />
           </button>
-          <div className="flex-1 flex items-center bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 focus-within:border-[#0A1EFF]/30 transition-colors">
+          <div className="flex-1 flex items-start bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl px-3 py-2 focus-within:border-[#0A1EFF]/40 focus-within:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all">
             {settings.webSearch && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold mr-2 flex-shrink-0">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold mr-2 mt-1.5 flex-shrink-0">
                 <Globe className="w-2.5 h-2.5" /> WEB
               </div>
             )}
-            <input
-              ref={inputRef}
-              type="text"
+            <textarea
+              ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask VTX anything..."
-              className="flex-1 bg-transparent py-3 text-xs placeholder-gray-600 focus:outline-none"
+              onChange={(e) => {
+                setInput(e.target.value);
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 240) + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!loading && input.trim() && !(rateLimited && !isPro)) {
+                    void handleSend();
+                    requestAnimationFrame(() => {
+                      const el = e.currentTarget as HTMLTextAreaElement | null;
+                      if (el) el.style.height = 'auto';
+                    });
+                  }
+                }
+              }}
+              rows={1}
+              placeholder="Ask VTX about any token, wallet, or whale..."
+              className="flex-1 bg-transparent text-xs placeholder-gray-600 focus:outline-none resize-none leading-relaxed max-h-60 overflow-y-auto"
               disabled={loading || (rateLimited && !isPro)}
             />
           </div>
-          <button onClick={() => handleSend()} disabled={loading || !input.trim() || (rateLimited && !isPro)} className="bg-[#0A1EFF] hover:bg-[#0918D0] p-3 rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-[#0A1EFF] flex-shrink-0">
-            <Send className="w-4 h-4" />
-          </button>
+        </div>
+        <div className="mt-1.5 px-1 text-[10px] text-slate-500">
+          Press Enter to send · Shift + Enter for new line
         </div>
       </div>
     </div>
