@@ -20,7 +20,7 @@ SECURITY CENTER (/dashboard/security): Token contract security scanner via GoPlu
 
 DNA ANALYZER (/dashboard/dna-analyzer): Deep-dive token analysis — fundamentals, community metrics, on-chain data, technical signals.
 
-TRADING SUITE (/dashboard/trading-suite): Professional trading interface with TradingView charts, multiple timeframes, order placement, position management.
+MARKET + TRADING TERMINAL (/dashboard/market): Token list. Click any coin to open /dashboard/market/[chain]/[address] — the unified trading terminal with professional charts, multiple timeframes, order placement, position management. (Replaces the retired /dashboard/trading-suite.)
 
 PREDICTIONS MARKET (/dashboard/predictions): Community price predictions. Create predictions, vote, submit proof, climb leaderboard.
 
