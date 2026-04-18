@@ -55,7 +55,8 @@ export function PersonalizedHome() {
 
   if (loading) return <NakaLoader size={40} text="Loading your dashboard..." />;
 
-  const displayName = data?.user.displayName ?? "there";
+  // FIX 5A.1: was defaulting to literal "there"; now falls back to email local-part then "trader".
+  const displayName = data?.user.displayName || "trader";
   const walletsCount = data?.wallets.length ?? 0;
   const watchlistCount = data?.watchlist.length ?? 0;
 

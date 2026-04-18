@@ -22,15 +22,26 @@ export async function GET(request: NextRequest) {
   const cacheKey = `dashboard:home:${userId}`;
 
   try {
-    // Fetch full auth user for metadata (not cached — cheap + always current)
-    const { data: fullAuthUser } = await supabase.auth.admin.getUserById(userId);
+    // FIX 5A.1: was reading only auth metadata (often empty) and defaulting to "there";
+    // also read from profiles.{display_name,username} and profiles.tier (source of truth).
+    const [{ data: fullAuthUser }, { data: profileRow }] = await Promise.all([
+      supabase.auth.admin.getUserById(userId),
+      supabase
+        .from("profiles")
+        .select("display_name, username, tier")
+        .eq("id", userId)
+        .single(),
+    ]);
     const meta = (fullAuthUser?.user?.user_metadata ?? {}) as Record<string, unknown>;
     const displayName =
+      (profileRow?.display_name && String(profileRow.display_name)) ||
+      (profileRow?.username && String(profileRow.username)) ||
       (typeof meta.display_name === "string" && meta.display_name) ||
       (typeof meta.username === "string" && meta.username) ||
       (user.email && user.email.split("@")[0]) ||
-      "there";
-    const tier = typeof meta.subscription_tier === "string" ? meta.subscription_tier : "free";
+      "trader";
+    const tier = (profileRow?.tier as string) ||
+      (typeof meta.subscription_tier === "string" ? meta.subscription_tier : "free");
 
     const data = await cacheWithFallback(cacheKey, 30, async () => {
       const [walletsR, watchlistR, alertsR, followsR, vtxR] = await Promise.all([

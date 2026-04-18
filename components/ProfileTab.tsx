@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useTier } from '@/lib/hooks/useTier';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +41,9 @@ type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'secur
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
+  const { tier, isPaid, verifiedBadge } = useTier();
+  // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
+  const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
   const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -1226,8 +1230,16 @@ export default function ProfileTab() {
             <p className="text-[11px] text-gray-500 mt-0.5">{fullName}</p>
           )}
           <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[10px] text-gray-500">{isConnected ? 'Free Tier' : 'Sign in to unlock features'}</span>
-            {isConnected && (
+            <span className="text-[10px] text-gray-500">{isConnected ? tierLabel : 'Sign in to unlock features'}</span>
+            {isConnected && isPaid && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/40 text-[9px] font-semibold text-white">
+                <svg className="w-2.5 h-2.5 text-[#60A5FA]" fill="currentColor" viewBox="0 0 20 20" aria-label="Verified">
+                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {verifiedBadge ? verifiedBadge.toUpperCase() : tier.toUpperCase()}
+              </span>
+            )}
+            {isConnected && !isPaid && (
               <button
                 onClick={() => router.push('/dashboard/pricing')}
                 className="px-2 py-0.5 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/25 rounded-full text-[9px] text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1"
@@ -1312,14 +1324,16 @@ export default function ProfileTab() {
             <Crown className="w-4 h-4 text-[#FFD700]" />
             <div>
               <div className="text-sm font-semibold">Current Plan</div>
-              <div className="text-[10px] text-gray-500">Free Tier · 25 messages/day</div>
+              <div className="text-[10px] text-gray-500">
+                {isPaid ? `${tier.toUpperCase()} · Unlimited messages` : 'Free Tier · 25 messages/day'}
+              </div>
             </div>
           </div>
           <button
             onClick={() => router.push('/dashboard/pricing')}
             className="px-3 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/30 rounded-lg text-[10px] font-bold text-[#0A1EFF] hover:opacity-80 transition-opacity"
           >
-            Upgrade
+            {isPaid ? 'Manage Plan' : 'Upgrade'}
           </button>
         </div>
         <div className="px-3 py-3">
