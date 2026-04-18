@@ -91,6 +91,12 @@ ALTER TABLE user_copy_trades DROP CONSTRAINT IF EXISTS user_copy_trades_status_c
 ALTER TABLE user_copy_trades ADD CONSTRAINT user_copy_trades_status_check
   CHECK (status IN ('pending', 'success', 'failed', 'cancelled', 'expired'));
 
+-- Action can now be 'sell' (full-exit when followed whale sells).
+ALTER TABLE user_copy_trades DROP CONSTRAINT IF EXISTS user_copy_trades_action_check;
+ALTER TABLE user_copy_trades ADD CONSTRAINT user_copy_trades_action_check
+  CHECK (action IN ('buy', 'sell'));
+ALTER TABLE user_copy_trades ALTER COLUMN amount_usd DROP NOT NULL;
+
 -- ── 6. Reconciliation indexes ───────────────────────────────────────
 CREATE INDEX IF NOT EXISTS limit_orders_reconcile_idx
   ON limit_orders(receipt_reconciled_at)
