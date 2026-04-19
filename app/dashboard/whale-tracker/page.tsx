@@ -308,7 +308,21 @@ export default function WhaleTrackerPage() {
             Live whale feed · {feedTotal.toLocaleString()} matches
           </div>
           {feedLoading && feed.length === 0 ? (
-            <NakaLoader text="Loading whales..." />
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 flex items-center gap-3 animate-pulse"
+                >
+                  <div className="w-8 h-8 rounded-full bg-white/[0.06] flex-shrink-0" />
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <div className="h-3 rounded bg-white/[0.06] w-1/3" />
+                    <div className="h-2.5 rounded bg-white/[0.04] w-2/3" />
+                  </div>
+                  <div className="h-3 rounded bg-white/[0.06] w-16 flex-shrink-0" />
+                </div>
+              ))}
+            </div>
           ) : feedError ? (
             <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4 text-sm text-rose-300 flex items-center justify-between">
               <span>Feed failed: {feedError}</span>
