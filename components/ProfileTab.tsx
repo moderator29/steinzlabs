@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
+import { TierBadge } from '@/components/ui/TierBadge';
 
 interface Notification {
   id: string;
@@ -1228,7 +1229,14 @@ export default function ProfileTab() {
 
           <h2 className="text-base font-heading font-bold leading-tight flex items-center gap-1.5">
             {displayName}
-            {user?.is_verified && <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />}
+            {/* Tier badge wins over the legacy gold "verified" mark; gold mark
+                is still shown for accounts manually flagged is_verified=true
+                without any paid tier (admin/celeb verifications). */}
+            {(user?.tier && user.tier !== 'free') ? (
+              <TierBadge tier={user.tier} size={16} />
+            ) : user?.is_verified ? (
+              <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />
+            ) : null}
           </h2>
           {user?.first_name && user?.username && (
             <p className="text-[11px] text-gray-500 mt-0.5">{fullName}</p>

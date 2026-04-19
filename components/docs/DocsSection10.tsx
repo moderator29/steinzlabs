@@ -69,12 +69,13 @@ export function DocsSection10() {
         </div>
       </div>
 
-      {/* Alert limits */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+      {/* Alert limits — match the canonical tier ladder in pricing/page.tsx */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
-          { tier: 'Free', limit: '10 active alerts', color: '#6B7280' },
-          { tier: 'Pro', limit: '50 active alerts', color: '#0A1EFF' },
-          { tier: 'Enterprise', limit: 'Unlimited alerts', color: '#F59E0B' },
+          { tier: 'Free',  limit: '3 alerts',         color: '#6B7280' },
+          { tier: 'Mini',  limit: '10 alerts',        color: '#10B981' },
+          { tier: 'Pro',   limit: '50 alerts',        color: '#0A1EFF' },
+          { tier: 'Max',   limit: 'Unlimited alerts', color: '#F59E0B' },
         ].map(t => (
           <div key={t.tier} className="bg-white/[0.02] border rounded-xl p-3 text-center" style={{ borderColor: t.color + '30' }}>
             <div className="text-xs font-bold mb-1" style={{ color: t.color }}>{t.tier}</div>
