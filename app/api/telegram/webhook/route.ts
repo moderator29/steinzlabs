@@ -16,9 +16,10 @@ function verifyWebhook(request: NextRequest): boolean {
   return request.headers.get(WEBHOOK_SECRET_HEADER) === expected;
 }
 
+const PRICING_URL = `${APP_URL}/dashboard/pricing`;
 const OPEN_APP_BTN = { text: "🌐 Open Naka Labs", url: APP_URL };
 const SETTINGS_BTN = { text: "⚙️ Notification Settings", url: `${APP_URL}/settings/notifications` };
-const UPGRADE_BTN = { text: "⭐ Upgrade Plan", url: `${APP_URL}/pricing` };
+const UPGRADE_BTN = { text: "⭐ Upgrade Plan", url: PRICING_URL };
 
 interface LinkedUser {
   user_id: string;
@@ -52,24 +53,27 @@ async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void
   const text =
     `*Naka Labs Bot — Commands*\n` +
     `${tierLine}\n\n` +
-    `*🆓 Free (anyone linked)*\n` +
+    `*🆓 Free*\n` +
     `• \`/start\` — onboarding\n` +
     `• \`/help\` — this menu\n` +
     `• \`/status\` — link & plan info\n` +
     `• \`/link <code>\` — connect account\n` +
     `• \`/unlink\` — disconnect\n` +
     `• \`/price <symbol>\` — token price card\n` +
-    `• \`/watchlist\` — your watchlist (top 10)\n\n` +
-    `*✨ MINI+ ($9/mo)*\n` +
-    `• \`/whale <address>\` — wallet snapshot\n` +
-    `• \`/alerts\` — recent alerts (24h)\n\n` +
-    `*⭐ PRO+ ($29/mo)*\n` +
-    `• \`/vtx <question>\` — ask VTX AI\n` +
-    `• \`/portfolio\` — your tracked wallet PnL\n\n` +
-    `*🔥 MAX ($99/mo)*\n` +
-    `• \`/snipe <token>\` — sniper config (early access)\n` +
-    `• \`/copy <whale>\` — toggle copy-trade\n\n` +
-    `_Receive automatic alerts for whales, price moves, and copy-trade fills based on your settings._`;
+    `• \`/watchlist\` — open your watchlist\n` +
+    `• \`/alerts\` — recent triggered alerts\n` +
+    `• \`/vtx <question>\` — ask VTX AI _(25 msgs/day on Free)_\n\n` +
+    `*✨ MINI ($5/mo)*\n` +
+    `• \`/whale <address>\` — wallet snapshot (whale tracker)\n` +
+    `• \`/portfolio\` — multi-chain wallet PnL\n` +
+    `_(also: 100 VTX msgs/day, 10 alerts, 3 wallets)_\n\n` +
+    `*⭐ PRO ($9/mo)*\n` +
+    `• \`/copy <whale>\` — toggle copy-trade\n` +
+    `_(also: unlimited VTX, smart-money tracking, wallet clusters, bubble map)_\n\n` +
+    `*🔥 MAX ($15/mo)*\n` +
+    `• \`/snipe <token>\` — sniper bot config\n` +
+    `_(also: unlimited wallets, priority support, early access)_\n\n` +
+    `_Automatic alerts (whale moves, price targets, copy-trade fills, security events) are pushed based on your Settings → Notifications config._`;
 
   const buttons = linked
     ? [[OPEN_APP_BTN, SETTINGS_BTN], ...(linked.tier === "free" || linked.tier === "mini" ? [[UPGRADE_BTN]] : [])]
@@ -244,7 +248,6 @@ export async function POST(request: NextRequest) {
     await sendTelegramMessage(chatId, `🔍 Looking up *${sym}*…`, {
       reply_markup: { inline_keyboard: [[{ text: `📊 Open ${sym} on Naka`, url: `${APP_URL}/market/search?q=${encodeURIComponent(sym)}` }]] },
     });
-    // Real price lookup is wired separately by the bot worker; this is the ack.
     return NextResponse.json({ ok: true });
   }
 
@@ -255,16 +258,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // ─── MINI+ tier ──────────────────────────────────────────────────────
-  if (text.startsWith("/whale") || text === "/alerts") {
+  if (text === "/alerts") {
+    await sendTelegramMessage(chatId, "🔔 Recent alerts (last 24h):", {
+      reply_markup: { inline_keyboard: [[{ text: "🌐 Open Alerts", url: `${APP_URL}/dashboard/alerts` }]] },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (text.startsWith("/vtx")) {
+    // VTX is gated by daily message quota (25 free / 100 mini / unlimited pro+),
+    // not by tier — the in-app VTX route enforces that. The bot just routes.
+    await sendTelegramMessage(chatId, "🧠 Open VTX AI for the full conversation experience (deep research, multi-step tools, charts):", {
+      reply_markup: { inline_keyboard: [[{ text: "🧠 Open VTX AI", url: `${APP_URL}/dashboard/vtx-ai` }]] },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  // ─── MINI+ tier (whale tracker, full wallet intelligence) ────────────
+  if (text.startsWith("/whale") || text === "/portfolio") {
     const gate = checkTier(linked.tier, null, "mini");
     if (!gate.allowed) {
       await sendTelegramMessage(chatId, tierGateMsg("mini"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
       return NextResponse.json({ ok: true });
     }
-    if (text === "/alerts") {
-      await sendTelegramMessage(chatId, "🔔 Recent alerts:", {
-        reply_markup: { inline_keyboard: [[{ text: "🌐 Open Alerts", url: `${APP_URL}/dashboard/alerts` }]] },
+    if (text === "/portfolio") {
+      await sendTelegramMessage(chatId, "💼 Your portfolio:", {
+        reply_markup: { inline_keyboard: [[{ text: "🌐 Open Portfolio", url: `${APP_URL}/dashboard/wallet-intelligence` }]] },
       });
     } else {
       const addr = text.split(/\s+/)[1];
@@ -279,38 +298,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // ─── PRO+ tier ───────────────────────────────────────────────────────
-  if (text.startsWith("/vtx") || text === "/portfolio") {
+  // ─── PRO tier (copy trading) ─────────────────────────────────────────
+  if (text.startsWith("/copy")) {
     const gate = checkTier(linked.tier, null, "pro");
     if (!gate.allowed) {
       await sendTelegramMessage(chatId, tierGateMsg("pro"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
       return NextResponse.json({ ok: true });
     }
-    if (text === "/portfolio") {
-      await sendTelegramMessage(chatId, "💼 Your portfolio:", {
-        reply_markup: { inline_keyboard: [[{ text: "🌐 Open Portfolio", url: `${APP_URL}/dashboard` }]] },
-      });
-    } else {
-      await sendTelegramMessage(chatId, "🧠 Ask VTX in the app for the full conversation experience:", {
-        reply_markup: { inline_keyboard: [[{ text: "🧠 Open VTX AI", url: `${APP_URL}/dashboard/vtx-ai` }]] },
-      });
-    }
+    await sendTelegramMessage(chatId, "🔁 Copy Trade controls:", {
+      reply_markup: { inline_keyboard: [[{ text: "🌐 Open Copy Trade", url: `${APP_URL}/dashboard/copy-trade` }]] },
+    });
     return NextResponse.json({ ok: true });
   }
 
-  // ─── MAX tier ────────────────────────────────────────────────────────
-  if (text.startsWith("/snipe") || text.startsWith("/copy")) {
+  // ─── MAX tier (sniper bot) ───────────────────────────────────────────
+  if (text.startsWith("/snipe")) {
     const gate = checkTier(linked.tier, null, "max");
     if (!gate.allowed) {
       await sendTelegramMessage(chatId, tierGateMsg("max"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
       return NextResponse.json({ ok: true });
     }
-    await sendTelegramMessage(chatId, "🔥 MAX trading commands available in-app:", {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🎯 Sniper", url: `${APP_URL}/dashboard/sniper` }, { text: "🔁 Copy Trade", url: `${APP_URL}/dashboard/copy-trade` }],
-        ],
-      },
+    await sendTelegramMessage(chatId, "🔥 Sniper Bot config:", {
+      reply_markup: { inline_keyboard: [[{ text: "🎯 Open Sniper", url: `${APP_URL}/dashboard/sniper` }]] },
     });
     return NextResponse.json({ ok: true });
   }

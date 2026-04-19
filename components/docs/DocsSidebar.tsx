@@ -51,6 +51,11 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'price-alerts', label: 'Price Alerts' },
     { id: 'push-notifications', label: 'Push Notifications' },
   ]},
+  { id: 'telegram-bot', number: '11', label: 'Telegram Bot', subsections: [
+    { id: 'bot-connect', label: 'Connecting Your Account' },
+    { id: 'bot-commands', label: 'Commands by Tier' },
+    { id: 'bot-notifications', label: 'Automatic Notifications' },
+  ]},
 ];
 
 interface DocsSidebarProps {
