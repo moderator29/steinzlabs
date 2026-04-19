@@ -3,11 +3,11 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, ShieldX, Check } from 'lucide-react';
 
-const COINS = [
-  { label: 'BTC', color: '#F59E0B', style: { top: 16, left: 16 } },
+// User-requested: removed BTC and BNB text-in-circle chips since the real
+// 3D crypto logos already exist on the landing page (see FloatingCoins).
+const COINS: Array<{ label: string; color: string; style: React.CSSProperties }> = [
   { label: 'ETH', color: '#6366F1', style: { top: 16, right: 16 } },
   { label: 'SOL', color: '#9945FF', style: { bottom: 96, left: 16 } },
-  { label: 'BNB', color: '#F59E0B', style: { top: '50%', right: 0, transform: 'translateY(-50%)' } },
 ];
 
 const ROWS: [string, string][] = [['Liquidity', '$8.4M'], ['Holders', '12,847'], ['Rug Risk', 'Low']];

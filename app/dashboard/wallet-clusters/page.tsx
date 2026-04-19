@@ -127,7 +127,7 @@ export default function WalletClustersPage() {
               <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">PRO</span>
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              5-signal on-chain intelligence · AI-named archetypes · community reputation · beyond Nansen/Arkham
+              5-signal on-chain intelligence · AI-named archetypes · community reputation
             </p>
           </div>
         </div>

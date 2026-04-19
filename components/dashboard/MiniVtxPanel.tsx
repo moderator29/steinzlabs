@@ -238,9 +238,12 @@ export function MiniVtxPanel({
               Trade
             </button>
 
-            {/* Credits pill with progress */}
+            {/* Credits pill — progress only (numeric counter hidden per product decision) */}
             <div className="ml-auto flex items-center gap-2">
-              <div className="w-16 sm:w-20 h-1 rounded-full bg-white/[0.05] overflow-hidden flex-shrink-0">
+              <div
+                className="w-16 sm:w-20 h-1 rounded-full bg-white/[0.05] overflow-hidden flex-shrink-0"
+                title={`${creditsUsed.toLocaleString()} / ${creditsLimit.toLocaleString()} credits used`}
+              >
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -249,9 +252,6 @@ export function MiniVtxPanel({
                   }}
                 />
               </div>
-              <span className="text-[10px] font-mono text-slate-500 tabular-nums">
-                {creditsUsed.toLocaleString()} / {creditsLimit.toLocaleString()}
-              </span>
             </div>
           </div>
         </div>

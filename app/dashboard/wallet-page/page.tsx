@@ -611,7 +611,7 @@ export default function WalletPage() {
                 <ArrowLeft className="w-5 h-5 text-slate-400" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">N</div>
+                <SteinzLogo size={20} />
                 <span className="text-base font-bold">Naka Wallet</span>
                 {wallets.length > 1 && (
                   <select
@@ -1402,6 +1402,18 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           </div>
         </div>
 
+        {/* TRUST WALLET-STYLE warning bar — placed ABOVE the QR / address so the
+            user reads it before they ever copy or share. The exact phrasing
+            ("lost forever") matches what funds-handling apps use to make sure
+            users do not send wrong-chain assets. Mandatory on every chain. */}
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#F59E0B] mt-0.5" />
+          <p className="text-xs leading-relaxed text-amber-100">
+            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets sent on a different network will be{' '}
+            <span className="font-bold underline">lost forever</span>.
+          </p>
+        </div>
+
         <div className="text-center">
           <div className="w-56 h-56 bg-white rounded-2xl mx-auto mb-5 flex items-center justify-center p-3 shadow-lg relative">
             {qrDataUrl ? (
@@ -1434,10 +1446,10 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
             {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
           </button>
 
-          <div className="mt-4 p-3 bg-[#F59E0B]/5 rounded-xl border border-[#F59E0B]/10">
-            <p className="text-[11px] text-gray-400">
-              <AlertTriangle className="w-3 h-3 text-[#F59E0B] inline mr-1" />
-              Only send {chain.name} network tokens to this address. Sending from other networks may result in loss.
+          {/* Lower-prominence reminder — primary warning is the bar above the QR. */}
+          <div className="mt-4 p-3 bg-white/[0.03] rounded-xl border border-white/10">
+            <p className="text-[11px] text-gray-500">
+              Verified {chain.name} address. Always double-check the first and last 4 characters before sharing.
             </p>
           </div>
         </div>
