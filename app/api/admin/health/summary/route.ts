@@ -57,7 +57,7 @@ async function checkSupabase(): Promise<CheckResult> {
   try {
     const admin = getSupabaseAdmin();
     const result = await withTimeout(
-      admin.from("profiles").select("id", { count: "exact", head: true }).limit(1).then((r) => r.error ?? "ok"),
+      Promise.resolve(admin.from("profiles").select("id", { count: "exact", head: true }).limit(1)).then((r) => r.error ?? "ok"),
       3000,
     );
     const latencyMs = Date.now() - start;

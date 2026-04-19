@@ -4,6 +4,8 @@
 their Telegram account to receive alerts and run a curated set of
 read-only commands. Trading commands are gated by subscription tier.
 
+Tier prices match [`app/dashboard/pricing/page.tsx`](../app/dashboard/pricing/page.tsx) — the on-chain source of truth.
+
 ---
 
 ## How a user connects
@@ -30,7 +32,7 @@ Each command checks the user's effective tier via `checkTier()` from
 the rest of the platform. Expired subscriptions are auto-downgraded to
 `free`.
 
-### 🆓 Free — anyone with a linked account
+### 🆓 Free ($0) — anyone with a linked account
 
 | Command | What it does |
 |---|---|
@@ -41,30 +43,30 @@ the rest of the platform. Expired subscriptions are auto-downgraded to
 | `/unlink` | Removes the link. Stops all alerts to this chat. |
 | `/price <symbol>` | Quick token price card with a deep-link to the in-app token page. |
 | `/watchlist` | Opens the user's watchlist with a deep-link to the full UI. |
+| `/alerts` | Opens recent triggered alerts (last 24h). |
+| `/vtx <question>` | Routes to VTX AI in-app. **Quota-gated**: 25 msgs/day on Free, 100 on Mini, unlimited on Pro+. |
 
-### ✨ MINI ($9/mo) and above
-
-| Command | What it does |
-|---|---|
-| `/whale <address>` | Wallet snapshot card with deep-link to Wallet Intelligence. |
-| `/alerts` | Recent alerts (last 24h) with deep-link to the Alerts page. |
-
-### ⭐ PRO ($29/mo) and above
+### ✨ Mini ($5/mo) and above
 
 | Command | What it does |
 |---|---|
-| `/vtx <question>` | Routes the user into the VTX AI conversation page with a deep-link. |
-| `/portfolio` | PnL/positions across tracked wallets with a deep-link to Dashboard. |
+| `/whale <address>` | Wallet snapshot card with deep-link to Wallet Intelligence (gated because Whale Tracker is Mini+). |
+| `/portfolio` | PnL/positions across tracked wallets (multi-chain wallet intelligence is Mini+). |
 
-### 🔥 MAX ($99/mo) — early access
+### ⭐ Pro ($9/mo) and above
 
 | Command | What it does |
 |---|---|
-| `/snipe <token>` | Opens the in-app sniper config. |
-| `/copy <whale>` | Opens copy-trade controls for that whale. |
+| `/copy <whale>` | Opens copy-trade controls for a whale (copy-trading is Pro). |
+
+### 🔥 Max ($15/mo)
+
+| Command | What it does |
+|---|---|
+| `/snipe <token>` | Opens the in-app sniper config (Sniper Bot is Max-only). |
 
 When a user runs a command above their tier, the bot replies with a 🔒
-notice and an **Upgrade Plan** inline button → `/pricing`.
+notice and an **Upgrade Plan** inline button → `/dashboard/pricing`.
 
 ---
 
@@ -77,7 +79,7 @@ and have the matching toggle enabled in **Settings → Notifications**:
 |---|---|
 | `whale-activity-poll` (1 min) | Whale buys/sells above the user's USD threshold |
 | `alert-monitor` (1 min) | Custom price alerts the user configured |
-| `copy-trade-monitor` (1 min) | Copy-trade fills |
+| `copy-trade-monitor` (1 min) | Copy-trade fills (Pro+) |
 | `limit-order-monitor` (1 min) | Limit-order executions |
 | `stop-loss-monitor` (1 min) | Stop-loss triggers |
 | `daily-digest` (9am UTC) | Daily wrap-up |
@@ -85,8 +87,7 @@ and have the matching toggle enabled in **Settings → Notifications**:
 | `health-watch` (5 min) | **Admin-only** — infra status alerts to admins in `health_alert_recipients` |
 
 All sends go through `sendTelegramMessage()` in
-[`lib/telegram/client.ts`](../lib/telegram/client.ts), which honors the
-user's quiet-hours config and tier-based notification channels.
+[`lib/telegram/client.ts`](../lib/telegram/client.ts).
 
 ---
 
@@ -115,11 +116,11 @@ keyboard. Common buttons:
 - **🌐 Open Naka Labs** → `${APP_URL}`
 - **⚙️ Notification Settings** → `${APP_URL}/settings/notifications`
 - **🔑 Generate Code** → `${APP_URL}/settings/notifications`
-- **⭐ Upgrade Plan** → `${APP_URL}/pricing`
-- Per-command deep-links (e.g. `/whale 0xabc` → "🌐 Open Wallet" → `/dashboard/wallet-intelligence?address=0xabc`)
+- **⭐ Upgrade Plan** → `${APP_URL}/dashboard/pricing`
+- Per-command deep-links (e.g. `/whale 0xabc` → "🌐 Open Wallet")
 
-The button schema is `{ inline_keyboard: [[{ text, url }, …], …] }` —
-see Telegram's [InlineKeyboardMarkup docs](https://core.telegram.org/bots/api#inlinekeyboardmarkup).
+Schema: `{ inline_keyboard: [[{ text, url }, …], …] }` — see Telegram's
+[InlineKeyboardMarkup docs](https://core.telegram.org/bots/api#inlinekeyboardmarkup).
 
 ---
 
@@ -147,14 +148,3 @@ Verify: `curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
 | `TELEGRAM_BOT_USERNAME` | Server — deep-link generation in webhook |
 | `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Client — Settings card uses this for `t.me/` links |
 | `NEXT_PUBLIC_APP_URL` | Server + client — base URL in deep-links |
-
----
-
-## How other platforms compare
-
-- **Phantom / Coinbase / Linear** → Tier 1 (notifications only). Same as us today.
-- **Banana Gun / Maestro / Trojan / BONKbot** → Tier 2 (full trading from Telegram). Custodial wallets, `/buy /sell /positions` — this is where Naka can compete on Solana sniping.
-- **TON ecosystem (Notcoin, Hamster Kombat)** → Tier 3 (full mini-app inside Telegram). Best UX, most work.
-
-We're at Tier 1 + a handful of Tier 2 read-only commands. Adding
-custodial signing for `/buy /sell` is the next leap.
