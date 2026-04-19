@@ -3,27 +3,49 @@ import { NextResponse } from 'next/server';
 import { applyContextFilter, type PersonalContext } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+// Static imports — replaces the dynamic import inside fetchCoingeckoEvents
+// which was a cold-start hazard inside Promise.all on a slow lambda.
+import {
+  getTopGainers as cgTopGainers,
+  getTrendingTokens as cgTrendingTokens,
+  getRecentlyAdded as cgRecentlyAdded,
+  getTopTokens as cgTopTokens,
+} from '@/lib/services/coingecko';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
+  // 1.5 s hard ceiling. Personal context is a nice-to-have re-ranking input;
+  // if Supabase / auth-getUser is blipping, we'd rather return an unpersonalised
+  // feed than time out the whole route. This is the same pattern we use on
+  // every other Redis-touching path after the 2026-04-19 Upstash incident.
+  const TIMEOUT_MS = 1500;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
-    if (!user) return undefined;
-    const supabase = getSupabaseAdmin();
-    const [watchlistR, followsR] = await Promise.all([
-      supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
-      supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
-    ]);
-    const watchlistSymbols = new Set<string>();
-    (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
-      if (w.token_id) watchlistSymbols.add(w.token_id.toUpperCase());
+    const work = (async (): Promise<PersonalContext | undefined> => {
+      const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
+      if (!user) return undefined;
+      const supabase = getSupabaseAdmin();
+      const [watchlistR, followsR] = await Promise.all([
+        supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
+        supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
+      ]);
+      const watchlistSymbols = new Set<string>();
+      (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
+        if (w.token_id) watchlistSymbols.add(w.token_id.toUpperCase());
+      });
+      const followedAddresses = new Set<string>();
+      (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
+        if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
+      });
+      return { watchlistSymbols, followedAddresses };
+    })();
+    const timeout = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), TIMEOUT_MS);
     });
-    const followedAddresses = new Set<string>();
-    (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
-      if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
-    });
-    return { watchlistSymbols, followedAddresses };
+    return await Promise.race([work, timeout]);
   } catch {
     return undefined;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -184,15 +206,12 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
   const out: WhaleEvent[] = [];
   const ts = recentTimestamp();
   try {
-    const { getTopGainers, getTrendingTokens, getRecentlyAdded, getTopTokens } =
-      await import('@/lib/services/coingecko');
-
     // Pull all four in parallel; any single miss shouldn't kill the rest.
     const [gainers, trending, newCoins, top10] = await Promise.all([
-      getTopGainers(3).catch(() => []),
-      getTrendingTokens().catch(() => []),
-      getRecentlyAdded(5).catch(() => []),
-      getTopTokens(1, 10, false).catch(() => []),
+      cgTopGainers(3).catch(() => []),
+      cgTrendingTokens().catch(() => []),
+      cgRecentlyAdded(5).catch(() => []),
+      cgTopTokens(1, 10, false).catch(() => []),
     ]);
 
     // 1) Top Gainer Alert — top 3 by 24h % change
