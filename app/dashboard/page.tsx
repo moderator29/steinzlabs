@@ -241,7 +241,7 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-2 flex-1 justify-center max-w-md mx-4">
+          <div className="flex items-center gap-2 flex-1 justify-center max-w-md mx-2 md:mx-4">
             <GlobalSearch />
           </div>
           <div className="flex items-center gap-2">

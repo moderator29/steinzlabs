@@ -123,7 +123,7 @@ export function MiniVtxPanel({
         </div>
         <Link
           href="/dashboard/vtx-ai"
-          className="hidden md:inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition px-2.5 py-1 rounded-full border border-white/[0.06] hover:border-white/20"
+          className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition px-2.5 py-1 rounded-full border border-white/[0.06] hover:border-white/20 flex-shrink-0"
         >
           Open VTX <ArrowUpRight size={11} />
         </Link>
@@ -240,7 +240,7 @@ export function MiniVtxPanel({
 
             {/* Credits pill with progress */}
             <div className="ml-auto flex items-center gap-2">
-              <div className="hidden sm:block w-20 h-1 rounded-full bg-white/[0.05] overflow-hidden">
+              <div className="w-16 sm:w-20 h-1 rounded-full bg-white/[0.05] overflow-hidden flex-shrink-0">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{

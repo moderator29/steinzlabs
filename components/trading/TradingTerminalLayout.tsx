@@ -55,7 +55,7 @@ export function TradingTerminalLayout({
               setSymbol(s);
             }}
           />
-          <div className="hidden md:flex items-center gap-4 text-xs font-mono text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-slate-400 overflow-x-auto md:overflow-visible">
             <Stat label="24h" value="—" />
             <Stat label="Vol" value="—" />
             <Stat label="MCap" value="—" />
