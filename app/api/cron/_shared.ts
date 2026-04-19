@@ -2,6 +2,17 @@ import { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export function verifyCron(request: NextRequest): { ok: boolean; response?: Response } {
+  // Global kill switch. Set CRONS_PAUSED=true on Vercel to zero out all cron
+  // invocation cost for the rest of the current billing cycle without having
+  // to redeploy or edit vercel.json. Each job still runs the Vercel scheduler
+  // (billed as an invocation), but exits in <50ms with no external calls.
+  if (process.env.CRONS_PAUSED === "true") {
+    return {
+      ok: false,
+      response: Response.json({ ok: true, paused: true }, { status: 200 }),
+    };
+  }
+
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -15,6 +26,27 @@ export function verifyCron(request: NextRequest): { ok: boolean; response?: Resp
   }
 
   return { ok: true };
+}
+
+/**
+ * Short-circuit a cron when its target table is empty.
+ *
+ * Huge cost saver on a fresh deploy: the limit-order, stop-loss, sniper,
+ * copy-trade and DCA monitors used to hit external DEX / RPC endpoints every
+ * single tick even when they had zero rows to process. Call this at the top
+ * of the handler — if the table's empty we return a no-op response in <100ms.
+ */
+export async function cronHasWork(tableName: string, filter?: { column: string; value: unknown }): Promise<boolean> {
+  try {
+    const admin = getSupabaseAdmin();
+    let q = admin.from(tableName).select("id", { count: "exact", head: true });
+    if (filter) q = q.eq(filter.column, filter.value as string | number | boolean);
+    const { count, error } = await q;
+    if (error) return true; // on error, err on the side of running so we don't accidentally skip real work
+    return (count ?? 0) > 0;
+  } catch {
+    return true;
+  }
 }
 
 export function cronResponse(

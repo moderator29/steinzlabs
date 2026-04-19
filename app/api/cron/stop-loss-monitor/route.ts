@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, cronResponse } from "../_shared";
+import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
+
+  if (!(await cronHasWork("stop_loss_orders", { column: "status", value: "active" }))) {
+    return cronResponse("stop-loss-monitor", startedAt, { skipped: "no-active-orders" });
+  }
 
   const admin = getSupabaseAdmin();
   let triggered = 0;
