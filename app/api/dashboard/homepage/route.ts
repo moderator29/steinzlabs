@@ -22,18 +22,15 @@ export async function GET(request: NextRequest) {
   const cacheKey = `dashboard:home:${userId}`;
 
   try {
-    // Fetch full auth user for metadata (not cached — cheap + always current)
-    const { data: fullAuthUser } = await supabase.auth.admin.getUserById(userId);
-    const meta = (fullAuthUser?.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const displayName =
-      (typeof meta.display_name === "string" && meta.display_name) ||
-      (typeof meta.username === "string" && meta.username) ||
-      (user.email && user.email.split("@")[0]) ||
-      "there";
-    const tier = typeof meta.subscription_tier === "string" ? meta.subscription_tier : "free";
-
     const data = await cacheWithFallback(cacheKey, 30, async () => {
-      const [walletsR, watchlistR, alertsR, followsR, vtxR] = await Promise.all([
+      // Fan out everything in parallel including the profiles row so the
+      // dashboard greeting always has tier + is_verified ready to render.
+      const [profileR, walletsR, watchlistR, alertsR, followsR, vtxR] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle(),
         supabase.from("wallet_identities").select("address, chain").eq("user_id", userId),
         supabase.from("watchlist").select("token_id, chain").eq("user_id", userId).limit(20),
         supabase
@@ -52,6 +49,24 @@ export async function GET(request: NextRequest) {
           .limit(10),
       ]);
 
+      const profile = (profileR.data ?? {}) as Record<string, unknown>;
+      const displayName =
+        (typeof profile.display_name === "string" && profile.display_name) ||
+        (typeof profile.username === "string" && profile.username) ||
+        (typeof profile.first_name === "string" && profile.first_name) ||
+        (user.email && user.email.split("@")[0]) ||
+        "there";
+      const tierRaw = typeof profile.tier === "string" ? profile.tier : "free";
+      const tier = (tierRaw === "mini" || tierRaw === "pro" || tierRaw === "max") ? tierRaw : "free";
+      const tierExpiresAt = typeof profile.tier_expires_at === "string" ? profile.tier_expires_at : null;
+      // Honor tier expiry — same logic as effectiveTier() helper.
+      const effective =
+        tier !== "free" && tierExpiresAt && new Date(tierExpiresAt).getTime() < Date.now()
+          ? "free"
+          : tier;
+      const isVerified = profile.is_verified === true;
+      const role = profile.role === "admin" ? "admin" : "user";
+
       const recentVtx = ((vtxR.data as VtxConversation[] | null) ?? []).map((c) => {
         const msgs = Array.isArray(c.messages) ? (c.messages as unknown[]) : [];
         return {
@@ -63,7 +78,14 @@ export async function GET(request: NextRequest) {
       });
 
       return {
-        user: { id: userId, email: user.email, displayName, tier },
+        user: {
+          id: userId,
+          email: user.email,
+          displayName,
+          tier: effective,
+          isVerified,
+          role,
+        },
         wallets: walletsR.data ?? [],
         watchlist: watchlistR.data ?? [],
         alertsToday: alertsR.data ?? [],

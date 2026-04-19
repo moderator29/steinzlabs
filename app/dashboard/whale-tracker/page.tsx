@@ -216,7 +216,14 @@ export default function WhaleTrackerPage() {
               PRO
             </span>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {/* Phase 6: surface the new Directory view. */}
+            <Link
+              href="/dashboard/whale-tracker/directory"
+              className="text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors font-semibold text-slate-200"
+            >
+              Directory
+            </Link>
             <Link
               href="/dashboard/whale-tracker/submit"
               className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors font-semibold"

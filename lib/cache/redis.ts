@@ -19,11 +19,40 @@ export function getRedis(): Redis | null {
   return _redis;
 }
 
+// ─── Hard timeout wrapper ────────────────────────────────────────────────────
+// Upstash REST client doesn't expose a per-call timeout option and its
+// internal HTTP timeout defaults to 60s+. When Upstash has a transient blip
+// (which it does periodically — see Vercel 504 incident 2026-04-19 06:50 UTC),
+// any unwrapped redis call hangs for the full Vercel function lifetime
+// (15 minutes) and 504s the route. Every call below is wrapped so a stuck
+// Upstash can never block more than `ms` milliseconds.
+const REDIS_TIMEOUT_MS = 1500;
+const REDIS_TIMEOUT_SYMBOL = Symbol("redis-timeout");
+
+async function withTimeout<T>(promise: Promise<T>, op: string): Promise<T | typeof REDIS_TIMEOUT_SYMBOL> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof REDIS_TIMEOUT_SYMBOL>((resolve) => {
+    timer = setTimeout(() => resolve(REDIS_TIMEOUT_SYMBOL), REDIS_TIMEOUT_MS);
+  });
+  try {
+    const result = await Promise.race([promise, timeout]);
+    if (result === REDIS_TIMEOUT_SYMBOL) {
+      console.warn(`[redis.${op}] timed out after ${REDIS_TIMEOUT_MS}ms — Upstash slow/down, falling through`);
+      Sentry.captureMessage(`Redis ${op} timeout`, { level: "warning", tags: { op } });
+    }
+    return result;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function cacheGet<T>(key: string): Promise<T | null> {
   const redis = getRedis();
   if (!redis) return null;
   try {
-    return (await redis.get(key)) as T | null;
+    const result = await withTimeout(redis.get(key) as Promise<T | null>, `get:${key}`);
+    if (result === REDIS_TIMEOUT_SYMBOL) return null;
+    return result as T | null;
   } catch (err) {
     console.error(`[redis.get] ${key}`, err);
     Sentry.captureException(err, { tags: { op: "redis.get", key } });
@@ -35,7 +64,7 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
   const redis = getRedis();
   if (!redis) return;
   try {
-    await redis.set(key, value, { ex: ttlSeconds });
+    await withTimeout(redis.set(key, value, { ex: ttlSeconds }), `set:${key}`);
   } catch (err) {
     console.error(`[redis.set] ${key}`, err);
     Sentry.captureException(err, { tags: { op: "redis.set", key } });
@@ -46,7 +75,7 @@ export async function cacheDel(key: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   try {
-    await redis.del(key);
+    await withTimeout(redis.del(key), `del:${key}`);
   } catch (err) {
     console.error(`[redis.del] ${key}`, err);
   }
@@ -57,10 +86,13 @@ export async function cacheWithFallback<T>(
   ttlSeconds: number,
   fetcher: () => Promise<T>,
 ): Promise<T> {
+  // cacheGet returns null on timeout / error → falls through to fetcher.
   const cached = await cacheGet<T>(key);
   if (cached !== null && cached !== undefined) return cached;
   const fresh = await fetcher();
-  await cacheSet(key, fresh, ttlSeconds);
+  // Don't await — write is best-effort and shouldn't slow the response path.
+  // If cacheSet hangs, withTimeout caps it at REDIS_TIMEOUT_MS anyway.
+  void cacheSet(key, fresh, ttlSeconds);
   return fresh;
 }
 
@@ -80,9 +112,18 @@ export async function rateLimit(
     return { allowed: true, remaining: limit, resetAt: Date.now() + windowSeconds * 1000 };
   }
   try {
-    const count = await redis.incr(key);
-    if (count === 1) await redis.expire(key, windowSeconds);
-    const ttl = await redis.ttl(key);
+    // Combine all three calls in a single timeout budget. If Upstash is slow
+    // we fail-open rather than 504.
+    const incrResult = await withTimeout(redis.incr(key), `incr:${key}`);
+    if (incrResult === REDIS_TIMEOUT_SYMBOL) {
+      return { allowed: true, remaining: limit, resetAt: Date.now() + windowSeconds * 1000 };
+    }
+    const count = incrResult as number;
+    if (count === 1) {
+      void withTimeout(redis.expire(key, windowSeconds), `expire:${key}`);
+    }
+    const ttlResult = await withTimeout(redis.ttl(key), `ttl:${key}`);
+    const ttl = ttlResult === REDIS_TIMEOUT_SYMBOL ? windowSeconds : (ttlResult as number);
     return {
       allowed: count <= limit,
       remaining: Math.max(0, limit - count),
