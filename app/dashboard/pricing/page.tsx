@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Check, ArrowLeft, Star, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 
 const TIERS = [
   {
@@ -87,16 +87,8 @@ const TIERS = [
 
 export default function PricingPage() {
   const router = useRouter();
-  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-
-  useState(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const tier = user.user_metadata?.subscription_tier || user.user_metadata?.tier || 'free';
-        setCurrentPlan(tier);
-      }
-    });
-  });
+  const { user } = useAuth();
+  const currentPlan = effectiveTier(user);
 
   const handleSubscribe = (tierId: string) => {
     if (tierId === 'free') return;
