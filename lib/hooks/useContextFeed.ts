@@ -50,13 +50,17 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    // Hard 15s ceiling so a flaky cold-start never leaves the UI spinning.
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
       // Always fetch all chains from the server to maximise event coverage,
       // then filter client-side by the selected chain for display.
       const response = await fetch(`/api/context-feed?limit=200&chain=all`, {
         signal: controller.signal,
+        cache: 'no-store',
       });
+      clearTimeout(timeoutId);
       const data = await response.json();
       const rawEvents: ContextEvent[] = data.events || [];
       if (data.hasArchive !== undefined) setHasArchive(data.hasArchive);

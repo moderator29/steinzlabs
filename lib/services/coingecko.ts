@@ -3,30 +3,65 @@ import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
 
 /**
  * CoinGecko Market Intelligence Service
- * Uses paid API key (COINGECKO_API_KEY) with public endpoint fallback on rate limit.
+ *
+ * Single source of truth for every CoinGecko call in the codebase. All
+ * routes must import from here so we get one cache, one rate-limit
+ * budget, and one usage counter.
+ *
+ * Key handling is Demo-by-default (we're on the free Demo plan today)
+ * with auto-upgrade to the Pro base URL + header when COINGECKO_PLAN=pro
+ * is set in env. Falls back to the unauthenticated public endpoint on
+ * 429 so the platform keeps working during a credit blowout.
  */
 
 const API_KEY = process.env.COINGECKO_API_KEY || '';
+const PLAN = (process.env.COINGECKO_PLAN || 'demo').toLowerCase(); // 'demo' | 'pro'
 const BASE_PRO = 'https://pro-api.coingecko.com/api/v3';
 const BASE_PUBLIC = 'https://api.coingecko.com/api/v3';
-
 const TIMEOUT_MS = parseInt(process.env.COINGECKO_TIMEOUT_MS || '12000', 10);
 
 function getBase(): string {
-  return API_KEY ? BASE_PRO : BASE_PUBLIC;
+  if (!API_KEY) return BASE_PUBLIC;
+  return PLAN === 'pro' ? BASE_PRO : BASE_PUBLIC;
 }
 
 function getHeaders(): Record<string, string> {
   if (!API_KEY) return {};
-  return { 'x-cg-pro-api-key': API_KEY };
+  // Demo keys use the demo header on the PUBLIC base; Pro keys use the pro
+  // header on the PRO base. Sending the wrong one was the reason ~11 routes
+  // around the codebase silently fell through to unauth'd calls.
+  return PLAN === 'pro'
+    ? { 'x-cg-pro-api-key': API_KEY }
+    : { 'x-cg-demo-api-key': API_KEY };
 }
 
+// ─── Usage tracking ──────────────────────────────────────────────────────────
+
+interface UsageCounter { total: number; byEndpoint: Record<string, number>; lastReset: number; }
+const USAGE: UsageCounter = { total: 0, byEndpoint: {}, lastReset: Date.now() };
+
+export function getCoingeckoUsage(): UsageCounter {
+  return { ...USAGE, byEndpoint: { ...USAGE.byEndpoint } };
+}
+
+export function resetCoingeckoUsage(): void {
+  USAGE.total = 0;
+  USAGE.byEndpoint = {};
+  USAGE.lastReset = Date.now();
+}
+
+function logCall(endpoint: string): void {
+  USAGE.total += 1;
+  USAGE.byEndpoint[endpoint] = (USAGE.byEndpoint[endpoint] ?? 0) + 1;
+}
+
+// ─── Fetcher ─────────────────────────────────────────────────────────────────
+
 async function cgFetch(endpoint: string, params?: Record<string, string>): Promise<unknown> {
+  logCall(endpoint);
   const url = new URL(`${getBase()}${endpoint}`);
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, v);
-    }
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
 
   let res = await fetch(url.toString(), {
@@ -35,13 +70,11 @@ async function cgFetch(endpoint: string, params?: Record<string, string>): Promi
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
-  // Fallback to public API on rate limit
-  if (res.status === 429 && API_KEY) {
+  // 429 fallback — drop to unauth'd public API so we at least get degraded service.
+  if (res.status === 429) {
     const publicUrl = new URL(`${BASE_PUBLIC}${endpoint}`);
     if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        publicUrl.searchParams.set(k, v);
-      }
+      for (const [k, v] of Object.entries(params)) publicUrl.searchParams.set(k, v);
     }
     res = await fetch(publicUrl.toString(), {
       next: { revalidate: 60 },
@@ -49,7 +82,7 @@ async function cgFetch(endpoint: string, params?: Record<string, string>): Promi
     });
   }
 
-  if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
+  if (!res.ok) throw new Error(`CoinGecko ${endpoint} failed: ${res.status}`);
   return res.json();
 }
 
@@ -114,7 +147,7 @@ export interface CoinGeckoTokenDetail {
 }
 
 export interface OHLCVCandle {
-  time: number;  // unix timestamp (seconds)
+  time: number;
   open: number;
   high: number;
   low: number;
@@ -129,25 +162,75 @@ export interface GlobalMarketData {
   activeCryptocurrencies: number;
 }
 
+export interface TrendingCoin {
+  id: string;
+  name: string;
+  symbol: string;
+  thumb: string;
+  market_cap_rank: number;
+  price_btc: number;
+  score: number;
+  data?: { price_change_percentage_24h?: { usd?: number } };
+}
+
+// ─── Category mapping (for /coins/markets?category=) ─────────────────────────
+// Keeps the front-end category names decoupled from CoinGecko's slugs.
+export const COINGECKO_CATEGORY_MAP: Record<string, string | null> = {
+  all: null,
+  majors: null,
+  defi: 'decentralized-finance-defi',
+  layer1: 'layer-1',
+  layer2: 'layer-2',
+  gaming: 'gaming',
+  ai: 'artificial-intelligence',
+  meme: 'meme-token',
+  depin: 'depin',
+};
+
 // ─── API Functions ────────────────────────────────────────────────────────────
 
 export async function getTopTokens(
   page = 1,
   perPage = 100,
-  sparkline = false
+  sparkline = false,
+  category?: string,
 ): Promise<CoinGeckoMarketToken[]> {
-  const key = cacheKey('coingecko', 'markets', { page: String(page), perPage: String(perPage) });
+  const key = cacheKey('coingecko', 'markets', {
+    page: String(page), perPage: String(perPage), sparkline: String(sparkline), category: category ?? 'none',
+  });
   return withCache(key, TTL.MARKET_CAP, async () => {
-    const data = await cgFetch('/coins/markets', {
+    const params: Record<string, string> = {
       vs_currency: 'usd',
       order: 'market_cap_desc',
       per_page: String(perPage),
       page: String(page),
       sparkline: sparkline ? 'true' : 'false',
       price_change_percentage: '1h,24h,7d',
+    };
+    if (category) params.category = category;
+    const data = await cgFetch('/coins/markets', params);
+    return data as CoinGeckoMarketToken[];
+  });
+}
+
+/** Top N gainers by 24h % change. Uses /coins/markets ordered by price_change_percentage_24h desc. */
+export async function getTopGainers(limit = 10): Promise<CoinGeckoMarketToken[]> {
+  const key = cacheKey('coingecko', 'gainers', { limit: String(limit) });
+  return withCache(key, TTL.MARKET_CAP, async () => {
+    const data = await cgFetch('/coins/markets', {
+      vs_currency: 'usd',
+      order: 'price_change_percentage_24h_desc',
+      per_page: String(limit),
+      page: '1',
+      sparkline: 'true',
+      price_change_percentage: '24h,7d',
     });
     return data as CoinGeckoMarketToken[];
   });
+}
+
+export async function getCoinsByCategory(category: string, limit = 20): Promise<CoinGeckoMarketToken[]> {
+  return getTopTokens(1, limit, true, category);
 }
 
 export async function getTokenDetail(coinId: string): Promise<CoinGeckoTokenDetail> {
@@ -167,7 +250,7 @@ export async function getTokenDetail(coinId: string): Promise<CoinGeckoTokenDeta
 
 export async function getOHLCV(
   coinId: string,
-  days: number | 'max' = 1
+  days: number | 'max' = 1,
 ): Promise<OHLCVCandle[]> {
   const key = cacheKey('coingecko', 'ohlcv', { coinId, days: String(days) });
   return withCache(key, TTL.TOKEN_PRICE, async () => {
@@ -176,9 +259,21 @@ export async function getOHLCV(
       days: String(days),
     }) as number[][];
     return data.map(([time, open, high, low, close]) => ({
-      time: Math.floor(time / 1000), // Convert ms to seconds for lightweight-charts
+      time: Math.floor(time / 1000),
       open, high, low, close,
     }));
+  });
+}
+
+export interface CoinMarketChartPoint { t: number; price: number; }
+export async function getCoinMarketChart(coinId: string, days = 7): Promise<CoinMarketChartPoint[]> {
+  const key = cacheKey('coingecko', 'market_chart', { coinId, days: String(days) });
+  return withCache(key, TTL.TOKEN_PRICE, async () => {
+    const data = await cgFetch(`/coins/${coinId}/market_chart`, {
+      vs_currency: 'usd',
+      days: String(days),
+    }) as { prices: [number, number][] };
+    return (data.prices ?? []).map(([t, price]) => ({ t, price }));
   });
 }
 
@@ -207,10 +302,7 @@ export async function getGlobalMarketData(): Promise<GlobalMarketData> {
   });
 }
 
-export async function getTokenPrice(
-  coinId: string,
-  currency = 'usd'
-): Promise<number> {
+export async function getTokenPrice(coinId: string, currency = 'usd'): Promise<number> {
   const key = cacheKey('coingecko', 'price', { coinId, currency });
   return withCache(key, TTL.TOKEN_PRICE, async () => {
     const data = await cgFetch('/simple/price', {
@@ -221,10 +313,32 @@ export async function getTokenPrice(
   });
 }
 
+export interface TokenPriceDetailed { price: number; change24h: number; }
+export async function getTokenPriceDetailed(coinIds: string[], currency = 'usd'): Promise<Record<string, TokenPriceDetailed>> {
+  if (coinIds.length === 0) return {};
+  const key = cacheKey('coingecko', 'price_detailed', { ids: coinIds.sort().join(','), currency });
+  return withCache(key, TTL.TOKEN_PRICE, async () => {
+    const data = await cgFetch('/simple/price', {
+      ids: coinIds.join(','),
+      vs_currencies: currency,
+      include_24hr_change: 'true',
+    }) as Record<string, Record<string, number>>;
+    const out: Record<string, TokenPriceDetailed> = {};
+    for (const id of coinIds) {
+      const row = data[id] ?? {};
+      out[id] = {
+        price: row[currency] ?? 0,
+        change24h: row[`${currency}_24h_change`] ?? 0,
+      };
+    }
+    return out;
+  });
+}
+
 export async function getContractPrice(
   address: string,
   chain: string,
-  currency = 'usd'
+  currency = 'usd',
 ): Promise<number> {
   const PLATFORM_MAP: Record<string, string> = {
     ethereum: 'ethereum', eth: 'ethereum',
@@ -247,14 +361,26 @@ export async function getContractPrice(
   });
 }
 
-export async function getTrendingTokens(): Promise<{
-  id: string; name: string; symbol: string; thumb: string; score: number;
-}[]> {
+export async function getTrendingTokens(): Promise<TrendingCoin[]> {
   const key = 'coingecko:trending';
   return withCache(key, TTL.MARKET_CAP, async () => {
     const data = await cgFetch('/search/trending') as {
-      coins: { item: { id: string; name: string; symbol: string; thumb: string; score: number } }[];
+      coins: { item: TrendingCoin }[];
     };
     return data.coins.map(c => c.item);
+  });
+}
+
+/** Recently added coins — used by Context Feed "New Listing" events. */
+export interface NewCoin { id: string; symbol: string; name: string; activated_at?: number; }
+export async function getRecentlyAdded(limit = 20): Promise<NewCoin[]> {
+  const key = cacheKey('coingecko', 'new_coins', { limit: String(limit) });
+  return withCache(key, TTL.MARKET_CAP, async () => {
+    // /coins/list/new is a Pro endpoint; fall back to sorting /coins/markets
+    // by id desc isn't meaningful so if we're not on Pro we return an empty
+    // list rather than fabricate.
+    if (PLAN !== 'pro') return [];
+    const data = await cgFetch('/coins/list/new') as NewCoin[];
+    return data.slice(0, limit);
   });
 }

@@ -678,9 +678,14 @@ export async function GET(request: Request) {
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       storeEvents(cached.data);
       const liveEvents = getLiveEvents(chain);
+      const personalCached = await buildPersonalContext(request);
+      let cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal: personalCached });
+      if (cachedFiltered.length < 5) {
+        cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 0, personal: personalCached });
+      }
       return NextResponse.json({
-        events: liveEvents.slice(0, limit),
-        total: liveEvents.length,
+        events: cachedFiltered.slice(0, limit),
+        total: cachedFiltered.length,
         timestamp: new Date().toISOString(),
         source: cached.sources.join('+'),
         chain,
@@ -789,7 +794,14 @@ export async function GET(request: Request) {
 
     const liveEvents = getLiveEvents(chain);
     const personal = await buildPersonalContext(request);
-    const filtered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal });
+    // Progressive relaxation: start with the $500K market-cap gate that
+    // filters out junk pump.fun tokens. If that leaves the feed sparse
+    // (<5 events) or empty, drop the gate so we never show users a blank
+    // feed just because our live sources only returned microcaps that tick.
+    let filtered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal });
+    if (filtered.length < 5) {
+      filtered = applyContextFilter(liveEvents, { minMarketCap: 0, personal });
+    }
 
     return NextResponse.json({
       events: filtered.slice(0, limit),

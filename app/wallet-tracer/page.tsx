@@ -50,7 +50,7 @@ export default function WalletTracerPage() {
       <div className="max-w-5xl mx-auto">
         <PageHeader
           title="Wallet Tracer"
-          description="Deep wallet intelligence powered by Arkham — identify entities, track history, and revoke approvals"
+          description="Deep wallet intelligence — identify entities, track history, and revoke approvals"
         />
 
         {/* Search Bar */}
@@ -235,7 +235,7 @@ export default function WalletTracerPage() {
           <div className="text-center py-20 text-gray-500">
             <Activity size={64} className="mx-auto mb-4 opacity-30" />
             <p className="text-lg">Enter a wallet address to start tracing</p>
-            <p className="text-sm mt-2">Powered by Arkham Intelligence</p>
+            <p className="text-sm mt-2">Powered by Naka Intelligence</p>
           </div>
         )}
       </div>

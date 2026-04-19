@@ -293,10 +293,10 @@ export default function AdminResearchPage() {
             </div>
 
             {/* Two-column layout: left=fields, right=editor */}
-            <div className="flex-1 overflow-hidden flex gap-0 min-h-0">
+            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-0 min-h-0">
 
-              {/* Left column — metadata fields */}
-              <div className="w-72 flex-shrink-0 border-r border-[#1E2433] overflow-y-auto p-5 space-y-4">
+              {/* Left column — metadata fields (stacks above editor on mobile) */}
+              <div className="w-full lg:w-72 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-[#1E2433] overflow-y-auto p-5 space-y-4">
 
                 {/* Title */}
                 <div>

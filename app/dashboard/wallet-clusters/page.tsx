@@ -1,7 +1,7 @@
 'use client';
 
-// Phase 8 — Wallet Clusters directory (next-gen beyond Nansen/Arkham).
-// Five multi-signal detection algorithms fuse into a single confidence graph.
+// Wallet Clusters directory — multi-signal on-chain entity detection.
+// Five detection algorithms fuse into a single confidence graph.
 // Every cluster gets: AI-generated name + narrative, archetype, whale score,
 // risk score, dominant edge types, member count, community labels.
 // Paste any wallet to run live detection.

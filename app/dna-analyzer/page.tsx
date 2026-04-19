@@ -31,7 +31,7 @@ export default function DNAAnalyzerPage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">DNA Analyzer</h1>
           <p className="text-gray-400">
-            Verify any wallet with Arkham intelligence
+            Verify any wallet with Naka Intelligence entity lookup
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export default function DNAAnalyzerPage() {
           <div className="bg-[#141824] rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Unknown Wallet</h2>
             <p className="text-gray-400 mb-4">
-              This wallet is not verified by Arkham Intelligence.
+              This wallet has no verified entity label on record.
             </p>
 
             <div className="bg-[#0A0E1A] rounded p-4">

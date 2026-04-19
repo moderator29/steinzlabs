@@ -12,7 +12,7 @@ import { TokenRow } from '@/components/market/TokenRow';
 import { LoadingSkeleton } from '@/components/market/LoadingSkeleton';
 import { ErrorState } from '@/components/market/ErrorState';
 
-type CategoryId = 'all' | 'majors' | 'defi' | 'layer1' | 'layer2' | 'gaming' | 'ai' | 'meme' | 'depin';
+type CategoryId = 'all' | 'majors' | 'defi' | 'layer1' | 'layer2' | 'gaming' | 'ai' | 'meme' | 'depin' | 'pumpfun' | 'bnb-meme';
 
 const MAJOR_IDS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'cardano', 'avalanche-2', 'polkadot'];
 
