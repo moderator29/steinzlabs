@@ -129,7 +129,7 @@ export default function ApiHealthPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
         {[
           { label: 'Operational', count: healthy, status: 'active' as const },
           { label: 'Degraded', count: degraded, status: 'warning' as const },

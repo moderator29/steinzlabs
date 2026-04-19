@@ -136,7 +136,7 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4 h-[calc(100vh-200px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:h-[calc(100vh-200px)]">
         <div className="col-span-2 space-y-2 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-gray-500">

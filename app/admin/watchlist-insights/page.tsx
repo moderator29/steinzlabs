@@ -85,7 +85,7 @@ export default function WatchlistInsightsPage() {
 
       {!isEmpty && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
             {[
               { icon: Eye, label: 'Total Watchlist Items', value: formatLargeNumber(data.totalWatches) },
               { icon: Users, label: 'Users with Watchlists', value: formatLargeNumber(data.uniqueUsers) },
