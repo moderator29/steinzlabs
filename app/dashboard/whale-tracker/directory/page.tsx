@@ -194,7 +194,7 @@ export default function WhaleDirectoryPage() {
           </button>
           <div>
             <h1 className="text-lg font-bold">Whale Directory</h1>
-            <p className="text-[11px] text-slate-500">Institutional on-chain intelligence · Nansen + Arkham grade</p>
+            <p className="text-[11px] text-slate-500">Institutional-grade on-chain whale intelligence</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link

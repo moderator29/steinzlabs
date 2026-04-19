@@ -121,6 +121,27 @@ function getLiveEvents(chain: string): WhaleEvent[] {
   return live;
 }
 
+// Hard-cap any source fetch so a single hung upstream (DexScreener, Alchemy,
+// pump.fun) cannot drag the whole feed into the 15-min Vercel timeout. The
+// route must always return within a few seconds even if half the sources die.
+async function withSrcTimeout<T>(p: Promise<T[]>, ms: number, label: string): Promise<T[]> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T[]>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`[context-feed] ${label} timed out after ${ms}ms`);
+      resolve([] as T[]);
+    }, ms);
+  });
+  try {
+    return await Promise.race([p, timeout]);
+  } catch (err) {
+    console.warn(`[context-feed] ${label} threw:`, err);
+    return [] as T[];
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function getArchivedEvents(chain: string): WhaleEvent[] {
   const now = Date.now();
   const archived: WhaleEvent[] = [];
@@ -678,19 +699,20 @@ export async function GET(request: Request) {
     if (chain === 'all') {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
+      const SRC_TIMEOUT = 5000;
       const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex] = await Promise.all([
-        fetchAlchemyTransfers(),
-        fetchSolanaNetworkActivity(),
-        fetchPumpFunTokens(),
-        fetchDexScreenerTrending(),
-        fetchEthereumDexEvents(),
-        fetchSolanaDexEvents(),
-        fetchBSCDexEvents(),
-        fetchPolygonDexEvents(),
-        fetchAvalancheDexEvents(),
-        fetchBaseDexEvents(),
-        fetchArbitrumDexEvents(),
-        fetchOptimismDexEvents(),
+        withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
+        withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
+        withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
+        withSrcTimeout(fetchDexScreenerTrending(), SRC_TIMEOUT, 'dex-trending'),
+        withSrcTimeout(fetchEthereumDexEvents(), SRC_TIMEOUT, 'dex-ethereum'),
+        withSrcTimeout(fetchSolanaDexEvents(), SRC_TIMEOUT, 'dex-solana'),
+        withSrcTimeout(fetchBSCDexEvents(), SRC_TIMEOUT, 'dex-bsc'),
+        withSrcTimeout(fetchPolygonDexEvents(), SRC_TIMEOUT, 'dex-polygon'),
+        withSrcTimeout(fetchAvalancheDexEvents(), SRC_TIMEOUT, 'dex-avalanche'),
+        withSrcTimeout(fetchBaseDexEvents(), SRC_TIMEOUT, 'dex-base'),
+        withSrcTimeout(fetchArbitrumDexEvents(), SRC_TIMEOUT, 'dex-arbitrum'),
+        withSrcTimeout(fetchOptimismDexEvents(), SRC_TIMEOUT, 'dex-optimism'),
       ]);
 
       events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
@@ -708,19 +730,19 @@ export async function GET(request: Request) {
       if (opDex.length > 0) sources.push('dex-optimism');
 
     } else if (chain === 'base') {
-      events = await fetchBaseDexEvents();
+      events = await withSrcTimeout(fetchBaseDexEvents(), 5000, 'dex-base');
       if (events.length > 0) sources.push('dexscreener');
     } else if (chain === 'arbitrum') {
-      events = await fetchArbitrumDexEvents();
+      events = await withSrcTimeout(fetchArbitrumDexEvents(), 5000, 'dex-arbitrum');
       if (events.length > 0) sources.push('dexscreener');
     } else if (chain === 'optimism') {
-      events = await fetchOptimismDexEvents();
+      events = await withSrcTimeout(fetchOptimismDexEvents(), 5000, 'dex-optimism');
       if (events.length > 0) sources.push('dexscreener');
     } else if (chain === 'solana') {
       const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
-        fetchSolanaNetworkActivity(),
-        fetchPumpFunTokens(),
-        fetchSolanaDexEvents(),
+        withSrcTimeout(fetchSolanaNetworkActivity(), 5000, 'alchemy-solana'),
+        withSrcTimeout(fetchPumpFunTokens(), 5000, 'pumpfun'),
+        withSrcTimeout(fetchSolanaDexEvents(), 5000, 'dex-solana'),
       ]);
 
       events = [...solDex, ...pumpEvents, ...solanaNetEvents];
@@ -730,8 +752,8 @@ export async function GET(request: Request) {
 
     } else if (chain === 'ethereum') {
       const [alchemyEvents, ethDex] = await Promise.all([
-        fetchAlchemyTransfers(),
-        fetchEthereumDexEvents(),
+        withSrcTimeout(fetchAlchemyTransfers(), 5000, 'alchemy'),
+        withSrcTimeout(fetchEthereumDexEvents(), 5000, 'dex-ethereum'),
       ]);
 
       events = [...ethDex, ...alchemyEvents];
@@ -739,17 +761,17 @@ export async function GET(request: Request) {
       if (ethDex.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'bsc') {
-      const bscEvents = await fetchBSCDexEvents();
+      const bscEvents = await withSrcTimeout(fetchBSCDexEvents(), 5000, 'dex-bsc');
       events = bscEvents;
       if (bscEvents.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'polygon') {
-      const polygonEvents = await fetchPolygonDexEvents();
+      const polygonEvents = await withSrcTimeout(fetchPolygonDexEvents(), 5000, 'dex-polygon');
       events = polygonEvents;
       if (polygonEvents.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'avalanche') {
-      const avalancheEvents = await fetchAvalancheDexEvents();
+      const avalancheEvents = await withSrcTimeout(fetchAvalancheDexEvents(), 5000, 'dex-avalanche');
       events = avalancheEvents;
       if (avalancheEvents.length > 0) sources.push('dexscreener');
     }
