@@ -13,6 +13,11 @@ import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance }
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
+// Session 5B-2 additions
+import { getAddressSecurity, getDomainSecurity } from '@/lib/services/goplus';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { executeTrade, type TradeIntent } from '@/lib/trading/relayer';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -473,9 +478,133 @@ async function executeContractAnalysis(input: Record<string, unknown>): Promise<
 
 // ─── Tool Dispatch ────────────────────────────────────────────────────────────
 
+// ─── Session 5B-2 tool executors ──────────────────────────────────────────────
+
+async function executeAddressSecurity(input: Record<string, unknown>): Promise<string> {
+  const address = String(input.address || '');
+  const chain = String(input.chain || 'ethereum');
+  if (!address) return JSON.stringify({ error: 'address required' });
+  try {
+    const sec = await getAddressSecurity(address, chain);
+    return JSON.stringify({
+      address,
+      chain,
+      isScam: (sec as Record<string, unknown>).isScam ?? false,
+      isBlacklisted: (sec as Record<string, unknown>).isBlacklisted ?? false,
+      riskFlags: (sec as Record<string, unknown>).riskFlags ?? [],
+      raw: sec,
+    });
+  } catch (err) {
+    return JSON.stringify({ address, chain, error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+async function executeWhaleActivity(input: Record<string, unknown>): Promise<string> {
+  const whaleAddress = String(input.whale_address || '');
+  if (!whaleAddress) return JSON.stringify({ error: 'whale_address required' });
+  const chain = input.chain ? String(input.chain) : null;
+  const limit = Math.min(25, Math.max(1, Number(input.limit) || 10));
+  try {
+    const admin = getSupabaseAdmin();
+    let query = admin
+      .from('whale_activity')
+      .select('tx_hash, chain, action, token_address, token_symbol, value_usd, timestamp')
+      .eq('whale_address', whaleAddress)
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+    if (chain) query = query.eq('chain', chain);
+    const { data, error } = await query;
+    if (error) return JSON.stringify({ error: error.message });
+    return JSON.stringify({
+      whale_address: whaleAddress,
+      chain,
+      count: data?.length ?? 0,
+      moves: data ?? [],
+    });
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+async function executeCheckPhishingUrl(input: Record<string, unknown>): Promise<string> {
+  const url = String(input.url || '');
+  if (!url) return JSON.stringify({ error: 'url required' });
+  try {
+    const result = await getDomainSecurity(url);
+    return JSON.stringify({
+      url,
+      verdict: (result as Record<string, unknown>).verdict ?? 'UNKNOWN',
+      isPhishing: (result as Record<string, unknown>).isPhishing ?? false,
+      isMalicious: (result as Record<string, unknown>).isMalicious ?? false,
+      signals: (result as Record<string, unknown>).signals ?? [],
+      raw: result,
+    });
+  } catch (err) {
+    return JSON.stringify({ url, error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+async function executePrepareSwap(
+  input: Record<string, unknown>,
+  userId: string | null,
+): Promise<string> {
+  if (!userId) {
+    return JSON.stringify({
+      error: 'authentication_required',
+      message: 'You need to sign in to prepare a swap. Please sign in and ask again.',
+    });
+  }
+  const chain = String(input.chain || '');
+  const fromTokenAddress = String(input.from_token_address || '');
+  const toTokenAddress = String(input.to_token_address || '');
+  const amountIn = String(input.amount_in || '');
+  if (!chain || !fromTokenAddress || !toTokenAddress || !amountIn) {
+    return JSON.stringify({ error: 'missing_required_fields', need: ['chain', 'from_token_address', 'to_token_address', 'amount_in'] });
+  }
+  const slippageBps = Number(input.slippage_bps) || 100;
+  const walletSourceRaw = input.wallet_source ? String(input.wallet_source) : '';
+  const walletSource: TradeIntent['walletSource'] =
+    walletSourceRaw === 'external_solana' || walletSourceRaw === 'external_evm' || walletSourceRaw === 'builtin'
+      ? walletSourceRaw
+      : (chain.toLowerCase() === 'solana' || chain.toLowerCase() === 'sol')
+        ? 'external_solana'
+        : 'external_evm';
+
+  const result = await executeTrade({
+    userId,
+    chain,
+    walletSource,
+    fromTokenAddress,
+    toTokenAddress,
+    amountIn,
+    slippageBps,
+    reason: 'vtx_chat',
+    sourceOrderId: null,
+    sourceOrderTable: null,
+  });
+
+  if (result.success && result.awaitingUserConfirmation) {
+    return JSON.stringify({
+      ok: true,
+      pending_trade_id: result.pendingTradeId,
+      route_provider: result.route?.provider ?? null,
+      expected_amount_out: result.route?.amountOut ?? null,
+      message: 'Swap staged. Open the PendingTradesBanner to confirm in your browser.',
+    });
+  }
+  return JSON.stringify({
+    ok: false,
+    blocked: result.securityBlocked === true,
+    reason: result.failureReason ?? 'unknown',
+  });
+}
+
+// ─── Tool dispatcher ──────────────────────────────────────────────────────────
+
 async function executeVTXTool(
   toolName: string,
-  toolInput: Record<string, unknown>
+  toolInput: Record<string, unknown>,
+  userId: string | null = null,
 ): Promise<string> {
   switch (toolName) {
     case 'token_security_scan':  return executeTokenSecurityScan(toolInput);
@@ -487,6 +616,11 @@ async function executeVTXTool(
     case 'evm_token_data':       return executeEvmTokenData(toolInput);
     case 'new_token_detection':  return executeNewTokenDetection(toolInput);
     case 'contract_analysis':    return executeContractAnalysis(toolInput);
+    // Session 5B-2 additions
+    case 'address_security':     return executeAddressSecurity(toolInput);
+    case 'whale_activity':       return executeWhaleActivity(toolInput);
+    case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
+    case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
     default:                     return `Unknown tool: ${toolName}`;
   }
 }
@@ -699,6 +833,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to environment variables.' }, { status: 500 });
     }
 
+    // Resolve the calling user once. prepare_swap needs this; other tools tolerate
+    // null. Anonymous callers can still ask analytical questions but cannot
+    // stage swaps that write to user-scoped pending_trades.
+    const authedUser = await getAuthenticatedUser(request).catch(() => null);
+    const callerUserId = authedUser?.id ?? null;
+
     // ── Rate Limiting ───────────────────────────────────────────────────────
     const headersList = await headers();
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -863,7 +1003,7 @@ export async function POST(request: NextRequest) {
         const toolResults = await Promise.all(
           toolUseBlocks.map(async (block) => {
             toolsUsed.push(block.name);
-            const result = await executeVTXTool(block.name, block.input as Record<string, unknown>);
+            const result = await executeVTXTool(block.name, block.input as Record<string, unknown>, callerUserId);
             return {
               type: 'tool_result' as const,
               tool_use_id: block.id,
