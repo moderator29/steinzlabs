@@ -28,6 +28,7 @@
     { "path": "/api/cron/telegram-heartbeat", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/vtx-usage-reset", "schedule": "0 0 * * *" },
     { "path": "/api/cron/price-cache-refresh", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/sniper-monitor", "schedule": "*/1 * * * *" }
+    { "path": "/api/cron/sniper-monitor", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/health-watch", "schedule": "*/5 * * * *" }
   ]
 }

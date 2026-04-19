@@ -9,7 +9,9 @@ type ApiStatus = 'active' | 'error' | 'warning' | 'inactive';
 
 interface ApiEndpoint {
   name: string;
-  url: string;
+  // Either a public URL (HEAD ping) OR an internal probe path that requires auth.
+  url?: string;
+  probe?: string;
   category: string;
   status: ApiStatus;
   latencyMs: number;
@@ -19,20 +21,29 @@ interface ApiEndpoint {
 }
 
 const API_LIST: ApiEndpoint[] = [
-  { name: 'Alchemy (Solana)',            url: 'https://solana-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active',   latencyMs: 42,  uptime: 99.97, lastChecked: Date.now() - 30_000 },
-  { name: 'Alchemy (Ethereum)',          url: 'https://eth-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 68,  uptime: 99.95, lastChecked: Date.now() - 30_000 },
-  { name: 'Alchemy (Base)',              url: 'https://base-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 55,  uptime: 99.92, lastChecked: Date.now() - 30_000 },
-  { name: 'DexScreener',                url: 'https://api.dexscreener.com', category: 'Market Data', status: 'active', latencyMs: 120, uptime: 99.80, lastChecked: Date.now() - 30_000 },
-  { name: 'CoinGecko',                  url: 'https://api.coingecko.com', category: 'Market Data', status: 'warning', latencyMs: 450, uptime: 98.10, lastChecked: Date.now() - 30_000, errorMsg: 'Rate limit approaching' },
-  { name: 'Uniswap v3 Subgraph',        url: 'https://api.thegraph.com', category: 'DEX Routing', status: 'active',  latencyMs: 180, uptime: 99.50, lastChecked: Date.now() - 30_000 },
-  { name: 'Jupiter Aggregator',         url: 'https://quote-api.jup.ag', category: 'DEX Routing', status: 'active',  latencyMs: 95,  uptime: 99.90, lastChecked: Date.now() - 30_000 },
-  { name: 'Birdeye',                    url: 'https://public-api.birdeye.so', category: 'Analytics', status: 'active',  latencyMs: 220, uptime: 99.60, lastChecked: Date.now() - 30_000 },
-  { name: 'Arkham Intelligence',        url: 'https://api.arkhamintelligence.com', category: 'Analytics', status: 'active', latencyMs: 310, uptime: 99.20, lastChecked: Date.now() - 30_000 },
-  { name: 'Flashbots Protect',          url: 'https://rpc.flashbots.net', category: 'MEV', status: 'active',  latencyMs: 88,  uptime: 99.80, lastChecked: Date.now() - 30_000 },
-  { name: 'Jito Block Engine',          url: 'https://mainnet.block-engine.jito.wtf', category: 'MEV', status: 'active',  latencyMs: 72,  uptime: 99.85, lastChecked: Date.now() - 30_000 },
-  { name: 'Supabase (Database)',        url: 'https://phvewrldcdxupsnakddx.supabase.co', category: 'Infrastructure', status: 'active', latencyMs: 28,  uptime: 99.99, lastChecked: Date.now() - 30_000 },
-  { name: 'Cloudflare Turnstile',       url: 'https://challenges.cloudflare.com', category: 'Security', status: 'active', latencyMs: 65,  uptime: 99.99, lastChecked: Date.now() - 30_000 },
-  { name: 'Anthropic Claude API',       url: 'https://api.anthropic.com', category: 'AI', status: 'active',  latencyMs: 820, uptime: 99.70, lastChecked: Date.now() - 30_000 },
+  // Infrastructure first — these are the things that took the platform down on 2026-04-19.
+  { name: 'Upstash Redis (Cache)',       probe: '/api/admin/health/redis', category: 'Infrastructure', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Supabase (Database)',        url: 'https://phvewrldcdxupsnakddx.supabase.co', category: 'Infrastructure', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // Blockchain RPCs
+  { name: 'Alchemy (Solana)',            url: 'https://solana-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Alchemy (Ethereum)',          url: 'https://eth-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Alchemy (Base)',              url: 'https://base-mainnet.g.alchemy.com', category: 'Blockchain', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // Market data
+  { name: 'DexScreener',                url: 'https://api.dexscreener.com', category: 'Market Data', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'CoinGecko',                  url: 'https://api.coingecko.com/api/v3/ping', category: 'Market Data', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // DEX routing
+  { name: 'Uniswap v3 Subgraph',        url: 'https://api.thegraph.com', category: 'DEX Routing', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Jupiter Aggregator',         url: 'https://quote-api.jup.ag', category: 'DEX Routing', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // Analytics
+  { name: 'Birdeye',                    url: 'https://public-api.birdeye.so', category: 'Analytics', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Arkham Intelligence',        url: 'https://api.arkhamintelligence.com', category: 'Analytics', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // MEV
+  { name: 'Flashbots Protect',          url: 'https://rpc.flashbots.net', category: 'MEV', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Jito Block Engine',          url: 'https://mainnet.block-engine.jito.wtf', category: 'MEV', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // Security
+  { name: 'Cloudflare Turnstile',       url: 'https://challenges.cloudflare.com', category: 'Security', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  // AI
+  { name: 'Anthropic Claude API',       url: 'https://api.anthropic.com', category: 'AI', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -53,11 +64,20 @@ export default function ApiHealthPage() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    const token = sessionStorage.getItem('admin_token') ?? '';
     const updated = await Promise.all(
       apis.map(async (api) => {
         const start = Date.now();
         try {
-          const res = await fetch(`/api/admin/api-health/ping?url=${encodeURIComponent(api.url)}`, {
+          // Internal admin probes (Redis, etc.) require auth and do real work
+          // (e.g. SET sentinel + measure latency).
+          // External URLs go through the generic /api/admin/api-health/ping
+          // proxy which HEADs the URL with an allowlist.
+          const url = api.probe
+            ? api.probe
+            : `/api/admin/api-health/ping?url=${encodeURIComponent(api.url ?? '')}`;
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
             signal: AbortSignal.timeout(10000),
           });
           const latency = Date.now() - start;
@@ -68,7 +88,7 @@ export default function ApiHealthPage() {
               status: (data.status || 'active') as ApiStatus,
               latencyMs: data.latencyMs ?? latency,
               lastChecked: Date.now(),
-              errorMsg: data.errorMsg,
+              errorMsg: data.message ?? data.errorMsg,
             };
           }
           return { ...api, status: 'error' as ApiStatus, latencyMs: latency, lastChecked: Date.now(), errorMsg: `HTTP ${res.status}` };
@@ -81,6 +101,12 @@ export default function ApiHealthPage() {
     setLastRefresh(new Date());
     setLoading(false);
   }, [apis]);
+
+  // Auto-refresh on first mount so users see real values, not the placeholder zeros.
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(refresh, 60_000);
@@ -149,9 +175,13 @@ export default function ApiHealthPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{formatTimeAgo(api.lastChecked)}</td>
                 <td className="px-4 py-3">
-                  <a href={api.url} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-300">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  {api.url ? (
+                    <a href={api.url} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-300">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  ) : (
+                    <span className="text-gray-700 text-[10px]">internal</span>
+                  )}
                 </td>
               </tr>
             ))}
