@@ -14,8 +14,9 @@ import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
 // Dominance / Chains Tracked.
-import { GlobalSearch } from '@/components/dashboard/GlobalSearch';
 import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
+import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
+import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
@@ -69,21 +70,27 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
   icon: React.ElementType;
   trend: 'up' | 'down' | 'neutral';
 }) {
+  // Compact Trust-Wallet / CoinGecko-style stat cell. Single row on desktop,
+  // still single-row on mobile (the grid drops to 2 columns on small screens).
   return (
-    <div className="bg-[#111827] border border-white/[0.06] rounded-xl p-4 hover:border-[#0A1EFF]/20 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-[#0A1EFF]/[0.06]">
-          <Icon className="w-4 h-4 text-[#0A1EFF]" />
+    <div className="bg-[#111827] border border-white/[0.06] rounded-xl px-3 py-2.5 hover:border-[#0A1EFF]/20 transition-all duration-200">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <div className="p-1 rounded-md bg-[#0A1EFF]/[0.06]">
+            <Icon className="w-3 h-3 text-[#0A1EFF]" />
+          </div>
+          <span className="text-[10px] text-gray-500 tracking-wide">{label}</span>
         </div>
-        <div className={`flex items-center gap-1 text-xs font-medium ${
-          trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
-        }`}>
-          {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
-          {change}
-        </div>
+        {change ? (
+          <div className={`flex items-center gap-0.5 text-[10px] font-medium ${
+            trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
+          }`}>
+            {trend === 'up' ? <ArrowUpRight className="w-2.5 h-2.5" /> : trend === 'down' ? <ArrowDownRight className="w-2.5 h-2.5" /> : null}
+            {change}
+          </div>
+        ) : null}
       </div>
-      <div className="text-xl font-bold text-white font-mono tracking-tight">{value}</div>
-      <div className="text-[11px] text-gray-500 mt-1">{label}</div>
+      <div className="text-[15px] sm:text-base font-bold text-white font-mono tracking-tight">{value}</div>
     </div>
   );
 });
@@ -170,13 +177,18 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchMarketStats = async () => {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/global');
+        // Route through our unified service-layer endpoint so we share the
+        // cache + rate-limit + usage counter with everything else.
+        const res = await fetch('/api/dashboard/market-globals', {
+          signal: AbortSignal.timeout(10_000),
+          cache: 'no-store',
+        });
         if (res.ok) {
-          const { data } = await res.json();
-          const mc = data.total_market_cap?.usd || 0;
-          const vol = data.total_volume?.usd || 0;
-          const btcDom = data.market_cap_percentage?.btc || 0;
-          const mcChange = data.market_cap_change_percentage_24h_usd || 0;
+          const data = await res.json();
+          const mc = data.totalMarketCap || 0;
+          const vol = data.totalVolume || 0;
+          const btcDom = data.btcDominance || 0;
+          const mcChange = data.marketCapChange24h || 0;
           setMarketStats({
             totalMarketCap: mc >= 1e12 ? `$${(mc / 1e12).toFixed(2)}T` : `$${(mc / 1e9).toFixed(1)}B`,
             totalVolume: vol >= 1e12 ? `$${(vol / 1e12).toFixed(2)}T` : `$${(vol / 1e9).toFixed(1)}B`,
@@ -245,12 +257,10 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-1 justify-center max-w-md mx-2 md:mx-4">
-            <GlobalSearch />
-          </div>
+          {/* Search lives on the Market page, not the dashboard. Header keeps
+              the logo + LIVE badge on the left, translate + user on the right. */}
+          <div className="flex-1" />
           <div className="flex items-center gap-2">
-            {/* Platform-wide translate — persists per-user in localStorage and
-                broadcasts a `localeChange` event the rest of the app listens to. */}
             <LanguageSwitcher compact />
           </div>
         </div>
@@ -259,7 +269,7 @@ export default function Dashboard() {
       <div className="pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
               {stats.map((stat, i) => (
                 <motion.div
                   key={stat.label}
@@ -270,6 +280,17 @@ export default function Dashboard() {
                   <StatCard {...stat} />
                 </motion.div>
               ))}
+            </div>
+
+            {/* Top Gainers (60%) + Heating Up (40%) — CoinGecko-grade market
+                overview. Stacks single-column on mobile, splits on lg. */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-5">
+              <div className="lg:col-span-3">
+                <TopGainersCard />
+              </div>
+              <div className="lg:col-span-2">
+                <HeatingUpCard />
+              </div>
             </div>
 
             {/* Overview / Context Feed / Market tab toggle */}
