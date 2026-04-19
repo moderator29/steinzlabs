@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { buildContractIntelligence, topHolderRisk, type ContractHolder } from '@/lib/services/contract-intelligence';
+import { getContractPrice, getTokenDetail } from '@/lib/services/coingecko';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,6 +182,27 @@ export async function GET(request: Request) {
     // ── Security risk from holder concentration ────────────────────────────
     const holderRisk = topHolderRisk(intel.metadata.topHolderConcentration);
 
+    // ── 50/50 enrichment: prefer CoinGecko for price + market cap when it
+    //    indexes this contract. Falls back to the Alchemy/DexScreener-derived
+    //    values from buildContractIntelligence so the bubble map never
+    //    flatlines if CoinGecko misses the token.
+    let cgPrice = 0;
+    let cgMarketCap = 0;
+    let cgChange24h = 0;
+    try {
+      cgPrice = await getContractPrice(token, intel.chain);
+      if (cgPrice > 0) {
+        // Best effort to also pull market cap + 24h change from the full
+        // detail endpoint. If the contract isn't in the detail index we
+        // keep the simple price and leave market cap to Alchemy/Dex.
+        try {
+          const detail = await getTokenDetail(intel.symbol.toLowerCase());
+          cgMarketCap = detail.market_data?.market_cap?.usd ?? 0;
+          cgChange24h = detail.market_data?.price_change_percentage_24h ?? 0;
+        } catch { /* detail miss — keep price-only */ }
+      }
+    } catch { /* CoinGecko down or contract not indexed */ }
+
     const bubbleData: BubbleMapData = {
       nodes,
       links,
@@ -190,10 +212,10 @@ export async function GET(request: Request) {
         name: intel.name,
         symbol: intel.symbol,
         chain: intel.chain,
-        price: intel.market.priceUSD ?? 0,
-        priceChange24h: intel.market.priceChange24h,
+        price: cgPrice > 0 ? cgPrice : (intel.market.priceUSD ?? 0),
+        priceChange24h: cgChange24h !== 0 ? cgChange24h : intel.market.priceChange24h,
         volume24h: intel.market.volume24h,
-        marketCap: intel.market.marketCap,
+        marketCap: cgMarketCap > 0 ? cgMarketCap : intel.market.marketCap,
         liquidity: intel.market.liquidity,
         totalHolders: intel.metadata.holderCount,
         topHolderConcentration: intel.metadata.topHolderConcentration,
