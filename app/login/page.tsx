@@ -142,12 +142,22 @@ function LoginPageInner() {
     try {
       // ── CAPTCHA backend verification ──────────────────────────────────────
       if (TURNSTILE_SITE_KEY && captchaToken) {
-        const captchaRes = await fetch('/api/auth/verify-captcha', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: captchaToken, action: 'login' }),
-        });
-        const captchaData = await captchaRes.json();
+        let captchaData: { success?: boolean } = {};
+        try {
+          const captchaRes = await fetch('/api/auth/verify-captcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: captchaToken, action: 'login' }),
+            signal: AbortSignal.timeout(8000),
+          });
+          captchaData = await captchaRes.json();
+        } catch (captchaErr) {
+          // Network/timeout reaching verify-captcha — fail open, the server
+          // route also fails open on its own Cloudflare timeout. Without this
+          // catch the whole login form silently hangs.
+          console.warn('[login] verify-captcha unreachable, proceeding:', captchaErr);
+          captchaData = { success: true };
+        }
         if (!captchaData.success) {
           showToast('Security check failed. Please try again.', 'error');
           setErrors({ captcha: 'Security verification failed' });
@@ -163,18 +173,26 @@ function LoginPageInner() {
 
       let email = identifier.trim();
       if (!email.includes('@')) {
-        const res = await fetch('/api/auth/lookup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: email.toLowerCase() }),
-        });
-        const result = await res.json();
-        if (!res.ok || !result.email) {
-          showToast(result.error || 'No account found with that username.', 'error');
-          setErrors({ identifier: 'Username not found' });
+        try {
+          const res = await fetch('/api/auth/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: email.toLowerCase() }),
+            signal: AbortSignal.timeout(5000),
+          });
+          const result = await res.json();
+          if (!res.ok || !result.email) {
+            showToast(result.error || 'No account found with that username.', 'error');
+            setErrors({ identifier: 'Username not found' });
+            return;
+          }
+          email = result.email;
+        } catch (lookupErr) {
+          console.warn('[login] username lookup failed:', lookupErr);
+          showToast('Could not look up that username. Try signing in with email.', 'error');
+          setErrors({ identifier: 'Username lookup failed' });
           return;
         }
-        email = result.email;
       }
 
       const TIMEOUT_MS = 12000;
@@ -221,24 +239,17 @@ function LoginPageInner() {
 
       if (!data.session) { showToast('Sign in failed. Please try again.', 'error'); return; }
 
-      // @supabase/ssr writes session cookies automatically — do NOT set
-      // a custom `steinz_session` cookie; middleware ignores it.
+      // @supabase/ssr writes session cookies synchronously inside
+      // signInWithPassword, so by this line cookies are already on document.
+      // Do NOT add an extra getSession() roundtrip here — it can hang and
+      // strand the user on "Signing in..." with no recovery. (P0 fix 2026-04-18.)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('steinz_last_activity', Date.now().toString());
-      }
-
-      // Force a session refresh so the cookies are flushed before navigation.
-      // Without this, `window.location.href` can race the cookie write and
-      // middleware sees no session → redirects back to /login.
-      try {
-        await supabase.auth.getSession();
-      } catch (refreshErr) {
-        console.error('[login] getSession after sign-in failed:', refreshErr);
+        try { localStorage.setItem('steinz_last_activity', Date.now().toString()); } catch { /* private mode */ }
       }
 
       showToast('Welcome back!', 'success');
       const destination = searchParams.get('from') || '/dashboard';
-      // Hard navigation guarantees the cookies are sent with the new request.
+      // Hard navigation so middleware reads the freshly-written cookies.
       window.location.assign(destination);
     } catch (err: any) {
       const msg = err?.message || '';
