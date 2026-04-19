@@ -100,9 +100,6 @@ export function VTXSection() {
             </motion.div>
           ))}
         </motion.div>
-
-        {/* Connecting dashed line (desktop only) */}
-        <div className="hidden md:block relative -mt-[calc(50%+40px)] pointer-events-none" style={{ zIndex: 0 }} />
       </div>
     </section>
   );

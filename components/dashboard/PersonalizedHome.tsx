@@ -9,11 +9,12 @@ import {
   Bell,
   Wallet,
 } from "lucide-react";
-import { NakaLoader } from "@/components/brand/NakaLoader";
 import { MiniVtxPanel } from "@/components/dashboard/MiniVtxPanel";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { VerifiedGoldBadge } from "@/components/ui/VerifiedGoldBadge";
 
 interface HomepageData {
-  user: { id: string; email: string; displayName: string; tier: string };
+  user: { id: string; email: string; displayName: string; tier: string; isVerified?: boolean; role?: string };
   wallets: Array<{ address: string; chain: string }>;
   watchlist: Array<{ token_id: string; chain: string }>;
   alertsToday: Array<{ id: string; name?: string; triggered_at?: string; type?: string }>;
@@ -28,10 +29,15 @@ interface HomepageData {
 }
 
 function greeting(): string {
-  return "Hi";
+  const h = new Date().getHours();
+  if (h < 5) return "Hey night owl";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export function PersonalizedHome() {
+  const { user: authUser } = useAuth();
   const [data, setData] = useState<HomepageData | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -40,10 +46,18 @@ export function PersonalizedHome() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/dashboard/homepage", { credentials: "include" });
+        // 8s cap so a slow homepage API never strands the dashboard.
+        const res = await fetch("/api/dashboard/homepage", {
+          credentials: "include",
+          signal: AbortSignal.timeout(8000),
+        });
         if (!res.ok) return;
         const json = (await res.json()) as HomepageData;
         if (!cancelled) setData(json);
+      } catch (err) {
+        // Network/timeout: render shell with auth user only. Sub-sections fetch
+        // their own data lazily so the page stays usable.
+        console.warn("[PersonalizedHome] homepage data unavailable, rendering shell:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,22 +67,38 @@ export function PersonalizedHome() {
     };
   }, []);
 
-  if (loading) return <NakaLoader size={40} text="Loading your dashboard..." />;
-
-  const displayName = data?.user.displayName ?? "there";
+  // CRITICAL UX: never block the entire dashboard on the homepage data fetch.
+  // Use the auth user (instantly available from useAuth) as fallback so the
+  // shell renders in <100ms even if /api/dashboard/homepage is slow.
+  const displayName =
+    data?.user.displayName ||
+    authUser?.username ||
+    authUser?.first_name ||
+    authUser?.email?.split("@")[0] ||
+    "trader";
+  const isVerified = data?.user.isVerified ?? authUser?.is_verified ?? false;
   const walletsCount = data?.wallets.length ?? 0;
   const watchlistCount = data?.watchlist.length ?? 0;
 
   return (
     <div className="space-y-6">
-      {/* Greeting */}
+      {/* Greeting — renders immediately from auth user; enriched once API data arrives */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-white">
-          {greeting()}, <span className="text-blue-400">{displayName}</span>
+        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+          <span>
+            {greeting()}, <span className="text-blue-400">{displayName}</span>
+          </span>
+          {isVerified && <VerifiedGoldBadge size={22} title="Verified by Naka Labs" />}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          {walletsCount} wallet{walletsCount === 1 ? "" : "s"} tracked · {watchlistCount} token
-          {watchlistCount === 1 ? "" : "s"} watched
+          {loading ? (
+            <span className="opacity-60">Loading your day...</span>
+          ) : (
+            <>
+              {walletsCount} wallet{walletsCount === 1 ? "" : "s"} tracked · {watchlistCount} token
+              {watchlistCount === 1 ? "" : "s"} watched
+            </>
+          )}
         </p>
       </div>
 
