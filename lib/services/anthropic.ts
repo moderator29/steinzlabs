@@ -251,6 +251,26 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
       required: ['chain', 'from_token_address', 'to_token_address', 'amount_in'],
     },
   },
+  {
+    name: 'coingecko_market_data',
+    description: 'Get authoritative real-time market data from CoinGecko: live prices, market cap, 24h volume, trending coins, side-by-side coin comparisons, and price-history charts. ALWAYS use this for "what is the price of X" / "what is X market cap" / "what is trending right now" / "compare X and Y" queries — your training data is stale. Falls back to Alchemy/DexScreener via other tools when CoinGecko does not index a token. Coin ids are CoinGecko slugs (bitcoin, ethereum, solana, jupiter-exchange-solana, etc.) — if unsure, call action="search" first.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['get_coin', 'get_trending', 'search', 'compare_coins', 'get_chart', 'get_top_gainers'],
+          description: 'get_coin = full detail for one coin · get_trending = current trending list · search = find a coin by name/ticker · compare_coins = side-by-side stats for 2-5 coins · get_chart = price history (set days) · get_top_gainers = biggest 24h movers',
+        },
+        coinId: { type: 'string', description: 'CoinGecko slug for get_coin / get_chart (e.g. "bitcoin")' },
+        coinIds: { type: 'array', items: { type: 'string' }, description: 'Array of CoinGecko slugs for compare_coins' },
+        query: { type: 'string', description: 'Search query for action="search"' },
+        days: { type: 'number', description: 'Days of price history for get_chart (default 7, max 365)' },
+        limit: { type: 'number', description: 'Result count cap for trending / top_gainers (default 10)' },
+      },
+      required: ['action'],
+    },
+  },
 ];
 
 // ─── Core VTX Query Function ──────────────────────────────────────────────────
