@@ -57,7 +57,7 @@ async function checkSupabase(): Promise<CheckResult> {
   try {
     const admin = getSupabaseAdmin();
     const result = await withTimeout(
-      admin.from("profiles").select("id", { count: "exact", head: true }).limit(1).then((r) => r.error ?? "ok"),
+      Promise.resolve(admin.from("profiles").select("id", { count: "exact", head: true }).limit(1)).then((r) => r.error ?? "ok"),
       3000,
     );
     const latencyMs = Date.now() - start;
@@ -77,7 +77,7 @@ async function checkExternal(name: string, url: string): Promise<CheckResult> {
       fetch(url, { method: "GET", signal: AbortSignal.timeout(3000) }),
     );
     const latencyMs = Date.now() - start;
-    if (!res.ok) return { name, status: "error", latencyMs, message: `HTTP ${res.status}` };
+    if (res.status >= 500) return { name, status: "error", latencyMs, message: `HTTP ${res.status}` };
     if (latencyMs > 2000) return { name, status: "warning", latencyMs, message: "Slow" };
     return { name, status: "active", latencyMs };
   } catch (err) {
