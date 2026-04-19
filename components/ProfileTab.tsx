@@ -7,6 +7,7 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
+import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 
 interface Notification {
   id: string;
@@ -1223,11 +1224,7 @@ export default function ProfileTab() {
 
           <h2 className="text-base font-heading font-bold leading-tight flex items-center gap-1.5">
             {displayName}
-            {user?.is_verified && (
-              <span title="Verified" className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#0A1EFF] text-white">
-                <Check className="w-2.5 h-2.5" />
-              </span>
-            )}
+            {user?.is_verified && <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />}
           </h2>
           {user?.first_name && user?.username && (
             <p className="text-[11px] text-gray-500 mt-0.5">{fullName}</p>
