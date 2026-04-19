@@ -6,6 +6,8 @@ import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { supabase } from '@/lib/supabase';
+import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
+import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 
 interface TokenCardData {
   symbol: string;
@@ -467,8 +469,77 @@ function VtxAiPageInner() {
     return text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]\s/gm, '').replace(/^[•]\s/gm, '').replace(/\s*---\s*/g, '\n\n').replace(/\s*--\s*/g, ' ');
   };
 
+  // Aggregate sidecar data from current message stream.
+  // tokens: every token card produced in this session (newest first, deduped by symbol).
+  // toolEvents: timeline reconstructed from messages — when a token card or
+  // chart appears we infer the underlying tool. Genuine streaming of tool
+  // events from the API is a follow-up; this gives the desktop sidecar
+  // useful content today without requiring API changes.
+  const sidecarTokens: SidecarTokenCard[] = (() => {
+    const seen = new Set<string>();
+    const out: SidecarTokenCard[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (!m.tokenCards) continue;
+      for (const t of m.tokenCards) {
+        const key = `${t.chain}:${t.symbol}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          symbol: t.symbol,
+          name: t.name,
+          price: t.price,
+          change: `${t.change24h >= 0 ? '+' : ''}${t.change24h.toFixed(2)}%`,
+          isPositive: t.change24h >= 0,
+          marketCap: t.marketCap,
+          volume: t.volume,
+          liquidity: t.liquidity,
+          chain: t.chain,
+        });
+        if (out.length >= 8) break;
+      }
+      if (out.length >= 8) break;
+    }
+    return out;
+  })();
+
+  const sidecarToolEvents: SidecarToolEvent[] = (() => {
+    const out: SidecarToolEvent[] = [];
+    for (const m of messages) {
+      if (m.role !== 'assistant') continue;
+      const ts = m.timestamp ?? Date.now();
+      if (m.tokenCards && m.tokenCards.length > 0) {
+        out.push({
+          id: `tk-${ts}`,
+          name: 'token_market_data',
+          timestamp: ts,
+          summary: m.tokenCards.map(t => t.symbol).join(', '),
+        });
+      }
+    }
+    return out;
+  })();
+
+  const sidecarPendingSwap: SidecarPendingSwap | null = null; // wired in by API once prepare_swap streams
+
   return (
-    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col overflow-hidden">
+    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col lg:flex-row overflow-hidden">
+      {/* Desktop only: persistent left rail with chat history */}
+      <VtxConversationsRail
+        sessions={chatSessions.map(s => ({ id: s.id, date: s.date, preview: s.preview }))}
+        activeSessionId={null}
+        onSelect={(s) => {
+          const full = chatSessions.find(x => x.id === s.id);
+          if (full) loadChatSession(full);
+        }}
+        onNewChat={clearChat}
+        isPro={isPro}
+        remainingMessages={dailyUsage.remaining}
+        totalMessages={dailyUsage.limit}
+      />
+
+      {/* Center column — existing chat shell */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* Settings Toast */}
       {settingsToast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0A1EFF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none">
@@ -883,6 +954,13 @@ function VtxAiPageInner() {
           Press Enter to send · Shift + Enter for new line
         </div>
       </div>
+      </div>
+      {/* Desktop only: persistent right sidecar with token cards + tool timeline */}
+      <VtxToolSidecar
+        tokens={sidecarTokens}
+        toolEvents={sidecarToolEvents}
+        pendingSwap={sidecarPendingSwap}
+      />
     </div>
   );
 }
