@@ -484,13 +484,22 @@ export default function ProfileTab() {
           .single();
         if (existing) { setEditError('Username already taken'); setEditLoading(false); return; }
       }
-      // Update profiles table
+      // Store first_name / last_name in auth user_metadata (schema-independent),
+      // and keep username/bio in the profiles table. This sidesteps profiles-schema
+      // drift and means name changes take effect instantly without a migration.
+      const displayName = [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(' ').trim();
+      const { error: authErr } = await supabase.auth.updateUser({
+        data: {
+          first_name: editFirstName.trim() || null,
+          last_name: editLastName.trim() || null,
+        },
+      });
+      if (authErr) throw authErr;
       const { error } = await supabase
         .from('profiles')
         .update({
           username: editUsername.trim(),
-          first_name: editFirstName.trim(),
-          last_name: editLastName.trim(),
+          display_name: displayName || editUsername.trim(),
           bio: editBio.trim().slice(0, 160),
         })
         .eq('id', user.id);

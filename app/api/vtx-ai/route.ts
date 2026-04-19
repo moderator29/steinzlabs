@@ -489,9 +489,9 @@ async function executeAddressSecurity(input: Record<string, unknown>): Promise<s
     return JSON.stringify({
       address,
       chain,
-      isScam: (sec as Record<string, unknown>).isScam ?? false,
-      isBlacklisted: (sec as Record<string, unknown>).isBlacklisted ?? false,
-      riskFlags: (sec as Record<string, unknown>).riskFlags ?? [],
+      isScam: (sec as unknown as Record<string, unknown>).isScam ?? false,
+      isBlacklisted: (sec as unknown as Record<string, unknown>).isBlacklisted ?? false,
+      riskFlags: (sec as unknown as Record<string, unknown>).riskFlags ?? [],
       raw: sec,
     });
   } catch (err) {
@@ -533,10 +533,10 @@ async function executeCheckPhishingUrl(input: Record<string, unknown>): Promise<
     const result = await getDomainSecurity(url);
     return JSON.stringify({
       url,
-      verdict: (result as Record<string, unknown>).verdict ?? 'UNKNOWN',
-      isPhishing: (result as Record<string, unknown>).isPhishing ?? false,
-      isMalicious: (result as Record<string, unknown>).isMalicious ?? false,
-      signals: (result as Record<string, unknown>).signals ?? [],
+      verdict: (result as unknown as Record<string, unknown>).verdict ?? 'UNKNOWN',
+      isPhishing: (result as unknown as Record<string, unknown>).isPhishing ?? false,
+      isMalicious: (result as unknown as Record<string, unknown>).isMalicious ?? false,
+      signals: (result as unknown as Record<string, unknown>).signals ?? [],
       raw: result,
     });
   } catch (err) {

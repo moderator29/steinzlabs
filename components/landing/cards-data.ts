@@ -45,7 +45,7 @@ export const FEATURE_CARDS: CardData[] = [
   {
     tag: 'For Research', title: 'Bubble Map Intelligence',
     description: 'Visualize wallet networks, token holder distributions, and smart money flows. See who is connected to who, and what they are doing together.',
-    bullets: ['Complete token holder distribution maps', 'Wallet cluster and coordination detection', 'Arkham-powered entity labeling on every node', 'Smart money flow visualization'],
+    bullets: ['Complete token holder distribution maps', 'Wallet cluster and coordination detection', 'Entity labeling on every node', 'Smart money flow visualization'],
     pills: ['Cluster Detection', 'Whale Networks', 'Token Flows', 'Entity Mapping'],
     badge: 'NEW',
     badgePosition: 'top-left',
@@ -56,7 +56,7 @@ export const FEATURE_CARDS: CardData[] = [
   {
     tag: 'For Alpha', title: 'Smart Money + Whale Tracker',
     description: 'Follow the wallets that consistently win. When multiple smart money wallets enter the same token simultaneously — we alert you first.',
-    bullets: ['Real-time feed of large wallet movements', 'High conviction signals when 3+ smart wallets converge', 'Arkham entity labels on every whale move', 'Personal whale watchlist with instant alerts'],
+    bullets: ['Real-time feed of large wallet movements', 'High conviction signals when 3+ smart wallets converge', 'Entity labels on every whale move', 'Personal whale watchlist with instant alerts'],
     pills: ['Real-time Feed', 'Convergence Signals', 'Entity Labels', 'Watchlist'],
     icon: TrendingUp,
     gradient: 'linear-gradient(135deg,#92400E 0%,#D97706 100%)',
