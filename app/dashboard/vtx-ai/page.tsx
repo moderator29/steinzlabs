@@ -1,6 +1,7 @@
 'use client';
 
-import { Bot, ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
+import SteinzLogo from '@/components/SteinzLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
@@ -690,7 +691,7 @@ function VtxAiPageInner() {
           </button>
 
           <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
-            <Bot className="w-5 h-5 text-[#0A1EFF]" />
+            <SteinzLogo size={22} />
           </div>
 
           <div className="flex-1">
@@ -1007,7 +1008,11 @@ function VtxAiPageInner() {
                   <div className="text-[9px] text-gray-600 mt-1 text-right">{formatTime(msg.timestamp)}</div>
                 )}
                 {msg.role === 'assistant' && i > 0 && (
-                  <button onClick={() => copyMessage(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-white/[0.06] rounded-lg">
+                  <button
+                    onClick={() => copyMessage(i)}
+                    title="Copy reply"
+                    className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-white/[0.06] rounded-lg"
+                  >
                     {copiedIdx === i ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-gray-600" />}
                   </button>
                 )}

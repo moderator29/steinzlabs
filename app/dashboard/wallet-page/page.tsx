@@ -251,15 +251,64 @@ export default function WalletPage() {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('steinz_wallets');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setWallets(parsed);
+    let cancelled = false;
+
+    const hydrate = async () => {
+      // Read local first so the UI is interactive immediately (<5ms).
+      const stored = localStorage.getItem('steinz_wallets');
+      const localWallets: StoredWallet[] = stored ? (JSON.parse(stored) as StoredWallet[]) : [];
       const defAddr = localStorage.getItem('steinz_default_wallet') || '';
-      setDefaultWalletAddress(defAddr);
-      const def = parsed.find((w: StoredWallet) => w.address === defAddr) || parsed[0];
-      if (def) setActiveWallet(def);
-    }
+
+      if (localWallets.length > 0 && !cancelled) {
+        setWallets(localWallets);
+        setDefaultWalletAddress(defAddr);
+        const def = localWallets.find((w) => w.address === defAddr) || localWallets[0];
+        if (def) setActiveWallet(def);
+      }
+
+      // Then reconcile with cloud backup. The /api/wallet/sync endpoint
+      // refuses to wipe stored wallets, so even a transient empty local
+      // state cannot poison the cloud.
+      try {
+        const res = await fetch('/api/wallet/sync', { credentials: 'include' });
+        if (!res.ok || cancelled) return;
+        const cloud = (await res.json()) as { wallets: StoredWallet[]; defaultAddress: string | null };
+        const cloudWallets = Array.isArray(cloud.wallets) ? cloud.wallets : [];
+
+        // Union local + cloud by address; cloud is the durable record but
+        // local may have wallets not yet synced (offline-create case).
+        const byAddr = new Map<string, StoredWallet>();
+        for (const w of cloudWallets) byAddr.set(w.address.toLowerCase(), w);
+        for (const w of localWallets) byAddr.set(w.address.toLowerCase(), w);
+        const merged = Array.from(byAddr.values());
+
+        if (cancelled) return;
+
+        // Push the union back so cloud and local agree. Skip if nothing to do.
+        if (merged.length > 0 && merged.length !== cloudWallets.length) {
+          void fetch('/api/wallet/sync', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wallets: merged, defaultAddress: defAddr || cloud.defaultAddress }),
+          });
+        }
+
+        if (merged.length > 0) {
+          setWallets(merged);
+          localStorage.setItem('steinz_wallets', JSON.stringify(merged));
+          const finalDef = defAddr || cloud.defaultAddress || '';
+          setDefaultWalletAddress(finalDef);
+          const def = merged.find((w) => w.address === finalDef) || merged[0];
+          if (def) setActiveWallet(def);
+        }
+      } catch (err) {
+        console.warn('[wallet-page] cloud sync unavailable:', err);
+      }
+    };
+
+    void hydrate();
+
     const tokens = localStorage.getItem('steinz_custom_tokens');
     if (tokens) setCustomTokens(JSON.parse(tokens));
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
@@ -267,6 +316,10 @@ export default function WalletPage() {
     const savedHideSmall = localStorage.getItem('steinz_hide_small');
     if (savedHideSmall) setHideSmallBalances(savedHideSmall === 'true');
     fetchPrices();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const fetchPrices = async () => {
@@ -292,9 +345,25 @@ export default function WalletPage() {
     } finally { setPricesLoading(false); }
   };
 
-  const saveWallets = (w: StoredWallet[]) => {
+  const saveWallets = (w: StoredWallet[], opts: { intent?: 'save' | 'clear' } = {}) => {
+    // Hard guard: never silently wipe wallets. If the caller is trying to
+    // shrink the local set to empty, require explicit `intent: 'clear'`.
+    if (w.length === 0 && wallets.length > 0 && opts.intent !== 'clear') {
+      console.warn('[wallet-page] refused to overwrite wallets with empty array (intent not "clear")');
+      return;
+    }
     setWallets(w);
     localStorage.setItem('steinz_wallets', JSON.stringify(w));
+    void fetch('/api/wallet/sync', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallets: w,
+        defaultAddress: defaultWalletAddress || w[0]?.address || null,
+        ...(opts.intent === 'clear' ? { intent: 'clear' } : {}),
+      }),
+    }).catch((err) => console.warn('[wallet-page] cloud save failed:', err));
   };
 
   const fetchBalances = useCallback(async (address: string, chain: ChainInfo) => {
@@ -403,7 +472,9 @@ export default function WalletPage() {
 
   const removeWallet = (addr: string) => {
     const updated = wallets.filter(w => w.address !== addr);
-    saveWallets(updated);
+    // Removing the last wallet is an explicit user action — pass intent:'clear'
+    // so the cloud-sync guard allows it.
+    saveWallets(updated, updated.length === 0 ? { intent: 'clear' } : {});
     if (activeWallet?.address === addr) {
       setActiveWallet(updated[0] || null);
       setWalletData(null);
@@ -540,7 +611,7 @@ export default function WalletPage() {
                 <ArrowLeft className="w-5 h-5 text-slate-400" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">N</div>
+                <SteinzLogo size={20} />
                 <span className="text-base font-bold">Naka Wallet</span>
                 {wallets.length > 1 && (
                   <select
@@ -1331,6 +1402,18 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           </div>
         </div>
 
+        {/* TRUST WALLET-STYLE warning bar — placed ABOVE the QR / address so the
+            user reads it before they ever copy or share. The exact phrasing
+            ("lost forever") matches what funds-handling apps use to make sure
+            users do not send wrong-chain assets. Mandatory on every chain. */}
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#F59E0B] mt-0.5" />
+          <p className="text-xs leading-relaxed text-amber-100">
+            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets sent on a different network will be{' '}
+            <span className="font-bold underline">lost forever</span>.
+          </p>
+        </div>
+
         <div className="text-center">
           <div className="w-56 h-56 bg-white rounded-2xl mx-auto mb-5 flex items-center justify-center p-3 shadow-lg relative">
             {qrDataUrl ? (
@@ -1363,10 +1446,10 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
             {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
           </button>
 
-          <div className="mt-4 p-3 bg-[#F59E0B]/5 rounded-xl border border-[#F59E0B]/10">
-            <p className="text-[11px] text-gray-400">
-              <AlertTriangle className="w-3 h-3 text-[#F59E0B] inline mr-1" />
-              Only send {chain.name} network tokens to this address. Sending from other networks may result in loss.
+          {/* Lower-prominence reminder — primary warning is the bar above the QR. */}
+          <div className="mt-4 p-3 bg-white/[0.03] rounded-xl border border-white/10">
+            <p className="text-[11px] text-gray-500">
+              Verified {chain.name} address. Always double-check the first and last 4 characters before sharing.
             </p>
           </div>
         </div>

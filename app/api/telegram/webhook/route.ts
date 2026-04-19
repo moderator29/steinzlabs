@@ -29,19 +29,22 @@ interface LinkedUser {
 
 async function getLinkedUser(chatId: number): Promise<LinkedUser | null> {
   const supabase = getSupabaseAdmin();
+  // Single round-trip: PostgREST joined select. The profiles row is fetched
+  // alongside the link so we don't pay 2 sequential Supabase round-trips on
+  // every command — that latency was making Telegram time out.
   const { data: link } = await supabase
     .from("user_telegram_links")
-    .select("user_id")
+    .select("user_id, profiles!inner(tier, tier_expires_at)")
     .eq("telegram_chat_id", chatId)
     .maybeSingle();
   if (!link?.user_id) return null;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscription_tier, tier_expires_at")
-    .eq("id", link.user_id)
-    .maybeSingle();
-  const result = checkTier(profile?.subscription_tier, profile?.tier_expires_at, "free");
-  return { user_id: link.user_id, tier: result.currentTier, expired: result.expired };
+  // PostgREST returns the related row as either an object or array depending
+  // on relationship cardinality — normalise.
+  const profile = Array.isArray((link as { profiles?: unknown }).profiles)
+    ? ((link as { profiles: Array<{ tier?: string; tier_expires_at?: string | null }> }).profiles[0] ?? null)
+    : ((link as { profiles?: { tier?: string; tier_expires_at?: string | null } }).profiles ?? null);
+  const result = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "free");
+  return { user_id: link.user_id as string, tier: result.currentTier, expired: result.expired };
 }
 
 function tierBadge(tier: Tier): string {
