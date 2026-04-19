@@ -372,7 +372,13 @@ export default function WalletPage() {
     // which is why switching chains felt like "click SOL, still see ETH". Clear first.
     setWalletData(null);
     try {
-      const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chain.apiChain}`);
+      // 10s ceiling — RPC balance-of calls can stall on a cold lambda and the
+      // user has to see something within the 0.5–1s load budget; we retain the
+      // previous render above this, but guarantee the spinner clears.
+      const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chain.apiChain}`, {
+        signal: AbortSignal.timeout(10_000),
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data = await res.json();
         setWalletData(data);

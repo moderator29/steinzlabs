@@ -18,7 +18,11 @@ export function useMarketData({ page = 1, category = 'all' }: UseMarketDataOptio
       setLoading(true);
       setError(null);
       const params = new URLSearchParams({ page: String(page), category });
-      const res = await window.fetch(`/api/market/prices?${params}`);
+      // 10s ceiling so a CoinGecko cold-start / rate-limit never strands the page.
+      const res = await window.fetch(`/api/market/prices?${params}`, {
+        signal: AbortSignal.timeout(10_000),
+        cache: 'no-store',
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as CoinGeckoMarket[];
       setTokens(Array.isArray(data) ? data : []);
