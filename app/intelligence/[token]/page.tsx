@@ -86,7 +86,7 @@ export default function ViewProofPage() {
                 {tokenAddress.slice(0, 6)}...{tokenAddress.slice(-4)} Intelligence Report
               </h1>
               <p className="text-sm text-gray-400 mt-1">
-                Powered by Arkham Intelligence
+                Powered by Naka Intelligence
               </p>
             </div>
 

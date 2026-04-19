@@ -230,7 +230,7 @@ export default function ViewProofPage() {
                   <div className="flex justify-between"><span className="text-gray-500">Value</span><span className="font-semibold text-white">${event.valueUsd?.toLocaleString()}</span></div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-500">Analysis powered by Arkham Intelligence, Alchemy, and on-chain verification. Data refreshed in real-time.</p>
+              <p className="text-[10px] text-gray-500">Analysis powered by Naka Labs on-chain verification. Data refreshed in real-time.</p>
             </div>
           </div>
         )}

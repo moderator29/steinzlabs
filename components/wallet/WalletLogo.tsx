@@ -52,11 +52,13 @@ export function WalletConnectLogo({ size = 16, className = '' }: { size?: number
 
 export function NakaLogo({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
-    <span
-      style={{ width: size, height: size }}
-      className={`inline-flex items-center justify-center rounded-full bg-[#0A1EFF] text-white font-black ${className}`}
-    >
-      <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>N</span>
-    </span>
+    <img
+      src="/logo.png"
+      alt="Naka Labs"
+      width={size}
+      height={size}
+      className={`inline-block ${className}`}
+      style={{ width: size, height: size, objectFit: 'contain' }}
+    />
   );
 }

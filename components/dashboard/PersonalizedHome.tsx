@@ -103,9 +103,11 @@ export function PersonalizedHome() {
   // CRITICAL UX: never block the entire dashboard on the homepage data fetch.
   // Use the auth user (instantly available from useAuth) as fallback so the
   // shell renders in <100ms even if /api/dashboard/homepage is slow.
+  // Greeting prefers username-style handles so a user whose last name is "For" never
+  // renders as "Good evening, for". We never fall back to last_name.
   const displayName =
-    data?.user.displayName ||
     authUser?.username ||
+    data?.user.displayName ||
     authUser?.first_name ||
     authUser?.email?.split("@")[0] ||
     "trader";
@@ -118,7 +120,7 @@ export function PersonalizedHome() {
     <div className="space-y-6">
       {/* Greeting — renders immediately from auth user; enriched once API data arrives */}
       <div>
-        <h1 className="text-lg md:text-xl font-semibold tracking-tight text-white flex items-center gap-2 font-sans">
+        <h1 className="text-base md:text-lg font-medium tracking-tight text-white flex items-center gap-2 font-heading">
           <span>
             {greetingText}, <span className="text-blue-400">{displayName}</span>
           </span>

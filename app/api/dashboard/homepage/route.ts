@@ -50,10 +50,11 @@ export async function GET(request: NextRequest) {
       ]);
 
       const profile = (profileR.data ?? {}) as Record<string, unknown>;
+      // Greeting prefers USERNAME (user-chosen handle) over display_name to avoid
+      // accidents like a last-name-only display_name rendering as "Good evening, for".
       const displayName =
-        (typeof profile.display_name === "string" && profile.display_name) ||
         (typeof profile.username === "string" && profile.username) ||
-        (typeof profile.first_name === "string" && profile.first_name) ||
+        (typeof profile.display_name === "string" && profile.display_name) ||
         (user.email && user.email.split("@")[0]) ||
         "there";
       const tierRaw = typeof profile.tier === "string" ? profile.tier : "free";
