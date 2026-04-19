@@ -295,15 +295,22 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
     if (q.length < 2) { setResults([]); return; }
     setSearching(true);
     try {
-      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+      // Route through our unified resolve endpoint so the call goes via the
+      // service layer (same cache + counter as Market page search) and so
+      // contract addresses also work, not just tickers.
+      const res = await fetch(`/api/market/resolve?q=${encodeURIComponent(q)}`, {
+        signal: AbortSignal.timeout(8_000),
+      });
       if (!res.ok) return;
-      const data = await res.json();
-      setResults((data.coins || []).slice(0, 8).map((c: { id: string; symbol: string; name: string; thumb?: string }) => ({
-        id: c.id,
-        symbol: c.symbol,
-        name: c.name,
-        thumb: c.thumb,
-      })));
+      const data = await res.json() as { matches: { id: string | null; symbol: string; name: string; image: string | null }[] };
+      setResults((data.matches || []).slice(0, 8)
+        .filter((m) => m.id) // alerts need a coingecko id to track
+        .map((m) => ({
+          id: m.id as string,
+          symbol: m.symbol,
+          name: m.name,
+          thumb: m.image ?? '',
+        })));
     } catch {
       // ignore
     } finally {
