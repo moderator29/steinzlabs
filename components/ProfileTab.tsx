@@ -8,6 +8,7 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
+import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 
 interface Notification {
   id: string;
@@ -1225,28 +1226,36 @@ export default function ProfileTab() {
             )}
           </div>
 
-          <h2 className="text-base font-heading font-bold leading-tight">{displayName}</h2>
+          <h2 className="text-base font-heading font-bold leading-tight flex items-center gap-1.5">
+            {displayName}
+            {user?.is_verified && <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />}
+          </h2>
           {user?.first_name && user?.username && (
             <p className="text-[11px] text-gray-500 mt-0.5">{fullName}</p>
           )}
           <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[10px] text-gray-500">{isConnected ? tierLabel : 'Sign in to unlock features'}</span>
-            {isConnected && isPaid && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/40 text-[9px] font-semibold text-white">
-                <svg className="w-2.5 h-2.5 text-[#60A5FA]" fill="currentColor" viewBox="0 0 20 20" aria-label="Verified">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                {verifiedBadge ? verifiedBadge.toUpperCase() : tier.toUpperCase()}
-              </span>
-            )}
-            {isConnected && !isPaid && (
-              <button
-                onClick={() => router.push('/dashboard/pricing')}
-                className="px-2 py-0.5 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/25 rounded-full text-[9px] text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1"
-              >
-                <Crown className="w-2.5 h-2.5" /> Upgrade
-              </button>
-            )}
+            {(() => {
+              const tier = user?.tier ?? 'free';
+              const tierLabel = tier === 'max' ? 'Max Plan' : tier === 'pro' ? 'Pro Plan' : tier === 'mini' ? 'Mini Plan' : 'Free Tier';
+              const tierColor = tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0A1EFF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500';
+              if (!isConnected) return <span className="text-[10px] text-gray-500">Sign in to unlock features</span>;
+              return (
+                <>
+                  <span className={`text-[10px] font-semibold ${tierColor} inline-flex items-center gap-1`}>
+                    {tier !== 'free' && <Crown className="w-2.5 h-2.5" />}
+                    {tierLabel}
+                  </span>
+                  {tier !== 'max' && (
+                    <button
+                      onClick={() => router.push('/dashboard/pricing')}
+                      className="px-2 py-0.5 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/25 rounded-full text-[9px] text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1"
+                    >
+                      <Crown className="w-2.5 h-2.5" /> Upgrade
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -1318,34 +1327,48 @@ export default function ProfileTab() {
 
       {/* Subscription / Plan */}
       <SectionLabel>Plan</SectionLabel>
-      <div className="glass rounded-lg border border-white/10 mb-4 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <Crown className="w-4 h-4 text-[#FFD700]" />
-            <div>
-              <div className="text-sm font-semibold">Current Plan</div>
-              <div className="text-[10px] text-gray-500">
-                {isPaid ? `${tier.toUpperCase()} · Unlimited messages` : 'Free Tier · 25 messages/day'}
+      {(() => {
+        const tier = user?.tier ?? 'free';
+        const planDetails: Record<string, { name: string; summary: string; features: string[] }> = {
+          free: { name: 'Free Tier', summary: '25 VTX messages/day · basic intelligence', features: ['Unlimited VTX AI messages', 'Priority market data', 'Advanced DNA analysis', 'Early feature access'] },
+          mini: { name: 'Mini Plan', summary: '100 VTX messages/day · full intelligence', features: ['100 VTX messages/day', 'Full intelligence suite', '10 price alerts', 'Access to Whale Tracker'] },
+          pro:  { name: 'Pro Plan',  summary: 'Unlimited VTX · all features · gasless swaps', features: ['Unlimited VTX AI messages', 'Gasless swaps', '50 price alerts', 'Copy trading', 'Priority support'] },
+          max:  { name: 'Max Plan',  summary: 'Everything in Pro · Sniper Bot · early access', features: ['Everything in Pro', 'Sniper Bot (Max exclusive)', 'Unlimited alerts', 'Priority support', 'Early feature access'] },
+        };
+        const d = planDetails[tier];
+        return (
+          <div className="glass rounded-lg border border-white/10 mb-4 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <Crown className={`w-4 h-4 ${tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0A1EFF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <div>
+                  <div className="text-sm font-semibold">Current Plan: {d.name}</div>
+                  <div className="text-[10px] text-gray-500">{d.summary}</div>
+                </div>
               </div>
+              {tier !== 'max' && (
+                <button
+                  onClick={() => router.push('/dashboard/pricing')}
+                  className="px-3 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/30 rounded-lg text-[10px] font-bold text-[#0A1EFF] hover:opacity-80 transition-opacity"
+                >
+                  {tier === 'free' ? 'Upgrade' : 'Change'}
+                </button>
+              )}
+            </div>
+            <div className="px-3 py-3">
+              <div className="text-[10px] text-gray-500 mb-2">
+                {tier === 'free' ? 'Upgrade unlocks:' : 'Included in your plan:'}
+              </div>
+              {d.features.map(f => (
+                <div key={f} className="flex items-center gap-2 mb-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${tier === 'free' ? 'bg-[#0A1EFF]' : 'bg-emerald-400'} flex-shrink-0`} />
+                  <span className="text-[11px] text-gray-300">{f}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <button
-            onClick={() => router.push('/dashboard/pricing')}
-            className="px-3 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/30 rounded-lg text-[10px] font-bold text-[#0A1EFF] hover:opacity-80 transition-opacity"
-          >
-            {isPaid ? 'Manage Plan' : 'Upgrade'}
-          </button>
-        </div>
-        <div className="px-3 py-3">
-          <div className="text-[10px] text-gray-500 mb-2">What you get with STEINZ Pro:</div>
-          {['Unlimited VTX AI messages', 'Priority market data', 'Advanced DNA analysis', 'Early feature access'].map(f => (
-            <div key={f} className="flex items-center gap-2 mb-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#0A1EFF] flex-shrink-0" />
-              <span className="text-[11px] text-gray-300">{f}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        );
+      })()}
 
       <SectionLabel>Quick Actions</SectionLabel>
       <ProfileRow icon={PieChart} label="Portfolio" sub="View your holdings & P&L" onClick={() => router.push('/dashboard/portfolio')} />

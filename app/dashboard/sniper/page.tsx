@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Crosshair, Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle, Loader2, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
 
 interface SniperConfig {
@@ -61,8 +62,9 @@ function getRiskColor(level: 'safe' | 'caution' | 'danger') {
 
 export default function SniperPage() {
   const router = useRouter();
-  const [userTier, setUserTier] = useState<string | null>(null);
-  const [loadingTier, setLoadingTier] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const userTier = effectiveTier(user);
+  const loadingTier = authLoading;
   const [config, setConfig] = useState<SniperConfig>(DEFAULT_CONFIG);
   const [savingConfig, setSavingConfig] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -72,12 +74,6 @@ export default function SniperPage() {
   const [killSwitchStatus, setKillSwitchStatus] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setLoadingTier(false); return; }
-      const tier = user.user_metadata?.subscription_tier || user.user_metadata?.tier || 'free';
-      setUserTier(tier);
-      setLoadingTier(false);
-    });
 
     fetch('/api/sniper/config').then(r => r.json()).then(d => {
       if (d.config) setConfig({ ...DEFAULT_CONFIG, ...d.config });
