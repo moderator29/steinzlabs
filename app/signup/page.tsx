@@ -114,7 +114,8 @@ export default function SignUpPage() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && user) router.replace('/dashboard');
+    // FIX 5A.1: hard reload so no prior-user state carries over.
+    if (!authLoading && user) window.location.href = '/dashboard';
   }, [user, authLoading, router]);
 
   useEffect(() => {
