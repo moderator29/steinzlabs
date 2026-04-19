@@ -5,6 +5,7 @@ import { Check, ArrowLeft, Star, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
+import { TierBadge } from '@/components/ui/TierBadge';
 
 const TIERS = [
   {
@@ -135,7 +136,13 @@ export default function PricingPage() {
                 )}
 
                 <div className="mb-4">
-                  <div className="text-sm font-semibold mb-1" style={{ color: tier.accent }}>{tier.name}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold" style={{ color: tier.accent }}>{tier.name}</span>
+                    {/* Inline tier badge — same SVG users see beside their display
+                        name once they subscribe, so they know exactly what they're
+                        getting. Free tier renders nothing. */}
+                    <TierBadge tier={tier.id} size={16} title={`${tier.name} verified mark`} />
+                  </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold text-white">{tier.price}</span>
                     <span className="text-gray-500 text-sm">{tier.period}</span>

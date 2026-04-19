@@ -13,6 +13,7 @@ import {
 import { MiniVtxPanel } from "@/components/dashboard/MiniVtxPanel";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { VerifiedGoldBadge } from "@/components/ui/VerifiedGoldBadge";
+import { TierBadge } from "@/components/ui/TierBadge";
 import { TelegramConnectBanner } from "@/components/dashboard/TelegramConnectBanner";
 
 interface HomepageData {
@@ -85,6 +86,7 @@ export function PersonalizedHome() {
     authUser?.email?.split("@")[0] ||
     "trader";
   const isVerified = data?.user.isVerified ?? authUser?.is_verified ?? false;
+  const userTier = (data?.user.tier ?? authUser?.tier ?? "free") as string;
   const walletsCount = data?.wallets.length ?? 0;
   const watchlistCount = data?.watchlist.length ?? 0;
 
@@ -96,7 +98,14 @@ export function PersonalizedHome() {
           <span>
             {greetingText}, <span className="text-blue-400">{displayName}</span>
           </span>
-          {isVerified && <VerifiedGoldBadge size={18} title="Verified by Naka Labs" />}
+          {/* Tier badge takes priority — Mini blue, Pro platinum, Max gold.
+              Falls back to legacy gold "verified" mark if user has no paid
+              tier but is_verified flag is set (manually-verified accounts). */}
+          {userTier !== "free" ? (
+            <TierBadge tier={userTier} size={18} />
+          ) : isVerified ? (
+            <VerifiedGoldBadge size={18} title="Verified by Naka Labs" />
+          ) : null}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {loading ? (
