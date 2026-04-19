@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { VerifiedGoldBadge } from "@/components/ui/VerifiedGoldBadge";
 import { TierBadge } from "@/components/ui/TierBadge";
 import { TelegramConnectBanner } from "@/components/dashboard/TelegramConnectBanner";
+import { toast } from "sonner";
 
 interface HomepageData {
   user: { id: string; email: string; displayName: string; tier: string; isVerified?: boolean; role?: string };
@@ -50,6 +51,29 @@ export function PersonalizedHome() {
   useEffect(() => {
     setGreetingText(greetingFor(new Date().getHours()));
   }, []);
+
+  // Tier-upgrade celebration toast: fires once per tier change. Stored in
+  // localStorage by user id so we don't spam the same user every load and
+  // don't congratulate the wrong account if multiple sign in on one device.
+  useEffect(() => {
+    const tier = (data?.user.tier ?? authUser?.tier ?? "free") as string;
+    const uid = data?.user.id ?? authUser?.id;
+    if (!uid || tier === "free") return;
+    const key = `naka_tier_celebrated_${uid}`;
+    const last = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    if (last === tier) return;
+    const blurbs: Record<string, string> = {
+      mini: "Mini unlocks the full Whale Tracker, multi-chain wallet intelligence and 100 VTX messages per day. ",
+      pro:  "Pro unlocks unlimited VTX, copy trading, smart-money tracking, wallet clusters and the bubble map. ",
+      max:  "Max unlocks the Sniper Bot, unlimited connected wallets and priority support. ",
+    };
+    const niceTier = tier.charAt(0).toUpperCase() + tier.slice(1);
+    toast.success(`Congratulations! You are now ${niceTier} tier`, {
+      description: `${blurbs[tier] ?? ""}You are set!`,
+      duration: 8000,
+    });
+    if (typeof window !== "undefined") localStorage.setItem(key, tier);
+  }, [data?.user.tier, data?.user.id, authUser?.tier, authUser?.id]);
 
   useEffect(() => {
     let cancelled = false;
