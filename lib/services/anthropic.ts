@@ -198,6 +198,59 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
       required: ['contract_address', 'chain'],
     },
   },
+  // ── Session 5B-2 additions ────────────────────────────────────────────────
+  {
+    name: 'address_security',
+    description: 'Run a GoPlus address-level security check on a wallet address. Detects scam tags, blacklist status, sanctions, malicious behavior. Use this BEFORE a user transacts with an unknown counterparty.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        address: { type: 'string', description: 'Wallet address to scan' },
+        chain: { type: 'string', description: 'Chain (default: ethereum)' },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'whale_activity',
+    description: 'Get the last N on-chain moves (buys/sells/transfers) for a tracked whale address. Pulls from the platform whale_activity table — fast and authoritative. Use to answer "what is whale X doing recently?".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        whale_address: { type: 'string', description: 'Whale wallet address' },
+        chain: { type: 'string', description: 'Chain filter (optional)' },
+        limit: { type: 'number', description: 'Max moves to return (default 10, max 25)' },
+      },
+      required: ['whale_address'],
+    },
+  },
+  {
+    name: 'check_phishing_url',
+    description: 'Check if a URL is a phishing or malicious site via GoPlus domain security. Use whenever the user pastes a link or asks "is this site safe?".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        url: { type: 'string', description: 'Full URL or domain to check' },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'prepare_swap',
+    description: 'Stage a swap for the current user — runs token security pre-check, picks the best route via the multi-aggregator, and creates a pending_trades row that the user confirms in their browser via PendingTradesBanner. Returns pending_trade_id and route summary. Use ONLY when the user explicitly asks to buy/sell/swap a token. NEVER call without explicit user intent — this is an action, not a query.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        chain: { type: 'string', description: 'Chain: ethereum, base, polygon, arbitrum, optimism, bsc, solana' },
+        from_token_address: { type: 'string', description: 'Token to sell — contract address or symbol (USDC, ETH, SOL, etc.)' },
+        to_token_address: { type: 'string', description: 'Token to buy — contract address or symbol' },
+        amount_in: { type: 'string', description: 'Human-readable amount of from_token (e.g. "100" for 100 USDC).' },
+        slippage_bps: { type: 'number', description: 'Slippage tolerance in basis points (default 100 = 1%)' },
+        wallet_source: { type: 'string', description: 'Wallet to use: external_evm | external_solana | builtin (default: chain-appropriate external)' },
+      },
+      required: ['chain', 'from_token_address', 'to_token_address', 'amount_in'],
+    },
+  },
 ];
 
 // ─── Core VTX Query Function ──────────────────────────────────────────────────

@@ -6,7 +6,12 @@ import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { supabase } from '@/lib/supabase';
+import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
+import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 
+// FIX 5A.1 / Phase 5: TokenCardData now accepts both legacy string fields (parsed from reply text)
+// and the richer server shape (numbers + contractAddress + chain), so the Nansen-style card
+// can route Buy/Swap to the real on-chain address.
 interface TokenCardData {
   symbol: string;
   name: string;
@@ -20,6 +25,10 @@ interface TokenCardData {
   liquidity?: string;
   fdv?: string;
   holders?: string;
+  // New (from server `tokenCard`)
+  address?: string;
+  pairAddress?: string;
+  dexUrl?: string;
 }
 
 interface Message {
@@ -106,6 +115,16 @@ function saveDailyUsage(u: { used: number; limit: number; remaining: number }) {
   try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch { /* localStorage unavailable — silently ignore */ }
 }
 
+// FIX 5A.1 / Phase 5: shared number formatter for server-shape token cards.
+function fmtNum(n: unknown): string {
+  const v = typeof n === 'number' ? n : parseFloat(String(n || 0));
+  if (!v || !isFinite(v)) return '—';
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(2)}K`;
+  return `$${v.toFixed(2)}`;
+}
+
 function parseTokenCards(content: string): TokenCardData[] {
   const cards: TokenCardData[] = [];
   const lines = content.split('\n');
@@ -151,9 +170,34 @@ function generateSuggestions(content: string): string[] {
   return ['Market overview', 'Trending tokens', 'Check a wallet'];
 }
 
+// FIX 5A.1 / Phase 5: Nansen-style card — adds an embedded price chart, timeframe pills,
+// and Buy / Swap / Analyze action row. Falls back gracefully for legacy string-only cards
+// (those parsed from text without a contract address can't fetch chart data).
 function TokenCard({ token }: { token: TokenCardData }) {
+  const router = useRouter();
   const isPositive = token.change24h >= 0;
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
+  const [tf, setTf] = useState<'1h' | '24h' | '7d'>('24h');
+  const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(null);
+
+  useEffect(() => {
+    if (!token.address) return;
+    let cancelled = false;
+    fetch(`/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=${tf}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && d?.points) setChart({ points: d.points, changePct: d.changePct || 0 }); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [token.address, token.chain, tf]);
+
+  const handleBuy = () => {
+    if (!token.address) { router.push(`/dashboard/swap?symbol=${token.symbol}`); return; }
+    router.push(`/dashboard/swap?token=${token.address}&chain=${token.chain || ''}&buy=1`);
+  };
+  const handleSwap = () => {
+    if (!token.address) { router.push(`/dashboard/swap?symbol=${token.symbol}`); return; }
+    router.push(`/dashboard/swap?token=${token.address}&chain=${token.chain || ''}`);
+  };
 
   return (
     <div className="p-3 bg-[#0D1117] border border-white/[0.08] rounded-xl hover:border-[#0A1EFF]/30 transition-all">
@@ -163,7 +207,7 @@ function TokenCard({ token }: { token: TokenCardData }) {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-white">{token.symbol}</span>
             {token.name !== token.symbol && <span className="text-[10px] text-gray-500 truncate">{token.name}</span>}
-            {token.rank && <span className="text-[9px] text-gray-600">#{token.rank}</span>}
+            {token.chain && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-gray-400 uppercase">{token.chain}</span>}
           </div>
         </div>
         <div className="text-right">
@@ -173,7 +217,32 @@ function TokenCard({ token }: { token: TokenCardData }) {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+
+      {/* Embedded chart — only when server supplied a real contract address. */}
+      {token.address && (
+        <div className="mb-3">
+          <div className="h-16 w-full rounded-lg bg-white/[0.02] flex items-center justify-center overflow-hidden">
+            {chart && chart.points.length > 1 ? (
+              <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
+            ) : (
+              <span className="text-[10px] text-gray-600">Loading chart…</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 mt-1.5">
+            {(['1h', '24h', '7d'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTf(t)}
+                className={`text-[9px] px-2 py-0.5 rounded ${tf === t ? 'bg-[#0A1EFF] text-white' : 'bg-white/[0.04] text-gray-400 hover:text-white'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
           <div className="text-[8px] text-gray-600 uppercase">MCap</div>
           <div className="text-[10px] font-semibold text-white">{token.marketCap}</div>
@@ -199,7 +268,57 @@ function TokenCard({ token }: { token: TokenCardData }) {
           </div>
         )}
       </div>
+
+      {/* Action row — Buy / Swap. One-tap routing into the swap page with pre-filled token + chain. */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={handleBuy}
+          className="flex-1 py-1.5 bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-90 text-white text-[10px] font-bold rounded-lg transition-opacity"
+        >
+          Buy {token.symbol}
+        </button>
+        <button
+          onClick={handleSwap}
+          className="flex-1 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-white text-[10px] font-bold rounded-lg transition-colors"
+        >
+          Swap
+        </button>
+        {token.dexUrl && (
+          <a
+            href={token.dexUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 text-[10px] font-bold rounded-lg transition-colors"
+          >
+            DEX
+          </a>
+        )}
+      </div>
     </div>
+  );
+}
+
+// Minimal inline-SVG sparkline — dependency-free.
+function CardSparkline({ points, positive }: { points: number[]; positive: boolean }) {
+  const w = 280;
+  const h = 60;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const d = points
+    .map((v, i) => {
+      const x = (i / (points.length - 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  const stroke = positive ? '#10B981' : '#EF4444';
+  const fill = positive ? '#10B98115' : '#EF444415';
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} preserveAspectRatio="none" className="block">
+      <path d={`${d} L${w},${h} L0,${h} Z`} fill={fill} stroke="none" />
+      <path d={d} fill="none" stroke={stroke} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -435,7 +554,27 @@ function VtxAiPageInner() {
       } else if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
       } else {
-        const tokenCards = data.tokenCards || parseTokenCards(data.reply);
+        // FIX 5A.1 / Phase 5: server returns `tokenCard` (singular, rich) but client was only
+        // reading `tokenCards` (plural). Normalise both — server's rich card wins when present.
+        const serverCard = data.tokenCard
+          ? [{
+              symbol: data.tokenCard.symbol,
+              name: data.tokenCard.name,
+              address: data.tokenCard.address,
+              chain: data.tokenCard.chain,
+              price: typeof data.tokenCard.price === 'number'
+                ? `$${data.tokenCard.price < 1 ? data.tokenCard.price.toFixed(6) : data.tokenCard.price.toFixed(2)}`
+                : String(data.tokenCard.price || ''),
+              change24h: Number(data.tokenCard.change24h) || 0,
+              volume: fmtNum(data.tokenCard.volume24h),
+              marketCap: fmtNum(data.tokenCard.marketCap),
+              liquidity: fmtNum(data.tokenCard.liquidity),
+              logo: data.tokenCard.logo || undefined,
+              pairAddress: data.tokenCard.pairAddress,
+              dexUrl: data.tokenCard.dexUrl,
+            } as TokenCardData]
+          : null;
+        const tokenCards = serverCard || data.tokenCards || parseTokenCards(data.reply);
         const suggestions = generateSuggestions(data.reply);
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -467,8 +606,77 @@ function VtxAiPageInner() {
     return text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]\s/gm, '').replace(/^[•]\s/gm, '').replace(/\s*---\s*/g, '\n\n').replace(/\s*--\s*/g, ' ');
   };
 
+  // Aggregate sidecar data from current message stream.
+  // tokens: every token card produced in this session (newest first, deduped by symbol).
+  // toolEvents: timeline reconstructed from messages — when a token card or
+  // chart appears we infer the underlying tool. Genuine streaming of tool
+  // events from the API is a follow-up; this gives the desktop sidecar
+  // useful content today without requiring API changes.
+  const sidecarTokens: SidecarTokenCard[] = (() => {
+    const seen = new Set<string>();
+    const out: SidecarTokenCard[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (!m.tokenCards) continue;
+      for (const t of m.tokenCards) {
+        const key = `${t.chain}:${t.symbol}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          symbol: t.symbol,
+          name: t.name,
+          price: t.price,
+          change: `${t.change24h >= 0 ? '+' : ''}${t.change24h.toFixed(2)}%`,
+          isPositive: t.change24h >= 0,
+          marketCap: t.marketCap,
+          volume: t.volume,
+          liquidity: t.liquidity,
+          chain: t.chain,
+        });
+        if (out.length >= 8) break;
+      }
+      if (out.length >= 8) break;
+    }
+    return out;
+  })();
+
+  const sidecarToolEvents: SidecarToolEvent[] = (() => {
+    const out: SidecarToolEvent[] = [];
+    for (const m of messages) {
+      if (m.role !== 'assistant') continue;
+      const ts = m.timestamp ?? Date.now();
+      if (m.tokenCards && m.tokenCards.length > 0) {
+        out.push({
+          id: `tk-${ts}`,
+          name: 'token_market_data',
+          timestamp: ts,
+          summary: m.tokenCards.map(t => t.symbol).join(', '),
+        });
+      }
+    }
+    return out;
+  })();
+
+  const sidecarPendingSwap: SidecarPendingSwap | null = null; // wired in by API once prepare_swap streams
+
   return (
-    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col overflow-hidden">
+    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col lg:flex-row overflow-hidden">
+      {/* Desktop only: persistent left rail with chat history */}
+      <VtxConversationsRail
+        sessions={chatSessions.map(s => ({ id: s.id, date: s.date, preview: s.preview }))}
+        activeSessionId={null}
+        onSelect={(s) => {
+          const full = chatSessions.find(x => x.id === s.id);
+          if (full) loadChatSession(full);
+        }}
+        onNewChat={clearChat}
+        isPro={isPro}
+        remainingMessages={dailyUsage.remaining}
+        totalMessages={dailyUsage.limit}
+      />
+
+      {/* Center column — existing chat shell */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* Settings Toast */}
       {settingsToast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0A1EFF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none">
@@ -877,12 +1085,29 @@ function VtxAiPageInner() {
               className="flex-1 bg-transparent text-xs placeholder-gray-600 focus:outline-none resize-none leading-relaxed max-h-60 overflow-y-auto"
               disabled={loading || (rateLimited && !isPro)}
             />
+            {/* FIX 5A.1: was no send button (only helper text); now a real tappable Send button,
+                essential on mobile where Enter keys are inconsistent. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!loading && input.trim() && !(rateLimited && !isPro)) void handleSend();
+              }}
+              disabled={loading || !input.trim() || (rateLimited && !isPro)}
+              aria-label="Send message"
+              className="ml-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(10,30,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <Send className="w-4 h-4" />
+            </button>
           </div>
         </div>
-        <div className="mt-1.5 px-1 text-[10px] text-slate-500">
-          Press Enter to send · Shift + Enter for new line
-        </div>
       </div>
+      </div>
+      {/* Desktop only: persistent right sidecar with token cards + tool timeline */}
+      <VtxToolSidecar
+        tokens={sidecarTokens}
+        toolEvents={sidecarToolEvents}
+        pendingSwap={sidecarPendingSwap}
+      />
     </div>
   );
 }

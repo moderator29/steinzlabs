@@ -7,7 +7,8 @@ export type TradeNotificationReason =
   | "stop_loss"
   | "take_profit"
   | "trail_stop"
-  | "copy_trade";
+  | "copy_trade"
+  | "vtx_chat";
 
 export interface PendingTradeNotificationPayload {
   userId: string;
@@ -28,6 +29,7 @@ const REASON_LABEL: Record<TradeNotificationReason, string> = {
   take_profit: "Take-profit",
   trail_stop: "Trailing stop",
   copy_trade: "Copy trade",
+  vtx_chat: "VTX swap",
 };
 
 /**
