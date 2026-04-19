@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
-import { notifyWalletCreated, notifyWalletImported } from '@/lib/notifications';
+import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { MiniSparkline } from '@/components/wallet/MiniSparkline';
 
 interface TokenBalance {
@@ -465,6 +465,10 @@ export default function WalletPage() {
     setActiveWallet(wallet);
     setView('main');
     notifyWalletCreated(wallet.name);
+    // Always drop a dedicated seed-backup reminder so the bell has a
+    // non-dismissible paper trail even if the user closes the in-context
+    // banner before actually writing their phrase down.
+    notifySeedBackupReminder(`${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`);
   };
 
   const handleWalletImported = (wallet: StoredWallet) => {
@@ -474,6 +478,7 @@ export default function WalletPage() {
     setActiveWallet(wallet);
     setView('main');
     notifyWalletImported(wallet.name);
+    notifySeedBackupReminder(`${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`);
   };
 
   const removeWallet = (addr: string) => {
