@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTopGainers } from '@/lib/services/coingecko';
 
 export const runtime = 'nodejs';
-export const revalidate = 120;
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

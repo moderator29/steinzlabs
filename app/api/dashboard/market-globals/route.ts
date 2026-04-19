@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getGlobalMarketData } from "@/lib/services/coingecko";
 
-export const revalidate = 120;
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // Thin wrapper around the unified CoinGecko service so the dashboard gets the
 // same cache + usage counter + Demo/Pro header handling as everyone else.

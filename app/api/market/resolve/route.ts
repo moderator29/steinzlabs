@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { searchTokens, getContractPrice, getTokenDetail } from '@/lib/services/coingecko';
 
 export const runtime = 'nodejs';
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 // Smart search for the Market page. Accepts a raw query and figures out
 // whether the user pasted a contract address or typed a ticker / name.

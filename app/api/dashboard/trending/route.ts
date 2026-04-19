@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTrendingTokens } from '@/lib/services/coingecko';
 
 export const runtime = 'nodejs';
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
