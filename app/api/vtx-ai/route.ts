@@ -7,7 +7,10 @@ import Anthropic from '@anthropic-ai/sdk';
 // Service layer — all external data comes through here
 import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getTokenDetail, getTopTokens } from '@/lib/services/coingecko';
+import {
+  getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
+  searchTokens, getCoinMarketChart,
+} from '@/lib/services/coingecko';
 import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
@@ -231,6 +234,17 @@ SECURITY FLAGS:
 [Any flags: mixer connections, phishing, scam history]
 
 [CHART:portfolio]
+
+MARKET DATA INTELLIGENCE:
+For any question about live token prices, market caps, 24h changes, trending coins, top gainers, or coin comparisons — ALWAYS call the coingecko_market_data tool. Your training data is stale; never quote a price from memory. Examples:
+  "What is BTC price?"               -> coingecko_market_data(action='get_coin', coinId='bitcoin')
+  "What is trending right now?"      -> coingecko_market_data(action='get_trending', limit=10)
+  "Biggest movers today?"            -> coingecko_market_data(action='get_top_gainers', limit=10)
+  "Compare ETH and SOL"              -> coingecko_market_data(action='compare_coins', coinIds=['ethereum','solana'])
+  "BTC chart last 30 days"           -> coingecko_market_data(action='get_chart', coinId='bitcoin', days=30)
+  Unknown ticker?                    -> coingecko_market_data(action='search', query='<user input>') first, then re-call with the resolved id.
+For on-chain whale moves, security scans, contract analysis, holder data, or chain-specific metrics, prefer Alchemy / GoPlus / DexScreener tools (token_market_data, address_security, whale_activity, evm_token_data, solana_token_data). CoinGecko is the price/market layer; Alchemy is the chain layer. Use both when both are needed (e.g. "is X a safe buy" -> coingecko for price + token_security_scan for risk).
+Always format prices as $1,234.56 (with thousands separators), market caps as $1.23B, percentage changes as +12.3% / -4.1%. Never show raw API JSON.
 
 BRANDING RULES:
 Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
@@ -544,6 +558,89 @@ async function executeCheckPhishingUrl(input: Record<string, unknown>): Promise<
   }
 }
 
+async function executeCoingeckoMarketData(input: Record<string, unknown>): Promise<string> {
+  const action = String(input.action || '');
+  const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 25);
+  try {
+    switch (action) {
+      case 'get_coin': {
+        const coinId = String(input.coinId || '');
+        if (!coinId) return JSON.stringify({ error: 'coinId required' });
+        const d = await getTokenDetail(coinId);
+        return JSON.stringify({
+          id: d.id, name: d.name, symbol: d.symbol.toUpperCase(),
+          price_usd: d.market_data?.current_price?.usd ?? 0,
+          market_cap_usd: d.market_data?.market_cap?.usd ?? 0,
+          rank: d.market_cap_rank,
+          volume_24h_usd: d.market_data?.total_volume?.usd ?? 0,
+          change_24h_pct: d.market_data?.price_change_percentage_24h ?? 0,
+          change_7d_pct: d.market_data?.price_change_percentage_7d ?? 0,
+          change_30d_pct: d.market_data?.price_change_percentage_30d ?? 0,
+          ath_usd: d.market_data?.ath?.usd ?? 0,
+          ath_change_pct: d.market_data?.ath_change_percentage?.usd ?? 0,
+          circulating_supply: d.market_data?.circulating_supply ?? 0,
+        });
+      }
+      case 'get_trending': {
+        const t = await getTrendingTokens();
+        return JSON.stringify({ trending: t.slice(0, limit).map((c) => ({
+          id: c.id, name: c.name, symbol: c.symbol.toUpperCase(),
+          rank: c.market_cap_rank,
+          change_24h_pct: c.data?.price_change_percentage_24h?.usd ?? null,
+        })) });
+      }
+      case 'search': {
+        const q = String(input.query || '');
+        if (!q) return JSON.stringify({ error: 'query required' });
+        const r = await searchTokens(q);
+        return JSON.stringify({ matches: (r.coins ?? []).slice(0, 8).map((c) => ({
+          id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), rank: c.market_cap_rank,
+        })) });
+      }
+      case 'compare_coins': {
+        const ids = Array.isArray(input.coinIds) ? (input.coinIds as string[]).slice(0, 5) : [];
+        if (ids.length < 2) return JSON.stringify({ error: 'compare_coins needs at least 2 coinIds' });
+        const all = await Promise.all(ids.map(async (id) => {
+          try {
+            const d = await getTokenDetail(id);
+            return {
+              id: d.id, name: d.name, symbol: d.symbol.toUpperCase(),
+              price_usd: d.market_data?.current_price?.usd ?? 0,
+              market_cap_usd: d.market_data?.market_cap?.usd ?? 0,
+              rank: d.market_cap_rank,
+              change_24h_pct: d.market_data?.price_change_percentage_24h ?? 0,
+              change_7d_pct: d.market_data?.price_change_percentage_7d ?? 0,
+            };
+          } catch { return { id, error: 'fetch failed' }; }
+        }));
+        return JSON.stringify({ coins: all });
+      }
+      case 'get_chart': {
+        const coinId = String(input.coinId || '');
+        const days = Math.min(Math.max(Number(input.days) || 7, 1), 365);
+        if (!coinId) return JSON.stringify({ error: 'coinId required' });
+        const points = await getCoinMarketChart(coinId, days);
+        // Trim to a reasonable density for the LLM context window
+        const stride = Math.max(1, Math.floor(points.length / 50));
+        const sampled = points.filter((_, i) => i % stride === 0);
+        return JSON.stringify({ id: coinId, days, point_count: sampled.length, points: sampled });
+      }
+      case 'get_top_gainers': {
+        const g = await getTopGainers(limit);
+        return JSON.stringify({ gainers: g.map((c) => ({
+          id: c.id, symbol: c.symbol.toUpperCase(), name: c.name,
+          price_usd: c.current_price, market_cap_usd: c.market_cap,
+          change_24h_pct: c.price_change_percentage_24h,
+        })) });
+      }
+      default:
+        return JSON.stringify({ error: `unknown action "${action}"` });
+    }
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function executePrepareSwap(
   input: Record<string, unknown>,
   userId: string | null,
@@ -621,6 +718,7 @@ async function executeVTXTool(
     case 'whale_activity':       return executeWhaleActivity(toolInput);
     case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
     case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
+    case 'coingecko_market_data': return executeCoingeckoMarketData(toolInput);
     default:                     return `Unknown tool: ${toolName}`;
   }
 }
