@@ -117,7 +117,14 @@ export default function WhaleTrackerPage() {
       if (activeChainParam) params.set("chains", activeChainParam);
       if (actionFilter) params.set("action", actionFilter);
       if (tokenSearch.trim()) params.set("token", tokenSearch.trim());
-      const res = await fetch(`/api/whale-tracker/feed?${params}`);
+      // 10s ceiling so a cold-start Redis miss never leaves the tracker spinning.
+      const res = await fetch(`/api/whale-tracker/feed?${params}`, {
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+      });
+      if (res.status === 402 || res.status === 403) {
+        throw new Error("Whale Tracker is a paid feature. Upgrade to Pro or higher to unlock live whale flow.");
+      }
       if (!res.ok) throw new Error(`Feed ${res.status}`);
       const data = (await res.json()) as { rows: FeedRow[]; total: number };
       setFeed(data.rows ?? []);
