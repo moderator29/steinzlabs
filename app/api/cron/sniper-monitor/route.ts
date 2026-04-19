@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { verifyCron, cronResponse } from "../_shared";
+import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -50,10 +50,14 @@ interface TokenRow {
 }
 
 export async function GET(request: NextRequest) {
+  const startedAt = Date.now();
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
 
-  const startedAt = Date.now();
+  if (!(await cronHasWork("sniper_criteria", { column: "enabled", value: true }))) {
+    return cronResponse("sniper-monitor", startedAt, { skipped: "no-active-sniper-criteria" });
+  }
+
   const admin = getSupabaseAdmin();
 
   // Check platform kill switch first

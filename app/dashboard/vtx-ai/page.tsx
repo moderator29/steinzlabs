@@ -1,11 +1,10 @@
 'use client';
 
 import { ArrowLeft, Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
-import SteinzLogo from '@/components/SteinzLogo';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
-import SteinzLogo from '@/components/ui/SteinzLogo';
 import { supabase } from '@/lib/supabase';
 import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';

@@ -27,7 +27,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What makes Naka Labs different from other crypto platforms?',
-    a: 'Most platforms show you data. Naka Labs gives you intelligence. The difference is synthesis — instead of showing raw numbers, our VTX engine combines on-chain data, security analysis, social sentiment, and entity intelligence (powered by Arkham) into a single, actionable report. We also integrate with institutional-grade tools like Arkham entity labeling, which tells you exactly WHO owns the wallets you are analyzing.',
+    a: 'Most platforms show you data. Naka Labs gives you intelligence. The difference is synthesis — instead of showing raw numbers, our VTX engine combines on-chain data, security analysis, social sentiment, and entity intelligence into a single, actionable report. Our entity labeling tells you exactly WHO owns the wallets you are analyzing.',
   },
   {
     q: 'What blockchains does Naka Labs support?',
@@ -35,7 +35,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'How does the Bubble Map work?',
-    a: 'The Bubble Map pulls holder data for any token and renders a visual network graph showing wallet distribution. Each node represents a wallet cluster, sized by holdings. Arkham entity labels are overlaid where available — so you can instantly see if exchanges, funds, or known whales hold large positions. Connections show transfer relationships between clusters.',
+    a: 'The Bubble Map pulls holder data for any token and renders a visual network graph showing wallet distribution. Each node represents a wallet cluster, sized by holdings. Entity labels are overlaid where available — so you can instantly see if exchanges, funds, or known whales hold large positions. Connections show transfer relationships between clusters.',
   },
   {
     q: 'What is the DNA Analyzer?',
@@ -47,7 +47,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'How does the Whale Tracker know who the whales are?',
-    a: 'Whale identification uses two layers: transaction size threshold (>$50k single swap triggers a flag) and Arkham Intelligence entity labeling. Arkham provides named entity data for thousands of known wallets — exchanges, VC funds, market makers, and notable traders. When a labeled wallet makes a large move, you see the entity name, not just an address.',
+    a: 'Whale identification uses two layers: transaction size threshold (>$50k single swap triggers a flag) and Naka Intelligence entity labeling. Our labeling covers thousands of known wallets — exchanges, VC funds, market makers, and notable traders. When a labeled wallet makes a large move, you see the entity name, not just an address.',
   },
   {
     q: 'What chains does the swap engine support and how does routing work?',

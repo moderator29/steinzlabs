@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, cronResponse } from "../_shared";
+import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
@@ -46,6 +46,10 @@ export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
+
+  if (!(await cronHasWork("copy_trade_rules", { column: "enabled", value: true }))) {
+    return cronResponse("copy-trade-monitor", startedAt, { skipped: "no-active-copy-rules" });
+  }
 
   const admin = getSupabaseAdmin();
   let considered = 0;

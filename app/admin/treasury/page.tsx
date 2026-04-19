@@ -69,7 +69,7 @@ export default function TreasuryPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
         {[
           { label: 'Total Treasury Value', value: formatUSD(totalTreasury) },
           { label: 'USDC / Stablecoins',  value: formatUSD(totalUsdc) },

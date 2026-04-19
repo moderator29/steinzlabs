@@ -1,40 +1,23 @@
 import { NextResponse } from "next/server";
-import { cacheWithFallback } from "@/lib/cache/redis";
-import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
+import { getGlobalMarketData } from "@/lib/services/coingecko";
 
-export const revalidate = 120;
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-interface CoinGeckoGlobal {
-  data: {
-    total_market_cap: { usd: number };
-    total_volume: { usd: number };
-    market_cap_percentage: { btc: number };
-    market_cap_change_percentage_24h_usd: number;
-  };
-}
-
+// Thin wrapper around the unified CoinGecko service so the dashboard gets the
+// same cache + usage counter + Demo/Pro header handling as everyone else.
 export async function GET() {
   try {
-    const data = await cacheWithFallback("dashboard:market-globals", 120, async () => {
-      const res = await fetchWithRetry("https://api.coingecko.com/api/v3/global", {
-        source: "coingecko-global",
-        timeoutMs: 6000,
-        retries: 2,
-      });
-      const json = (await res.json()) as CoinGeckoGlobal;
-      return {
-        totalMarketCap: json.data.total_market_cap.usd,
-        totalVolume: json.data.total_volume.usd,
-        btcDominance: json.data.market_cap_percentage.btc,
-        volumeChange24h: json.data.market_cap_change_percentage_24h_usd ?? 0,
-        marketCapChange24h: json.data.market_cap_change_percentage_24h_usd ?? 0,
-        dominanceChange24h: 0,
-        chainsTracked: 15,
-      };
-    });
-
-    return NextResponse.json(data, {
+    const g = await getGlobalMarketData();
+    return NextResponse.json({
+      totalMarketCap: g.totalMarketCapUSD,
+      totalVolume: g.totalVolumeUSD,
+      btcDominance: g.btcDominancePercent,
+      volumeChange24h: g.marketCapChange24hPercent,
+      marketCapChange24h: g.marketCapChange24hPercent,
+      dominanceChange24h: 0,
+      chainsTracked: g.activeCryptocurrencies,
+    }, {
       headers: { "Cache-Control": "public, max-age=60, s-maxage=120" },
     });
   } catch (err) {

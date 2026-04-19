@@ -32,7 +32,12 @@ export default function WalletTab() {
   const fetchBalances = async (address: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/token-scanner?address=${address}`);
+      // 8s ceiling — on-chain RPC + token price enrichment can crawl on a cold
+      // start; without this the wallet card would spin forever on slow chains.
+      const response = await fetch(`/api/token-scanner?address=${address}`, {
+        signal: AbortSignal.timeout(8_000),
+        cache: 'no-store',
+      });
       const data = await response.json();
       if (data.tokens && data.tokens.length > 0) {
         const tokens = data.tokens.map((t: any) => ({

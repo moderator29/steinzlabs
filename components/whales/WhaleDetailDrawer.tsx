@@ -180,7 +180,7 @@ export default function WhaleDetailDrawer({
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{w.chain}</span>
               {w.archetype && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">{w.archetype}</span>}
-              {ark?.entity && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/20 text-[#8FA3FF]">Arkham: {ark.entity}</span>}
+              {ark?.entity && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/20 text-[#8FA3FF]">Entity: {ark.entity}</span>}
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5">

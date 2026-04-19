@@ -136,7 +136,7 @@ export default function AdminRevenuePage() {
       </div>
 
       {/* Volume Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <div className="text-xs text-gray-400">Total Trades</div>
           <div className="text-lg font-bold text-white">{data.volume.totalTrades}</div>

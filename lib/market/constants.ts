@@ -3,15 +3,17 @@ import { Timeframe } from './types';
 export const TIMEFRAMES: Timeframe[] = ['1H', '6H', '1D', '1W', '1M', '1Y', 'ALL'];
 
 export const CATEGORIES = [
-  { id: 'all',    label: 'All'     },
-  { id: 'majors', label: 'Majors'  },
-  { id: 'defi',   label: 'DeFi'    },
-  { id: 'layer1', label: 'Layer 1' },
-  { id: 'layer2', label: 'Layer 2' },
-  { id: 'gaming', label: 'Gaming'  },
-  { id: 'ai',     label: 'AI'      },
-  { id: 'meme',   label: 'Meme'    },
-  { id: 'depin',  label: 'DePIN'   },
+  { id: 'all',      label: 'All'       },
+  { id: 'majors',   label: 'Majors'    },
+  { id: 'defi',     label: 'DeFi'      },
+  { id: 'layer1',   label: 'Layer 1'   },
+  { id: 'layer2',   label: 'Layer 2'   },
+  { id: 'gaming',   label: 'Gaming'    },
+  { id: 'ai',       label: 'AI'        },
+  { id: 'meme',     label: 'Meme'      },
+  { id: 'depin',    label: 'DePIN'     },
+  { id: 'pumpfun',  label: 'Pump.fun'  },
+  { id: 'bnb-meme', label: 'BNB Meme'  },
 ] as const;
 
 export const MAJOR_IDS = [

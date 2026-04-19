@@ -1,7 +1,13 @@
 'use client';
 
-import { getWalletSessionKey } from './walletSession';
-import { supabase } from '@/lib/supabase';
+// AES-256-GCM helpers used by the wallet creation/import flow.
+//
+// NOTE: the former `migrateWalletToSupabase` + `loadWalletsFromSupabase`
+// helpers were removed — they wiped localStorage after a cloud write and
+// used a non-stable session-derived key, which is the disappearing-wallets
+// failure mode we root-caused. Persistence now flows through
+// /api/wallet/sync (see app/api/wallet/sync/route.ts) which is dual-read
+// (local + cloud union, never shrinks) and tolerant of session rotation.
 
 export interface EncryptedWalletData {
   data: string;
@@ -46,52 +52,3 @@ export async function decryptWithAES256GCM(encrypted: EncryptedWalletData, passw
   return new TextDecoder().decode(decrypted);
 }
 
-export async function migrateWalletToSupabase(userId: string): Promise<void> {
-  const oldWallet = localStorage.getItem('steinz_wallets');
-  if (!oldWallet) return;
-
-  const sessionKey = getWalletSessionKey();
-  if (!sessionKey) return;
-
-  try {
-    const encrypted = await encryptWithAES256GCM(oldWallet, sessionKey);
-    const { error } = await supabase.from('user_wallets').upsert({
-      user_id: userId,
-      encrypted_data: encrypted.data,
-      iv: encrypted.iv,
-      salt: encrypted.salt,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (!error) {
-      localStorage.removeItem('steinz_wallets');
-      localStorage.removeItem('steinz_default_wallet');
-    }
-  } catch (err) {
-    console.error('[wallet-storage] Migration failed:', err instanceof Error ? err.message : err);
-  }
-}
-
-export async function loadWalletsFromSupabase(userId: string): Promise<string | null> {
-  const sessionKey = getWalletSessionKey();
-  if (!sessionKey) return null;
-
-  const { data, error } = await supabase
-    .from('user_wallets')
-    .select('encrypted_data, iv, salt')
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !data) return null;
-
-  try {
-    return await decryptWithAES256GCM({
-      data: data.encrypted_data,
-      iv: data.iv,
-      salt: data.salt,
-    }, sessionKey);
-  } catch (err) {
-    console.error('[wallet-storage] Decryption failed:', err instanceof Error ? err.message : err);
-    return null;
-  }
-}

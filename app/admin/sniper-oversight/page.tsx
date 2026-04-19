@@ -17,13 +17,8 @@ interface SniperJob {
   pnl?: number;
 }
 
-const MOCK_JOBS: SniperJob[] = [
-  { id: 'snp_001', token: 'PEPE2',  chain: 'ETH',  targetPrice: 0.00001200, currentPrice: 0.00001150, walletAddress: '0xAb3f...B12E', createdAt: Date.now() - 3600_000, status: 'active' },
-  { id: 'snp_002', token: 'BONK',   chain: 'SOL',  targetPrice: 0.0000250,  currentPrice: 0.0000248,  walletAddress: '9UeS...mK7J', createdAt: Date.now() - 7200_000, status: 'active' },
-  { id: 'snp_003', token: 'WOJAK',  chain: 'BASE', targetPrice: 0.000500,   currentPrice: 0.000620,   walletAddress: '0xF2a1...D94C', createdAt: Date.now() - 1800_000, status: 'triggered', pnl: 240 },
-  { id: 'snp_004', token: 'FLOKI',  chain: 'BSC',  targetPrice: 0.0000180,  currentPrice: 0.0000140,  walletAddress: '0x9B2d...A3E1', createdAt: Date.now() - 14400_000, status: 'paused' },
-  { id: 'snp_005', token: 'MEME',   chain: 'ARB',  targetPrice: 0.0120,     currentPrice: 0.0105,     walletAddress: '0xC4e2...F87D', createdAt: Date.now() - 28800_000, status: 'failed' },
-];
+// Note: live jobs load from /api/admin/sniper-executions below. No fixtures —
+// an empty list renders an empty state rather than fabricated rows.
 
 const STATUS_COLOR: Record<string, string> = {
   active: 'active', paused: 'inactive', triggered: 'active', failed: 'error',
@@ -116,7 +111,7 @@ export default function SniperOversightPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
           { label: 'Active Jobs', value: activeCount, icon: Crosshair },
           { label: 'Triggered Today', value: jobs.filter(j => j.status === 'triggered').length, icon: Activity },

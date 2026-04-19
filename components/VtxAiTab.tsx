@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { BarChart3, Briefcase, AlertTriangle, Radio, Send, Bot, User, Loader2, Globe, Crown, Lock, Plus, Settings, History, X, Clock, TrendingUp, TrendingDown, Shield, ExternalLink, RefreshCw } from 'lucide-react';
+import { BarChart3, Briefcase, AlertTriangle, Radio, Send, User, Loader2, Globe, Crown, Lock, Plus, Settings, History, X, Clock, TrendingUp, TrendingDown, Shield, ExternalLink, RefreshCw, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import SteinzLogo from '@/components/ui/SteinzLogo';
 
 interface ChartInfo {
   type: 'price' | 'bubble' | 'portfolio' | 'holders';
@@ -747,7 +748,7 @@ export default function VtxAiTab() {
       {/* Header */}
       <div className="glass rounded-xl p-3 border border-white/10 flex items-center gap-2 mb-4 flex-shrink-0">
         <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Bot className="w-4 h-4 text-[#0A1EFF]" />
+          <SteinzLogo size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -1040,7 +1041,7 @@ export default function VtxAiTab() {
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
                 <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="w-3.5 h-3.5" />
+                  <SteinzLogo size={18} />
                 </div>
               )}
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
@@ -1069,7 +1070,7 @@ export default function VtxAiTab() {
           {loading && (
             <div className="flex gap-3 justify-start">
               <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="w-3.5 h-3.5" />
+                <SteinzLogo size={18} />
               </div>
               <div className="glass border border-white/10 rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2 text-sm text-gray-400">

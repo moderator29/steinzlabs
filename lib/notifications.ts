@@ -113,10 +113,24 @@ export function notifyWalletCreated(walletName: string, chain?: string): void {
   const chainStr = chain ? chain.charAt(0).toUpperCase() + chain.slice(1) : '';
   addLocalNotification({
     type: 'wallet_created',
-    title: 'Wallet Created! 🎉',
+    title: 'Wallet Created',
     message: chainStr
-      ? `Your ${chainStr} wallet has been successfully created and secured. You're now ready to trade.`
-      : `Your wallet "${walletName}" has been created successfully. Remember to back up your recovery phrase.`,
+      ? `Your ${chainStr} wallet has been created. Back up your 12-word recovery phrase now — if you lose it, your funds are gone forever.`
+      : `Your wallet "${walletName}" has been created. Back up your 12-word recovery phrase now — if you lose it, your funds are gone forever.`,
+  });
+}
+
+/**
+ * Dedicated seed-backup reminder. Call once right after create/import so the
+ * user sees a clearly-worded "please back up" entry in the notification bell
+ * even if they dismiss the in-context banner.
+ */
+export function notifySeedBackupReminder(walletAddressShort?: string): void {
+  const who = walletAddressShort ? ` for ${walletAddressShort}` : '';
+  addLocalNotification({
+    type: 'security',
+    title: 'Back up your seed phrase',
+    message: `Your recovery phrase is the ONLY way to restore this wallet${who}. Write it down, store it offline, and never share it. Open Wallet → Settings → Reveal Seed Phrase.`,
   });
 }
 
