@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { TierBadge } from '@/components/ui/TierBadge';
+import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 interface Notification {
   id: string;
@@ -39,7 +41,7 @@ interface ChatMessage {
   timestamp: number;
 }
 
-type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security' | 'edit-profile';
+type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security' | 'edit-profile' | 'telegram';
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
@@ -1017,6 +1019,19 @@ export default function ProfileTab() {
     );
   }
 
+  if (subPage === 'telegram') {
+    return (
+      <div>
+        <button onClick={() => setSubPage(null)} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Profile
+        </button>
+        <h2 className="text-lg font-heading font-bold mb-1">Telegram</h2>
+        <p className="text-xs text-gray-500 mb-4">Generate a code, paste it to the Naka Labs bot, and your account is linked. You can revoke it any time.</p>
+        <TelegramConnectCard />
+      </div>
+    );
+  }
+
   if (subPage === 'preferences') {
     return (
       <div>
@@ -1025,6 +1040,20 @@ export default function ProfileTab() {
         </button>
         <h2 className="text-lg font-heading font-bold mb-1">Preferences</h2>
         <p className="text-xs text-gray-500 mb-4">Customize your STEINZ experience.</p>
+
+        {/* Platform language — same dropdown that previously sat next to the
+            notification bell on the dashboard header. Lives here now where
+            preferences belong. */}
+        <div className="glass rounded-lg border border-white/10 p-3 mb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">Platform language</div>
+              <div className="text-[10px] text-gray-500">Translates the app to your selection</div>
+            </div>
+            <LanguageSwitcher />
+          </div>
+        </div>
+
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden mb-3">
           <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
@@ -1462,6 +1491,7 @@ export default function ProfileTab() {
       <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />
       <ProfileRow icon={Shield} label="Privacy" sub="Manage data & visibility" onClick={() => setSubPage('privacy')} />
       <ProfileRow icon={Settings} label="Preferences" sub="Customize your experience" onClick={() => setSubPage('preferences')} />
+      <ProfileRow icon={Send} label="Telegram" sub="Link the bot to your account for alerts" onClick={() => setSubPage('telegram')} />
 
       <SectionLabel>Support</SectionLabel>
       <ProfileRow icon={Headphones} label="AI Customer Service" sub="Chat with our AI support" onClick={() => setSubPage('ai-support')} />
