@@ -9,7 +9,10 @@ import SidebarMenu from '@/components/SidebarMenu';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { CompactKpiBar } from '@/components/dashboard/CompactKpiBar';
+// CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
+// above them. User feedback called it visual noise. The four full-size KPI
+// cards rendered below already cover Total Market Cap / 24h Volume / BTC
+// Dominance / Chains Tracked.
 import { GlobalSearch } from '@/components/dashboard/GlobalSearch';
 import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
 
@@ -247,10 +250,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
           </div>
         </div>
-        <CompactKpiBar />
       </div>
 
-      <div className="pt-[120px] px-3 lg:px-6 max-w-7xl mx-auto">
+      <div className="pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

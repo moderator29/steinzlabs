@@ -8,10 +8,12 @@ import {
   Eye,
   Bell,
   Wallet,
+  ChevronRight,
 } from "lucide-react";
 import { MiniVtxPanel } from "@/components/dashboard/MiniVtxPanel";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { VerifiedGoldBadge } from "@/components/ui/VerifiedGoldBadge";
+import { TelegramConnectBanner } from "@/components/dashboard/TelegramConnectBanner";
 
 interface HomepageData {
   user: { id: string; email: string; displayName: string; tier: string; isVerified?: boolean; role?: string };
@@ -28,19 +30,25 @@ interface HomepageData {
   }>;
 }
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return "Hey night owl";
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+function greetingFor(hour: number): string {
+  if (hour < 5) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 22) return "Good evening";
+  return "Good night";
 }
 
 export function PersonalizedHome() {
   const { user: authUser } = useAuth();
   const [data, setData] = useState<HomepageData | null>(null);
   const [loading, setLoading] = useState(true);
+  // Compute greeting client-only so SSR (which runs in Vercel UTC) cannot
+  // briefly show e.g. "Good evening" to a user whose local time is morning.
+  const [greetingText, setGreetingText] = useState<string>("Hello");
   const router = useRouter();
+  useEffect(() => {
+    setGreetingText(greetingFor(new Date().getHours()));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,11 +92,11 @@ export function PersonalizedHome() {
     <div className="space-y-6">
       {/* Greeting — renders immediately from auth user; enriched once API data arrives */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-lg md:text-xl font-semibold tracking-tight text-white flex items-center gap-2 font-sans">
           <span>
-            {greeting()}, <span className="text-blue-400">{displayName}</span>
+            {greetingText}, <span className="text-blue-400">{displayName}</span>
           </span>
-          {isVerified && <VerifiedGoldBadge size={22} title="Verified by Naka Labs" />}
+          {isVerified && <VerifiedGoldBadge size={18} title="Verified by Naka Labs" />}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {loading ? (
@@ -109,6 +117,9 @@ export function PersonalizedHome() {
         <QuickAction icon={<Eye size={18} />} label="Track Wallet" onClick={() => router.push("/dashboard/wallet-intelligence")} />
         <QuickAction icon={<Bell size={18} />} label="Set Alert" onClick={() => router.push("/dashboard/alerts")} />
       </div>
+
+      {/* Notification (Telegram) — connect prompt; auto-hides once connected */}
+      <TelegramConnectBanner />
 
       {/* Mini VTX panel */}
       <MiniVtxPanel
