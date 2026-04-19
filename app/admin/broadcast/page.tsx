@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Send, Users, Mail, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 type Audience = 'all' | 'pro' | 'free' | 'inactive';
 
-const AUDIENCE_LABELS: Record<Audience, { label: string; count: number; desc: string }> = {
-  all:      { label: 'All Users',         count: 50247, desc: 'Every registered user' },
-  pro:      { label: 'Pro Subscribers',   count: 4820,  desc: 'Paid Pro plan users only' },
-  free:     { label: 'Free Users',        count: 45427, desc: 'Free tier users only' },
-  inactive: { label: 'Inactive (30d)',    count: 12300, desc: 'Users with no login in 30+ days' },
+// Audience metadata. `count` starts at null and is filled in from
+// /api/admin/stats so we never display fabricated recipient counts.
+const AUDIENCE_META: Record<Audience, { label: string; desc: string }> = {
+  all:      { label: 'All Users',         desc: 'Every registered user' },
+  pro:      { label: 'Pro Subscribers',   desc: 'Paid Pro plan users only' },
+  free:     { label: 'Free Users',        desc: 'Free tier users only' },
+  inactive: { label: 'Inactive (30d)',    desc: 'Users with no login in 30+ days' },
 };
 
 export default function BroadcastPage() {
@@ -19,8 +21,28 @@ export default function BroadcastPage() {
   const [preview, setPreview] = useState(false);
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [confirmed, setConfirmed] = useState(false);
+  const [counts, setCounts] = useState<Record<Audience, number | null>>({
+    all: null, pro: null, free: null, inactive: null,
+  });
 
-  const selectedAudience = AUDIENCE_LABELS[audience];
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') ?? '' : '';
+    fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setCounts({
+          all: typeof data.totalUsers === 'number' ? data.totalUsers : null,
+          pro: typeof data.proUsers === 'number' ? data.proUsers : null,
+          free: typeof data.freeUsers === 'number' ? data.freeUsers : null,
+          inactive: typeof data.inactiveUsers === 'number' ? data.inactiveUsers : null,
+        });
+      })
+      .catch(() => {/* keep nulls; UI shows '—' */});
+  }, []);
+
+  const selectedCount = counts[audience];
+  const selectedMeta = AUDIENCE_META[audience];
 
   const send = async () => {
     if (!confirmed || !subject.trim() || !body.trim()) return;
@@ -49,7 +71,7 @@ export default function BroadcastPage() {
       {status === 'sent' && (
         <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-4">
           <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-          <span className="text-sm text-green-400">Broadcast sent to {selectedAudience.count.toLocaleString()} users.</span>
+          <span className="text-sm text-green-400">Broadcast sent to {selectedCount === null ? '—' : selectedCount.toLocaleString()} users.</span>
         </div>
       )}
 
@@ -63,17 +85,20 @@ export default function BroadcastPage() {
       <div className="space-y-4">
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-3">Audience</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {(Object.entries(AUDIENCE_LABELS) as [Audience, typeof AUDIENCE_LABELS[Audience]][]).map(([key, val]) => (
-              <button key={key} onClick={() => setAudience(key)}
-                className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${audience === key ? 'border-[#0A1EFF] bg-[#0A1EFF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
-                <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0A1EFF]' : 'text-gray-500'}`} />
-                <div>
-                  <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>
-                  <div className="text-[10px] text-gray-500">{val.count.toLocaleString()} recipients — {val.desc}</div>
-                </div>
-              </button>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(Object.entries(AUDIENCE_META) as [Audience, typeof AUDIENCE_META[Audience]][]).map(([key, val]) => {
+              const c = counts[key];
+              return (
+                <button key={key} onClick={() => setAudience(key)}
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${audience === key ? 'border-[#0A1EFF] bg-[#0A1EFF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                  <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0A1EFF]' : 'text-gray-500'}`} />
+                  <div>
+                    <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>
+                    <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients — {val.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -107,7 +132,7 @@ export default function BroadcastPage() {
           <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs text-orange-400 font-semibold mb-1">Confirm before sending</p>
-            <p className="text-xs text-gray-400 mb-2">This will send emails to {selectedAudience.count.toLocaleString()} users ({selectedAudience.label}). This cannot be undone.</p>
+            <p className="text-xs text-gray-400 mb-2">This will send emails to {selectedCount === null ? '—' : selectedCount.toLocaleString()} users ({selectedMeta.label}). This cannot be undone.</p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="accent-[#0A1EFF]" />
               <span className="text-xs text-gray-300">I understand and confirm this broadcast</span>

@@ -9,6 +9,7 @@ import SidebarMenu from '@/components/SidebarMenu';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 // CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
@@ -248,6 +249,9 @@ export default function Dashboard() {
             <GlobalSearch />
           </div>
           <div className="flex items-center gap-2">
+            {/* Platform-wide translate — persists per-user in localStorage and
+                broadcasts a `localeChange` event the rest of the app listens to. */}
+            <LanguageSwitcher compact />
           </div>
         </div>
       </div>
