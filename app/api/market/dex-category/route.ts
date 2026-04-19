@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const revalidate = 120;
+export const dynamic = 'force-dynamic';
 
 // DexScreener-backed categories for the Market page. Used by the Pump.fun
 // and BNB-meme tabs — CoinGecko doesn't index those chains tightly enough,
