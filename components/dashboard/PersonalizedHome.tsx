@@ -55,8 +55,8 @@ export function PersonalizedHome() {
         const json = (await res.json()) as HomepageData;
         if (!cancelled) setData(json);
       } catch (err) {
-        // Network / timeout: render shell with auth user only. The dashboard
-        // is still usable; sub-sections fetch their own data lazily.
+        // Network/timeout: render shell with auth user only. Sub-sections fetch
+        // their own data lazily so the page stays usable.
         console.warn("[PersonalizedHome] homepage data unavailable, rendering shell:", err);
       } finally {
         if (!cancelled) setLoading(false);
@@ -82,7 +82,7 @@ export function PersonalizedHome() {
 
   return (
     <div className="space-y-6">
-      {/* Greeting — renders immediately from auth user; enriched once data arrives */}
+      {/* Greeting — renders immediately from auth user; enriched once API data arrives */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
           <span>

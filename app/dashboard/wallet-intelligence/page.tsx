@@ -609,11 +609,12 @@ export default function WalletIntelligencePage() {
                             </div>
                             <div className="flex items-center gap-3">
                               {pct > 0 && (
-                                <div className="hidden sm:flex items-center gap-1.5 w-20">
-                                  <div className="flex-1 bg-white/5 rounded-full h-1">
+                                <div className="flex items-center gap-1.5 w-12 sm:w-20">
+                                  {/* Bar hidden on small screens to save space; numeric % always visible */}
+                                  <div className="hidden sm:block flex-1 bg-white/5 rounded-full h-1">
                                     <div className="h-1 rounded-full bg-[#0A1EFF]" style={{ width: `${Math.min(100, pct)}%` }} />
                                   </div>
-                                  <span className="text-[9px] text-gray-600 w-8 text-right">{pct.toFixed(1)}%</span>
+                                  <span className="text-[9px] text-gray-600 w-full sm:w-8 text-right">{pct.toFixed(1)}%</span>
                                 </div>
                               )}
                               <div className="text-right">

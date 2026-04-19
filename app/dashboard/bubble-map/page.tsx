@@ -441,7 +441,7 @@ export default function BubbleMapPage() {
                 {Math.abs(info.priceChange24h).toFixed(2)}%
               </span>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-[10px] text-gray-500">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-gray-500">
               <span>Vol: <span className="text-gray-300 font-mono">{fmtNum(info.volume24h)}</span></span>
               <span>MCap: <span className="text-gray-300 font-mono">{fmtNum(info.marketCap)}</span></span>
               <span>Liq: <span className="text-gray-300 font-mono">{fmtNum(info.liquidity)}</span></span>
