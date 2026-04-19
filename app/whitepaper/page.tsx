@@ -182,16 +182,16 @@ export default function WhitepaperPage() {
             </Callout>
           </WpSection>
 
-          {/* Section 04 — Architecture */}
-          <WpSection id="architecture" n="04" title="Platform Architecture">
-            <p>NAKA LABS is built on Next.js 15 with server-side rendering, real-time Server-Sent Event streams, and a TypeScript-first codebase. The platform integrates 15+ external blockchain data APIs through a unified abstraction layer, enabling chain-agnostic intelligence with consistent data quality.</p>
+          {/* Section 04 — How Naka Labs Works (user-facing, not a stack disclosure) */}
+          <WpSection id="architecture" n="04" title="How Naka Labs Works">
+            <p>Naka Labs organises every feature into four layers. You never have to think about which layer you are in — the platform decides — but knowing the layout makes it easier to understand what the product actually does for you.</p>
             <FeatureGrid items={[
-              { icon: Layers, color: '#0A1EFF', title: 'Intelligence Layer', desc: 'VTX AI engine, Context Feed, Trading DNA, Wallet Classification, Trend Detection' },
-              { icon: Shield, color: '#10B981', title: 'Security Layer', desc: 'Trust Score engine, Shadow Guardian, Contract Analyzer, Domain Shield, Approval Manager' },
-              { icon: Repeat, color: '#F59E0B', title: 'Execution Layer', desc: 'DEX aggregation (Jupiter + 0x Protocol), Copy Trading, Sniper Bot, Limit Orders' },
-              { icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer', desc: 'Portfolio Tracker, Prediction Markets, Research Lab, Whale Tracker, Smart Money' },
+              { icon: Layers, color: '#0A1EFF', title: 'Intelligence Layer', desc: 'VTX Agent, Context Feed, DNA Analyzer, Wallet Classification, Trend Detection' },
+              { icon: Shield, color: '#10B981', title: 'Security Layer', desc: 'Trust Score, Shadow Guardian, Contract Analyzer, Domain Shield, Approval Manager' },
+              { icon: Repeat, color: '#F59E0B', title: 'Execution Layer', desc: 'Multi-chain Swap, Copy Trading, Sniper Bot, Limit Orders, Stop-Loss' },
+              { icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer', desc: 'Portfolio Tracker, Predictions, Research, Whale Tracker, Smart Money' },
             ]} />
-            <p>Data is aggregated from a proprietary blend of on-chain RPC providers, market-data feeds, DEX aggregators, and entity-intelligence services. Every source is abstracted behind a typed service layer with automatic fallback, rate-limit management, and response caching.</p>
+            <p>Every scan, every alert, and every swap runs through the same real-time data pipeline — so the number you see in the Context Feed is the same number your VTX Agent reasons over and the same number the swap engine quotes against. One source of truth, everywhere.</p>
           </WpSection>
 
           {/* Section 05 — Intelligence */}
