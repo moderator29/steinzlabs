@@ -581,6 +581,41 @@ async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
   return results.flat();
 }
 
+// FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism coverage was missing — every event
+// on those L2s got dropped, which is a big part of why the feed felt thin and pump.fun-heavy.
+async function fetchBaseDexEvents(): Promise<WhaleEvent[]> {
+  const tokens = ['ETH', 'AERO', 'BRETT', 'DEGEN', 'WETH', 'USDC', 'WELL'];
+  const searches = tokens.map(t => fetchDexSearchPairs(t, 'base', 3));
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('base', 15)]);
+  return results.flat();
+}
+
+async function fetchArbitrumDexEvents(): Promise<WhaleEvent[]> {
+  const tokens = ['ARB', 'GMX', 'MAGIC', 'GNS', 'PENDLE', 'WETH', 'USDC'];
+  const searches = tokens.map(t => fetchDexSearchPairs(t, 'arbitrum', 3));
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('arbitrum', 15)]);
+  return results.flat();
+}
+
+async function fetchOptimismDexEvents(): Promise<WhaleEvent[]> {
+  const tokens = ['OP', 'VELO', 'WELL', 'SNX', 'WETH', 'USDC'];
+  const searches = tokens.map(t => fetchDexSearchPairs(t, 'optimism', 3));
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('optimism', 15)]);
+  return results.flat();
+}
+
+function eventScore(e: WhaleEvent): number {
+  const tsMs = new Date(e.timestamp).getTime() || Date.now();
+  const ageMin = Math.max(0, (Date.now() - tsMs) / 60000);
+  // Newer is better — but only mildly. Quality dominates.
+  const recency = Math.max(0, 120 - ageMin); // 0..120 points from last 2h
+  const trust = e.trustScore || 0; // 0..100
+  const usdScore = Math.min(50, Math.log10(Math.max(1, e.valueUsd || 0))); // ~0..50
+  const pumpPenalty = (e.platform || '').toLowerCase().includes('pump') ? -40 : 0;
+  const whaleBoost = e.type === 'whale_transfer' ? 20 : 0;
+  return recency + trust + usdScore + pumpPenalty + whaleBoost;
+}
+
 function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
   const seenIds = new Set<string>();
   const seenKeys = new Set<string>();
@@ -641,7 +676,9 @@ export async function GET(request: Request) {
     const sources: string[] = [];
 
     if (chain === 'all') {
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex] = await Promise.all([
+      // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
+      // pump.fun trash" was largely driven by these L2s having zero coverage.
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex] = await Promise.all([
         fetchAlchemyTransfers(),
         fetchSolanaNetworkActivity(),
         fetchPumpFunTokens(),
@@ -651,9 +688,12 @@ export async function GET(request: Request) {
         fetchBSCDexEvents(),
         fetchPolygonDexEvents(),
         fetchAvalancheDexEvents(),
+        fetchBaseDexEvents(),
+        fetchArbitrumDexEvents(),
+        fetchOptimismDexEvents(),
       ]);
 
-      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
       if (pumpEvents.length > 0) sources.push('pumpfun');
@@ -663,7 +703,19 @@ export async function GET(request: Request) {
       if (bscDex.length > 0) sources.push('dex-bsc');
       if (polygonDex.length > 0) sources.push('dex-polygon');
       if (avalancheDex.length > 0) sources.push('dex-avalanche');
+      if (baseDex.length > 0) sources.push('dex-base');
+      if (arbDex.length > 0) sources.push('dex-arbitrum');
+      if (opDex.length > 0) sources.push('dex-optimism');
 
+    } else if (chain === 'base') {
+      events = await fetchBaseDexEvents();
+      if (events.length > 0) sources.push('dexscreener');
+    } else if (chain === 'arbitrum') {
+      events = await fetchArbitrumDexEvents();
+      if (events.length > 0) sources.push('dexscreener');
+    } else if (chain === 'optimism') {
+      events = await fetchOptimismDexEvents();
+      if (events.length > 0) sources.push('dexscreener');
     } else if (chain === 'solana') {
       const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
         fetchSolanaNetworkActivity(),
@@ -702,7 +754,10 @@ export async function GET(request: Request) {
       if (avalancheEvents.length > 0) sources.push('dexscreener');
     }
 
-    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // FIX 5A.1 / Phase 7: was pure-timestamp sort, which let low-quality pump.fun tokens
+    // (always freshly timestamped) dominate the top of the feed. Now uses a composite score
+    // of trust + USD value + recency, with a penalty for pump.fun and a boost for whale events.
+    events.sort((a, b) => eventScore(b) - eventScore(a));
 
     events = deduplicateEvents(events);
 

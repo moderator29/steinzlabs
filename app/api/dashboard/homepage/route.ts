@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
       const profile = (profileR.data ?? {}) as Record<string, unknown>;
       const displayName =
+        (typeof profile.display_name === "string" && profile.display_name) ||
         (typeof profile.username === "string" && profile.username) ||
         (typeof profile.first_name === "string" && profile.first_name) ||
         (user.email && user.email.split("@")[0]) ||

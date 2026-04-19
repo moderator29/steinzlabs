@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
+import { MetaMaskLogo, PhantomLogo, NakaLogo } from '@/components/wallet/WalletLogo';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -396,7 +397,8 @@ export default function SwapPage() {
     if (mode === 'metamask') {
       const win = typeof window !== 'undefined' ? window : null;
       if (!win?.ethereum) {
-        setWalletConnectError('MetaMask not detected. Install the MetaMask browser extension first.');
+        // FIX 5A.1: was a bare error message; now a CTA that links to the extension store.
+        setWalletConnectError('metamask-not-installed');
         return;
       }
       try {
@@ -422,7 +424,7 @@ export default function SwapPage() {
     if (mode === 'phantom') {
       const win = typeof window !== 'undefined' ? window : null;
       if (!win?.solana?.isPhantom) {
-        setWalletConnectError('Phantom not detected. Install the Phantom browser extension first.');
+        setWalletConnectError('phantom-not-installed');
         return;
       }
       try {
@@ -802,7 +804,39 @@ export default function SwapPage() {
           </div>
 
           {/* Wallet Selector Pills */}
-          {walletConnectError && (
+          {/* FIX 5A.1: was a red error banner dead-ending users; now an inline CTA
+              linking to the correct extension store. */}
+          {walletConnectError === 'metamask-not-installed' && (
+            <div className="mb-3 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+              <MetaMaskLogo size={16} />
+              <span className="text-xs text-amber-300 flex-1">MetaMask isn't installed in this browser.</span>
+              <a
+                href="https://metamask.io/download/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-[10px] font-bold text-amber-200 transition-colors"
+              >
+                Install
+              </a>
+              <button onClick={() => setWalletConnectError('')} className="text-amber-300 hover:text-amber-100"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
+          {walletConnectError === 'phantom-not-installed' && (
+            <div className="mb-3 flex items-center gap-2 bg-[#551BF9]/10 border border-[#551BF9]/30 rounded-xl px-3 py-2.5">
+              <PhantomLogo size={16} />
+              <span className="text-xs text-[#c9c2ff] flex-1">Phantom isn't installed in this browser.</span>
+              <a
+                href="https://phantom.app/download"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 rounded-lg bg-[#551BF9]/30 hover:bg-[#551BF9]/40 text-[10px] font-bold text-white transition-colors"
+              >
+                Install
+              </a>
+              <button onClick={() => setWalletConnectError('')} className="text-[#c9c2ff] hover:text-white"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
+          {walletConnectError && walletConnectError !== 'metamask-not-installed' && walletConnectError !== 'phantom-not-installed' && (
             <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span className="text-xs text-red-400">{walletConnectError}</span>
@@ -810,10 +844,11 @@ export default function SwapPage() {
             </div>
           )}
           <div className="flex items-center gap-2 mb-4">
+            {/* FIX 5A.1: was emoji (🦊 👻); now inline-SVG brand marks. */}
             {([
-              { id: 'naka', label: 'Naka Wallet', icon: 'N', connected: !!nakaAddress },
-              { id: 'metamask', label: 'MetaMask', icon: '🦊', connected: metamaskConnected },
-              { id: 'phantom', label: 'Phantom', icon: '👻', connected: phantomConnected },
+              { id: 'naka', label: 'Naka Wallet', connected: !!nakaAddress },
+              { id: 'metamask', label: 'MetaMask', connected: metamaskConnected },
+              { id: 'phantom', label: 'Phantom', connected: phantomConnected },
             ] as const).map(w => (
               <button
                 key={w.id}
@@ -824,9 +859,9 @@ export default function SwapPage() {
                     : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
                 }`}
               >
-                <span className={w.id === 'naka' ? 'w-4 h-4 rounded-full bg-[#0A1EFF] text-white flex items-center justify-center text-[9px] font-black' : 'text-sm'}>
-                  {w.icon}
-                </span>
+                {w.id === 'naka' && <NakaLogo size={16} />}
+                {w.id === 'metamask' && <MetaMaskLogo size={16} />}
+                {w.id === 'phantom' && <PhantomLogo size={16} />}
                 {w.label}
                 {walletMode === w.id && !w.connected && (
                   <span className="text-[9px] text-amber-400 font-normal ml-0.5">Connect</span>
@@ -1064,7 +1099,7 @@ export default function SwapPage() {
                     {walletMode === 'metamask' ? 'MetaMask not connected' : walletMode === 'phantom' ? 'Phantom not connected' : 'No Naka Wallet found'}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5">
-                    {walletMode === 'naka' ? 'Create or import a wallet to swap' : `Click the ${walletMode === 'metamask' ? 'MetaMask 🦊' : 'Phantom 👻'} pill above to connect`}
+                    {walletMode === 'naka' ? 'Create or import a wallet to swap' : `Tap the ${walletMode === 'metamask' ? 'MetaMask' : 'Phantom'} pill above to connect`}
                   </p>
                 </div>
                 {walletMode === 'naka' && (

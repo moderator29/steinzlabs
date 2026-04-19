@@ -71,11 +71,11 @@ export function PersonalizedHome() {
   // Use the auth user (instantly available from useAuth) as fallback so the
   // shell renders in <100ms even if /api/dashboard/homepage is slow.
   const displayName =
-    data?.user.displayName ??
-    authUser?.username ??
-    authUser?.first_name ??
-    authUser?.email?.split("@")[0] ??
-    "there";
+    data?.user.displayName ||
+    authUser?.username ||
+    authUser?.first_name ||
+    authUser?.email?.split("@")[0] ||
+    "trader";
   const isVerified = data?.user.isVerified ?? authUser?.is_verified ?? false;
   const walletsCount = data?.wallets.length ?? 0;
   const watchlistCount = data?.watchlist.length ?? 0;

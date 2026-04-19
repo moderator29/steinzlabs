@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useTier } from '@/lib/hooks/useTier';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +42,9 @@ type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'secur
 
 export default function ProfileTab() {
   const { user, signOut } = useAuth();
+  const { tier, isPaid, verifiedBadge } = useTier();
+  // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
+  const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
   const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
   const router = useRouter();
   const [copied, setCopied] = useState(false);

@@ -2,7 +2,8 @@
 
 import { use, useState } from "react";
 import { Suspense } from "react";
-import { Star, Bell, Share2, Shield } from "lucide-react";
+import { Star, Bell, Share2, Shield, Brain, X } from "lucide-react";
+import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import { TradingTerminalLayout } from "@/components/trading/TradingTerminalLayout";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { BackButton } from "@/components/ui/BackButton";
@@ -36,6 +37,8 @@ export default function TokenTerminalPage({ params }: { params: Promise<RoutePar
   const { detail, loading } = useTokenDetail(address);
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
   const [showAlert, setShowAlert] = useState(false);
+  // Phase 10: Token Intelligence drawer (bottom sheet on mobile, side rail on desktop).
+  const [showIntel, setShowIntel] = useState(false);
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -77,6 +80,20 @@ export default function TokenTerminalPage({ params }: { params: Promise<RoutePar
           </div>
 
           <div className="ml-auto flex items-center gap-1">
+            {/* Phase 10: Intelligence toggle — the feature that makes this beat Binance/MEXC/CheckPrice. */}
+            <button
+              type="button"
+              onClick={() => setShowIntel((v) => !v)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                showIntel
+                  ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-white border border-transparent'
+              }`}
+              title="Token intelligence"
+            >
+              <Brain size={14} />
+              <span className="hidden sm:inline">Intel</span>
+            </button>
             <IconAction
               title="Security"
               onClick={() => {
@@ -122,17 +139,45 @@ export default function TokenTerminalPage({ params }: { params: Promise<RoutePar
         </div>
       </div>
 
-      {/* Trading terminal body */}
-      <div className="flex-1 min-h-0">
-        <Suspense fallback={<NakaLoader text="Loading terminal..." />}>
-          <TradingTerminalLayout
-            initialChain={chain}
-            initialToken={address}
-            initialSymbol={symbol}
-            showTokenSelector={false}
-          />
-        </Suspense>
+      {/* Trading terminal body + intelligence rail */}
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-w-0">
+          <Suspense fallback={<NakaLoader text="Loading terminal..." />}>
+            <TradingTerminalLayout
+              initialChain={chain}
+              initialToken={address}
+              initialSymbol={symbol}
+              showTokenSelector={false}
+            />
+          </Suspense>
+        </div>
+
+        {/* Desktop: pinned right rail */}
+        {showIntel && (
+          <aside className="hidden lg:block w-[340px] shrink-0 border-l border-slate-800/50 bg-slate-950/40 overflow-y-auto p-3">
+            <TokenIntelligencePanel address={address} chain={chain} symbol={symbol} />
+          </aside>
+        )}
       </div>
+
+      {/* Mobile: bottom sheet */}
+      {showIntel && (
+        <div className="lg:hidden fixed inset-0 z-40 flex items-end">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowIntel(false)} />
+          <div className="relative w-full max-h-[85vh] bg-[#05081E] border-t border-white/10 rounded-t-2xl overflow-y-auto p-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-[#8FA3FF]" />
+                <span className="font-bold">Token Intelligence</span>
+              </div>
+              <button onClick={() => setShowIntel(false)} className="p-1.5 rounded-lg hover:bg-white/5">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <TokenIntelligencePanel address={address} chain={chain} symbol={symbol} />
+          </div>
+        </div>
+      )}
 
       {showAlert && detail && (
         <AlertModal
