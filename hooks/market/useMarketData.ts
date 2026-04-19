@@ -17,15 +17,20 @@ export function useMarketData({ page = 1, category = 'all' }: UseMarketDataOptio
     try {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams({ page: String(page), category });
-      // 10s ceiling so a CoinGecko cold-start / rate-limit never strands the page.
-      const res = await window.fetch(`/api/market/prices?${params}`, {
+      // Pump.fun / BNB-meme hit DexScreener via /api/market/dex-category so
+      // the tabs feel alive even though CoinGecko doesn't index those markets.
+      const isDexPreset = category === 'pumpfun' || category === 'bnb-meme';
+      const url = isDexPreset
+        ? `/api/market/dex-category?preset=${category}`
+        : `/api/market/prices?${new URLSearchParams({ page: String(page), category })}`;
+      const res = await window.fetch(url, {
         signal: AbortSignal.timeout(10_000),
         cache: 'no-store',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as CoinGeckoMarket[];
-      setTokens(Array.isArray(data) ? data : []);
+      const data = await res.json();
+      const rows: CoinGeckoMarket[] = Array.isArray(data) ? data : (data?.tokens ?? []);
+      setTokens(rows);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load market data');
     } finally {
