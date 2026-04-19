@@ -75,7 +75,7 @@ export default function FeatureUsagePage() {
 
       {!isEmpty && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
             {[
               { label: 'Total Usage Events (30d)', value: formatLargeNumber(totalUsage) },
               { label: 'Tracked Features', value: features.length.toString() },

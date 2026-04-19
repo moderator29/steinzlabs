@@ -233,7 +233,7 @@ export default function EmailTemplatesPage() {
       )}
 
       {templates.length > 0 && (
-        <div className="grid grid-cols-5 gap-4" style={{ minHeight: '500px' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4" style={{ minHeight: '500px' }}>
           <div className="col-span-2 space-y-2">
             {templates.map(t => (
               <div key={t.id} onClick={() => setSelected(t)}
