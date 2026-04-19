@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, BellOff, Clock, Mail, Zap, TrendingUp, Brain, ChevronDown, ChevronUp, Save, CheckCircle } from 'lucide-react';
 import NotificationSetup from '@/components/notifications/NotificationSetup';
+import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 
 interface NotifSettings {
   whale_alerts_enabled: boolean;
@@ -148,6 +149,9 @@ export default function NotificationSettingsPage() {
         <SectionCard title="Push Status" icon={Bell} color="#0A1EFF">
           <NotificationSetup session={session} compact />
         </SectionCard>
+
+        {/* 1b — Telegram */}
+        <TelegramConnectCard />
 
         {/* 2 — Whale Alerts */}
         <SectionCard title="Whale Tracker Alerts" icon={Zap} color="#F59E0B">

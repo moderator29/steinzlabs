@@ -50,7 +50,7 @@ async function checkSupabase(supabaseAdmin: ReturnType<typeof getSupabaseAdmin>)
   const start = Date.now();
   try {
     const result = await withTimeout(
-      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).then((r) => r.error ?? "ok"),
+      Promise.resolve(supabaseAdmin.from("profiles").select("id", { count: "exact", head: true })).then((r) => r.error ?? "ok"),
       3000,
     );
     const latencyMs = Date.now() - start;
@@ -70,7 +70,9 @@ async function checkExternal(name: string, url: string, timeoutMs = 3000): Promi
       fetch(url, { method: "GET", signal: AbortSignal.timeout(timeoutMs) }),
     );
     const latencyMs = Date.now() - start;
-    if (!res.ok) return { name, status: "error", latencyMs, message: `HTTP ${res.status}` };
+    // 4xx = server reachable, no route at this path (expected for API roots).
+    // Only 5xx counts as a real outage.
+    if (res.status >= 500) return { name, status: "error", latencyMs, message: `HTTP ${res.status}` };
     if (latencyMs > 2000) return { name, status: "warning", latencyMs, message: "Slow" };
     return { name, status: "active", latencyMs };
   } catch (err) {

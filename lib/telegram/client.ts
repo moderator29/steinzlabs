@@ -22,7 +22,11 @@ export interface TelegramUpdate {
 export async function sendTelegramMessage(
   chatId: number | string,
   text: string,
-  opts: { parse_mode?: "Markdown" | "HTML"; disable_web_page_preview?: boolean } = {},
+  opts: {
+    parse_mode?: "Markdown" | "HTML";
+    disable_web_page_preview?: boolean;
+    reply_markup?: { inline_keyboard: Array<Array<{ text: string; url?: string; callback_data?: string }>> };
+  } = {},
 ): Promise<void> {
   const t = token();
   if (!t) {
@@ -38,6 +42,7 @@ export async function sendTelegramMessage(
         text,
         parse_mode: opts.parse_mode ?? "Markdown",
         disable_web_page_preview: opts.disable_web_page_preview ?? true,
+        ...(opts.reply_markup ? { reply_markup: opts.reply_markup } : {}),
       }),
       source: "telegram.sendMessage",
       timeoutMs: 5000,
