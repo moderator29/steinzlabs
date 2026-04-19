@@ -94,6 +94,17 @@ function LoginPageInner() {
     if (!authLoading && user) router.replace('/dashboard');
   }, [user, authLoading, router]);
 
+  // Pre-warm the auth API routes on mount so the first sign-in click doesn't
+  // pay Vercel cold-start cost (typically 1-2s on first request to a serverless
+  // function). HEAD requests are cheap and just spin up the function instance.
+  useEffect(() => {
+    const warm = (path: string) => {
+      fetch(path, { method: 'HEAD', cache: 'no-store' }).catch(() => { /* best effort */ });
+    };
+    warm('/api/auth/verify-captcha');
+    warm('/api/auth/lookup');
+  }, []);
+
   useEffect(() => {
     const confirmed = searchParams.get('confirmed');
     const verified = searchParams.get('verified');
