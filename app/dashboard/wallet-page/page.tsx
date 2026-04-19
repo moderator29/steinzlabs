@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap } from 'lucide-react';
+import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
@@ -1451,14 +1451,69 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
             <p className="text-xs font-mono break-all text-[#0A1EFF]">{address}</p>
           </div>
 
-          <button
-            onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-            {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Address</>}
-          </button>
+          {/* Trust-Wallet-style 3-action row: Copy · Set Amount · Share. Each
+              action fails soft — Share silently falls back to copy-link when
+              the Web Share API isn't available (desktop Chrome without https, etc). */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <button
+              onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-300" />}
+              <span className="text-[11px] font-semibold text-slate-200">{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+            <button
+              onClick={() => {
+                const raw = typeof window !== 'undefined' ? window.prompt(`Amount of ${chain.symbol} to request (optional)`) : null;
+                if (raw === null) return;
+                const n = Number(raw);
+                if (!Number.isFinite(n) || n <= 0) return;
+                const link = chain.id === 'solana'
+                  ? `solana:${address}?amount=${n}`
+                  : `ethereum:${address}?value=${n}`;
+                navigator.clipboard.writeText(link);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              <DollarSign className="w-4 h-4 text-slate-300" />
+              <span className="text-[11px] font-semibold text-slate-200">Set Amount</span>
+            </button>
+            <button
+              onClick={async () => {
+                const shareData = {
+                  title: `Receive ${chain.symbol}`,
+                  text: `Send ${chain.symbol} on ${chain.name} to:\n${address}`,
+                };
+                try {
+                  if (typeof navigator !== 'undefined' && navigator.share) {
+                    await navigator.share(shareData);
+                  } else {
+                    navigator.clipboard.writeText(`${shareData.text}`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                } catch { /* user cancelled */ }
+              }}
+              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              <Share2 className="w-4 h-4 text-slate-300" />
+              <span className="text-[11px] font-semibold text-slate-200">Share</span>
+            </button>
+          </div>
+
+          {/* Deposit-from-exchange hint — Trust Wallet parity. Low-prominence
+              but reminds users that CEX withdrawals land on the same address. */}
+          <div className="flex items-start gap-3 p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 text-left mb-4">
+            <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-100">Deposit from exchange</p>
+              <p className="text-[11px] text-slate-500">Withdraw {chain.symbol} from your exchange to the address above.</p>
+            </div>
+          </div>
 
           {/* Lower-prominence reminder — primary warning is the bar above the QR. */}
-          <div className="mt-4 p-3 bg-white/[0.03] rounded-xl border border-white/10">
+          <div className="p-3 bg-white/[0.03] rounded-xl border border-white/10">
             <p className="text-[11px] text-gray-500">
               Verified {chain.name} address. Always double-check the first and last 4 characters before sharing.
             </p>
