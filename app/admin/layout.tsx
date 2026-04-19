@@ -10,6 +10,7 @@ import {
   Mail, LogOut, Menu, X, ChevronRight, Lock
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
+import { HealthBadge } from '@/components/admin/HealthBadge';
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',           icon: LayoutDashboard, label: 'Dashboard' },
@@ -118,6 +119,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
+        {/* Live infrastructure health — turns amber/red when Upstash, Supabase,
+            CoinGecko, DexScreener, or Anthropic is degraded. Click to see
+            the full health table. */}
+        <div className="px-3 py-2.5 border-b border-[#1E2433]">
+          <HealthBadge />
+        </div>
+
         <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {NAV_ITEMS.map(item => {
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -148,6 +156,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="w-5 h-5" />
           </button>
           <span className="text-sm font-bold text-white">Admin Panel</span>
+          <div className="ml-auto">
+            <HealthBadge />
+          </div>
         </header>
         <main className="flex-1 overflow-auto">
           {children}
