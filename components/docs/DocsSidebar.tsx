@@ -56,6 +56,11 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'bot-commands', label: 'Commands by Tier' },
     { id: 'bot-notifications', label: 'Automatic Notifications' },
   ]},
+  { id: 'coming-soon', number: '12', label: 'Coming Soon', subsections: [
+    { id: 'roadmap-wallet', label: 'Naka Wallet upgrades' },
+    { id: 'roadmap-trading', label: 'Advanced trading' },
+    { id: 'roadmap-social', label: 'Social & sharing' },
+  ]},
 ];
 
 interface DocsSidebarProps {
