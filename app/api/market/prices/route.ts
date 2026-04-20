@@ -1,25 +1,20 @@
 import { NextResponse } from 'next/server';
+import { getTopTokens, COINGECKO_CATEGORY_MAP, type CoinGeckoMarketToken } from '@/lib/services/coingecko';
 
-// ISR — regenerate every 5 minutes at the edge so CoinGecko is hit at most once per 5 min
-export const revalidate = 300;
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 10;
 
-// Demo API key — always use api.coingecko.com, header is x-cg-demo-api-key
-const CG_BASE = 'https://api.coingecko.com/api/v3';
-
-function cgHeaders() {
-  if (!process.env.COINGECKO_API_KEY) return {};
-  return { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY };
-}
-
-// CoinCap fallback — free, no key, no rate limit issues
-async function fetchCoinCap(limit: number) {
+// CoinCap fallback — free, no key, no rate limit issues. Used only if the
+// unified CoinGecko service throws (rate-limited / outage / cold-start).
+async function fetchCoinCap(limit: number): Promise<CoinGeckoMarketToken[]> {
   const res = await fetch(
     `https://api.coincap.io/v2/assets?limit=${limit}`,
-    { next: { revalidate: 300 } }
+    { signal: AbortSignal.timeout(6000), next: { revalidate: 300 } }
   );
   if (!res.ok) throw new Error('CoinCap failed');
-  const { data } = await res.json();
-  return (data as any[]).map((c) => ({
+  const { data } = await res.json() as { data: any[] };
+  return data.map((c) => ({
     id:                               c.id,
     symbol:                           c.symbol?.toUpperCase() ?? '',
     name:                             c.name ?? '',
@@ -33,76 +28,64 @@ async function fetchCoinCap(limit: number) {
     low_24h:                          0,
     price_change_24h:                 0,
     price_change_percentage_24h:      parseFloat(c.changePercent24Hr) || 0,
-    price_change_percentage_1h_in_currency:  0,
-    price_change_percentage_7d_in_currency:  0,
+    market_cap_change_24h:            0,
+    market_cap_change_percentage_24h: 0,
     circulating_supply:               parseFloat(c.supply) || 0,
     total_supply:                     parseFloat(c.maxSupply) || null,
     max_supply:                       parseFloat(c.maxSupply) || null,
     ath: 0, ath_change_percentage: 0, ath_date: '',
-    sparkline_in_7d:                  undefined,
+    atl: 0, atl_change_percentage: 0, atl_date: '',
+    last_updated: new Date().toISOString(),
   }));
 }
 
-// CoinGecko category map
-const CAT_MAP: Record<string, string> = {
-  defi:   'decentralized-finance-defi',
-  layer1: 'layer-1',
-  layer2: 'layer-2',
-  gaming: 'gaming',
-  meme:   'meme-token',
-  ai:     'artificial-intelligence',
-  depin:  'depin',
-};
+async function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const t = new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); });
+  try { return await Promise.race([p, t]); } finally { if (timer) clearTimeout(timer); }
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const page     = searchParams.get('page')     ?? '1';
+  const page     = Math.max(parseInt(searchParams.get('page') ?? '1', 10) || 1, 1);
   const category = searchParams.get('category') ?? 'all';
 
-  const params = new URLSearchParams({
-    vs_currency:             'usd',
-    order:                   'market_cap_desc',
-    per_page:                '100',
-    page,
-    sparkline:               'true',
-    price_change_percentage: '1h,24h,7d',
-  });
+  // Majors = top 200 by market cap (per product spec). Other categories use
+  // 100 per page which is CoinGecko's standard for the /coins/markets endpoint.
+  const perPage = category === 'majors' ? 200 : 100;
+  const cgCategory = COINGECKO_CATEGORY_MAP[category] ?? null;
 
-  if (category && category !== 'all' && category !== 'majors') {
-    const slug = CAT_MAP[category];
-    if (slug) params.set('category', slug);
-  }
-
-  // Try CoinGecko first
+  // Hard 8s deadline so the dashboard never blocks waiting for upstream.
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7000);
-    const res = await fetch(`${CG_BASE}/coins/markets?${params}`, {
-      headers: cgHeaders(),
-      signal:  controller.signal,
-      next:    { revalidate: 300 },
-    } as RequestInit);
-    clearTimeout(timer);
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data, {
+    const tokens = await withDeadline<CoinGeckoMarketToken[]>(
+      getTopTokens(page, perPage, true, cgCategory ?? undefined),
+      8000,
+      [],
+    );
+    if (tokens.length > 0) {
+      return NextResponse.json(tokens, {
         headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' },
       });
     }
-  } catch {
-    // fall through to CoinCap
-  }
-
-  // CoinGecko failed — use CoinCap (only works for 'all' / 'majors')
-  try {
-    const data = await fetchCoinCap(100);
-    return NextResponse.json(data, {
-      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' },
-    });
-  } catch {
+    // Empty CG result on majors/all? Try CoinCap so the page never goes blank.
+    if (category === 'all' || category === 'majors') {
+      const cc = await withDeadline<CoinGeckoMarketToken[]>(fetchCoinCap(perPage), 6000, []);
+      return NextResponse.json(cc, {
+        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' },
+      });
+    }
     return NextResponse.json([], {
       headers: { 'Cache-Control': 'public, s-maxage=60' },
     });
+  } catch (err) {
+    console.error('[market/prices]', err);
+    // Last-resort: CoinCap, then [].
+    if (category === 'all' || category === 'majors') {
+      try {
+        const cc = await withDeadline<CoinGeckoMarketToken[]>(fetchCoinCap(perPage), 6000, []);
+        return NextResponse.json(cc, { status: 200 });
+      } catch { /* fall through */ }
+    }
+    return NextResponse.json([], { status: 502 });
   }
 }
