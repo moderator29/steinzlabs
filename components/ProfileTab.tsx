@@ -11,6 +11,7 @@ import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, typ
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
+import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 interface Notification {
@@ -1067,6 +1068,7 @@ export default function ProfileTab() {
         </div>
 
         <TelegramConnectCard />
+        <VtxWalletAccessCard />
       </div>
     );
   }

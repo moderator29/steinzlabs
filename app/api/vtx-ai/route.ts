@@ -247,7 +247,7 @@ For on-chain whale moves, security scans, contract analysis, holder data, or cha
 Always format prices as $1,234.56 (with thousands separators), market caps as $1.23B, percentage changes as +12.3% / -4.1%. Never show raw API JSON.
 
 BRANDING RULES:
-Always cite "STEINZ Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
+Always cite "Naka Labs Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
 
 ABSOLUTE FORMATTING RULES:
 No **, no *, no ##, no -- , no bullet dashes. Clean plain text only.
@@ -746,7 +746,7 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
     contract: `Contract analysis for: "${args}". Use contract_analysis tool. Explain what the contract does, its permissions, and risks.`,
     domain: `Domain/URL safety check for: "${args}". Analyze for phishing signals, scam patterns, suspicious TLDs. Return SAFE/SUSPICIOUS/PHISHING verdict.`,
     sig: `Decode transaction signature/calldata: "${args}". Explain what function is being called, parameters, risks (unlimited approvals, dangerous permissions).`,
-    swap: `Swap quote for: "${args}". Parse tokens and amount. Provide best route, estimated output, price impact, fees (0.15% STEINZ platform fee), slippage.`,
+    swap: `Swap quote for: "${args}". Parse tokens and amount. Provide best route, estimated output, price impact, fees (0.15% Naka platform fee), slippage.`,
     portfolio: `Portfolio analysis${args ? ` for address: ${args}` : ' for connected wallet'}. Use wallet_profile tool. Total value, allocation, P&L, risk score, AI recommendations.`,
     chart: `Price chart for: "${args || 'specified token'}". Include [CHART:price]. Show current price, trend direction, key support/resistance, short technical outlook.`,
     dna: `Trading DNA analysis for wallet: "${args}". Archetype, win rate, avg hold time, risk profile, sector preferences, top patterns, actionable advice.`,
@@ -936,6 +936,29 @@ export async function POST(request: NextRequest) {
     // stage swaps that write to user-scoped pending_trades.
     const authedUser = await getAuthenticatedUser(request).catch(() => null);
     const callerUserId = authedUser?.id ?? null;
+
+    // Privacy gate: the client may send a walletAddress in context, but VTX
+    // only receives it if the user has opted in via the Profile "VTX Wallet
+    // Access" toggle. Default off. Anonymous callers never get wallet context.
+    if (body.context?.walletAddress && callerUserId) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: prefRow } = await admin
+          .from('user_preferences')
+          .select('preferences')
+          .eq('user_id', callerUserId)
+          .maybeSingle();
+        const allowed = (prefRow?.preferences as Record<string, unknown> | null)?.vtx_wallet_access === true;
+        if (!allowed) {
+          body.context.walletAddress = undefined;
+        }
+      } catch {
+        // If the preference read fails, fail-closed: strip wallet context.
+        body.context.walletAddress = undefined;
+      }
+    } else if (body.context?.walletAddress && !callerUserId) {
+      body.context.walletAddress = undefined;
+    }
 
     // ── Rate Limiting ───────────────────────────────────────────────────────
     const headersList = await headers();
