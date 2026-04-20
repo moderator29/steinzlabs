@@ -1,8 +1,10 @@
 'use client';
 
 // Phase 6 — FollowWhaleModal
-// 3 modes: Alerts Only (all tiers) · One-Click Copy (Pro) · Auto-Copy (Max).
-// Persists to user_whale_follows + user_copy_rules via POST /api/whales/[address]/follow.
+// 3 modes: Alerts Only (Pro) · One-Click Copy (Pro) · Auto-Copy (Max).
+// Whole follow flow is Pro+ by product design — the backend
+// `withTierGate('pro')` on /api/whales/[address]/follow mirrors that.
+// Persists to user_whale_follows + user_copy_rules.
 
 import { useState } from 'react';
 import { X, Bell, Zap, Cpu, Loader2, Check, AlertTriangle, Lock } from 'lucide-react';
@@ -37,7 +39,7 @@ export default function FollowWhaleModal({
   const [success, setSuccess] = useState(false);
 
   const submit = async () => {
-    if (mode === 'one_click' && !isPro) { setError('One-Click Copy requires Pro.'); return; }
+    if (!isPro) { setError('Whale tracking requires Pro. Upgrade to follow whales.'); return; }
     if (mode === 'auto' && !isMax) { setError('Auto-Copy requires Max.'); return; }
     setSaving(true); setError(null);
     try {
@@ -86,11 +88,13 @@ export default function FollowWhaleModal({
             <label className="text-[10px] uppercase tracking-wider text-slate-500">Follow mode</label>
             <ModeCard
               active={mode === 'alerts'}
-              onClick={() => setMode('alerts')}
+              onClick={() => { if (isPro) setMode('alerts'); }}
               Icon={Bell}
               title="Alerts only"
-              description="Get notified when this whale trades — free for everyone."
-              locked={false}
+              description="Get notified when this whale trades. Requires Pro."
+              locked={!isPro}
+              requiredTier="Pro"
+              currentTier={tier}
             />
             <ModeCard
               active={mode === 'one_click'}
@@ -189,8 +193,10 @@ export default function FollowWhaleModal({
           >
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Confirm Follow'}
           </button>
-          {!isPaid && mode === 'alerts' && (
-            <p className="text-[10px] text-slate-500 text-center">Upgrade to Pro for one-click copy trading.</p>
+          {!isPro && (
+            <p className="text-[10px] text-amber-400/80 text-center">
+              Whale tracking is Pro+. Upgrade to follow whales, receive alerts, and copy trades.
+            </p>
           )}
         </div>
       </div>
