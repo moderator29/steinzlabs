@@ -34,6 +34,7 @@ export function TelegramConnectCard() {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -62,13 +63,22 @@ export function TelegramConnectCard() {
 
   const generateCode = async () => {
     setGenerating(true);
+    setGenError(null);
     try {
       const res = await fetch("/api/telegram/link-code", { method: "POST", credentials: "include" });
       if (res.ok) {
         const json = (await res.json()) as CodeResponse;
         setCode(json.code);
         setExpiresAt(json.expiresAt);
+      } else {
+        // The old code silently ignored non-2xx responses, which is why the
+        // button looked dead while the server kept returning 500 on the
+        // UNIQUE constraint collision (chat_id=0 placeholder).
+        const body = await res.json().catch(() => ({}));
+        setGenError(body.error || `Failed (HTTP ${res.status}). Please try again.`);
       }
+    } catch (err: any) {
+      setGenError(err?.message || "Network error — please try again.");
     } finally {
       setGenerating(false);
     }
@@ -171,6 +181,11 @@ export function TelegramConnectCard() {
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {generating ? "Generating…" : "Generate Connect Code"}
           </button>
+          {genError && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+              {genError}
+            </div>
+          )}
         </div>
       )}
 
