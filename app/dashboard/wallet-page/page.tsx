@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, 
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
-import { MiniSparkline } from '@/components/wallet/MiniSparkline';
+import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
 
 interface TokenBalance {
   symbol: string;
@@ -803,42 +803,31 @@ export default function WalletPage() {
               </button>
             </div>
 
-            {/* ── ASSETS LIST ──────────────────────────────── */}
-            <div className="space-y-2 mb-6">
+            {/* ── ASSETS LIST (Trust Wallet-style vertical rows) ──────── */}
+            <div className="flex flex-col mb-6 divide-y divide-slate-900/60">
               {loading ? (
                 <>
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="h-[68px] bg-slate-900/40 border border-slate-800/30 rounded-xl animate-pulse" />
+                    <div key={i} className="h-[64px] bg-slate-900/30 my-1 rounded-xl animate-pulse" />
                   ))}
                 </>
               ) : allHoldings.length > 0 ? (
                 allHoldings.map((token, i) => {
-                  const val = parseFloat(token.valueUsd || '0');
-                  const bal = parseFloat(token.balance) || 0;
                   const logoUrl = (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()];
                   return (
-                    <button
-                      key={i}
+                    <WalletTokenRow
+                      key={`${token.symbol}-${i}`}
+                      symbol={token.symbol}
+                      name={token.name}
+                      balance={token.balance}
+                      valueUsd={token.valueUsd}
+                      contractAddress={token.contractAddress}
+                      logoUrl={logoUrl}
+                      chainLabel={activeChain.name}
+                      coinGeckoId={resolveCoinGeckoId(token.symbol, activeChain)}
+                      hideBalance={hideBalance}
                       onClick={() => router.push(`/dashboard/market/${activeChain.id}/${token.contractAddress || token.symbol}`)}
-                      className="w-full flex items-center gap-4 p-4 bg-slate-900/40 border border-slate-800/30 rounded-xl hover:bg-slate-900/80 hover:border-slate-800/60 hover:translate-x-0.5 transition-all duration-150 group text-left"
-                    >
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={token.symbol} className="w-11 h-11 rounded-full shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      ) : (
-                        <div className="w-11 h-11 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold shrink-0">{token.symbol.slice(0, 2)}</div>
-                      )}
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="font-bold text-white text-sm">{token.symbol}</p>
-                        <p className="text-xs text-slate-400 truncate">{token.name}</p>
-                      </div>
-                      {/* FIX 5A.1 / Phase 4: 7-day sparkline per row, dependency-free inline SVG. */}
-                      <MiniSparkline coinGeckoId={resolveCoinGeckoId(token.symbol, activeChain)} />
-                      <div className="text-right shrink-0">
-                        <p className="font-mono text-white text-sm">{hideBalance ? '••••' : bal.toLocaleString(undefined, { maximumFractionDigits: 6 })} {token.symbol}</p>
-                        <p className="text-xs text-slate-400 font-mono">{hideBalance ? '••••' : val > 0 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </button>
+                    />
                   );
                 })
               ) : (

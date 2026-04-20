@@ -155,6 +155,7 @@ export default function Dashboard() {
   const [marketStats, setMarketStats] = useState<{
     totalMarketCap: string; totalVolume: string; btcDominance: string;
     marketCapChange: string; volumeChange: string; dominanceChange: string;
+    activeCoins: string;
   } | null>(null);
 
   const handleNavChange = useCallback((id: string) => {
@@ -188,13 +189,18 @@ export default function Dashboard() {
           const vol = data.totalVolume || 0;
           const btcDom = data.btcDominance || 0;
           const mcChange = data.marketCapChange24h || 0;
+          const active = Number(data.chainsTracked) || 0;
           setMarketStats({
             totalMarketCap: mc >= 1e12 ? `$${(mc / 1e12).toFixed(2)}T` : `$${(mc / 1e9).toFixed(1)}B`,
             totalVolume: vol >= 1e12 ? `$${(vol / 1e12).toFixed(2)}T` : `$${(vol / 1e9).toFixed(1)}B`,
             btcDominance: `${btcDom.toFixed(1)}%`,
             marketCapChange: `${mcChange >= 0 ? '+' : ''}${mcChange.toFixed(1)}%`,
-            volumeChange: `${mcChange >= 0 ? '+' : ''}${(mcChange * 0.8).toFixed(1)}%`,
-            dominanceChange: `${btcDom > 50 ? '+' : '-'}${(Math.abs(btcDom - 50) * 0.1).toFixed(1)}%`,
+            // Volume change 24h and dominance change aren't returned by the
+            // CoinGecko /global endpoint on the demo plan, so we intentionally
+            // leave them empty rather than fabricate a value.
+            volumeChange: '',
+            dominanceChange: '',
+            activeCoins: active > 1000 ? `${Math.round(active / 100) / 10}k+` : String(active),
           });
         }
       } catch (err) {
@@ -232,14 +238,14 @@ export default function Dashboard() {
 
   const stats = marketStats ? [
     { label: 'Total Market Cap', value: marketStats.totalMarketCap, change: marketStats.marketCapChange, icon: BarChart3, trend: (parseFloat(marketStats.marketCapChange) >= 0 ? 'up' : 'down') as 'up' | 'down' | 'neutral' },
-    { label: '24h Volume', value: marketStats.totalVolume, change: marketStats.volumeChange, icon: Activity, trend: (parseFloat(marketStats.volumeChange) >= 0 ? 'up' : 'down') as 'up' | 'down' | 'neutral' },
-    { label: 'BTC Dominance', value: marketStats.btcDominance, change: marketStats.dominanceChange, icon: TrendingDown, trend: 'neutral' as const },
-    { label: 'Chains Tracked', value: '12+', change: 'Live', icon: Zap, trend: 'up' as const },
+    { label: '24h Volume', value: marketStats.totalVolume, change: '', icon: Activity, trend: 'neutral' as const },
+    { label: 'BTC Dominance', value: marketStats.btcDominance, change: '', icon: TrendingDown, trend: 'neutral' as const },
+    { label: 'Active Coins', value: marketStats.activeCoins, change: 'Live', icon: Zap, trend: 'up' as const },
   ] : [
     { label: 'Total Market Cap', value: '...', change: '', icon: BarChart3, trend: 'neutral' as const },
     { label: '24h Volume', value: '...', change: '', icon: Activity, trend: 'neutral' as const },
     { label: 'BTC Dominance', value: '...', change: '', icon: TrendingDown, trend: 'neutral' as const },
-    { label: 'Chains Tracked', value: '12+', change: 'Live', icon: Zap, trend: 'up' as const },
+    { label: 'Active Coins', value: '…', change: '', icon: Zap, trend: 'neutral' as const },
   ];
 
   return (

@@ -141,15 +141,55 @@ export default function PortfolioPage() {
     };
   }, [user]);
 
-  const totalValueUsd = Number(intel?.totalBalanceUsd ?? 0) || 0;
+  // Live CoinGecko prices keyed by contractAddress.toLowerCase() or SYMBOL (for natives).
+  const [livePrices, setLivePrices] = useState<Record<string, { price: number; change24h: number }>>({});
+
+  useEffect(() => {
+    const raw = intel?.holdings ?? [];
+    if (raw.length === 0) return;
+    let abort = false;
+    const payload = raw.map((h) => ({
+      address: h.contractAddress,
+      chain: intel?.chain,
+      symbol: h.symbol,
+    }));
+    fetch('/api/portfolio/live-prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tokens: payload }),
+    })
+      .then(async (r) => (r.ok ? ((await r.json()) as { prices: Record<string, { price: number; change24h: number }> }) : null))
+      .then((d) => {
+        if (!abort && d) setLivePrices(d.prices ?? {});
+      })
+      .catch(() => {});
+    return () => {
+      abort = true;
+    };
+  }, [intel]);
+
   const holdings: Holding[] = useMemo(
     () =>
-      (intel?.holdings ?? []).map((h) => ({
-        ...h,
-        chain: intel?.chain,
-      })),
-    [intel],
+      (intel?.holdings ?? []).map((h) => {
+        const key = h.contractAddress?.toLowerCase() || h.symbol.toUpperCase();
+        const live = livePrices[key];
+        const balNum = Number(h.balance) || 0;
+        const liveValue = live && live.price > 0 && balNum > 0 ? balNum * live.price : null;
+        return {
+          ...h,
+          chain: intel?.chain,
+          valueUsd: liveValue != null ? String(liveValue) : h.valueUsd,
+          change24h: live?.change24h ?? h.change24h,
+        };
+      }),
+    [intel, livePrices],
   );
+
+  const totalValueUsd = useMemo(() => {
+    const live = holdings.reduce((sum, h) => sum + (Number(h.valueUsd ?? 0) || 0), 0);
+    if (live > 0) return live;
+    return Number(intel?.totalBalanceUsd ?? 0) || 0;
+  }, [holdings, intel]);
 
   const tradeableHoldings = useMemo(
     () => holdings.filter((h) => (Number(h.valueUsd ?? 0) || 0) > 0),
