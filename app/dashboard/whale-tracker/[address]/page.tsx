@@ -10,6 +10,10 @@ import { toast } from "sonner";
 type Tab = "overview" | "activity" | "tokens" | "counterparties" | "copy";
 
 interface WhaleDetail {
+  // Bug §2.4: whale can be null when the address is known via Arkham but not
+  // in our whales table yet. The old code dereferenced data.whale.address
+  // unconditionally and crashed the moment the API returned a null whale,
+  // which redirected the user back to the directory in ~0.5s.
   whale: {
     id: string;
     address: string;
@@ -26,7 +30,16 @@ interface WhaleDetail {
     x_handle: string | null;
     verified: boolean;
     last_active_at: string | null;
-  };
+  } | null;
+  arkham?: {
+    entity: string | null;
+    type: string | null;
+    verified: boolean;
+    logo: string | null;
+    website: string | null;
+    twitter: string | null;
+    labels: string[];
+  } | null;
   activity: Array<{
     id: string;
     tx_hash: string;
@@ -60,14 +73,27 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
   const [following, setFollowing] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
 
+  const [fetchError, setFetchError] = useState<'auth' | 'tier' | 'notfound' | 'network' | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch(`/api/whales/${address}?chain=${encodeURIComponent(chain)}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          // Bug §2.4: previously a failing fetch silently left data=null, which
+          // rendered the bare "Whale not found" screen and users read it as a
+          // crash. Surface the real reason so we can show something useful.
+          if (res.status === 401) setFetchError('auth');
+          else if (res.status === 403) setFetchError('tier');
+          else if (res.status === 404) setFetchError('notfound');
+          else setFetchError('network');
+          return;
+        }
         const json = (await res.json()) as WhaleDetail;
         if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setFetchError('network');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -84,7 +110,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
         const res = await fetch("/api/whales/follow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ whale_address: address, chain, label: data?.whale.label }),
+          body: JSON.stringify({ whale_address: address, chain, label: data?.whale?.label ?? null }),
         });
         if (res.ok) {
           setFollowing(true);
@@ -110,13 +136,43 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     );
   }
 
-  if (!data) {
+  if (!data || !data.whale) {
+    // Bug §2.4: handle all the reasons the page can land here without an
+    // auto-redirect. Previously clicking View opened the page, the fetch
+    // returned whale:null (or 403/404), and the user saw a blank "Whale
+    // not found" for ~0.5s before tapping back. Now the page STAYS open
+    // and explains which situation we're in + offers a next action.
+    const arkham = data?.arkham || null;
+    const reasonText = fetchError === 'auth' ? 'You need to sign in to view whale profiles.'
+      : fetchError === 'tier' ? 'Whale profiles require a Pro or Max plan.'
+      : fetchError === 'network' ? 'Could not reach the server. Check your connection and retry.'
+      : arkham?.entity ? `${arkham.entity} hasn't been added to our tracker yet. Submit it to start indexing trades.`
+      : 'This whale is not in our directory yet.';
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-slate-500 gap-3">
-        <p>Whale not found</p>
-        <Link href="/dashboard/whale-tracker" className="text-blue-400 text-sm">
-          ← Back to whale tracker
-        </Link>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-slate-300 gap-4 px-6 text-center">
+        <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400">
+          <Loader2 className="w-5 h-5" />
+        </div>
+        <div className="max-w-sm space-y-2">
+          <p className="text-base font-semibold text-white">Whale profile unavailable</p>
+          <p className="text-sm text-slate-400">{reasonText}</p>
+          {arkham?.labels && arkham.labels.length > 0 && (
+            <p className="text-xs text-slate-500">Arkham labels: {arkham.labels.slice(0, 4).join(', ')}</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Link href="/dashboard/whale-tracker" className="px-4 py-2 text-sm rounded-lg border border-slate-700 hover:bg-slate-800/60 transition">
+            Back to tracker
+          </Link>
+          {fetchError !== 'tier' && fetchError !== 'auth' && (
+            <Link
+              href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(address)}${chain ? `&chain=${encodeURIComponent(chain)}` : ''}`}
+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 transition text-white"
+            >
+              Submit this whale
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
