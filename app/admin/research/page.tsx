@@ -21,6 +21,7 @@ interface ResearchPost {
   tags: string[];
   published: boolean;
   published_at: string | null;
+  scheduled_at?: string | null;
   created_at: string;
 }
 
@@ -35,8 +36,14 @@ const CATEGORIES = [
 
 const BLANK: Omit<ResearchPost, 'id' | 'created_at'> = {
   title: '', slug: '', summary: '', content: '', category: 'General',
-  image_url: null, tags: [], published: false, published_at: null,
+  image_url: null, tags: [], published: false, published_at: null, scheduled_at: null,
 };
+
+const EMOJIS = [
+  '📈', '📉', '🚀', '🔥', '💎', '💰', '⚡', '🎯', '🛡️', '🔒', '🔑', '📊',
+  '🐋', '🐳', '🚨', '⚠️', '✅', '❌', '🟢', '🔴', '🟠', '🟡', '🔷', '🔶',
+  '🎉', '🎊', '👀', '👋', '🙏', '💡', '📌', '📎', '🧠', '🤖', '🧪', '🔮',
+];
 
 /* ── Markdown helpers ──────────────────────────────────────────────────────── */
 
@@ -367,13 +374,29 @@ export default function AdminResearchPage() {
                     placeholder="DeFi, Solana, Analysis" />
                 </div>
 
+                {/* Schedule (optional) */}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Schedule publish (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={form.scheduled_at ?? ''}
+                    onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value || null }))}
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/50"
+                  />
+                  {form.scheduled_at && (
+                    <p className="text-[10px] text-amber-300/80 mt-1">
+                      Saves as a draft until this time. A server worker publishes it automatically.
+                    </p>
+                  )}
+                </div>
+
                 {/* Publish toggle */}
                 <label className="flex items-center gap-3 cursor-pointer pt-1">
                   <div onClick={() => setForm(f => ({ ...f, published: !f.published }))}
                     className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${form.published ? 'bg-emerald-500' : 'bg-[#1E2433]'}`}>
                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.published ? 'translate-x-5' : 'translate-x-0.5'}`} />
                   </div>
-                  <span className="text-sm text-gray-300">{form.published ? 'Published' : 'Draft'}</span>
+                  <span className="text-sm text-gray-300">{form.scheduled_at ? 'Scheduled' : form.published ? 'Published' : 'Draft'}</span>
                 </label>
               </div>
 
@@ -389,7 +412,10 @@ export default function AdminResearchPage() {
                       {tab}
                     </button>
                   ))}
-                  <div className="ml-auto flex items-center px-4 text-[10px] text-gray-600">Markdown supported</div>
+                  <div className="ml-auto flex items-center gap-2 px-4">
+                    <EmojiPickerButton onPick={(e) => setForm(f => ({ ...f, content: f.content + e }))} />
+                    <span className="text-[10px] text-gray-600">Markdown supported</span>
+                  </div>
                 </div>
 
                 {/* Editor / Preview body */}
@@ -419,6 +445,44 @@ export default function AdminResearchPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmojiPickerButton({ onPick }: { onPick: (e: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) { if (!ref.current?.contains(e.target as Node)) setOpen(false); }
+    if (open) document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-[11px] px-2 py-1 rounded-md bg-[#1E2433] hover:bg-[#2E3443] text-gray-400 hover:text-white transition-colors"
+        title="Insert emoji"
+      >
+        😀
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-56 bg-[#0e1220] border border-white/[0.08] rounded-xl p-2 shadow-2xl z-50 grid grid-cols-6 gap-1">
+          {EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => { onPick(e); setOpen(false); }}
+              className="w-8 h-8 flex items-center justify-center text-lg rounded-md hover:bg-white/[0.06] transition-colors"
+            >
+              {e}
+            </button>
+          ))}
         </div>
       )}
     </div>

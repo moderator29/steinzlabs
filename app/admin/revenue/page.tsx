@@ -52,7 +52,7 @@ function exportCSV(trades: AnalyticsData['trades']) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'steinz_revenue_export.csv';
+  a.download = 'naka_revenue_export.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -101,7 +101,7 @@ export default function AdminRevenuePage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'All-Time Fees', value: fmtUsd(data.revenue.totalFeesUsd) },
           { label: 'This Month', value: fmtUsd(data.revenue.feesThisMonth) },

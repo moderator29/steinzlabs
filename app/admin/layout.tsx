@@ -7,7 +7,7 @@ import {
   LayoutDashboard, DollarSign, Users, Activity, BarChart3,
   Crosshair, Shield, Send, Bell, BookOpen, Eye, Landmark,
   Settings, ScrollText, LifeBuoy, Zap, Search, Tag, Star,
-  Mail, LogOut, Menu, X, ChevronRight, Lock
+  Mail, LogOut, Menu, X, ChevronRight, Lock, FileText,
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
 import { HealthBadge } from '@/components/admin/HealthBadge';
@@ -33,6 +33,7 @@ const NAV_ITEMS = [
   { href: '/admin/wallet-labels',       icon: Tag,             label: 'Wallet Labels' },
   { href: '/admin/featured-tokens',     icon: Star,            label: 'Featured Tokens' },
   { href: '/admin/email-templates',     icon: Mail,            label: 'Email Templates' },
+  { href: '/admin/docs',                icon: FileText,        label: 'Admin Docs' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
