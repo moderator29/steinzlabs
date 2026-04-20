@@ -48,7 +48,14 @@ export async function POST(request: Request) {
   if (!adminId) return unauthorizedResponse();
 
   try {
-    const { action, userId } = await request.json();
+    // Bug §2.18: the old handler called `request.json()` once for action+userId
+    // and then again inside set_tier / set_role to read their extra fields.
+    // The second call throws "body already used" so tier/months/role were
+    // always undefined — which is why admins could click "Set to Max" and
+    // nothing actually changed in Supabase. Read the body exactly once here.
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+    const action = typeof body.action === 'string' ? body.action : '';
+    const userId = typeof body.userId === 'string' ? body.userId : '';
     const supabase = getSupabaseAdmin();
 
     if (action === 'delete') {
@@ -68,7 +75,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'set_role') {
-      const { role } = await request.json().catch(() => ({}));
+      const role = typeof body.role === 'string' ? body.role : null;
+      if (!role) return NextResponse.json({ error: 'role required' }, { status: 400 });
       const { error } = await supabase
         .from('profiles')
         .update({ role })
@@ -81,8 +89,9 @@ export async function POST(request: Request) {
     // Sets tier + optional tier_expires_at on the profile. effectiveTier()
     // honours expiry so comps auto-revert when expiry passes.
     if (action === 'set_tier') {
-      const body = await request.json().catch(() => ({}));
-      const { tier, months, reason } = body as { tier?: string; months?: number; reason?: string };
+      const tier = typeof body.tier === 'string' ? body.tier : undefined;
+      const months = typeof body.months === 'number' ? body.months : undefined;
+      const reason = typeof body.reason === 'string' ? body.reason : undefined;
       const allowed = ['free', 'mini', 'pro', 'max'];
       if (!tier || !allowed.includes(tier)) {
         return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });

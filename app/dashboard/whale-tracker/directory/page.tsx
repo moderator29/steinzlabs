@@ -193,8 +193,11 @@ export default function WhaleDirectoryPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-lg font-bold">Whale Directory</h1>
-            <p className="text-[11px] text-slate-500">Institutional-grade on-chain whale intelligence</p>
+            {/* Bug §2.13: header was text-lg with default font; user wanted
+                smaller, cleaner. text-sm + tracking-tight + font-sans keeps
+                it readable while matching platform typography. */}
+            <h1 className="text-sm font-semibold tracking-tight font-sans">Whale Directory</h1>
+            <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link
@@ -203,11 +206,13 @@ export default function WhaleDirectoryPage() {
             >
               Live Feed
             </Link>
+            {/* Bug §2.12: was full-width "Submit Whale" with gradient — now a
+                small, dark neon-blue pill that just says "Submit". */}
             <Link
               href="/dashboard/whale-tracker/submit"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/80 font-semibold"
+              className="text-[11px] px-2.5 py-1 rounded-md bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold shadow-[0_0_8px_rgba(0,102,255,0.4)]"
             >
-              Submit Whale
+              Submit
             </Link>
           </div>
         </div>
