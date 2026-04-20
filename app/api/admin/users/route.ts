@@ -77,6 +77,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // Admin tier override: upgrade, downgrade, comp (admin-granted free Max).
+    // Sets tier + optional tier_expires_at on the profile. effectiveTier()
+    // honours expiry so comps auto-revert when expiry passes.
+    if (action === 'set_tier') {
+      const body = await request.json().catch(() => ({}));
+      const { tier, months, reason } = body as { tier?: string; months?: number; reason?: string };
+      const allowed = ['free', 'mini', 'pro', 'max'];
+      if (!tier || !allowed.includes(tier)) {
+        return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
+      }
+      const expires = tier === 'free'
+        ? null
+        : new Date(Date.now() + Math.max(1, Math.min(60, Number(months) || 1)) * 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ tier, tier_expires_at: expires, tier_granted_by: adminId, tier_granted_reason: reason ?? null })
+        .eq('id', userId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: true, tier, tier_expires_at: expires });
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
