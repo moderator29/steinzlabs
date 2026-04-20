@@ -141,15 +141,18 @@ async function checkPriceAlerts(alerts: SmartAlert[]): Promise<void> {
 
   const tokenIds = [...new Set(priceAlerts.map(a => a.tokenId))].join(',');
   try {
+    // Route through our internal batch endpoint so the call shares the
+    // unified service-layer cache + usage counter and survives CG rate-limits.
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${tokenIds}&vs_currencies=usd`,
+      `/api/prices/batch?ids=${encodeURIComponent(tokenIds)}`,
       { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return;
-    const data: Record<string, { usd: number }> = await res.json();
+    const json = (await res.json()) as { prices: Record<string, { price: number; change24h: number }> };
+    const data = json.prices ?? {};
 
     for (const alert of priceAlerts) {
-      const price = data[alert.tokenId]?.usd;
+      const price = data[alert.tokenId]?.price;
       if (price == null) continue;
 
       const triggered =

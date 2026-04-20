@@ -3,27 +3,49 @@ import { NextResponse } from 'next/server';
 import { applyContextFilter, type PersonalContext } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+// Static imports — replaces the dynamic import inside fetchCoingeckoEvents
+// which was a cold-start hazard inside Promise.all on a slow lambda.
+import {
+  getTopGainers as cgTopGainers,
+  getTrendingTokens as cgTrendingTokens,
+  getRecentlyAdded as cgRecentlyAdded,
+  getTopTokens as cgTopTokens,
+} from '@/lib/services/coingecko';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
+  // 1.5 s hard ceiling. Personal context is a nice-to-have re-ranking input;
+  // if Supabase / auth-getUser is blipping, we'd rather return an unpersonalised
+  // feed than time out the whole route. This is the same pattern we use on
+  // every other Redis-touching path after the 2026-04-19 Upstash incident.
+  const TIMEOUT_MS = 1500;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
-    if (!user) return undefined;
-    const supabase = getSupabaseAdmin();
-    const [watchlistR, followsR] = await Promise.all([
-      supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
-      supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
-    ]);
-    const watchlistSymbols = new Set<string>();
-    (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
-      if (w.token_id) watchlistSymbols.add(w.token_id.toUpperCase());
+    const work = (async (): Promise<PersonalContext | undefined> => {
+      const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
+      if (!user) return undefined;
+      const supabase = getSupabaseAdmin();
+      const [watchlistR, followsR] = await Promise.all([
+        supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
+        supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
+      ]);
+      const watchlistSymbols = new Set<string>();
+      (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
+        if (w.token_id) watchlistSymbols.add(w.token_id.toUpperCase());
+      });
+      const followedAddresses = new Set<string>();
+      (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
+        if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
+      });
+      return { watchlistSymbols, followedAddresses };
+    })();
+    const timeout = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), TIMEOUT_MS);
     });
-    const followedAddresses = new Set<string>();
-    (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
-      if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
-    });
-    return { watchlistSymbols, followedAddresses };
+    return await Promise.race([work, timeout]);
   } catch {
     return undefined;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -173,6 +195,128 @@ async function fetchPrices(): Promise<void> {
   } catch (err) {
     console.error('[context-feed] Fetch prices from CoinGecko failed:', err);
   }
+}
+
+// ─── CoinGecko event sources ─────────────────────────────────────────────────
+// All four use the unified coingecko service so they share the cache + usage
+// counter with the Dashboard cards. Each returns WhaleEvent rows shaped the
+// same as every other source so they slot into the existing dedupe + score
+// + filter pipeline without any UI change.
+async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
+  const out: WhaleEvent[] = [];
+  const ts = recentTimestamp();
+  try {
+    // Pull all four in parallel; any single miss shouldn't kill the rest.
+    const [gainers, trending, newCoins, top10] = await Promise.all([
+      cgTopGainers(3).catch(() => []),
+      cgTrendingTokens().catch(() => []),
+      cgRecentlyAdded(5).catch(() => []),
+      cgTopTokens(1, 10, false).catch(() => []),
+    ]);
+
+    // 1) Top Gainer Alert — top 3 by 24h % change
+    for (const g of gainers) {
+      out.push({
+        id: `cg-gain-${g.id}`,
+        type: 'trade',
+        sentiment: 'bullish',
+        title: `${g.symbol.toUpperCase()} up ${g.price_change_percentage_24h.toFixed(1)}% in 24h`,
+        summary: `${g.name} is the #${g.market_cap_rank ?? '?'} gainer right now — ${g.current_price < 0.01 ? `$${g.current_price.toFixed(6)}` : `$${g.current_price.toFixed(2)}`} per token, market cap ${fmtUsd(g.market_cap)}.`,
+        from: '', to: '',
+        value: g.current_price,
+        valueUsd: g.market_cap,
+        chain: 'ethereum',
+        trustScore: 80,
+        txHash: '',
+        blockNumber: 0,
+        timestamp: ts,
+        tokenName: g.name,
+        tokenSymbol: g.symbol.toUpperCase(),
+        tokenPrice: String(g.current_price),
+        tokenMarketCap: g.market_cap,
+        tokenPriceChange24h: g.price_change_percentage_24h,
+        tokenIcon: g.image,
+        platform: 'coingecko',
+      });
+    }
+
+    // 2) Trending Spike — top 3 most-searched coins
+    for (const t of trending.slice(0, 3)) {
+      const change = t.data?.price_change_percentage_24h?.usd ?? 0;
+      out.push({
+        id: `cg-trend-${t.id}`,
+        type: 'new_listing',
+        sentiment: change >= 0 ? 'bullish' : 'neutral',
+        title: `${t.symbol.toUpperCase()} is trending #${t.market_cap_rank ?? '—'}`,
+        summary: `${t.name} is one of the most-searched assets across the market right now.`,
+        from: '', to: '',
+        value: 0,
+        valueUsd: 0,
+        chain: 'ethereum',
+        trustScore: 70,
+        txHash: '',
+        blockNumber: 0,
+        timestamp: ts,
+        tokenName: t.name,
+        tokenSymbol: t.symbol.toUpperCase(),
+        tokenPriceChange24h: change,
+        tokenIcon: t.thumb,
+        platform: 'coingecko',
+      });
+    }
+
+    // 3) New Listing — recently added (Pro plan only; demo returns [])
+    for (const n of newCoins) {
+      out.push({
+        id: `cg-new-${n.id}`,
+        type: 'new_listing',
+        sentiment: 'neutral',
+        title: `${n.symbol.toUpperCase()} just listed`,
+        summary: `${n.name} (${n.symbol.toUpperCase()}) is a freshly listed asset. Treat new listings with caution — verify contract, liquidity, and team before any size.`,
+        from: '', to: '',
+        value: 0, valueUsd: 0,
+        chain: 'ethereum',
+        trustScore: 50,
+        txHash: '',
+        blockNumber: 0,
+        timestamp: n.activated_at ? new Date(n.activated_at * 1000).toISOString() : ts,
+        tokenName: n.name,
+        tokenSymbol: n.symbol.toUpperCase(),
+        platform: 'coingecko',
+      });
+    }
+
+    // 4) Large Cap Movement — top 10 tokens moving >5% in 24h
+    for (const c of top10) {
+      const moved = Math.abs(c.price_change_percentage_24h ?? 0);
+      if (moved < 5) continue;
+      out.push({
+        id: `cg-largecap-${c.id}`,
+        type: 'whale_accumulation',
+        sentiment: c.price_change_percentage_24h >= 0 ? 'bullish' : 'bearish',
+        title: `${c.symbol.toUpperCase()} moved ${c.price_change_percentage_24h.toFixed(1)}% (top-10 cap)`,
+        summary: `${c.name} (rank #${c.market_cap_rank}) is making an unusually large 24h move. Market cap ${fmtUsd(c.market_cap)}.`,
+        from: '', to: '',
+        value: c.current_price,
+        valueUsd: c.market_cap,
+        chain: 'ethereum',
+        trustScore: 90,
+        txHash: '',
+        blockNumber: 0,
+        timestamp: ts,
+        tokenName: c.name,
+        tokenSymbol: c.symbol.toUpperCase(),
+        tokenPrice: String(c.current_price),
+        tokenMarketCap: c.market_cap,
+        tokenPriceChange24h: c.price_change_percentage_24h,
+        tokenIcon: c.image,
+        platform: 'coingecko',
+      });
+    }
+  } catch (err) {
+    console.error('[context-feed] coingecko events failed:', err);
+  }
+  return out;
 }
 
 async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
@@ -705,7 +849,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -718,9 +862,15 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchBaseDexEvents(), SRC_TIMEOUT, 'dex-base'),
         withSrcTimeout(fetchArbitrumDexEvents(), SRC_TIMEOUT, 'dex-arbitrum'),
         withSrcTimeout(fetchOptimismDexEvents(), SRC_TIMEOUT, 'dex-optimism'),
+        withSrcTimeout(fetchCoingeckoEvents(), SRC_TIMEOUT, 'coingecko'),
       ]);
 
-      events = [...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      // Order matters: whale > smart-money > rug > new-listing > large-transfer.
+      // CoinGecko events are interleaved alongside on-chain ones — the score
+      // function in /lib/contextFeed/filter.ts re-ranks by trustScore + USD,
+      // so this is just the de-dupe input order.
+      events = [...cgEvents, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      if (cgEvents.length > 0) sources.push('coingecko');
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
       if (pumpEvents.length > 0) sources.push('pumpfun');

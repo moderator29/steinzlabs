@@ -9,7 +9,6 @@ import SidebarMenu from '@/components/SidebarMenu';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 // CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
@@ -257,12 +256,10 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
-          {/* Search lives on the Market page, not the dashboard. Header keeps
-              the logo + LIVE badge on the left, translate + user on the right. */}
+          {/* Header is intentionally minimal — logo + LIVE pill only. The
+              search box is on the Market page; the language switcher lives
+              under Profile → Preferences (not next to the bell). */}
           <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher compact />
-          </div>
         </div>
       </div>
 

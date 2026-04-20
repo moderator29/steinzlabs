@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheSet } from "@/lib/cache/redis";
-import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
+import { getTokenPriceDetailed } from "@/lib/services/coingecko";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -14,22 +14,6 @@ interface TokenSnapshot {
   price: number;
   change24h: number;
   fetchedAt: number;
-}
-
-async function fetchCoingeckoPrice(tokenId: string): Promise<TokenSnapshot | null> {
-  try {
-    const res = await fetchWithRetry(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(tokenId)}&vs_currencies=usd&include_24hr_change=true`,
-      { source: "coingecko-simple", timeoutMs: 5000, retries: 2 },
-    );
-    if (!res.ok) return null;
-    const json = (await res.json()) as Record<string, { usd?: number; usd_24h_change?: number }>;
-    const row = json[tokenId];
-    if (!row || typeof row.usd !== "number") return null;
-    return { price: row.usd, change24h: row.usd_24h_change ?? 0, fetchedAt: Date.now() };
-  } catch {
-    return null;
-  }
 }
 
 export async function GET(request: NextRequest) {
@@ -50,9 +34,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    for (const tokenId of uniq) {
-      const snap = await fetchCoingeckoPrice(tokenId);
-      if (snap) {
+    // Single batched call through the unified service — replaces N individual
+    // /simple/price round-trips with one and goes through the shared cache.
+    const ids = Array.from(uniq);
+    if (ids.length > 0) {
+      const prices = await getTokenPriceDetailed(ids).catch(() => ({} as Record<string, { price: number; change24h: number }>));
+      for (const tokenId of ids) {
+        const row = prices[tokenId];
+        if (!row || row.price <= 0) continue;
+        const snap: TokenSnapshot = { price: row.price, change24h: row.change24h, fetchedAt: Date.now() };
         await cacheSet(`watchlist:snap:${tokenId}`, snap, 600);
         refreshed++;
       }
