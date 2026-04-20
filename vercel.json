@@ -30,6 +30,7 @@
     { "path": "/api/cron/price-cache-refresh",        "schedule": "*/30 * * * *" },
     { "path": "/api/cron/sniper-monitor",             "schedule": "*/5 * * * *" },
     { "path": "/api/cron/health-watch",               "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/publish-scheduled-research", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/publish-scheduled-research", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/whale-backfill-pnl",         "schedule": "*/30 * * * *" }
   ]
 }
