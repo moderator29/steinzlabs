@@ -5,6 +5,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import { ToastProvider } from "@/components/Toast";
 import { WalletProvider } from "@/context/WalletContext";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -63,17 +64,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
-        <AuthProvider>
-          <WalletProvider>
-            <ToastProvider>
-              <Suspense fallback={null}>
-                <PostHogProvider>
-                  {children}
-                </PostHogProvider>
-              </Suspense>
-            </ToastProvider>
-          </WalletProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <WalletProvider>
+              <ToastProvider>
+                <Suspense fallback={null}>
+                  <PostHogProvider>
+                    {children}
+                  </PostHogProvider>
+                </Suspense>
+              </ToastProvider>
+            </WalletProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
