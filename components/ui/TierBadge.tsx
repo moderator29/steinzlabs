@@ -116,7 +116,7 @@ export function TierBadge({ tier, size = 16, title, className, nonInteractive }:
         <span
           role="dialog"
           aria-label={`${v.label} details`}
-          className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 w-[240px] max-w-[80vw] rounded-xl border border-white/10 bg-[#0b1022]/95 backdrop-blur px-3 py-2.5 text-left shadow-2xl"
+          className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-[240px] max-w-[80vw] rounded-xl border border-white/10 bg-[#0b1022]/95 backdrop-blur px-3 py-2.5 text-left shadow-2xl"
           style={{ boxShadow: `0 10px 40px -10px ${v.ringRgba}, 0 2px 8px rgba(0,0,0,0.45)` }}
         >
           <span className="flex items-center gap-1.5 mb-1">

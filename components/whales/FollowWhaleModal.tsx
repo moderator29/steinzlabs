@@ -27,7 +27,7 @@ export default function FollowWhaleModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const { tier, isPro, isMax, isPaid } = useTier();
+  const { tier, isPro, isMax, isPaid, loading: tierLoading } = useTier();
   const [mode, setMode] = useState<Mode>('alerts');
   const [maxPerTrade, setMaxPerTrade] = useState(500);
   const [dailyCap, setDailyCap] = useState(2500);
@@ -86,36 +86,50 @@ export default function FollowWhaleModal({
           {/* Mode selector */}
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-wider text-slate-500">Follow mode</label>
-            <ModeCard
-              active={mode === 'alerts'}
-              onClick={() => { if (isPro) setMode('alerts'); }}
-              Icon={Bell}
-              title="Alerts only"
-              description="Get notified when this whale trades. Requires Pro."
-              locked={!isPro}
-              requiredTier="Pro"
-              currentTier={tier}
-            />
-            <ModeCard
-              active={mode === 'one_click'}
-              onClick={() => { if (isPro) setMode('one_click'); }}
-              Icon={Zap}
-              title="One-Click Copy"
-              description="Review each trade, copy with one tap. Requires Pro."
-              locked={!isPro}
-              requiredTier="Pro"
-              currentTier={tier}
-            />
-            <ModeCard
-              active={mode === 'auto'}
-              onClick={() => { if (isMax) setMode('auto'); }}
-              Icon={Cpu}
-              title="Auto-Copy"
-              description="Mirror every trade automatically with your rules. Requires Max."
-              locked={!isMax}
-              requiredTier="Max"
-              currentTier={tier}
-            />
+            {tierLoading ? (
+              // Bug §2.17: without this guard, the modal flashes all-locked
+              // for a beat (useTier defaults isPro=isMax=false until /api/user/tier
+              // resolves). A Max user would see three locks for ~200ms and
+              // screenshot it as "my tier isn't detected". Show a real skeleton.
+              <div className="space-y-2">
+                <div className="h-16 rounded-xl bg-white/5 animate-pulse" />
+                <div className="h-16 rounded-xl bg-white/5 animate-pulse" />
+                <div className="h-16 rounded-xl bg-white/5 animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <ModeCard
+                  active={mode === 'alerts'}
+                  onClick={() => { if (isPro) setMode('alerts'); }}
+                  Icon={Bell}
+                  title="Alerts only"
+                  description="Get notified when this whale trades. Requires Pro."
+                  locked={!isPro}
+                  requiredTier="Pro"
+                  currentTier={tier}
+                />
+                <ModeCard
+                  active={mode === 'one_click'}
+                  onClick={() => { if (isPro) setMode('one_click'); }}
+                  Icon={Zap}
+                  title="One-Click Copy"
+                  description="Review each trade, copy with one tap. Requires Pro."
+                  locked={!isPro}
+                  requiredTier="Pro"
+                  currentTier={tier}
+                />
+                <ModeCard
+                  active={mode === 'auto'}
+                  onClick={() => { if (isMax) setMode('auto'); }}
+                  Icon={Cpu}
+                  title="Auto-Copy"
+                  description="Mirror every trade automatically with your rules. Requires Max."
+                  locked={!isMax}
+                  requiredTier="Max"
+                  currentTier={tier}
+                />
+              </>
+            )}
           </div>
 
           {/* Alert threshold + channels (always shown) */}
