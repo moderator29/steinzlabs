@@ -196,7 +196,7 @@ export default function EmailTemplatesPage() {
       {showNew && (
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Template</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} placeholder="Template name"
               className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
             <select value={newForm.type} onChange={e => setNewForm(f => ({ ...f, type: e.target.value as TemplateType }))}

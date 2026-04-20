@@ -96,9 +96,9 @@ export default function LaunchpadPage() {
           <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
             Every project is verified, every milestone is enforced, and every investor is protected. Funds release only when builders deliver.
           </p>
-          <Link href="/dashboard/builder-funding" className="inline-flex items-center gap-1 text-[11px] text-[#0A1EFF] font-semibold hover:underline">
-            Apply to Launch <ChevronRight className="w-3 h-3" />
-          </Link>
+          <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-semibold">
+            Apply to Launch — coming soon
+          </span>
         </div>
 
         <div className="grid grid-cols-4 gap-2">
@@ -176,9 +176,7 @@ export default function LaunchpadPage() {
                     <span>{project.category}</span>
                     {totalMilestones > 0 && <span>{completedMilestones}/{totalMilestones} milestones</span>}
                     {project.daysLeft > 0 && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {project.daysLeft}d</span>}
-                    <Link href="/dashboard/builder-funding" className="ml-auto text-[#0A1EFF] font-semibold flex items-center gap-0.5">
-                      Details <ExternalLink className="w-3 h-3" />
-                    </Link>
+                    {/* Details route deferred — page not shipped. */}
                   </div>
                 </div>
               );
@@ -188,9 +186,7 @@ export default function LaunchpadPage() {
               <div className="text-center py-12">
                 <Rocket className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-sm text-gray-400">No projects in this category yet</p>
-                <Link href="/dashboard/builder-funding" className="text-xs text-[#0A1EFF] mt-2 inline-block hover:underline">
-                  Submit your project
-                </Link>
+                <p className="text-xs text-gray-600 mt-2">Submissions opening soon.</p>
               </div>
             )}
           </div>

@@ -578,7 +578,7 @@ export default function ContextFeed() {
                     <Bookmark className={`w-4 h-4 ${bookmarks.has(event.id) ? 'fill-current' : ''}`} />
                   </button>
                   <span className="text-gray-400 text-xs">
-                    {new Date(event.timestamp).toLocaleTimeString()}
+                    {new Date(event.displayTimestamp || event.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
               </div>

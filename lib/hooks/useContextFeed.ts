@@ -15,6 +15,12 @@ interface ContextEvent {
   chain: string;
   trustScore: number;
   timestamp: string;
+  // Bug §1: the raw `timestamp` is the real on-chain / source event time.
+  // `displayTimestamp` is a staggered version used for the clock in the UI
+  // so batch-delivered events (10 news items all emitted at 07:07:41) don't
+  // render as a wall of identical timestamps. Events are spaced at least
+  // 6 seconds apart visually; the raw time is kept for sort/filter logic.
+  displayTimestamp?: string;
   txHash: string;
   blockNumber: number;
   tokenName?: string;
@@ -30,6 +36,30 @@ interface ContextEvent {
   platform?: string;
   buys24h?: number;
   sells24h?: number;
+}
+
+// Bug §1: enforce a minimum visual spacing of 6s between adjacent events so
+// that batch-delivered items (all stamped at the same second by the upstream
+// cron) don't read as "10 things happened at 07:07:41". Operates on a DESC
+// sorted list (newest first); walks from newest→oldest and if the next item
+// is within 6s of the previous one, its displayTimestamp is pushed back.
+// The raw `timestamp` stays untouched so sorting/filtering is unaffected.
+const MIN_GAP_MS = 6000;
+function staggerDisplayTimestamps(sorted: ContextEvent[]): ContextEvent[] {
+  let lastDisplay = Number.POSITIVE_INFINITY;
+  return sorted.map((e) => {
+    const real = new Date(e.timestamp).getTime();
+    const display = Number.isFinite(real)
+      ? Math.min(real, lastDisplay - MIN_GAP_MS)
+      : real;
+    lastDisplay = Number.isFinite(display) ? display : lastDisplay;
+    return {
+      ...e,
+      displayTimestamp: Number.isFinite(display)
+        ? new Date(display).toISOString()
+        : e.timestamp,
+    };
+  });
 }
 
 // FIX 5A.1 / Phase 7: added base/arbitrum/optimism. Server now returns events for these chains.
@@ -77,7 +107,8 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
       if (currentChain.current !== chain) {
         currentChain.current = chain;
         seenIds.current.clear();
-        setEvents(newEvents.slice(0, 200));
+        const sorted = [...newEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setEvents(staggerDisplayTimestamps(sorted.slice(0, 200)));
       } else {
         setEvents((prev: ContextEvent[]) => {
           const mergedMap = new Map<string, ContextEvent>();
@@ -85,7 +116,7 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
           prev.forEach((e: ContextEvent) => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
           const merged = Array.from(mergedMap.values());
           merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          return merged.slice(0, 200);
+          return staggerDisplayTimestamps(merged.slice(0, 200));
         });
       }
 

@@ -166,7 +166,7 @@ export default function FeaturedTokensPage() {
       {showForm && (
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Featured Token</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={form.symbol} onChange={e => setForm(f => ({ ...f, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol (e.g. PEPE)"
               className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Token name"
