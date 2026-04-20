@@ -15,7 +15,7 @@
  * Register via Helius dashboard → Webhooks → New Webhook →
  *   Type: enhancedTransaction
  *   Transaction Types: SWAP, TRANSFER
- *   Webhook URL: https://steinzlabs.vercel.app/api/webhooks/helius-whale
+ *   Webhook URL: https://nakalabs.xyz/api/webhooks/helius-whale
  *   Auth Header: <HELIUS_WEBHOOK_SECRET value>
  *   Account Addresses: paste addresses from GET /api/webhooks/helius-whale
  */
