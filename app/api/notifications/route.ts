@@ -221,6 +221,31 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ title, message, type, userEmail }),
       }).catch(() => {});
     }
+
+    // Outbound Telegram push — runs fire-and-forget so notification
+    // creation latency isn't tied to Telegram's response.
+    if (body.userId) {
+      try {
+        const { queueTelegramNotification } = await import('@/lib/telegram/notify');
+        const kindMap: Record<string, 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general'> = {
+          whale: 'whale', whale_alert: 'whale', wallet_activity: 'whale',
+          price: 'price', price_target: 'price', trending: 'price',
+          security: 'security',
+          new_launch: 'sniper',
+          swap: 'alert', send: 'alert', wallet_created: 'general', wallet_imported: 'general',
+          welcome: 'general', system: 'general', prediction: 'general',
+        };
+        queueTelegramNotification({
+          userId: body.userId,
+          kind: kindMap[type] ?? 'general',
+          title,
+          body: message,
+        });
+      } catch (err) {
+        console.warn('[notifications POST] telegram push failed (non-fatal):', err);
+      }
+    }
+
     return NextResponse.json({ notification, supabaseId });
   } catch {
     return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 });

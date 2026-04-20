@@ -8,6 +8,7 @@ import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 import { supabase } from '@/lib/supabase';
 import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
+import { VtxSettingsDrawer } from '@/components/vtx/VtxSettingsDrawer';
 
 // TokenCardData accepts both legacy string fields (parsed from reply text)
 // and the richer server shape (numbers + contractAddress + chain) so the
@@ -399,6 +400,7 @@ function VtxAiPageInner() {
   const [rateLimited, setRateLimited] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatHistoryEntry[]>([]);
   const [settings, setSettings] = useState<AgentSettings>({ ...DEFAULT_PAGE_SETTINGS });
@@ -549,7 +551,7 @@ function VtxAiPageInner() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 25 messages reached. Upgrade to STEINZ Pro for unlimited VTX Agent access.', timestamp: Date.now() }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 25 messages reached. Upgrade to NAKA Pro for unlimited VTX Agent access.', timestamp: Date.now() }]);
         if (data.usage) { const u = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining }; setDailyUsage(u); saveDailyUsage(u); }
       } else if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}. Please try again.`, timestamp: Date.now() }]);
@@ -709,7 +711,7 @@ function VtxAiPageInner() {
             <button onClick={() => setShowHistory(!showHistory)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Chat history">
               <History className="w-4 h-4 text-gray-500" />
             </button>
-            <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
+            <button onClick={() => setShowSettingsDrawer(true)} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title="Settings">
               <Settings className="w-4 h-4 text-gray-500" />
             </button>
           </div>
@@ -1111,6 +1113,20 @@ function VtxAiPageInner() {
         tokens={sidecarTokens}
         toolEvents={sidecarToolEvents}
         pendingSwap={sidecarPendingSwap}
+      />
+
+      {/* Cloud-backed settings drawer */}
+      <VtxSettingsDrawer
+        open={showSettingsDrawer}
+        onClose={() => setShowSettingsDrawer(false)}
+        onClearChats={() => {
+          setMessages([]);
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(HISTORY_INDEX_KEY);
+          } catch { /* private mode */ }
+          setShowSettingsDrawer(false);
+        }}
       />
     </div>
   );
