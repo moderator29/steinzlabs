@@ -8,7 +8,7 @@ import { TokenLogo } from './TokenLogo';
 import { useWallet } from '@/lib/hooks/useWallet';
 
 interface BuySellModalProps {
-  tokenId: string;
+  tokenId?: string;
   symbol: string;
   name: string;
   logo?: string;
@@ -16,14 +16,15 @@ interface BuySellModalProps {
   chain: string;
   tokenAddress?: string;
   userId?: string;
+  initialMode?: 'BUY' | 'SELL';
   onClose: () => void;
 }
 
 const QUICK_AMOUNTS = ['25', '50', '100', 'MAX'];
 
-export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress, userId, onClose }: BuySellModalProps) {
+export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress, userId, initialMode, onClose }: BuySellModalProps) {
   const { address: walletAddr } = useWallet();
-  const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
+  const [mode, setMode] = useState<'BUY' | 'SELL'>(initialMode ?? 'BUY');
   const [amount, setAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [executing, setExecuting] = useState(false);
@@ -165,9 +166,31 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
             )}
 
             {balanceError && (
-              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">
-                <AlertTriangle size={14} className="text-red-400 shrink-0" />
-                <span className="text-xs text-red-400">{balanceError}</span>
+              // §5.1 Insufficient-balance CTA. Before this, users got a
+              // generic failure with no action — now we show them the path
+              // to get funds (Receive modal pre-targets the right chain).
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                  <span className="text-xs text-red-400 font-semibold">Insufficient Balance</span>
+                </div>
+                <p className="text-xs text-slate-300 mb-2">{balanceError}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = `/dashboard/wallet-page?action=receive&chain=${chain}`; }}
+                    className="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
+                  >
+                    Add Funds
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBalanceError('')}
+                    className="text-xs px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
