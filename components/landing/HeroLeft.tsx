@@ -58,8 +58,14 @@ export function HeroLeft() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Animated logo — sized up for brand impact on hero */}
-      <SteinzLogo size={160} animated={true} />
+      {/* Animated logo — sized responsively. 112 on phones so it doesn't eat
+          the screen at 375px; 160 from sm+ for brand impact. */}
+      <div className="block sm:hidden">
+        <SteinzLogo size={112} animated={true} />
+      </div>
+      <div className="hidden sm:block">
+        <SteinzLogo size={160} animated={true} />
+      </div>
 
       {/* Wordmark */}
       <p className="mt-3 text-[11px] font-bold uppercase"

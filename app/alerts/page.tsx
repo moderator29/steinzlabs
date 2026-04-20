@@ -64,7 +64,7 @@ export default function AlertsPage() {
           <div className="bg-[#141824] rounded-lg p-6 border border-[#0A1EFF] mb-6">
             <h3 className="text-white font-bold text-lg mb-4">Create Alert</h3>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               {ALERT_TYPES.map((type) => (
                 <button
                   key={type.value}

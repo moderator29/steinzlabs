@@ -226,7 +226,7 @@ export default function NotificationSettingsPage() {
             <Toggle on={settings.quiet_hours_enabled} onChange={v => set('quiet_hours_enabled', v)} />
           </Row>
           {settings.quiet_hours_enabled && <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Start</label>
                 <input type="time" value={settings.quiet_start}

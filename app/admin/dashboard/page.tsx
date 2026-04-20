@@ -96,7 +96,7 @@ export default function AdminDashboard() {
         <KpiCard icon={Shield} label="Threats Found" value={formatLargeNumber(stats?.platform.totalThreats ?? 0)} change="All time" changeType="neutral" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">User Growth (30d)</h3>
           <ResponsiveContainer width="100%" height={160}>
