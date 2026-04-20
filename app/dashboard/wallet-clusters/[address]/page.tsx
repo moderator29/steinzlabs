@@ -42,7 +42,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
   const [submitting, setSubmitting] = useState(false);
 
   async function load() {
-    const res = await fetch(`/api/clusters/${address}`);
+    const res = await fetch(`/api/clusters/by-address/${address}`);
     if (res.ok) {
       const json = (await res.json()) as ClusterData;
       setData(json);
@@ -70,7 +70,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
     if (!data || !labelForm.label.trim()) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/clusters/${address}/labels`, {
+      const res = await fetch(`/api/clusters/by-address/${address}/labels`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cluster_key: data.clusterKey, ...labelForm }),
