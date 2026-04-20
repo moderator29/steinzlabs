@@ -397,7 +397,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
 
       <div>
         <label className="text-xs text-gray-400 block mb-1.5">Direction</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {(['above', 'below'] as const).map(d => (
             <button
               key={d}
@@ -482,7 +482,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-gray-400 block mb-1.5">Min Liquidity</label>
           <div className="relative">
@@ -653,7 +653,7 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert:
           </div>
 
           {/* Tab pills */}
-          <div className="grid grid-cols-2 gap-2 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
             {CREATE_TABS.map(t => {
               const TabIcon = t.icon;
               return (

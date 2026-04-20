@@ -148,7 +148,7 @@ export default function WalletLabelsPage() {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
