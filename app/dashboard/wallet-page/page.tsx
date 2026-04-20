@@ -1205,10 +1205,19 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
       let wallet: any;
       let phraseForStorage: string | null = null;
       if (method === 'phrase') {
-        wallet = ethers.Wallet.fromPhrase(input.trim());
-        phraseForStorage = input.trim();
+        // BIP39 mnemonics are always lowercase with single-space separators.
+        // Users paste from notes apps that auto-capitalize the first word, or
+        // copy phrases with tabs/newlines between words, and ethers then
+        // throws "invalid mnemonic checksum" because the hash of "Riot ..."
+        // differs from "riot ...". Normalize before validating.
+        const normalized = input.trim().toLowerCase().replace(/\s+/g, ' ');
+        wallet = ethers.Wallet.fromPhrase(normalized);
+        phraseForStorage = normalized;
       } else {
-        wallet = new ethers.Wallet(input.trim());
+        // Private keys: strip stray whitespace but keep case (0x-hex is case-insensitive
+        // but users sometimes paste with a leading/trailing newline).
+        const normalized = input.trim().replace(/\s+/g, '');
+        wallet = new ethers.Wallet(normalized);
       }
       const encrypted = await encryptPrivateKey(wallet.privateKey, password);
       const encryptedMnemonic = phraseForStorage ? await encryptPrivateKey(phraseForStorage, password) : undefined;
