@@ -541,7 +541,7 @@ export default function AdminPanel() {
                       <Activity className="w-4 h-4 text-[#0A1EFF]" />
                       <span className="text-xs font-heading font-bold">API Health</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {apiHealth.slice(0, 8).map((api) => (
                         <div key={api.name} className="flex items-center gap-2 py-1">
                           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />

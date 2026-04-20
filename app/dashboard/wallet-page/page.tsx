@@ -34,6 +34,15 @@ interface StoredWallet {
   encryptedKey: string;
   name: string;
   createdAt: string;
+  // Batch 1 / bug §4.3: mnemonic is only derivable when the wallet was generated
+  // from a fresh HD seed. ethers can't go private-key → mnemonic, so we must
+  // persist the encrypted mnemonic at creation time or the "Reveal Seed" action
+  // has no way to show it later.
+  encryptedMnemonic?: string;
+  // How the wallet entered our vault: 'generated' (we made the seed), 'seed'
+  // (user imported 12/24-word phrase), or 'private_key' (user imported raw pk).
+  // Drives which reveal options the UI surfaces.
+  importMethod?: 'generated' | 'seed' | 'private_key';
 }
 
 interface ChainInfo {
@@ -1056,7 +1065,18 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
 
   const confirmAndSave = async () => {
     const encrypted = await encryptPrivateKey(privateKey, password);
-    onCreated({ address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
+    // Bug §4.3: persist the mnemonic too so "Reveal Seed Phrase" actually works
+    // later. ethers can't re-derive a mnemonic from a private key, so without
+    // this the seed is gone the moment the UI unmounts.
+    const encryptedMnemonic = mnemonic ? await encryptPrivateKey(mnemonic, password) : undefined;
+    onCreated({
+      address,
+      encryptedKey: encrypted,
+      encryptedMnemonic,
+      importMethod: 'generated',
+      name: walletName,
+      createdAt: new Date().toISOString(),
+    });
   };
 
   const handleCopyPhrase = () => {
@@ -1183,10 +1203,32 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
     try {
       const ethers = await import('ethers');
       let wallet: any;
-      if (method === 'phrase') { wallet = ethers.Wallet.fromPhrase(input.trim()); }
-      else { wallet = new ethers.Wallet(input.trim()); }
+      let phraseForStorage: string | null = null;
+      if (method === 'phrase') {
+        // BIP39 mnemonics are always lowercase with single-space separators.
+        // Users paste from notes apps that auto-capitalize the first word, or
+        // copy phrases with tabs/newlines between words, and ethers then
+        // throws "invalid mnemonic checksum" because the hash of "Riot ..."
+        // differs from "riot ...". Normalize before validating.
+        const normalized = input.trim().toLowerCase().replace(/\s+/g, ' ');
+        wallet = ethers.Wallet.fromPhrase(normalized);
+        phraseForStorage = normalized;
+      } else {
+        // Private keys: strip stray whitespace but keep case (0x-hex is case-insensitive
+        // but users sometimes paste with a leading/trailing newline).
+        const normalized = input.trim().replace(/\s+/g, '');
+        wallet = new ethers.Wallet(normalized);
+      }
       const encrypted = await encryptPrivateKey(wallet.privateKey, password);
-      onImported({ address: wallet.address, encryptedKey: encrypted, name: walletName, createdAt: new Date().toISOString() });
+      const encryptedMnemonic = phraseForStorage ? await encryptPrivateKey(phraseForStorage, password) : undefined;
+      onImported({
+        address: wallet.address,
+        encryptedKey: encrypted,
+        encryptedMnemonic,
+        importMethod: method === 'phrase' ? 'seed' : 'private_key',
+        name: walletName,
+        createdAt: new Date().toISOString(),
+      });
     } catch (e: any) { setError(e.message || 'Invalid input. Check your recovery phrase or private key.'); }
     finally { setImporting(false); }
   };
@@ -1720,20 +1762,35 @@ function WalletSettingsView({
     if (!revealPassword) { setRevealError('Enter your wallet password'); return; }
     setRevealLoading(true); setRevealError('');
     try {
+      // Validate password by decrypting the private key first. Cheap and
+      // gives a clear "Wrong password" signal before we touch the mnemonic.
       const pk = await decryptPrivateKey(wallet.encryptedKey, revealPassword);
       if (!pk || pk.length < 32) { setRevealError('Wrong password'); setRevealLoading(false); return; }
+
       if (type === 'key') {
         setRevealedKey(pk);
       } else {
-        // Derive mnemonic from private key using ethers
-        const { Wallet } = await import('ethers');
-        try {
-          const w = new Wallet(pk);
-          // Mnemonic is only available if the wallet was created from one; if not, show private key
-          const mnemonic = (w as { mnemonic?: { phrase: string } }).mnemonic?.phrase || '';
-          if (mnemonic) setRevealedPhrase(mnemonic);
-          else { setRevealError('This wallet was imported from a private key — no seed phrase available. Use Export Private Key instead.'); }
-        } catch { setRevealedKey(pk); setRevealError('Seed phrase unavailable for this wallet type. Private key shown instead.'); }
+        // Bug §4.3: the old code tried ethers.Wallet(pk).mnemonic — that's
+        // always undefined (private-key → mnemonic is not a valid derivation).
+        // We now use the encryptedMnemonic persisted at creation/import time.
+        if (wallet.encryptedMnemonic) {
+          try {
+            const phrase = await decryptPrivateKey(wallet.encryptedMnemonic, revealPassword);
+            if (phrase && phrase.split(/\s+/).length >= 12) {
+              setRevealedPhrase(phrase);
+            } else {
+              setRevealError('Seed phrase could not be decrypted. Use Export Private Key instead.');
+            }
+          } catch {
+            setRevealError('Seed phrase could not be decrypted. Use Export Private Key instead.');
+          }
+        } else if (wallet.importMethod === 'private_key') {
+          setRevealError('This wallet was imported from a private key — no seed phrase available. Use Export Private Key instead.');
+        } else {
+          // Legacy wallet: created before we persisted encryptedMnemonic. The
+          // seed was never saved, so it's genuinely unrecoverable. Be honest.
+          setRevealError('This wallet was created before seed-phrase backup was supported. Use Export Private Key to back it up, then create a new wallet to get a recovery phrase.');
+        }
       }
     } catch { setRevealError('Incorrect password. Please try again.'); }
     setRevealLoading(false);
@@ -1748,9 +1805,32 @@ function WalletSettingsView({
       const pk = await decryptPrivateKey(wallet.encryptedKey, oldPwd);
       if (!pk || pk.length < 32) { setPwdError('Current password is incorrect'); setPwdLoading(false); return; }
       const newEncrypted = await encryptPrivateKey(pk, newPwd);
+      // Also re-encrypt the mnemonic with the new password if we have one;
+      // otherwise the user can still decrypt keys but reveal-seed would fail.
+      let newEncryptedMnemonic = wallet.encryptedMnemonic;
+      if (wallet.encryptedMnemonic) {
+        try {
+          const phrase = await decryptPrivateKey(wallet.encryptedMnemonic, oldPwd);
+          if (phrase) newEncryptedMnemonic = await encryptPrivateKey(phrase, newPwd);
+        } catch { /* mnemonic decrypt failed — leave as-is, user keeps old seed backup */ }
+      }
       const wallets: StoredWallet[] = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
-      const updated = wallets.map(w => w.address === wallet.address ? { ...w, encryptedKey: newEncrypted } : w);
+      const updated = wallets.map(w => w.address === wallet.address
+        ? { ...w, encryptedKey: newEncrypted, encryptedMnemonic: newEncryptedMnemonic }
+        : w);
       localStorage.setItem('steinz_wallets', JSON.stringify(updated));
+      // Push the re-encrypted blobs to cloud sync too — otherwise the next
+      // device/login still has the old-password ciphertext and the user is
+      // locked out on that surface. This was a real bug; previously password
+      // change only updated localStorage.
+      try {
+        await fetch('/api/wallet/sync', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallets: updated, defaultAddress: wallet.address }),
+        });
+      } catch { /* best-effort; local write already succeeded */ }
       setPwdSuccess(true); setPwdError(''); setOldPwd(''); setNewPwd(''); setConfirmPwd('');
       setTimeout(() => setPwdSuccess(false), 3000);
     } catch { setPwdError('Failed. Check your current password.'); }

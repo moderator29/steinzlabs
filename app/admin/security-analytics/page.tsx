@@ -133,7 +133,7 @@ export default function SecurityAnalyticsPage() {
       {showAdd && (
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-white mb-3">Flag New Token</h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             {[['address', 'Contract Address'], ['symbol', 'Token Symbol']].map(([name, placeholder]) => (
               <input
                 key={name}

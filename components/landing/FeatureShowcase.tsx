@@ -274,7 +274,7 @@ export function FeatureShowcase() {
               className={`opacity-0 ${visible ? 'animate-fadeInUp' : ''}`}
             >
               <div
-                className="relative h-full rounded-3xl p-6 overflow-hidden border"
+                className="relative h-full rounded-3xl p-6 overflow-hidden border will-change-transform"
                 style={{
                   background: `linear-gradient(165deg, ${f.color}08 0%, rgba(10,14,26,0.8) 55%)`,
                   borderColor: f.color + '22',
