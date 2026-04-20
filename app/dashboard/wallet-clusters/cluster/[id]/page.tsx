@@ -66,7 +66,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`/api/clusters/${encodeURIComponent(id)}`);
+      const res = await fetch(`/api/clusters/by-id/${encodeURIComponent(id)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
     } catch (e: any) {
@@ -82,7 +82,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
     if (!newLabel.trim()) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/clusters/${encodeURIComponent(id)}/labels`, {
+      const res = await fetch(`/api/clusters/by-id/${encodeURIComponent(id)}/labels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: newLabel.trim() }),
@@ -94,7 +94,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
   }
 
   async function voteLabel(labelId: string, vote: 1 | -1) {
-    await fetch(`/api/clusters/${encodeURIComponent(id)}/labels`, {
+    await fetch(`/api/clusters/by-id/${encodeURIComponent(id)}/labels`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label_id: labelId, vote }),
