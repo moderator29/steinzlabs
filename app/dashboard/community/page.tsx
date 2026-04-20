@@ -52,7 +52,7 @@ export default function CommunityPage() {
           <Bell className="w-8 h-8 text-[#0A1EFF] mx-auto mb-4" />
           <h3 className="font-bold text-xl mb-3">Join the Waitlist</h3>
           <p className="text-sm text-gray-400 mb-4">
-            Be among the first to access the STEINZ community when it launches.
+            Be among the first to access the NAKA community when it launches.
           </p>
           <div className="flex gap-2">
             <input

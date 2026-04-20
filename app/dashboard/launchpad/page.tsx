@@ -92,7 +92,7 @@ export default function LaunchpadPage() {
 
       <div className="p-4 space-y-4">
         <div className="glass rounded-xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-r from-[#0A1EFF]/5 to-[#7C3AED]/5">
-          <h2 className="text-sm font-bold mb-1">STEINZ Milestone-Gated Launchpad</h2>
+          <h2 className="text-sm font-bold mb-1">NAKA Milestone-Gated Launchpad</h2>
           <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
             Every project is verified, every milestone is enforced, and every investor is protected. Funds release only when builders deliver.
           </p>

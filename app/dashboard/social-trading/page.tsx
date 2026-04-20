@@ -112,7 +112,7 @@ export default function SocialTradingPage() {
             </div>
           </div>
           <p className="text-xs text-gray-500 max-w-md mx-auto">
-            Social Trading will launch first to STEINZ private beta members. Stay tuned for early access announcements.
+            Social Trading will launch first to NAKA private beta members. Stay tuned for early access announcements.
           </p>
           <WaitlistForm feature="social-trading" />
         </div>
