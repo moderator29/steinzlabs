@@ -1,6 +1,6 @@
 'use client';
 
-// Phase 8 — cluster detail page (next-gen beyond Nansen/Arkham).
+// Cluster detail page.
 // Hero: AI name + narrative + archetype + scores.
 // Interactive force-directed graph of members & edges.
 // Member list with roles, edge table, community labels with voting,

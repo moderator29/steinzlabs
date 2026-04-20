@@ -9,9 +9,9 @@ import { supabase } from '@/lib/supabase';
 import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 
-// FIX 5A.1 / Phase 5: TokenCardData now accepts both legacy string fields (parsed from reply text)
-// and the richer server shape (numbers + contractAddress + chain), so the Nansen-style card
-// can route Buy/Swap to the real on-chain address.
+// TokenCardData accepts both legacy string fields (parsed from reply text)
+// and the richer server shape (numbers + contractAddress + chain) so the
+// rich token card can route Buy/Swap to the real on-chain address.
 interface TokenCardData {
   symbol: string;
   name: string;
@@ -170,8 +170,8 @@ function generateSuggestions(content: string): string[] {
   return ['Market overview', 'Trending tokens', 'Check a wallet'];
 }
 
-// FIX 5A.1 / Phase 5: Nansen-style card — adds an embedded price chart, timeframe pills,
-// and Buy / Swap / Analyze action row. Falls back gracefully for legacy string-only cards
+// Rich token card — adds an embedded price chart, timeframe pills, and
+// Buy / Swap / Analyze action row. Falls back gracefully for legacy string-only cards
 // (those parsed from text without a contract address can't fetch chart data).
 function TokenCard({ token }: { token: TokenCardData }) {
   const router = useRouter();

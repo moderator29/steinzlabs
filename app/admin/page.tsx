@@ -917,7 +917,7 @@ export default function AdminPanel() {
                     {[
                       { label: 'Jupiter Aggregator (Solana)', status: 'Live', color: 'text-[#10B981]' },
                       { label: '0x Protocol (EVM)', status: 'Live', color: 'text-[#10B981]' },
-                      { label: 'Arkham Intelligence', status: 'Live', color: 'text-[#10B981]' },
+                      { label: 'Entity Intelligence', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Money Radar (Copy Trade)', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'VTX Intelligence Engine', status: 'Live', color: 'text-[#10B981]' },
                       { label: 'Multi-Chain Search', status: 'Live', color: 'text-[#10B981]' },
@@ -1003,7 +1003,7 @@ export default function AdminPanel() {
                     { label: 'Database', value: 'Supabase PostgreSQL', status: 'Connected' },
                     { label: 'Market Data', value: 'CoinGecko API', status: 'Connected' },
                     { label: 'DEX Data', value: 'DexScreener API', status: 'Connected' },
-                    { label: 'On-chain Intel', value: 'Arkham Intelligence', status: 'Connected' },
+                    { label: 'On-chain Intel', value: 'Entity Intelligence', status: 'Connected' },
                     { label: 'AI Engine', value: 'VTX Intelligence Engine', status: 'Connected' },
                     { label: 'Solana Trading', value: 'Jupiter Aggregator', status: 'Connected' },
                     { label: 'EVM Trading', value: '0x Protocol', status: 'Connected' },
