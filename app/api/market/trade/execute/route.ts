@@ -4,6 +4,7 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { getSwapQuote, getChainId } from '@/lib/services/zerox';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
+import { resolveTokenAddress } from '@/lib/market/tokenResolver';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +28,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Img 17 fix: 0x rejects non-hex tokens with INPUT_INVALID. Users saw
+    // "Invalid ethereum address" when buying BTC because we passed the
+    // symbol "BTC" straight through. Resolve symbols to canonical
+    // addresses (BTC → WBTC on Ethereum, cbBTC on Base, BTCB on BSC, etc.)
+    // before anything else.
+    const resolvedIn = resolveTokenAddress(tokenIn, chain);
+    const resolvedOut = resolveTokenAddress(tokenOut, chain);
+    if (!resolvedIn || !resolvedOut) {
+      return NextResponse.json(
+        {
+          error: `Cannot resolve "${!resolvedIn ? tokenIn : tokenOut}" on ${chain}. ` +
+            `Pass a contract address or a known symbol.`,
+          code: 'UNRESOLVED_TOKEN',
+        },
+        { status: 400 },
+      );
+    }
+
     // Step 1: Security scan on output token
-    const security = await getTokenSecurity(tokenOut, chain).catch(() => null);
+    const security = await getTokenSecurity(resolvedOut, chain).catch(() => null);
     const riskScore = (security as unknown as Record<string, unknown>)?.riskScore as number ?? 0;
 
     if (riskScore > SWAP_RISK_THRESHOLD) {
@@ -47,8 +66,8 @@ export async function POST(req: NextRequest) {
 
     const quote = await getSwapQuote({
       chainId,
-      sellToken: tokenIn,
-      buyToken: tokenOut,
+      sellToken: resolvedIn,
+      buyToken: resolvedOut,
       sellAmount: amountIn,
       taker: walletAddress,
     });
@@ -62,8 +81,8 @@ export async function POST(req: NextRequest) {
     await db.from('swap_logs').insert({
       user_id: userId ?? null,
       chain,
-      input_token: tokenIn,
-      output_token: tokenOut,
+      input_token: resolvedIn,
+      output_token: resolvedOut,
       input_amount: parseFloat(amountIn),
       status: 'pending',
     });  // fire-and-forget insert

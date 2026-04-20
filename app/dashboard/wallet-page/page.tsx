@@ -318,8 +318,25 @@ export default function WalletPage() {
 
     void hydrate();
 
-    const tokens = localStorage.getItem('steinz_custom_tokens');
-    if (tokens) setCustomTokens(JSON.parse(tokens));
+    // §4.6 — seed default platform tokens on first load. Naka Go and
+    // Pleasure Coin are the two tokens users should always see regardless
+    // of whether the on-chain balance fetch picked them up. Contract
+    // addresses match the ones in the product spec. Stored in
+    // localStorage alongside user-added custom tokens so the user can
+    // still remove them via the Add Token view if they choose to.
+    const DEFAULT_TOKENS = [
+      'ethereum:0x6967b9a8c0b14849CFE8f9E5732B401433fD2898', // Naka Go
+      'polygon:0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',  // Pleasure Coin
+    ];
+    const stored = localStorage.getItem('steinz_custom_tokens');
+    const parsed: string[] = stored ? JSON.parse(stored) : [];
+    let merged = parsed;
+    let changed = false;
+    for (const t of DEFAULT_TOKENS) {
+      if (!parsed.includes(t)) { merged = [...merged, t]; changed = true; }
+    }
+    if (changed) localStorage.setItem('steinz_custom_tokens', JSON.stringify(merged));
+    setCustomTokens(merged);
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
     if (savedSort) setTokenSort(savedSort);
     const savedHideSmall = localStorage.getItem('steinz_hide_small');

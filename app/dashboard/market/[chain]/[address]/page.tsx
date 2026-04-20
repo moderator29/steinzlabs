@@ -1,12 +1,11 @@
 "use client";
 
 import { use, useState } from "react";
-import { Suspense } from "react";
-import { Star, Bell, Share2, Shield, Brain, X } from "lucide-react";
+import { Star, Bell, Share2, Shield, Brain, X, ArrowUpRight, ArrowDownLeft, Repeat, ShoppingCart } from "lucide-react";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
-import { TradingTerminalLayout } from "@/components/trading/TradingTerminalLayout";
-import { NakaLoader } from "@/components/brand/NakaLoader";
+import TradingViewChart, { getTradingViewSymbol } from "@/components/TradingViewChart";
 import { BackButton } from "@/components/ui/BackButton";
+import { BuySellModal } from "@/components/market/BuySellModal";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -21,24 +20,28 @@ interface RouteParams {
 }
 
 /**
- * Unified token trading terminal. Replaces /dashboard/trading-suite.
- *   - Top bar: identity + live price + inline stats + actions.
- *   - TradingTerminalLayout handles chart + ChartToolbar + OrderForm +
- *     five bottom-panel tabs (OpenOrders/History/Positions/DCA/Stop).
- *   - We hide the layout's built-in TokenSelector — the URL owns identity.
+ * §4.7 / §6.3: Coin Detail Page.
+ *
+ * REPLACED the old TradingTerminalLayout (OpenOrders / History / Positions
+ * / DCA / Stop tabs) per product spec ("DELETE that stupid trading
+ * terminal from my Naka wallet"). Keeps: identity bar, live price,
+ * TradingView chart with native 1H/1D/1W/1M timeframe buttons,
+ * Send / Receive / Swap / Buy / Sell action row, token stats row,
+ * Token Intelligence drawer, watchlist + alerts.
  *
  * `address` is either a CoinGecko id ("bitcoin", "ethereum") or a
- * contract address on the given chain. The inner hooks + aggregator
- * routes accept both by design.
+ * contract address on the given chain. BuySellModal resolves symbols
+ * to real contract addresses via lib/market/tokenResolver before hitting
+ * 0x (Img 17 fix).
  */
-export default function TokenTerminalPage({ params }: { params: Promise<RouteParams> }) {
+export default function CoinDetailPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
   const { user } = useAuth();
   const { detail, loading } = useTokenDetail(address);
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
   const [showAlert, setShowAlert] = useState(false);
-  // Phase 10: Token Intelligence drawer (bottom sheet on mobile, side rail on desktop).
   const [showIntel, setShowIntel] = useState(false);
+  const [buySellMode, setBuySellMode] = useState<'BUY' | 'SELL' | null>(null);
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -139,17 +142,74 @@ export default function TokenTerminalPage({ params }: { params: Promise<RoutePar
         </div>
       </div>
 
-      {/* Trading terminal body + intelligence rail */}
+      {/* Coin detail body + intelligence rail */}
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0">
-          <Suspense fallback={<NakaLoader text="Loading terminal..." />}>
-            <TradingTerminalLayout
-              initialChain={chain}
-              initialToken={address}
-              initialSymbol={symbol}
-              showTokenSelector={false}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Chart — TradingView widget with built-in 1h/1d/1w/1m timeframe + crosshair */}
+          <div className="h-[420px] md:h-[520px] border-b border-slate-800/50">
+            <TradingViewChart
+              symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
+              interval="D"
+              height={520}
+              showTools
             />
-          </Suspense>
+          </div>
+
+          {/* Action row — matches Trust Wallet coin detail layout */}
+          <div className="grid grid-cols-4 gap-2 p-4 border-b border-slate-800/50 bg-slate-950/40">
+            <ActionButton
+              icon={<ArrowUpRight size={18} />}
+              label="Send"
+              onClick={() => (window.location.href = `/dashboard/wallet-page?action=send&token=${symbol}&chain=${chain}`)}
+            />
+            <ActionButton
+              icon={<ArrowDownLeft size={18} />}
+              label="Receive"
+              onClick={() => (window.location.href = `/dashboard/wallet-page?action=receive&chain=${chain}`)}
+            />
+            <ActionButton
+              icon={<Repeat size={18} />}
+              label="Swap"
+              onClick={() => setBuySellMode('SELL')}
+            />
+            <ActionButton
+              icon={<ShoppingCart size={18} />}
+              label="Buy"
+              primary
+              onClick={() => setBuySellMode('BUY')}
+            />
+          </div>
+
+          {/* Token stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-800/50">
+            <StatCell label="Market Cap" value={md?.market_cap?.usd ? `$${formatLargeNumber(md.market_cap.usd)}` : '—'} />
+            <StatCell label="24h Volume" value={md?.total_volume?.usd ? `$${formatLargeNumber(md.total_volume.usd)}` : '—'} />
+            <StatCell label="FDV" value={md?.fully_diluted_valuation?.usd ? `$${formatLargeNumber(md.fully_diluted_valuation.usd)}` : '—'} />
+            <StatCell label="Supply" value={md?.circulating_supply ? formatLargeNumber(md.circulating_supply) : '—'} />
+          </div>
+
+          {/* Contract + chain metadata */}
+          <div className="p-4 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-slate-500">Contract</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    navigator.clipboard.writeText(address).catch(() => {});
+                  }
+                }}
+                className="font-mono text-slate-300 hover:text-white truncate max-w-[280px] text-right"
+                title="Copy"
+              >
+                {address}
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Network</span>
+              <span className="text-slate-300 uppercase">{chain}</span>
+            </div>
+          </div>
         </div>
 
         {/* Desktop: pinned right rail */}
@@ -188,6 +248,48 @@ export default function TokenTerminalPage({ params }: { params: Promise<RoutePar
           onClose={() => setShowAlert(false)}
         />
       )}
+
+      {buySellMode && detail && (
+        <BuySellModal
+          symbol={symbol}
+          name={name}
+          logo={logo}
+          priceUSD={price}
+          chain={chain}
+          tokenAddress={address}
+          userId={user?.id}
+          initialMode={buySellMode}
+          onClose={() => setBuySellMode(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ActionButton({
+  icon, label, primary, onClick,
+}: { icon: React.ReactNode; label: string; primary?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-semibold text-[11px] transition-colors ${
+        primary
+          ? 'bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white shadow-[0_0_12px_rgba(10,30,255,0.35)]'
+          : 'bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800'
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-4 py-3 border-r border-b border-slate-800/50 last:border-r-0">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-sm font-mono font-semibold text-white mt-0.5 tabular-nums">{value}</div>
     </div>
   );
 }

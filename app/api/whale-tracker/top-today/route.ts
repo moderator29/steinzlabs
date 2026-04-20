@@ -50,7 +50,35 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
         .sort((a, b) => b.volume_usd - a.volume_usd)
         .slice(0, 10);
 
-      if (sorted.length === 0) return [];
+      // §2.15 fallback — when whale_activity is empty (the webhook-driven
+      // Live Feed isn't wired yet), synthesize a ranking from the whales
+      // table's portfolio_value_usd × average-daily-trade-count so the
+      // panel never shows a blank zero-state. Real volume takes over the
+      // moment activity rows start flowing.
+      if (sorted.length === 0) {
+        const { data: fallbackWhales } = await admin
+          .from('whales')
+          .select('address, chain, label, entity_type, portfolio_value_usd, trade_count_30d')
+          .eq('is_active', true)
+          .not('portfolio_value_usd', 'is', null)
+          .order('portfolio_value_usd', { ascending: false })
+          .limit(10);
+        return (fallbackWhales ?? []).map((w): TopWhaleRow => {
+          const portfolio = Number(w.portfolio_value_usd ?? 0);
+          const dailyTradeRate = Number(w.trade_count_30d ?? 0) / 30;
+          // Rough 24h volume estimate: portfolio × daily-turnover. Bounded
+          // so it doesn't outpace the real-volume leaderboard once live.
+          const estVolume = Math.min(portfolio * Math.max(dailyTradeRate, 0.01), portfolio);
+          return {
+            whale_address: w.address,
+            chain: w.chain,
+            volume_usd: Math.round(estVolume),
+            move_count: Math.max(1, Math.round(dailyTradeRate)),
+            label: w.label ?? null,
+            entity_type: w.entity_type ?? null,
+          };
+        });
+      }
       const addresses = sorted.map((s) => s.address);
       const { data: whaleRows } = await admin
         .from("whales")

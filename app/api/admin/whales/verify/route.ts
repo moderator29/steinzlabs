@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     .from('whales')
     .select('id, address, chain, label')
     .eq('is_active', true)
-    .order('created_at', { ascending: true })
+    .order('first_seen_at', { ascending: true, nullsFirst: true })
     .limit(limit);
   if (chainFilter) query = query.eq('chain', chainFilter);
 
