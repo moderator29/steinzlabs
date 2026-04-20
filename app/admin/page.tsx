@@ -755,7 +755,7 @@ export default function AdminPanel() {
                 }
               />
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <MetricCard icon={CheckCircle} label="Online" value={apiHealth.filter(a => a.status === 'online').length.toString()} sub="Healthy services" color="green" loading={false} />
                 <MetricCard icon={AlertTriangle} label="Degraded" value={apiHealth.filter(a => a.status === 'degraded').length.toString()} sub="Slow response" color="amber" loading={false} />
                 <MetricCard icon={XCircle} label="Offline" value={apiHealth.filter(a => a.status === 'offline').length.toString()} sub="Unreachable" color="red" loading={false} />

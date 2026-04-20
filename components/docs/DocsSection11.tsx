@@ -1,10 +1,10 @@
 import { Send, Link2, Command, Lock, Bell, Zap } from 'lucide-react';
 
 const CONNECT_STEPS = [
-  { n: '1', title: 'Open Settings → Notifications', desc: 'Sign in to Naka Labs, then go to Settings → Notifications. You will see a Telegram Notifications card.' },
-  { n: '2', title: 'Generate a 6-digit code', desc: 'Tap "Generate Connect Code". A 6-digit code appears, valid for 10 minutes.' },
-  { n: '3', title: 'Open the bot', desc: 'Tap "Open Bot" — Telegram opens with @Nakalabsbot ready. Or search for it manually.' },
-  { n: '4', title: 'Send /link <code>', desc: 'In the bot DM, send /link 123456 (replace with your code). The bot replies "✅ Account linked!" instantly.' },
+  { n: '1', title: 'Open Profile → Telegram', desc: 'Sign in to Naka Labs, tap your Profile, then open the Telegram row. (The same card lives in Settings → Notifications if you prefer the Settings area.)' },
+  { n: '2', title: 'Generate a 6-digit code', desc: 'Tap "Generate Connect Code". A 6-digit one-time code appears, valid for 10 minutes.' },
+  { n: '3', title: 'Open the bot', desc: 'Tap "Open Bot" — Telegram opens directly with @Nakalabsbot. Or search "@Nakalabsbot" inside Telegram yourself.' },
+  { n: '4', title: 'Send /link <code>', desc: 'Inside the bot, send /link 123456 (replace with your code). The bot replies "Account linked" instantly and the Profile page flips to "Connected".' },
 ];
 
 const FREE_COMMANDS = [
