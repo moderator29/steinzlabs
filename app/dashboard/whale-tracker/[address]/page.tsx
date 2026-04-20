@@ -187,12 +187,25 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
             <ArrowLeft size={12} /> Whale tracker
           </Link>
           <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl md:text-2xl font-bold truncate">{w.label ?? "Unlabeled whale"}</h1>
-                {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
-                <SecurityBadge score={w.whale_score} size="md" />
-              </div>
+            <div className="flex-1 min-w-0 flex items-start gap-3">
+              {/* §2.5 Whale avatar — prefer Arkham entity logo when we
+                  have one, else deterministic dicebear avatar seeded on
+                  the address so the same whale always gets the same
+                  generated face. No flicker on re-render. */}
+              <WhaleAvatar
+                address={w.address}
+                logoUrl={data.arkham?.logo ?? null}
+                size={48}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-bold truncate">
+                    {/* Real name priority: Arkham entity > stored label > truncated address */}
+                    {data.arkham?.entity || w.label || `${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                  </h1>
+                  {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
+                  <SecurityBadge score={w.whale_score} size="md" />
+                </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <code className="font-mono">{w.address}</code>
                 <button
@@ -210,6 +223,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                     @{w.x_handle} <ExternalLink size={9} />
                   </a>
                 )}
+              </div>
               </div>
             </div>
             <button
@@ -241,16 +255,19 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {tab === "overview" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <StatCard label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} />
-            <StatCard label="7d PnL" value={fmtUsd(w.pnl_7d_usd)} tone={(w.pnl_7d_usd ?? 0) >= 0 ? "up" : "down"} />
-            <StatCard label="30d PnL" value={fmtUsd(w.pnl_30d_usd)} tone={(w.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
-            <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
-            <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
-            <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
-            <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
-            <StatCard label="Score" value={w.whale_score.toString()} />
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <StatCard label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} />
+              <StatCard label="7d PnL" value={fmtUsd(w.pnl_7d_usd)} tone={(w.pnl_7d_usd ?? 0) >= 0 ? "up" : "down"} />
+              <StatCard label="30d PnL" value={fmtUsd(w.pnl_30d_usd)} tone={(w.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
+              <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
+              <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
+              <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
+              <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
+              <StatCard label="Score" value={w.whale_score.toString()} />
+            </div>
+            <AiSummarySection address={w.address} chain={w.chain} />
+          </>
         )}
 
         {tab === "activity" && (
@@ -318,5 +335,106 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
         {value}
       </p>
     </div>
+  );
+}
+
+/**
+ * §2.9 — AI Analysis section on whale profile. Button triggers Claude
+ * summary; cached 24h server-side. Pro+ gated by the API route.
+ */
+function AiSummarySection({ address, chain }: { address: string; chain: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [data, setData] = useState<{
+    rating_30d: number; rating_10d: number; sentiment: string; style: string;
+    summary: string; generatedAt: string; cached: boolean;
+  } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const run = async () => {
+    setState('loading');
+    setErr(null);
+    try {
+      const res = await fetch(`/api/whales/${address}/ai-summary?chain=${encodeURIComponent(chain)}`, {
+        credentials: 'include',
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
+      setData(body);
+      setState('ok');
+    } catch (e: any) {
+      setErr(e?.message ?? 'unknown');
+      setState('error');
+    }
+  };
+
+  const sentimentColor = data?.sentiment === 'bullish' ? 'text-emerald-400' : data?.sentiment === 'bearish' ? 'text-red-400' : 'text-slate-400';
+
+  return (
+    <div className="rounded-xl border border-slate-800/70 bg-slate-900/30 p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[10px] uppercase tracking-wider text-slate-500">AI Analysis</span>
+        {state === 'idle' && (
+          <button
+            onClick={run}
+            className="ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
+          >
+            Generate
+          </button>
+        )}
+        {state === 'loading' && (
+          <span className="ml-auto text-xs text-slate-400 inline-flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" /> Analyzing…
+          </span>
+        )}
+        {state === 'ok' && data?.cached && (
+          <span className="ml-auto text-[10px] text-slate-500">cached · {new Date(data.generatedAt).toLocaleDateString()}</span>
+        )}
+      </div>
+
+      {state === 'idle' && (
+        <p className="text-xs text-slate-500">Click Generate for an AI-powered breakdown of this whale&apos;s trading style, risk profile, and recent performance.</p>
+      )}
+
+      {state === 'error' && (
+        <p className="text-xs text-red-400">AI summary failed: {err}</p>
+      )}
+
+      {state === 'ok' && data && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-semibold">{data.rating_30d}/10 <span className="text-slate-500 font-normal">(30d)</span></span>
+            <span className="font-semibold">{data.rating_10d}/10 <span className="text-slate-500 font-normal">(10d)</span></span>
+            <span className={`font-semibold uppercase ${sentimentColor}`}>{data.sentiment}</span>
+          </div>
+          <p className="text-xs text-slate-300 italic">{data.style}</p>
+          <p className="text-[13px] text-slate-200 leading-relaxed">{data.summary}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * §2.5 — Whale avatar. Arkham entity logo when available (real logos for
+ * Binance, Circle, Vitalik, etc.), otherwise a deterministic dicebear
+ * face keyed on the wallet address so the same whale always shows the
+ * same generated avatar across sessions. No flicker, no random seed.
+ */
+function WhaleAvatar({
+  address, logoUrl, size = 48,
+}: { address: string; logoUrl: string | null; size?: number }) {
+  const [errored, setErrored] = useState(false);
+  const fallback = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(address)}&backgroundColor=0A1EFF,7C3AED,059669,dc2626,0891b2&backgroundType=gradientLinear`;
+  const src = logoUrl && !errored ? logoUrl : fallback;
+  return (
+    <img
+      src={src}
+      alt="whale"
+      width={size}
+      height={size}
+      onError={() => setErrored(true)}
+      className="rounded-full border border-slate-700 shrink-0"
+      style={{ width: size, height: size, objectFit: 'cover', background: '#0f172a' }}
+    />
   );
 }
