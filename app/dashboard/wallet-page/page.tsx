@@ -1774,9 +1774,6 @@ function WalletSettingsView({
     { id: 'password', label: 'Change Password', icon: <Key className="w-4 h-4" />, color: '#F59E0B' },
     { id: 'preferences', label: 'Preferences', icon: <Settings className="w-4 h-4" />, color: '#8B5CF6' },
     { id: 'notifications', label: 'Notifications', icon: <Zap className="w-4 h-4" />, color: '#06B6D4' },
-    { id: 'dapp', label: 'dApp connections', icon: <Globe className="w-4 h-4" />, color: '#14B8A6' },
-    { id: 'help', label: 'Help Center', icon: <Shield className="w-4 h-4" />, color: '#0EA5E9' },
-    { id: 'about', label: 'About Naka Wallet', icon: <Wallet className="w-4 h-4" />, color: '#A78BFA' },
     { id: 'advanced', label: 'Advanced', icon: <Layers className="w-4 h-4" />, color: '#EF4444' },
   ];
 
@@ -2007,65 +2004,6 @@ function WalletSettingsView({
                         Enable Browser Notifications
                       </button>
                     </>
-                  )}
-
-                  {/* ── dAPP CONNECTIONS ── */}
-                  {s.id === 'dapp' && (
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
-                      <p className="text-xs font-semibold text-slate-300">Active connections</p>
-                      <p className="text-xs text-slate-500">
-                        No dApps are currently connected to this wallet. Active WalletConnect and browser-extension sessions will appear here so you can review permissions and disconnect with one tap.
-                      </p>
-                      <div className="pt-2 border-t border-slate-800/60">
-                        <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Tip: always disconnect from a dApp after you&apos;re done signing. A live connection can re-prompt you for approvals at any time.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── HELP CENTER ── */}
-                  {s.id === 'help' && (
-                    <div className="space-y-2">
-                      <a href="/docs" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Open Documentation</p>
-                          <p className="text-[11px] text-slate-500">Step-by-step guides for every feature</p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-slate-500" />
-                      </a>
-                      <a href="/whitepaper" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Whitepaper</p>
-                          <p className="text-[11px] text-slate-500">How Naka Labs works</p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-slate-500" />
-                      </a>
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                        <p className="text-sm font-semibold text-white mb-1">Contact support</p>
-                        <p className="text-[11px] text-slate-500">Reach the team from Profile → AI Customer Service, or open Telegram.</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── ABOUT ── */}
-                  {s.id === 'about' && (
-                    <div className="space-y-2">
-                      <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center">
-                        <div className="flex justify-center mb-2"><SteinzLogo size={40} /></div>
-                        <p className="text-sm font-bold text-white">Naka Wallet</p>
-                        <p className="text-[11px] text-slate-500 mt-1">Non-custodial. Your keys, your crypto.</p>
-                      </div>
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1 text-xs">
-                        <div className="flex justify-between"><span className="text-slate-500">Version</span><span className="text-slate-300 font-mono">v2.0</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Encryption</span><span className="text-slate-300">AES-256-GCM</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Storage</span><span className="text-slate-300">Local + optional cloud</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Supported chains</span><span className="text-slate-300">12+</span></div>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-                        Naka Wallet stores your private key on this device, encrypted with your password. Naka Labs never sees your keys. If you lose your device, the only way to recover your wallet is your 12-word seed phrase — always back it up before funding.
-                      </p>
-                    </div>
                   )}
 
                   {/* ── ADVANCED ── */}

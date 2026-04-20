@@ -16,6 +16,7 @@ import { DocsSection09 } from '@/components/docs/DocsSection09';
 import { DocsSection10 } from '@/components/docs/DocsSection10';
 import { DocsSection11 } from '@/components/docs/DocsSection11';
 import { DocsSection12 } from '@/components/docs/DocsSection12';
+import { DocsSection13 } from '@/components/docs/DocsSection13';
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('getting-started');
@@ -145,6 +146,7 @@ export default function DocsPage() {
           <DocsSection10 />
           <DocsSection11 />
           <DocsSection12 />
+          <DocsSection13 />
 
           <div className="mt-16 pt-8 border-t border-white/[0.06]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

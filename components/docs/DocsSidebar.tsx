@@ -61,6 +61,12 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'roadmap-trading', label: 'Advanced trading' },
     { id: 'roadmap-social', label: 'Social & sharing' },
   ]},
+  { id: 'about', number: '13', label: 'About & Support', subsections: [
+    { id: 'about-mission', label: 'Our mission' },
+    { id: 'about-what-we-do', label: 'What Naka Labs does' },
+    { id: 'about-wallet', label: 'Naka Wallet' },
+    { id: 'about-help', label: 'Help Center' },
+  ]},
 ];
 
 interface DocsSidebarProps {
