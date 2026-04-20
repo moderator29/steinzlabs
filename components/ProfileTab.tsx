@@ -45,7 +45,7 @@ interface ChatMessage {
 type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security' | 'edit-profile' | 'telegram';
 
 export default function ProfileTab() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshProfile } = useAuth();
   const { tier, isPaid, verifiedBadge } = useTier();
   // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
   const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
@@ -507,6 +507,12 @@ export default function ProfileTab() {
         })
         .eq('id', user.id);
       if (error) throw error;
+      // Bug §3.1: without this, useAuth keeps serving the stale profile row
+      // so when the edit panel closes the old name flashes back on screen
+      // for ~100ms before the next auth refresh pulls the new row. Force an
+      // immediate refetch so every consumer of useAuth() sees the new name
+      // on the very next render.
+      try { await refreshProfile(); } catch { /* non-fatal — save already succeeded */ }
       setEditSuccess('Profile updated successfully!');
       setTimeout(() => { setEditSuccess(''); setSubPage(null); }, 1500);
     } catch (e: any) {
