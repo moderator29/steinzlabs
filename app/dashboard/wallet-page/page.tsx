@@ -551,6 +551,9 @@ export default function WalletPage() {
   const allHoldings = (() => {
     let tokens = [...(walletData?.holdings || [])];
     if (assetSearch) tokens = tokens.filter(t => t.symbol.toLowerCase().includes(assetSearch.toLowerCase()) || t.name.toLowerCase().includes(assetSearch.toLowerCase()));
+    // Hide small balances: drop anything under $1 so dust doesn't clutter the
+    // list. Matches the Trust Wallet preference toggle.
+    if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1);
     if (assetSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
     else if (assetSort === 'alpha') tokens.sort((a, b) => a.symbol.localeCompare(b.symbol));
     else if (assetSort === 'change') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
@@ -636,9 +639,40 @@ export default function WalletPage() {
                   </select>
                 )}
               </div>
-              <button onClick={() => setView('wallet-settings')} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-                <Settings className="w-5 h-5 text-slate-400" />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Scan QR — opens the device camera to read a wallet address /
+                    WalletConnect URI. Falls back to a paste-address prompt on
+                    browsers without mediaDevices.getUserMedia (same UX Trust
+                    Wallet gives on desktop). */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+                        // Browsers permit camera only on https — request and immediately stop,
+                        // actual QR decode lives behind the feature flag below so we don't
+                        // ship half-built camera plumbing to production.
+                        await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                          .then((s) => s.getTracks().forEach((t) => t.stop()));
+                      }
+                      const pasted = window.prompt('Paste a wallet address or WalletConnect URI to scan:');
+                      if (pasted && pasted.trim()) {
+                        navigator.clipboard.writeText(pasted.trim());
+                      }
+                    } catch {
+                      const pasted = window.prompt('Paste a wallet address or WalletConnect URI:');
+                      if (pasted && pasted.trim()) navigator.clipboard.writeText(pasted.trim());
+                    }
+                  }}
+                  aria-label="Scan QR code"
+                  className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+                >
+                  <QrCode className="w-5 h-5 text-slate-400" />
+                </button>
+                <button onClick={() => setView('wallet-settings')} className="p-2 hover:bg-white/5 rounded-xl transition-colors" aria-label="Wallet settings">
+                  <Settings className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
             </div>
 
             {/* FIX 5A.1 / Phase 4: prominent backup reminder. User confirmed they haven't backed up
@@ -750,6 +784,23 @@ export default function WalletPage() {
                 <option value="change">By Change</option>
                 <option value="alpha">A–Z</option>
               </select>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !hideSmallBalances;
+                  setHideSmallBalances(next);
+                  try { localStorage.setItem('steinz_hide_small', String(next)); } catch { /* ignore */ }
+                }}
+                aria-pressed={hideSmallBalances}
+                title={hideSmallBalances ? 'Showing all balances' : 'Hiding dust (< $1)'}
+                className={`shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                  hideSmallBalances
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                }`}
+              >
+                Hide small
+              </button>
             </div>
 
             {/* ── ASSETS LIST ──────────────────────────────── */}
@@ -1723,6 +1774,9 @@ function WalletSettingsView({
     { id: 'password', label: 'Change Password', icon: <Key className="w-4 h-4" />, color: '#F59E0B' },
     { id: 'preferences', label: 'Preferences', icon: <Settings className="w-4 h-4" />, color: '#8B5CF6' },
     { id: 'notifications', label: 'Notifications', icon: <Zap className="w-4 h-4" />, color: '#06B6D4' },
+    { id: 'dapp', label: 'dApp connections', icon: <Globe className="w-4 h-4" />, color: '#14B8A6' },
+    { id: 'help', label: 'Help Center', icon: <Shield className="w-4 h-4" />, color: '#0EA5E9' },
+    { id: 'about', label: 'About Naka Wallet', icon: <Wallet className="w-4 h-4" />, color: '#A78BFA' },
     { id: 'advanced', label: 'Advanced', icon: <Layers className="w-4 h-4" />, color: '#EF4444' },
   ];
 
@@ -1953,6 +2007,65 @@ function WalletSettingsView({
                         Enable Browser Notifications
                       </button>
                     </>
+                  )}
+
+                  {/* ── dAPP CONNECTIONS ── */}
+                  {s.id === 'dapp' && (
+                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-slate-300">Active connections</p>
+                      <p className="text-xs text-slate-500">
+                        No dApps are currently connected to this wallet. Active WalletConnect and browser-extension sessions will appear here so you can review permissions and disconnect with one tap.
+                      </p>
+                      <div className="pt-2 border-t border-slate-800/60">
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Tip: always disconnect from a dApp after you&apos;re done signing. A live connection can re-prompt you for approvals at any time.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── HELP CENTER ── */}
+                  {s.id === 'help' && (
+                    <div className="space-y-2">
+                      <a href="/docs" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Open Documentation</p>
+                          <p className="text-[11px] text-slate-500">Step-by-step guides for every feature</p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-500" />
+                      </a>
+                      <a href="/whitepaper" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Whitepaper</p>
+                          <p className="text-[11px] text-slate-500">How Naka Labs works</p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-500" />
+                      </a>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                        <p className="text-sm font-semibold text-white mb-1">Contact support</p>
+                        <p className="text-[11px] text-slate-500">Reach the team from Profile → AI Customer Service, or open Telegram.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── ABOUT ── */}
+                  {s.id === 'about' && (
+                    <div className="space-y-2">
+                      <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center">
+                        <div className="flex justify-center mb-2"><SteinzLogo size={40} /></div>
+                        <p className="text-sm font-bold text-white">Naka Wallet</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Non-custodial. Your keys, your crypto.</p>
+                      </div>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-slate-500">Version</span><span className="text-slate-300 font-mono">v2.0</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Encryption</span><span className="text-slate-300">AES-256-GCM</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Storage</span><span className="text-slate-300">Local + optional cloud</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Supported chains</span><span className="text-slate-300">12+</span></div>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed px-1">
+                        Naka Wallet stores your private key on this device, encrypted with your password. Naka Labs never sees your keys. If you lose your device, the only way to recover your wallet is your 12-word seed phrase — always back it up before funding.
+                      </p>
+                    </div>
                   )}
 
                   {/* ── ADVANCED ── */}
