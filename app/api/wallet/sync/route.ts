@@ -22,6 +22,11 @@ interface WalletRow {
   encryptedKey: string;
   name: string;
   createdAt: string;
+  // Batch 1 / bug §4.3: persist the encrypted mnemonic and origin so the
+  // "Reveal Seed Phrase" action works across devices. Both fields are
+  // optional so older rows keep deserializing cleanly.
+  encryptedMnemonic?: string;
+  importMethod?: "generated" | "seed" | "private_key";
 }
 
 export async function GET(request: NextRequest) {
