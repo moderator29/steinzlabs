@@ -10,7 +10,7 @@
  * Register the webhook once per network via Alchemy dashboard OR via:
  *   POST https://dashboard.alchemy.com/api/create-webhook
  *   body: { network, webhook_type: "ADDRESS_ACTIVITY",
- *           webhook_url: "https://steinzlabs.vercel.app/api/webhooks/alchemy-whale",
+ *           webhook_url: "https://nakalabs.xyz/api/webhooks/alchemy-whale",
  *           addresses: [<every active EVM whale in our DB>] }
  *
  * Signature verification: Alchemy signs the raw body with X-Alchemy-Signature
