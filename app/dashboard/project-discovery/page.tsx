@@ -330,12 +330,12 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
                 <ExternalLink className="w-3 h-3" /> View Your Token Preview
               </a>
             )}
-            <p className="text-gray-500 text-[10px] mb-4">Share this preview link to see how your token will appear on STEINZ Discovery. Once approved, you will receive payment instructions via email.</p>
+            <p className="text-gray-500 text-[10px] mb-4">Share this preview link to see how your token will appear on NAKA Discovery. Once approved, you will receive payment instructions via email.</p>
             <button onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-sm font-semibold">Close</button>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-gray-400 text-xs mb-2">Submit your token for listing on STEINZ Project Discovery. Our team will verify and list approved tokens. Some tokens may be manually listed by our team.</p>
+            <p className="text-gray-400 text-xs mb-2">Submit your token for listing on NAKA Project Discovery. Our team will verify and list approved tokens. Some tokens may be manually listed by our team.</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Token Name *</label>

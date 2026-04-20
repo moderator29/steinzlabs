@@ -23,35 +23,30 @@ function fmtPrice(p: number): string {
   return `$${p.toExponential(2)}`;
 }
 
-function fmtMcap(m: number): string {
-  if (m >= 1e12) return `$${(m / 1e12).toFixed(2)}T`;
-  if (m >= 1e9) return `$${(m / 1e9).toFixed(2)}B`;
-  if (m >= 1e6) return `$${(m / 1e6).toFixed(2)}M`;
-  if (m >= 1e3) return `$${(m / 1e3).toFixed(1)}K`;
-  return `$${m.toFixed(0)}`;
-}
-
-function MiniSpark({ prices }: { prices: number[] }) {
-  if (!prices || prices.length < 2) return <div className="w-16 h-6" />;
+export function MiniSpark({ prices, width = 72, height = 26 }: { prices: number[]; width?: number; height?: number }) {
+  if (!prices || prices.length < 2) return <div style={{ width, height }} />;
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
   const points = prices.map((p, i) => {
-    const x = (i / (prices.length - 1)) * 60;
-    const y = 22 - ((p - min) / range) * 20;
+    const x = (i / (prices.length - 1)) * width;
+    const y = height - 2 - ((p - min) / range) * (height - 4);
     return `${x},${y}`;
   }).join(' ');
   const last = prices[prices.length - 1];
   const first = prices[0];
   const isUp = last >= first;
+  const color = isUp ? '#10B981' : '#EF4444';
   return (
-    <svg viewBox="0 0 60 24" className="w-16 h-6" preserveAspectRatio="none">
-      <polyline points={points} fill="none" stroke={isUp ? '#10B981' : '#EF4444'} strokeWidth="1.2" />
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width, height }} preserveAspectRatio="none">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );
 }
 
-export function TopGainersCard() {
+interface Props { limit?: number; href?: string }
+
+export function TopGainersCard({ limit = 5, href = '/dashboard/top-gainers' }: Props) {
   const [gainers, setGainers] = useState<Gainer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,13 +54,13 @@ export function TopGainersCard() {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch('/api/dashboard/top-gainers?limit=8', {
+        const res = await fetch(`/api/dashboard/top-gainers?limit=${limit}`, {
           signal: AbortSignal.timeout(10_000),
           cache: 'no-store',
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json() as { tokens: Gainer[] };
-        if (!cancelled) setGainers(json.tokens ?? []);
+        if (!cancelled) setGainers((json.tokens ?? []).slice(0, limit));
       } catch {
         if (!cancelled) setGainers([]);
       } finally {
@@ -75,10 +70,10 @@ export function TopGainersCard() {
     void load();
     const t = setInterval(load, 120_000);
     return () => { cancelled = true; clearInterval(t); };
-  }, []);
+  }, [limit]);
 
   return (
-    <div className="bg-[#111827] border border-white/[0.06] rounded-xl overflow-hidden">
+    <div className="bg-[#111827] border border-white/[0.06] rounded-xl overflow-hidden h-full flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
@@ -89,57 +84,47 @@ export function TopGainersCard() {
             <p className="text-[10px] text-gray-500">24h movers</p>
           </div>
         </div>
-        <Link href="/dashboard/market" className="text-[11px] text-[#4D6BFF] hover:text-[#0A1EFF] flex items-center gap-1">
+        <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0A1EFF] flex items-center gap-1">
           View all <ArrowUpRight className="w-3 h-3" />
         </Link>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs min-w-[560px]">
-          <thead className="text-gray-500 border-b border-white/[0.04]">
-            <tr>
-              <th className="text-left font-medium px-3 py-2 w-8">#</th>
-              <th className="text-left font-medium px-3 py-2">Coin</th>
-              <th className="text-right font-medium px-3 py-2">Price</th>
-              <th className="text-right font-medium px-3 py-2">24h</th>
-              <th className="text-right font-medium px-3 py-2 hidden sm:table-cell">7d</th>
-              <th className="text-right font-medium px-3 py-2 hidden md:table-cell">Market Cap</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.03]">
-            {loading && gainers.length === 0 ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i}>
-                  <td colSpan={6} className="px-3 py-3">
-                    <div className="h-6 bg-white/[0.02] animate-pulse rounded" />
-                  </td>
-                </tr>
-              ))
-            ) : gainers.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-500 text-xs">No gainers data right now. Check back in a minute.</td></tr>
-            ) : gainers.map((g, i) => (
-              <tr key={g.id} className="hover:bg-white/[0.02] transition-colors">
-                <td className="px-3 py-2.5 text-gray-600 font-mono">{i + 1}</td>
-                <td className="px-3 py-2.5">
-                  <Link href={`/dashboard/market?coin=${g.id}`} className="flex items-center gap-2 hover:text-[#4D6BFF]">
-                    {g.image && <img src={g.image} alt={g.symbol} className="w-5 h-5 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />}
-                    <div className="min-w-0">
-                      <div className="text-white font-medium truncate">{g.name}</div>
-                      <div className="text-[10px] text-gray-500 uppercase">{g.symbol}</div>
-                    </div>
-                  </Link>
-                </td>
-                <td className="px-3 py-2.5 text-right text-white font-mono">{fmtPrice(g.current_price)}</td>
-                <td className="px-3 py-2.5 text-right font-semibold text-emerald-400">
-                  +{g.price_change_percentage_24h.toFixed(1)}%
-                </td>
-                <td className="px-3 py-2.5 text-right hidden sm:table-cell">
-                  <div className="flex justify-end"><MiniSpark prices={g.sparkline_in_7d?.price ?? []} /></div>
-                </td>
-                <td className="px-3 py-2.5 text-right text-gray-400 font-mono hidden md:table-cell">{fmtMcap(g.market_cap)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="divide-y divide-white/[0.03] flex-1">
+        {loading && gainers.length === 0 ? (
+          Array.from({ length: limit }).map((_, i) => (
+            <div key={i} className="h-14 bg-white/[0.02] animate-pulse mx-3 my-2 rounded" />
+          ))
+        ) : gainers.length === 0 ? (
+          <div className="px-4 py-8 text-center text-gray-500 text-xs">No gainers data right now.</div>
+        ) : gainers.map((g, i) => (
+          <Link
+            key={g.id}
+            href={`/dashboard/market?coin=${g.id}`}
+            className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
+          >
+            <span className="w-4 text-[11px] font-mono text-gray-600 text-center shrink-0">{i + 1}</span>
+            {g.image && (
+              <img
+                src={g.image}
+                alt={g.symbol}
+                className="w-7 h-7 rounded-full shrink-0"
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
+            )}
+            <div className="min-w-0 shrink-0 w-[72px] sm:w-auto sm:flex-shrink">
+              <div className="text-sm text-white font-medium truncate leading-tight">{g.name}</div>
+              <div className="text-[10px] text-gray-500 uppercase leading-tight">{g.symbol}</div>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <MiniSpark prices={g.sparkline_in_7d?.price ?? []} />
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-sm text-white font-mono leading-tight">{fmtPrice(g.current_price)}</div>
+              <div className="text-[11px] font-semibold text-emerald-400 leading-tight">
+                +{g.price_change_percentage_24h.toFixed(1)}%
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

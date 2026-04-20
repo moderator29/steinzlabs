@@ -142,7 +142,7 @@ export default function WalletTab() {
       <div className="glass rounded-xl p-4 border border-[#0A1EFF]/20 mb-4 bg-gradient-to-br from-[#0A1EFF]/5 to-[#7C3AED]/5">
         <div className="flex items-center gap-3 mb-2">
           <Key className="w-4 h-4 text-[#0A1EFF]" />
-          <h3 className="text-xs font-bold">STEINZ Built-in Wallet</h3>
+          <h3 className="text-xs font-bold">Naka Built-in Wallet</h3>
           <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#0A1EFF]/20 text-[#0A1EFF]">NEW</span>
         </div>
         <p className="text-[10px] text-gray-400 mb-2">Create or import a non-custodial wallet. Your keys stay on your device.</p>
@@ -160,7 +160,7 @@ function WalletPageButton() {
       onClick={() => router.push('/dashboard/wallet-page')}
       className="w-full py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
     >
-      <Plus className="w-3 h-3" /> Open STEINZ Wallet
+      <Plus className="w-3 h-3" /> Open Naka Wallet
     </button>
   );
 }

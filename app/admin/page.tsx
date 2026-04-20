@@ -398,7 +398,7 @@ export default function AdminPanel() {
         <div className="p-4 border-b border-white/[0.06]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <img src="/steinz-logo-128.png" alt="STEINZ" className="w-8 h-8 rounded-lg" style={{ objectFit: 'contain' }} />
+              <img src="/steinz-logo-128.png" alt="Naka Labs" className="w-8 h-8 rounded-lg" style={{ objectFit: 'contain' }} />
               <div>
                 <div className="text-sm font-heading font-bold tracking-tight">NAKA LABS</div>
                 <div className="text-[9px] text-gray-500 font-medium uppercase tracking-wider">Admin Panel</div>
@@ -480,21 +480,21 @@ export default function AdminPanel() {
 
           {activeSection === 'overview' && (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={Users} label="Total Users" value={stats?.users.total?.toString() || '0'} sub="Registered accounts" color="blue" loading={loadingStats} trend="up" />
                 <MetricCard icon={UserCheck} label="Verified Users" value={stats?.users.verified?.toString() || '0'} sub="Identity confirmed" color="green" loading={loadingStats} />
                 <MetricCard icon={UserPlus} label="Today's Signups" value={stats?.users.todaySignups?.toString() || '0'} sub="New registrations" color="purple" loading={loadingStats} trend="up" />
                 <MetricCard icon={Users} label="This Week" value={stats?.users.weekSignups?.toString() || '0'} sub="7-day signups" color="amber" loading={loadingStats} />
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={Eye} label="Total Views" value={stats?.engagement.views?.toLocaleString() || '0'} sub="Platform-wide" color="blue" loading={loadingStats} />
                 <MetricCard icon={Heart} label="Total Likes" value={stats?.engagement.likes?.toLocaleString() || '0'} sub="Content engagement" color="red" loading={loadingStats} />
                 <MetricCard icon={Share2} label="Total Shares" value={stats?.engagement.shares?.toLocaleString() || '0'} sub="Content shared" color="purple" loading={loadingStats} />
                 <MetricCard icon={Server} label="API Status" value={totalApis > 0 ? `${onlineApis}/${totalApis}` : '—'} sub="Services online" color={onlineApis === totalApis ? 'green' : 'amber'} loading={false} />
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={ShieldAlert} label="Security Scans" value={stats?.platform.totalScans?.toString() || '0'} sub="Token scans run" color="green" loading={loadingStats} />
                 <MetricCard icon={Layers} label="Positions" value={`${stats?.platform.activePositions || 0} active`} sub={`${stats?.platform.totalPositions || 0} total`} color="blue" loading={loadingStats} />
                 <MetricCard icon={AlertTriangle} label="Threats" value={stats?.platform.totalThreats?.toString() || '0'} sub="Detected threats" color="red" loading={loadingStats} />
@@ -607,7 +607,7 @@ export default function AdminPanel() {
                 }
               />
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={Users} label="Total Users" value={userTotal.toString()} sub="All accounts" color="blue" loading={false} />
                 <MetricCard icon={UserCheck} label="Verified" value={stats?.users.verified?.toString() || '0'} sub="Confirmed identity" color="green" loading={loadingStats} />
                 <MetricCard icon={UserPlus} label="Today" value={stats?.users.todaySignups?.toString() || '0'} sub="New today" color="purple" loading={loadingStats} />
@@ -684,7 +684,7 @@ export default function AdminPanel() {
                 }
               />
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={BarChart3} label="Total Market Cap" value={formatNumber(totalMarketCap)} sub="Top 50 tokens" color="blue" loading={loadingTokens} />
                 <MetricCard icon={Activity} label="24h Volume" value={formatNumber(totalVolume)} sub="Trading volume" color="green" loading={loadingTokens} />
                 <MetricCard icon={TrendingUp} label="Tokens Tracked" value={tokens.length.toString()} sub="Real-time prices" color="purple" loading={loadingTokens} />
@@ -788,7 +788,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <SectionHeader title="Token Listing Submissions" subtitle="Review and manage listing requests" />
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={Briefcase} label="Total Submissions" value={tokenListings.length.toString()} sub="All time" color="blue" loading={loadingListings} />
                 <MetricCard icon={Clock} label="Pending" value={tokenListings.filter(l => l.status === 'pending').length.toString()} sub="Awaiting review" color="amber" loading={loadingListings} />
                 <MetricCard icon={CheckCircle} label="Listed" value={tokenListings.filter(l => l.status === 'listed').length.toString()} sub="Live on platform" color="green" loading={loadingListings} />
@@ -878,7 +878,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <SectionHeader title="Security Overview" subtitle="Shadow Guardian & platform security metrics" />
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard icon={ShieldCheck} label="Scans Run" value={stats?.platform.totalScans?.toString() || '0'} sub="Token security scans" color="green" loading={loadingStats} />
                 <MetricCard icon={AlertTriangle} label="Threats Found" value={stats?.platform.totalThreats?.toString() || '0'} sub="Detected threats" color="red" loading={loadingStats} />
                 <MetricCard icon={ShieldAlert} label="Active Alerts" value={stats?.platform.totalAlerts?.toString() || '0'} sub="User-configured" color="amber" loading={loadingStats} />

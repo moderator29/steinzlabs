@@ -89,7 +89,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard icon={Users} label="Total Users" value={formatLargeNumber(stats?.users.total ?? 0)} change={`+${stats?.users.weekSignups ?? 0} this week`} changeType="up" />
         <KpiCard icon={DollarSign} label="Revenue (30d)" value={formatUSD(0)} change="Payments not yet live" changeType="neutral" />
         <KpiCard icon={Activity} label="Total Scans" value={formatLargeNumber(stats?.platform.totalScans ?? 0)} change={`${stats?.platform.activePositions ?? 0} active positions`} changeType="neutral" />

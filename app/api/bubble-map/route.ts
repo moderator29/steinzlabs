@@ -133,6 +133,28 @@ export async function GET(request: Request) {
       address: h.address,
     }));
 
+    // CoinGecko enrichment happens up-front so the center bubble can colorize
+    // by 24h price change (green = up, red = down, blue = flat/unknown).
+    let cgPrice = 0;
+    let cgMarketCap = 0;
+    let cgChange24h = 0;
+    try {
+      cgPrice = await getContractPrice(token, intel.chain);
+      if (cgPrice > 0) {
+        try {
+          const detail = await getTokenDetail(intel.symbol.toLowerCase());
+          cgMarketCap = detail.market_data?.market_cap?.usd ?? 0;
+          cgChange24h = detail.market_data?.price_change_percentage_24h ?? 0;
+        } catch { /* detail miss — keep price-only */ }
+      }
+    } catch { /* CoinGecko down or contract not indexed */ }
+
+    const effectiveChange24h = cgChange24h !== 0 ? cgChange24h : intel.market.priceChange24h;
+    const centerColor =
+      effectiveChange24h > 1 ? '#10B981' :
+      effectiveChange24h < -1 ? '#EF4444' :
+      NODE_COLORS.token;
+
     const centerNode: BubbleNode = {
       id: 'center',
       label: intel.symbol || intel.name,
@@ -141,7 +163,7 @@ export async function GET(request: Request) {
       type: 'token',
       entity: intel.name,
       verified: intel.verified,
-      color: NODE_COLORS.token,
+      color: centerColor,
       entityLabel: null,
       entityName: intel.name,
       entityBadge: intel.metadata.sourceVerified ? '✓' : null,
@@ -181,27 +203,6 @@ export async function GET(request: Request) {
 
     // ── Security risk from holder concentration ────────────────────────────
     const holderRisk = topHolderRisk(intel.metadata.topHolderConcentration);
-
-    // ── 50/50 enrichment: prefer CoinGecko for price + market cap when it
-    //    indexes this contract. Falls back to the Alchemy/DexScreener-derived
-    //    values from buildContractIntelligence so the bubble map never
-    //    flatlines if CoinGecko misses the token.
-    let cgPrice = 0;
-    let cgMarketCap = 0;
-    let cgChange24h = 0;
-    try {
-      cgPrice = await getContractPrice(token, intel.chain);
-      if (cgPrice > 0) {
-        // Best effort to also pull market cap + 24h change from the full
-        // detail endpoint. If the contract isn't in the detail index we
-        // keep the simple price and leave market cap to Alchemy/Dex.
-        try {
-          const detail = await getTokenDetail(intel.symbol.toLowerCase());
-          cgMarketCap = detail.market_data?.market_cap?.usd ?? 0;
-          cgChange24h = detail.market_data?.price_change_percentage_24h ?? 0;
-        } catch { /* detail miss — keep price-only */ }
-      }
-    } catch { /* CoinGecko down or contract not indexed */ }
 
     const bubbleData: BubbleMapData = {
       nodes,

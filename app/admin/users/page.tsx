@@ -18,6 +18,32 @@ interface AdminUser {
 }
 
 function UserDrawer({ user, onClose, onBan }: { user: AdminUser; onClose: () => void; onBan: (id: string, ban: boolean) => void }) {
+  const [tier, setTier] = useState(user.subscription?.toLowerCase() ?? 'free');
+  const [months, setMonths] = useState<number>(1);
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  async function applyTier() {
+    setSaving(true);
+    setFlash(null);
+    try {
+      const token = sessionStorage.getItem('admin_token') ?? '';
+      const r = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'set_tier', userId: user.id, tier, months, reason }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? 'Failed');
+      setFlash(`Tier set to ${tier}${tier !== 'free' ? ` for ${months} month${months === 1 ? '' : 's'}` : ''}.`);
+    } catch (e) {
+      setFlash(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/50" onClick={onClose} />
@@ -49,6 +75,50 @@ function UserDrawer({ user, onClose, onBan }: { user: AdminUser; onClose: () => 
               <span className="text-xs text-white font-medium">{val}</span>
             </div>
           ))}
+
+          {/* Tier management */}
+          <div className="pt-2 space-y-2 border border-[#1E2433] rounded-xl p-3 bg-[#0d1120]">
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Tier override</div>
+            <select
+              value={tier}
+              onChange={(e) => setTier(e.target.value)}
+              className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-3 py-2 text-xs text-white"
+            >
+              <option value="free">Free — $0</option>
+              <option value="mini">Mini — $5/mo</option>
+              <option value="pro">Pro — $9/mo</option>
+              <option value="max">Max — $15/mo</option>
+            </select>
+            {tier !== 'free' && (
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-gray-500">Months</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={months}
+                  onChange={(e) => setMonths(parseInt(e.target.value) || 1)}
+                  className="flex-1 bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white"
+                />
+              </div>
+            )}
+            <input
+              type="text"
+              placeholder="Reason (optional — audit trail)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600"
+            />
+            <button
+              onClick={applyTier}
+              disabled={saving}
+              className="w-full py-2 rounded-lg text-xs font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving…' : 'Apply tier'}
+            </button>
+            {flash && <div className="text-[11px] text-emerald-400">{flash}</div>}
+          </div>
+
           <div className="pt-2 space-y-2">
             <button onClick={() => onBan(user.id, !user.is_banned)}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${user.is_banned ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600/20 hover:bg-red-600 border border-red-600/30 text-red-400 hover:text-white'}`}>

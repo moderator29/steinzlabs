@@ -67,7 +67,7 @@ export default function TokenPreviewPage() {
     approved_pending_payment: { label: 'Approved - Awaiting Payment', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Your token has been approved! Please check your email for payment instructions to complete the listing.' },
     payment_sent: { label: 'Payment Email Sent', color: 'bg-[#0A1EFF]/20 text-[#0A1EFF]', desc: 'Payment instructions have been sent to your email. Complete payment to get listed.' },
     paid: { label: 'Payment Confirmed', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Payment confirmed! Your token will be listed on Project Discovery shortly.' },
-    listed: { label: 'Listed', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Your token is now live on STEINZ Project Discovery!' },
+    listed: { label: 'Listed', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Your token is now live on NAKA Project Discovery!' },
     rejected: { label: 'Rejected', color: 'bg-[#EF4444]/20 text-[#EF4444]', desc: 'Unfortunately, your token listing was not approved at this time.' },
   };
 
@@ -110,7 +110,7 @@ export default function TokenPreviewPage() {
               <Shield className="w-3 h-3" />
               TOKEN LISTING PREVIEW
             </div>
-            <div className="text-xs text-gray-500">This is how your token will appear on STEINZ Project Discovery once listed.</div>
+            <div className="text-xs text-gray-500">This is how your token will appear on NAKA Project Discovery once listed.</div>
           </div>
 
           <div className="p-6">
