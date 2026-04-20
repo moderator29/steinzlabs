@@ -36,8 +36,6 @@ TRENDS / COIN DISCOVERY (/dashboard/trends): Discover trending and newly listed 
 
 BUILDER NETWORK (/dashboard/builder-network): Community of verified builders. Apply, showcase projects, collaborate.
 
-BUILDER FUNDING (/dashboard/builder-funding): Submit projects for milestone-based community funding.
-
 LAUNCHPAD (/dashboard/launchpad): Discover and participate in new token launches from verified builders.
 
 PROJECT DISCOVERY (/dashboard/project-discovery): Browse and evaluate new crypto projects with community ratings.
@@ -47,8 +45,6 @@ WALLET CLUSTERS (/dashboard/wallet-clusters): Identify connected wallets, detect
 NETWORK METRICS (/dashboard/network-metrics): Real-time blockchain health (TPS, active addresses, gas, block times).
 
 RISK SCANNER (/dashboard/risk-scanner): Comprehensive risk assessment for tokens and DeFi protocols.
-
-HODL RUNNER (/dashboard/hodl-runner): Arcade mini-game — dodge market crashes, collect coins, compete on leaderboard.
 
 COMMUNITY (/dashboard/community): Social hub for discussion and sharing insights.
 
