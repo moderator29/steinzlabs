@@ -36,7 +36,7 @@ const API_LIST: ApiEndpoint[] = [
   { name: 'Jupiter Aggregator',         url: 'https://quote-api.jup.ag', category: 'DEX Routing', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
   // Analytics
   { name: 'Birdeye',                    url: 'https://public-api.birdeye.so', category: 'Analytics', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
-  { name: 'Arkham Intelligence',        url: 'https://api.arkhamintelligence.com', category: 'Analytics', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
+  { name: 'Entity Intelligence',        url: 'https://api.arkhamintelligence.com', category: 'Analytics', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
   // MEV
   { name: 'Flashbots Protect',          url: 'https://rpc.flashbots.net', category: 'MEV', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },
   { name: 'Jito Block Engine',          url: 'https://mainnet.block-engine.jito.wtf', category: 'MEV', status: 'active', latencyMs: 0, uptime: 0, lastChecked: 0 },

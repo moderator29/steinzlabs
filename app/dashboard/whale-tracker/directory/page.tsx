@@ -1,8 +1,8 @@
 'use client';
 
-// Phase 6 — Whale Directory (Nansen / Dune / Arkham grade).
-// Shows ranked whale entities with rich stats, faceted filters, search, sort.
-// Click any row → WhaleDetailDrawer with Arkham enrichment + live activity + follow controls.
+// Whale Directory — ranked whale entities with rich stats, faceted filters,
+// search and sort. Clicking a row opens WhaleDetailDrawer with entity-label
+// enrichment, live activity, and follow controls.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
