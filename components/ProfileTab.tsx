@@ -1025,8 +1025,47 @@ export default function ProfileTab() {
         <button onClick={() => setSubPage(null)} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Profile
         </button>
-        <h2 className="text-lg font-heading font-bold mb-1">Telegram</h2>
-        <p className="text-xs text-gray-500 mb-4">Generate a code, paste it to the Naka Labs bot, and your account is linked. You can revoke it any time.</p>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-[#229ED9]/10 border border-[#229ED9]/30 flex items-center justify-center">
+            <Send className="w-5 h-5 text-[#229ED9]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-heading font-bold leading-tight">Telegram</h2>
+            <p className="text-[11px] text-gray-500">Get real-time alerts, run commands, and chat with VTX from your phone.</p>
+          </div>
+        </div>
+
+        {/* Step-by-step mini guide — matches the connect flow the card
+            below drives, so the user always knows what's coming next. */}
+        <div className="glass rounded-xl border border-white/10 p-3 mb-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">How it works</p>
+          <ol className="space-y-2 text-xs text-gray-300">
+            <li className="flex gap-2.5">
+              <span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">1</span>
+              <span>Tap <span className="font-semibold text-white">Generate code</span> below. You&apos;ll get a 6-digit one-time code that expires in 10 minutes.</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">2</span>
+              <span>Tap <span className="font-semibold text-white">Open Bot</span> (or search <span className="font-mono text-[#4D6BFF]">@Nakalabsbot</span> on Telegram).</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">3</span>
+              <span>In the bot, send <span className="font-mono text-[#4D6BFF]">/link &lt;code&gt;</span>. The page here flips to &quot;Connected&quot; within a few seconds.</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">4</span>
+              <span>You&apos;re done. Try <span className="font-mono text-[#4D6BFF]">/price BTC</span> or <span className="font-mono text-[#4D6BFF]">/help</span> to see what&apos;s unlocked for your tier.</span>
+            </li>
+          </ol>
+          <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+            Want the full command catalogue and examples?{' '}
+            <a href="/docs#telegram-bot" target="_blank" rel="noopener noreferrer" className="text-[#4D6BFF] hover:text-white">
+              Read the Telegram Bot docs →
+            </a>
+          </p>
+        </div>
+
         <TelegramConnectCard />
       </div>
     );
