@@ -1,11 +1,13 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart2, CandlestickChart, Star } from 'lucide-react';
+import { BarChart2, Star } from 'lucide-react';
 
+// §4.7 — "Trade" tab removed. The standalone trading terminal at
+// /market/trade was deleted per product spec; users now click any coin
+// from /market/prices to open its coin-detail page (chart + Buy/Sell).
 const TABS = [
   { label: 'Prices', path: '/market/prices', icon: BarChart2 },
-  { label: 'Trade', path: '/market/trade', icon: CandlestickChart },
   { label: 'Watchlist', path: '/market/watchlist', icon: Star },
 ];
 

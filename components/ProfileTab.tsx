@@ -56,6 +56,11 @@ export default function ProfileTab() {
   const [notifList, setNotifList] = useState<Notification[]>(defaultNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifLoading, setNotifLoading] = useState(true);
+  // Bug §2.20 — Following counter. Stored in Supabase (user_whale_follows),
+  // never localStorage, so it survives device switches and matches what the
+  // whale directory actually knows about. Refetched whenever the user id
+  // changes so it's accurate right after login.
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -297,6 +302,27 @@ export default function ProfileTab() {
         }
       })
       .catch(err => console.error('[ProfileTab] login activity fetch failed:', err));
+  }, [user?.id]);
+
+  // Bug §2.20 — hydrate Following count from user_whale_follows. Fires
+  // whenever the user id changes (login, session refresh). Failures leave
+  // followingCount=null which the UI renders as "—" rather than a misleading 0.
+  useEffect(() => {
+    if (!user?.id || !supabase) {
+      setFollowingCount(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('user_whale_follows')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .then(({ count, error }) => {
+        if (cancelled) return;
+        if (error) { setFollowingCount(null); return; }
+        setFollowingCount(count ?? 0);
+      });
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   const displayName = user?.username
@@ -1353,7 +1379,7 @@ export default function ProfileTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
         <div className="glass rounded-lg p-3 text-center border border-white/10">
           {(() => {
             const pts = (() => { try { return parseInt(localStorage.getItem('steinz_points') || '0'); } catch { return 0; } })();
@@ -1376,6 +1402,19 @@ export default function ProfileTab() {
             return (<><div className="text-lg font-bold">{pts}</div><div className="text-[10px] text-gray-400">Points</div></>);
           })()}
         </div>
+        {/* Bug §2.20 — Following tile (4th). Clicking drills into the user's
+            followed whales list. Count comes from user_whale_follows (Supabase),
+            never localStorage. Null during load renders as "—" not a fake zero. */}
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/whale-tracker?tab=my-whales')}
+          className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0A1EFF]/40 transition-colors"
+        >
+          <div className="text-lg font-bold text-[#0A1EFF]">
+            {followingCount === null ? '—' : followingCount}
+          </div>
+          <div className="text-[10px] text-gray-400">Following</div>
+        </button>
       </div>
 
       {user?.email && (
