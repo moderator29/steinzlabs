@@ -544,8 +544,8 @@ function WatchlistPanel({
     <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-bold text-white">My Watchlist</h3>
-          <p className="text-[11px] text-slate-500">Watching {items.length} wallets</p>
+          <h3 className="text-sm font-bold text-white">My Whales</h3>
+          <p className="text-[11px] text-slate-500">Following {items.length} {items.length === 1 ? 'whale' : 'whales'}</p>
         </div>
         <button
           type="button"
@@ -742,7 +742,7 @@ function AddWhaleModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
-          <h2 className="text-sm font-bold text-white">Add whale to watchlist</h2>
+          <h2 className="text-sm font-bold text-white">Add whale to My Whales</h2>
           <button
             type="button"
             onClick={onClose}

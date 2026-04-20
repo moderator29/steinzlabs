@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { href: '/admin/announcements',       icon: Bell,            label: 'Announcements' },
   { href: '/admin/research',            icon: BookOpen,        label: 'Research' },
   { href: '/admin/watchlist-insights',  icon: Eye,             label: 'Watchlist Insights' },
+  { href: '/admin/whale-submissions',   icon: FileText,        label: 'Whale Submissions' },
   { href: '/admin/treasury',            icon: Landmark,        label: 'Treasury' },
   { href: '/admin/settings',            icon: Settings,        label: 'Settings' },
   { href: '/admin/logs',                icon: ScrollText,      label: 'Activity Logs' },
