@@ -13,7 +13,7 @@ async function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '8', 10) || 8, 1), 25);
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '8', 10) || 8, 1), 50);
   try {
     const gainers = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(limit), 8000, []);
     return NextResponse.json({ tokens: gainers }, {

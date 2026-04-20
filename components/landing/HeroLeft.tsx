@@ -58,8 +58,8 @@ export function HeroLeft() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Animated logo */}
-      <SteinzLogo size={110} animated={true} />
+      {/* Animated logo — sized up for brand impact on hero */}
+      <SteinzLogo size={160} animated={true} />
 
       {/* Wordmark */}
       <p className="mt-3 text-[11px] font-bold uppercase"

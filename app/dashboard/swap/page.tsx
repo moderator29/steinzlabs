@@ -270,6 +270,7 @@ export default function SwapPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTokenSelect, setShowTokenSelect] = useState<'from' | 'to' | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [fetchingQuote, setFetchingQuote] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
@@ -996,7 +997,13 @@ export default function SwapPage() {
                   <div className="px-4 sm:px-5 pb-4 space-y-2.5">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Price Impact</span>
-                      <span className={`font-medium ${parseFloat(priceImpact) < 1 ? 'text-green-400' : parseFloat(priceImpact) < 3 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      <span className={`font-medium ${(() => {
+                        const pi = parseFloat(priceImpact);
+                        if (pi < 1) return 'text-green-400';
+                        if (pi < 5) return 'text-yellow-400';
+                        if (pi < 15) return 'text-orange-400';
+                        return 'text-red-400';
+                      })()}`}>
                         {priceImpact}%
                       </span>
                     </div>
@@ -1122,7 +1129,11 @@ export default function SwapPage() {
             )}
 
             <button
-              onClick={handleSwap}
+              onClick={() => {
+                if (!connectedAddress) { handleSwap(); return; }
+                if (!fromAmount || parseFloat(fromAmount) <= 0) return;
+                setShowReview(true);
+              }}
               disabled={!fromAmount || parseFloat(fromAmount) <= 0 || swapping || fetchingQuote}
               className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 fromAmount && parseFloat(fromAmount) > 0 && !swapping && !fetchingQuote
@@ -1238,6 +1249,112 @@ export default function SwapPage() {
         }}
         exclude={showTokenSelect === 'from' ? toToken : fromToken}
       />
+
+      {showReview && (() => {
+        const pi = parseFloat(priceImpact || '0');
+        const piColor =
+          pi < 1 ? 'text-green-400' :
+          pi < 5 ? 'text-yellow-400' :
+          pi < 15 ? 'text-orange-400' :
+          'text-red-400';
+        const piLabel = pi < 1 ? 'Low' : pi < 5 ? 'Moderate' : pi < 15 ? 'High' : 'Severe';
+        const piBlocked = pi > 30;
+        return (
+          <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setShowReview(false)}>
+            <div
+              className="w-full max-w-[460px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-white">Review swap</h2>
+                <button onClick={() => setShowReview(false)} className="p-1.5 rounded-lg hover:bg-white/5">
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+
+              <div className="bg-[#0f1320] rounded-2xl p-4 space-y-3 border border-white/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold">{fromToken.slice(0, 2)}</div>
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase">You pay</div>
+                      <div className="text-base font-mono text-white">{fromAmount} {fromToken}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-center"><ChevronDown className="w-4 h-4 text-gray-600" /></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold">{toToken.slice(0, 2)}</div>
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase">You receive</div>
+                      <div className="text-base font-mono text-white">{toAmount} {toToken}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rate</span>
+                  <span className="text-gray-200 font-mono">1 {fromToken} = {rate.toFixed(6)} {toToken}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Price impact</span>
+                  <span className={`font-semibold ${piColor}`}>{priceImpact}% <span className="text-[10px] font-normal opacity-80">({piLabel})</span></span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Slippage tolerance</span>
+                  <span className="text-gray-200">{slippage}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Minimum received</span>
+                  <span className="text-gray-200 font-mono">{quoteData ? quoteData.minReceived : (parseFloat(toAmount) * (1 - parseFloat(slippage) / 100)).toFixed(6)} {toToken}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Network fee</span>
+                  <span className="text-gray-200">{estimatedGas}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Route</span>
+                  <span style={{ color: activeChain.color }} className="font-medium">{activeChain.dex}</span>
+                </div>
+              </div>
+
+              {pi >= 5 && (
+                <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border ${piBlocked ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                  <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${piBlocked ? 'text-red-400' : 'text-amber-400'}`} />
+                  <div className={`text-[11px] ${piBlocked ? 'text-red-300' : 'text-amber-300'}`}>
+                    {piBlocked
+                      ? `Price impact of ${priceImpact}% is too high. This swap is blocked to protect your funds.`
+                      : `High price impact of ${priceImpact}%. You'll receive noticeably less than the market rate.`}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowReview(false)}
+                  className="flex-1 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-semibold text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowReview(false); handleSwap(); }}
+                  disabled={piBlocked || swapping}
+                  className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${
+                    piBlocked
+                      ? 'bg-red-500/20 text-red-400 cursor-not-allowed'
+                      : 'bg-[#0A1EFF] hover:bg-[#0918CC] text-white active:scale-[0.98]'
+                  }`}
+                >
+                  {piBlocked ? 'Blocked' : 'Confirm swap'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

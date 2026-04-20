@@ -361,6 +361,23 @@ export async function getContractPrice(
   });
 }
 
+/** Fetch market data for a specific set of coin IDs (for attaching sparklines / prices to a known set). */
+export async function getMarketsByIds(ids: string[], sparkline = true): Promise<CoinGeckoMarketToken[]> {
+  if (!ids.length) return [];
+  const key = cacheKey('coingecko', 'markets_by_ids', { ids: ids.slice().sort().join(','), spark: String(sparkline) });
+  return withCache(key, TTL.MARKET_CAP, async () => {
+    const data = await cgFetch('/coins/markets', {
+      vs_currency: 'usd',
+      ids: ids.join(','),
+      per_page: String(Math.max(ids.length, 1)),
+      page: '1',
+      sparkline: sparkline ? 'true' : 'false',
+      price_change_percentage: '24h,7d',
+    });
+    return data as CoinGeckoMarketToken[];
+  });
+}
+
 export async function getTrendingTokens(): Promise<TrendingCoin[]> {
   const key = 'coingecko:trending';
   return withCache(key, TTL.MARKET_CAP, async () => {
