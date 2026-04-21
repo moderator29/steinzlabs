@@ -69,11 +69,40 @@ async function dexscreenerFallback(contract: string) {
   };
 }
 
+// Common wallet-side symbols the user might URL-ify (eth/btc/sol/etc)
+// don't match CoinGecko slugs directly. Map the obvious ones so the
+// coin-detail page stops showing $0.00 for native assets when the
+// wallet links to /coin/<chain>/eth instead of /coin/<chain>/ethereum.
+const SYMBOL_TO_SLUG: Record<string, string> = {
+  eth: 'ethereum',
+  weth: 'weth',
+  btc: 'bitcoin',
+  wbtc: 'wrapped-bitcoin',
+  sol: 'solana',
+  bnb: 'binancecoin',
+  wbnb: 'wbnb',
+  matic: 'matic-network',
+  pol: 'polygon-ecosystem-token',
+  avax: 'avalanche-2',
+  arb: 'arbitrum',
+  op: 'optimism',
+  usdc: 'usd-coin',
+  usdt: 'tether',
+  dai: 'dai',
+  link: 'chainlink',
+  uni: 'uniswap',
+  ltc: 'litecoin',
+  trx: 'tron',
+  doge: 'dogecoin',
+  shib: 'shiba-inu',
+};
+
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
+  const { id: rawId } = await context.params;
+  const id = SYMBOL_TO_SLUG[rawId.toLowerCase()] ?? rawId;
 
   // EVM contract shape → go straight to DexScreener; CoinGecko's
   // /coins/:id only accepts slugs (bitcoin, ethereum). Avoids a
