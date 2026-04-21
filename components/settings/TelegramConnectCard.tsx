@@ -78,7 +78,15 @@ export function TelegramConnectCard() {
         setGenError(body.error || `Failed (HTTP ${res.status}). Please try again.`);
       }
     } catch (err: any) {
-      setGenError(err?.message || "Network error — please try again.");
+      // iOS Safari returns "Load failed" / "TypeError: Load failed" as the
+      // generic network error which is useless to users. Map it to
+      // something actionable.
+      const msg = err?.message || "";
+      if (/Load failed|Failed to fetch|NetworkError/i.test(msg)) {
+        setGenError("Network blip. Pull down to refresh, make sure you're signed in, then try again.");
+      } else {
+        setGenError(msg || "Network error, please try again.");
+      }
     } finally {
       setGenerating(false);
     }
