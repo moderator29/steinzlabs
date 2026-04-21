@@ -49,12 +49,21 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
 </html>`;
 }
 
+// Sender comes from EMAIL_FROM env when set (e.g.
+// "NAKA LABS <noreply@contact.nakalabs.xyz>"), falls back to the
+// Resend-verified contact.nakalabs.xyz subdomain. The previous
+// hardcoded noreply@nakalabs.com was on an unverified domain and
+// caused Resend to reject every send.
+const DEFAULT_FROM = 'NAKA LABS <noreply@contact.nakalabs.xyz>';
+
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const apiKey = getResendKey();
   if (!apiKey) {
-
+    console.error('[email] RESEND_API_KEY not set');
     return false;
   }
+
+  const from = (process.env.EMAIL_FROM || '').trim() || DEFAULT_FROM;
 
   try {
     const res = await fetch(RESEND_API_URL, {
@@ -64,23 +73,22 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'NAKA LABS <noreply@nakalabs.com>',
+        from,
         to: [to],
         subject,
         html,
       }),
     });
 
-    const result = await res.json();
-
     if (!res.ok) {
-
+      const body = await res.text().catch(() => '');
+      console.error(`[email] Resend ${res.status}: ${body}`);
       return false;
     }
 
     return true;
   } catch (err: any) {
-
+    console.error('[email] send threw:', err?.message || err);
     return false;
   }
 }
