@@ -18,13 +18,14 @@ if [ -z "${ALCHEMY_NOTIFY_TOKEN:-}" ]; then
   exit 1
 fi
 
-# FILL IN your 5 webhook IDs here, one per chain:
+# Webhook IDs from the Alchemy dashboard (naka-whale-* webhooks).
+# Captured 2026-04-21 from the dashboard webhook list view.
 declare -A WEBHOOK_IDS=(
-  [ethereum]="wh_REPLACE_ME_ETH"
-  [base]="wh_REPLACE_ME_BASE"
-  [bsc]="wh_REPLACE_ME_BSC"
-  [polygon]="wh_REPLACE_ME_POLY"
-  [arbitrum]="wh_REPLACE_ME_ARB"
+  [ethereum]="wh_lqusytlrh1bnslp8"
+  [base]="wh_xy2ur9az80x8xhrx"
+  [bsc]="wh_oe0k7c1owoyhjjro"
+  [polygon]="wh_wiv4iil3t9q5jvv2"
+  [arbitrum]="wh_bytaoha5wvjmlrwu"
 )
 
 for chain in "${!WEBHOOK_IDS[@]}"; do
