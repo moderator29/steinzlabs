@@ -17,7 +17,6 @@ import { DocsSection10 } from '@/components/docs/DocsSection10';
 import { DocsSection11 } from '@/components/docs/DocsSection11';
 import { DocsSection12 } from '@/components/docs/DocsSection12';
 import { DocsSection13 } from '@/components/docs/DocsSection13';
-import GlobalControls from '@/components/GlobalControls';
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('getting-started');
@@ -80,10 +79,7 @@ export default function DocsPage() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0" data-no-translate>
-            <div className="hidden md:flex items-center gap-2">
-              <GlobalControls />
-            </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Link href="/whitepaper" className="hidden lg:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>
@@ -108,12 +104,7 @@ export default function DocsPage() {
                 <X className="w-4 h-4 text-gray-400" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              {/* Toggle cluster inside drawer so mobile users still
-                  reach theme + language without crowding the top nav. */}
-              <div className="flex items-center gap-2 pb-4 border-b border-white/[0.06] md:hidden" data-no-translate>
-                <GlobalControls />
-              </div>
+            <div className="p-4">
               <DocsSidebar
                 activeSection={activeSection}
                 onSectionClick={() => setMobileOpen(false)}

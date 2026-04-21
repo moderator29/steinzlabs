@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
@@ -102,8 +102,37 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 // FIX 5A.1 / Phase 4: was 'ethereum,base,polygon,avalanche,solana' only, which is why
 // clicking Arbitrum / BNB pills showed the previous chain's balances — they weren't gated
 // for live fetching. Now matches the full set supported by /api/wallet-intelligence.
+// All chains the backend can actually price balances for. This is the
+// full universe — the home list below further filters this by the
+// user's enabled-chains preference (see DEFAULT_ENABLED_CHAINS and
+// NAKA_ENABLED_CHAINS_KEY).
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
 const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+
+// Default chains to show on the wallet home — in display order.
+// Everything else is toggled on by the user via Add Network.
+const DEFAULT_ENABLED_CHAINS = ['ethereum', 'bnb', 'polygon', 'solana'];
+const NAKA_ENABLED_CHAINS_KEY = 'naka_enabled_chains';
+// Display priority: native chains first (ETH/BNB/Polygon/SOL), then the
+// two seeded platform tokens, then anything else the user has added.
+const TOKEN_SORT_PRIORITY: Array<{ chain: string; symbol?: string; contract?: string }> = [
+  { chain: 'ethereum', symbol: 'ETH' },
+  { chain: 'bnb', symbol: 'BNB' },
+  { chain: 'polygon', symbol: 'MATIC' },
+  { chain: 'solana', symbol: 'SOL' },
+  { chain: 'ethereum', contract: '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898' }, // Naka Go
+  { chain: 'polygon',  contract: '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19' }, // Pleasure Coin
+];
+function priorityIndex(chain: string, symbol: string, contract: string | null | undefined): number {
+  const c = (contract || '').toLowerCase();
+  for (let i = 0; i < TOKEN_SORT_PRIORITY.length; i++) {
+    const p = TOKEN_SORT_PRIORITY[i];
+    if (p.chain !== chain) continue;
+    if (p.contract && p.contract === c) return i;
+    if (p.symbol && !p.contract && !c && p.symbol === symbol.toUpperCase()) return i;
+  }
+  return TOKEN_SORT_PRIORITY.length + 1;
+}
 
 // Map a wallet holding (symbol + chain) to its CoinGecko id for sparkline lookup.
 // Falls back to chain's native-asset id so we always render a line rather than a blank.
@@ -231,12 +260,23 @@ const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_
 
 export default function WalletPage() {
   const router = useRouter();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'wallet-settings'>('main');
+  const searchParams = useSearchParams();
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
+  // Enabled chains — persisted per-device. Default is the 4 native
+  // chains (ETH/BNB/Polygon/SOL); anything else the user toggles on
+  // via the Add Network flow.
+  const [enabledChains, setEnabledChains] = useState<string[]>(DEFAULT_ENABLED_CHAINS);
+  // Hydrated TokenBalance rows for each custom-token entry
+  // (chain:contractAddress). Pulled from /api/market/token/<addr>
+  // (DexScreener fallback when CoinGecko has no slug) so Naka Go +
+  // Pleasure Coin always render with real price/logo even when the
+  // wallet has zero balance.
+  const [customTokenRows, setCustomTokenRows] = useState<Array<TokenBalance & { chain: string }>>([]);
   const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
@@ -337,6 +377,16 @@ export default function WalletPage() {
     }
     if (changed) localStorage.setItem('steinz_custom_tokens', JSON.stringify(merged));
     setCustomTokens(merged);
+    // Hydrate enabled chains preference, default to the 4 natives.
+    try {
+      const storedChains = localStorage.getItem(NAKA_ENABLED_CHAINS_KEY);
+      if (storedChains) {
+        const parsedChains = JSON.parse(storedChains) as string[];
+        if (Array.isArray(parsedChains) && parsedChains.length) setEnabledChains(parsedChains);
+      } else {
+        localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(DEFAULT_ENABLED_CHAINS));
+      }
+    } catch { /* localStorage quota — use defaults */ }
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
     if (savedSort) setTokenSort(savedSort);
     const savedHideSmall = localStorage.getItem('steinz_hide_small');
@@ -443,6 +493,72 @@ export default function WalletPage() {
   useEffect(() => {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
+
+  // Deep-link hydration from the coin-detail page's Send / Receive
+  // buttons. URL shape: ?action=send|receive[&chain=<id>]. If chain is
+  // specified we switch the active chain so the view opens on the
+  // correct asset.
+  useEffect(() => {
+    const action = searchParams?.get('action');
+    const wantedChainId = searchParams?.get('chain');
+    if (!action) return;
+    if (wantedChainId) {
+      const c = SUPPORTED_CHAINS.find((x) => x.id === wantedChainId);
+      if (c) setActiveChain(c);
+    }
+    if (action === 'send') setView('send');
+    else if (action === 'receive') setView('receive');
+    // Strip the query params so refresh doesn't keep reopening.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      url.searchParams.delete('chain');
+      url.searchParams.delete('token');
+      window.history.replaceState({}, '', url.toString());
+    } catch { /* SSR — ignore */ }
+  }, [searchParams]);
+
+  // Hydrate custom-token metadata (Naka Go, Pleasure Coin, anything the
+  // user added). Each entry is "<chain>:<contract>"; we call
+  // /api/market/token/<contract> which hits DexScreener for small-cap
+  // contracts that CoinGecko doesn't index. Real name / symbol / price /
+  // image all arrive from the pair data. Cached per (chain,address) for
+  // 5 min in memory so switching chain filters doesn't refetch.
+  useEffect(() => {
+    if (customTokens.length === 0) { setCustomTokenRows([]); return; }
+    let cancelled = false;
+    (async () => {
+      const rows = await Promise.all(customTokens.map(async (entry) => {
+        const [chainId, contract] = entry.split(':');
+        if (!chainId || !contract) return null;
+        try {
+          const res = await fetch(`/api/market/token/${contract}`);
+          if (!res.ok) return null;
+          const data = await res.json() as {
+            symbol?: string; name?: string;
+            image?: { small?: string; thumb?: string };
+            market_data?: { current_price?: { usd?: number } };
+          };
+          const price = data?.market_data?.current_price?.usd ?? 0;
+          return {
+            symbol: (data?.symbol ?? 'TKN').toUpperCase(),
+            name: data?.name ?? 'Custom Token',
+            balance: '0',
+            valueUsd: price > 0 ? '0' : null,
+            contractAddress: contract,
+            logo: data?.image?.small ?? data?.image?.thumb,
+            chain: chainId,
+          } as TokenBalance & { chain: string };
+        } catch {
+          return null;
+        }
+      }));
+      if (!cancelled) {
+        setCustomTokenRows(rows.filter((r): r is TokenBalance & { chain: string } => r !== null));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [customTokens]);
 
   // CountUp animation: runs whenever walletData changes
   useEffect(() => {
@@ -553,6 +669,14 @@ export default function WalletPage() {
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
   if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
+  if (view === 'add-network') return <AddNetworkView
+    onBack={() => setView('main')}
+    enabled={enabledChains}
+    onChange={(next) => {
+      setEnabledChains(next);
+      try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+    }}
+  />;
   if (view === 'wallet-settings' && activeWallet) return (
     <WalletSettingsView
       onBack={() => setView('main')}
@@ -575,15 +699,46 @@ export default function WalletPage() {
   ];
 
   const allHoldings = (() => {
-    let tokens = [...(walletData?.holdings || [])];
+    // Base holdings from the on-chain balance fetch, plus every
+    // hydrated custom token (Naka Go, Pleasure Coin, user adds).
+    // Custom rows always appear even when balance is zero so the user
+    // can see the price + click through to the coin-detail page.
+    const onChain = (walletData?.holdings || []).map((t) => ({
+      ...t,
+      chain: activeChain.id,
+    })) as Array<TokenBalance & { chain: string }>;
+    const seen = new Set(onChain.map((t) => `${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`));
+    const customOnly = customTokenRows.filter((t) =>
+      !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
+    );
+    let tokens: Array<TokenBalance & { chain: string }> = [...onChain, ...customOnly];
+    // Enabled-chains preference — the home list only shows rows whose
+    // chain the user has toggled on. Default: ETH/BNB/Polygon/SOL +
+    // the two seeded custom tokens (which live on Ethereum + Polygon,
+    // both enabled by default). User extends via Add Network.
+    tokens = tokens.filter((t) => enabledChains.includes(t.chain));
+    // Chain pill filter — only apply when not on 'all'. Solana + BTC
+    // etc. don't have EVM contract tokens so they naturally filter out.
+    if (chainFilter !== 'all') tokens = tokens.filter((t) => t.chain === chainFilter);
     if (assetSearch) tokens = tokens.filter(t => t.symbol.toLowerCase().includes(assetSearch.toLowerCase()) || t.name.toLowerCase().includes(assetSearch.toLowerCase()));
     // Hide small balances: drop anything under $1 so dust doesn't clutter the
-    // list. Matches the Trust Wallet preference toggle.
-    if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1);
-    if (assetSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
-    else if (assetSort === 'alpha') tokens.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    else if (assetSort === 'change') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
-    return tokens;
+    // list. Matches the Trust Wallet preference toggle. Custom tokens with
+    // no balance keep showing regardless (they're aspirational holdings).
+    if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1 || parseFloat(t.balance || '0') === 0);
+    // Explicit priority sort wins over the user's value/alpha sort for
+    // the top of the list — we always want ETH → BNB → Polygon → SOL →
+    // Naka Go → Pleasure Coin at the top, then user's preferred sort
+    // for everything below priority.
+    const withPriority = tokens.map((t) => ({
+      t, prio: priorityIndex(t.chain, t.symbol, t.contractAddress ?? null),
+    }));
+    if (assetSort === 'value') withPriority.sort((a, b) =>
+      a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
+    else if (assetSort === 'alpha') withPriority.sort((a, b) =>
+      a.prio - b.prio || a.t.symbol.localeCompare(b.t.symbol));
+    else if (assetSort === 'change') withPriority.sort((a, b) =>
+      a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
+    return withPriority.map((x) => x.t);
   })();
 
   const pnlAmount = currentBalance * (priceChange / 100);
@@ -876,9 +1031,14 @@ export default function WalletPage() {
                 </div>
               )}
 
-              <button onClick={() => setView('add-token')} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                <Plus className="w-3.5 h-3.5" /> Add Custom Token
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setView('add-network')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> Add Network
+                </button>
+                <button onClick={() => setView('add-token')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> Add Custom Token
+                </button>
+              </div>
             </div>
 
             {/* ── RECENT ACTIVITY ──────────────────────────── */}
@@ -2217,6 +2377,82 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Add Network — toggle which chains show on the wallet home list.
+ * Default set (ETH/BNB/Polygon/SOL) can be disabled; the rest start
+ * off and the user flips them on. Persists to localStorage via the
+ * caller (parent stores naka_enabled_chains).
+ */
+function AddNetworkView({
+  onBack,
+  enabled,
+  onChange,
+}: {
+  onBack: () => void;
+  enabled: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const toggle = (id: string) => {
+    const next = enabled.includes(id)
+      ? enabled.filter((x) => x !== id)
+      : [...enabled, id];
+    // Guard: never let the user disable every chain at once — keep at
+    // least one so the wallet home isn't an empty screen.
+    if (next.length === 0) return;
+    onChange(next);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white">
+      <div className="sticky top-0 z-20 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800/60">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-base font-bold">Networks</h1>
+            <p className="text-[11px] text-slate-500">Toggle which chains appear on your wallet home.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4">
+        <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
+          {SUPPORTED_CHAINS.map((c) => {
+            const isOn = enabled.includes(c.id);
+            const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggle(c.id)}
+                className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/[0.02] transition-colors text-left"
+              >
+                <img src={c.logoUrl} alt={c.name} className="w-7 h-7 rounded-full bg-slate-900" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{c.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <span>{c.symbol}</span>
+                    {isDefault && <span className="text-[#4D6BFF]">· default</span>}
+                  </div>
+                </div>
+                {/* iOS-style toggle */}
+                <div className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${isOn ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isOn ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-4 text-[11px] text-slate-500 leading-relaxed">
+          Disabling a chain hides its tokens and native balance from the wallet home — your assets are never touched on-chain. Re-enable anytime.
+        </p>
+      </div>
     </div>
   );
 }
