@@ -237,6 +237,12 @@ export default function WalletPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
+  // Hydrated TokenBalance rows for each custom-token entry
+  // (chain:contractAddress). Pulled from /api/market/token/<addr>
+  // (DexScreener fallback when CoinGecko has no slug) so Naka Go +
+  // Pleasure Coin always render with real price/logo even when the
+  // wallet has zero balance.
+  const [customTokenRows, setCustomTokenRows] = useState<Array<TokenBalance & { chain: string }>>([]);
   const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
@@ -444,6 +450,48 @@ export default function WalletPage() {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
 
+  // Hydrate custom-token metadata (Naka Go, Pleasure Coin, anything the
+  // user added). Each entry is "<chain>:<contract>"; we call
+  // /api/market/token/<contract> which hits DexScreener for small-cap
+  // contracts that CoinGecko doesn't index. Real name / symbol / price /
+  // image all arrive from the pair data. Cached per (chain,address) for
+  // 5 min in memory so switching chain filters doesn't refetch.
+  useEffect(() => {
+    if (customTokens.length === 0) { setCustomTokenRows([]); return; }
+    let cancelled = false;
+    (async () => {
+      const rows = await Promise.all(customTokens.map(async (entry) => {
+        const [chainId, contract] = entry.split(':');
+        if (!chainId || !contract) return null;
+        try {
+          const res = await fetch(`/api/market/token/${contract}`);
+          if (!res.ok) return null;
+          const data = await res.json() as {
+            symbol?: string; name?: string;
+            image?: { small?: string; thumb?: string };
+            market_data?: { current_price?: { usd?: number } };
+          };
+          const price = data?.market_data?.current_price?.usd ?? 0;
+          return {
+            symbol: (data?.symbol ?? 'TKN').toUpperCase(),
+            name: data?.name ?? 'Custom Token',
+            balance: '0',
+            valueUsd: price > 0 ? '0' : null,
+            contractAddress: contract,
+            logo: data?.image?.small ?? data?.image?.thumb,
+            chain: chainId,
+          } as TokenBalance & { chain: string };
+        } catch {
+          return null;
+        }
+      }));
+      if (!cancelled) {
+        setCustomTokenRows(rows.filter((r): r is TokenBalance & { chain: string } => r !== null));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [customTokens]);
+
   // CountUp animation: runs whenever walletData changes
   useEffect(() => {
     const target = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
@@ -575,11 +623,27 @@ export default function WalletPage() {
   ];
 
   const allHoldings = (() => {
-    let tokens = [...(walletData?.holdings || [])];
+    // Base holdings from the on-chain balance fetch, plus every
+    // hydrated custom token (Naka Go, Pleasure Coin, user adds).
+    // Custom rows always appear even when balance is zero so the user
+    // can see the price + click through to the coin-detail page.
+    const onChain = (walletData?.holdings || []).map((t) => ({
+      ...t,
+      chain: activeChain.id,
+    })) as Array<TokenBalance & { chain: string }>;
+    const seen = new Set(onChain.map((t) => `${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`));
+    const customOnly = customTokenRows.filter((t) =>
+      !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
+    );
+    let tokens: Array<TokenBalance & { chain: string }> = [...onChain, ...customOnly];
+    // Chain pill filter — only apply when not on 'all'. Solana + BTC
+    // etc. don't have EVM contract tokens so they naturally filter out.
+    if (chainFilter !== 'all') tokens = tokens.filter((t) => t.chain === chainFilter);
     if (assetSearch) tokens = tokens.filter(t => t.symbol.toLowerCase().includes(assetSearch.toLowerCase()) || t.name.toLowerCase().includes(assetSearch.toLowerCase()));
     // Hide small balances: drop anything under $1 so dust doesn't clutter the
-    // list. Matches the Trust Wallet preference toggle.
-    if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1);
+    // list. Matches the Trust Wallet preference toggle. Custom tokens with
+    // no balance keep showing regardless (they're aspirational holdings).
+    if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1 || parseFloat(t.balance || '0') === 0);
     if (assetSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
     else if (assetSort === 'alpha') tokens.sort((a, b) => a.symbol.localeCompare(b.symbol));
     else if (assetSort === 'change') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
