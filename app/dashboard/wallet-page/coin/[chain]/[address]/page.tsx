@@ -54,6 +54,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [comingSoonOpen, setComingSoonOpen] = useState<string | null>(null);
   const [chartPoints, setChartPoints] = useState<number[]>([]);
+  const [chartCandles, setChartCandles] = useState<Array<{ time: number; open: number; high: number; low: number; close: number }>>([]);
   const [chartLoading, setChartLoading] = useState(false);
 
   const md = detail?.market_data;
@@ -85,20 +86,24 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
       : 'max';
     let cancelled = false;
     setChartLoading(true);
-    fetch(`/api/market/token/${address}/chart?days=${days}`)
+    fetch(`/api/market/token/${address}/chart?days=${days}&chain=${chain}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data: { candles?: Array<{ close: number }> } | null) => {
+      .then((data: { candles?: Array<{ time: number; open: number; high: number; low: number; close: number }> } | null) => {
         if (cancelled) return;
         if (data?.candles?.length) {
           setChartPoints(data.candles.map((c) => c.close));
+          setChartCandles(data.candles);
         } else {
           setChartPoints([]);
+          setChartCandles([]);
         }
       })
-      .catch(() => { if (!cancelled) setChartPoints([]); })
+      .catch(() => {
+        if (!cancelled) { setChartPoints([]); setChartCandles([]); }
+      })
       .finally(() => { if (!cancelled) setChartLoading(false); });
     return () => { cancelled = true; };
-  }, [address, timeframe]);
+  }, [address, chain, timeframe]);
 
   const chartData = chartPoints.length > 1 ? chartPoints : sparklineData;
 
@@ -141,10 +146,16 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         </div>
       </div>
 
-      {/* Line chart — timeframe-driven. Uses /api/market/token/[id]/chart
-          closes; falls back to 7d sparkline while loading. */}
+      {/* Chart — native SVG. Renders a candlestick series when the
+          GeckoTerminal/CoinGecko fallback returns OHLCV (Naka Go,
+          Pleasure, any DEX-indexed token). Falls back to a stride
+          line when only closes are available. No third-party iframe. */}
       <div className="px-4 pb-4">
-        <Sparkline data={chartData} negative={isNegative} loading={chartLoading && chartData.length === 0} />
+        {chartCandles.length > 1 ? (
+          <CandlestickChart candles={chartCandles} />
+        ) : (
+          <Sparkline data={chartData} negative={isNegative} loading={chartLoading && chartData.length === 0} />
+        )}
       </div>
 
       {/* Timeframe tabs */}
@@ -294,6 +305,57 @@ function Sparkline({ data, negative, loading }: { data: number[]; negative: bool
         strokeLinejoin="round"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+/**
+ * Native SVG candlestick chart. No external library, no iframe —
+ * pure polygons with wicks. Takes OHLC candles from the GeckoTerminal
+ * fallback for contract tokens (Naka Go, Pleasure Coin) or synthesised
+ * candles from CoinGecko closes for listed slugs.
+ */
+function CandlestickChart({ candles }: { candles: Array<{ time: number; open: number; high: number; low: number; close: number }> }) {
+  const W = 720;
+  const H = 200;
+  const padT = 8;
+  const padB = 8;
+  const padX = 4;
+  const innerW = W - padX * 2;
+  const innerH = H - padT - padB;
+  const highs = candles.map((c) => c.high);
+  const lows  = candles.map((c) => c.low);
+  const min = Math.min(...lows);
+  const max = Math.max(...highs);
+  const range = max - min || 1;
+  const n = candles.length;
+  const bw = Math.max(1, innerW / n - 1);
+
+  const y = (v: number) => padT + (1 - (v - min) / range) * innerH;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-48" preserveAspectRatio="none">
+      {candles.map((c, i) => {
+        const x = padX + (i / n) * innerW + (innerW / n - bw) / 2;
+        const isUp = c.close >= c.open;
+        const color = isUp ? '#10B981' : '#EF4444';
+        const bodyTop = y(Math.max(c.open, c.close));
+        const bodyH = Math.max(1, Math.abs(y(c.open) - y(c.close)));
+        return (
+          <g key={i}>
+            <line
+              x1={x + bw / 2} y1={y(c.high)}
+              x2={x + bw / 2} y2={y(c.low)}
+              stroke={color} strokeWidth="1"
+            />
+            <rect
+              x={x} y={bodyTop}
+              width={bw} height={bodyH}
+              fill={color}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }
