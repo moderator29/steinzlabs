@@ -540,6 +540,46 @@ async function executeWhaleActivity(input: Record<string, unknown>): Promise<str
   }
 }
 
+async function executeWhaleProfile(input: Record<string, unknown>): Promise<string> {
+  const action = String(input.action || (input.address ? 'get' : 'list'));
+  const admin = getSupabaseAdmin();
+  try {
+    if (action === 'get') {
+      const address = String(input.address || '').toLowerCase();
+      if (!address) return JSON.stringify({ error: 'address required for action=get' });
+      let q = admin.from('whales').select('address, chain, label, entity_type, portfolio_value_usd, pnl_7d_usd, pnl_30d_usd, win_rate, trade_count_30d, whale_score, follower_count, verified, last_active_at, x_handle, archetype').eq('address', address).eq('is_active', true);
+      if (input.chain) q = q.eq('chain', String(input.chain));
+      const { data, error } = await q.maybeSingle();
+      if (error) return JSON.stringify({ error: error.message });
+      if (!data) return JSON.stringify({ found: false, message: 'Whale not in directory. Use whale_activity tool to check on-chain moves, or suggest user submit via the whale tracker.' });
+      return JSON.stringify({ found: true, whale: data });
+    }
+    // action=list
+    const chain = input.chain ? String(input.chain) : null;
+    const entityType = input.entity_type ? String(input.entity_type) : null;
+    const minPortfolio = input.min_portfolio_usd ? Number(input.min_portfolio_usd) : null;
+    const sort = String(input.sort || 'portfolio');
+    const limit = Math.min(25, Math.max(1, Number(input.limit) || 10));
+
+    const sortCol = sort === 'pnl_30d' ? 'pnl_30d_usd'
+      : sort === 'trade_count_30d' ? 'trade_count_30d'
+      : sort === 'win_rate' ? 'win_rate'
+      : sort === 'score' ? 'whale_score'
+      : 'portfolio_value_usd';
+
+    let q = admin.from('whales').select('address, chain, label, entity_type, portfolio_value_usd, pnl_30d_usd, win_rate, trade_count_30d, whale_score').eq('is_active', true).order(sortCol, { ascending: false, nullsFirst: false }).limit(limit);
+    if (chain) q = q.eq('chain', chain);
+    if (entityType) q = q.eq('entity_type', entityType);
+    if (minPortfolio !== null) q = q.gte('portfolio_value_usd', minPortfolio);
+
+    const { data, error } = await q;
+    if (error) return JSON.stringify({ error: error.message });
+    return JSON.stringify({ count: data?.length ?? 0, sort_by: sortCol, whales: data ?? [] });
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function executeCheckPhishingUrl(input: Record<string, unknown>): Promise<string> {
   const url = String(input.url || '');
   if (!url) return JSON.stringify({ error: 'url required' });
@@ -716,6 +756,7 @@ async function executeVTXTool(
     // Session 5B-2 additions
     case 'address_security':     return executeAddressSecurity(toolInput);
     case 'whale_activity':       return executeWhaleActivity(toolInput);
+    case 'whale_profile':        return executeWhaleProfile(toolInput);
     case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
     case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
     case 'coingecko_market_data': return executeCoingeckoMarketData(toolInput);
