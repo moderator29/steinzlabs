@@ -323,7 +323,22 @@ export default function WhaleDirectoryPage() {
         ) : rows.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-slate-300 font-semibold mb-1">No whales match those filters.</p>
-            <p className="text-slate-500 text-sm">Clear filters or search by address to discover more.</p>
+            {/* §2.11 — if the search looks like an address (starts with 0x
+                or plausible base58 Solana) and produced zero results, offer
+                the Submit CTA directly instead of just "clear filters". */}
+            {(q.trim().startsWith('0x') && q.trim().length === 42) || (q.trim().length >= 32 && !q.trim().includes(' ')) ? (
+              <div className="mt-2">
+                <p className="text-slate-500 text-sm mb-3">No whale matches <code className="px-1 py-0.5 rounded bg-slate-900 text-[11px] font-mono">{q.slice(0, 10)}…</code> in our directory.</p>
+                <a
+                  href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(q.trim())}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-xs font-semibold"
+                >
+                  Submit this whale
+                </a>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm">Clear filters or search by address to discover more.</p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

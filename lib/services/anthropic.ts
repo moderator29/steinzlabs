@@ -225,6 +225,30 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'whale_profile',
+    description: 'Look up a tracked whale in our directory. Returns name/label, entity_type (trader/exchange/VC/dev), 30d and 7d PnL in USD, win rate, trade count (30d), portfolio USD value, whale score (0-100), follower count, verified status, last_active_at, and x_handle if linked. Use for questions like "who is whale X?", "what is Vitalik\'s PnL?", "how many whales are tracked?", "show me top 10 whales by portfolio". When action=list, filters by chain/entity_type/min_portfolio and returns ranked results. When action=get, returns one whale by address. Tier-gated: Pro+ only for content; Free/Mini get an upgrade prompt.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['get', 'list'],
+          description: 'get = single whale by address · list = top whales with filters',
+        },
+        address: { type: 'string', description: 'Whale wallet address (required for action=get)' },
+        chain: { type: 'string', description: 'Chain filter: ethereum, base, bsc, polygon, arbitrum, optimism, solana' },
+        entity_type: { type: 'string', description: 'Filter: trader, influencer, dev, exchange, institutional, fund, vc' },
+        min_portfolio_usd: { type: 'number', description: 'Minimum portfolio USD to include (action=list)' },
+        sort: {
+          type: 'string',
+          enum: ['portfolio', 'pnl_30d', 'trade_count_30d', 'win_rate', 'score'],
+          description: 'Ranking for action=list (default: portfolio)',
+        },
+        limit: { type: 'number', description: 'Max results for action=list (default 10, max 25)' },
+      },
+    },
+  },
+  {
     name: 'check_phishing_url',
     description: 'Check if a URL is a phishing or malicious site via GoPlus domain security. Use whenever the user pastes a link or asks "is this site safe?".',
     input_schema: {
