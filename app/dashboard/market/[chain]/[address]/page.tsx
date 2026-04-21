@@ -27,8 +27,10 @@ import { use, useState } from "react";
 import { Star, Bell, Share2, Brain, X } from "lucide-react";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import TradingViewChart, { getTradingViewSymbol } from "@/components/TradingViewChart";
+import { useTheme } from "@/lib/theme/ThemeProvider";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
+import BuySellRatioBar from "@/components/market/BuySellRatioBar";
 import PortfolioHistoryPanel from "@/components/market/PortfolioHistoryPanel";
 import { BackButton } from "@/components/ui/BackButton";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
@@ -47,6 +49,7 @@ interface RouteParams {
 export default function CoinDetailPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { detail, loading } = useTokenDetail(address);
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
   const [showAlert, setShowAlert] = useState(false);
@@ -134,9 +137,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <div className="h-[380px] md:h-[560px] border-b border-slate-800/50">
             <TradingViewChart
               symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
-              interval="D"
+              interval="15"
               height={560}
               showTools
+              theme={theme}
             />
           </div>
 
@@ -151,7 +155,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             />
           </div>
 
-          {/* Mobile: recent trades */}
+          {/* Mobile: buy/sell ratio + recent trades */}
+          {buys24h != null && sells24h != null && (buys24h + sells24h) > 0 && (
+            <div className="md:hidden px-3 pt-3">
+              <BuySellRatioBar buys={buys24h} sells={sells24h} />
+            </div>
+          )}
           <div className="md:hidden p-3">
             <RecentTradesRail pairAddress={address} chain={chain} />
           </div>
@@ -185,6 +194,9 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             priceUSD={price}
             userId={user?.id}
           />
+          {buys24h != null && sells24h != null && (buys24h + sells24h) > 0 && (
+            <BuySellRatioBar buys={buys24h} sells={sells24h} />
+          )}
           <RecentTradesRail pairAddress={address} chain={chain} />
           {showIntel && (
             <div className="pt-2 border-t border-slate-800/50">
