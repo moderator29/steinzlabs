@@ -3,14 +3,14 @@ import { BarChart3, Wallet, TrendingUp, Target, BookOpen } from 'lucide-react';
 const PORTFOLIO_FEATURES = [
   { title: 'Multi-wallet sync', desc: 'Add up to 25 wallets across any supported chain. Holdings and balances sync automatically without manual input.' },
   { title: 'USD P&L tracking', desc: 'Real-time profit and loss in USD, with historical charting so you can see how your portfolio has changed over time.' },
-  { title: 'Chain breakdown', desc: 'See your exposure split by chain — how much value you hold on Ethereum vs Solana vs Base, etc.' },
+  { title: 'Chain breakdown', desc: 'See your exposure split by chain · how much value you hold on Ethereum vs Solana vs Base, etc.' },
   { title: 'Token history', desc: 'Full history of every token you\'ve held, including entry price, exit price, and realized gain/loss.' },
-  { title: 'Risk exposure', desc: 'Portfolio-level concentration risk — what percentage of your capital is in a single token, sector, or chain.' },
+  { title: 'Risk exposure', desc: 'Portfolio-level concentration risk · what percentage of your capital is in a single token, sector, or chain.' },
 ];
 
 const PREDICTION_MECHANICS = [
-  { step: '1', title: 'Browse markets', desc: 'View open prediction questions — price targets, protocol milestones, on-chain events.' },
-  { step: '2', title: 'Stake your position', desc: 'Stake tokens on the YES or NO side. Staking size is your conviction — larger stakes mean larger potential payout.' },
+  { step: '1', title: 'Browse markets', desc: 'View open prediction questions · price targets, protocol milestones, on-chain events.' },
+  { step: '2', title: 'Stake your position', desc: 'Stake tokens on the YES or NO side. Staking size is your conviction · larger stakes mean larger potential payout.' },
   { step: '3', title: 'Market resolves', desc: 'When the event occurs (or the time window closes), the market resolves on-chain and winners claim their rewards.' },
 ];
 
@@ -22,7 +22,7 @@ export function DocsSection09() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Portfolio & Analytics</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        A unified portfolio view across every chain and wallet you own — with real-time USD values, P&L tracking, risk metrics, and access to on-chain prediction markets.
+        A unified portfolio view across every chain and wallet you own · with real-time USD values, P&L tracking, risk metrics, and access to on-chain prediction markets.
       </p>
 
       {/* Portfolio Tracker */}
@@ -46,7 +46,7 @@ export function DocsSection09() {
         </div>
         <div className="bg-[#10B981]/[0.05] border border-[#10B981]/20 rounded-xl p-3">
           <p className="text-xs text-gray-400">
-            <span className="text-[#10B981] font-semibold">Privacy first:</span> Portfolio tracking is read-only. You provide only a wallet address — no private keys, no seed phrases, no signing. Your funds are never at risk from the tracking feature.
+            <span className="text-[#10B981] font-semibold">Privacy first:</span> Portfolio tracking is read-only. You provide only a wallet address · no private keys, no seed phrases, no signing. Your funds are never at risk from the tracking feature.
           </p>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function DocsSection09() {
           <Target className="w-4 h-4 text-[#8B5CF6]" />Prediction Markets
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Create or participate in on-chain prediction markets for crypto events — price targets, protocol achievements, or market milestones. Outcomes resolve on-chain with verifiable data.
+          Create or participate in on-chain prediction markets for crypto events · price targets, protocol achievements, or market milestones. Outcomes resolve on-chain with verifiable data.
         </p>
         <div className="space-y-2 mb-5">
           {PREDICTION_MECHANICS.map(s => (

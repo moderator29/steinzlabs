@@ -9,15 +9,21 @@ import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 
 export const runtime = 'nodejs';
 
-type SortKey = 'score' | 'portfolio' | 'pnl_30d' | 'win_rate' | 'recent_activity';
+// §2.10 — performance pill maps to one of these. pnl_30d_asc = Top
+// Losers (sort ascending). trade_count = Most Active.
+type SortKey = 'score' | 'portfolio' | 'pnl_30d' | 'pnl_30d_asc' | 'win_rate' | 'recent_activity' | 'trade_count';
 
 const SORT_COLUMN: Record<SortKey, string> = {
   score: 'whale_score',
   portfolio: 'portfolio_value_usd',
   pnl_30d: 'pnl_30d_usd',
+  pnl_30d_asc: 'pnl_30d_usd',
   win_rate: 'win_rate',
   recent_activity: 'last_active_at',
+  trade_count: 'trade_count_30d',
 };
+
+const SORT_ASCENDING = new Set<SortKey>(['pnl_30d_asc']);
 
 export const GET = withTierGate('pro', async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
@@ -26,15 +32,17 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
   const q = (sp.get('q') || '').trim();
   const sort = (sp.get('sort') || 'score') as SortKey;
   const minScore = parseInt(sp.get('min_score') || '0', 10) || 0;
+  const minPortfolioUsd = parseInt(sp.get('min_portfolio_usd') || '0', 10) || 0;
   const offset = Math.max(0, parseInt(sp.get('offset') || '0', 10) || 0);
   const limit = Math.max(1, Math.min(60, parseInt(sp.get('limit') || '24', 10) || 24));
 
-  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${offset}:${limit}`;
+  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${minPortfolioUsd}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback(cacheKey, 20, async () => {
       const supabase = getSupabaseAdmin();
       const column = SORT_COLUMN[sort] || 'whale_score';
+      const ascending = SORT_ASCENDING.has(sort);
       let query = supabase
         .from('whales')
         .select(
@@ -42,12 +50,13 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
           { count: 'exact' },
         )
         .eq('is_active', true)
-        .order(column, { ascending: false, nullsFirst: false })
+        .order(column, { ascending, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (chain) query = query.eq('chain', chain);
       if (entityType) query = query.eq('entity_type', entityType);
       if (minScore > 0) query = query.gte('whale_score', minScore);
+      if (minPortfolioUsd > 0) query = query.gte('portfolio_value_usd', minPortfolioUsd);
       if (q) query = query.or(`label.ilike.%${q}%,address.ilike.%${q}%`);
 
       const { data, error, count } = await query;

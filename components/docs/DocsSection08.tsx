@@ -23,7 +23,7 @@ export function DocsSection08() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Smart Money & Whales</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        Track the wallets that consistently outperform the market. NAKA LABS continuously monitors the top-performing wallets across all chains and surfaces their moves in real time — giving you the edge of knowing what professional capital is doing before it&apos;s reflected in price.
+        Track the wallets that consistently outperform the market. NAKA LABS continuously monitors the top-performing wallets across all chains and surfaces their moves in real time · giving you the edge of knowing what professional capital is doing before it&apos;s reflected in price.
       </p>
 
       {/* Smart Money */}
@@ -45,7 +45,7 @@ export function DocsSection08() {
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
           <div className="text-xs font-semibold text-white mb-3">Convergence Signal</div>
           <p className="text-xs text-gray-400 leading-relaxed">
-            When multiple top-performing wallets buy the same token within a short time window, the platform surfaces a <span className="text-[#F59E0B] font-semibold">Convergence Signal</span> — historically one of the strongest leading indicators of short-term price momentum.
+            When multiple top-performing wallets buy the same token within a short time window, the platform surfaces a <span className="text-[#F59E0B] font-semibold">Convergence Signal</span> · historically one of the strongest leading indicators of short-term price momentum.
           </p>
         </div>
       </div>
@@ -56,7 +56,7 @@ export function DocsSection08() {
           <Fish className="w-4 h-4 text-[#0A1EFF]" />Whale Tracker
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Monitors 1,000+ wallets across 10 chains in real time — ranking them by volume, win rate, and tier. The Live Feed tab streams large wallet movements as they happen via server-sent events.
+          Monitors 1,000+ wallets across 10 chains in real time · ranking them by volume, win rate, and tier. The Live Feed tab streams large wallet movements as they happen via server-sent events.
         </p>
         <div className="space-y-2 mb-5">
           {WHALE_TIERS.map(w => (
@@ -75,7 +75,7 @@ export function DocsSection08() {
             <span className="text-sm font-semibold text-white">Copy Trade Flow</span>
           </div>
           <p className="text-xs text-gray-400 leading-relaxed">
-            From any whale profile, you can initiate a Copy Trade. The platform shows you 15 seconds to review the whale&apos;s stats — win rate, volume, P&L — before confirming. This cooldown is intentional: copy trading carries real risk, and you should understand what you&apos;re following.
+            From any whale profile, you can initiate a Copy Trade. The platform shows you 15 seconds to review the whale&apos;s stats · win rate, volume, P&L · before confirming. This cooldown is intentional: copy trading carries real risk, and you should understand what you&apos;re following.
           </p>
         </div>
       </div>

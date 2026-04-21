@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, FileText } from 'lucide-react';
 
 export const metadata = {
-  title: 'Terms of Service — Naka Labs',
+  title: 'Terms of Service · Naka Labs',
   description: 'The terms that govern your use of the Naka Labs platform.',
 };
 
@@ -48,9 +48,9 @@ export default function TermsPage() {
         <p>You must be at least 18 years old (or the age of majority in your jurisdiction) and legally permitted to use financial analytics and trading tools under the laws of your country. You may not use the platform if you are a resident of, or accessing from, a jurisdiction where such services are prohibited by law.</p>
         <p>You may not use the platform if you are subject to sanctions administered by the U.S. OFAC, EU Council, UK HMT, or UN Security Council, or appear on any applicable sanctions list.</p>
 
-        <H2 n="02">What Naka Labs Is — and Isn&apos;t</H2>
+        <H2 n="02">What Naka Labs Is · and Isn&apos;t</H2>
         <p>Naka Labs is an information and analytics platform providing on-chain intelligence, market data, security scanning, and access to non-custodial trading tooling. <strong>Naka Labs is not a broker-dealer, investment adviser, money transmitter, or custodian.</strong></p>
-        <p>Nothing on the platform — including AI-generated responses, Trust Scores, whale-tracking data, or copy-trading suggestions — constitutes financial, legal, tax, or investment advice. All information is provided for educational and informational purposes only.</p>
+        <p>Nothing on the platform · including AI-generated responses, Trust Scores, whale-tracking data, or copy-trading suggestions · constitutes financial, legal, tax, or investment advice. All information is provided for educational and informational purposes only.</p>
 
         <H2 n="03">Accounts &amp; Security</H2>
         <H3>Account creation</H3>
@@ -68,19 +68,19 @@ export default function TermsPage() {
 
         <H2 n="06">Risk Disclosure</H2>
         <p>Cryptocurrency trading involves substantial risk, including risk of total loss. You should only engage in crypto trading with funds you can afford to lose. Market volatility, smart contract exploits, protocol failures, exchange hacks, and network outages can all result in partial or total loss of funds.</p>
-        <p>Security tools provided by Naka Labs — Trust Scores, Shadow Guardian, Contract Analyzer, Domain Shield, and others — reduce but do not eliminate risk. A token flagged as safe today may not be safe tomorrow. Always conduct your own due diligence.</p>
+        <p>Security tools provided by Naka Labs · Trust Scores, Shadow Guardian, Contract Analyzer, Domain Shield, and others · reduce but do not eliminate risk. A token flagged as safe today may not be safe tomorrow. Always conduct your own due diligence.</p>
         <p>Past performance of any wallet, strategy, or platform tool is not indicative of future results.</p>
 
         <H2 n="07">Third-Party Services</H2>
         <p>The platform integrates third-party data providers and infrastructure: CoinGecko, Alchemy, Helius, Birdeye, DexScreener, GoPlus, LunarCrush, Anthropic Claude, Supabase, Vercel, Cloudflare, Sentry, PostHog, and others. Your use of the platform is additionally subject to the terms of these providers where applicable. Naka Labs is not responsible for outages, errors, or data inaccuracies originating with third-party providers.</p>
 
         <H2 n="08">Intellectual Property</H2>
-        <p>All content, code, design, copy, and branding on the platform — except user-generated content and third-party content — is the property of Naka Labs and protected by applicable copyright and trademark law. You may not reproduce, distribute, or create derivative works without written permission.</p>
+        <p>All content, code, design, copy, and branding on the platform · except user-generated content and third-party content · is the property of Naka Labs and protected by applicable copyright and trademark law. You may not reproduce, distribute, or create derivative works without written permission.</p>
         <p>User-generated content (e.g., research posts, comments, VTX chat history) remains your property; by posting or creating you grant Naka Labs a non-exclusive, worldwide, royalty-free license to host, display, and distribute it as required to operate the platform.</p>
 
         <H2 n="09">Termination</H2>
         <p>You may terminate your account at any time from Settings → Account. Naka Labs may suspend or terminate your access if you violate these Terms, engage in fraudulent or illegal activity, or if required by law. Termination does not relieve either party of obligations incurred prior to termination.</p>
-        <p>Upon termination, we will delete your account data within 30 days, subject to legal retention requirements. Your on-chain wallet remains yours — we have no control over it.</p>
+        <p>Upon termination, we will delete your account data within 30 days, subject to legal retention requirements. Your on-chain wallet remains yours · we have no control over it.</p>
 
         <H2 n="10">Disclaimers &amp; Limitation of Liability</H2>
         <p>THE PLATFORM IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY LAW, NAKA LABS DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
