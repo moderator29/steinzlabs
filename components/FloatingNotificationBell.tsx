@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * Fixed top-right cluster shown on every dashboard page:
- *   [ quick-translate ] [ language ] [ theme ]  [ bell* ]
- * Bell is whitelisted to /dashboard + /dashboard/profile + /profile
- * per product spec; the theme/language toggles ride along on every
- * route so they're always one tap away (user wanted them at the top,
- * next to the bell — not floating in a corner).
+ * Fixed top-right cluster shown ONLY on the main dashboard + profile
+ * pages (same whitelist as the notification bell). Product rule:
+ *   [ quick-translate ] [ language ] [ theme ]  [ bell ]
+ * never appears on wallet / market / whale-tracker / coin-detail etc.
+ * because those pages have their own sticky headers and the floating
+ * cluster disrupts the layout (reported against the coin-detail page).
  */
 
 import { usePathname } from 'next/navigation';
 import NotificationBell from '@/components/NotificationBell';
 import GlobalControls from '@/components/GlobalControls';
 
-const BELL_ALLOWED = new Set([
+const ALLOWED = new Set([
   '/dashboard', '/dashboard/',
   '/dashboard/profile', '/dashboard/profile/',
   '/profile', '/profile/',
@@ -21,7 +21,7 @@ const BELL_ALLOWED = new Set([
 
 export default function FloatingNotificationBell() {
   const pathname = usePathname();
-  const showBell = !!pathname && BELL_ALLOWED.has(pathname);
+  if (!pathname || !ALLOWED.has(pathname)) return null;
   return (
     <div
       className="fixed top-3 right-3 z-50 flex items-center gap-2 print:hidden"
@@ -29,7 +29,7 @@ export default function FloatingNotificationBell() {
       data-no-translate
     >
       <GlobalControls />
-      {showBell && <NotificationBell />}
+      <NotificationBell />
     </div>
   );
 }
