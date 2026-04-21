@@ -10,7 +10,7 @@
  * Register the webhook once per network via Alchemy dashboard OR via:
  *   POST https://dashboard.alchemy.com/api/create-webhook
  *   body: { network, webhook_type: "ADDRESS_ACTIVITY",
- *           webhook_url: "https://steinzlabs.vercel.app/api/webhooks/alchemy-whale",
+ *           webhook_url: "https://nakalabs.xyz/api/webhooks/alchemy-whale",
  *           addresses: [<every active EVM whale in our DB>] }
  *
  * Signature verification: Alchemy signs the raw body with X-Alchemy-Signature
@@ -61,16 +61,29 @@ const NETWORK_TO_CHAIN: Record<string, string> = {
 };
 
 function verifySignature(rawBody: string, signature: string | null): boolean {
-  const key = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
-  if (!key) return true; // dev mode, no signing configured
+  // Accept multiple signing keys because Alchemy issues one per webhook
+  // (and we run one webhook per chain = 5 keys on free plan). Env var is
+  // comma-separated:  ALCHEMY_WEBHOOK_SIGNING_KEYS=keyEth,keyBase,keyBnb,...
+  // Legacy single-key var ALCHEMY_WEBHOOK_SIGNING_KEY also honored for
+  // backwards-compat with the earlier setup.
+  const keysRaw = [
+    process.env.ALCHEMY_WEBHOOK_SIGNING_KEYS || '',
+    process.env.ALCHEMY_WEBHOOK_SIGNING_KEY || '',
+  ].join(',');
+  const keys = keysRaw.split(',').map((k) => k.trim()).filter(Boolean);
+
+  if (keys.length === 0) return true; // dev mode — no signing configured anywhere
   if (!signature) return false;
-  const expected = crypto.createHmac('sha256', key).update(rawBody, 'utf8').digest('hex');
-  // Constant-time compare
-  try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-  } catch {
-    return false;
+
+  for (const key of keys) {
+    try {
+      const expected = crypto.createHmac('sha256', key).update(rawBody, 'utf8').digest('hex');
+      if (expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+        return true;
+      }
+    } catch { /* try next key */ }
   }
+  return false;
 }
 
 function classifyAction(event: AlchemyActivityEvent, whaleAddress: string): 'buy' | 'sell' | 'transfer_in' | 'transfer_out' {
@@ -192,9 +205,13 @@ export async function GET() {
     if (!byChain[w.chain]) byChain[w.chain] = [];
     byChain[w.chain].push(w.address);
   }
+  const multiKeys = (process.env.ALCHEMY_WEBHOOK_SIGNING_KEYS || '').split(',').filter(Boolean).length;
+  const legacyKey = !!process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
   return NextResponse.json({
     ok: true,
-    signingKeyConfigured: !!process.env.ALCHEMY_WEBHOOK_SIGNING_KEY,
+    signingKeysConfigured: multiKeys + (legacyKey ? 1 : 0),
+    acceptsMultipleKeys: true,
+    envVarHint: 'ALCHEMY_WEBHOOK_SIGNING_KEYS=key1,key2,key3,... (comma-separated, any key matches)',
     totalWhales: (data ?? []).length,
     byChain: Object.fromEntries(Object.entries(byChain).map(([c, a]) => [c, a.length])),
   });
