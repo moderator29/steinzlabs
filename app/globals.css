@@ -1030,6 +1030,26 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #FFFFFF !important;
 }
 
+/* Lowercase + remaining inline hex variants used across admin / vtx / whales */
+[data-theme="light"] .bg-\[\#0f1320\],
+[data-theme="light"] .bg-\[\#050010\],
+[data-theme="light"] .bg-\[\#0D1120\],
+[data-theme="light"] .bg-\[\#0d1117\],
+[data-theme="light"] .bg-\[\#0a0e1a\] {
+  background-color: #F5F7FA !important;
+}
+
+[data-theme="light"] .border-\[\#1a1f2e\],
+[data-theme="light"] .border-\[\#2E3443\],
+[data-theme="light"] .border-\[\#2A3343\] {
+  border-color: #E2E8F0 !important;
+}
+
+[data-theme="light"] .text-\[\#8FA3FF\],
+[data-theme="light"] .text-\[\#4D6BFF\] {
+  color: #3B4ED6 !important;
+}
+
 [data-theme="light"] .bg-slate-950,
 [data-theme="light"] .bg-slate-950\/80,
 [data-theme="light"] .bg-slate-950\/60,

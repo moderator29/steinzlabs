@@ -23,7 +23,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <FloatingNotificationBell />
       <PendingSignerProvider />
       <PendingTradesBanner />
-      <div className="fixed top-3 right-3 z-30" data-no-translate>
+      {/* Floating bottom-left cluster — out of the way of page
+          headers (coin detail has its own sticky top bar), still
+          reachable from any dashboard page. Avoids the bottom-right
+          because mobile coin-detail pins a Buy/Sell bar there. */}
+      <div className="fixed bottom-4 left-4 z-30 print:hidden" data-no-translate>
         <GlobalControls />
       </div>
       {children}
