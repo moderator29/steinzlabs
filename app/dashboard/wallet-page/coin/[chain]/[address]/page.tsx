@@ -26,7 +26,7 @@
  */
 
 import { use, useState, useEffect } from "react";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Repeat, ShoppingCart, Landmark, Star, Fuel } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Repeat, ShoppingCart, Landmark, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
@@ -54,6 +54,8 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const [tab, setTab] = useState<Tab>('holdings');
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [comingSoonOpen, setComingSoonOpen] = useState<string | null>(null);
+  const [chartPoints, setChartPoints] = useState<number[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -67,10 +69,39 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const balanceAmount = balance.tokens[symbol] ?? 0;
   const balanceUsd = balanceAmount * price;
 
-  // Sparkline from CoinGecko
+  // Chart points — fetched from /api/market/token/[id]/chart with a days
+  // window matched to the active timeframe button. Falls back to the 7d
+  // sparkline baked into the token detail response so something renders
+  // immediately while the chart call resolves.
   const sparklineData: number[] = (md as any)?.sparkline_7d?.price
     ?? (detail as any)?.sparkline_in_7d?.price
     ?? [];
+
+  useEffect(() => {
+    const days = timeframe === '1H' ? '1'
+      : timeframe === '1D' ? '1'
+      : timeframe === '1W' ? '7'
+      : timeframe === '1M' ? '30'
+      : timeframe === '1Y' ? '365'
+      : 'max';
+    let cancelled = false;
+    setChartLoading(true);
+    fetch(`/api/market/token/${address}/chart?days=${days}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { candles?: Array<{ close: number }> } | null) => {
+        if (cancelled) return;
+        if (data?.candles?.length) {
+          setChartPoints(data.candles.map((c) => c.close));
+        } else {
+          setChartPoints([]);
+        }
+      })
+      .catch(() => { if (!cancelled) setChartPoints([]); })
+      .finally(() => { if (!cancelled) setChartLoading(false); });
+    return () => { cancelled = true; };
+  }, [address, timeframe]);
+
+  const chartData = chartPoints.length > 1 ? chartPoints : sparklineData;
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
@@ -88,16 +119,17 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         </button>
       </div>
 
-      {/* Gas + stakers row */}
-      <div className="flex items-center justify-between gap-2 px-4 mb-2">
-        <div className="inline-flex items-center gap-1 text-xs text-emerald-400">
-          <Fuel size={12} /> <span className="font-mono">$0.01</span>
+      {/* Gas + stakers row — stakers pill only for ETH (real stakers count
+          is public: ETH2 has ~1M validators but the "45K stakers" line
+          from the Trust Wallet reference is their own DEX integration
+          and doesn't apply to generic tokens). Hide on non-ETH. */}
+      {symbol.toUpperCase() === 'ETH' && (
+        <div className="flex items-center justify-center gap-2 px-4 mb-2">
+          <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] bg-[#A78BFA]/15 px-2.5 py-1 rounded-full">
+            <span>👥</span> ETH staking active
+          </div>
         </div>
-        <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] bg-[#A78BFA]/15 px-2.5 py-1 rounded-full">
-          <span>👥</span> Over 45K stakers
-        </div>
-        <div className="w-[60px]" />
-      </div>
+      )}
 
       {/* Price */}
       <div className="text-center py-6">
@@ -110,9 +142,10 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         </div>
       </div>
 
-      {/* Line chart — simple SVG stride using 7d sparkline */}
+      {/* Line chart — timeframe-driven. Uses /api/market/token/[id]/chart
+          closes; falls back to 7d sparkline while loading. */}
       <div className="px-4 pb-4">
-        <Sparkline data={sparklineData} negative={isNegative} />
+        <Sparkline data={chartData} negative={isNegative} loading={chartLoading && chartData.length === 0} />
       </div>
 
       {/* Timeframe tabs */}
@@ -130,40 +163,10 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         ))}
       </div>
 
-      {/* Buy now fiat card */}
-      <div className="px-4 mb-6">
-        <div className="text-sm font-semibold text-slate-300 mb-2">Buy now</div>
-        <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-2xl font-bold tabular-nums">40,275</div>
-              <div className="text-[10px] uppercase text-slate-500 font-semibold">NGN</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setComingSoonOpen('Buy')}
-              className="px-6 py-2 rounded-full bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-sm transition-colors"
-            >
-              Buy
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mb-2">
-            {['20K', '30K', '60K', '100K'].map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                onClick={() => setComingSoonOpen('Buy')}
-                className="flex-1 py-1 rounded-full bg-emerald-900/40 text-emerald-300 text-xs font-semibold"
-              >
-                {amt}
-              </button>
-            ))}
-          </div>
-          <div className="text-[10px] text-slate-500">
-            Buying {(price > 0 ? 40275 / 1600 / price : 0).toFixed(8)} {symbol} · <span className="text-emerald-400">Instant P2P Bank</span> · <span className="text-emerald-400">Yellowcard</span>
-          </div>
-        </div>
-      </div>
+      {/* Buy now fiat card — hidden until the P2P/Yellowcard integration
+          is live. Prior version hardcoded 40,275 NGN with no real rate
+          and no working flow; showing dead UI was worse than no UI. The
+          Buy button in the bottom bar still routes through ComingSoon. */}
 
       {/* Tabs */}
       <div className="flex items-center gap-6 px-4 border-b border-slate-800 mb-4 text-sm font-semibold">
@@ -265,14 +268,14 @@ function WalletAction({
  * bends up/down. Matches the reference screenshot style — no candles,
  * no axes, just the price arc.
  */
-function Sparkline({ data, negative }: { data: number[]; negative: boolean }) {
+function Sparkline({ data, negative, loading }: { data: number[]; negative: boolean; loading?: boolean }) {
   const [measured, setMeasured] = useState(false);
   useEffect(() => { setMeasured(true); }, []);
 
   if (!data || data.length < 2) {
     return (
       <div className="h-48 rounded-lg bg-slate-900/40 flex items-center justify-center text-xs text-slate-500">
-        {measured ? 'Chart data unavailable' : 'Loading chart…'}
+        {loading || !measured ? 'Loading chart…' : 'Chart data unavailable'}
       </div>
     );
   }
