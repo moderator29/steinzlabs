@@ -261,7 +261,7 @@ const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_
 export default function WalletPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'wallet-settings'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -669,6 +669,14 @@ export default function WalletPage() {
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
   if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
+  if (view === 'add-network') return <AddNetworkView
+    onBack={() => setView('main')}
+    enabled={enabledChains}
+    onChange={(next) => {
+      setEnabledChains(next);
+      try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+    }}
+  />;
   if (view === 'wallet-settings' && activeWallet) return (
     <WalletSettingsView
       onBack={() => setView('main')}
@@ -1023,9 +1031,14 @@ export default function WalletPage() {
                 </div>
               )}
 
-              <button onClick={() => setView('add-token')} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                <Plus className="w-3.5 h-3.5" /> Add Custom Token
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setView('add-network')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> Add Network
+                </button>
+                <button onClick={() => setView('add-token')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> Add Custom Token
+                </button>
+              </div>
             </div>
 
             {/* ── RECENT ACTIVITY ──────────────────────────── */}
@@ -2364,6 +2377,82 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Add Network — toggle which chains show on the wallet home list.
+ * Default set (ETH/BNB/Polygon/SOL) can be disabled; the rest start
+ * off and the user flips them on. Persists to localStorage via the
+ * caller (parent stores naka_enabled_chains).
+ */
+function AddNetworkView({
+  onBack,
+  enabled,
+  onChange,
+}: {
+  onBack: () => void;
+  enabled: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const toggle = (id: string) => {
+    const next = enabled.includes(id)
+      ? enabled.filter((x) => x !== id)
+      : [...enabled, id];
+    // Guard: never let the user disable every chain at once — keep at
+    // least one so the wallet home isn't an empty screen.
+    if (next.length === 0) return;
+    onChange(next);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-white">
+      <div className="sticky top-0 z-20 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800/60">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-base font-bold">Networks</h1>
+            <p className="text-[11px] text-slate-500">Toggle which chains appear on your wallet home.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4">
+        <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
+          {SUPPORTED_CHAINS.map((c) => {
+            const isOn = enabled.includes(c.id);
+            const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggle(c.id)}
+                className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/[0.02] transition-colors text-left"
+              >
+                <img src={c.logoUrl} alt={c.name} className="w-7 h-7 rounded-full bg-slate-900" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{c.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <span>{c.symbol}</span>
+                    {isDefault && <span className="text-[#4D6BFF]">· default</span>}
+                  </div>
+                </div>
+                {/* iOS-style toggle */}
+                <div className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${isOn ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isOn ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-4 text-[11px] text-slate-500 leading-relaxed">
+          Disabling a chain hides its tokens and native balance from the wallet home — your assets are never touched on-chain. Re-enable anytime.
+        </p>
+      </div>
     </div>
   );
 }
