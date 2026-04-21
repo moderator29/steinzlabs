@@ -852,7 +852,13 @@ export default function WalletPage() {
                       chainLabel={activeChain.name}
                       coinGeckoId={resolveCoinGeckoId(token.symbol, activeChain)}
                       hideBalance={hideBalance}
-                      onClick={() => router.push(`/dashboard/market/${activeChain.id}/${token.contractAddress || token.symbol}`)}
+                      // §4.5 — wallet token click opens the Trust-Wallet-style coin detail
+                      // (line chart + fiat buy + Holdings/History/About + Send/Receive/Swap
+                      // /Buy/Sell action bar), NOT the full trading terminal. The market
+                      // trading view lives at /dashboard/market/<chain>/<addr>.
+                      // Use token.chain so clicking a Solana token from the Base filter
+                      // still routes to a Solana page (§4.2 chain detection fix).
+                      onClick={() => router.push(`/dashboard/wallet-page/coin/${(token as any).chain || activeChain.id}/${token.contractAddress || token.symbol}`)}
                     />
                   );
                 })
