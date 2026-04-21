@@ -60,6 +60,12 @@ async function dexscreenerFallback(contract: string) {
       en: `${pair.baseToken.name} (${pair.baseToken.symbol}) — trading on ${pair.dexId} via ${pair.chainId}. Data sourced from DexScreener.`,
     },
     _source: 'dexscreener',
+    _dex: {
+      volume_m5: pair.volume?.m5 ?? 0,
+      volume_h24: pair.volume?.h24 ?? 0,
+      buys_h24: pair.txns?.h24?.buys ?? 0,
+      sells_h24: pair.txns?.h24?.sells ?? 0,
+    },
   };
 }
 
