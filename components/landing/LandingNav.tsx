@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { QuickTranslateToggle } from '@/components/i18n/QuickTranslateToggle';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -44,12 +41,7 @@ export function LandingNav() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2" data-no-translate>
-            <div className="hidden sm:flex items-center gap-2">
-              <QuickTranslateToggle />
-              <LanguageSwitcher variant="nav" />
-              <ThemeToggle />
-            </div>
+          <div className="flex items-center gap-2">
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>
@@ -81,14 +73,6 @@ export function LandingNav() {
               ))}
               <Link href="/login" onClick={() => setOpen(false)}
                 className="text-base font-medium text-white/70 hover:text-white transition-colors">Log In</Link>
-              {/* Mobile-only: theme + language inside the drawer so
-                  the controls are reachable even on very narrow phones
-                  where the top bar has no room for them. */}
-              <div className="mt-2 pt-4 border-t border-white/10 flex items-center gap-2 flex-wrap" data-no-translate>
-                <QuickTranslateToggle />
-                <LanguageSwitcher variant="nav" />
-                <ThemeToggle />
-              </div>
             </div>
             <Link href="/signup" className="w-full py-3.5 rounded-xl font-bold text-white text-center"
               style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)' }}>
