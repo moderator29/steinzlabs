@@ -31,26 +31,50 @@ foreach ($w in $webhooks) {
     }
 
     $addresses = Get-Content $w.file | Where-Object { $_ -match '^0x[0-9a-fA-F]{40}$' }
-    Write-Host "  Adding $($addresses.Count) addresses..."
+    Write-Host "  $($addresses.Count) addresses total, chunking into batches of 50..."
 
-    $body = @{
-        webhook_id          = $w.id
-        addresses_to_add    = $addresses
-        addresses_to_remove = @()
-    } | ConvertTo-Json -Compress
+    # Alchemy Notify returns 503 when the PATCH body exceeds ~50 addresses
+    # (ETH with 199 failed; Base with 5 succeeded). Chunk + retry strategy.
+    $chunkSize = 50
+    $ok = 0
+    $failed = 0
 
-    try {
-        $response = Invoke-RestMethod `
-            -Uri "https://dashboard.alchemy.com/api/update-webhook-addresses" `
-            -Method Patch `
-            -Headers @{ "X-Alchemy-Token" = $env:ALCHEMY_NOTIFY_TOKEN; "Content-Type" = "application/json" } `
-            -Body $body
-        Write-Host "  SUCCESS" -ForegroundColor Green
-        $response | ConvertTo-Json -Depth 4 | Out-String | Write-Host
-    } catch {
-        Write-Host "  FAILED: $($_.Exception.Message)" -ForegroundColor Red
-        if ($_.ErrorDetails) { Write-Host $_.ErrorDetails.Message }
+    for ($i = 0; $i -lt $addresses.Count; $i += $chunkSize) {
+        $end = [Math]::Min($i + $chunkSize - 1, $addresses.Count - 1)
+        $chunk = $addresses[$i..$end]
+        $body = @{
+            webhook_id          = $w.id
+            addresses_to_add    = $chunk
+            addresses_to_remove = @()
+        } | ConvertTo-Json -Compress
+
+        $attempt = 0
+        $success = $false
+        while ($attempt -lt 3 -and -not $success) {
+            $attempt++
+            try {
+                Invoke-RestMethod `
+                    -Uri "https://dashboard.alchemy.com/api/update-webhook-addresses" `
+                    -Method Patch `
+                    -Headers @{ "X-Alchemy-Token" = $env:ALCHEMY_NOTIFY_TOKEN; "Content-Type" = "application/json" } `
+                    -Body $body | Out-Null
+                $success = $true
+                $ok += $chunk.Count
+                Write-Host "    chunk $($i+1)..$($end+1) OK" -ForegroundColor Green
+            } catch {
+                if ($attempt -lt 3) {
+                    Start-Sleep -Seconds 2
+                } else {
+                    $failed += $chunk.Count
+                    Write-Host "    chunk $($i+1)..$($end+1) FAILED after 3 tries: $($_.Exception.Message)" -ForegroundColor Red
+                    if ($_.ErrorDetails) { Write-Host "    $($_.ErrorDetails.Message)" }
+                }
+            }
+        }
+        Start-Sleep -Milliseconds 500  # small gap between chunks
     }
+
+    Write-Host "  [$($w.chain)] added=$ok failed=$failed" -ForegroundColor Cyan
 }
 
 Write-Host ""
