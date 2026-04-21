@@ -178,12 +178,22 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
   const stableId = useRef(`tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}-${++idCounter.current}`);
 
   return (
-    <div
-      ref={containerRef}
-      id={stableId.current}
-      style={{ height: `${height}px`, width: '100%' }}
-      className="rounded-lg overflow-hidden"
-    />
+    <div className="relative rounded-lg overflow-hidden" style={{ height: `${height}px`, width: '100%' }}>
+      <div
+        ref={containerRef}
+        id={stableId.current}
+        style={{ height: `${height}px`, width: '100%' }}
+      />
+      {/* Cover TradingView's bottom-right logo ribbon with a matching-color
+          overlay. The free widget doesn't expose an option to hide the
+          branding — this is the standard workaround used across Naka's
+          chart views to keep the surface clean. */}
+      <div
+        aria-hidden
+        className="absolute pointer-events-none"
+        style={{ right: 0, bottom: 0, width: 120, height: 28, background: '#0A0E1A' }}
+      />
+    </div>
   );
 }
 

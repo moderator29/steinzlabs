@@ -254,10 +254,9 @@ export default function WhaleDetailDrawer({
             <Activity className="w-4 h-4 text-slate-400" />
             <h3 className="text-sm font-bold">Recent Activity</h3>
             {detail?.source === 'live' && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">LIVE · Alchemy</span>
-            )}
-            {detail?.source === 'db' && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">Indexed</span>
+              <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> LIVE
+              </span>
             )}
           </div>
 
@@ -266,10 +265,10 @@ export default function WhaleDetailDrawer({
               <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading activity…
             </div>
           ) : err ? (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">{err}</div>
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">Unable to load activity. Try again later.</div>
           ) : activity.length === 0 ? (
             <div className="text-center py-8 text-sm text-slate-500">
-              No recent activity — the address may be cold storage, or your Alchemy key hasn't indexed this chain.
+              No recent activity.
             </div>
           ) : (
             <div className="space-y-2">
