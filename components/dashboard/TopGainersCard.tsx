@@ -98,7 +98,7 @@ export function TopGainersCard({ limit = 5, href = '/dashboard/top-gainers' }: P
         ) : gainers.map((g, i) => (
           <Link
             key={g.id}
-            href={`/dashboard/market?coin=${g.id}`}
+            href={`/dashboard/market/ethereum/${g.id}`}
             className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
           >
             <span className="w-4 text-[11px] font-mono text-gray-600 text-center shrink-0">{i + 1}</span>

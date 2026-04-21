@@ -1,17 +1,17 @@
 import { Bell, Zap, Shield, Smartphone, Clock, Settings } from 'lucide-react';
 
 const ALERT_TYPES = [
-  { icon: Zap, color: '#F59E0B', title: 'Price Alerts', desc: 'Set a target price for any token. You will be notified the moment it crosses your threshold — above or below.' },
+  { icon: Zap, color: '#F59E0B', title: 'Price Alerts', desc: 'Set a target price for any token. You will be notified the moment it crosses your threshold · above or below.' },
   { icon: Bell, color: '#0A1EFF', title: 'Whale Movement Alerts', desc: 'Get notified when a watched whale wallet makes a transaction above your configured USD threshold (min $10K).' },
   { icon: Shield, color: '#EF4444', title: 'Security Alerts', desc: 'Instant notification when a token in your portfolio drops below a Trust Score threshold or a new risk is detected.' },
-  { icon: Zap, color: '#10B981', title: 'Smart Money Alerts', desc: 'Alert when 2+ smart money wallets buy the same token — the convergence signal delivered to your device.' },
+  { icon: Zap, color: '#10B981', title: 'Smart Money Alerts', desc: 'Alert when 2+ smart money wallets buy the same token · the convergence signal delivered to your device.' },
   { icon: Bell, color: '#8B5CF6', title: 'Trend Alerts', desc: 'Notified when a monitored on-chain metric (TVL, stablecoin flow, active addresses) moves more than 10% in 24 hours.' },
 ];
 
 const PUSH_STEPS = [
   { n: '1', title: 'Enable in Settings', desc: 'Go to Settings → Notifications and click "Enable Push Notifications". Your browser will ask for permission.' },
   { n: '2', title: 'Grant permission', desc: 'Accept the browser permission prompt. This allows the platform to send you alerts even when the tab is closed.' },
-  { n: '3', title: 'Configure categories', desc: 'Choose which alert types you want as push notifications — price, whale, security, smart money, or trends.' },
+  { n: '3', title: 'Configure categories', desc: 'Choose which alert types you want as push notifications · price, whale, security, smart money, or trends.' },
   { n: '4', title: 'Set quiet hours', desc: 'Configure a quiet window (e.g. 11pm–7am) to pause non-critical alerts while you sleep.' },
 ];
 
@@ -23,7 +23,7 @@ export function DocsSection10() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Alerts & Notifications</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        NAKA LABS keeps you informed without keeping you glued to a screen. Configure price alerts, whale movement notifications, security events, and trend signals — delivered via push notification, in-app, or email.
+        NAKA LABS keeps you informed without keeping you glued to a screen. Configure price alerts, whale movement notifications, security events, and trend signals · delivered via push notification, in-app, or email.
       </p>
 
       {/* Alert types */}
@@ -52,7 +52,7 @@ export function DocsSection10() {
           <Smartphone className="w-4 h-4 text-[#10B981]" />Push Notifications Setup
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Push notifications work on Chrome, Firefox, and Safari (iOS 16.4+) and are delivered via the Web Push standard — no app download required.
+          Push notifications work on Chrome, Firefox, and Safari (iOS 16.4+) and are delivered via the Web Push standard · no app download required.
         </p>
         <div className="space-y-2 mb-6">
           {PUSH_STEPS.map(s => (
@@ -69,7 +69,7 @@ export function DocsSection10() {
         </div>
       </div>
 
-      {/* Alert limits — match the canonical tier ladder in pricing/page.tsx */}
+      {/* Alert limits · match the canonical tier ladder in pricing/page.tsx */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
           { tier: 'Free',  limit: '3 alerts',         color: '#6B7280' },

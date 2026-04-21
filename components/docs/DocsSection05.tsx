@@ -25,7 +25,7 @@ export function DocsSection05() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Wallet Intelligence</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        NAKA LABS turns raw wallet addresses into complete behavioral profiles. Understand how any wallet trades, how it performs, what category it falls into, and whether it&apos;s connected to other known wallets — all from one lookup.
+        NAKA LABS turns raw wallet addresses into complete behavioral profiles. Understand how any wallet trades, how it performs, what category it falls into, and whether it&apos;s connected to other known wallets · all from one lookup.
       </p>
 
       {/* DNA Analyzer */}
@@ -34,7 +34,7 @@ export function DocsSection05() {
           <Dna className="w-4 h-4 text-[#0A1EFF]" />Trading DNA Analyzer
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Enter any wallet address to receive a full Trading DNA report — a behavioral fingerprint built from every on-chain trade that wallet has made. Supports EVM and Solana wallets.
+          Enter any wallet address to receive a full Trading DNA report · a behavioral fingerprint built from every on-chain trade that wallet has made. Supports EVM and Solana wallets.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
           {DNA_METRICS.map(m => (
@@ -63,7 +63,7 @@ export function DocsSection05() {
           <GitBranch className="w-4 h-4 text-[#8B5CF6]" />Wallet Clusters
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Cluster detection identifies groups of wallets that appear to be controlled by the same entity — detected through shared funding sources, coordinated trading patterns, and transaction timing analysis. Use it to unmask wash traders, coordinated pump groups, or protocol insiders.
+          Cluster detection identifies groups of wallets that appear to be controlled by the same entity · detected through shared funding sources, coordinated trading patterns, and transaction timing analysis. Use it to unmask wash traders, coordinated pump groups, or protocol insiders.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
@@ -85,15 +85,15 @@ export function DocsSection05() {
           <Network className="w-4 h-4 text-[#10B981]" />Network Graph & Bubble Map
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Visualize wallet relationships as an interactive force graph. The <strong className="text-gray-300">Network Graph</strong> shows fund flows and connections between entities. The <strong className="text-gray-300">Bubble Map</strong> shows token holder distributions — each bubble represents a holder, sized by their share, color-coded by entity type (exchange, whale, smart money, retail).
+          Visualize wallet relationships as an interactive force graph. The <strong className="text-gray-300">Network Graph</strong> shows fund flows and connections between entities. The <strong className="text-gray-300">Bubble Map</strong> shows token holder distributions · each bubble represents a holder, sized by their share, color-coded by entity type (exchange, whale, smart money, retail).
         </p>
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
           <div className="text-xs font-semibold text-white mb-2">Bubble Map View Modes</div>
           <div className="space-y-2">
             {[
-              { mode: 'Holders', desc: 'Token holder distribution — all wallets holding a token sized by their share.' },
-              { mode: 'Network', desc: 'Wallet connection view — wallets linked by shared behaviors or known relations.' },
-              { mode: 'Clusters', desc: 'Entity groupings — color-coded clusters of wallets belonging to the same entity.' },
+              { mode: 'Holders', desc: 'Token holder distribution · all wallets holding a token sized by their share.' },
+              { mode: 'Network', desc: 'Wallet connection view · wallets linked by shared behaviors or known relations.' },
+              { mode: 'Clusters', desc: 'Entity groupings · color-coded clusters of wallets belonging to the same entity.' },
             ].map(m => (
               <div key={m.mode} className="flex gap-3 text-xs">
                 <span className="font-semibold text-[#4D6BFF] w-16 flex-shrink-0">{m.mode}</span>

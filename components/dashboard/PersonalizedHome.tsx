@@ -32,12 +32,12 @@ interface HomepageData {
   }>;
 }
 
-function greetingFor(hour: number): string {
-  if (hour < 5) return "Good night";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 22) return "Good evening";
-  return "Good night";
+// Per product direction (batch 12): greeting is always "Welcome" and
+// the username follows. Previously we computed time-of-day greetings
+// but that felt generic and the product wanted a consistent brand
+// voice on dashboard load.
+function greetingFor(_hour: number): string {
+  return "Welcome";
 }
 
 export function PersonalizedHome() {
@@ -46,7 +46,7 @@ export function PersonalizedHome() {
   const [loading, setLoading] = useState(true);
   // Compute greeting client-only so SSR (which runs in Vercel UTC) cannot
   // briefly show e.g. "Good evening" to a user whose local time is morning.
-  const [greetingText, setGreetingText] = useState<string>("Hello");
+  const [greetingText, setGreetingText] = useState<string>("Welcome");
   const router = useRouter();
   useEffect(() => {
     setGreetingText(greetingFor(new Date().getHours()));

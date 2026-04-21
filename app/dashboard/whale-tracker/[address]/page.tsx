@@ -30,6 +30,7 @@ interface WhaleDetail {
     x_handle: string | null;
     verified: boolean;
     last_active_at: string | null;
+    first_seen_at?: string | null;
   } | null;
   arkham?: {
     entity: string | null;
@@ -53,6 +54,20 @@ interface WhaleDetail {
     timestamp: string;
   }>;
   followerCount: number;
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (!isFinite(diff) || diff < 0) return "—";
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
 function fmtUsd(n: number | null): string {
@@ -265,6 +280,8 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
               <StatCard label="Score" value={w.whale_score.toString()} />
+              <StatCard label="First seen" value={w.first_seen_at ? new Date(w.first_seen_at).toLocaleDateString() : "—"} />
+              <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "—"} />
             </div>
             <AiSummarySection address={w.address} chain={w.chain} />
           </>

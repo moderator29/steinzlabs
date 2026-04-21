@@ -24,7 +24,7 @@ export function DocsSection07() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Trading Suite</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        Everything you need to act on your research — swaps, limit orders, stop-loss, copy trading, and a sniper bot — all in one place, every trade security-checked before it hits the chain.
+        Everything you need to act on your research · swaps, limit orders, stop-loss, copy trading, and a sniper bot · all in one place, every trade security-checked before it hits the chain.
       </p>
 
       {/* Multi-Chain Swap */}
@@ -33,10 +33,10 @@ export function DocsSection07() {
           <Repeat className="w-4 h-4 text-[#0A1EFF]" />Multi-Chain Swap
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Swap any token on any supported chain from one interface. The routing engine queries multiple sources in parallel and picks the best price — no wallet switching, no bridge juggling.
+          Swap any token on any supported chain from one interface. The routing engine queries multiple sources in parallel and picks the best price · no wallet switching, no bridge juggling.
         </p>
 
-        {/* How to swap — step-by-step */}
+        {/* How to swap · step-by-step */}
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 mb-4">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-3">How a swap works</p>
           <ol className="space-y-2 text-xs text-gray-300">
@@ -82,7 +82,7 @@ export function DocsSection07() {
           <Zap className="w-4 h-4 text-[#F59E0B]" />Limit Orders &amp; Stop-Loss
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Set a price, walk away. Limit orders fire a buy or sell when the market hits your target. Stop-loss and take-profit keep open positions on autopilot — set the rule once, it executes without you at the keyboard.
+          Set a price, walk away. Limit orders fire a buy or sell when the market hits your target. Stop-loss and take-profit keep open positions on autopilot · set the rule once, it executes without you at the keyboard.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
@@ -110,7 +110,7 @@ export function DocsSection07() {
           <Zap className="w-4 h-4 text-[#F59E0B]" />Copy Trading
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Mirror the buys of any tracked wallet. Set a max per-trade cap, a daily spend cap, and optional safety filters. Copies fire automatically when the source wallet trades — you keep control of the exits.
+          Mirror the buys of any tracked wallet. Set a max per-trade cap, a daily spend cap, and optional safety filters. Copies fire automatically when the source wallet trades · you keep control of the exits.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
@@ -133,7 +133,7 @@ export function DocsSection07() {
           <Crosshair className="w-4 h-4 text-[#EF4444]" />Sniper Bot
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Detect new launches the instant liquidity is added and buy with a 5-layer safety protocol in front. Every launch is scanned — nothing is bought blindly.
+          Detect new launches the instant liquidity is added and buy with a 5-layer safety protocol in front. Every launch is scanned · nothing is bought blindly.
         </p>
         <div className="space-y-2 mb-4">
           {SNIPER_STEPS.map((s) => (
