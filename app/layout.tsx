@@ -64,6 +64,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Pre-hydration flash guard for auto-translate: if the user
+            has a non-English language stored, hide the body with a CSS
+            class before React mounts. AutoTranslate.tsx removes the
+            class once the first translate pass completes (1.5s safety
+            timeout fallback). Same pattern used for theme persistence. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem('naka_language');if(l&&l!=='en'){document.documentElement.classList.add('naka-translating');if(l==='ar'){document.documentElement.setAttribute('dir','rtl');}}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <AutoTranslate />

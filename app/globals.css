@@ -1155,3 +1155,16 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(224, 64, 251, 0.2) !important;
   box-shadow: 0 0 20px rgba(224, 64, 251, 0.08), 0 8px 24px rgba(0, 0, 0, 0.3) !important;
 }
+
+/* Auto-translate first-paint flash guard — hide body until the
+   initial translate pass finishes (class removed by AutoTranslate.tsx,
+   with a 1.5s safety timeout). A pre-hydration inline script in the
+   root layout adds the class when localStorage.naka_language != 'en'
+   so the flash window is closed before React mounts. */
+html.naka-translating body {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+html body {
+  transition: opacity 180ms ease-out;
+}
