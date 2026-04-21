@@ -102,8 +102,37 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 // FIX 5A.1 / Phase 4: was 'ethereum,base,polygon,avalanche,solana' only, which is why
 // clicking Arbitrum / BNB pills showed the previous chain's balances — they weren't gated
 // for live fetching. Now matches the full set supported by /api/wallet-intelligence.
+// All chains the backend can actually price balances for. This is the
+// full universe — the home list below further filters this by the
+// user's enabled-chains preference (see DEFAULT_ENABLED_CHAINS and
+// NAKA_ENABLED_CHAINS_KEY).
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
 const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+
+// Default chains to show on the wallet home — in display order.
+// Everything else is toggled on by the user via Add Network.
+const DEFAULT_ENABLED_CHAINS = ['ethereum', 'bnb', 'polygon', 'solana'];
+const NAKA_ENABLED_CHAINS_KEY = 'naka_enabled_chains';
+// Display priority: native chains first (ETH/BNB/Polygon/SOL), then the
+// two seeded platform tokens, then anything else the user has added.
+const TOKEN_SORT_PRIORITY: Array<{ chain: string; symbol?: string; contract?: string }> = [
+  { chain: 'ethereum', symbol: 'ETH' },
+  { chain: 'bnb', symbol: 'BNB' },
+  { chain: 'polygon', symbol: 'MATIC' },
+  { chain: 'solana', symbol: 'SOL' },
+  { chain: 'ethereum', contract: '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898' }, // Naka Go
+  { chain: 'polygon',  contract: '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19' }, // Pleasure Coin
+];
+function priorityIndex(chain: string, symbol: string, contract: string | null | undefined): number {
+  const c = (contract || '').toLowerCase();
+  for (let i = 0; i < TOKEN_SORT_PRIORITY.length; i++) {
+    const p = TOKEN_SORT_PRIORITY[i];
+    if (p.chain !== chain) continue;
+    if (p.contract && p.contract === c) return i;
+    if (p.symbol && !p.contract && !c && p.symbol === symbol.toUpperCase()) return i;
+  }
+  return TOKEN_SORT_PRIORITY.length + 1;
+}
 
 // Map a wallet holding (symbol + chain) to its CoinGecko id for sparkline lookup.
 // Falls back to chain's native-asset id so we always render a line rather than a blank.
@@ -238,6 +267,10 @@ export default function WalletPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
+  // Enabled chains — persisted per-device. Default is the 4 native
+  // chains (ETH/BNB/Polygon/SOL); anything else the user toggles on
+  // via the Add Network flow.
+  const [enabledChains, setEnabledChains] = useState<string[]>(DEFAULT_ENABLED_CHAINS);
   // Hydrated TokenBalance rows for each custom-token entry
   // (chain:contractAddress). Pulled from /api/market/token/<addr>
   // (DexScreener fallback when CoinGecko has no slug) so Naka Go +
@@ -344,6 +377,16 @@ export default function WalletPage() {
     }
     if (changed) localStorage.setItem('steinz_custom_tokens', JSON.stringify(merged));
     setCustomTokens(merged);
+    // Hydrate enabled chains preference, default to the 4 natives.
+    try {
+      const storedChains = localStorage.getItem(NAKA_ENABLED_CHAINS_KEY);
+      if (storedChains) {
+        const parsedChains = JSON.parse(storedChains) as string[];
+        if (Array.isArray(parsedChains) && parsedChains.length) setEnabledChains(parsedChains);
+      } else {
+        localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(DEFAULT_ENABLED_CHAINS));
+      }
+    } catch { /* localStorage quota — use defaults */ }
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
     if (savedSort) setTokenSort(savedSort);
     const savedHideSmall = localStorage.getItem('steinz_hide_small');
@@ -661,6 +704,11 @@ export default function WalletPage() {
       !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
     );
     let tokens: Array<TokenBalance & { chain: string }> = [...onChain, ...customOnly];
+    // Enabled-chains preference — the home list only shows rows whose
+    // chain the user has toggled on. Default: ETH/BNB/Polygon/SOL +
+    // the two seeded custom tokens (which live on Ethereum + Polygon,
+    // both enabled by default). User extends via Add Network.
+    tokens = tokens.filter((t) => enabledChains.includes(t.chain));
     // Chain pill filter — only apply when not on 'all'. Solana + BTC
     // etc. don't have EVM contract tokens so they naturally filter out.
     if (chainFilter !== 'all') tokens = tokens.filter((t) => t.chain === chainFilter);
@@ -669,10 +717,20 @@ export default function WalletPage() {
     // list. Matches the Trust Wallet preference toggle. Custom tokens with
     // no balance keep showing regardless (they're aspirational holdings).
     if (hideSmallBalances) tokens = tokens.filter(t => parseFloat(t.valueUsd || '0') >= 1 || parseFloat(t.balance || '0') === 0);
-    if (assetSort === 'value') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
-    else if (assetSort === 'alpha') tokens.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    else if (assetSort === 'change') tokens.sort((a, b) => parseFloat(b.valueUsd || '0') - parseFloat(a.valueUsd || '0'));
-    return tokens;
+    // Explicit priority sort wins over the user's value/alpha sort for
+    // the top of the list — we always want ETH → BNB → Polygon → SOL →
+    // Naka Go → Pleasure Coin at the top, then user's preferred sort
+    // for everything below priority.
+    const withPriority = tokens.map((t) => ({
+      t, prio: priorityIndex(t.chain, t.symbol, t.contractAddress ?? null),
+    }));
+    if (assetSort === 'value') withPriority.sort((a, b) =>
+      a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
+    else if (assetSort === 'alpha') withPriority.sort((a, b) =>
+      a.prio - b.prio || a.t.symbol.localeCompare(b.t.symbol));
+    else if (assetSort === 'change') withPriority.sort((a, b) =>
+      a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
+    return withPriority.map((x) => x.t);
   })();
 
   const pnlAmount = currentBalance * (priceChange / 100);
