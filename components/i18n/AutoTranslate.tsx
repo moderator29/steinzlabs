@@ -23,6 +23,15 @@ const NUMERIC_RE = /^[\s\d.,+\-%$€£¥₿()\/:]*$/;
 
 type TextNodeMap = WeakMap<Text, string>;
 const original: TextNodeMap = new WeakMap();
+// Nodes we've just written to — the observer skips characterData
+// mutations on these to avoid an infinite retranslate loop.
+const justWrote = new WeakSet<Text>();
+
+function setNodeValue(node: Text, v: string) {
+  if (node.nodeValue === v) return;
+  justWrote.add(node);
+  node.nodeValue = v;
+}
 
 function cacheKey(lang: string) { return `naka_tx_${lang}`; }
 function loadCache(lang: string): Record<string, string> {
@@ -84,7 +93,7 @@ async function translateAll(target: string) {
     collectTextNodes(document.body, nodes);
     for (const n of nodes) {
       const orig = original.get(n);
-      if (orig !== undefined && n.nodeValue !== orig) n.nodeValue = orig;
+      if (orig !== undefined && n.nodeValue !== orig) setNodeValue(n, orig);
     }
     return;
   }
@@ -100,7 +109,7 @@ async function translateAll(target: string) {
     const key = (original.get(n) ?? cur).trim();
     if (!key) continue;
     if (cache[key]) {
-      if (n.nodeValue !== cache[key]) n.nodeValue = cache[key];
+      if (n.nodeValue !== cache[key]) setNodeValue(n, cache[key]);
     } else {
       toFetch.push({ node: n, text: key });
     }
@@ -120,7 +129,7 @@ async function translateAll(target: string) {
 
   for (const { node, text } of toFetch) {
     const t = cache[text];
-    if (t && node.nodeValue !== t) node.nodeValue = t;
+    if (t && node.nodeValue !== t) setNodeValue(node, t);
   }
 }
 
@@ -158,9 +167,23 @@ export default function AutoTranslate() {
 
     window.addEventListener('naka_lang_change', onLang);
 
-    const mo = new MutationObserver(() => {
+    const mo = new MutationObserver((mutations) => {
       if (lang === 'en') return;
-      schedule();
+      // Filter out mutations we caused ourselves.
+      let realChange = false;
+      for (const m of mutations) {
+        if (m.type === 'characterData') {
+          const t = m.target as Text;
+          if (justWrote.has(t)) { justWrote.delete(t); continue; }
+          realChange = true;
+          break;
+        }
+        if (m.type === 'childList' && (m.addedNodes.length || m.removedNodes.length)) {
+          realChange = true;
+          break;
+        }
+      }
+      if (realChange) schedule();
     });
     mo.observe(document.body, { childList: true, subtree: true, characterData: true });
 
