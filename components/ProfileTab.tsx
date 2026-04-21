@@ -1380,27 +1380,23 @@ export default function ProfileTab() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+        {/* §2.19 — Rank / Win Rate / Points were reading from localStorage
+            which (a) isn't durable across devices and (b) can be tampered.
+            Points + alert-result storage is future server-side work; until
+            then these render honest zeros for new users rather than
+            reading a client-side number that pretends to be authoritative.
+            When the user_stats table lands, wire the fetch here. */}
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          {(() => {
-            const pts = (() => { try { return parseInt(localStorage.getItem('steinz_points') || '0'); } catch { return 0; } })();
-            const rank = pts >= 5000 ? { label: 'Legend', color: 'text-red-400' } : pts >= 1500 ? { label: 'Whale', color: 'text-yellow-400' } : pts >= 500 ? { label: 'Analyst', color: 'text-purple-400' } : pts >= 100 ? { label: 'Trader', color: 'text-blue-400' } : { label: 'Rookie', color: 'text-gray-400' };
-            return (<><div className={`text-sm font-bold ${rank.color}`}>{rank.label}</div><div className="text-[10px] text-gray-400">Rank</div></>);
-          })()}
+          <div className="text-sm font-bold text-gray-400">Rookie</div>
+          <div className="text-[10px] text-gray-400">Rank</div>
         </div>
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          {(() => {
-            const results = (() => { try { const r = JSON.parse(localStorage.getItem('steinz_alert_results') || '[]'); return r; } catch { return []; } })();
-            const total = results.length;
-            const wins = results.filter((r: {success?: boolean}) => r.success).length;
-            const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
-            return (<><div className="text-lg font-bold">{rate}%</div><div className="text-[10px] text-gray-400">Win Rate</div></>);
-          })()}
+          <div className="text-lg font-bold">—</div>
+          <div className="text-[10px] text-gray-400">Win Rate</div>
         </div>
         <div className="glass rounded-lg p-3 text-center border border-white/10">
-          {(() => {
-            const pts = (() => { try { return parseInt(localStorage.getItem('steinz_points') || '0'); } catch { return 0; } })();
-            return (<><div className="text-lg font-bold">{pts}</div><div className="text-[10px] text-gray-400">Points</div></>);
-          })()}
+          <div className="text-lg font-bold">0</div>
+          <div className="text-[10px] text-gray-400">Points</div>
         </div>
         {/* Bug §2.20 — Following tile (4th). Clicking drills into the user's
             followed whales list. Count comes from user_whale_follows (Supabase),

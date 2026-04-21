@@ -29,6 +29,7 @@ import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import TradingViewChart, { getTradingViewSymbol } from "@/components/TradingViewChart";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
+import PortfolioHistoryPanel from "@/components/market/PortfolioHistoryPanel";
 import { BackButton } from "@/components/ui/BackButton";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
@@ -204,6 +205,9 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           </div>
         )}
       </div>
+
+      {/* Batch 9 — Portfolio / Trade History bottom table (checkprice-style) */}
+      <PortfolioHistoryPanel />
 
       {showAlert && detail && (
         <AlertModal
