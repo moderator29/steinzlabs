@@ -27,7 +27,11 @@ export async function GET(request: NextRequest) {
       .single();
 
     const result = checkTier(profile?.tier, profile?.tier_expires_at, 'free');
-    const tier = result.currentTier;
+    // Admins get unconditional Max — they built the platform, they get
+    // everything. Also if the stored tier is already 'max' and role is
+    // admin, ignore any expiry (internal accounts shouldn't be downgraded).
+    const isAdmin = profile?.role === 'admin';
+    const tier = isAdmin ? 'max' : result.currentTier;
 
     return NextResponse.json(
       {
@@ -35,10 +39,10 @@ export async function GET(request: NextRequest) {
         isPaid: tier !== 'free',
         isPro: tier === 'pro' || tier === 'max',
         isMax: tier === 'max',
-        isAdmin: profile?.role === 'admin',
+        isAdmin,
         verifiedBadge: profile?.verified_badge || null,
         tierExpiresAt: profile?.tier_expires_at || null,
-        expired: result.expired,
+        expired: isAdmin ? false : result.expired,
       },
       { headers: { 'Cache-Control': 'private, max-age=10' } },
     );
