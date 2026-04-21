@@ -1,5 +1,20 @@
 'use client';
 
+/**
+ * §5.2 — Canonical wallet/balance hook. Call from ANY client component
+ * that needs the connected wallet address, total USD, or per-token
+ * balance. Backed by /api/wallet-intelligence (multi-chain aggregator).
+ *
+ *   const { address, balance } = useWallet();
+ *   // balance.totalUsd           → USD across all chains
+ *   // balance.tokens["ETH"]      → ETH balance as number
+ *   // balance.tokens["USDC"]     → USDC balance as number
+ *
+ * Auto-refetches whenever 'steinz:balance-changed' event fires (after
+ * a swap, send, or receive). If you're adding a new feature that needs
+ * to know the user's funds, use THIS — don't write a second fetcher.
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { connectMetaMask, connectPhantom, clearStoredWallet } from '@/lib/wallet';
