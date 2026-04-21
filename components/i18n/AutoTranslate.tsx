@@ -138,31 +138,57 @@ export default function AutoTranslate() {
     let lang = getCurrentLang();
     let pending = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // First-paint flash guard: if the user's stored language isn't
+    // English, hide the body until the initial translate pass completes
+    // (or a 1.5s safety timeout fires — so a slow /api/translate can't
+    // leave the page blank). CSS transitions in so it's a gentle fade
+    // rather than a snap.
+    const flashGuardActive = lang !== 'en';
+    const html = document.documentElement;
+    if (flashGuardActive) {
+      html.classList.add('naka-translating');
+    }
+    const revealPage = () => {
+      html.classList.remove('naka-translating');
+    };
+    let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+    if (flashGuardActive) {
+      safetyTimer = setTimeout(revealPage, 1500);
+    }
 
-    const run = () => {
+    const run = (reveal = false) => {
       if (pending) return;
       pending = true;
       Promise.resolve().then(async () => {
-        try { await translateAll(lang); } finally { pending = false; }
+        try { await translateAll(lang); } finally {
+          pending = false;
+          if (reveal) {
+            if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+            revealPage();
+          }
+        }
       });
     };
 
     const schedule = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(run, DEBOUNCE_MS);
+      timer = setTimeout(() => run(false), DEBOUNCE_MS);
     };
 
     const onLang = () => {
       lang = getCurrentLang();
       // RTL handling for Arabic
       document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-      run();
+      run(false);
     };
 
     // Initial pass if user already has a non-en language stored.
     if (lang !== 'en') {
       document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-      setTimeout(run, 800); // let first render settle
+      // Shorter settle than before — 150ms — because we're hiding the
+      // page anyway, so reducing time-to-reveal matters more than
+      // waiting for subtree to stabilise.
+      setTimeout(() => run(true), 150);
     }
 
     window.addEventListener('naka_lang_change', onLang);
@@ -191,6 +217,8 @@ export default function AutoTranslate() {
       window.removeEventListener('naka_lang_change', onLang);
       mo.disconnect();
       if (timer) clearTimeout(timer);
+      if (safetyTimer) clearTimeout(safetyTimer);
+      revealPage();
     };
   }, []);
 

@@ -53,33 +53,41 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-[#080C18] text-white">
-      {/* Top Nav */}
+      {/* Top Nav — clean single-row layout on all sizes.
+          Mobile: hamburger + compact "NAKA Docs" title + Open App only
+                  (toggles live inside the sidebar drawer to avoid overflow).
+          Desktop: full label + Back link + toggle cluster + Whitepaper + Open App. */}
       <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <button
-              className="lg:hidden p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
+              className="lg:hidden p-2 rounded-lg hover:bg-white/[0.06] transition-colors flex-shrink-0"
               onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
             >
               <Menu className="w-5 h-5 text-gray-400" />
             </button>
-            <Link href="/" className="hidden sm:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-sm">
+            <Link href="/" className="hidden sm:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-sm flex-shrink-0">
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </Link>
-            <span className="hidden sm:block w-px h-4 bg-white/[0.08]" />
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-[#0A1EFF]" />
-              <span className="text-sm font-semibold text-white">NAKA LABS Docs</span>
+            <span className="hidden sm:block w-px h-4 bg-white/[0.08] flex-shrink-0" />
+            <div className="flex items-center gap-1.5 min-w-0">
+              <BookOpen className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+              <span className="text-sm font-semibold text-white whitespace-nowrap truncate">
+                <span className="hidden sm:inline">NAKA LABS Docs</span>
+                <span className="sm:hidden">Docs</span>
+              </span>
             </div>
-            <span className="lg:hidden text-[10px] text-gray-500 ml-1">— {currentLabel}</span>
           </div>
-          <div className="flex items-center gap-2" data-no-translate>
-            <GlobalControls />
-            <Link href="/whitepaper" className="hidden sm:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
+          <div className="flex items-center gap-2 flex-shrink-0" data-no-translate>
+            <div className="hidden md:flex items-center gap-2">
+              <GlobalControls />
+            </div>
+            <Link href="/whitepaper" className="hidden lg:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>
-            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-semibold">
+            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-semibold whitespace-nowrap">
               Open App
             </Link>
           </div>
@@ -100,7 +108,12 @@ export default function DocsPage() {
                 <X className="w-4 h-4 text-gray-400" />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 space-y-4">
+              {/* Toggle cluster inside drawer so mobile users still
+                  reach theme + language without crowding the top nav. */}
+              <div className="flex items-center gap-2 pb-4 border-b border-white/[0.06] md:hidden" data-no-translate>
+                <GlobalControls />
+              </div>
               <DocsSidebar
                 activeSection={activeSection}
                 onSectionClick={() => setMobileOpen(false)}

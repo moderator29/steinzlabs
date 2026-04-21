@@ -43,11 +43,24 @@ function intervalFor(days: string): number {
   return 604800;
 }
 
+// Same symbol→slug normalization the token detail route uses, so
+// wallet links like /coin/arbitrum/eth resolve to CoinGecko's
+// "ethereum" slug instead of a 404.
+const SYMBOL_TO_SLUG: Record<string, string> = {
+  eth: 'ethereum', weth: 'weth', btc: 'bitcoin', wbtc: 'wrapped-bitcoin',
+  sol: 'solana', bnb: 'binancecoin', wbnb: 'wbnb', matic: 'matic-network',
+  pol: 'polygon-ecosystem-token', avax: 'avalanche-2', arb: 'arbitrum',
+  op: 'optimism', usdc: 'usd-coin', usdt: 'tether', dai: 'dai',
+  link: 'chainlink', uni: 'uniswap', ltc: 'litecoin', trx: 'tron',
+  doge: 'dogecoin', shib: 'shiba-inu',
+};
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
+  const { id: rawId } = await context.params;
+  const id = SYMBOL_TO_SLUG[rawId.toLowerCase()] ?? rawId;
   const days = req.nextUrl.searchParams.get('days') ?? '1';
 
   const url = new URL(`${BASE}/coins/${id}/market_chart`);

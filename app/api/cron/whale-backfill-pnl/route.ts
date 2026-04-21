@@ -46,6 +46,7 @@ interface TransferLite {
 interface PnlMetrics {
   pnl_30d_usd: number;
   pnl_7d_usd: number;
+  pnl_5d_usd: number;
   win_rate: number | null; // null when <3 closed positions (insufficient data)
   trade_count_30d: number;
   last_active_at: string | null;
@@ -158,11 +159,13 @@ async function computeMetrics(address: string, chain: string): Promise<PnlMetric
   const now = Date.now();
   const THIRTY_D = 30 * 86400 * 1000;
   const SEVEN_D = 7 * 86400 * 1000;
+  const FIVE_D = 5 * 86400 * 1000;
 
   const windowTx30 = transfers.filter((t) => t.timestampMs >= now - THIRTY_D);
 
   const p30 = calculatePnl(address, transfers, THIRTY_D, now);
   const p7 = calculatePnl(address, transfers, SEVEN_D, now);
+  const p5 = calculatePnl(address, transfers, FIVE_D, now);
 
   const winRate = p30.sells >= 3 ? Math.round((p30.profitableSells / p30.sells) * 100) : null;
   const lastActiveMs = transfers.length > 0 ? Math.max(...transfers.map((t) => t.timestampMs)) : 0;
@@ -170,6 +173,7 @@ async function computeMetrics(address: string, chain: string): Promise<PnlMetric
   return {
     pnl_30d_usd: Math.round(p30.pnl),
     pnl_7d_usd: Math.round(p7.pnl),
+    pnl_5d_usd: Math.round(p5.pnl),
     win_rate: winRate,
     trade_count_30d: windowTx30.length,
     last_active_at: lastActiveMs > 0 ? new Date(lastActiveMs).toISOString() : null,
@@ -240,6 +244,7 @@ export async function GET(request: NextRequest) {
         fields: {
           pnl_30d_usd: metrics.pnl_30d_usd,
           pnl_7d_usd: metrics.pnl_7d_usd,
+          pnl_5d_usd: metrics.pnl_5d_usd,
           win_rate: metrics.win_rate,
           trade_count_30d: metrics.trade_count_30d,
           last_active_at: metrics.last_active_at,
