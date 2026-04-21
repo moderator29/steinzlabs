@@ -59,6 +59,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const volume24h = md?.total_volume?.usd ?? 0;
   const marketCap = md?.market_cap?.usd ?? 0;
   const fdv = md?.fully_diluted_valuation?.usd ?? 0;
+  const dex = (detail as any)?._dex as { volume_m5?: number; buys_h24?: number; sells_h24?: number } | undefined;
+  const vol5m = dex?.volume_m5;
+  const buys24h = dex?.buys_h24;
+  const sells24h = dex?.sells_h24;
   const symbol = detail?.symbol?.toUpperCase() ?? address.slice(0, 6).toUpperCase();
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
@@ -114,7 +118,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <div className="h-4 w-px bg-slate-800/60 hidden md:block" />
           <StatInline label="1h" value={change1h != null ? `${change1h >= 0 ? '+' : ''}${change1h.toFixed(2)}%` : '—'} tone={change1h >= 0 ? 'up' : 'down'} />
           <StatInline label="24h" value={`${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%`} tone={change24h >= 0 ? 'up' : 'down'} />
+          <StatInline label="5m Vol" value={vol5m != null && vol5m > 0 ? `$${formatLargeNumber(vol5m)}` : '—'} />
           <StatInline label="24h Vol" value={volume24h ? `$${formatLargeNumber(volume24h)}` : '—'} />
+          <StatInline label="24h Buy" value={buys24h != null && buys24h > 0 ? formatLargeNumber(buys24h) : '—'} tone={buys24h && buys24h > 0 ? 'up' : undefined} />
+          <StatInline label="24h Sell" value={sells24h != null && sells24h > 0 ? formatLargeNumber(sells24h) : '—'} tone={sells24h && sells24h > 0 ? 'down' : undefined} />
           <StatInline label="Mcap" value={marketCap ? `$${formatLargeNumber(marketCap)}` : '—'} />
           <StatInline label="FDV" value={fdv ? `$${formatLargeNumber(fdv)}` : '—'} />
         </div>

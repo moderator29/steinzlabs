@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/Toast";
 import { WalletProvider } from "@/context/WalletContext";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import AutoTranslate from "@/components/i18n/AutoTranslate";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -65,6 +66,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
+          <AutoTranslate />
           <AuthProvider>
             <WalletProvider>
               <ToastProvider>
