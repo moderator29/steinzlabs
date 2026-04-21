@@ -17,6 +17,7 @@ import { DocsSection10 } from '@/components/docs/DocsSection10';
 import { DocsSection11 } from '@/components/docs/DocsSection11';
 import { DocsSection12 } from '@/components/docs/DocsSection12';
 import { DocsSection13 } from '@/components/docs/DocsSection13';
+import GlobalControls from '@/components/GlobalControls';
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('getting-started');
@@ -73,7 +74,8 @@ export default function DocsPage() {
             </div>
             <span className="lg:hidden text-[10px] text-gray-500 ml-1">— {currentLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-no-translate>
+            <GlobalControls />
             <Link href="/whitepaper" className="hidden sm:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>

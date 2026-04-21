@@ -6,6 +6,7 @@ import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import FloatingNotificationBell from '@/components/FloatingNotificationBell';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
+import GlobalControls from '@/components/GlobalControls';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -22,6 +23,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <FloatingNotificationBell />
       <PendingSignerProvider />
       <PendingTradesBanner />
+      <div className="fixed top-3 right-3 z-30" data-no-translate>
+        <GlobalControls />
+      </div>
       {children}
     </div>
   );
