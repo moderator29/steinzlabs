@@ -11,7 +11,7 @@
  * Withdraw text links.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
 
@@ -29,6 +29,19 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   const { address: walletAddr, balance } = useWallet();
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
   const [amount, setAmount] = useState('');
+
+  // Quick-Sell from PortfolioHistoryPanel emits this event — if the
+  // symbol matches, flip to SELL mode and pre-fill with full position.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail as { symbol?: string } | undefined;
+      if (detail?.symbol && detail.symbol.toUpperCase() === symbol.toUpperCase()) {
+        setMode('SELL');
+      }
+    };
+    window.addEventListener('market:quick-sell', handler);
+    return () => window.removeEventListener('market:quick-sell', handler);
+  }, [symbol]);
   const [executing, setExecuting] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
 
