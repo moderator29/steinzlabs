@@ -1,32 +1,27 @@
 "use client";
 
 /**
- * Batch 8 — Naka Wallet coin-detail page. Opens when user clicks any
- * token in the wallet home list. Matches the Trust-Wallet-style layout
- * from the reference screenshot (§4.5 refinement):
+ * Naka Wallet coin-detail page. Inspired by Trust Wallet's layout but
+ * fully Naka-branded (brand blue primary, no green accents, no
+ * Yellowcard/P2P fiat card):
  *
- *   [← back]       ETH / COIN | Ethereum         [★ watch]
- *   ⛽ $0.01       [Over 45K stakers]
+ *   [← back]       ETH / COIN · Ethereum              [★ watch]
  *                     $2,286.61
  *                     ↓ -$27.00 (-1.16%)
- *   [          line chart (stride / simple)          ]
+ *   [          line chart — real price history         ]
  *   [ 1H  1D  1W  1M  1Y  All ]
  *
- *   Buy now
- *   [ 40,275 NGN ] [ Buy ]
- *   [ 20K 30K 60K 100K ]       Yellowcard · P2P Bank
+ *   [ My Position · Activity ]
  *
- *   [ Holdings · History · About ]
+ *   [  Send  ] [ Receive ] [  Swap  ]     ← fixed bottom
  *
- *   [Send] [Receive] [Swap] [BUY] [Sell]      ← fixed bottom
- *
- * Buy / Sell / Swap currently show a "Coming Soon" toast per product
- * direction — rail is built, wiring to the real swap pipeline queued.
- * Send + Receive deep-link to the existing wallet flows (work today).
+ * Send + Receive deep-link to the existing wallet flows. Swap shows
+ * a Coming Soon modal — the in-wallet swap pipeline is queued.
+ * Buy + Sell removed (fiat on/off-ramp ships with Yellowcard later).
  */
 
 import { use, useState, useEffect } from "react";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Repeat, ShoppingCart, Landmark, Star } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Repeat, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
@@ -39,9 +34,13 @@ interface RouteParams {
   address: string;
 }
 
-type Tab = 'holdings' | 'history' | 'about';
+type Tab = 'position' | 'activity';
 type Timeframe = '1H' | '1D' | '1W' | '1M' | '1Y' | 'All';
 const TIMEFRAMES: Timeframe[] = ['1H', '1D', '1W', '1M', '1Y', 'All'];
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'position', label: 'My Position' },
+  { id: 'activity', label: 'Activity' },
+];
 
 export default function WalletCoinPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
@@ -51,7 +50,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const { detail, loading } = useTokenDetail(address);
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
 
-  const [tab, setTab] = useState<Tab>('holdings');
+  const [tab, setTab] = useState<Tab>('position');
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [comingSoonOpen, setComingSoonOpen] = useState<string | null>(null);
   const [chartPoints, setChartPoints] = useState<number[]>([]);
@@ -163,28 +162,26 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         ))}
       </div>
 
-      {/* Buy now fiat card — hidden until the P2P/Yellowcard integration
-          is live. Prior version hardcoded 40,275 NGN with no real rate
-          and no working flow; showing dead UI was worse than no UI. The
-          Buy button in the bottom bar still routes through ComingSoon. */}
-
-      {/* Tabs */}
+      {/* Tabs — kept lean: My Position (what the user holds) +
+          Activity (their tx history for this token). About was
+          removed per spec: users don't need a marketing blurb inside
+          the wallet. */}
       <div className="flex items-center gap-6 px-4 border-b border-slate-800 mb-4 text-sm font-semibold">
-        {(['holdings', 'history', 'about'] as Tab[]).map((t) => (
+        {TABS.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`pb-3 -mb-px border-b-2 capitalize transition-colors ${
-              tab === t ? 'border-emerald-400 text-white' : 'border-transparent text-slate-500 hover:text-white'
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`pb-3 -mb-px border-b-2 transition-colors ${
+              tab === t.id ? 'border-[#0A1EFF] text-white' : 'border-transparent text-slate-500 hover:text-white'
             }`}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>
 
       <div className="px-4 min-h-[140px]">
-        {tab === 'holdings' && (
+        {tab === 'position' && (
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">My Balance</p>
             {balanceAmount > 0 ? (
@@ -199,35 +196,31 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
             )}
           </div>
         )}
-        {tab === 'history' && (
-          <p className="text-sm text-slate-500">Transaction history for {symbol} will appear here once you trade.</p>
-        )}
-        {tab === 'about' && (
-          <p className="text-sm text-slate-400 leading-relaxed">
-            {detail?.description?.en ? detail.description.en.split('.')[0] + '.' : `${name} is a digital asset on ${chainLabel}.`}
-          </p>
+        {tab === 'activity' && (
+          <p className="text-sm text-slate-500">Your {symbol} activity on {chainLabel} will appear here once you transact.</p>
         )}
       </div>
 
-      {/* Fixed bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-[#0A0E1A]/95 backdrop-blur-xl px-3 py-3 grid grid-cols-5 gap-2 z-40">
-        <WalletAction icon={<ArrowUpRight size={16} />} label="Send" onClick={() => router.push(`/dashboard/wallet-page?action=send&token=${symbol}&chain=${chain}`)} />
+      {/* Fixed bottom action bar — Send / Receive / Swap only.
+          Buy + Sell removed per spec (they were Coming Soon stubs;
+          fiat on/off-ramp ships with the Yellowcard integration).
+          Send + Receive deep-link into the working wallet flows. */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-[#0A0E1A]/95 backdrop-blur-xl px-3 py-3 grid grid-cols-3 gap-2 z-40">
+        <WalletAction icon={<ArrowUpRight size={16} />} label="Send" primary onClick={() => router.push(`/dashboard/wallet-page?action=send&token=${symbol}&chain=${chain}`)} />
         <WalletAction icon={<ArrowDownLeft size={16} />} label="Receive" onClick={() => router.push(`/dashboard/wallet-page?action=receive&chain=${chain}`)} />
         <WalletAction icon={<Repeat size={16} />} label="Swap" onClick={() => setComingSoonOpen('Swap')} />
-        <WalletAction icon={<ShoppingCart size={16} />} label="Buy" primary onClick={() => setComingSoonOpen('Buy')} />
-        <WalletAction icon={<Landmark size={16} />} label="Sell" onClick={() => setComingSoonOpen('Sell')} />
       </div>
 
-      {/* Coming Soon modal */}
+      {/* Coming Soon modal — only Swap uses this now. */}
       {comingSoonOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#0D1117] border border-slate-800 rounded-2xl p-6 w-full max-w-xs text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#0A1EFF]/15 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-[#0A1EFF]" />
+              <Repeat className="w-5 h-5 text-[#0A1EFF]" />
             </div>
             <h3 className="text-base font-bold mb-1">{comingSoonOpen} — Coming Soon</h3>
             <p className="text-xs text-slate-400 mb-4">
-              In-wallet fiat {comingSoonOpen.toLowerCase()} flow is launching shortly. For now you can still trade via the <span className="text-white">Market</span>.
+              In-wallet {comingSoonOpen.toLowerCase()} is launching shortly. For now you can trade via the <span className="text-white">Market</span>.
             </p>
             <button
               type="button"
@@ -250,13 +243,13 @@ function WalletAction({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
+      className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-colors ${
         primary
-          ? 'bg-emerald-400 text-black shadow-[0_0_12px_rgba(74,222,128,0.25)]'
+          ? 'bg-[#0A1EFF] text-white shadow-[0_0_16px_rgba(10,30,255,0.35)] hover:bg-[#0818CC]'
           : 'bg-slate-900/70 text-slate-300 hover:bg-slate-800'
       }`}
     >
-      <div className={primary ? 'text-black' : ''}>{icon}</div>
+      <div>{icon}</div>
       <span className="text-[10px] font-semibold">{label}</span>
     </button>
   );

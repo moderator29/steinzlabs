@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
@@ -231,6 +231,7 @@ const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_
 
 export default function WalletPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
@@ -449,6 +450,30 @@ export default function WalletPage() {
   useEffect(() => {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
+
+  // Deep-link hydration from the coin-detail page's Send / Receive
+  // buttons. URL shape: ?action=send|receive[&chain=<id>]. If chain is
+  // specified we switch the active chain so the view opens on the
+  // correct asset.
+  useEffect(() => {
+    const action = searchParams?.get('action');
+    const wantedChainId = searchParams?.get('chain');
+    if (!action) return;
+    if (wantedChainId) {
+      const c = SUPPORTED_CHAINS.find((x) => x.id === wantedChainId);
+      if (c) setActiveChain(c);
+    }
+    if (action === 'send') setView('send');
+    else if (action === 'receive') setView('receive');
+    // Strip the query params so refresh doesn't keep reopening.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      url.searchParams.delete('chain');
+      url.searchParams.delete('token');
+      window.history.replaceState({}, '', url.toString());
+    } catch { /* SSR — ignore */ }
+  }, [searchParams]);
 
   // Hydrate custom-token metadata (Naka Go, Pleasure Coin, anything the
   // user added). Each entry is "<chain>:<contract>"; we call
