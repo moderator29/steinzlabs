@@ -32,18 +32,48 @@ const CHAIN_LABEL: Record<string, string> = {
   optimism:'OP', base:'BASE', solana:'SOL', avalanche:'AVAX',
 };
 
+// Maps UI category id -> CoinGecko category slug (their actual category
+// IDs, not our shorthand). Earlier version used incorrect slugs like
+// 'defi' which CoinGecko doesn't recognize, so the filter silently fell
+// back to "top" and every category showed the same list. These are the
+// real slugs (verified against /coins/categories/list).
 const CAT_API_MAP: Record<string, string> = {
-  all:'top', majors:'top', defi:'defi',
-  layer1:'layer-1', layer2:'layer-2', gaming:'gaming',
-  ai:'ai', meme:'meme', depin:'depin',
+  all:         'top',
+  majors:      'top',
+  defi:        'decentralized-finance-defi',
+  layer1:      'layer-1',
+  layer2:      'layer-2',
+  gaming:      'gaming',
+  ai:          'artificial-intelligence',
+  meme:        'meme-token',
+  depin:       'depin',
+  stocks:      'tokenized-stocks',
+  commodities: 'real-world-assets-rwa',
+  cults:       'cults',   // client-side post-filter — no CG category match
 };
 
+// Cults = culturally-driven tokens (community/brand). CoinGecko has no
+// first-class category, so when cults is selected we fetch meme-token
+// and filter to a curated list the platform recognizes as "cult".
+const CULT_TOKENS = new Set([
+  'dogecoin','shiba-inu','pepe','bonk','dogwifcoin','popcat','floki',
+  'mog-coin','book-of-meme','brett-2','apu','goatseus-maximus','neiro',
+  'fartcoin','moodeng','pnut','peanut-the-squirrel','chill-guy','turbo',
+]);
+
 const CATEGORIES = [
-  { id:'all', label:'All' }, { id:'majors', label:'Majors' },
-  { id:'defi', label:'DeFi' }, { id:'layer1', label:'Layer 1' },
-  { id:'layer2', label:'Layer 2' }, { id:'gaming', label:'Gaming' },
-  { id:'ai', label:'AI' }, { id:'meme', label:'Meme' },
-  { id:'depin', label:'DePIN' },
+  { id:'all',         label:'All' },
+  { id:'majors',      label:'Majors' },
+  { id:'defi',        label:'DeFi' },
+  { id:'layer1',      label:'Layer 1' },
+  { id:'layer2',      label:'Layer 2' },
+  { id:'gaming',      label:'Gaming' },
+  { id:'ai',          label:'AI' },
+  { id:'meme',        label:'Meme' },
+  { id:'depin',       label:'DePIN' },
+  { id:'stocks',      label:'Stocks' },
+  { id:'commodities', label:'Commodities' },
+  { id:'cults',       label:'Cults' },
 ];
 
 function fmtPrice(p: number): string {
@@ -117,7 +147,8 @@ export default function MarketDashboard() {
   const fetchCoins = useCallback(async () => {
     setLoading(true);
     try {
-      const apiCat = CAT_API_MAP[category] || 'top';
+      // Cults reuses meme-token fetch then client-side filters (see below)
+      const apiCat = category === 'cults' ? CAT_API_MAP.meme : (CAT_API_MAP[category] || 'top');
       const res = await fetch(`/api/market-data?category=${apiCat}&limit=100`);
       const data = await res.json() as { tokens?: Record<string, unknown>[] };
       if (data.tokens && data.tokens.length > 0) {
@@ -135,6 +166,10 @@ export default function MarketDashboard() {
           source:   'coingecko' as const,
         }));
         if (category === 'majors') rows = rows.filter(c => MAJOR_IDS.includes(c.id));
+        // Cults is a curated subset of meme-token — CoinGecko has no
+        // first-class category, so we fetch meme-token upstream (via
+        // CAT_API_MAP) then post-filter to the platform's cult list.
+        if (category === 'cults') rows = rows.filter(c => CULT_TOKENS.has(c.id));
         rows.forEach(r => coinCache.current.set(r.id, r));
         setCoins(rows);
       } else { setCoins([]); }

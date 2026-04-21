@@ -3,11 +3,15 @@ import { NextResponse } from 'next/server';
 // ISR — edge cache for 5 minutes
 export const revalidate = 300;
 
-async function fromCoinGecko(limit: number) {
+// category: actual CoinGecko category slug (see /coins/categories/list).
+// Pass-through to their API so tabs like defi/ai/meme/depin/stocks
+// return chain-specific sets instead of the generic market_cap list.
+async function fromCoinGecko(limit: number, category?: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 7000);
+  const catParam = category && category !== 'top' ? `&category=${encodeURIComponent(category)}` : '';
   const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=true&price_change_percentage=24h,7d`,
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=true&price_change_percentage=24h,7d${catParam}`,
     {
       headers: process.env.COINGECKO_API_KEY
         ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
@@ -49,8 +53,14 @@ export async function GET(request: Request) {
 
   let coins: any[] = [];
 
+  // gainers/losers are computed client-side from the top list — don't
+  // pass those as CoinGecko categories (they'd 404). All other values
+  // (defi, layer-1, artificial-intelligence, meme-token, depin, etc.)
+  // are real CoinGecko category slugs.
+  const cgCategory = (category === 'gainers' || category === 'losers' || category === 'top') ? undefined : category;
+
   try {
-    coins = await fromCoinGecko(limit);
+    coins = await fromCoinGecko(limit, cgCategory);
   } catch {
     try {
       coins = await fromCoinCap(limit);
