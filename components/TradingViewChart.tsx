@@ -91,6 +91,7 @@ interface TradingViewChartProps {
   height?: number;
   interval?: string;
   showTools?: boolean;
+  theme?: 'dark' | 'light';
 }
 
 function loadTradingViewScript(): Promise<void> {
@@ -114,7 +115,7 @@ function loadTradingViewScript(): Promise<void> {
   });
 }
 
-function TradingViewChartInner({ symbol, height = 400, interval = '60', showTools = false }: TradingViewChartProps) {
+function TradingViewChartInner({ symbol, height = 400, interval = '15', showTools = false, theme = 'dark' }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<any>(null);
 
@@ -127,14 +128,21 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
 
       containerRef.current.innerHTML = '';
 
+      const isLight = theme === 'light';
+      const bg = isLight ? '#FFFFFF' : '#0A0E1A';
+      const grid = isLight ? '#E2E8F0' : '#1A2235';
+      const textCol = isLight ? '#475569' : '#6B7280';
+      const upCol = '#10B981';
+      const downCol = '#EF4444';
+
       widgetRef.current = new window.TradingView.widget({
         symbol: symbol,
         interval: interval,
         timezone: 'Etc/UTC',
-        theme: 'dark',
+        theme: theme,
         style: '1',
         locale: 'en',
-        toolbar_bg: '#0A0E1A',
+        toolbar_bg: bg,
         enable_publishing: false,
         hide_top_toolbar: !showTools,
         hide_side_toolbar: !showTools,
@@ -142,23 +150,23 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
         save_image: false,
         container_id: containerRef.current.id,
         autosize: true,
-        backgroundColor: '#0A0E1A',
-        gridColor: '#1A2235',
+        backgroundColor: bg,
+        gridColor: grid,
         studies: ['Volume@tv-basicstudies'],
-        loading_screen: { backgroundColor: '#0A0E1A', foregroundColor: '#0A1EFF' },
+        loading_screen: { backgroundColor: bg, foregroundColor: '#0A1EFF' },
         overrides: {
-          'paneProperties.background': '#0A0E1A',
+          'paneProperties.background': bg,
           'paneProperties.backgroundType': 'solid',
-          'paneProperties.vertGridProperties.color': '#1A2235',
-          'paneProperties.horzGridProperties.color': '#1A2235',
-          'scalesProperties.backgroundColor': '#0A0E1A',
-          'scalesProperties.textColor': '#6B7280',
-          'mainSeriesProperties.candleStyle.upColor': '#0A1EFF',
-          'mainSeriesProperties.candleStyle.downColor': '#EF4444',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#0A1EFF',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#EF4444',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#0A1EFF',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#EF4444',
+          'paneProperties.vertGridProperties.color': grid,
+          'paneProperties.horzGridProperties.color': grid,
+          'scalesProperties.backgroundColor': bg,
+          'scalesProperties.textColor': textCol,
+          'mainSeriesProperties.candleStyle.upColor': upCol,
+          'mainSeriesProperties.candleStyle.downColor': downCol,
+          'mainSeriesProperties.candleStyle.wickUpColor': upCol,
+          'mainSeriesProperties.candleStyle.wickDownColor': downCol,
+          'mainSeriesProperties.candleStyle.borderUpColor': upCol,
+          'mainSeriesProperties.candleStyle.borderDownColor': downCol,
         },
       });
     };
@@ -172,7 +180,7 @@ function TradingViewChartInner({ symbol, height = 400, interval = '60', showTool
         widgetRef.current = null;
       }
     };
-  }, [symbol, interval, showTools]);
+  }, [symbol, interval, showTools, theme]);
 
   const idCounter = useRef(0);
   const stableId = useRef(`tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}-${++idCounter.current}`);
