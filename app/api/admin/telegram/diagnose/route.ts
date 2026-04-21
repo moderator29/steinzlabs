@@ -15,7 +15,7 @@
  * Auth: admin-only, same gate as the whale verifier.
  *
  * Usage:
- *   curl "https://steinzlabs.vercel.app/api/admin/telegram/diagnose" \
+ *   curl "https://nakalabs.xyz/api/admin/telegram/diagnose" \
  *     -H "x-migration-secret: <ADMIN_MIGRATION_SECRET>"
  */
 import 'server-only';
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
   }
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://steinzlabs.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz';
 
   if (!token) {
     return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN missing' }, { status: 500 });
