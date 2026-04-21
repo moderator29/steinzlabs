@@ -85,6 +85,29 @@ const SORT_OPTIONS = [
   { id: 'recent_activity', label: 'Recently Active' },
 ];
 
+// §2.10 filter pills
+const TIMEFRAME_PILLS = [
+  { id: '24h', label: '24h' },
+  { id: '7d',  label: '7d'  },
+  { id: '30d', label: '30d' }, // default — matches how the backfill cron computes metrics
+  { id: 'all', label: 'All'  },
+];
+
+const PERFORMANCE_PILLS = [
+  { id: '',             label: 'All' },
+  { id: 'pnl_30d',      label: 'Top Gainers' },      // sort by pnl_30d desc (already default behavior)
+  { id: 'pnl_30d_asc',  label: 'Top Losers' },       // server handles _asc suffix
+  { id: 'trade_count',  label: 'Most Active' },      // sort by trade_count_30d desc
+  { id: 'win_rate',     label: 'Highest Win Rate' }, // sort by win_rate desc
+];
+
+const VOLUME_PILLS = [
+  { id: 0,       label: 'Any' },
+  { id: 10000,   label: '>$10K' },
+  { id: 100000,  label: '>$100K' },
+  { id: 1000000, label: '>$1M' },
+];
+
 function fmtUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
   const n = typeof v === 'number' ? v : parseFloat(v);
@@ -148,6 +171,9 @@ export default function WhaleDirectoryPage() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<string>('score');
   const [minScore, setMinScore] = useState(0);
+  const [timeframe, setTimeframe] = useState('30d');
+  const [performance, setPerformance] = useState('');
+  const [minPortfolio, setMinPortfolio] = useState(0);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<WhaleRow | null>(null);
   const [followTarget, setFollowTarget] = useState<WhaleRow | null>(null);
@@ -155,11 +181,16 @@ export default function WhaleDirectoryPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const p = new URLSearchParams({ limit: '24', offset: String(offset), sort });
+      const p = new URLSearchParams({ limit: '24', offset: String(offset) });
       if (chain) p.set('chain', chain);
       if (entityType) p.set('entity_type', entityType);
       if (q.trim()) p.set('q', q.trim());
       if (minScore > 0) p.set('min_score', String(minScore));
+      if (minPortfolio > 0) p.set('min_portfolio_usd', String(minPortfolio));
+      if (timeframe && timeframe !== '30d') p.set('timeframe', timeframe);
+      // Performance pill wins over sort dropdown when set
+      const effectiveSort = performance || sort;
+      p.set('sort', effectiveSort);
       const res = await fetch(`/api/whales/directory?${p}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = (await res.json()) as DirectoryResponse;
@@ -171,7 +202,7 @@ export default function WhaleDirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [chain, entityType, q, sort, minScore, offset]);
+  }, [chain, entityType, q, sort, minScore, minPortfolio, timeframe, performance, offset]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -293,6 +324,61 @@ export default function WhaleDirectoryPage() {
                   <Icon className="w-3 h-3" />
                   {e.label}
                   {count > 0 && <span className="text-slate-500 text-[9px]">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* §2.10 advanced filter pill rows */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
+            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Timeframe</span>
+            {TIMEFRAME_PILLS.map((t) => {
+              const active = timeframe === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setTimeframe(t.id); setOffset(0); }}
+                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
+                    active ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
+            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Performance</span>
+            {PERFORMANCE_PILLS.map((p) => {
+              const active = performance === p.id;
+              return (
+                <button
+                  key={p.id || 'all'}
+                  onClick={() => { setPerformance(p.id); setOffset(0); }}
+                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
+                    active ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
+            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Min portfolio</span>
+            {VOLUME_PILLS.map((v) => {
+              const active = minPortfolio === v.id;
+              return (
+                <button
+                  key={String(v.id)}
+                  onClick={() => { setMinPortfolio(v.id); setOffset(0); }}
+                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
+                    active ? 'bg-purple-500/15 text-purple-300 border border-purple-500/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  {v.label}
                 </button>
               );
             })}

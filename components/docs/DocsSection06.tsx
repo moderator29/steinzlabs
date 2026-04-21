@@ -18,7 +18,7 @@ const SECURITY_TOOLS = [
   {
     icon: FileCode, color: '#0A1EFF',
     title: 'Contract Analyzer',
-    desc: 'Paste any smart contract address and VTX AI will decode the bytecode and explain exactly what the contract does — in plain English. Identifies dangerous functions like mint, pause, blacklist, and proxy upgrades.',
+    desc: 'Paste any smart contract address and VTX AI will decode the bytecode and explain exactly what the contract does · in plain English. Identifies dangerous functions like mint, pause, blacklist, and proxy upgrades.',
   },
   {
     icon: Globe, color: '#F59E0B',
@@ -50,7 +50,7 @@ export function DocsSection06() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Security Center</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        Every interaction on-chain carries risk. NAKA LABS Security Center gives you six tools to assess, verify, and protect yourself before moving any funds — from token safety scores to real-time phishing detection.
+        Every interaction on-chain carries risk. NAKA LABS Security Center gives you six tools to assess, verify, and protect yourself before moving any funds · from token safety scores to real-time phishing detection.
       </p>
 
       {/* Trust Score */}

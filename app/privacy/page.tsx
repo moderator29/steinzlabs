@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export const metadata = {
-  title: 'Privacy Policy — Naka Labs',
+  title: 'Privacy Policy · Naka Labs',
   description: 'How Naka Labs collects, uses, and protects your data.',
 };
 
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
         <H3>Account information</H3>
         <p>When you create an account we collect your email address, a password hash (never the plaintext), your chosen display name (optional), subscription tier, and account creation timestamp. Login timestamps and IP addresses are stored for security audit purposes.</p>
         <H3>Wallet addresses</H3>
-        <p>We store the public wallet addresses you choose to associate with your account. These are public on-chain data — we do not treat them as secret, but we do protect them with Row-Level Security so only your own account session can read or modify your address list.</p>
+        <p>We store the public wallet addresses you choose to associate with your account. These are public on-chain data · we do not treat them as secret, but we do protect them with Row-Level Security so only your own account session can read or modify your address list.</p>
         <H3>Usage and analytics</H3>
         <p>PostHog captures anonymized page views, feature-usage events, and error occurrences to help us improve the platform. Sentry captures JavaScript errors including stack traces. Neither service receives your private keys, wallet passwords, or plaintext wallet data.</p>
         <H3>Platform content</H3>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
         <p>We use your data to:</p>
         <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
           <li>Operate and deliver the platform features you access.</li>
-          <li>Personalise your experience — VTX context, your feed, your watchlists.</li>
+          <li>Personalise your experience · VTX context, your feed, your watchlists.</li>
           <li>Send you transactional messages you opt into (alerts, security warnings, account notices).</li>
           <li>Detect and prevent fraud, abuse, and security incidents.</li>
           <li>Comply with legal obligations.</li>
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
         <p>We share your data only with the third-party providers required to operate the platform, under contracts that constrain their use of that data to operating their service:</p>
         <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
           <li><strong>Infrastructure:</strong> Vercel (hosting), Supabase (database), Cloudflare (CDN &amp; bot protection), Upstash (Redis rate-limiting cache).</li>
-          <li><strong>Data providers:</strong> CoinGecko, Alchemy, Helius, Birdeye, DexScreener, GoPlus, LunarCrush. We pass public on-chain identifiers (addresses, token IDs) — not your personal data — to these providers.</li>
+          <li><strong>Data providers:</strong> CoinGecko, Alchemy, Helius, Birdeye, DexScreener, GoPlus, LunarCrush. We pass public on-chain identifiers (addresses, token IDs) · not your personal data · to these providers.</li>
           <li><strong>AI:</strong> Anthropic Claude for VTX responses. We send only the chat content and relevant tool-call payloads. We do not send wallet passwords, seed phrases, or secrets.</li>
           <li><strong>Analytics &amp; error tracking:</strong> PostHog (usage analytics, anonymized), Sentry (error reporting, PII stripped).</li>
           <li><strong>Email:</strong> Resend for transactional email delivery.</li>

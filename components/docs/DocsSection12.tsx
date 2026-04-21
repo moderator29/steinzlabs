@@ -1,7 +1,7 @@
 import { Rocket, Wallet, BarChart3, Users } from 'lucide-react';
 
 // User-facing roadmap. Every item listed here is already scoped in the
-// codebase but not yet exposed on the frontend — this is the "Coming Soon"
+// codebase but not yet exposed on the frontend · this is the "Coming Soon"
 // disclosure the product team wants live on the docs page.
 
 interface RoadmapGroup {
@@ -58,7 +58,7 @@ export function DocsSection12() {
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
         Features on the build list. Order and timing can shift based on what the
-        community asks for — if you want to vote, drop your pick in the Naka
+        community asks for · if you want to vote, drop your pick in the Naka
         Labs community channel.
       </p>
 
