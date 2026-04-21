@@ -107,6 +107,40 @@ export async function sendVerificationEmail(
   return sendEmail(to, 'Verify your NAKA LABS account', html);
 }
 
+export async function sendWelcomeEmail(
+  to: string,
+  firstName: string
+): Promise<boolean> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz';
+  const body = `
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#cbd5e1;">Hi ${firstName},</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#cbd5e1;">Welcome to NAKA LABS. You're now set up on the on-chain intelligence platform built for traders who want edge without noise.</p>
+
+    <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#ffffff;">Your first 5 minutes:</p>
+    <ul style="margin:0 0 24px;padding-left:18px;color:#cbd5e1;font-size:13px;line-height:1.7;">
+      <li>Open the <a href="${appUrl}/dashboard" style="color:#4D6BFF;text-decoration:none;">Dashboard</a> to see the live Context Feed</li>
+      <li>Paste any token address into the Security Center for an instant Trust Score</li>
+      <li>Check the <a href="${appUrl}/dashboard/whale-tracker" style="color:#4D6BFF;text-decoration:none;">Whale Tracker</a> and follow wallets that matter</li>
+      <li>Set up alerts so you get pinged on the moves you actually care about</li>
+    </ul>
+
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <a href="${appUrl}/dashboard" style="display:inline-block;padding:14px 40px;background-color:#0A1EFF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Open your dashboard</a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:28px 0 8px;font-size:13px;font-weight:600;color:#ffffff;">Your Naka Wallet</p>
+    <p style="margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;">Naka ships a fully non-custodial wallet. Your keys are encrypted on your device and never leave unencrypted. Always back up your seed phrase before funding the wallet. External wallets (MetaMask, Phantom, Coinbase Wallet) also connect.</p>
+
+    <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b;">Questions? Reply to this email or ping us in the app via the VTX assistant.</p>`;
+
+  const html = brandedEmailWrapper('Welcome aboard', `${firstName}, let's get you running`, body);
+  return sendEmail(to, 'Welcome to NAKA LABS', html);
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string,

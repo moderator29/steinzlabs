@@ -3,7 +3,7 @@ import { Send, Link2, Command, Lock, Bell, Zap } from 'lucide-react';
 const CONNECT_STEPS = [
   { n: '1', title: 'Open Profile → Telegram', desc: 'Sign in to Naka Labs, tap your Profile, then open the Telegram row. (The same card lives in Settings → Notifications if you prefer the Settings area.)' },
   { n: '2', title: 'Generate a 6-digit code', desc: 'Tap "Generate Connect Code". A 6-digit one-time code appears, valid for 10 minutes.' },
-  { n: '3', title: 'Open the bot', desc: 'Tap "Open Bot" — Telegram opens directly with @Nakalabsbot. Or search "@Nakalabsbot" inside Telegram yourself.' },
+  { n: '3', title: 'Open the bot', desc: 'Tap "Open Bot" · Telegram opens directly with @Nakalabsbot. Or search "@Nakalabsbot" inside Telegram yourself.' },
   { n: '4', title: 'Send /link <code>', desc: 'Inside the bot, send /link 123456 (replace with your code). The bot replies "Account linked" instantly and the Profile page flips to "Connected".' },
 ];
 
@@ -20,21 +20,21 @@ const FREE_COMMANDS = [
 ];
 
 const MINI_COMMANDS = [
-  { cmd: '/whale <address>', desc: 'Wallet snapshot — gated because Whale Tracker is Mini+' },
-  { cmd: '/portfolio', desc: 'Multi-chain wallet PnL — full Wallet Intelligence is Mini+' },
+  { cmd: '/whale <address>', desc: 'Wallet snapshot · gated because Whale Tracker is Mini+' },
+  { cmd: '/portfolio', desc: 'Multi-chain wallet PnL · full Wallet Intelligence is Mini+' },
 ];
 
 const PRO_COMMANDS = [
-  { cmd: '/copy <whale>', desc: 'Toggle copy-trade for a whale — Copy Trading is a Pro feature' },
+  { cmd: '/copy <whale>', desc: 'Toggle copy-trade for a whale · Copy Trading is a Pro feature' },
 ];
 
 const MAX_COMMANDS = [
-  { cmd: '/snipe <token>', desc: 'Configure the Sniper Bot — Max-only feature' },
+  { cmd: '/snipe <token>', desc: 'Configure the Sniper Bot · Max-only feature' },
 ];
 
 const OUTBOUND_NOTIFS = [
   { type: 'Whale movements', desc: 'Buys/sells above your USD threshold from any tracked whale' },
-  { type: 'Price alerts', desc: 'Custom price targets — quota differs by tier (3 / 10 / 50 / unlimited)' },
+  { type: 'Price alerts', desc: 'Custom price targets · quota differs by tier (3 / 10 / 50 / unlimited)' },
   { type: 'Copy-trade fills', desc: 'When a copy-trade you set up executes (Pro+)' },
   { type: 'Limit / stop orders', desc: 'Confirmation when your conditional order fills' },
   { type: 'Daily digest', desc: 'A 9am UTC summary if enabled in Settings' },
@@ -69,7 +69,7 @@ export function DocsSection11() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Telegram Bot</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        @Nakalabsbot brings Naka Labs into Telegram — receive whale, price, and copy-trade alerts directly in your DMs, and run commands to look up tokens, wallets, and positions without leaving chat. Trading commands are gated by your subscription tier (same gates as the web app).
+        @Nakalabsbot brings Naka Labs into Telegram · receive whale, price, and copy-trade alerts directly in your DMs, and run commands to look up tokens, wallets, and positions without leaving chat. Trading commands are gated by your subscription tier (same gates as the web app).
       </p>
 
       {/* Connect flow */}

@@ -17,26 +17,29 @@ const CHAINS = [
 const FEATURE_GROUPS = [
   {
     icon: Layers, color: '#0A1EFF', title: 'Intelligence Layer',
-    features: ['Context Feed — real-time on-chain signal stream', 'VTX AI Engine — natural language on-chain analyst', 'Trading DNA Analyzer — complete wallet behavioral profiles', 'Wallet Intelligence — automatic wallet classification', 'On-Chain Trends — momentum and narrative detection'],
+    features: ['Context Feed · real-time on-chain signal stream', 'VTX AI Engine · natural language on-chain analyst', 'Trading DNA Analyzer · complete wallet behavioral profiles', 'Wallet Intelligence · automatic wallet classification', 'On-Chain Trends · momentum and narrative detection'],
   },
   {
     icon: ShieldCheck, color: '#10B981', title: 'Security Layer',
-    features: ['Token Trust Score — 0–100 risk assessment', 'Shadow Guardian — pre-trade honeypot simulation', 'Contract Analyzer — AI-powered bytecode analysis', 'Domain Shield — real-time phishing detection', 'Approval Manager — token permission risk audit'],
+    features: ['Token Trust Score · 0–100 risk assessment', 'Shadow Guardian · pre-trade honeypot simulation', 'Contract Analyzer · AI-powered bytecode analysis', 'Domain Shield · real-time phishing detection', 'Approval Manager · token permission risk audit'],
   },
   {
     icon: Repeat, color: '#F59E0B', title: 'Trading Layer',
-    features: ['Multi-Chain Swap — DEX aggregation on 6+ chains', 'Copy Trading — one-click wallet mirroring', 'Sniper Bot — automated launch detection with safety', 'Trading Suite — advanced orders and P&L tracking', 'Limit Orders — price-conditional trade execution'],
+    features: ['Multi-Chain Swap · DEX aggregation on 6+ chains', 'Copy Trading · one-click wallet mirroring', 'Sniper Bot · automated launch detection with safety', 'Trading Suite · advanced orders and P&L tracking', 'Limit Orders · price-conditional trade execution'],
   },
   {
     icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer',
-    features: ['Portfolio Tracker — multi-wallet auto-sync', 'Prediction Markets — on-chain position staking', 'Smart Money Tracking — elite wallet watchlists', 'Whale Tracker — large movement monitoring', 'Research Lab — deep-dive protocol reports'],
+    features: ['Portfolio Tracker · multi-wallet auto-sync', 'Prediction Markets · on-chain position staking', 'Smart Money Tracking · elite wallet watchlists', 'Whale Tracker · large movement monitoring', 'Research Lab · deep-dive protocol reports'],
   },
 ];
 
+// Real tier ladder in profiles.tier: free / mini / pro / max. Pricing
+// matches the public /pricing page.
 const TIERS = [
-  { name: 'Free', color: '#6B7280', perks: ['Context Feed (limited)', 'Basic wallet lookup', 'Token Trust Score', '10 alerts', '5 wallets tracked'] },
-  { name: 'Pro', color: '#0A1EFF', perks: ['Full Context Feed', 'VTX AI Engine', 'DNA Analyzer', 'Copy Trading', '50 alerts', '25 wallets', 'Advanced security'] },
-  { name: 'Enterprise', color: '#F59E0B', perks: ['Everything in Pro', 'Unlimited wallets', 'Sniper Bot access', 'Priority data feeds', 'Dedicated support'] },
+  { name: 'Free',  price: '$0/mo',  color: '#6B7280', perks: ['Context Feed (limited)', 'Basic wallet lookup', 'Token Trust Score', '25 VTX messages/day', '10 price alerts', '5 tracked wallets'] },
+  { name: 'Mini',  price: '$5/mo',  color: '#10B981', perks: ['Everything in Free', 'Full Context Feed', '100 VTX messages/day', '25 price alerts', '10 tracked wallets', 'Whale snapshots'] },
+  { name: 'Pro',   price: '$9/mo',  color: '#0A1EFF', perks: ['Everything in Mini', 'Unlimited VTX messages', 'Smart Money Tracking', 'Wallet Clusters', 'Bubble Map', 'Whale Tracker + Follow', 'One-Click Copy Trading', '50 alerts, 25 wallets'] },
+  { name: 'Max',   price: '$15/mo', color: '#F59E0B', perks: ['Everything in Pro', 'Sniper Bot (auto-execute)', 'Auto-Copy Trading', 'Unlimited alerts + wallets', 'Priority data feeds', 'Early feature access'] },
 ];
 
 export function DocsSection02() {
@@ -47,7 +50,7 @@ export function DocsSection02() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Platform Overview</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        NAKA LABS is built in four integrated layers — Intelligence, Security, Trading, and Analytics — all unified in one dashboard. It pulls from 15+ blockchain data sources and uses AI to surface what matters, when it matters.
+        NAKA LABS is built in four integrated layers · Intelligence, Security, Trading, and Analytics · all unified in one dashboard. It pulls from 15+ blockchain data sources and uses AI to surface what matters, when it matters.
       </p>
 
       <div id="overview-features" className="scroll-mt-20 mb-10">
@@ -92,10 +95,13 @@ export function DocsSection02() {
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
           <Star className="w-4 h-4 text-[#F59E0B]" />Subscription Tiers
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {TIERS.map(t => (
             <div key={t.name} className="bg-white/[0.02] rounded-xl p-4 border" style={{ borderColor: t.color + '30' }}>
-              <div className="text-sm font-bold mb-3" style={{ color: t.color }}>{t.name}</div>
+              <div className="flex items-baseline justify-between mb-3">
+                <span className="text-sm font-bold" style={{ color: t.color }}>{t.name}</span>
+                <span className="text-[10px] font-mono text-gray-500">{t.price}</span>
+              </div>
               <ul className="space-y-1.5">
                 {t.perks.map(p => (
                   <li key={p} className="text-xs text-gray-400 flex items-start gap-1.5">

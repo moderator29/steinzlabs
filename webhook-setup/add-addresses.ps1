@@ -14,7 +14,7 @@ if (-not $env:ALCHEMY_NOTIFY_TOKEN) {
 }
 
 $webhooks = @(
-    @{ chain = "ethereum"; id = "wh_lqusytlrh1bnslp8"; file = "webhook-setup\ethereum.txt" }
+    @{ chain = "ethereum"; id = "wh_p924jkcihgpw3zp9"; file = "webhook-setup\ethereum.txt" }
     @{ chain = "base";     id = "wh_xy2ur9az80x8xhrx"; file = "webhook-setup\base.txt" }
     @{ chain = "bsc";      id = "wh_oe0k7c1owoyhjjro"; file = "webhook-setup\bsc.txt" }
     @{ chain = "polygon";  id = "wh_wiv4iil3t9q5jvv2"; file = "webhook-setup\polygon.txt" }

@@ -2,9 +2,9 @@ import { CheckCircle, ArrowRight, Zap, Globe, Shield, Brain, TrendingUp, Star } 
 import Link from 'next/link';
 
 const STEPS = [
-  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.com with your email. Verify to activate — no credit card required for the free tier.' },
+  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.com with your email. Verify to activate · no credit card required for the free tier.' },
   { n: '02', title: 'Connect your wallets', desc: 'Go to Portfolio and link up to 10 wallets across Ethereum, Base, Solana, Arbitrum, Polygon, and BSC for automatic tracking.' },
-  { n: '03', title: 'Explore the Context Feed', desc: 'Your personalized real-time intelligence stream activates immediately — showing whale moves, smart money signals, and on-chain alerts.' },
+  { n: '03', title: 'Explore the Context Feed', desc: 'Your personalized real-time intelligence stream activates immediately · showing whale moves, smart money signals, and on-chain alerts.' },
   { n: '04', title: 'Run your first scan', desc: 'Paste any token address into the search bar or Security Center for an instant Trust Score, holder analysis, and risk breakdown.' },
   { n: '05', title: 'Set up alerts', desc: 'Configure price alerts, whale movement notifications, and security triggers from the Alerts page to stay ahead of the market.' },
 ];
@@ -45,7 +45,7 @@ export function DocsSection01() {
       {/* Setup steps */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[#0A1EFF]" />Quick Setup — 5 Steps
+          <Zap className="w-4 h-4 text-[#0A1EFF]" />Quick Setup · 5 Steps
         </h3>
         <div className="space-y-3">
           {STEPS.map(s => (
@@ -67,8 +67,8 @@ export function DocsSection01() {
         <h3 className="text-sm font-semibold text-white mb-3">What You Need</h3>
         <ul className="space-y-2">
           {[
-            'Modern browser — Chrome 90+, Firefox 88+, Safari 14+, Edge 90+',
-            'A Web3 wallet for on-chain trading (MetaMask, Phantom, Coinbase Wallet, etc.)',
+            'Modern browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+',
+            'A wallet for on-chain swap. Naka ships a fully non-custodial Naka Wallet built in (always back up your seed phrase). External wallets like MetaMask, Phantom, and Coinbase Wallet also connect.',
             'An email address to create your NAKA LABS account',
           ].map((req, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-gray-400">
