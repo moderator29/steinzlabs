@@ -8,25 +8,25 @@ const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-pass
 // this middleware even runs. The usual cause is accumulated Supabase auth
 // cookies (the SSR client chunks large JWTs into .0 / .1 parts and stale
 // pairs from multiple projects / auth attempts pile up). We pre-emptively
-// nuke the auth cookies when the Cookie header climbs past 24KB so we never
-// reach the edge's ceiling — affected users get bounced to /login with a
-// one-shot "session reset" signal instead of the 494 wall.
-const COOKIE_BUDGET_BYTES = 24 * 1024;
+// nuke cookies when the Cookie header climbs past 12KB — well below the
+// edge ceiling — so affected users get bounced to /auth/clear + /login
+// instead of the 494 wall. The threshold is deliberately aggressive: if
+// we're above 12KB we're on a trajectory to 32KB, and a forced re-login
+// is a much cheaper failure mode than a bricked site.
+const COOKIE_BUDGET_BYTES = 8 * 1024; // 8KB — hard ceiling, Vercel 494s at 32KB
 
-function isAuthCookie(name: string): boolean {
-  return (
-    name.startsWith('sb-') ||
-    name === 'supabase-auth-token' ||
-    name === '__stripe_mid' ||
-    name === '__stripe_sid'
-  );
-}
-
-function clearBloatedAuthCookies(request: NextRequest, response: NextResponse) {
+// When a request triggers the overflow guard we wipe EVERY cookie, not
+// just auth ones. At 12KB+ something is off — translate cookies, tracking
+// cookies, stray testing fixtures, any of it — and the only reliable way
+// to recover is to nuke the whole jar. Users log in again; no app data
+// lives in cookies (we use localStorage for wallets, preferences, chat
+// history), so nothing important is lost.
+function clearAllCookies(request: NextRequest, response: NextResponse) {
   for (const c of request.cookies.getAll()) {
-    if (isAuthCookie(c.name)) {
-      response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 });
-    }
+    response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 });
+    // Also clear on bare domain + leading-dot domain so pre-deploy chunks
+    // written against alternate host variants don't survive the sweep.
+    response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0, domain: request.nextUrl.hostname });
   }
 }
 
@@ -52,18 +52,20 @@ export async function middleware(request: NextRequest) {
   const isAdminRoute = path.startsWith('/admin');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
-  // Pre-flight: if the cookie header is approaching the Vercel edge limit,
-  // strip auth cookies now and redirect to /auth/clear. This saves users
-  // stuck in the 494 REQUEST_HEADER_TOO_LARGE loop where every subsequent
-  // request also fails at the edge — we intercept BEFORE that point.
+  // Pre-flight: if the cookie header is anywhere near the Vercel edge
+  // ceiling, nuke the jar and redirect to /auth/clear. Except we don't
+  // want to loop — /auth/clear itself is exempt, otherwise a user whose
+  // incoming cookies still haven't been committed by the browser yet
+  // would bounce back here forever.
   const cookieHeader = request.headers.get('cookie') || '';
-  if (cookieHeader.length > COOKIE_BUDGET_BYTES) {
+  if (cookieHeader.length > COOKIE_BUDGET_BYTES && path !== '/auth/clear') {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/clear';
     url.searchParams.set('reason', 'cookie-overflow');
+    url.searchParams.set('size', String(cookieHeader.length));
     url.searchParams.set('from', path);
     const resp = NextResponse.redirect(url);
-    clearBloatedAuthCookies(request, resp);
+    clearAllCookies(request, resp);
     return applyHeaders(resp);
   }
 
@@ -76,6 +78,10 @@ export async function middleware(request: NextRequest) {
   if ((isProtectedDashboard || isAdminRoute) && !isPublic) {
     const response = NextResponse.next();
 
+    // Cap every auth cookie we write to SESSION_MAX_AGE so they
+    // self-destruct and can never accumulate past the 8KB budget.
+    const SESSION_MAX_AGE = 60 * 60; // 1 hour — matches app/login SESSION_HOURS
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -85,10 +91,28 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
-            response.cookies.set({ name, value, ...options });
+            // Before writing a new auth chunk, delete ALL existing sb-*
+            // chunks in the response so stale shards from previous sessions
+            // are gone — prevents chunk count from growing across logins.
+            if (name.startsWith('sb-')) {
+              request.cookies.getAll()
+                .filter(c => c.name.startsWith('sb-') && c.name !== name)
+                .forEach(c => response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 }));
+            }
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+              // Hard cap: never let a session cookie outlive 1 hour.
+              maxAge: options.maxAge ? Math.min(options.maxAge, SESSION_MAX_AGE) : SESSION_MAX_AGE,
+              sameSite: 'lax',
+              httpOnly: true,
+              secure: true,
+              path: '/',
+            });
           },
           remove(name: string, options: CookieOptions) {
-            response.cookies.set({ name, value: '', ...options });
+            response.cookies.set({ name, value: '', ...options, maxAge: 0, path: '/' });
           },
         },
       }
@@ -97,10 +121,16 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (!user || error) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('from', path);
-      return applyHeaders(NextResponse.redirect(url));
+      // Also clear any stale sb-* cookies on the redirect so the
+      // browser doesn't carry them to /login and start accumulating again.
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/login';
+      redirectUrl.searchParams.set('from', path);
+      const redirectResp = NextResponse.redirect(redirectUrl);
+      request.cookies.getAll()
+        .filter(c => c.name.startsWith('sb-'))
+        .forEach(c => redirectResp.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 }));
+      return applyHeaders(redirectResp);
     }
 
     return applyHeaders(response);

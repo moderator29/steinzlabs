@@ -41,6 +41,29 @@ function LoginPageInner() {
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
 
+  // Pre-login cookie sweep — prevents the REQUEST_HEADER_TOO_LARGE loop
+  // from re-forming. Every time a user lands on /login we strip any stale
+  // sb-<ref>-auth-token.* chunks from previous sessions / preview deploys
+  // BEFORE Supabase writes the new session. Without this, chunks accrete
+  // across deploys and eventually cross Vercel's 32KB edge ceiling.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const host = window.location.hostname;
+    const hosts = [host, `.${host}`, host.split('.').slice(-2).join('.'), `.${host.split('.').slice(-2).join('.')}`];
+    const paths = ['/', '/auth', '/dashboard', '/api', '/api/auth'];
+    document.cookie.split(';').forEach((raw) => {
+      const name = raw.split('=')[0]?.trim();
+      if (!name) return;
+      // Only purge auth residue — don't touch Turnstile / Stripe / analytics
+      // cookies on a normal re-visit to /login.
+      if (!name.startsWith('sb-') && name !== 'supabase-auth-token') return;
+      for (const h of hosts) for (const p of paths) {
+        document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${name}=; Path=${p}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+    });
+  }, []);
+
   // Explicit Turnstile render — implicit auto-render is unreliable on mobile
   // Safari when the script loads after hydration. (Production bug 2026-04-17.)
   useEffect(() => {
