@@ -890,12 +890,26 @@ export default function WalletPage() {
                       {pnlPositive ? '+' : ''}{pnlAmount >= 0.01 ? `$${pnlAmount.toFixed(2)} ` : ''}{priceChange !== 0 ? `(${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)` : ''} today
                     </span>
                   )}
-                  <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
-                    <span className="text-[11px] font-mono text-slate-400">
-                      {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
-                    </span>
-                    {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
-                  </button>
+                  {/* Chain-aware address row: an EVM-derived 0x… address is
+                      not a valid Solana identifier, so on the Solana pill we
+                      show a "no Solana wallet" notice instead of lying with
+                      the ETH address. Any non-EVM / non-SOL chain without a
+                      matching wallet falls into the same branch. */}
+                  {activeWallet && activeChain.id === 'solana' && activeWallet.address.startsWith('0x') ? (
+                    <button
+                      onClick={() => setView('import')}
+                      className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/15 rounded-full transition-colors border border-amber-500/30"
+                    >
+                      <span className="text-[11px] text-amber-300">No Solana wallet — tap to import</span>
+                    </button>
+                  ) : (
+                    <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+                      <span className="text-[11px] font-mono text-slate-400">
+                        {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
+                      </span>
+                      {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                    </button>
+                  )}
                 </div>
                 <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ml-2 mt-1">
                   <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
@@ -994,7 +1008,21 @@ export default function WalletPage() {
                 </>
               ) : allHoldings.length > 0 ? (
                 allHoldings.map((token, i) => {
-                  const logoUrl = (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()];
+                  // Logo resolution order: native-symbol map (ETH/SOL/…), then
+                  // per-token logo the hydrator pulled from CoinGecko (gives
+                  // Naka Go / Pleasure Coin their real branded icons), then
+                  // per-contract overrides as a final safety net.
+                  const contractKey = (token.contractAddress || '').toLowerCase();
+                  const CONTRACT_LOGOS: Record<string, string> = {
+                    '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898':
+                      'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
+                    '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19':
+                      'https://assets.coingecko.com/coins/images/31549/small/pleasure.png',
+                  };
+                  const logoUrl =
+                    (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()]
+                    || (token as { logo?: string }).logo
+                    || CONTRACT_LOGOS[contractKey];
                   return (
                     <WalletTokenRow
                       key={`${token.symbol}-${i}`}
