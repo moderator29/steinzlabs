@@ -87,6 +87,9 @@ export default function PrivacyPage() {
         <H3>Monitoring</H3>
         <p>Errors are tracked in Sentry with sensitive fields stripped. Access patterns are monitored via PostHog and internal logs. Security-relevant events (failed logins, unusual access patterns, approvals from new devices) are logged for audit.</p>
 
+        <H3>VTX Agent &amp; your wallet</H3>
+        <p>VTX Agent can read your connected wallet's public address so it can quote swaps, display balances, and reason about your portfolio. It cannot read your private key, your seed phrase, or your password — those never leave your device. VTX is an advisory layer: it cannot withdraw funds, transfer tokens, approve allowances, or execute any on-chain action. Every swap, send, or approval requires a fresh signature prompt from your wallet, triggered only by your explicit tap of "Sign &amp; Swap" (or equivalent). If you prefer VTX not to see your wallet address at all, disconnect the wallet from the Wallet page before chatting.</p>
+
         <H2 n="05">Data Sharing</H2>
         <p>We share your data only with the third-party providers required to operate the platform, under contracts that constrain their use of that data to operating their service:</p>
         <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
