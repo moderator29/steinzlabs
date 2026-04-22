@@ -346,6 +346,13 @@ function LoginPageInner() {
             </div>
           )}
 
+          {searchParams.get('reason') === 'cookie-overflow' && (
+            <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
+              <div className="font-semibold mb-0.5">Session refreshed</div>
+              Your browser had too many old session cookies stacked up. We cleared them — log in to continue.
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* Email */}
             <div>
