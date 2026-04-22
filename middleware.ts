@@ -78,6 +78,10 @@ export async function middleware(request: NextRequest) {
   if ((isProtectedDashboard || isAdminRoute) && !isPublic) {
     const response = NextResponse.next();
 
+    // Cap every auth cookie we write to SESSION_MAX_AGE so they
+    // self-destruct and can never accumulate past the 8KB budget.
+    const SESSION_MAX_AGE = 60 * 60; // 1 hour — matches app/login SESSION_HOURS
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -87,10 +91,28 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
-            response.cookies.set({ name, value, ...options });
+            // Before writing a new auth chunk, delete ALL existing sb-*
+            // chunks in the response so stale shards from previous sessions
+            // are gone — prevents chunk count from growing across logins.
+            if (name.startsWith('sb-')) {
+              request.cookies.getAll()
+                .filter(c => c.name.startsWith('sb-') && c.name !== name)
+                .forEach(c => response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 }));
+            }
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+              // Hard cap: never let a session cookie outlive 1 hour.
+              maxAge: options.maxAge ? Math.min(options.maxAge, SESSION_MAX_AGE) : SESSION_MAX_AGE,
+              sameSite: 'lax',
+              httpOnly: true,
+              secure: true,
+              path: '/',
+            });
           },
           remove(name: string, options: CookieOptions) {
-            response.cookies.set({ name, value: '', ...options });
+            response.cookies.set({ name, value: '', ...options, maxAge: 0, path: '/' });
           },
         },
       }
@@ -99,10 +121,16 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (!user || error) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('from', path);
-      return applyHeaders(NextResponse.redirect(url));
+      // Also clear any stale sb-* cookies on the redirect so the
+      // browser doesn't carry them to /login and start accumulating again.
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/login';
+      redirectUrl.searchParams.set('from', path);
+      const redirectResp = NextResponse.redirect(redirectUrl);
+      request.cookies.getAll()
+        .filter(c => c.name.startsWith('sb-'))
+        .forEach(c => redirectResp.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 }));
+      return applyHeaders(redirectResp);
     }
 
     return applyHeaders(response);
