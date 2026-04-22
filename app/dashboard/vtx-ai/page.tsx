@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 import { VtxSettingsDrawer } from '@/components/vtx/VtxSettingsDrawer';
+import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
 
 // TokenCardData accepts both legacy string fields (parsed from reply text)
 // and the richer server shape (numbers + contractAddress + chain) so the
@@ -37,6 +38,7 @@ interface Message {
   content: string;
   timestamp?: number;
   tokenCards?: TokenCardData[];
+  swapCard?: SwapCardData & { walletAddress?: string; needsWallet?: boolean };
   suggestions?: string[];
 }
 
@@ -583,6 +585,7 @@ function VtxAiPageInner() {
           content: data.reply,
           timestamp: Date.now(),
           tokenCards: tokenCards.length > 0 ? tokenCards : undefined,
+          swapCard: data.swapCard || undefined,
           suggestions,
         }]);
         if (settings.messageSound) playPageChime();
@@ -992,6 +995,16 @@ function VtxAiPageInner() {
                     {msg.tokenCards.map((token, ti) => (
                       <TokenCard key={ti} token={token} />
                     ))}
+                  </div>
+                )}
+                {msg.swapCard && (
+                  <div className="mt-3">
+                    <SwapCard swap={msg.swapCard} walletAddress={msg.swapCard.walletAddress} />
+                    {msg.swapCard.needsWallet && (
+                      <div className="mt-2 text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-2 py-1.5">
+                        Connect a wallet to execute this swap. Insufficient balance? Deposit first from the Wallet page.
+                      </div>
+                    )}
                   </div>
                 )}
                 {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
