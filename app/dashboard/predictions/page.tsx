@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  ArrowLeft, Target, Clock, Users, TrendingUp, DollarSign,
+  Target, Clock, Users, TrendingUp, DollarSign,
   BarChart3, Filter, ChevronDown, CheckCircle, XCircle,
   AlertTriangle, Zap, Trophy, X
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import Link from 'next/link';
 import TradingViewChart, { getTradingViewSymbol } from '@/components/TradingViewChart';
 
@@ -664,9 +665,7 @@ export default function PredictionsPage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="px-4 pt-6">
-        <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-4 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
+        <div className="mb-4"><BackButton href="/dashboard" label="Back to Dashboard" /></div>
 
         <div className="flex items-center gap-3 mb-1">
           <Target className="w-5 h-5 text-[#FF6B35]" />

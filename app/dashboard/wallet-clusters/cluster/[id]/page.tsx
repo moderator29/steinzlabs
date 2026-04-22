@@ -10,9 +10,10 @@ import { useCallback, useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Loader2, ThumbsUp, ThumbsDown, CheckCircle2, Copy, Check, ExternalLink,
+  Loader2, ThumbsUp, ThumbsDown, CheckCircle2, Copy, Check, ExternalLink,
   Sparkles, Users, Network, Clock, ShieldAlert, TrendingUp, Crown, Bot, Brain, Activity, Layers,
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import ClusterGraph from '@/components/clusters/ClusterGraph';
 
 interface Member { address: string; role: string | null; created_at?: string }
@@ -136,7 +137,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
       {/* Header */}
       <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-2">
-          <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-white/5"><ArrowLeft className="w-4 h-4" /></button>
+          <BackButton />
           <code className="text-[11px] font-mono text-slate-500 truncate flex-1">{cluster.cluster_id}</code>
           <Link href="/dashboard/wallet-clusters" className="text-[11px] text-[#8FA3FF] hover:underline">Directory</Link>
         </div>

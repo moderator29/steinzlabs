@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Globe, Search, AlertTriangle, CheckCircle,
+  Globe, Search, AlertTriangle, CheckCircle,
   XCircle, Shield, Loader2, Clock, Info, Brain, ThumbsUp, ThumbsDown, ShieldAlert
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 interface ScanResult {
   url: string;
@@ -92,9 +93,7 @@ export default function DomainShieldPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Globe className="w-4 h-4" />
           </div>

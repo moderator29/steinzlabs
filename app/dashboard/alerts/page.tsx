@@ -1,10 +1,11 @@
 'use client';
 
 import {
-  Bell, ArrowLeft, Plus, Trash2, ToggleLeft, ToggleRight,
+  Bell, Plus, Trash2, ToggleLeft, ToggleRight,
   Fish, TrendingUp, Rocket, Activity, X,
   History, Search, Check, AlertTriangle, Play,
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -798,9 +799,7 @@ export default function AlertsPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <Bell className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
           <button

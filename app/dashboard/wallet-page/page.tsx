@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap, Share2 } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
@@ -854,9 +855,7 @@ export default function WalletPage() {
           <>
             {/* ── TOP BAR ─────────────────────────────────── */}
             <div className="flex items-center justify-between pt-4 pb-5">
-              <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-                <ArrowLeft className="w-5 h-5 text-slate-400" />
-              </button>
+              <BackButton />
               <div className="flex items-center gap-2">
                 <SteinzLogo size={20} />
                 <span className="text-base font-bold">Naka Wallet</span>

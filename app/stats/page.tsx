@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, BarChart3, TrendingUp, Zap, Activity } from 'lucide-react';
+import { BarChart3, TrendingUp, Zap, Activity } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import BackButton from '@/components/ui/BackButton';
 
 interface StatsData {
   totalTrades: number;
@@ -70,9 +71,7 @@ export default function StatsPage() {
     <div className="min-h-screen bg-[#0a0b0f] text-white">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <div>
             <h1 className="text-xl font-bold">Platform Stats</h1>
             <p className="text-xs text-gray-400">Real-time trading activity on Naka Labs</p>

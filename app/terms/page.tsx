@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 export const metadata = {
   title: 'Terms of Service · Naka Labs',
@@ -24,9 +25,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-[#080C18] text-white">
       <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white">
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Link>
+          <BackButton href="/" label="Back" />
           <div className="flex items-center gap-2 text-sm font-semibold">
             <FileText className="w-4 h-4 text-[#0A1EFF]" />
             Terms of Service

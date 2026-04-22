@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Globe, MessageCircle, Twitter, Copy, CheckCircle, Clock, Shield } from 'lucide-react';
+import { ExternalLink, Globe, MessageCircle, Twitter, Copy, CheckCircle, Clock, Shield } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 interface TokenListing {
   id: string;
@@ -97,12 +98,7 @@ export default function TokenPreviewPage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white">
       <div className="max-w-2xl mx-auto p-4 pt-8">
-        <button
-          onClick={() => router.push('/dashboard/project-discovery')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Discovery
-        </button>
+        <div className="mb-6"><BackButton href="/dashboard/project-discovery" label="Back to Discovery" /></div>
 
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">
           <div className="bg-gradient-to-r from-[#0A1EFF]/10 to-[#7C3AED]/10 px-6 py-4 border-b border-white/5">

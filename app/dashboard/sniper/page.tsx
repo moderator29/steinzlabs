@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Crosshair, Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle, Loader2, Lock } from 'lucide-react';
+import { Crosshair, Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle, Loader2, Lock } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { supabase } from '@/lib/supabase';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -160,9 +161,7 @@ export default function SniperPage() {
     <div className="min-h-screen bg-[#0A0E1A] p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </button>
+          <BackButton />
           <PageHeader title="Sniper Bot" description="Automated new token detection and trading" />
           <div className="ml-auto flex items-center gap-2">
             <span className={`text-xs px-2 py-1 rounded-full border ${killSwitchStatus === false ? 'text-red-400 bg-red-400/10 border-red-400/20' : 'text-green-400 bg-green-400/10 border-green-400/20'}`}>

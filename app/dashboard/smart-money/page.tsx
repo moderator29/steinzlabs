@@ -1,6 +1,7 @@
 'use client';
 
-import { Trophy, ArrowLeft, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc, Award, Fish, Building2, Settings2, X, Radio, Shield } from 'lucide-react';
+import { Trophy, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc, Award, Fish, Building2, Settings2, X, Radio, Shield } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { addLocalNotification } from '@/lib/notifications';
@@ -166,9 +167,7 @@ export default function SmartMoneyPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </button>
+          <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#F59E0B] to-[#F97316] rounded-xl flex items-center justify-center">
             <Trophy className="w-4 h-4" />
           </div>

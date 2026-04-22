@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, Clock, Tag, ArrowRight } from 'lucide-react';
+import { BookOpen, Clock, Tag, ArrowRight } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 interface Post {
   id: string;
@@ -44,9 +45,7 @@ export default function PublicResearchPage() {
     <div className="min-h-screen bg-[#080C18] text-white">
       <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white">
-            <ArrowLeft className="w-4 h-4" /> Home
-          </Link>
+          <BackButton href="/" label="Home" />
           <div className="flex items-center gap-2 text-sm font-semibold">
             <BookOpen className="w-4 h-4 text-[#0A1EFF]" /> Research
           </div>

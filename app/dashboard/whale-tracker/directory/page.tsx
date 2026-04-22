@@ -7,8 +7,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import BackButton from '@/components/ui/BackButton';
 import {
-  ArrowLeft,
   Search,
   TrendingUp,
   TrendingDown,
@@ -220,9 +220,7 @@ export default function WhaleDirectoryPage() {
       {/* Top bar */}
       <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-white/5">
-            <ArrowLeft className="w-4 h-4" />
-          </button>
+          <BackButton />
           <div>
             {/* Bug §2.13: header was text-lg with default font; user wanted
                 smaller, cleaner. text-sm + tracking-tight + font-sans keeps
