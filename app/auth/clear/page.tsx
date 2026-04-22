@@ -24,32 +24,49 @@ function AuthClearInner() {
   useEffect(() => {
     const names: string[] = [];
     try {
+      // Broadest possible sweep. Some cookies were written with explicit
+      // domain + path attrs (e.g. Supabase chunks on `.nakalabs.xyz`) and
+      // can only be cleared by a Set-Cookie that exactly matches. We fan
+      // out across every plausible (host × path) combination.
+      const host = window.location.hostname;
+      const hosts = Array.from(new Set([
+        host,
+        `.${host}`,
+        host.replace(/^www\./, ''),
+        `.${host.replace(/^www\./, '')}`,
+        // Parent domain in case the site is on a subdomain (e.g. app.nakalabs.xyz
+        // → .nakalabs.xyz chunks also need wiping).
+        host.split('.').slice(-2).join('.'),
+        `.${host.split('.').slice(-2).join('.')}`,
+      ]));
+      const paths = ['/', '/dashboard', '/auth', '/api', '/api/auth'];
+
       const cookies = document.cookie.split(';');
       for (const raw of cookies) {
         const name = raw.split('=')[0]?.trim();
         if (!name) continue;
         names.push(name);
-        // Wipe on every plausible path + domain combination so chunks from
-        // previous deploys or preview URLs don't linger.
-        const hosts = [
-          window.location.hostname,
-          `.${window.location.hostname}`,
-          window.location.hostname.replace(/^www\./, ''),
-          `.${window.location.hostname.replace(/^www\./, '')}`,
-        ];
-        const paths = ['/', '/dashboard', '/auth'];
         for (const h of hosts) {
           for (const p of paths) {
+            // With and without SameSite/Secure — Chrome is lenient on
+            // deletion but some browsers refuse to clear Secure cookies
+            // with a non-Secure delete header.
             document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+            document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax`;
             document.cookie = `${name}=; Path=${p}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
           }
         }
       }
-      // Also wipe localStorage entries Supabase writes, so the client doesn't
-      // instantly re-hydrate a stale session on the next page.
+      // Wipe localStorage + sessionStorage auth residue so the client can't
+      // instantly rehydrate a stale session and re-bloat the jar.
       try {
         Object.keys(localStorage).forEach((k) => {
-          if (k.startsWith('sb-') || k === 'supabase.auth.token') localStorage.removeItem(k);
+          if (k.startsWith('sb-') || k === 'supabase.auth.token' || k.startsWith('supabase.')) {
+            localStorage.removeItem(k);
+          }
+        });
+        Object.keys(sessionStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k.startsWith('supabase.')) sessionStorage.removeItem(k);
         });
       } catch {}
     } finally {
@@ -57,7 +74,7 @@ function AuthClearInner() {
       setDone(true);
       // Auto-bounce back so users don't have to click anything.
       const target = from.startsWith('/dashboard') || from.startsWith('/admin') ? '/login' : from;
-      const t = setTimeout(() => { window.location.replace(target); }, 1200);
+      const t = setTimeout(() => { window.location.replace(target); }, 1500);
       return () => clearTimeout(t);
     }
   }, [from, router]);
