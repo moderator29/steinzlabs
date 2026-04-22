@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
-import { supabase } from '@/lib/supabase';
+import { supabase, clearSbCookies } from '@/lib/supabase';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -64,6 +64,9 @@ export default function SignUpPage() {
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+
+  // Clear stale sb-* cookies so old session shards don't accumulate.
+  useEffect(() => { clearSbCookies(); }, []);
 
   // Explicit Turnstile render — implicit auto-render is unreliable on mobile
   // Safari when the script loads after hydration. (Production bug 2026-04-17.)
