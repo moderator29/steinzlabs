@@ -69,7 +69,12 @@ function getClient(): SupabaseClient {
       cookies: {
         get: readCookie,
         set(name, value) {
-          if (name.startsWith('sb-')) nukeSbCookies(); // wipe old chunks first
+          // Do NOT call nukeSbCookies() here — Supabase writes multiple
+          // chunks sequentially (.0 then .1) and nuking on each write
+          // deletes the previous chunk before all chunks are committed,
+          // leaving a partial session → user sees welcome but stays on /login.
+          // Cleanup of old sessions happens on login-page mount (useEffect)
+          // and on logout. The 1-hour maxAge handles gradual expiry.
           writeCookie(name, value);
         },
         remove: deleteCookie,
