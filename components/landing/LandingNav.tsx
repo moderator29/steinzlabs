@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import GlobalControls from '@/components/GlobalControls';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -42,6 +43,7 @@ export function LandingNav() {
           </div>
 
           <div className="flex items-center gap-2">
+            <GlobalControls className="hidden sm:flex" />
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>

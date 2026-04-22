@@ -2,7 +2,33 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/auth/callback'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/auth/callback', '/auth/clear'];
+
+// Vercel's edge rejects requests with >32KB total headers with a 494 before
+// this middleware even runs. The usual cause is accumulated Supabase auth
+// cookies (the SSR client chunks large JWTs into .0 / .1 parts and stale
+// pairs from multiple projects / auth attempts pile up). We pre-emptively
+// nuke the auth cookies when the Cookie header climbs past 24KB so we never
+// reach the edge's ceiling — affected users get bounced to /login with a
+// one-shot "session reset" signal instead of the 494 wall.
+const COOKIE_BUDGET_BYTES = 24 * 1024;
+
+function isAuthCookie(name: string): boolean {
+  return (
+    name.startsWith('sb-') ||
+    name === 'supabase-auth-token' ||
+    name === '__stripe_mid' ||
+    name === '__stripe_sid'
+  );
+}
+
+function clearBloatedAuthCookies(request: NextRequest, response: NextResponse) {
+  for (const c of request.cookies.getAll()) {
+    if (isAuthCookie(c.name)) {
+      response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 });
+    }
+  }
+}
 
 const securityHeaders: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
@@ -25,6 +51,21 @@ export async function middleware(request: NextRequest) {
   const isProtectedDashboard = path.startsWith('/dashboard');
   const isAdminRoute = path.startsWith('/admin');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
+
+  // Pre-flight: if the cookie header is approaching the Vercel edge limit,
+  // strip auth cookies now and redirect to /auth/clear. This saves users
+  // stuck in the 494 REQUEST_HEADER_TOO_LARGE loop where every subsequent
+  // request also fails at the edge — we intercept BEFORE that point.
+  const cookieHeader = request.headers.get('cookie') || '';
+  if (cookieHeader.length > COOKIE_BUDGET_BYTES) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/clear';
+    url.searchParams.set('reason', 'cookie-overflow');
+    url.searchParams.set('from', path);
+    const resp = NextResponse.redirect(url);
+    clearBloatedAuthCookies(request, resp);
+    return applyHeaders(resp);
+  }
 
   if (path === '/auth') {
     const url = request.nextUrl.clone();

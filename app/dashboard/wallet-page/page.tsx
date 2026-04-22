@@ -890,26 +890,12 @@ export default function WalletPage() {
                       {pnlPositive ? '+' : ''}{pnlAmount >= 0.01 ? `$${pnlAmount.toFixed(2)} ` : ''}{priceChange !== 0 ? `(${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)` : ''} today
                     </span>
                   )}
-                  {/* Chain-aware address row: an EVM-derived 0x… address is
-                      not a valid Solana identifier, so on the Solana pill we
-                      show a "no Solana wallet" notice instead of lying with
-                      the ETH address. Any non-EVM / non-SOL chain without a
-                      matching wallet falls into the same branch. */}
-                  {activeWallet && activeChain.id === 'solana' && activeWallet.address.startsWith('0x') ? (
-                    <button
-                      onClick={() => setView('import')}
-                      className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/15 rounded-full transition-colors border border-amber-500/30"
-                    >
-                      <span className="text-[11px] text-amber-300">No Solana wallet — tap to import</span>
-                    </button>
-                  ) : (
-                    <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
-                      <span className="text-[11px] font-mono text-slate-400">
-                        {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
-                      </span>
-                      {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
-                    </button>
-                  )}
+                  <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+                    <span className="text-[11px] font-mono text-slate-400">
+                      {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
+                    </span>
+                    {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                  </button>
                 </div>
                 <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ml-2 mt-1">
                   <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
@@ -1025,15 +1011,18 @@ export default function WalletPage() {
                     || CONTRACT_LOGOS[contractKey];
                   return (
                     <WalletTokenRow
-                      key={`${token.symbol}-${i}`}
+                      key={`${token.chain}-${token.symbol}-${i}`}
                       symbol={token.symbol}
                       name={token.name}
                       balance={token.balance}
                       valueUsd={token.valueUsd}
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
-                      chainLabel={activeChain.name}
-                      coinGeckoId={resolveCoinGeckoId(token.symbol, activeChain)}
+                      chainLabel={SUPPORTED_CHAINS.find(c => c.id === token.chain)?.name ?? ''}
+                      coinGeckoId={resolveCoinGeckoId(
+                        token.symbol,
+                        SUPPORTED_CHAINS.find(c => c.id === token.chain) ?? activeChain,
+                      )}
                       hideBalance={hideBalance}
                       // §4.5 — wallet token click opens the Trust-Wallet-style coin detail
                       // (line chart + fiat buy + Holdings/History/About + Send/Receive/Swap
