@@ -3,16 +3,59 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const SESSION_SECONDS = 60 * 60; // 1 hour
 
+// ─── Cookie helpers ──────────────────────────────────────────────────────────
+// Supabase SSR chunks JWTs into sb-<ref>-auth-token.0/.1/.2 (each ~4KB).
+// Without cleanup, a few logins push the Cookie header past Vercel's 32KB
+// edge limit → 494. Fix: always wipe all sb-* chunks before writing a new
+// one, and cap maxAge to 1 hour so they self-delete.
+
+const SESSION_MAX_AGE = 60 * 60;
+
+function cookieHosts(): string[] {
+  if (typeof window === 'undefined') return [];
+  const h = window.location.hostname;
+  return Array.from(new Set([h, `.${h}`, h.split('.').slice(-2).join('.'), `.${h.split('.').slice(-2).join('.')}`]));
+}
+const COOKIE_PATHS = ['/', '/auth', '/dashboard', '/api'];
+
+function nukeSbCookies() {
+  if (typeof document === 'undefined') return;
+  document.cookie.split(';').forEach(raw => {
+    const name = raw.split('=')[0]?.trim();
+    if (!name?.startsWith('sb-')) return;
+    for (const h of cookieHosts()) for (const p of COOKIE_PATHS) {
+      document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      document.cookie = `${name}=; Path=${p}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    }
+  });
+}
+
+function writeCookie(name: string, value: string) {
+  if (typeof document === 'undefined') return;
+  const sec = location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${name}=${value}; Path=/; Max-Age=${SESSION_MAX_AGE}; SameSite=Lax${sec}`;
+}
+
+function readCookie(name: string) {
+  if (typeof document === 'undefined') return undefined;
+  return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(`${name}=`))?.slice(name.length + 1);
+}
+
+function deleteCookie(name: string) {
+  if (typeof document === 'undefined') return;
+  for (const h of cookieHosts()) for (const p of COOKIE_PATHS) {
+    document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `${name}=; Path=${p}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  }
+}
+
+// ─── Supabase browser client ─────────────────────────────────────────────────
+
 let _supabase: SupabaseClient | null = null;
 
 function getClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  // IMPORTANT: do NOT pass a custom `storageKey` here.
-  // @supabase/ssr writes session cookies named `sb-<projectref>-auth-token.*`
-  // and the server middleware in middleware.ts reads them by that exact name.
-  // Overriding `storageKey` causes a name mismatch — middleware never sees the
-  // session and redirects authenticated users back to /login. (Production bug 2026-04-17.)
   _supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,6 +65,14 @@ function getClient(): SupabaseClient {
         persistSession: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
+      },
+      cookies: {
+        get: readCookie,
+        set(name, value) {
+          if (name.startsWith('sb-')) nukeSbCookies(); // wipe old chunks first
+          writeCookie(name, value);
+        },
+        remove: deleteCookie,
       },
     }
   );
