@@ -528,29 +528,59 @@ export default function WalletPage() {
     if (customTokens.length === 0) { setCustomTokenRows([]); return; }
     let cancelled = false;
     (async () => {
+      // Hardcoded brand metadata for the two seeded platform tokens so the
+      // row always has a real logo + name even when DexScreener returns
+      // empty (low-liquidity pairs can have no indexed pair on their API).
+      // Any field DexScreener does supply wins over these defaults.
+      const SEEDED_META: Record<string, { symbol: string; name: string; logo: string }> = {
+        '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898': {
+          symbol: 'NAKA',
+          name: 'Naka Go',
+          logo: 'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
+        },
+        '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19': {
+          symbol: 'NSFW',
+          name: 'Pleasure Coin',
+          logo: 'https://assets.coingecko.com/coins/images/24834/small/pleasurecoinlogo200x200.png',
+        },
+      };
       const rows = await Promise.all(customTokens.map(async (entry) => {
         const [chainId, contract] = entry.split(':');
         if (!chainId || !contract) return null;
+        const seed = SEEDED_META[contract.toLowerCase()];
         try {
           const res = await fetch(`/api/market/token/${contract}`);
-          if (!res.ok) return null;
-          const data = await res.json() as {
+          const data = res.ok ? await res.json() as {
             symbol?: string; name?: string;
             image?: { small?: string; thumb?: string };
             market_data?: { current_price?: { usd?: number } };
-          };
+          } : null;
           const price = data?.market_data?.current_price?.usd ?? 0;
+          const symbol = (data?.symbol ?? seed?.symbol ?? 'TKN').toUpperCase();
+          const name = data?.name ?? seed?.name ?? 'Custom Token';
+          const logo = data?.image?.small ?? data?.image?.thumb ?? seed?.logo;
           return {
-            symbol: (data?.symbol ?? 'TKN').toUpperCase(),
-            name: data?.name ?? 'Custom Token',
+            symbol,
+            name,
             balance: '0',
             valueUsd: price > 0 ? '0' : null,
             contractAddress: contract,
-            logo: data?.image?.small ?? data?.image?.thumb,
+            logo,
             chain: chainId,
           } as TokenBalance & { chain: string };
         } catch {
-          return null;
+          // Full fetch failure — still surface the seeded row so users see
+          // their NAKA / NSFW placeholders rather than an empty list.
+          if (!seed) return null;
+          return {
+            symbol: seed.symbol,
+            name: seed.name,
+            balance: '0',
+            valueUsd: null,
+            contractAddress: contract,
+            logo: seed.logo,
+            chain: chainId,
+          } as TokenBalance & { chain: string };
         }
       }));
       if (!cancelled) {
@@ -711,7 +741,29 @@ export default function WalletPage() {
     const customOnly = customTokenRows.filter((t) =>
       !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
     );
-    let tokens: Array<TokenBalance & { chain: string }> = [...onChain, ...customOnly];
+    // Native-asset placeholders for every enabled chain that hasn't been
+    // fetched yet (user hasn't activated that chain pill). Without this,
+    // enabling Solana / Arbitrum on the Add Network screen does nothing
+    // visible on the home list — the only on-chain data we have is for
+    // the currently-active chain, so SOL / ARB never appeared.
+    const nativePlaceholders: Array<TokenBalance & { chain: string }> = [];
+    for (const chainId of enabledChains) {
+      if (chainId === activeChain.id) continue;
+      const c = SUPPORTED_CHAINS.find((x) => x.id === chainId);
+      if (!c) continue;
+      const key = `${chainId}:${c.symbol.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      nativePlaceholders.push({
+        symbol: c.symbol,
+        name: c.name,
+        balance: '0',
+        valueUsd: null,
+        contractAddress: null,
+        chain: chainId,
+      });
+      seen.add(key);
+    }
+    let tokens: Array<TokenBalance & { chain: string }> = [...onChain, ...customOnly, ...nativePlaceholders];
     // Enabled-chains preference — the home list only shows rows whose
     // chain the user has toggled on. Default: ETH/BNB/Polygon/SOL +
     // the two seeded custom tokens (which live on Ethereum + Polygon,
