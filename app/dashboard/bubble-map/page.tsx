@@ -4,10 +4,11 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import * as d3 from 'd3';
 import {
-  ArrowLeft, Search, Send, Bot, Copy, Check, User,
+  Search, Send, Bot, Copy, Check, User,
   TrendingUp, TrendingDown, Shield, Layers, Maximize2, Minimize2,
   X, Network, GitBranch, BarChart3, ExternalLink, ChevronDown,
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -379,9 +380,7 @@ export default function BubbleMapPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </button>
+          <BackButton />
           <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
             <Layers className="w-5 h-5" />
           </div>

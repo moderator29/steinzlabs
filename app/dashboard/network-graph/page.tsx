@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import BackButton from '@/components/ui/BackButton';
 import {
-  ArrowLeft,
   Network,
   Search,
   ChevronDown,
@@ -498,13 +498,7 @@ export default function NetworkGraphPage() {
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-40 bg-[#0A0E1A]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
-        <button
-          onClick={() => router.back()}
-          className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors flex-shrink-0"
-          aria-label="Go back"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-400" />
-        </button>
+        <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
 

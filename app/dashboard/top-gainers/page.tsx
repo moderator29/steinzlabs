@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TrendingUp, ArrowLeft, Star } from 'lucide-react';
+import { TrendingUp, Star } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { MiniSpark } from '@/components/dashboard/TopGainersCard';
 
 interface Gainer {
@@ -65,9 +66,7 @@ export default function TopGainersPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard" className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center">
-          <ArrowLeft className="w-4 h-4 text-gray-400" />
-        </Link>
+        <BackButton href="/dashboard" />
         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
           <TrendingUp className="w-5 h-5 text-emerald-400" />
         </div>

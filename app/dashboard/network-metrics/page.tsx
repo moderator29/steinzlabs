@@ -1,6 +1,7 @@
 'use client';
 
-import { Radio, ArrowLeft, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
+import { Radio, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -34,9 +35,7 @@ export default function NetworkMetricsPage() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <Radio className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
         </div>

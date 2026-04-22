@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Menu, X, ChevronRight, ExternalLink } from 'lucide-react';
+import { BookOpen, Menu, X, ChevronRight, ExternalLink } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { DocsSidebar, DOC_SECTIONS } from '@/components/docs/DocsSidebar';
 import GlobalControls from '@/components/GlobalControls';
 import { DocsSection01 } from '@/components/docs/DocsSection01';
@@ -67,10 +68,7 @@ export default function DocsPage() {
             >
               <Menu className="w-5 h-5 text-gray-400" />
             </button>
-            <Link href="/" className="hidden sm:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-sm flex-shrink-0">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </Link>
+            <BackButton href="/" label="Back" className="hidden sm:inline-flex" />
             <span className="hidden sm:block w-px h-4 bg-white/[0.08] flex-shrink-0" />
             <div className="flex items-center gap-1.5 min-w-0">
               <BookOpen className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />

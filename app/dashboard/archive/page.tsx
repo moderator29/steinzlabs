@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowLeft, Archive, Clock, Filter, Search, TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, ChevronDown, ExternalLink } from 'lucide-react';
+import { Archive, Clock, Filter, Search, TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, ChevronDown, ExternalLink } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -126,9 +127,7 @@ export default function ArchivePage() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <Archive className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Archive</h1>
           <span className="text-[10px] text-gray-500 ml-1">Events older than 24h</span>

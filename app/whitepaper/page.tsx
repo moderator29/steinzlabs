@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import BackButton from '@/components/ui/BackButton';
 import {
-  ArrowLeft, Shield, Brain, Zap, BarChart3, Users, Target, CheckCircle,
+  Shield, Brain, Zap, BarChart3, Users, Target, CheckCircle,
   AlertTriangle, Layers, FileText, Repeat, Star, Lock, Eye, EyeOff,
   Sparkles, Globe, Wallet, KeyRound, ShieldCheck, Cpu, Database, Network,
 } from 'lucide-react';
@@ -144,10 +145,7 @@ export default function WhitepaperPage() {
       <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
+            <BackButton href="/" label="Back" />
             <span className="hidden sm:block w-px h-4 bg-white/[0.08]" />
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#0A1EFF]" />

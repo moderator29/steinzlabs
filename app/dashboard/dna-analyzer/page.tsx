@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dna, ArrowLeft, Loader2, TrendingUp, Shield, Target, Brain, Zap,
+  Dna, Loader2, TrendingUp, Shield, Target, Brain, Zap,
   BarChart3, AlertTriangle, CheckCircle, RotateCcw, FileCode2, ArrowRight,
   Copy, Bell, Map, Search, Users, Activity, ThumbsUp, ThumbsDown, ExternalLink,
   Award, TrendingDown, Clock, Hash
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 
@@ -416,9 +417,7 @@ export default function DNAAnalyzerPage() {
       {/* Header */}
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center px-4 h-14 gap-3">
-          <button onClick={() => router.push('/dashboard')} className="hover:bg-white/10 p-2 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton href="/dashboard" />
           <Dna className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="font-heading font-bold">DNA Analyzer</h1>
           <span className="ml-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Mail, ArrowLeft, Loader2, Check } from 'lucide-react';
+import { Shield, Mail, Loader2, Check } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
 
@@ -82,7 +83,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center justify-between mb-8">
             <Link href="/" className="flex items-center gap-2"><SteinzLogo size={28} /><span className="text-sm font-bold">NAKA LABS</span></Link>
-            <Link href="/login" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /> Back to login</Link>
+            <BackButton href="/login" label="Back to login" />
           </div>
 
           <div className="text-center mb-8">

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ArrowLeft, Star, Zap } from 'lucide-react';
+import { Check, Star, Zap } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
@@ -99,9 +100,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
       <div className="sticky top-0 z-10 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-400" />
-        </button>
+        <BackButton />
         <span className="text-white font-semibold">Pricing</span>
       </div>
 

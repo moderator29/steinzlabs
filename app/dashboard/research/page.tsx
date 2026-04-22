@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import BackButton from '@/components/ui/BackButton';
 import {
   Search,
   Tag,
@@ -9,7 +10,6 @@ import {
   ChevronRight,
   Loader2,
   BookOpen,
-  ArrowLeft,
   Clock,
   RefreshCw,
   SlidersHorizontal,
@@ -226,7 +226,7 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
         onClick={onBack}
         className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" /> Back to Research
+        Back to Research
       </button>
       {post.image_url && (
         <div className="h-48 w-full rounded-xl overflow-hidden mb-5 border border-white/[0.06]">
@@ -365,12 +365,7 @@ export default function ResearchPage() {
 
         {/* ── Header ── */}
         <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 text-gray-400" />
-          </button>
+          <BackButton />
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-heading font-bold text-white">Research Labs</h1>
             <p className="text-[11px] text-gray-500">Live intel from DexScreener, CoinGecko & more</p>

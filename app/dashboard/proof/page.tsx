@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity } from 'lucide-react';
+import { ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
 
 interface ProofEvent {
@@ -169,9 +170,7 @@ export default function ViewProofPage() {
     <div className="min-h-screen bg-[#0A0E1A] text-white">
       <div className="fixed top-0 w-full z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.push('/dashboard')} className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </button>
+          <BackButton href="/dashboard" />
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold truncate">View Proof</h1>
             <p className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : 'Intelligence Report'}</p>

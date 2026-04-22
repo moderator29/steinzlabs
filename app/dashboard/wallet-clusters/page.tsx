@@ -10,9 +10,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Loader2, Search, ArrowLeft, Zap, ShieldAlert, Sparkles, Users, TrendingUp,
+  Loader2, Search, Zap, ShieldAlert, Sparkles, Users, TrendingUp,
   Brain, Bot, Activity, Crown, Cpu, Layers, ChevronRight, X,
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 type Archetype =
   | 'alpha_hive' | 'sybil_farm' | 'insider_ring' | 'smart_money_pack'
@@ -119,7 +120,7 @@ export default function WalletClustersPage() {
       {/* Hero */}
       <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-start gap-3">
-          <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-white/5"><ArrowLeft className="w-4 h-4" /></button>
+          <BackButton />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">Wallet Clusters</h1>
