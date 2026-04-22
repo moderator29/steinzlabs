@@ -173,129 +173,99 @@ function generateSuggestions(content: string): string[] {
   return ['Market overview', 'Trending tokens', 'Check a wallet'];
 }
 
-// Rich token card — adds an embedded price chart, timeframe pills, and
-// Buy / Swap / Analyze action row. Falls back gracefully for legacy string-only cards
-// (those parsed from text without a contract address can't fetch chart data).
+// Lana-AI-style token card — chain logo, big price + change, wide line chart,
+// and a spec row (Volume / Holders / MCap / Liquidity / FDV). No Buy/Swap
+// buttons on the card — this is an intel surface, not a trade surface. If
+// the user wants to swap, they ask VTX and get a separate Swap Card.
 function TokenCard({ token }: { token: TokenCardData }) {
-  const router = useRouter();
   const isPositive = token.change24h >= 0;
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
-  const [tf, setTf] = useState<'1h' | '24h' | '7d'>('24h');
   const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(null);
 
   useEffect(() => {
-    if (!token.address) return;
     let cancelled = false;
-    fetch(`/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=${tf}`)
-      .then((r) => r.json())
+    const q = token.address
+      ? `/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=7d`
+      : `/api/vtx/token-card?symbol=${encodeURIComponent(token.symbol)}&tf=7d`;
+    fetch(q)
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled && d?.points) setChart({ points: d.points, changePct: d.changePct || 0 }); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [token.address, token.chain, tf]);
+  }, [token.address, token.chain, token.symbol]);
 
-  const handleBuy = () => {
-    if (!token.address) { router.push(`/dashboard/swap?symbol=${token.symbol}`); return; }
-    router.push(`/dashboard/swap?token=${token.address}&chain=${token.chain || ''}&buy=1`);
-  };
-  const handleSwap = () => {
-    if (!token.address) { router.push(`/dashboard/swap?symbol=${token.symbol}`); return; }
-    router.push(`/dashboard/swap?token=${token.address}&chain=${token.chain || ''}`);
-  };
+  const chainName = (() => {
+    const c = (token.chain || '').toLowerCase();
+    if (!c) return '';
+    if (c === 'eth' || c === 'ethereum') return 'Ethereum';
+    if (c === 'sol' || c === 'solana') return 'Solana';
+    if (c === 'bsc' || c === 'bnb') return 'BNB Chain';
+    return c.charAt(0).toUpperCase() + c.slice(1);
+  })();
+
+  const trimmedAddr = token.address
+    ? `${token.address.slice(0, 4)}…${token.address.slice(-4)}`
+    : '';
 
   return (
-    <div className="p-3 bg-[#0D1117] border border-white/[0.08] rounded-xl hover:border-[#0A1EFF]/30 transition-all">
-      <div className="flex items-center gap-3 mb-3">
-        <img src={logoUrl} alt={token.symbol} className="w-8 h-8 rounded-full bg-[#1a1f2e]" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true`; }} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-white">{token.symbol}</span>
-            {token.name !== token.symbol && <span className="text-[10px] text-gray-500 truncate">{token.name}</span>}
-            {token.chain && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-gray-400 uppercase">{token.chain}</span>}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs font-bold text-white font-mono">{token.price}</div>
-          <div className={`text-[10px] font-semibold ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '+' : ''}{token.change24h.toFixed(2)}%
-          </div>
-        </div>
-      </div>
-
-      {/* Embedded chart — only when server supplied a real contract address. */}
-      {token.address && (
-        <div className="mb-3">
-          <div className="h-16 w-full rounded-lg bg-white/[0.02] flex items-center justify-center overflow-hidden">
-            {chart && chart.points.length > 1 ? (
-              <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
-            ) : (
-              <span className="text-[10px] text-gray-600">Loading chart…</span>
+    <div className="bg-[#0A0F1A] border border-white/[0.08] rounded-2xl p-4 w-full">
+      {/* Header: logo + name/chain + price + change */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <img
+            src={logoUrl}
+            alt={token.symbol}
+            className="w-10 h-10 rounded-full bg-[#141824] shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true`; }}
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">{token.symbol}</span>
+              {chainName && <span className="text-[11px] text-gray-400">{chainName}</span>}
+            </div>
+            {trimmedAddr && (
+              <div className="text-[10px] text-gray-500 font-mono mt-0.5">{trimmedAddr}</div>
             )}
           </div>
-          <div className="flex items-center gap-1 mt-1.5">
-            {(['1h', '24h', '7d'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTf(t)}
-                className={`text-[9px] px-2 py-0.5 rounded ${tf === t ? 'bg-[#0A1EFF] text-white' : 'bg-white/[0.04] text-gray-400 hover:text-white'}`}
-              >
-                {t}
-              </button>
-            ))}
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-lg font-bold text-white font-mono leading-none">{token.price}</div>
+          <div className={`text-[11px] font-semibold mt-1 ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? '↗ +' : '↘ '}{token.change24h.toFixed(2)}%
+            <span className="text-gray-500 font-normal ml-1">24h</span>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
-          <div className="text-[8px] text-gray-600 uppercase">MCap</div>
-          <div className="text-[10px] font-semibold text-white">{token.marketCap}</div>
-        </div>
-        <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
-          <div className="text-[8px] text-gray-600 uppercase">Volume</div>
-          <div className="text-[10px] font-semibold text-white">{token.volume}</div>
-        </div>
-        {token.liquidity ? (
-          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
-            <div className="text-[8px] text-gray-600 uppercase">Liquidity</div>
-            <div className="text-[10px] font-semibold text-white">{token.liquidity}</div>
-          </div>
-        ) : token.fdv ? (
-          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
-            <div className="text-[8px] text-gray-600 uppercase">FDV</div>
-            <div className="text-[10px] font-semibold text-white">{token.fdv}</div>
-          </div>
+      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls) */}
+      <div className="h-28 w-full rounded-lg bg-transparent mb-4 overflow-hidden">
+        {chart && chart.points.length > 1 ? (
+          <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
         ) : (
-          <div className="bg-white/[0.03] rounded-lg px-2 py-1.5">
-            <div className="text-[8px] text-gray-600 uppercase">Chain</div>
-            <div className="text-[10px] font-semibold text-white capitalize">{token.chain}</div>
+          <div className="h-full flex items-center justify-center">
+            <span className="text-[11px] text-gray-600">Loading chart…</span>
           </div>
         )}
       </div>
 
-      {/* Action row — Buy / Swap. One-tap routing into the swap page with pre-filled token + chain. */}
-      <div className="flex gap-1.5">
-        <button
-          onClick={handleBuy}
-          className="flex-1 py-1.5 bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-90 text-white text-[10px] font-bold rounded-lg transition-opacity"
-        >
-          Buy {token.symbol}
-        </button>
-        <button
-          onClick={handleSwap}
-          className="flex-1 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-white text-[10px] font-bold rounded-lg transition-colors"
-        >
-          Swap
-        </button>
-        {token.dexUrl && (
-          <a
-            href={token.dexUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 text-[10px] font-bold rounded-lg transition-colors"
-          >
-            DEX
-          </a>
-        )}
+      {/* Stats grid — Volume, Liquidity, MCap, FDV */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+        <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
+          <span className="text-gray-500">24h Volume</span>
+          <span className="text-white font-semibold">{token.volume || '—'}</span>
+        </div>
+        <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
+          <span className="text-gray-500">Market Cap</span>
+          <span className="text-white font-semibold">{token.marketCap || '—'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Liquidity</span>
+          <span className="text-white font-semibold">{token.liquidity || '—'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">FDV</span>
+          <span className="text-white font-semibold">{token.fdv || '—'}</span>
+        </div>
       </div>
     </div>
   );
@@ -544,7 +514,20 @@ function VtxAiPageInner() {
           depth: settings.depth,
           riskAppetite: settings.riskAppetite,
           context: {
-            walletAddress: typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null,
+            walletAddress: typeof window !== 'undefined' ? (() => {
+              // Try the explicit "active wallet" key first (set when user
+              // opens the Wallet page), then fall back to the saved wallet
+              // vault so VTX sees the wallet even before Wallet has been
+              // visited in this session. Either way the wallet address is
+              // public on-chain info.
+              const active = localStorage.getItem('wallet_address');
+              if (active) return active;
+              try {
+                const stored = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
+                if (Array.isArray(stored) && stored[0]?.address) return stored[0].address as string;
+              } catch { /* ignore */ }
+              return null;
+            })() : null,
             currentPage: 'vtx-ai',
           },
         }),

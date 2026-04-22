@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Menu, X, ChevronRight, ExternalLink } from 'lucide-react';
 import { DocsSidebar, DOC_SECTIONS } from '@/components/docs/DocsSidebar';
+import GlobalControls from '@/components/GlobalControls';
 import { DocsSection01 } from '@/components/docs/DocsSection01';
 import { DocsSection02 } from '@/components/docs/DocsSection02';
 import { DocsSection03 } from '@/components/docs/DocsSection03';
@@ -80,6 +81,7 @@ export default function DocsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <GlobalControls className="hidden sm:flex" />
             <Link href="/whitepaper" className="hidden lg:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>

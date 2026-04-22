@@ -11,12 +11,60 @@ interface CacheEntry { at: number; data: unknown }
 const cache = new Map<string, CacheEntry>();
 const TTL = 60 * 1000;
 
+const SYMBOL_TO_CG: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', DOGE: 'dogecoin', ADA: 'cardano', AVAX: 'avalanche-2',
+  MATIC: 'matic-network', POL: 'matic-network', ARB: 'arbitrum', SUI: 'sui',
+  LINK: 'chainlink', UNI: 'uniswap', AAVE: 'aave', PEPE: 'pepe', SHIB: 'shiba-inu',
+  USDT: 'tether', USDC: 'usd-coin', BONK: 'bonk', WIF: 'dogwifcoin', JUP: 'jupiter-exchange-solana',
+  TON: 'the-open-network', OP: 'optimism', LTC: 'litecoin', TRX: 'tron',
+};
+
+async function fetchCoinGeckoChart(symbol: string, tf: '1h' | '24h' | '7d') {
+  const id = SYMBOL_TO_CG[symbol.toUpperCase()];
+  if (!id) return null;
+  const days = tf === '1h' ? 1 : tf === '7d' ? 7 : 1;
+  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`;
+  const res = await fetch(url, { next: { revalidate: 60 } });
+  if (!res.ok) return null;
+  const body = await res.json();
+  const prices: [number, number][] = Array.isArray(body?.prices) ? body.prices : [];
+  // Downsample to ~48 points so the SVG path stays light.
+  const step = Math.max(1, Math.floor(prices.length / 48));
+  const points = prices.filter((_, i) => i % step === 0).map((p) => p[1]);
+  const first = points[0] ?? 0;
+  const last = points[points.length - 1] ?? 0;
+  const changePct = first ? ((last - first) / first) * 100 : 0;
+  return { points, changePct, source: 'coingecko', price: last };
+}
+
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get('address');
+  const symbol = req.nextUrl.searchParams.get('symbol');
   const chain = req.nextUrl.searchParams.get('chain');
   const tf = (req.nextUrl.searchParams.get('tf') || '24h') as '1h' | '24h' | '7d';
 
-  if (!address) return NextResponse.json({ error: 'missing address' }, { status: 400 });
+  // Symbol-first path: majors render from CoinGecko market_chart — real
+  // historical series, not % reconstructions.
+  if (!address && symbol) {
+    const key = `sym:${symbol.toUpperCase()}:${tf}`;
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.at < TTL) {
+      return NextResponse.json(cached.data, {
+        headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
+      });
+    }
+    const cg = await fetchCoinGeckoChart(symbol, tf);
+    if (cg) {
+      cache.set(key, { at: Date.now(), data: cg });
+      return NextResponse.json(cg, {
+        headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
+      });
+    }
+    return NextResponse.json({ points: [], changePct: 0, source: 'none' });
+  }
+
+  if (!address) return NextResponse.json({ error: 'missing address or symbol' }, { status: 400 });
 
   const key = `${chain || ''}:${address}:${tf}`;
   const cached = cache.get(key);
