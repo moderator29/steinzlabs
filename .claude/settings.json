@@ -11,7 +11,8 @@
       "mcp__claude_ai_Supabase__get_publishable_keys",
       "Read(//tmp/**)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(git commit -m 'fix\\(auth\\): intercept browser cookie writes — nuke stale sb-* before each login *)"
+      "Bash(git commit -m 'fix\\(auth\\): intercept browser cookie writes — nuke stale sb-* before each login *)",
+      "Bash(git commit -m 'fix\\(auth\\): stable cookie fix — nuke+1h cap, revert risky localStorage change *)"
     ]
   }
 }
