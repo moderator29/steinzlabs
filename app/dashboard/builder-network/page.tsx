@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, ArrowLeft, Search, Globe, Users, Code, Star, MessageSquare, Plus, Award, Loader2, ChevronRight, X } from 'lucide-react';
+import { Building2, Search, Globe, Users, Code, Star, MessageSquare, Plus, Award, Loader2, ChevronRight, X } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 import Image from 'next/image';
@@ -121,9 +122,7 @@ export default function BuilderNetworkPage() {
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <Building2 className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Builder Network</h1>
           <span className="ml-auto text-[10px] text-gray-500">{builders.length} builders</span>

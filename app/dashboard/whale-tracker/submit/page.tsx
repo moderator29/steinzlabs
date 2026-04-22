@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
 import { toast } from "sonner";
 
 const ENTITY_TYPES = ["vc", "trader", "fund", "exchange", "dev", "influencer", "institutional"];
@@ -61,9 +61,7 @@ export default function SubmitWhalePage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="max-w-xl mx-auto px-4 py-6">
-        <Link href="/dashboard/whale-tracker" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition mb-4">
-          <ArrowLeft size={12} /> Whale tracker
-        </Link>
+        <div className="mb-4"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
         <h1 className="text-2xl font-bold mb-1">Submit a whale</h1>
         <p className="text-xs text-slate-500 mb-6">
           Propose a public wallet for inclusion in the Naka Labs whale directory. An admin reviews every submission before it goes live.

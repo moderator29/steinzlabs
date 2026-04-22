@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { SmartMoneyPanel } from '@/components/intelligence/SmartMoneyPanel';
 import { HolderBreakdown } from '@/components/intelligence/HolderBreakdown';
 import { Bubblemaps } from '@/components/visualization/Bubblemaps';
@@ -72,13 +72,7 @@ export default function ViewProofPage() {
       {/* Header */}
       <div className="bg-[#141824] border-b border-[#1E2433] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-3"
-          >
-            <ArrowLeft size={20} />
-            Back to Feed
-          </button>
+          <div className="mb-3"><BackButton label="Back to Feed" /></div>
 
           <div className="flex items-center justify-between">
             <div>
