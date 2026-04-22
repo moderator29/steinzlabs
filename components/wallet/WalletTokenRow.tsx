@@ -52,27 +52,36 @@ function formatValue(v: number): string {
 }
 
 export function WalletTokenRow({
-  symbol, name, balance, valueUsd, logoUrl, chainLabel, coinGeckoId, hideBalance, onClick,
+  symbol, name, balance, valueUsd, contractAddress, logoUrl, chainLabel, coinGeckoId, hideBalance, onClick,
 }: Props) {
   const [changePct, setChangePct] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!coinGeckoId) return;
-    if (sparkCache.has(coinGeckoId)) {
-      setChangePct(sparkCache.get(coinGeckoId)?.changePct ?? null);
+    // Prefer contract-backed DexScreener sparkline when we have a contract
+    // address — CoinGecko doesn't index small-caps like Naka Go / Pleasure
+    // Coin, so the id path would 404 and the row would render a blank line.
+    const url = contractAddress && /^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(contractAddress)
+      ? `/api/wallet/sparkline?contract=${encodeURIComponent(contractAddress)}&chain=${encodeURIComponent((chainLabel || '').toLowerCase())}`
+      : coinGeckoId
+        ? `/api/wallet/sparkline?id=${encodeURIComponent(coinGeckoId)}`
+        : null;
+    if (!url) return;
+    const cacheKey = url;
+    if (sparkCache.has(cacheKey)) {
+      setChangePct(sparkCache.get(cacheKey)?.changePct ?? null);
       return;
     }
     let cancelled = false;
-    fetch(`/api/wallet/sparkline?id=${encodeURIComponent(coinGeckoId)}`)
+    fetch(url)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: SparkData | null) => {
         if (cancelled || !d || !Array.isArray(d.points)) return;
-        sparkCache.set(coinGeckoId, d);
+        sparkCache.set(cacheKey, d);
         setChangePct(d.changePct);
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [coinGeckoId]);
+  }, [contractAddress, coinGeckoId, chainLabel]);
 
   const qty = parseFloat(balance) || 0;
   const val = parseFloat(valueUsd || '0') || 0;
