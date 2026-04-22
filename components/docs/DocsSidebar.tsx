@@ -23,6 +23,7 @@ export const DOC_SECTIONS: DocSection[] = [
   { id: 'vtx-ai', number: '04', label: 'VTX AI Engine', subsections: [
     { id: 'vtx-capabilities', label: 'Capabilities' },
     { id: 'vtx-usage', label: 'How to Use It' },
+    { id: 'vtx-triggers', label: 'Inline Card Commands' },
   ]},
   { id: 'wallet-intelligence', number: '05', label: 'Wallet Intelligence', subsections: [
     { id: 'dna-analyzer', label: 'DNA Analyzer' },

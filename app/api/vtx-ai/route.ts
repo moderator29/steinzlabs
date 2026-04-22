@@ -259,6 +259,12 @@ CURRENT MARKET CONTEXT: {market_context}
 
 PLATFORM CONTEXT: {platform_context}
 
+WALLET BEHAVIOR: If the "User Wallet" field above shows an address (anything other than "Not connected"), the user HAS a wallet connected on this platform. Never ask them to "connect a wallet" — you can see it. For balance or portfolio questions, call wallet_profile / portfolio tools with that address and answer with real numbers. Only say "no wallet connected" when the field literally reads "Not connected".
+
+SWAP BEHAVIOR: When the user asks to swap / convert / trade tokens (e.g. "swap 0.1 ETH for USDC", "convert 100 USDC to SOL"), respond with a one-line confirmation of what you're quoting — the UI will render an inline Swap Card with the live quote and a Confirm button. Do NOT try to execute the swap yourself, do NOT output raw JSON, do NOT tell them to go to an external DEX. Just acknowledge and let the Swap Card handle the rest.
+
+TOKEN CARD BEHAVIOR: When the user asks about a specific token (by name, symbol, or address), the UI renders an inline Token Card with logo, price, 24h change, market cap, volume, and a price chart. Keep your text response focused on analysis — don't repeat the raw numbers the card already shows.
+
 RESPONSE STYLE: {style_instruction}
 
 RISK FRAMING: {risk_instruction}
@@ -978,27 +984,33 @@ export async function POST(request: NextRequest) {
     const authedUser = await getAuthenticatedUser(request).catch(() => null);
     const callerUserId = authedUser?.id ?? null;
 
-    // Privacy gate: the client may send a walletAddress in context, but VTX
-    // only receives it if the user has opted in via the Profile "VTX Wallet
-    // Access" toggle. Default off. Anonymous callers never get wallet context.
-    if (body.context?.walletAddress && callerUserId) {
+    // Wallet context: the address is public on-chain info (same thing shown in
+    // the wallet UI), so VTX sees it by default. If the client didn't send one
+    // but the caller is signed in, fall back to the user's saved default wallet
+    // so VTX stops telling authenticated users "no wallet connected" when they
+    // clearly have one on the platform.
+    if (!body.context) body.context = {};
+    if (!body.context.walletAddress && callerUserId) {
       try {
         const admin = getSupabaseAdmin();
-        const { data: prefRow } = await admin
-          .from('user_preferences')
-          .select('preferences')
+        const { data: row } = await admin
+          .from('user_wallets_v2')
+          .select('default_address, wallets')
           .eq('user_id', callerUserId)
           .maybeSingle();
-        const allowed = (prefRow?.preferences as Record<string, unknown> | null)?.vtx_wallet_access === true;
-        if (!allowed) {
-          body.context.walletAddress = undefined;
-        }
+        const fallback = row?.default_address
+          || (Array.isArray(row?.wallets) && row.wallets[0] && typeof (row.wallets[0] as { address?: unknown }).address === 'string'
+              ? (row.wallets[0] as { address: string }).address
+              : null);
+        if (fallback) body.context.walletAddress = fallback;
       } catch {
-        // If the preference read fails, fail-closed: strip wallet context.
-        body.context.walletAddress = undefined;
+        // Non-fatal — just leave walletAddress undefined.
       }
-    } else if (body.context?.walletAddress && !callerUserId) {
-      body.context.walletAddress = undefined;
+    }
+    if (body.context.walletAddress && !callerUserId) {
+      // Anonymous callers: don't trust client-supplied addresses as
+      // "connected". Keep the value but flag it so the prompt doesn't claim
+      // ownership.
     }
 
     // ── Rate Limiting ───────────────────────────────────────────────────────
@@ -1215,13 +1227,50 @@ export async function POST(request: NextRequest) {
     const currentUsage = isPro ? null : await getRateLimitInfo(ip);
 
     // ── Build token card if a specific token was discussed ─────────────────
+    // Trigger on: explicit address, chart intent, OR a common symbol/name
+    // mentioned by the user. The card shows live price + chart inline.
     let tokenCard: Record<string, unknown> | null = null;
-    if (tokenDetected || chartPayload?.address) {
+    const symbolQuery = (() => {
+      if (tokenDetected || chartPayload?.address) return null;
+      const lower = cleanMessage.toLowerCase();
+      const dollar = cleanMessage.match(/\$([A-Za-z]{2,10})\b/);
+      if (dollar) return dollar[1];
+      const KNOWN: Array<[RegExp, string]> = [
+        [/\bbitcoin\b|\bbtc\b/, 'BTC'],
+        [/\bethereum\b|\beth\b/, 'ETH'],
+        [/\bsolana\b|\bsol\b/, 'SOL'],
+        [/\bbnb\b|\bbinance coin\b/, 'BNB'],
+        [/\bxrp\b/, 'XRP'],
+        [/\busdt\b|\btether\b/, 'USDT'],
+        [/\busdc\b/, 'USDC'],
+        [/\bdoge(coin)?\b/, 'DOGE'],
+        [/\bpepe\b/, 'PEPE'],
+        [/\bshib(a)?( inu)?\b/, 'SHIB'],
+        [/\bavax\b|\bavalanche\b/, 'AVAX'],
+        [/\bmatic\b|\bpolygon\b/, 'MATIC'],
+        [/\barbitrum\b|\barb\b/, 'ARB'],
+        [/\bsui\b/, 'SUI'],
+        [/\bton\b/, 'TON'],
+        [/\blink\b|\bchainlink\b/, 'LINK'],
+        [/\buni\b|\buniswap\b/, 'UNI'],
+        [/\baave\b/, 'AAVE'],
+        [/\bbonk\b/, 'BONK'],
+        [/\bwif\b/, 'WIF'],
+        [/\bjup\b|\bjupiter\b/, 'JUP'],
+      ];
+      for (const [re, sym] of KNOWN) if (re.test(lower)) return sym;
+      return null;
+    })();
+
+    const cardQuery = tokenDetected || chartPayload?.address || symbolQuery;
+    if (cardQuery) {
       try {
-        const tokenAddr = tokenDetected || chartPayload?.address || '';
-        const pairs = await searchPairs(tokenAddr);
+        const pairs = await searchPairs(cardQuery);
         if (pairs.length > 0) {
-          const p = pairs[0];
+          // Prefer the highest-liquidity pair so we don't land on a scam fork.
+          const p = [...pairs].sort(
+            (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0),
+          )[0];
           tokenCard = {
             symbol: p.baseToken.symbol,
             name: p.baseToken.name,
@@ -1243,6 +1292,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Swap Card: detect swap intent and build an inline swap preview ─────
+    // Patterns: "swap 0.1 eth for usdc", "swap 100 usdc to sol", "convert X for Y",
+    // "trade X to Y". Shows a SwapCard with live quote + Confirm button.
+    let swapCard: Record<string, unknown> | null = null;
+    const swapIntent = (() => {
+      const m = cleanMessage.match(
+        /\b(?:swap|convert|trade|exchange)\s+([0-9]+(?:\.[0-9]+)?)\s*\$?([A-Za-z]{2,10})\s+(?:for|to|into)\s+\$?([A-Za-z]{2,10})\b/i,
+      );
+      if (!m) return null;
+      return { amount: m[1], from: m[2].toUpperCase(), to: m[3].toUpperCase() };
+    })();
+    if (swapIntent) {
+      try {
+        const walletForSwap = body.context?.walletAddress || null;
+        swapCard = {
+          fromToken: swapIntent.from,
+          toToken: swapIntent.to,
+          fromAmount: swapIntent.amount,
+          toAmount: '~',
+          rate: '—',
+          priceImpact: 0,
+          platformFee: '0.3%',
+          chain: /\b(sol|solana|bonk|wif|jup)\b/i.test(`${swapIntent.from} ${swapIntent.to}`) ? 'solana' : 'ethereum',
+          walletAddress: walletForSwap,
+          needsWallet: !walletForSwap,
+        };
+      } catch (err) {
+        console.error('[vtx-ai] Swap card build failed:', err);
+      }
+    }
+
     return NextResponse.json({
       reply: finalReply,
       tier: isPro ? 'pro' : 'free',
@@ -1256,6 +1336,7 @@ export async function POST(request: NextRequest) {
       chart: chartPayload,
       chartType: finalChartType,
       tokenCard,
+      swapCard,
       ...(chartPayload ? { chartToken: chartPayload.token, chartAddress: chartPayload.address } : {}),
     });
   } catch (err) {

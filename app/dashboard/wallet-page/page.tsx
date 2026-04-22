@@ -111,7 +111,7 @@ const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum',
 
 // Default chains to show on the wallet home — in display order.
 // Everything else is toggled on by the user via Add Network.
-const DEFAULT_ENABLED_CHAINS = ['ethereum', 'bnb', 'polygon', 'solana'];
+const DEFAULT_ENABLED_CHAINS = ['ethereum', 'solana', 'polygon', 'arbitrum', 'bnb', 'base'];
 const NAKA_ENABLED_CHAINS_KEY = 'naka_enabled_chains';
 // Display priority: native chains first (ETH/BNB/Polygon/SOL), then the
 // two seeded platform tokens, then anything else the user has added.
@@ -890,12 +890,26 @@ export default function WalletPage() {
                       {pnlPositive ? '+' : ''}{pnlAmount >= 0.01 ? `$${pnlAmount.toFixed(2)} ` : ''}{priceChange !== 0 ? `(${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)` : ''} today
                     </span>
                   )}
-                  <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
-                    <span className="text-[11px] font-mono text-slate-400">
-                      {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
-                    </span>
-                    {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
-                  </button>
+                  {/* Chain-aware address row: an EVM-derived 0x… address is
+                      not a valid Solana identifier, so on the Solana pill we
+                      show a "no Solana wallet" notice instead of lying with
+                      the ETH address. Any non-EVM / non-SOL chain without a
+                      matching wallet falls into the same branch. */}
+                  {activeWallet && activeChain.id === 'solana' && activeWallet.address.startsWith('0x') ? (
+                    <button
+                      onClick={() => setView('import')}
+                      className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/15 rounded-full transition-colors border border-amber-500/30"
+                    >
+                      <span className="text-[11px] text-amber-300">No Solana wallet — tap to import</span>
+                    </button>
+                  ) : (
+                    <button onClick={copyAddress} className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+                      <span className="text-[11px] font-mono text-slate-400">
+                        {activeWallet?.address.slice(0, 8)}...{activeWallet?.address.slice(-6)}
+                      </span>
+                      {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                    </button>
+                  )}
                 </div>
                 <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ml-2 mt-1">
                   <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
@@ -994,7 +1008,21 @@ export default function WalletPage() {
                 </>
               ) : allHoldings.length > 0 ? (
                 allHoldings.map((token, i) => {
-                  const logoUrl = (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()];
+                  // Logo resolution order: native-symbol map (ETH/SOL/…), then
+                  // per-token logo the hydrator pulled from CoinGecko (gives
+                  // Naka Go / Pleasure Coin their real branded icons), then
+                  // per-contract overrides as a final safety net.
+                  const contractKey = (token.contractAddress || '').toLowerCase();
+                  const CONTRACT_LOGOS: Record<string, string> = {
+                    '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898':
+                      'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
+                    '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19':
+                      'https://assets.coingecko.com/coins/images/31549/small/pleasure.png',
+                  };
+                  const logoUrl =
+                    (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()]
+                    || (token as { logo?: string }).logo
+                    || CONTRACT_LOGOS[contractKey];
                   return (
                     <WalletTokenRow
                       key={`${token.symbol}-${i}`}
@@ -1041,37 +1069,8 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* ── RECENT ACTIVITY ──────────────────────────── */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-white">Recent Activity</h2>
-                <Link href="/dashboard/transactions" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                  View All <ExternalLink className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
-                {recentActivity.length > 0 ? recentActivity.map((tx, i) => (
-                  <div key={tx.id} className={`flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors ${i > 0 ? 'border-t border-slate-800/30' : ''}`}>
-                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-                      <Repeat className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium truncate">Swapped {tx.amount} {tx.from} → {tx.to}</p>
-                      <p className="text-xs text-slate-500">{formatTimeAgo(tx.timestamp)}</p>
-                    </div>
-                    {tx.txHash && (
-                      <a href={getExplorerUrl(tx.txHash, tx.chain)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 shrink-0">
-                        View <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                )) : (
-                  <div className="py-8 text-center">
-                    <p className="text-slate-500 text-sm">No transactions yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Recent Activity container removed from wallet home — lives on the
+                dedicated Transactions page (/dashboard/transactions). */}
 
             {/* ── SECURITY SECTION ─────────────────────────── */}
             <div className="mb-5 bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
@@ -1113,14 +1112,9 @@ export default function WalletPage() {
                     </div>
                     <span className="text-xs text-slate-500 px-3 py-1.5 border border-slate-800 rounded-lg">Soon</span>
                   </div>
-                  {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-                    <div className="p-4">
-                      <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-slate-800/60 hover:bg-slate-800 rounded-xl text-xs text-slate-400 hover:text-slate-300 transition-colors">
-                        View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
+                  {/* "View on Solscan/Explorer" button removed per product
+                      direction — users stay inside Naka; explorer links live
+                      on individual activity rows if needed. */}
                 </div>
               )}
             </div>

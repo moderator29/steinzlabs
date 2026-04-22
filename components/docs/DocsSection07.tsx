@@ -74,6 +74,19 @@ export function DocsSection07() {
             <span className="text-[#10B981] font-semibold">Pre-flight safety:</span> every swap runs a Shadow Guardian simulation before it signs. Honeypot, impossible-to-sell, and high-tax contracts are blocked automatically.
           </p>
         </div>
+
+        <div className="mt-3 bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/25 rounded-xl p-3 space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold">AI &amp; Swap Safety</p>
+          <p className="text-xs text-gray-300 leading-relaxed">
+            VTX Agent can quote swaps and render an inline Swap Card, but it <span className="text-white font-semibold">cannot execute trades, withdraw funds, or sign anything</span> on your behalf. Every swap is broadcast only after you manually tap <span className="font-mono text-[#4D6BFF]">Sign &amp; Swap</span> and your wallet approves the signature.
+          </p>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            VTX sees only your public wallet address · the same one visible on any explorer. Private keys and seed phrases never leave your device and are never sent to the AI. High-price-impact swaps (&gt;30%) are blocked by the card as a safety rail. Quotes are refreshed at sign time, so execution price can shift slightly between preview and confirmation.
+          </p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            AI = assistant. Wallet = authority. Always review the From / To / amount / slippage line before signing.
+          </p>
+        </div>
       </div>
 
       {/* Limit orders / stop-loss */}
