@@ -12,7 +12,7 @@
 // authority over the signature.
 
 import { useEffect, useState } from 'react';
-import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check } from 'lucide-react';
 
 export interface SwapCardData {
   fromToken: string;
@@ -31,7 +31,7 @@ interface Props {
   walletAddress?: string;
 }
 
-type Stage = 'quoting' | 'ready' | 'signing' | 'done' | 'error';
+type Stage = 'quoting' | 'ready' | 'signing' | 'done' | 'error' | 'insufficient';
 
 const LOGO: Record<string, string> = {
   ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
@@ -68,6 +68,41 @@ export function SwapCard({ swap, walletAddress }: Props) {
   const [quote, setQuote] = useState<SwapCardData>(swap);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Balance probe — we hit /api/wallet-intelligence for the user's current
+  // chain and look up the from-token balance. If it's under what they want
+  // to swap (including a small gas buffer for natives), we flip the card
+  // into the "insufficient" state and offer a copy-address CTA so they can
+  // deposit before trying again. Non-fatal: if the probe fails, we just
+  // let Sign & Swap do the check at execute time.
+  useEffect(() => {
+    if (!walletAddress) { setBalance(null); return; }
+    let cancelled = false;
+    const chain = swap.chain || 'ethereum';
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/wallet-intelligence?address=${encodeURIComponent(walletAddress)}&chain=${encodeURIComponent(chain)}`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const sym = swap.fromToken.toUpperCase();
+        const native = parseFloat(data?.nativeBalance || '0');
+        const holdings: Array<{ symbol?: string; balance?: string }> =
+          Array.isArray(data?.holdings) ? data.holdings : [];
+        const row = holdings.find((h) => (h.symbol || '').toUpperCase() === sym);
+        const bal = row ? parseFloat(row.balance || '0') : native;
+        if (cancelled) return;
+        setBalance(Number.isFinite(bal) ? bal : 0);
+      } catch {
+        // Non-fatal — leave balance null; execute path will error cleanly.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [walletAddress, swap.chain, swap.fromToken]);
 
   // Step 1 — fetch a live quote the moment the card mounts. We probe the
   // platform's /api/swap/price endpoint (which maps symbol → canonical
@@ -101,13 +136,21 @@ export function SwapCard({ swap, walletAddress }: Props) {
           quoteData: data?.quoteData || swap.quoteData,
         };
         setQuote(next);
-        setStage('ready');
+        // If we already have a balance and it's short, land on the
+        // insufficient-balance state so the user gets the copy-address CTA
+        // instead of a live "Sign & Swap" they can't execute.
+        const wanted = parseFloat(swap.fromAmount) || 0;
+        if (balance !== null && balance < wanted) {
+          setStage('insufficient');
+        } else {
+          setStage('ready');
+        }
       } catch {
         if (!cancelled) setStage('ready');
       }
     })();
     return () => { cancelled = true; };
-  }, [swap]);
+  }, [swap, balance]);
 
   const impactColor =
     quote.priceImpact < 1 ? 'text-emerald-400' :
@@ -144,11 +187,15 @@ export function SwapCard({ swap, walletAddress }: Props) {
         setTxHash(data.txHash);
         setStage('done');
       } else {
-        setError(
-          data?.error ||
-          'Swap failed. Make sure your wallet has enough balance plus gas — deposit and try again.',
-        );
-        setStage('error');
+        const msg = (data?.error || '').toString();
+        // Treat chain / router "insufficient funds / balance" responses the
+        // same way as a pre-flight balance miss: flip to the deposit CTA.
+        if (/insufficient|not enough|balance/i.test(msg)) {
+          setStage('insufficient');
+        } else {
+          setError(msg || 'Swap failed. Make sure your wallet has enough balance plus gas — deposit and try again.');
+          setStage('error');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Swap failed. Please try again.');
@@ -191,17 +238,50 @@ export function SwapCard({ swap, walletAddress }: Props) {
           <ArrowDownUp size={11} />
           <span>Swap Preview</span>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-1">
+        {/* Lana-style stage rail — previous step is solid green, active step
+            has a shimmer gradient, pending step is dim. `insufficient` is a
+            terminal state that parks the rail at step 2 (we got a quote but
+            the balance isn't there to sign with). */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {[
-            { id: 'quote', label: 'Fetching quote', active: stage === 'quoting', done: stage !== 'quoting' },
-            { id: 'sign', label: 'Sign & Swap', active: stage === 'ready', done: stage === 'signing' || stage === 'done' },
-            { id: 'confirm', label: 'Confirm in wallet', active: stage === 'signing', done: stage === 'done' },
+            {
+              id: 'quote',
+              label: 'Fetching quote',
+              active: stage === 'quoting',
+              done: stage === 'ready' || stage === 'signing' || stage === 'done' || stage === 'insufficient' || stage === 'error',
+            },
+            {
+              id: 'sign',
+              label: 'Sign & Swap',
+              active: stage === 'ready' || stage === 'insufficient',
+              done: stage === 'signing' || stage === 'done',
+            },
+            {
+              id: 'confirm',
+              label: 'Confirm in wallet',
+              active: stage === 'signing',
+              done: stage === 'done',
+            },
           ].map((s) => (
-            <div key={s.id} className="flex flex-col items-start gap-1">
-              <div className={`h-1 w-full rounded-full transition-all ${
-                s.done ? 'bg-emerald-500' : s.active ? 'bg-[#0A1EFF]' : 'bg-white/[0.06]'
-              }`} />
-              <span className={`text-[10px] ${s.active ? 'text-white' : s.done ? 'text-emerald-400' : 'text-gray-500'}`}>
+            <div key={s.id} className="flex flex-col items-start gap-1.5">
+              <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden relative">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    s.done
+                      ? 'w-full bg-emerald-500'
+                      : s.active
+                        ? 'w-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]'
+                        : 'w-0 bg-white/[0.06]'
+                  }`}
+                />
+              </div>
+              <span className={`text-[10px] ${
+                s.done
+                  ? 'text-emerald-400'
+                  : s.active
+                    ? 'text-white'
+                    : 'text-gray-500'
+              }`}>
                 {s.label}
               </span>
             </div>
@@ -262,13 +342,53 @@ export function SwapCard({ swap, walletAddress }: Props) {
         </div>
       </div>
 
-      {/* Inline warnings (kept short; the AI text above already explained) */}
+      {/* No wallet at all — prompt to connect one on the platform. */}
       {!walletAddress && stage === 'ready' && (
         <div className="mx-4 mb-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
           <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
           <span className="text-[11px] text-amber-300 leading-relaxed">
-            Connect a wallet on the Wallet page to sign. Insufficient balance? Deposit first.
+            Connect a wallet on the Wallet page to sign this swap.
           </span>
+        </div>
+      )}
+
+      {/* Insufficient balance — show "deposit" path: copy-address CTA. */}
+      {stage === 'insufficient' && walletAddress && (
+        <div className="mx-4 mb-3 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+          <div className="flex items-start gap-2 mb-2">
+            <AlertTriangle size={13} className="text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="text-[12px] font-semibold text-amber-300 leading-tight">
+                Insufficient balance
+              </div>
+              <div className="text-[11px] text-amber-200/80 leading-relaxed mt-0.5">
+                You need {quote.fromAmount} {quote.fromToken}
+                {balance !== null ? <> — you have {balance.toFixed(6)} {quote.fromToken}</> : null}.
+                Deposit into your wallet and try the swap again.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(walletAddress);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2200);
+              } catch {
+                setCopied(false);
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 text-[12px] font-semibold transition-colors"
+          >
+            {copied ? (
+              <><Check size={13} /> Address copied — paste in your exchange/wallet to deposit</>
+            ) : (
+              <><Copy size={13} /> Copy wallet address to deposit</>
+            )}
+          </button>
+          <div className="mt-2 text-[10px] font-mono text-amber-200/60 text-center break-all">
+            {walletAddress.slice(0, 10)}…{walletAddress.slice(-8)}
+          </div>
         </div>
       )}
 
@@ -279,18 +399,29 @@ export function SwapCard({ swap, walletAddress }: Props) {
         </div>
       )}
 
-      {/* Action button — the ONLY thing that can trigger a signature */}
+      {/* Action button — the ONLY thing that can trigger a signature. In the
+          insufficient state the primary action flips to "Check balance again"
+          so users who just deposited can re-probe without leaving the chat. */}
       <div className="px-4 pb-4">
-        <button
-          onClick={handleSign}
-          disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
-          className="w-full py-3 rounded-xl bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
-        >
-          {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}
-          {stage === 'ready' && (<><ArrowDownUp size={14} /> Sign &amp; Swap</>)}
-          {stage === 'signing' && (<><Loader2 size={14} className="animate-spin" /> Confirm in your wallet…</>)}
-          {stage === 'error' && (<><ArrowDownUp size={14} /> Retry</>)}
-        </button>
+        {stage === 'insufficient' ? (
+          <button
+            onClick={() => { setStage('quoting'); setBalance(null); }}
+            className="w-full py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={14} /> Check balance again
+          </button>
+        ) : (
+          <button
+            onClick={handleSign}
+            disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
+            className="w-full py-3 rounded-xl bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+          >
+            {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}
+            {stage === 'ready' && (<><ArrowDownUp size={14} /> Sign &amp; Swap</>)}
+            {stage === 'signing' && (<><Loader2 size={14} className="animate-spin" /> Confirm in your wallet…</>)}
+            {stage === 'error' && (<><ArrowDownUp size={14} /> Retry</>)}
+          </button>
+        )}
       </div>
     </div>
   );
