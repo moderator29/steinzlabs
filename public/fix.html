@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Naka Labs — Session Reset</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{margin:0;background:#07090f;color:#fff;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px}
+  .card{max-width:400px;width:100%}
+  h1{font-size:1.4rem;margin-bottom:.75rem}
+  p{color:#9ca3af;font-size:.9rem;line-height:1.6;margin-bottom:1.5rem}
+  .btn{display:inline-block;background:#0A1EFF;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.9rem}
+  .badge{display:inline-block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fcd34d;padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:600;margin-bottom:1rem}
+  #status{color:#10b981;font-size:.8rem;margin-top:1rem;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">Session Reset</div>
+  <h1>Clearing your session...</h1>
+  <p>Removing old auth data so you can log in cleanly. You'll be redirected to the login page automatically.</p>
+  <div id="status">Working...</div>
+  <br>
+  <a href="/login" class="btn">Go to Login</a>
+</div>
+<script>
+(function(){
+  var cleared=0;
+  var h=location.hostname;
+  var hosts=[h,'.'+h,h.split('.').slice(-2).join('.'),'.'+h.split('.').slice(-2).join('.')];
+  var paths=['/','/auth','/dashboard','/api','/api/auth'];
+  var exp='Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  var cookies=document.cookie.split(';');
+  for(var i=0;i<cookies.length;i++){
+    var name=(cookies[i].split('=')[0]||'').trim();
+    if(!name)continue;
+    cleared++;
+    for(var j=0;j<hosts.length;j++){
+      for(var k=0;k<paths.length;k++){
+        document.cookie=name+'=;Path='+paths[k]+';Domain='+hosts[j]+';'+exp;
+        document.cookie=name+'=;Path='+paths[k]+';'+exp;
+        document.cookie=name+'=;Path='+paths[k]+';Domain='+hosts[j]+';'+exp+';Secure;SameSite=Lax';
+      }
+    }
+  }
+  try{
+    Object.keys(localStorage).forEach(function(k){
+      if(k.indexOf('sb-')===0||k.indexOf('supabase')===0)localStorage.removeItem(k);
+    });
+    Object.keys(sessionStorage).forEach(function(k){
+      if(k.indexOf('sb-')===0)sessionStorage.removeItem(k);
+    });
+  }catch(e){}
+  document.getElementById('status').textContent='Cleared '+cleared+' items. Redirecting...';
+  setTimeout(function(){window.location.replace('/login');},1500);
+})();
+</script>
+</body>
+</html>
