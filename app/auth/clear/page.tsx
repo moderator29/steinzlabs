@@ -1,0 +1,109 @@
+'use client';
+
+// Public escape hatch for users stuck behind Vercel's
+// REQUEST_HEADER_TOO_LARGE (494) error. Cause: Supabase auth cookies
+// accumulated past the 32KB edge limit — the edge rejects every request
+// before any server code runs, so the only way out is a page that clears
+// cookies client-side. This route is listed in PUBLIC_PATHS in middleware
+// so it's reachable even with bloated cookies (after our middleware strips
+// the auth ones). On mount we nuke every cookie we can see and bounce to
+// /login.
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
+
+function AuthClearInner() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const from = search.get('from') || '/';
+  const [done, setDone] = useState(false);
+  const [cleared, setCleared] = useState<string[]>([]);
+
+  useEffect(() => {
+    const names: string[] = [];
+    try {
+      const cookies = document.cookie.split(';');
+      for (const raw of cookies) {
+        const name = raw.split('=')[0]?.trim();
+        if (!name) continue;
+        names.push(name);
+        // Wipe on every plausible path + domain combination so chunks from
+        // previous deploys or preview URLs don't linger.
+        const hosts = [
+          window.location.hostname,
+          `.${window.location.hostname}`,
+          window.location.hostname.replace(/^www\./, ''),
+          `.${window.location.hostname.replace(/^www\./, '')}`,
+        ];
+        const paths = ['/', '/dashboard', '/auth'];
+        for (const h of hosts) {
+          for (const p of paths) {
+            document.cookie = `${name}=; Path=${p}; Domain=${h}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+            document.cookie = `${name}=; Path=${p}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+          }
+        }
+      }
+      // Also wipe localStorage entries Supabase writes, so the client doesn't
+      // instantly re-hydrate a stale session on the next page.
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k === 'supabase.auth.token') localStorage.removeItem(k);
+        });
+      } catch {}
+    } finally {
+      setCleared(names);
+      setDone(true);
+      // Auto-bounce back so users don't have to click anything.
+      const target = from.startsWith('/dashboard') || from.startsWith('/admin') ? '/login' : from;
+      const t = setTimeout(() => { window.location.replace(target); }, 1200);
+      return () => clearTimeout(t);
+    }
+  }, [from, router]);
+
+  return (
+    <div className="min-h-screen bg-[#07090f] text-white flex items-center justify-center px-6">
+      <div className="max-w-md w-full text-center">
+        <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 rounded-full px-3 py-1 text-xs text-amber-300 font-semibold mb-5">
+          Session reset
+        </div>
+        <h1 className="text-2xl font-bold mb-3">Refreshing your session</h1>
+        <p className="text-sm text-gray-400 leading-relaxed mb-6">
+          {done
+            ? 'Your browser had too many stale auth cookies stacked up (a Vercel edge limit). We cleared them — bouncing you to the login page now.'
+            : 'Clearing accumulated auth cookies so you can log in again…'}
+        </p>
+
+        {done && cleared.length > 0 && (
+          <div className="text-[10px] text-gray-600 font-mono mb-6 leading-relaxed">
+            Cleared {cleared.length} cookie{cleared.length === 1 ? '' : 's'}
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-3">
+          <Link
+            href="/login"
+            className="px-5 py-2.5 rounded-xl bg-[#0A1EFF] hover:bg-[#0916CC] text-white text-sm font-semibold transition-colors"
+          >
+            Go to login
+          </Link>
+          <Link
+            href="/"
+            className="px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/20 text-gray-300 hover:text-white text-sm font-semibold transition-colors"
+          >
+            Landing page
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AuthClearPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthClearInner />
+    </Suspense>
+  );
+}
