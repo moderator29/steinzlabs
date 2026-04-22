@@ -192,14 +192,19 @@ function TradingViewChartInner({ symbol, height = 400, interval = '15', showTool
         id={stableId.current}
         style={{ height: `${height}px`, width: '100%' }}
       />
-      {/* Cover TradingView's bottom-right logo ribbon with a matching-color
-          overlay. The free widget doesn't expose an option to hide the
-          branding — this is the standard workaround used across Naka's
-          chart views to keep the surface clean. */}
+      {/* Cover TradingView's logo ribbons (bottom-right attribution and
+          top-left symbol badge). The free widget doesn't expose an option to
+          hide the branding, so we overlay with a theme-matched patch. Size is
+          generous to catch the "tracking view" text on narrow widths too. */}
       <div
         aria-hidden
-        className="absolute pointer-events-none"
-        style={{ right: 0, bottom: 0, width: 120, height: 28, background: '#0A0E1A' }}
+        className="absolute pointer-events-none bg-[var(--tv-cover,#0A0E1A)]"
+        style={{ right: 0, bottom: 0, width: 180, height: 36 }}
+      />
+      <div
+        aria-hidden
+        className="absolute pointer-events-none bg-[var(--tv-cover,#0A0E1A)]"
+        style={{ left: 0, bottom: 0, width: 140, height: 28 }}
       />
     </div>
   );
