@@ -221,15 +221,16 @@ export default function ContextFeed() {
   const [shareEvent, setShareEvent] = useState<any>(null);
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-  const [activeFilter, setActiveFilter] = useState<'all' | 'new_coins' | 'volume' | 'trending' | 'info'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info'>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const FEED_FILTERS = [
     { id: 'all' as const, label: 'All', icon: BarChart2 },
+    { id: 'news' as const, label: 'News', icon: Info },
+    { id: 'coins' as const, label: 'Coins', icon: Zap },
     { id: 'new_coins' as const, label: 'New Coins', icon: Zap },
     { id: 'volume' as const, label: 'Volume', icon: TrendingUp },
     { id: 'trending' as const, label: 'Trending', icon: TrendingUp },
-    { id: 'info' as const, label: 'Info', icon: Info },
   ];
 
   useEffect(() => {
@@ -281,15 +282,66 @@ export default function ContextFeed() {
   const baseEvents = activeChain === 'bookmarks'
     ? currentEvents.filter(e => bookmarks.has(e.id))
     : currentEvents;
-  const displayEvents = activeFilter === 'all' ? baseEvents : baseEvents.filter(e => {
+  const isNewsEvent = (e: any) => {
     const t = (e.type || '').toLowerCase();
     const title = (e.title || '').toLowerCase();
-    if (activeFilter === 'new_coins') return t.includes('launch') || t.includes('new') || t.includes('listing') || title.includes('new') || title.includes('launch');
-    if (activeFilter === 'volume') return t.includes('volume') || t.includes('trade') || title.includes('volume') || title.includes('whale');
-    if (activeFilter === 'trending') return t.includes('trending') || t.includes('bullish') || e.sentiment === 'BULLISH' || e.sentiment === 'HYPE';
-    if (activeFilter === 'info') return t.includes('info') || t.includes('update') || t.includes('news') || e.sentiment === 'NEUTRAL';
-    return true;
-  });
+    const summary = (e.summary || '').toLowerCase();
+    // "News" = blockchain transaction events and whale activity — these are
+    // the on-chain news stories (whale buys/sells, cross-chain transfers).
+    return (
+      t.includes('whale') || t.includes('transfer') || t.includes('tx') || t.includes('buy') || t.includes('sell') ||
+      t.includes('news') || t.includes('update') || t.includes('info') ||
+      title.includes('whale') || summary.includes('whale') ||
+      (typeof e.valueUsd === 'number' && e.valueUsd >= 50000)
+    );
+  };
+  const isCoinEvent = (e: any) => {
+    const t = (e.type || '').toLowerCase();
+    const title = (e.title || '').toLowerCase();
+    return (
+      t.includes('launch') || t.includes('listing') || t.includes('trending') ||
+      t.includes('new') || t.includes('volume') || t.includes('surge') || t.includes('pump') ||
+      title.includes('surging') || title.includes('launch') || title.includes('new') ||
+      !!e.tokenSymbol
+    );
+  };
+
+  // All filter: 80/20 news-to-coin blend, Ethereum-weighted. Cap to ≥150 events
+  // when supply allows so the feed never feels sparse on login.
+  const shapeAllMix = (evts: any[]): any[] => {
+    const news = evts.filter(isNewsEvent);
+    const coins = evts.filter(e => !isNewsEvent(e) && isCoinEvent(e));
+    const rest = evts.filter(e => !isNewsEvent(e) && !isCoinEvent(e));
+    const ethFirst = <T extends { chain?: string }>(list: T[]) =>
+      [...list].sort((a, b) => {
+        const aEth = a.chain === 'ethereum' ? 0 : 1;
+        const bEth = b.chain === 'ethereum' ? 0 : 1;
+        return aEth - bEth;
+      });
+    const target = Math.max(150, evts.length);
+    const newsTarget = Math.floor(target * 0.8);
+    const coinTarget = target - newsTarget;
+    return [
+      ...ethFirst(news).slice(0, newsTarget),
+      ...ethFirst(coins).slice(0, coinTarget),
+      ...rest,
+    ];
+  };
+
+  const displayEvents = activeFilter === 'all'
+    ? shapeAllMix(baseEvents)
+    : activeFilter === 'news'
+      ? baseEvents.filter(isNewsEvent)
+      : activeFilter === 'coins'
+        ? baseEvents.filter(isCoinEvent)
+        : baseEvents.filter(e => {
+            const t = (e.type || '').toLowerCase();
+            const title = (e.title || '').toLowerCase();
+            if (activeFilter === 'new_coins') return t.includes('launch') || t.includes('new') || t.includes('listing') || title.includes('new') || title.includes('launch');
+            if (activeFilter === 'volume') return t.includes('volume') || t.includes('trade') || title.includes('volume') || title.includes('whale');
+            if (activeFilter === 'trending') return t.includes('trending') || t.includes('bullish') || e.sentiment === 'BULLISH' || e.sentiment === 'HYPE';
+            return true;
+          });
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];

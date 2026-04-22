@@ -111,7 +111,7 @@ const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum',
 
 // Default chains to show on the wallet home — in display order.
 // Everything else is toggled on by the user via Add Network.
-const DEFAULT_ENABLED_CHAINS = ['ethereum', 'bnb', 'polygon', 'solana'];
+const DEFAULT_ENABLED_CHAINS = ['ethereum', 'solana', 'polygon', 'arbitrum', 'bnb', 'base'];
 const NAKA_ENABLED_CHAINS_KEY = 'naka_enabled_chains';
 // Display priority: native chains first (ETH/BNB/Polygon/SOL), then the
 // two seeded platform tokens, then anything else the user has added.
@@ -1041,37 +1041,8 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* ── RECENT ACTIVITY ──────────────────────────── */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-white">Recent Activity</h2>
-                <Link href="/dashboard/transactions" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                  View All <ExternalLink className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
-                {recentActivity.length > 0 ? recentActivity.map((tx, i) => (
-                  <div key={tx.id} className={`flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors ${i > 0 ? 'border-t border-slate-800/30' : ''}`}>
-                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-                      <Repeat className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium truncate">Swapped {tx.amount} {tx.from} → {tx.to}</p>
-                      <p className="text-xs text-slate-500">{formatTimeAgo(tx.timestamp)}</p>
-                    </div>
-                    {tx.txHash && (
-                      <a href={getExplorerUrl(tx.txHash, tx.chain)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 shrink-0">
-                        View <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                )) : (
-                  <div className="py-8 text-center">
-                    <p className="text-slate-500 text-sm">No transactions yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Recent Activity container removed from wallet home — lives on the
+                dedicated Transactions page (/dashboard/transactions). */}
 
             {/* ── SECURITY SECTION ─────────────────────────── */}
             <div className="mb-5 bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
@@ -1113,14 +1084,9 @@ export default function WalletPage() {
                     </div>
                     <span className="text-xs text-slate-500 px-3 py-1.5 border border-slate-800 rounded-lg">Soon</span>
                   </div>
-                  {activeWallet && LIVE_CHAINS.includes(activeChain.id) && (
-                    <div className="p-4">
-                      <a href={`${activeChain.explorerUrl}/address/${activeWallet.address}`} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-slate-800/60 hover:bg-slate-800 rounded-xl text-xs text-slate-400 hover:text-slate-300 transition-colors">
-                        View on {activeChain.explorerName} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
+                  {/* "View on Solscan/Explorer" button removed per product
+                      direction — users stay inside Naka; explorer links live
+                      on individual activity rows if needed. */}
                 </div>
               )}
             </div>
