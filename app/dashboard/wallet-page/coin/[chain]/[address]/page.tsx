@@ -21,7 +21,8 @@
  */
 
 import { use, useState, useEffect } from "react";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Repeat, Star } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Repeat, Star } from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
 import { useRouter } from "next/navigation";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
@@ -111,9 +112,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
-          <ArrowLeft size={20} />
-        </button>
+        <BackButton />
         <div className="text-center flex-1">
           <div className="text-xl font-bold">{symbol}</div>
           <div className="text-[11px] text-slate-500">COIN · {chainLabel}</div>

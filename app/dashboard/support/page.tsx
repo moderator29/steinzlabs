@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  LifeBuoy, ArrowLeft, Send, Plus, Clock, CheckCircle, AlertTriangle,
+  LifeBuoy, Send, Plus, Clock, CheckCircle, AlertTriangle,
   MessageSquare, Loader2,
 } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 interface TicketSummary {
   id: string;
@@ -150,9 +151,7 @@ export default function SupportPage() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="w-9 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center">
-              <ArrowLeft className="w-4 h-4 text-gray-400" />
-            </Link>
+            <BackButton href="/dashboard" />
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 <LifeBuoy className="w-5 h-5 text-[#4D6BFF]" />

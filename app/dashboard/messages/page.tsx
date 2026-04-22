@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MessageSquare, Search, Plus, ArrowLeft, Send, Globe, Lock, MoreVertical } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import Link from 'next/link';
 
 interface ChatGroup {
@@ -63,9 +64,7 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white">
       <div className="px-4 pt-4 pb-2 border-b border-white/10">
-        <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 text-xs mb-2 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+        <div className="mb-2"><BackButton href="/dashboard" label="Back" /></div>
         <div className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-lg font-heading font-bold">Messages</h1>

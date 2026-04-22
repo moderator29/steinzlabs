@@ -2,7 +2,8 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Eye, MessageSquare } from "lucide-react";
+import { Loader2, Eye, MessageSquare } from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
 import { AgentAvatar } from "@/components/brand/AgentAvatar";
 
 interface Shared {
@@ -57,9 +58,7 @@ export default function SharedConversationPage({ params }: { params: Promise<{ t
     <div className="min-h-screen bg-[#0A0E1A] text-white">
       <div className="sticky top-0 z-30 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition">
-            <ArrowLeft size={12} /> Naka Labs
-          </Link>
+          <BackButton href="/dashboard" label="Naka Labs" />
           <div className="flex items-center gap-2 text-[11px] text-slate-500">
             <Eye size={11} /> {views} views
           </div>

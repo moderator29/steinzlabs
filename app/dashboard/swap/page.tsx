@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowDownUp, ArrowLeft, ChevronDown, Settings, Zap, Search, X, AlertTriangle, Loader2, RefreshCw, ExternalLink, Info, Wallet, CheckCircle } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Settings, Zap, Search, X, AlertTriangle, Loader2, RefreshCw, ExternalLink, Info, Wallet, CheckCircle } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
@@ -792,9 +793,7 @@ export default function SwapPage() {
       <div className="relative z-10 flex flex-col items-center px-4 pt-6 sm:pt-12 pb-20 min-h-screen">
         <div className="w-full max-w-[460px]">
           <div className="flex items-center justify-between mb-6">
-            <button onClick={() => router.back()} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-400" />
-            </button>
+            <BackButton />
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
             <button
               onClick={() => setShowSettings(!showSettings)}

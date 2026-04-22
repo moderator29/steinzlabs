@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, TrendingDown, ArrowLeft, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 import type { TrendCard, TrendAlertItem, TrendsResponse, TrendSparkpoint } from '@/app/api/intelligence/on-chain-trends/route';
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
@@ -222,9 +223,7 @@ export default function TrendsPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </button>
+          <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#10B981] rounded-xl flex items-center justify-center">
             <TrendingUp className="w-4 h-4" />
           </div>

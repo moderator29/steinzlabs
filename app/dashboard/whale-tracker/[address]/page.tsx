@@ -3,7 +3,8 @@
 import { useEffect, useState, use } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
+import { ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 
@@ -198,9 +199,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
       <div className="sticky top-0 z-30 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <Link href="/dashboard/whale-tracker" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition mb-3">
-            <ArrowLeft size={12} /> Whale tracker
-          </Link>
+          <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 flex items-start gap-3">
               {/* §2.5 Whale avatar — prefer Arkham entity logo when we
