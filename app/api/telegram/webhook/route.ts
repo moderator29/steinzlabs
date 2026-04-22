@@ -29,22 +29,36 @@ interface LinkedUser {
 
 async function getLinkedUser(chatId: number): Promise<LinkedUser | null> {
   const supabase = getSupabaseAdmin();
-  // Single round-trip: PostgREST joined select. The profiles row is fetched
-  // alongside the link so we don't pay 2 sequential Supabase round-trips on
-  // every command — that latency was making Telegram time out.
+  // Step 1: find the link. We no longer use `profiles!inner(...)` because an
+  // INNER join silently drops the row when the user's profile doesn't exist
+  // yet (or the FK isn't set up) — which is exactly what was making users
+  // see "Link your account first" AFTER a successful /link. Read the link on
+  // its own so a missing profile never hides a valid link.
   const { data: link } = await supabase
     .from("user_telegram_links")
-    .select("user_id, profiles!inner(tier, tier_expires_at)")
+    .select("user_id")
     .eq("telegram_chat_id", chatId)
     .maybeSingle();
   if (!link?.user_id) return null;
-  // PostgREST returns the related row as either an object or array depending
-  // on relationship cardinality — normalise.
-  const profile = Array.isArray((link as { profiles?: unknown }).profiles)
-    ? ((link as { profiles: Array<{ tier?: string; tier_expires_at?: string | null }> }).profiles[0] ?? null)
-    : ((link as { profiles?: { tier?: string; tier_expires_at?: string | null } }).profiles ?? null);
-  const result = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "free");
-  return { user_id: link.user_id as string, tier: result.currentTier, expired: result.expired };
+
+  // Step 2: pull the profile separately. If it's missing we still treat the
+  // account as linked (tier = free) so the user can at least use free-tier
+  // commands while we sort out their profile.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tier, tier_expires_at, role")
+    .eq("id", link.user_id)
+    .maybeSingle();
+
+  const baseTier = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "free");
+  // Admins get unconditional MAX (matches /api/user/tier semantics). Without
+  // this, internal / staff Telegram accounts were being gated as FREE even
+  // though the platform treats them as MAX — users pay for MAX and the bot
+  // was the one place still reading raw profiles.tier.
+  const isAdmin = profile?.role === "admin";
+  const tier: Tier = isAdmin ? "max" : baseTier.currentTier;
+  const expired = isAdmin ? false : baseTier.expired;
+  return { user_id: link.user_id as string, tier, expired };
 }
 
 function tierBadge(tier: Tier): string {
