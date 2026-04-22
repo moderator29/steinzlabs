@@ -12,7 +12,9 @@
       "Read(//tmp/**)",
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(git commit -m 'fix\\(auth\\): intercept browser cookie writes — nuke stale sb-* before each login *)",
-      "Bash(git commit -m 'fix\\(auth\\): stable cookie fix — nuke+1h cap, revert risky localStorage change *)"
+      "Bash(git commit -m 'fix\\(auth\\): stable cookie fix — nuke+1h cap, revert risky localStorage change *)",
+      "Bash(git commit -m 'fix\\(auth\\): remove nukeSbCookies from set\\(\\) — was breaking login *)",
+      "Bash(git commit -m 'fix\\(auth\\): restore working login/signup — cookieOptions only, no custom adapter *)"
     ]
   }
 }
