@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTelegramMessage, type TelegramUpdate } from "@/lib/telegram/client";
 import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
+import {
+  handlePrice,
+  handleChart,
+  handleInfo,
+  handleSecurity,
+  handleWhalesTop,
+  handleWhaleLookup,
+  handleAlerts,
+  handleSetAlert,
+  handlePortfolio,
+  handleTrending,
+  handleGainers,
+} from "@/lib/telegram/commands/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,11 +42,6 @@ interface LinkedUser {
 
 async function getLinkedUser(chatId: number): Promise<LinkedUser | null> {
   const supabase = getSupabaseAdmin();
-  // Step 1: find the link. We no longer use `profiles!inner(...)` because an
-  // INNER join silently drops the row when the user's profile doesn't exist
-  // yet (or the FK isn't set up) — which is exactly what was making users
-  // see "Link your account first" AFTER a successful /link. Read the link on
-  // its own so a missing profile never hides a valid link.
   const { data: link } = await supabase
     .from("user_telegram_links")
     .select("user_id")
@@ -41,9 +49,6 @@ async function getLinkedUser(chatId: number): Promise<LinkedUser | null> {
     .maybeSingle();
   if (!link?.user_id) return null;
 
-  // Step 2: pull the profile separately. If it's missing we still treat the
-  // account as linked (tier = free) so the user can at least use free-tier
-  // commands while we sort out their profile.
   const { data: profile } = await supabase
     .from("profiles")
     .select("tier, tier_expires_at, role")
@@ -51,10 +56,6 @@ async function getLinkedUser(chatId: number): Promise<LinkedUser | null> {
     .maybeSingle();
 
   const baseTier = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "free");
-  // Admins get unconditional MAX (matches /api/user/tier semantics). Without
-  // this, internal / staff Telegram accounts were being gated as FREE even
-  // though the platform treats them as MAX — users pay for MAX and the bot
-  // was the one place still reading raw profiles.tier.
   const isAdmin = profile?.role === "admin";
   const tier: Tier = isAdmin ? "max" : baseTier.currentTier;
   const expired = isAdmin ? false : baseTier.expired;
@@ -68,29 +69,27 @@ function tierBadge(tier: Tier): string {
 async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void> {
   const tierLine = linked ? `Plan: *${tierBadge(linked.tier)}*` : "_Not linked yet_";
   const text =
-    `*Naka Labs Bot — Commands*\n` +
-    `${tierLine}\n\n` +
-    `*🆓 Free*\n` +
-    `• \`/start\` — onboarding\n` +
-    `• \`/help\` — this menu\n` +
-    `• \`/status\` — link & plan info\n` +
-    `• \`/link <code>\` — connect account\n` +
-    `• \`/unlink\` — disconnect\n` +
-    `• \`/price <symbol>\` — token price card\n` +
-    `• \`/watchlist\` — open your watchlist\n` +
-    `• \`/alerts\` — recent triggered alerts\n` +
-    `• \`/vtx <question>\` — ask VTX AI _(25 msgs/day on Free)_\n\n` +
+    `*🤖 Naka Labs Bot*\n${tierLine}\n\n` +
+    `*🔓 Free*\n` +
+    `• \`/price BTC\` — live price card\n` +
+    `• \`/chart ETH 7\` — price chart (1, 7, 30, 365 days)\n` +
+    `• \`/info SOL\` — full token info\n` +
+    `• \`/security <addr>\` — GoPlus rug check\n` +
+    `• \`/trending\` — top trending coins\n` +
+    `• \`/gainers\` — top 24h gainers\n` +
+    `• \`/whales\` — top 10 whales by 30d PnL\n` +
+    `• \`/alerts\` — your active price alerts\n` +
+    `• \`/setalert BTC 100000\` — alert when ≥ price\n` +
+    `• \`/setalert ETH <3000\` — alert when ≤ price\n` +
+    `• \`/portfolio\` — your connected wallets\n\n` +
     `*✨ MINI ($5/mo)*\n` +
-    `• \`/whale <address>\` — wallet snapshot (whale tracker)\n` +
-    `• \`/portfolio\` — multi-chain wallet PnL\n` +
-    `_(also: 100 VTX msgs/day, 10 alerts, 3 wallets)_\n\n` +
+    `• \`/whale <addr>\` — full wallet intelligence\n\n` +
     `*⭐ PRO ($9/mo)*\n` +
-    `• \`/copy <whale>\` — toggle copy-trade\n` +
-    `_(also: unlimited VTX, smart-money tracking, wallet clusters, bubble map)_\n\n` +
+    `• \`/copy <addr>\` — copy trading controls\n\n` +
     `*🔥 MAX ($15/mo)*\n` +
-    `• \`/snipe <token>\` — sniper bot config\n` +
-    `_(also: unlimited wallets, priority support, early access)_\n\n` +
-    `_Automatic alerts (whale moves, price targets, copy-trade fills, security events) are pushed based on your Settings → Notifications config._`;
+    `• \`/snipe <token>\` — sniper bot config\n\n` +
+    `*Account*\n` +
+    `• \`/start\` · \`/help\` · \`/status\` · \`/link <code>\` · \`/unlink\``;
 
   const buttons = linked
     ? [[OPEN_APP_BTN, SETTINGS_BTN], ...(linked.tier === "free" || linked.tier === "mini" ? [[UPGRADE_BTN]] : [])]
@@ -102,6 +101,16 @@ async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void
 function tierGateMsg(needed: Tier): string {
   const labels: Record<Tier, string> = { free: "Free", mini: "MINI", pro: "PRO", max: "MAX" };
   return `🔒 This command requires *${labels[needed]}* or higher. Upgrade at ${APP_URL}/pricing`;
+}
+
+interface ParsedCmd { name: string; args: string[]; raw: string }
+function parseCmd(text: string): ParsedCmd | null {
+  if (!text.startsWith("/")) return null;
+  // Strip @BotName suffix Telegram adds in groups: "/price@MyBot BTC" → "/price"
+  const cleaned = text.replace(/^(\/[a-zA-Z0-9_]+)@\w+/, "$1");
+  const parts = cleaned.trim().split(/\s+/);
+  const name = parts[0]?.slice(1).toLowerCase() ?? "";
+  return { name, args: parts.slice(1), raw: text };
 }
 
 export async function POST(request: NextRequest) {
@@ -121,29 +130,36 @@ export async function POST(request: NextRequest) {
 
   const chatId = msg.chat.id;
   const text = msg.text.trim();
+  const cmd = parseCmd(text);
+  if (!cmd) return NextResponse.json({ ok: true });
+
   const supabase = getSupabaseAdmin();
   const linked = await getLinkedUser(chatId);
+  const ctx = { chatId, args: cmd.args, rawText: text };
 
-  // /start — onboarding
-  if (text === "/start") {
+  // ─── Account commands (no link required) ─────────────────────────────
+  if (cmd.name === "start") {
     if (linked) {
       await sendHelp(chatId, linked);
     } else {
       await sendTelegramMessage(
         chatId,
         `*Welcome to Naka Labs* 🎯\n\n` +
-          `Your on-chain intelligence co-pilot. Track whales, get alerts, copy trades, talk to VTX — all from Telegram.\n\n` +
-          `*To get started:*\n` +
-          `1. Tap *Open Naka Labs* below and sign in.\n` +
-          `2. Go to *Settings → Notifications → Telegram*.\n` +
-          `3. Tap *Generate Code*, copy the 6-digit code.\n` +
-          `4. Come back here and send: \`/link 123456\`\n\n` +
-          `Send \`/help\` anytime to see all commands.`,
+          `Your on-chain intelligence co-pilot. Live prices, charts, whales, alerts, copy trades — all from Telegram.\n\n` +
+          `*Quick start (no account needed):*\n` +
+          `• \`/price BTC\` — live price\n` +
+          `• \`/chart SOL 7\` — chart\n` +
+          `• \`/trending\` — what's hot\n\n` +
+          `*Link your account for alerts and trading:*\n` +
+          `1. Tap *Open Naka Labs* below.\n` +
+          `2. Settings → Notifications → Telegram.\n` +
+          `3. Generate a 6-digit code.\n` +
+          `4. Send: \`/link 123456\``,
         {
           reply_markup: {
             inline_keyboard: [
               [{ text: "🌐 Open Naka Labs", url: `${APP_URL}/settings/notifications` }],
-              [{ text: "❓ See all commands", url: `https://t.me/${BOT_USERNAME}?start=help` }],
+              [{ text: "❓ All commands", callback_data: "help" }],
             ],
           },
         },
@@ -152,15 +168,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (text === "/help") {
+  if (cmd.name === "help" || cmd.name === "menu") {
     await sendHelp(chatId, linked);
     return NextResponse.json({ ok: true });
   }
 
-  // /link 123456
-  if (text.startsWith("/link")) {
-    const parts = text.split(/\s+/);
-    const code = parts[1]?.trim();
+  if (cmd.name === "link") {
+    const code = cmd.args[0]?.trim();
     if (!code || !/^\d{6}$/.test(code)) {
       await sendTelegramMessage(chatId, "Send `/link` followed by your 6-digit code, e.g. `/link 123456`.\n\nGet your code at:", {
         reply_markup: { inline_keyboard: [[{ text: "🔑 Generate Code", url: `${APP_URL}/settings/notifications` }]] },
@@ -210,11 +224,11 @@ export async function POST(request: NextRequest) {
     const fresh = await getLinkedUser(chatId);
     await sendTelegramMessage(
       chatId,
-      `✅ *Account linked!*\n\nPlan: *${tierBadge(fresh?.tier ?? "free")}*\n\nYou will now receive alerts and notifications here. Tap a button below to get going.`,
+      `✅ *Account linked!*\nPlan: *${tierBadge(fresh?.tier ?? "free")}*\n\nTry \`/price BTC\` or \`/help\` for the full command list.`,
       {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "📋 Show Commands", url: `https://t.me/${BOT_USERNAME}?start=help` }, OPEN_APP_BTN],
+            [{ text: "📋 Show Commands", callback_data: "help" }, OPEN_APP_BTN],
             [SETTINGS_BTN],
           ],
         },
@@ -223,8 +237,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // /status
-  if (text === "/status") {
+  if (cmd.name === "status") {
     if (!linked) {
       await sendTelegramMessage(chatId, "❌ Not linked. Send `/start` to begin.", {
         reply_markup: { inline_keyboard: [[OPEN_APP_BTN]] },
@@ -239,15 +252,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // /unlink
-  if (text === "/unlink") {
+  if (cmd.name === "unlink") {
     const { error } = await supabase.from("user_telegram_links").delete().eq("telegram_chat_id", chatId);
     if (error) await sendTelegramMessage(chatId, "Could not unlink. Try again shortly.");
     else await sendTelegramMessage(chatId, "Unlinked. You will no longer receive notifications here.");
     return NextResponse.json({ ok: true });
   }
 
-  // From here on, all commands require linked account
+  // ─── Public commands (no link required) ──────────────────────────────
+  // We let unlinked users use read-only data commands so they can try the
+  // bot before signing up. /alerts, /portfolio etc. need a linked user.
+  switch (cmd.name) {
+    case "price":     await handlePrice(ctx); return NextResponse.json({ ok: true });
+    case "chart":     await handleChart(ctx); return NextResponse.json({ ok: true });
+    case "info":      await handleInfo(ctx); return NextResponse.json({ ok: true });
+    case "security":  await handleSecurity(ctx); return NextResponse.json({ ok: true });
+    case "whales":    await handleWhalesTop(ctx); return NextResponse.json({ ok: true });
+    case "trending":  await handleTrending(ctx); return NextResponse.json({ ok: true });
+    case "gainers":   await handleGainers(ctx); return NextResponse.json({ ok: true });
+  }
+
+  // ─── Linked-required commands ────────────────────────────────────────
   if (!linked) {
     await sendTelegramMessage(chatId, "🔗 Link your account first. Send `/start` to begin.", {
       reply_markup: { inline_keyboard: [[OPEN_APP_BTN]] },
@@ -255,94 +280,75 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // ─── FREE tier commands ──────────────────────────────────────────────
-  if (text.startsWith("/price")) {
-    const sym = text.split(/\s+/)[1]?.toUpperCase();
-    if (!sym) {
-      await sendTelegramMessage(chatId, "Usage: `/price ETH` or `/price SOL`");
+  switch (cmd.name) {
+    case "alerts":    await handleAlerts(linked.user_id, ctx); return NextResponse.json({ ok: true });
+    case "setalert":  await handleSetAlert(linked.user_id, ctx); return NextResponse.json({ ok: true });
+    case "portfolio": await handlePortfolio(linked.user_id, ctx); return NextResponse.json({ ok: true });
+  }
+
+  // ─── MINI+ ───────────────────────────────────────────────────────────
+  if (cmd.name === "whale") {
+    const gate = checkTier(linked.tier, null, "mini");
+    if (!gate.allowed) {
+      await sendTelegramMessage(chatId, tierGateMsg("mini"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
       return NextResponse.json({ ok: true });
     }
-    await sendTelegramMessage(chatId, `🔍 Looking up *${sym}*…`, {
-      reply_markup: { inline_keyboard: [[{ text: `📊 Open ${sym} on Naka`, url: `${APP_URL}/market/search?q=${encodeURIComponent(sym)}` }]] },
-    });
+    await handleWhaleLookup(ctx);
     return NextResponse.json({ ok: true });
   }
 
-  if (text === "/watchlist") {
-    await sendTelegramMessage(chatId, "📋 Your watchlist:", {
-      reply_markup: { inline_keyboard: [[{ text: "🌐 Open Watchlist", url: `${APP_URL}/market/watchlist` }]] },
-    });
+  // ─── PRO+ (copy trading) ─────────────────────────────────────────────
+  if (cmd.name === "copy") {
+    const gate = checkTier(linked.tier, null, "pro");
+    if (!gate.allowed) {
+      await sendTelegramMessage(chatId, tierGateMsg("pro"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
+      return NextResponse.json({ ok: true });
+    }
+    const target = cmd.args[0];
+    await sendTelegramMessage(
+      chatId,
+      target
+        ? `🔁 Copy Trade setup for \`${target.slice(0, 14)}…\` — configure modes (Alerts / One-Click / Auto) and limits in the dashboard:`
+        : "🔁 Copy Trade dashboard:",
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: "🌐 Open Copy Trade", url: target ? `${APP_URL}/dashboard/copy-trade/setup?whale=${target}` : `${APP_URL}/dashboard/copy-trade` }]],
+        },
+      },
+    );
     return NextResponse.json({ ok: true });
   }
 
-  if (text === "/alerts") {
-    await sendTelegramMessage(chatId, "🔔 Recent alerts (last 24h):", {
-      reply_markup: { inline_keyboard: [[{ text: "🌐 Open Alerts", url: `${APP_URL}/dashboard/alerts` }]] },
-    });
+  // ─── MAX (sniper) ────────────────────────────────────────────────────
+  if (cmd.name === "snipe") {
+    const gate = checkTier(linked.tier, null, "max");
+    if (!gate.allowed) {
+      await sendTelegramMessage(chatId, tierGateMsg("max"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
+      return NextResponse.json({ ok: true });
+    }
+    const target = cmd.args[0];
+    await sendTelegramMessage(
+      chatId,
+      target ? `🔥 Sniper setup for \`${target.slice(0, 14)}…\`:` : "🔥 Sniper Bot config:",
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: "🎯 Open Sniper", url: target ? `${APP_URL}/dashboard/sniper/new?token=${target}` : `${APP_URL}/dashboard/sniper` }]],
+        },
+      },
+    );
     return NextResponse.json({ ok: true });
   }
 
-  if (text.startsWith("/vtx")) {
-    // VTX is gated by daily message quota (25 free / 100 mini / unlimited pro+),
-    // not by tier — the in-app VTX route enforces that. The bot just routes.
+  // ─── VTX passthrough ─────────────────────────────────────────────────
+  if (cmd.name === "vtx") {
     await sendTelegramMessage(chatId, "🧠 Open VTX AI for the full conversation experience (deep research, multi-step tools, charts):", {
       reply_markup: { inline_keyboard: [[{ text: "🧠 Open VTX AI", url: `${APP_URL}/dashboard/vtx-ai` }]] },
     });
     return NextResponse.json({ ok: true });
   }
 
-  // ─── MINI+ tier (whale tracker, full wallet intelligence) ────────────
-  if (text.startsWith("/whale") || text === "/portfolio") {
-    const gate = checkTier(linked.tier, null, "mini");
-    if (!gate.allowed) {
-      await sendTelegramMessage(chatId, tierGateMsg("mini"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
-      return NextResponse.json({ ok: true });
-    }
-    if (text === "/portfolio") {
-      await sendTelegramMessage(chatId, "💼 Your portfolio:", {
-        reply_markup: { inline_keyboard: [[{ text: "🌐 Open Portfolio", url: `${APP_URL}/dashboard/wallet-intelligence` }]] },
-      });
-    } else {
-      const addr = text.split(/\s+/)[1];
-      if (!addr) {
-        await sendTelegramMessage(chatId, "Usage: `/whale 0xabc...`");
-        return NextResponse.json({ ok: true });
-      }
-      await sendTelegramMessage(chatId, `🐋 Looking up wallet \`${addr.slice(0, 10)}…\``, {
-        reply_markup: { inline_keyboard: [[{ text: "🌐 Open Wallet", url: `${APP_URL}/dashboard/wallet-intelligence?address=${addr}` }]] },
-      });
-    }
-    return NextResponse.json({ ok: true });
-  }
-
-  // ─── PRO tier (copy trading) ─────────────────────────────────────────
-  if (text.startsWith("/copy")) {
-    const gate = checkTier(linked.tier, null, "pro");
-    if (!gate.allowed) {
-      await sendTelegramMessage(chatId, tierGateMsg("pro"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
-      return NextResponse.json({ ok: true });
-    }
-    await sendTelegramMessage(chatId, "🔁 Copy Trade controls:", {
-      reply_markup: { inline_keyboard: [[{ text: "🌐 Open Copy Trade", url: `${APP_URL}/dashboard/copy-trade` }]] },
-    });
-    return NextResponse.json({ ok: true });
-  }
-
-  // ─── MAX tier (sniper bot) ───────────────────────────────────────────
-  if (text.startsWith("/snipe")) {
-    const gate = checkTier(linked.tier, null, "max");
-    if (!gate.allowed) {
-      await sendTelegramMessage(chatId, tierGateMsg("max"), { reply_markup: { inline_keyboard: [[UPGRADE_BTN]] } });
-      return NextResponse.json({ ok: true });
-    }
-    await sendTelegramMessage(chatId, "🔥 Sniper Bot config:", {
-      reply_markup: { inline_keyboard: [[{ text: "🎯 Open Sniper", url: `${APP_URL}/dashboard/sniper` }]] },
-    });
-    return NextResponse.json({ ok: true });
-  }
-
-  // Default: gentle help with button
-  await sendTelegramMessage(chatId, "Unknown command. Tap below or send `/help`.", {
+  // Unknown command
+  await sendTelegramMessage(chatId, `Unknown command: \`/${cmd.name}\`. Send /help for the full list.`, {
     reply_markup: { inline_keyboard: [[{ text: "❓ Show All Commands", callback_data: "help" }]] },
   });
   return NextResponse.json({ ok: true });

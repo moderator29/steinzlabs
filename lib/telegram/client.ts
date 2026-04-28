@@ -57,6 +57,57 @@ export async function sendTelegramMessage(
   }
 }
 
+export async function sendTelegramPhoto(
+  chatId: number | string,
+  photoUrl: string,
+  opts: {
+    caption?: string;
+    parse_mode?: "Markdown" | "HTML";
+    reply_markup?: { inline_keyboard: Array<Array<{ text: string; url?: string; callback_data?: string }>> };
+  } = {},
+): Promise<void> {
+  const t = token();
+  if (!t) {
+    console.warn("[telegram] TELEGRAM_BOT_TOKEN not set; skipping photo");
+    return;
+  }
+  try {
+    const res = await fetchWithRetry(`${API_BASE}/bot${t}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: photoUrl,
+        ...(opts.caption ? { caption: opts.caption, parse_mode: opts.parse_mode ?? "Markdown" } : {}),
+        ...(opts.reply_markup ? { reply_markup: opts.reply_markup } : {}),
+      }),
+      source: "telegram.sendPhoto",
+      timeoutMs: 8000,
+      retries: 2,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error(`[telegram.sendPhoto] HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
+  } catch (err) {
+    console.error("[telegram.sendPhoto] failed:", err);
+  }
+}
+
+/** Show typing indicator (auto-clears after 5s or when next message is sent). */
+export async function sendTelegramTyping(chatId: number | string): Promise<void> {
+  const t = token();
+  if (!t) return;
+  try {
+    await fetch(`${API_BASE}/bot${t}/sendChatAction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, action: "typing" }),
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch { /* best effort */ }
+}
+
 export async function setTelegramWebhook(url: string, secret: string): Promise<boolean> {
   const t = token();
   if (!t) return false;
