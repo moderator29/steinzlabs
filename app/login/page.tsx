@@ -281,11 +281,12 @@ function LoginPageInner() {
 
   const inputBase: React.CSSProperties = {
     background: 'rgba(10,10,30,.8)',
-    border: '1px solid rgba(26,58,204,.18)',
+    border: '1px solid rgba(26,58,204,.32)',
     borderRadius: 10,
-    padding: '12px 16px',
-    fontSize: 14,
-    color: 'white',
+    padding: '13px 16px',
+    fontSize: 16,
+    fontWeight: 500,
+    color: '#FFFFFF',
     width: '100%',
     outline: 'none',
     transition: 'border-color 200ms, box-shadow 200ms',
@@ -294,6 +295,10 @@ function LoginPageInner() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: '#07090f' }}>
+      <style>{`
+        .auth-card input::placeholder { color: rgba(255,255,255,.55); font-weight: 400; }
+        .auth-card input:focus::placeholder { color: rgba(255,255,255,.4); }
+      `}</style>
       {/* Grid overlay */}
       <div className="absolute inset-0 pointer-events-none" style={{
         backgroundImage: 'linear-gradient(rgba(26,58,204,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,58,204,.04) 1px,transparent 1px)',
@@ -316,7 +321,7 @@ function LoginPageInner() {
       </div>
 
       {/* Card */}
-      <div className="relative z-10 w-full" style={{ maxWidth: 440 }}>
+      <div className="relative z-10 w-full auth-card" style={{ maxWidth: 440 }}>
         <div
           className="w-full rounded-3xl"
           style={{
@@ -330,13 +335,13 @@ function LoginPageInner() {
           {/* Top */}
           <div className="flex flex-col items-center mb-7">
             <SteinzLogo size={48} animated={true} />
-            <p className="mt-2 text-[10px] font-bold tracking-[6px] uppercase" style={{ color: '#1a2855', letterSpacing: 6 }}>
+            <p className="mt-2 text-[11px] font-bold tracking-[6px] uppercase" style={{ color: '#A3A3A3', letterSpacing: 6 }}>
               NAKA LABS
             </p>
           </div>
 
-          <h2 className="text-[26px] font-bold text-white mb-1">Welcome back.</h2>
-          <p className="text-sm mb-7" style={{ color: '#1e2e50' }}>Continue your intelligence session.</p>
+          <h2 className="text-[28px] font-bold text-white mb-1.5">Welcome back.</h2>
+          <p className="text-[15px] font-medium mb-7" style={{ color: '#E5E5E5' }}>Continue your intelligence session.</p>
 
           {/* Verification banner */}
           {needsVerification && (
@@ -360,52 +365,54 @@ function LoginPageInner() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* Email */}
             <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-[1.5px] mb-1.5"
-                style={{ color: '#0e1535' }}>EMAIL</label>
+              <label className="block text-[11px] font-bold uppercase tracking-[1.5px] mb-2"
+                style={{ color: '#E5E5E5' }}>EMAIL</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.6)' }} />
                 <input
                   type="text"
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
-                  style={{ ...inputBase, paddingLeft: 38, borderColor: errors.identifier ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)' }}
+                  className="placeholder:text-white/50 placeholder:font-normal"
+                  style={{ ...inputBase, paddingLeft: 40, borderColor: errors.identifier ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)' }}
                   placeholder="john@example.com or username"
                   autoComplete="username"
                   autoFocus
-                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = errors.identifier ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(125,163,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.18)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.identifier ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
-              {errors.identifier && !needsVerification && <p className="text-red-400 text-xs mt-1.5">{errors.identifier}</p>}
+              {errors.identifier && !needsVerification && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.identifier}</p>}
             </div>
 
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-[1.5px]" style={{ color: '#0e1535' }}>PASSWORD</label>
-                <Link href="/forgot-password" className="text-[12px] transition-colors hover:opacity-80" style={{ color: '#1a3acc' }}>
+                <label className="text-[11px] font-bold uppercase tracking-[1.5px]" style={{ color: '#E5E5E5' }}>PASSWORD</label>
+                <Link href="/forgot-password" className="text-[13px] font-medium transition-colors hover:opacity-80" style={{ color: '#7DA3FF' }}>
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.2)' }} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.6)' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors({}); }}
-                  style={{ ...inputBase, paddingLeft: 38, paddingRight: 44, borderColor: errors.password ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)' }}
+                  className="placeholder:text-white/50 placeholder:font-normal"
+                  style={{ ...inputBase, paddingLeft: 40, paddingRight: 44, borderColor: errors.password ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)' }}
                   placeholder="Your password"
                   autoComplete="current-password"
-                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(77,128,255,.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.08)'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = errors.password ? 'rgba(239,68,68,.4)' : 'rgba(26,58,204,.18)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(125,163,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.18)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = errors.password ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-white"
-                  style={{ color: 'rgba(255,255,255,.25)' }}>
+                  style={{ color: 'rgba(255,255,255,.65)' }}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>}
+              {errors.password && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.password}</p>}
             </div>
 
             {/* Turnstile CAPTCHA — explicit render via window.turnstile */}
@@ -421,31 +428,31 @@ function LoginPageInner() {
                   ref={turnstileRef}
                   style={{ minHeight: 65, colorScheme: 'dark', width: '100%' }}
                 />
-                {errors.captcha && <p className="text-red-400 text-xs mt-1">{errors.captcha}</p>}
+                {errors.captcha && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.captcha}</p>}
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full font-bold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full font-bold text-[16px] text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]"
               style={{
                 marginTop: 4,
-                padding: 14,
+                padding: 16,
                 borderRadius: 12,
                 background: 'linear-gradient(135deg,#1a3acc,#0d1f88)',
                 border: '1px solid rgba(77,128,255,.28)',
                 boxShadow: '0 0 20px rgba(26,58,204,.25)',
               }}
             >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
-            <span className="text-[11px]" style={{ color: '#0e1535' }}>or</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: '#A3A3A3' }}>or</span>
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,.06)' }} />
           </div>
 
@@ -459,7 +466,7 @@ function LoginPageInner() {
               });
               if (error) setErrors({ oauth: error.message });
             }}
-            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-white/10 bg-white hover:bg-gray-50 text-gray-800 font-semibold text-sm transition-colors mb-4"
+            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-lg border border-white/10 bg-white hover:bg-gray-50 text-gray-900 font-semibold text-[15px] transition-colors mb-4"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
               <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
@@ -470,15 +477,15 @@ function LoginPageInner() {
             Continue with Google
           </button>
 
-          <p className="text-center text-sm" style={{ color: '#0e1535' }}>
+          <p className="text-center text-[15px] font-medium" style={{ color: '#E5E5E5' }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium transition-colors hover:opacity-80" style={{ color: '#4d80ff' }}>Sign up</Link>
+            <Link href="/signup" className="font-semibold transition-colors hover:opacity-80" style={{ color: '#7DA3FF' }}>Sign up</Link>
           </p>
 
-          <p className="text-center text-[11px] mt-4" style={{ color: '#080e20' }}>
+          <p className="text-center text-[12px] font-medium mt-4" style={{ color: '#9CA3AF' }}>
             By continuing you agree to our{' '}
-            <Link href="/terms" className="hover:text-white/40 transition-colors">Terms</Link> and{' '}
-            <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="underline hover:text-white transition-colors">Terms</Link> and{' '}
+            <Link href="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>
           </p>
         </div>
       </div>
