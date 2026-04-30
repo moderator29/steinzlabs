@@ -124,8 +124,19 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
     const c = raw;
 
     // Trigger-type gate: don't fire whale_buy criteria on new_token_launch
-    // events, or vice versa.
-    if (c.trigger_type !== input.trigger && c.trigger_type !== "manual") {
+    // events, or vice versa. The UI persists "new_pair" and the legacy cron
+    // persists "new_token_launch" — both refer to the same trigger; matcher
+    // accepts either alias. "manual" criteria are user-initiated and never
+    // fire from a webhook.
+    const triggerAliases: Record<string, ReadonlyArray<string>> = {
+      new_token_launch: ["new_token_launch", "new_pair"],
+      whale_buy: ["whale_buy"],
+    };
+    if (c.trigger_type === "manual") {
+      out.skipped++;
+      continue;
+    }
+    if (!triggerAliases[input.trigger].includes(c.trigger_type)) {
       out.skipped++;
       continue;
     }
