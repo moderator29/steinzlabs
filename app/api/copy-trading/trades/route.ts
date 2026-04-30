@@ -34,7 +34,8 @@ export async function GET() {
 
   const all = trades ?? [];
   const executed = all.filter((t) => t.status === "success");
-  const blocked = all.filter((t) => t.status === "blocked_security" || t.status === "blocked_rule");
+  const alerts = all.filter((t) => t.status === "alert");
+  const blocked = all.filter((t) => t.status === "failed" || t.status === "cancelled");
   const totalPnl = executed.reduce(
     (acc: number, t: { pnl_usd: number | null }) => acc + (t.pnl_usd ?? 0),
     0,
@@ -49,6 +50,7 @@ export async function GET() {
     stats: {
       total: all.length,
       executed: executed.length,
+      alerts: alerts.length,
       blocked: blocked.length,
       totalInvested,
       totalPnl,

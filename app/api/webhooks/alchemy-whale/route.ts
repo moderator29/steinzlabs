@@ -24,6 +24,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { matchCopyEvent } from '@/lib/copy/matcher';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -187,12 +188,13 @@ export async function POST(req: NextRequest) {
 
   // §3 Copy-trade matcher fan-out. Awaited so retries on 5xx don't lose the
   // event before user_copy_trades / pending_trades rows land. Each row's
-  // matcher call is independent — if one rule fails, the rest still process.
-  const { matchCopyEvent } = await import('@/lib/copy/matcher');
-  const copyOutcomes: unknown[] = [];
+  // matcher call is independent — if one rule fails, the rest still process,
+  // but if EVERY row fails we return 500 so Alchemy retries the webhook.
+  let matched = 0;
+  let failed = 0;
   for (const r of rows) {
     try {
-      const outcome = await matchCopyEvent({
+      await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),
         chain: String(r.chain ?? ''),
         tx_hash: String(r.tx_hash ?? ''),
@@ -204,13 +206,20 @@ export async function POST(req: NextRequest) {
         value_usd: (r.value_usd as number | null) ?? null,
         timestamp: String(r.timestamp ?? new Date().toISOString()),
       });
-      copyOutcomes.push(outcome);
+      matched++;
     } catch (e) {
+      failed++;
       console.error('[webhook.alchemy-whale] copy matcher failed:', e);
     }
   }
 
-  return NextResponse.json({ ok: true, inserted: rows.length, copy: copyOutcomes });
+  if (failed > 0 && matched === 0) {
+    return NextResponse.json(
+      { error: 'matcher_failed', inserted: rows.length },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json({ ok: true, inserted: rows.length, matched, failed });
 }
 
 /**

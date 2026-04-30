@@ -70,6 +70,18 @@ export const POST = withTierGate("mini", async (request: NextRequest) => {
   if (body.max_per_trade_usd > body.daily_cap_usd) {
     return NextResponse.json({ error: "max_per_trade_usd cannot exceed daily_cap_usd" }, { status: 400 });
   }
+  if (body.pct_of_whale != null) {
+    const p = Number(body.pct_of_whale);
+    if (!Number.isFinite(p) || p <= 0 || p > 100) {
+      return NextResponse.json({ error: "pct_of_whale must be between 0 and 100" }, { status: 400 });
+    }
+  }
+  if (body.tp_pct != null && (!Number.isFinite(Number(body.tp_pct)) || Number(body.tp_pct) <= 0)) {
+    return NextResponse.json({ error: "tp_pct must be positive" }, { status: 400 });
+  }
+  if (body.sl_pct != null && (!Number.isFinite(Number(body.sl_pct)) || Number(body.sl_pct) <= 0)) {
+    return NextResponse.json({ error: "sl_pct must be positive" }, { status: 400 });
+  }
 
   const mode: CopyMode = body.mode ?? "oneclick";
   if (!["alerts_only", "oneclick", "auto_copy"].includes(mode)) {
