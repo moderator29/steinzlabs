@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Bell, MousePointerClick, Bot, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/hooks/useAuth";
-import { effectiveTier } from "@/lib/hooks/useAuth";
+import { useAuth, effectiveTier } from "@/lib/hooks/useAuth";
 
 type Mode = "alerts_only" | "oneclick" | "auto_copy";
 
@@ -45,7 +44,22 @@ export default function NewCopyRuleModal({
   onSaved,
 }: Props) {
   const { user } = useAuth();
-  const tier = useMemo(() => effectiveTier(user as any), [user]);
+  const tier = useMemo(
+    () =>
+      effectiveTier(
+        user ? { tier: user.tier, tier_expires_at: user.tier_expires_at } : null,
+      ),
+    [user],
+  );
+
+  // Escape closes modal — matches platform UX.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const [mode, setMode] = useState<Mode>("oneclick");
   const [whale, setWhale] = useState(initialWhaleAddress);
@@ -62,12 +76,33 @@ export default function NewCopyRuleModal({
   const modeAllowed = TIER_RANK[tier] >= TIER_RANK[MODE_META[mode].required];
 
   async function save() {
+    if (!modeAllowed) {
+      return toast.error(`${MODE_META[mode].title} requires ${MODE_META[mode].required} tier`);
+    }
     if (!whale.trim()) return toast.error("Whale address required");
     const max = Number(maxPerTrade);
     const day = Number(dailyCap);
-    if (!(max > 0) || !(day > 0)) return toast.error("Caps must be > 0");
+    if (!Number.isFinite(max) || !Number.isFinite(day) || max <= 0 || day <= 0) {
+      return toast.error("Caps must be positive numbers");
+    }
     if (max > day) return toast.error("Max per trade can't exceed daily cap");
-    if (!modeAllowed) return toast.error(`${MODE_META[mode].title} requires ${MODE_META[mode].required} tier`);
+
+    let pctValue: number | null = null;
+    if (sizingMode === "pct") {
+      const p = Number(pctOfWhale);
+      if (!Number.isFinite(p) || p <= 0 || p > 100) {
+        return toast.error("% of whale must be between 0 and 100");
+      }
+      pctValue = p;
+    }
+    const tp = tpPct ? Number(tpPct) : null;
+    const sl = slPct ? Number(slPct) : null;
+    if (tp != null && (!Number.isFinite(tp) || tp <= 0)) return toast.error("TP must be positive");
+    if (sl != null && (!Number.isFinite(sl) || sl <= 0)) return toast.error("SL must be positive");
+    const slip = Number(slippageBps);
+    if (!Number.isFinite(slip) || slip <= 0 || slip > 5000) {
+      return toast.error("Slippage must be 1–5000 bps");
+    }
 
     setSaving(true);
     try {
@@ -80,10 +115,10 @@ export default function NewCopyRuleModal({
           mode,
           max_per_trade_usd: max,
           daily_cap_usd: day,
-          pct_of_whale: sizingMode === "pct" ? Number(pctOfWhale) : null,
-          tp_pct: tpPct ? Number(tpPct) : null,
-          sl_pct: slPct ? Number(slPct) : null,
-          max_slippage_bps: Number(slippageBps),
+          pct_of_whale: pctValue,
+          tp_pct: tp,
+          sl_pct: sl,
+          max_slippage_bps: slip,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -184,7 +219,7 @@ export default function NewCopyRuleModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Take-profit %" value={tpPct} onChange={setTpPct} type="number" placeholder="e.g. 100" />
             <Field label="Stop-loss %" value={slPct} onChange={setSlPct} type="number" placeholder="e.g. 25" />
             <Field label="Slippage (bps)" value={slippageBps} onChange={setSlippageBps} type="number" />

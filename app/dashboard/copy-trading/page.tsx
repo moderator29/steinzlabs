@@ -251,7 +251,8 @@ export default function CopyTradingPage() {
                     <td className={`px-3 py-2 text-[10px] uppercase ${
                       t.status === "success" ? "text-green-400" :
                       t.status === "pending" ? "text-amber-400" :
-                      t.status.startsWith("blocked") ? "text-red-400" : "text-slate-500"
+                      t.status === "alert" ? "text-blue-400" :
+                      t.status === "failed" || t.status === "cancelled" ? "text-red-400" : "text-slate-500"
                     }`}>
                       {t.status}
                     </td>

@@ -22,6 +22,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { matchCopyEvent } from '@/lib/copy/matcher';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -188,12 +189,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // §3 Copy-trade matcher fan-out (Solana side).
-  const { matchCopyEvent } = await import('@/lib/copy/matcher');
-  const copyOutcomes: unknown[] = [];
+  // §3 Copy-trade matcher fan-out (Solana side). Returns 500 if every row
+  // fails so Helius retries the webhook.
+  let matched = 0;
+  let failed = 0;
   for (const r of rows) {
     try {
-      const outcome = await matchCopyEvent({
+      await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),
         chain: String(r.chain ?? 'solana'),
         tx_hash: String(r.tx_hash ?? ''),
@@ -205,13 +207,19 @@ export async function POST(req: NextRequest) {
         value_usd: (r.value_usd as number | null) ?? null,
         timestamp: String(r.timestamp ?? new Date().toISOString()),
       });
-      copyOutcomes.push(outcome);
+      matched++;
     } catch (e) {
+      failed++;
       console.error('[webhook.helius-whale] copy matcher failed:', e);
     }
   }
-
-  return NextResponse.json({ ok: true, inserted: rows.length, copy: copyOutcomes });
+  if (failed > 0 && matched === 0) {
+    return NextResponse.json(
+      { error: 'matcher_failed', inserted: rows.length },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json({ ok: true, inserted: rows.length, matched, failed });
 }
 
 export async function GET() {
