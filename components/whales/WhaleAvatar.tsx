@@ -46,15 +46,23 @@ export function WhaleAvatar({ address, chain, logoUrl, size = 32, className = ""
     const key = `${chain ?? ""}:${address.toLowerCase()}`;
     if (inflight.has(key)) return;
     inflight.add(key);
+    let cancelled = false;
+    const controller = new AbortController();
     const search = chain ? `?chain=${encodeURIComponent(chain)}` : "";
-    fetch(`/api/whales/${encodeURIComponent(address)}/logo${search}`)
+    fetch(`/api/whales/${encodeURIComponent(address)}/logo${search}`, {
+      signal: controller.signal,
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { url?: string } | null) => {
+        if (cancelled) return;
         if (j?.url) setResolvedUrl(j.url);
       })
       .catch(() => undefined)
       .finally(() => inflight.delete(key));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [resolvedUrl, address, chain]);
 
   const src = resolvedUrl && !errored ? resolvedUrl : dicebearFor(address);

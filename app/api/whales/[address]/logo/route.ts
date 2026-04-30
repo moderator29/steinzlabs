@@ -31,16 +31,20 @@ export async function GET(
   const admin = getSupabaseAdmin();
   const addrLower = address.toLowerCase();
 
+  // Whale rows are unique per (address, chain) — pinning the chain to the
+  // query stops a write from clobbering the same address on a different
+  // chain when both happen to be tracked.
   if (!force) {
-    const { data } = await admin
+    let cacheQuery = admin
       .from("whales")
       .select("logo_url, logo_source, logo_resolved_at")
-      .ilike("address", addrLower)
-      .maybeSingle<{
-        logo_url: string | null;
-        logo_source: string | null;
-        logo_resolved_at: string | null;
-      }>();
+      .ilike("address", addrLower);
+    if (chain) cacheQuery = cacheQuery.eq("chain", chain);
+    const { data } = await cacheQuery.maybeSingle<{
+      logo_url: string | null;
+      logo_source: string | null;
+      logo_resolved_at: string | null;
+    }>();
     if (data?.logo_url && data.logo_resolved_at) {
       const age = Date.now() - new Date(data.logo_resolved_at).getTime();
       if (age < FRESH_TTL_MS) {
@@ -55,7 +59,7 @@ export async function GET(
 
   const resolved = await resolveWhaleLogo(address, chain);
 
-  await admin
+  let updateQuery = admin
     .from("whales")
     .update({
       logo_url: resolved.url,
@@ -63,6 +67,8 @@ export async function GET(
       logo_resolved_at: new Date().toISOString(),
     })
     .ilike("address", addrLower);
+  if (chain) updateQuery = updateQuery.eq("chain", chain);
+  await updateQuery;
 
   return NextResponse.json({ ...resolved, cached: false });
 }

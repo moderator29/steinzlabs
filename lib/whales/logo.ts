@@ -26,11 +26,20 @@ export interface ResolvedLogo {
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY ?? process.env.NEXT_PUBLIC_ALCHEMY_API_KEY ?? "";
 
 function dicebearFallback(address: string): ResolvedLogo {
-  const seed = encodeURIComponent(address.toLowerCase());
+  const safe = address && address.length > 0 ? address.toLowerCase() : "unknown-whale";
+  const seed = encodeURIComponent(safe);
   return {
     url: `https://api.dicebear.com/7.x/identicon/svg?seed=${seed}&backgroundColor=0a0e1a`,
     source: "dicebear",
   };
+}
+
+function isRenderableHttpUrl(s: unknown): s is string {
+  // <img src=...> only renders absolute http(s) URLs. ipfs://, ar://,
+  // data:, and relative paths break the avatar — fall through to ENS or
+  // Dicebear instead of letting the broken URL persist on the row.
+  if (typeof s !== "string") return false;
+  return /^https?:\/\//i.test(s);
 }
 
 async function fromArkham(address: string, chain?: string): Promise<ResolvedLogo | null> {
@@ -38,7 +47,7 @@ async function fromArkham(address: string, chain?: string): Promise<ResolvedLogo
   try {
     const intel = await arkhamAPI.getAddressIntel(address, chain);
     const logo = intel?.arkhamEntity?.logo;
-    if (logo && typeof logo === "string" && logo.startsWith("http")) {
+    if (isRenderableHttpUrl(logo)) {
       return { url: logo, source: "arkham" };
     }
   } catch {
@@ -60,7 +69,7 @@ async function fromEns(address: string): Promise<ResolvedLogo | null> {
     );
     if (!res.ok) return null;
     const data = (await res.json()) as { name?: string; avatar?: string };
-    if (data.avatar && typeof data.avatar === "string" && data.avatar.startsWith("http")) {
+    if (isRenderableHttpUrl(data.avatar)) {
       return { url: data.avatar, source: "ens" };
     }
   } catch {

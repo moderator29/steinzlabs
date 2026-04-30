@@ -32,6 +32,7 @@ interface SummaryResult {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   style: string;
   summary: string;
+  recommended_copy_mode: 'alerts_only' | 'oneclick' | 'auto_copy' | null;
   generatedAt: string;
 }
 
@@ -63,6 +64,8 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
       sentiment: cached.sentiment,
       style: cached.style,
       summary: cached.summary,
+      recommended_copy_mode: (cached as { recommended_copy_mode?: SummaryResult['recommended_copy_mode'] })
+        .recommended_copy_mode ?? null,
       generatedAt: cached.generated_at,
     } satisfies SummaryResult);
   }
@@ -120,6 +123,7 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
     sentiment: parsed.sentiment,
     style: parsed.style,
     summary: parsed.summary,
+    recommended_copy_mode: parsed.recommended_copy_mode,
     generated_at: now,
   }, { onConflict: 'whale_address,chain' });
 
@@ -163,10 +167,12 @@ Return ONLY a JSON object, no prose before or after, with these exact keys:
   "rating_10d": <integer 0-10>,
   "sentiment": "bullish" | "bearish" | "neutral",
   "style": "<one-line trading style, e.g. 'Aggressive L1 accumulator' or 'Passive long-term holder'>",
-  "summary": "<2-3 sentences covering (a) strategy pattern, (b) recent performance, (c) notable risks>"
+  "summary": "<2-3 sentences covering (a) strategy pattern, (b) recent performance, (c) notable risks>",
+  "recommended_copy_mode": "alerts_only" | "oneclick" | "auto_copy"
 }
 
-Base your ratings on: PnL sign and magnitude, win rate, portfolio size, and activity consistency. If data is sparse, pick conservative mid-range ratings (4-6) and mention uncertainty in the summary.`;
+Base your ratings on: PnL sign and magnitude, win rate, portfolio size, and activity consistency.
+For recommended_copy_mode: pick "alerts_only" if the trader is volatile / unpredictable / has thin data; "oneclick" if their pattern is consistent enough that a user should at least see every move; "auto_copy" only if performance is strong, win rate is high, and trade cadence is reasonable. If data is sparse, prefer "alerts_only" and mention uncertainty in the summary.`;
 }
 
 function parseResponse(raw: string): {
@@ -175,6 +181,7 @@ function parseResponse(raw: string): {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   style: string;
   summary: string;
+  recommended_copy_mode: SummaryResult['recommended_copy_mode'];
 } | null {
   // Strip markdown fences Claude sometimes adds even when told not to.
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -185,8 +192,11 @@ function parseResponse(raw: string): {
     const sentiment = ['bullish', 'bearish', 'neutral'].includes(parsed.sentiment) ? parsed.sentiment : 'neutral';
     const style = typeof parsed.style === 'string' ? parsed.style.slice(0, 120) : 'Unknown';
     const summary = typeof parsed.summary === 'string' ? parsed.summary.slice(0, 600) : '';
+    const mode = ['alerts_only', 'oneclick', 'auto_copy'].includes(parsed.recommended_copy_mode)
+      ? (parsed.recommended_copy_mode as SummaryResult['recommended_copy_mode'])
+      : null;
     if (!summary) return null;
-    return { rating_30d: r30, rating_10d: r10, sentiment, style, summary };
+    return { rating_30d: r30, rating_10d: r10, sentiment, style, summary, recommended_copy_mode: mode };
   } catch {
     return null;
   }
