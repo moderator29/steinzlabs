@@ -30,14 +30,28 @@ interface NormalisedEvent {
 }
 
 function verifyAlchemy(raw: string, signature: string | null): boolean {
-  const key = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
-  if (!key || !signature) return false;
-  const computed = crypto.createHmac('sha256', key).update(raw).digest('hex');
-  try {
-    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(signature));
-  } catch {
-    return false;
+  if (!signature) return false;
+  // Multi-key support: ALCHEMY_WEBHOOK_SIGNING_KEYS holds a comma-separated
+  // list of signing keys (one per chain). Legacy ALCHEMY_WEBHOOK_SIGNING_KEY
+  // remains honored for back-compat. Any matching key passes.
+  const keys = [
+    ...(process.env.ALCHEMY_WEBHOOK_SIGNING_KEYS ?? '').split(',').map((k) => k.trim()).filter(Boolean),
+    process.env.ALCHEMY_WEBHOOK_SIGNING_KEY ?? '',
+  ].filter(Boolean);
+  for (const key of keys) {
+    const computed = crypto.createHmac('sha256', key).update(raw).digest('hex');
+    try {
+      if (
+        computed.length === signature.length &&
+        crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(signature))
+      ) {
+        return true;
+      }
+    } catch {
+      // Length mismatch on timingSafeEqual — fall through to next key.
+    }
   }
+  return false;
 }
 
 function verifyHelius(authHeader: string | null): boolean {
@@ -130,19 +144,40 @@ export async function POST(req: NextRequest) {
 
   // Phase 4: low-latency matcher. Awaited so the webhook only ACKs once
   // sniper_match_events rows are written; Alchemy/Helius retry on 5xx so we
-  // want the row in place before responding 200. Errors bubble up rather than
-  // being swallowed — a silent matcher failure would mean missed snipes.
-  const trigger: 'whale_buy' | 'new_token_launch' =
-    event.fromAddress ? 'whale_buy' : 'new_token_launch';
-  const outcome = await matchSniperEvent({
-    chain: event.chain as SniperChain,
-    trigger,
-    tokenAddress: event.tokenAddress,
-    tokenSymbol: event.tokenSymbol,
-    txHash: event.txHash,
-    whaleAddress: trigger === 'whale_buy' ? event.fromAddress : null,
-    whaleValueUsd: trigger === 'whale_buy' ? event.amountUsd : null,
-  });
+  // want the row in place before responding 200.
+  //
+  // Most events have a fromAddress regardless of whether they represent a
+  // new-pair detection or a tracked whale's trade, so we cannot infer the
+  // trigger type from that field alone. Instead we run the matcher under
+  // BOTH trigger types — the matcher's own trigger_type filter on
+  // sniper_criteria + per-criteria whale-address check ensure a single event
+  // only fires the right rules. Dedup keyed on (criteria_id, token) prevents
+  // double-insertion if a criteria somehow matched both passes.
+  const chain = event.chain as SniperChain;
+  const [whaleOutcome, newTokenOutcome] = await Promise.all([
+    matchSniperEvent({
+      chain,
+      trigger: 'whale_buy',
+      tokenAddress: event.tokenAddress,
+      tokenSymbol: event.tokenSymbol,
+      txHash: event.txHash,
+      whaleAddress: event.fromAddress,
+      whaleValueUsd: event.amountUsd,
+    }),
+    matchSniperEvent({
+      chain,
+      trigger: 'new_token_launch',
+      tokenAddress: event.tokenAddress,
+      tokenSymbol: event.tokenSymbol,
+      txHash: event.txHash,
+    }),
+  ]);
 
-  return NextResponse.json({ ok: true, matcher: outcome });
+  return NextResponse.json({
+    ok: true,
+    matcher: {
+      whale: whaleOutcome,
+      newToken: newTokenOutcome,
+    },
+  });
 }

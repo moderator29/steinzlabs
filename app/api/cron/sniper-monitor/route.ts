@@ -9,7 +9,7 @@ export const maxDuration = 60;
 interface CriteriaRow {
   id: string;
   user_id: string;
-  trigger_type: "new_token_launch" | "whale_buy" | "price_target";
+  trigger_type: "new_token_launch" | "new_pair" | "whale_buy" | "price_target";
   chains_allowed: string[];
   min_liquidity_usd: number;
   max_buy_tax_bps: number;
@@ -181,7 +181,10 @@ export async function GET(request: NextRequest) {
     }
 
     // ── new_token_launch trigger ───────────────────────────────────────────
-    if (c.trigger_type === "new_token_launch") {
+    // Accepts both legacy "new_token_launch" and the UI-persisted "new_pair"
+    // value as aliases for the same trigger. Without this, any criteria
+    // created via NewSniperModal would silently never match in the cron.
+    if (c.trigger_type === "new_token_launch" || c.trigger_type === "new_pair") {
       const cutoff = new Date(Date.now() - c.max_age_hours * 3_600_000).toISOString();
       const candidates = newTokens.filter(
         (t) =>

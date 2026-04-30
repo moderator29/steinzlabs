@@ -51,8 +51,10 @@ async function stonfiSwapSimulate(params: {
         slippage_tolerance: params.slippageTolerance.toString(),
         wallet_address: params.walletAddress,
       });
+      // Ston.fi simulate is a GET endpoint with all parameters in the query
+      // string. POST returns 405 / silent failure.
       const res = await fetch(`${STONFI_BASE}/v1/swap/simulate?${search.toString()}`, {
-        method: "POST",
+        method: "GET",
       });
       if (!res.ok) {
         const body = await res.text().catch(() => res.statusText);
