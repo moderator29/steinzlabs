@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { matchSniperEvent } from '@/lib/sniper/matcher';
+import type { SniperChain } from '@/lib/sniper/chains';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -126,5 +128,21 @@ export async function POST(req: NextRequest) {
     console.error('[webhooks/sniper-detect] insert failed:', err);
   }
 
-  return NextResponse.json({ ok: true });
+  // Phase 4: low-latency matcher. Awaited so the webhook only ACKs once
+  // sniper_match_events rows are written; Alchemy/Helius retry on 5xx so we
+  // want the row in place before responding 200. Errors bubble up rather than
+  // being swallowed — a silent matcher failure would mean missed snipes.
+  const trigger: 'whale_buy' | 'new_token_launch' =
+    event.fromAddress ? 'whale_buy' : 'new_token_launch';
+  const outcome = await matchSniperEvent({
+    chain: event.chain as SniperChain,
+    trigger,
+    tokenAddress: event.tokenAddress,
+    tokenSymbol: event.tokenSymbol,
+    txHash: event.txHash,
+    whaleAddress: trigger === 'whale_buy' ? event.fromAddress : null,
+    whaleValueUsd: trigger === 'whale_buy' ? event.amountUsd : null,
+  });
+
+  return NextResponse.json({ ok: true, matcher: outcome });
 }
