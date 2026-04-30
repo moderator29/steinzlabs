@@ -131,5 +131,9 @@ dist
 
 # Replit debugger
 .breakpoints
-.vercel
+
+# Vercel CLI
+.vercel/
+
+# Local env
 .env*.local
