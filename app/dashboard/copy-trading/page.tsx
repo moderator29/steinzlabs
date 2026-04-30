@@ -2,19 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Power, Shield, Trash2 } from "lucide-react";
+import { Loader2, Pause, Play, Plus, Power, Shield, Trash2 } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
+import NewCopyRuleModal from "./NewCopyRuleModal";
+
+type CopyMode = "alerts_only" | "oneclick" | "auto_copy";
 
 interface CopyRule {
   id: string;
   whale_address: string;
   chain: string;
+  mode: CopyMode | null;
   max_per_trade_usd: number;
   daily_cap_usd: number;
+  pct_of_whale: number | null;
+  tp_pct: number | null;
+  sl_pct: number | null;
   min_liquidity_usd: number;
   max_slippage_bps: number;
   enabled: boolean;
+  paused: boolean;
 }
 
 interface CopyTrade {
@@ -51,6 +59,7 @@ export default function CopyTradingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"rules" | "trades">("rules");
+  const [showNewRule, setShowNewRule] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -71,7 +80,7 @@ export default function CopyTradingPage() {
     load();
   }, []);
 
-  async function toggleRule(rule: CopyRule) {
+  async function toggleEnabled(rule: CopyRule) {
     const res = await fetch(`/api/copy-trading/rules/${rule.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -79,6 +88,20 @@ export default function CopyTradingPage() {
     });
     if (res.ok) load();
     else toast.error("Failed");
+  }
+
+  async function togglePaused(rule: CopyRule) {
+    const res = await fetch(`/api/copy-trading/rules/${rule.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused: !rule.paused }),
+    });
+    if (res.ok) {
+      toast.success(rule.paused ? "Resumed" : "Paused");
+      load();
+    } else {
+      toast.error("Failed");
+    }
   }
 
   async function deleteRule(rule: CopyRule) {
@@ -96,9 +119,15 @@ export default function CopyTradingPage() {
           <div>
             <h1 className="text-2xl font-bold">Copy Trading</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Every copy trade passes GoPlus security checks (token + whale address) and your safety rules before it ever reaches the relayer.
+              Three modes: Alerts, One-Click, Auto-Copy. Every trade passes GoPlus + your rules before the relayer touches it.
             </p>
           </div>
+          <button
+            onClick={() => setShowNewRule(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white"
+          >
+            <Plus size={13} /> New rule
+          </button>
         </div>
 
         {stats && (
@@ -147,19 +176,38 @@ export default function CopyTradingPage() {
               {rules.map((r) => (
                 <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 border border-slate-800">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <code className="text-xs font-mono text-white truncate">{r.whale_address.slice(0, 8)}…{r.whale_address.slice(-4)}</code>
                       <span className="text-[10px] uppercase text-slate-500">{r.chain}</span>
+                      <ModeBadge mode={r.mode ?? "oneclick"} />
+                      {r.paused && (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">paused</span>
+                      )}
+                      {!r.enabled && (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-400">off</span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                      <span>Max/trade {fmtUsd(r.max_per_trade_usd)}</span>
-                      <span>Daily cap {fmtUsd(r.daily_cap_usd)}</span>
-                      <span>Min liq {fmtUsd(r.min_liquidity_usd)}</span>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
+                      {r.pct_of_whale != null ? (
+                        <span>{r.pct_of_whale}% of whale (cap {fmtUsd(r.max_per_trade_usd)})</span>
+                      ) : (
+                        <span>Max/trade {fmtUsd(r.max_per_trade_usd)}</span>
+                      )}
+                      <span>Daily {fmtUsd(r.daily_cap_usd)}</span>
+                      {r.tp_pct != null && <span className="text-green-400/70">TP +{r.tp_pct}%</span>}
+                      {r.sl_pct != null && <span className="text-red-400/70">SL −{r.sl_pct}%</span>}
                       <span>Slip {(r.max_slippage_bps / 100).toFixed(1)}%</span>
                     </div>
                   </div>
                   <button
-                    onClick={() => toggleRule(r)}
+                    onClick={() => togglePaused(r)}
+                    title={r.paused ? "Resume" : "Pause"}
+                    className={`p-1.5 rounded transition ${r.paused ? "text-amber-400 hover:bg-amber-500/10" : "text-slate-400 hover:bg-white/5"}`}
+                  >
+                    {r.paused ? <Play size={13} /> : <Pause size={13} />}
+                  </button>
+                  <button
+                    onClick={() => toggleEnabled(r)}
                     title={r.enabled ? "Disable" : "Enable"}
                     className={`p-1.5 rounded transition ${r.enabled ? "text-green-400 hover:bg-green-500/10" : "text-slate-500 hover:bg-white/5"}`}
                   >
@@ -215,16 +263,30 @@ export default function CopyTradingPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-3">
-          <Shield size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-          <div className="text-[11px] text-amber-200/80 leading-relaxed">
-            <p className="font-semibold text-amber-300 mb-1">Auto-Copy is deferred to Session 5C.</p>
-            Manual One-Click copy is live and gated by every rule above plus GoPlus security checks. Fully autonomous copy execution (no user tap) goes through a separate safety review before it ships.
+        <div className="mt-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-3">
+          <Shield size={14} className="text-blue-300 flex-shrink-0 mt-0.5" />
+          <div className="text-[11px] text-blue-200/80 leading-relaxed">
+            <p className="font-semibold text-blue-200 mb-1">Non-custodial by design.</p>
+            One-Click and Auto-Copy still need your browser to sign — Naka Labs never holds keys. Auto-Copy users opt into auto-confirmation while the dashboard is open.
           </div>
         </div>
       </div>
+
+      {showNewRule && (
+        <NewCopyRuleModal onClose={() => setShowNewRule(false)} onSaved={load} />
+      )}
     </div>
   );
+}
+
+function ModeBadge({ mode }: { mode: CopyMode }) {
+  const map: Record<CopyMode, { label: string; cls: string }> = {
+    alerts_only: { label: "Alerts", cls: "bg-slate-500/15 text-slate-300" },
+    oneclick: { label: "One-Click", cls: "bg-blue-500/15 text-blue-300" },
+    auto_copy: { label: "Auto", cls: "bg-purple-500/15 text-purple-300" },
+  };
+  const m = map[mode];
+  return <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${m.cls}`}>{m.label}</span>;
 }
 
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "up" | "down" | "warn" }) {
