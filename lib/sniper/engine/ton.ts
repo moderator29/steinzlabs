@@ -88,7 +88,11 @@ export const tonAdapter: EngineAdapter = {
     const messagePayload = sim?.message_payload ?? sim?.payload ?? null;
     if (!messagePayload) throw new Error("Ston.fi returned no message payload");
 
-    const expectedOut = Number(sim?.ask_units ?? 0) / 1e9;
+    // ask_units is in the destination jetton's smallest unit. For native TON
+    // outputs this is nanotons (9 decimals); for jettons the decimals come
+    // from the jetton master and are resolved by the caller.
+    const expectedOutRaw = String(sim?.ask_units ?? "0");
+    const expectedOutDecimals = ask === TON_NATIVE ? 9 : null;
     const priceImpactPct = parseFloat(sim?.price_impact ?? "0") * 100;
 
     const unsignedTx = Buffer.from(
@@ -103,7 +107,8 @@ export const tonAdapter: EngineAdapter = {
     return {
       unsignedTx,
       encoding: "ton-boc-base64",
-      expectedOut,
+      expectedOutRaw,
+      expectedOutDecimals,
       priceImpactPct,
       routeLabel: "Ston.fi",
       validUntilMs: Date.now() + QUOTE_VALIDITY_MS,

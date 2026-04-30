@@ -168,9 +168,11 @@ export const solanaAdapter: EngineAdapter = {
       criteriaId: p.criteriaId,
     });
 
-    const outAmountRaw = Number(quote.outAmount ?? 0);
-    const outDecimals = Number(quote.outputDecimals ?? 9);
-    const expectedOut = outAmountRaw / 10 ** outDecimals;
+    // Jupiter v6 returns outAmount as a string in the destination mint's
+    // smallest unit. Decimals are NOT included on the quote payload — caller
+    // resolves them via token metadata; we surface null here rather than
+    // guessing 9 (which would be wrong for USDC-style 6-dec mints).
+    const expectedOutRaw = String(quote.outAmount ?? "0");
     const priceImpactPct = Math.abs(parseFloat(quote.priceImpactPct ?? "0")) * 100;
     const labels: string[] = (quote.routePlan ?? [])
       .map((s: any) => s?.swapInfo?.label)
@@ -180,7 +182,8 @@ export const solanaAdapter: EngineAdapter = {
     return {
       unsignedTx: swapTransaction,
       encoding: "solana-versioned-tx-base64",
-      expectedOut,
+      expectedOutRaw,
+      expectedOutDecimals: null,
       priceImpactPct,
       routeLabel,
       validUntilMs: Date.now() + QUOTE_VALIDITY_MS,
