@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   for (const w of whales as Array<{ address: string; chain: string | null }>) {
     try {
       const resolved = await resolveWhaleLogo(w.address, w.chain);
-      await admin
+      let updateQuery = admin
         .from("whales")
         .update({
           logo_url: resolved.url,
@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
           logo_resolved_at: new Date().toISOString(),
         })
         .ilike("address", w.address.toLowerCase());
+      // Pin the chain so a row on a sibling chain isn't overwritten.
+      if (w.chain) updateQuery = updateQuery.eq("chain", w.chain);
+      await updateQuery;
       refreshed++;
     } catch {
       failed++;
