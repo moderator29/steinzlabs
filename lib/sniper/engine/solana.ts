@@ -13,6 +13,7 @@
  */
 
 import { Connection, VersionedTransaction } from "@solana/web3.js";
+import bs58 from "bs58";
 import type { BuildParams, BuildResult, EngineAdapter, SubmitParams, SubmitResult } from "./types";
 import { timed } from "./apiCost";
 
@@ -197,28 +198,34 @@ export const solanaAdapter: EngineAdapter = {
     const conn = new Connection(heliusRpcUrl(), "confirmed");
 
     if (p.mevProtect) {
-      const txHash = await submitJitoBundle({
+      // Jito sendBundle returns a bundle UUID, NOT the tx signature. We derive
+      // the actual tx signature from the signed VersionedTransaction itself
+      // (the first signature in the tx is the user's, which is also the tx id
+      // on Solana) and use that for confirmation.
+      const buf = Buffer.from(p.signedTx, "base64");
+      const tx = VersionedTransaction.deserialize(buf);
+      const sigBytes = tx.signatures[0];
+      if (!sigBytes || sigBytes.every((b) => b === 0)) {
+        throw new Error("Signed Solana tx has no signature in slot 0");
+      }
+      const txHash = bs58.encode(sigBytes);
+
+      const bundleId = await submitJitoBundle({
         signedTxBase64: p.signedTx,
         userId: p.userId,
         criteriaId: p.criteriaId,
       });
+
       const conf = await conn.confirmTransaction(txHash, "confirmed");
-      if (conf.value.err) {
-        return {
-          txHash,
-          executionTimeMs: Date.now() - t0,
-          gasUsed: null,
-          gasPriceNative: null,
-          routeUsed: "jito-bundle",
-          error: `Confirmed with err: ${JSON.stringify(conf.value.err)}`,
-        };
-      }
       return {
         txHash,
         executionTimeMs: Date.now() - t0,
         gasUsed: null,
         gasPriceNative: null,
         routeUsed: "jito-bundle",
+        error: conf.value.err
+          ? `Confirmed with err: ${JSON.stringify(conf.value.err)} (bundle=${bundleId})`
+          : undefined,
       };
     }
 
