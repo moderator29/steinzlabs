@@ -1,0 +1,68 @@
+/**
+ * GET /api/whales/[address]/logo?chain=...&refresh=1
+ *
+ * Returns the resolved logo for a tracked whale and caches it on the
+ * whales row (logo_url / logo_source / logo_resolved_at). Refresh forces
+ * a re-pull from Arkham/ENS even if the cached row is fresh.
+ *
+ * Public endpoint: logos are not sensitive, and the whale-tracker UI
+ * needs them on every list render. No tier gate.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveWhaleLogo } from "@/lib/whales/logo";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const FRESH_TTL_MS = 7 * 24 * 3600 * 1000; // 7 days
+
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ address: string }> },
+) {
+  const { address } = await ctx.params;
+  if (!address) return NextResponse.json({ error: "address required" }, { status: 400 });
+  const url = req.nextUrl;
+  const chain = url.searchParams.get("chain");
+  const force = url.searchParams.get("refresh") === "1";
+
+  const admin = getSupabaseAdmin();
+  const addrLower = address.toLowerCase();
+
+  if (!force) {
+    const { data } = await admin
+      .from("whales")
+      .select("logo_url, logo_source, logo_resolved_at")
+      .ilike("address", addrLower)
+      .maybeSingle<{
+        logo_url: string | null;
+        logo_source: string | null;
+        logo_resolved_at: string | null;
+      }>();
+    if (data?.logo_url && data.logo_resolved_at) {
+      const age = Date.now() - new Date(data.logo_resolved_at).getTime();
+      if (age < FRESH_TTL_MS) {
+        return NextResponse.json({
+          url: data.logo_url,
+          source: data.logo_source ?? "unknown",
+          cached: true,
+        });
+      }
+    }
+  }
+
+  const resolved = await resolveWhaleLogo(address, chain);
+
+  await admin
+    .from("whales")
+    .update({
+      logo_url: resolved.url,
+      logo_source: resolved.source,
+      logo_resolved_at: new Date().toISOString(),
+    })
+    .ilike("address", addrLower);
+
+  return NextResponse.json({ ...resolved, cached: false });
+}
