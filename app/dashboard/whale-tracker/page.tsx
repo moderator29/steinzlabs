@@ -20,6 +20,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { BackButton } from "@/components/ui/BackButton";
 import { NakaLoader } from "@/components/brand/NakaLoader";
+import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 
 type Action = "buy" | "sell" | "transfer" | null;
 type Size = "10k" | "50k" | "100k" | "500k" | "1m";
@@ -654,6 +655,7 @@ function TopTodayPanel({
               <span className="text-xs font-mono text-slate-600 w-5 text-center">
                 #{i + 1}
               </span>
+              <WhaleAvatar address={w.whale_address} chain={w.chain} size={28} />
               <button
                 type="button"
                 onClick={() => onOpen(w.whale_address, w.chain)}
