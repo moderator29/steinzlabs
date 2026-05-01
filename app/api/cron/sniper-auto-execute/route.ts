@@ -71,23 +71,44 @@ export async function GET(request: NextRequest) {
   }
 
   // Resolve criteria (amount + slippage + user wallet) in a single query.
+  // v2 schema: amount_per_snipe_usd / max_slippage_bps / wallet_addresses[] /
+  // enabled+paused (replaced single `active`). The pre-v2 column names were
+  // returning NULL here, which meant every auto-snipe got $0 and 100bps
+  // default slippage instead of the user's configured values.
   const criteriaIds = Array.from(new Set(matches.map((m) => m.criteria_id)));
   const { data: criteriaRows } = await supabase
     .from('sniper_criteria')
-    .select('id, amount_usd, slippage_bps, wallet_address, active, user_id')
+    .select(
+      'id, amount_per_snipe_usd, max_slippage_bps, wallet_addresses, enabled, paused, user_id',
+    )
     .in('id', criteriaIds);
   const criteriaMap = new Map((criteriaRows ?? []).map((c) => [c.id, c]));
 
   const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error'; reason?: string; pendingTradeId?: string }> = [];
 
   for (const m of matches) {
-    const criteria = criteriaMap.get(m.criteria_id);
-    if (!criteria || !criteria.active) {
+    const criteria = criteriaMap.get(m.criteria_id) as
+      | {
+          id: string;
+          amount_per_snipe_usd: number | null;
+          max_slippage_bps: number | null;
+          wallet_addresses: string[] | null;
+          enabled: boolean | null;
+          paused: boolean | null;
+          user_id: string;
+        }
+      | undefined;
+    if (!criteria || criteria.enabled === false || criteria.paused === true) {
       processed.push({ matchId: m.id, status: 'skipped', reason: 'criteria inactive or missing' });
       continue;
     }
-    if (!criteria.wallet_address) {
+    const walletAddress = (criteria.wallet_addresses ?? [])[0] ?? null;
+    if (!walletAddress) {
       processed.push({ matchId: m.id, status: 'skipped', reason: 'no wallet configured' });
+      continue;
+    }
+    if (!criteria.amount_per_snipe_usd || criteria.amount_per_snipe_usd <= 0) {
+      processed.push({ matchId: m.id, status: 'skipped', reason: 'no snipe amount configured' });
       continue;
     }
 
@@ -102,12 +123,12 @@ export async function GET(request: NextRequest) {
       .from('pending_trades')
       .insert({
         user_id: criteria.user_id,
-        wallet_address: criteria.wallet_address,
+        wallet_address: walletAddress,
         chain: m.matched_chain,
         token_in: 'USDC',  // sniper always funds from USDC; tokenResolver upgrades to address
         token_out: m.matched_token_address,
-        amount_in_usd: criteria.amount_usd,
-        slippage_bps: criteria.slippage_bps ?? 100,
+        amount_in_usd: criteria.amount_per_snipe_usd,
+        slippage_bps: criteria.max_slippage_bps ?? 100,
         source: 'sniper',
         source_id: m.id,
         status: 'queued',

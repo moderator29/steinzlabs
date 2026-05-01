@@ -124,11 +124,9 @@ export function makeEvmAdapter(chain: Extract<SniperChain, "ethereum" | "bsc" | 
       });
 
       const tx = quote.transaction ?? {};
-      const buyAmountWei = BigInt(quote.buyAmount ?? "0");
-      // Output decimals are token-specific. 0x doesn't include them in v2 quote;
-      // expectedOut is reported in raw wei here and converted by the caller when
-      // it knows the token's decimals. UI/relayer already does this lookup.
-      const expectedOutRaw = Number(buyAmountWei);
+      const expectedOutRaw = String(quote.buyAmount ?? "0");
+      // 0x v2 doesn't include destination decimals on the quote — surface null
+      // and let the caller (relayer / UI) resolve via token metadata.
 
       const unsignedTx = JSON.stringify({
         chainId: CHAIN_IDS[chain],
@@ -145,7 +143,8 @@ export function makeEvmAdapter(chain: Extract<SniperChain, "ethereum" | "bsc" | 
       return {
         unsignedTx,
         encoding: "evm-eip1559-json",
-        expectedOut: expectedOutRaw,
+        expectedOutRaw,
+        expectedOutDecimals: null,
         priceImpactPct: parseFloat(quote.estimatedPriceImpact ?? "0"),
         routeLabel: (quote.route?.fills ?? [])
           .map((f: any) => f?.source)
