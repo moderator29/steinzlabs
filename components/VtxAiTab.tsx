@@ -1,9 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { BarChart3, Briefcase, AlertTriangle, Radio, Send, User, Loader2, Globe, Crown, Lock, Plus, Settings, History, X, Clock, TrendingUp, TrendingDown, Shield, ExternalLink, RefreshCw, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+
+// §11 — Replace DexScreener / TradingView iframes with native
+// lightweight-charts. Lazy-loaded so the lightweight-charts bundle
+// (~50KB min+gz) only ships when the inline chart actually renders.
+const AdvancedChart = dynamic(
+  () => import('@/components/trading/AdvancedChart').then(m => m.AdvancedChart),
+  { ssr: false, loading: () => <div className="w-full h-44 rounded-lg border border-white/10 flex items-center justify-center text-[11px] text-gray-500">Loading chart…</div> },
+);
 
 interface ChartInfo {
   type: 'price' | 'bubble' | 'portfolio' | 'holders';
@@ -147,33 +156,6 @@ function saveDailyUsage(usage: { used: number; limit: number; remaining: number 
   try {
     localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
   } catch { /* localStorage unavailable — silently ignore */ }
-}
-
-// Resolve a token symbol to a TradingView-compatible symbol
-function toTvSymbol(token?: string): string {
-  if (!token) return 'BTCUSDT';
-  const map: Record<string, string> = {
-    btc: 'BTCUSDT', bitcoin: 'BTCUSDT',
-    eth: 'ETHUSDT', ethereum: 'ETHUSDT',
-    sol: 'SOLUSDT', solana: 'SOLUSDT',
-    bnb: 'BNBUSDT',
-    base: 'ETHUSDT',
-    avax: 'AVAXUSDT', avalanche: 'AVAXUSDT',
-    matic: 'MATICUSDT', polygon: 'MATICUSDT',
-    arb: 'ARBUSDT', arbitrum: 'ARBUSDT',
-    op: 'OPUSDT', optimism: 'OPUSDT',
-    link: 'LINKUSDT', chainlink: 'LINKUSDT',
-    uni: 'UNIUSDT', uniswap: 'UNIUSDT',
-    doge: 'DOGEUSDT', dogecoin: 'DOGEUSDT',
-    pepe: 'PEPEUSDT',
-    shib: 'SHIBUSDT',
-    ada: 'ADAUSDT', cardano: 'ADAUSDT',
-    dot: 'DOTUSDT', polkadot: 'DOTUSDT',
-    xrp: 'XRPUSDT', ripple: 'XRPUSDT',
-    ltc: 'LTCUSDT', litecoin: 'LTCUSDT',
-    atom: 'ATOMUSDT', cosmos: 'ATOMUSDT',
-  };
-  return map[token.toLowerCase()] || token.toUpperCase() + 'USDT';
 }
 
 // Token card data fetcher + renderer
@@ -353,7 +335,11 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
 }
 
 function InlineChart({ type, token, address, data }: ChartInfo) {
-  // Price chart — DexScreener embed if address, else TradingView mini widget
+  // Price chart — §11: replaced DexScreener and TradingView iframes
+  // with native lightweight-charts via AdvancedChart. The OHLCV API
+  // (/api/market/ohlcv/[chain]/[token]) accepts either a contract
+  // address or a symbol; AdvancedChart shows a graceful error state
+  // if the lookup fails (vs a broken iframe that just hangs).
   if (type === 'price') {
     if (address) {
       const isSolana = !address.startsWith('0x') && address.length >= 32;
@@ -361,27 +347,30 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
       return (
         <div className="mt-2 space-y-2">
           <TokenStatsCard address={address} token={token} />
-          <div className="w-full h-44 rounded-lg overflow-hidden border border-white/10">
-            <iframe
-              src={`https://dexscreener.com/${chain}/${address}?embed=1&theme=dark&trades=0&info=0&chart=1`}
-              className="w-full h-full border-0"
-              loading="lazy"
-              title="Price chart"
+          <div className="w-full rounded-lg overflow-hidden border border-white/10">
+            <AdvancedChart
+              chain={chain}
+              token={address}
+              tf="1h"
+              chartType="candlestick"
+              indicators={{ ema21: true, volume: true }}
+              height={176}
             />
           </div>
         </div>
       );
     }
-    const tvSymbol = toTvSymbol(token);
     return (
       <div className="mt-2 space-y-2">
         <TokenStatsCard token={token} />
-        <div className="w-full h-44 rounded-lg overflow-hidden border border-white/10">
-          <iframe
-            src={`https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=${tvSymbol}&theme=dark&locale=en&dateRange=1D&colorTheme=dark`}
-            className="w-full h-full border-0"
-            loading="lazy"
-            title="Price chart"
+        <div className="w-full rounded-lg overflow-hidden border border-white/10">
+          <AdvancedChart
+            chain="ethereum"
+            token={token ?? 'ETH'}
+            tf="1h"
+            chartType="candlestick"
+            indicators={{ ema21: true, volume: true }}
+            height={176}
           />
         </div>
       </div>
