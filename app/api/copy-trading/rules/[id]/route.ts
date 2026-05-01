@@ -29,11 +29,27 @@ export const PATCH = withTierGate("mini", async (
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await request.json()) as Partial<{ enabled: boolean; max_per_trade_usd: number; daily_cap_usd: number }>;
+  const body = (await request.json()) as Partial<{
+    enabled: boolean;
+    paused: boolean;
+    max_per_trade_usd: number;
+    daily_cap_usd: number;
+    pct_of_whale: number | null;
+    tp_pct: number | null;
+    sl_pct: number | null;
+    max_slippage_bps: number;
+    cooldown_until: string | null;
+  }>;
   const update: Record<string, unknown> = {};
   if (body.enabled !== undefined) update.enabled = body.enabled;
+  if (body.paused !== undefined) update.paused = body.paused;
   if (body.max_per_trade_usd !== undefined) update.max_per_trade_usd = body.max_per_trade_usd;
   if (body.daily_cap_usd !== undefined) update.daily_cap_usd = body.daily_cap_usd;
+  if (body.pct_of_whale !== undefined) update.pct_of_whale = body.pct_of_whale;
+  if (body.tp_pct !== undefined) update.tp_pct = body.tp_pct;
+  if (body.sl_pct !== undefined) update.sl_pct = body.sl_pct;
+  if (body.max_slippage_bps !== undefined) update.max_slippage_bps = body.max_slippage_bps;
+  if (body.cooldown_until !== undefined) update.cooldown_until = body.cooldown_until;
 
   const { error } = await supabase
     .from("user_copy_rules")
