@@ -28,6 +28,14 @@ export async function GET(
   const chain = url.searchParams.get("chain");
   const force = url.searchParams.get("refresh") === "1";
 
+  // chain is now required — without it, both the cache lookup and the
+  // update silently match all whales sharing this address across chains,
+  // which silently clobbers logos on other rows. Better to 400 than to
+  // corrupt data on first call.
+  if (!chain) {
+    return NextResponse.json({ error: "chain query param required" }, { status: 400 });
+  }
+
   const admin = getSupabaseAdmin();
   const addrLower = address.toLowerCase();
 
