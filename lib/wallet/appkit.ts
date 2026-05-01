@@ -33,31 +33,41 @@ import {
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? '';
 
+/** Public flag so call sites can conditionally render AppKit-dependent UI. */
+export const HAS_APPKIT = PROJECT_ID.length > 0;
+
 // Networks the swap surface supports today. Keep in sync with the
 // CHAINS array in app/dashboard/swap/page.tsx — drift = chain switcher
 // shows wallets a chain we can't actually quote.
 export const APPKIT_EVM_NETWORKS = [mainnet, bsc, base, arbitrum, optimism, polygon, avalanche] as const;
 export const APPKIT_NETWORKS = [...APPKIT_EVM_NETWORKS, solana] as const;
 
+// Stable metadata URL — DO NOT read window.location at module init.
+// Doing so caused an SSR/CSR mismatch (server emitted nakalabs.xyz,
+// client emitted whatever origin it was on, including preview URLs).
+// Wallets show a "URL mismatch" warning when the metadata URL differs
+// from the actual page origin, but a stable canonical URL is the
+// correct choice for production deploys.
 const metadata = {
   name: 'Naka Labs',
   description: 'Top-1% on-chain trading terminal',
-  // url MUST match the production origin once nakalabs.xyz is live.
-  // For preview deploys AppKit accepts the request anyway, but the
-  // wallet UI may show a "URL mismatch" warning.
-  url: typeof window !== 'undefined' ? window.location.origin : 'https://nakalabs.xyz',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz',
   icons: ['https://nakalabs.xyz/logo.png'],
 };
 
-// Build the wagmi adapter once, lazily. Calling new WagmiAdapter
-// during module init on the server is fine — it doesn't touch window.
-export const wagmiAdapter = new WagmiAdapter({
-  networks: [...APPKIT_EVM_NETWORKS],
-  projectId: PROJECT_ID,
-  ssr: true,
-});
+// Build the wagmi adapter only when we have a real PROJECT_ID.
+// Constructing WagmiAdapter with an empty projectId triggers a
+// runtime warning AND emits a broken WalletConnect transport that
+// blocks the modal forever. Audit §10.2 — guard at construction.
+export const wagmiAdapter = HAS_APPKIT
+  ? new WagmiAdapter({
+      networks: [...APPKIT_EVM_NETWORKS],
+      projectId: PROJECT_ID,
+      ssr: true,
+    })
+  : null;
 
-export const solanaAdapter = new SolanaAdapter();
+export const solanaAdapter = HAS_APPKIT ? new SolanaAdapter() : null;
 
 // `createAppKit` is idempotent inside this file — it returns the same
 // instance on subsequent imports. We export the instance so callers
@@ -67,7 +77,7 @@ let _appKit: ReturnType<typeof createAppKit> | null = null;
 
 export function getAppKit() {
   if (_appKit) return _appKit;
-  if (!PROJECT_ID) {
+  if (!HAS_APPKIT || !wagmiAdapter || !solanaAdapter) {
     // No project ID configured. Return null and let the caller fall
     // back to the legacy connect path (window.ethereum / window.solana).
     return null;
