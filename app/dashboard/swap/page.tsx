@@ -7,7 +7,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
-import { MetaMaskLogo, PhantomLogo, NakaLogo } from '@/components/wallet/WalletLogo';
+import { MetaMaskLogo, PhantomLogo, NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { isMobile } from '@/lib/utils/detectDevice';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -287,6 +289,16 @@ export default function SwapPage() {
     }
     return 'naka';
   });
+
+  // §10 — Reown AppKit hooks. `open()` triggers the wallet picker
+  // modal (extension + WalletConnect QR + mobile deep-links). The
+  // useAppKitAccount hook fires when the user finishes connecting via
+  // any AppKit-mediated wallet; we mirror that into the existing
+  // metamask/phantom address state below so the rest of the swap
+  // page continues to work without further refactor.
+  const { open: openAppKitModal } = useAppKit();
+  const { address: appKitAddress, isConnected: appKitConnected, caipAddress } = useAppKitAccount();
+  const onMobileDevice = typeof window !== 'undefined' ? isMobile() : false;
   const [metamaskConnected, setMetamaskConnected] = useState(false);
   const [phantomConnected, setPhantomConnected] = useState(false);
   const [metamaskAddress, setMetamaskAddress] = useState('');
@@ -447,6 +459,34 @@ export default function SwapPage() {
       }
     }
   };
+
+  // §10 — When AppKit connects a wallet (via WalletConnect QR or mobile
+  // deep-link), mirror the address into the existing per-wallet state so
+  // the rest of the swap page (quote fetcher, balance loader, sign flow)
+  // continues to use its own state machine. CAIP namespace tells us
+  // whether to treat it as EVM (metamask slot) or Solana (phantom slot).
+  useEffect(() => {
+    if (!appKitConnected || !appKitAddress) return;
+    const ns = caipAddress?.split(':')[0]; // "eip155" | "solana"
+    if (ns === 'solana') {
+      setPhantomAddress(appKitAddress);
+      setPhantomConnected(true);
+      setDetectedWallet('solana');
+      if (walletMode !== 'phantom') {
+        setWalletMode('phantom');
+        localStorage.setItem('swap_wallet_mode', 'phantom');
+        setChain('solana');
+      }
+    } else {
+      setMetamaskAddress(appKitAddress);
+      setMetamaskConnected(true);
+      setDetectedWallet('ethereum');
+      if (walletMode !== 'metamask') {
+        setWalletMode('metamask');
+        localStorage.setItem('swap_wallet_mode', 'metamask');
+      }
+    }
+  }, [appKitAddress, appKitConnected, caipAddress, walletMode]);
 
   // Check if external wallets are already connected on mount + subscribe to events
   useEffect(() => {
@@ -843,7 +883,7 @@ export default function SwapPage() {
               <button onClick={() => setWalletConnectError('')} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" /></button>
             </div>
           )}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             {/* FIX 5A.1: was emoji (🦊 👻); now inline-SVG brand marks. */}
             {([
               { id: 'naka', label: 'Naka Wallet', connected: !!nakaAddress },
@@ -858,6 +898,7 @@ export default function SwapPage() {
                     ? 'bg-[#0A1EFF]/15 text-blue-400 border-[#0A1EFF]/40'
                     : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
                 }`}
+                aria-pressed={walletMode === w.id}
               >
                 {w.id === 'naka' && <NakaLogo size={16} />}
                 {w.id === 'metamask' && <MetaMaskLogo size={16} />}
@@ -871,6 +912,22 @@ export default function SwapPage() {
                 )}
               </button>
             ))}
+
+            {/* §10 — WalletConnect pill: opens the AppKit modal which
+                handles browser extensions, the WC v2 QR (desktop), and
+                mobile deep-links to MetaMask / Phantom (Android/iOS).
+                The connected account is mirrored into metamask/phantom
+                state by the useEffect above; no further wiring needed.
+                On phones we promote this to first place visually. */}
+            <button
+              onClick={() => openAppKitModal()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border bg-[#0A1EFF]/10 text-blue-200 border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/20 hover:text-blue-100 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+              aria-label="Connect via WalletConnect (mobile-friendly)"
+            >
+              <WalletConnectLogo size={16} />
+              {onMobileDevice ? 'Mobile / WalletConnect' : 'WalletConnect'}
+              {appKitConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />}
+            </button>
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
