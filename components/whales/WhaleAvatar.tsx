@@ -43,13 +43,17 @@ export function WhaleAvatar({ address, chain, logoUrl, size = 32, className = ""
 
   useEffect(() => {
     if (resolvedUrl) return;
-    const key = `${chain ?? ""}:${address.toLowerCase()}`;
+    // /api/whales/[address]/logo requires the chain — without it the route
+    // will 400 (it used to silently match all chains, which corrupted
+    // sibling whales). When the caller doesn't know the chain we keep
+    // showing the Dicebear floor rather than firing a guaranteed 400.
+    if (!chain) return;
+    const key = `${chain}:${address.toLowerCase()}`;
     if (inflight.has(key)) return;
     inflight.add(key);
     let cancelled = false;
     const controller = new AbortController();
-    const search = chain ? `?chain=${encodeURIComponent(chain)}` : "";
-    fetch(`/api/whales/${encodeURIComponent(address)}/logo${search}`, {
+    fetch(`/api/whales/${encodeURIComponent(address)}/logo?chain=${encodeURIComponent(chain)}`, {
       signal: controller.signal,
     })
       .then((r) => (r.ok ? r.json() : null))
