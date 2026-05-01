@@ -103,6 +103,7 @@ export default function AdminResearchPage() {
   const [form, setForm]             = useState({ ...BLANK });
   const [search, setSearch]         = useState('');
   const [error, setError]           = useState<string | null>(null);
+  const [formError, setFormError]   = useState<string | null>(null);
   const [editorTab, setEditorTab]   = useState<EditorTab>('write');
   const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,20 +131,25 @@ export default function AdminResearchPage() {
   useEffect(() => { load(); }, [load]);
 
   /* ── Open new / edit ────────────────────────────────────────────────────── */
-  const openNew = () => { setEditing(null); setForm({ ...BLANK }); setEditorTab('write'); setShowForm(true); };
+  const openNew = () => { setEditing(null); setForm({ ...BLANK }); setFormError(null); setEditorTab('write'); setShowForm(true); };
 
   const openEdit = (post: ResearchPost) => {
     setEditing(post.id);
     setForm({ title: post.title, slug: post.slug, summary: post.summary, content: post.content,
               category: post.category, image_url: post.image_url, tags: post.tags,
               published: post.published, published_at: post.published_at });
+    setFormError(null);
     setEditorTab('write');
     setShowForm(true);
   };
 
   /* ── Save ───────────────────────────────────────────────────────────────── */
   const save = async () => {
-    if (!form.title.trim()) return;
+    setFormError(null);
+    if (!form.title.trim()) {
+      setFormError('Title is required.');
+      return;
+    }
     setSaving(true);
     try {
       const body = { ...form, slug: form.slug || slugify(form.title) };
@@ -153,12 +159,15 @@ export default function AdminResearchPage() {
         headers: jsonHdrs(),
         body: JSON.stringify(isNew ? body : { id: editing, ...body }),
       });
-      if (!res.ok) { const d = await res.json() as { error?: string }; throw new Error(d.error ?? 'Save failed'); }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `Save failed (HTTP ${res.status})`);
+      }
       setShowForm(false);
       setEditing(null);
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Save failed');
+      setFormError(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -166,32 +175,46 @@ export default function AdminResearchPage() {
 
   /* ── Toggle publish ─────────────────────────────────────────────────────── */
   const togglePublish = async (post: ResearchPost) => {
+    setError(null);
     const res = await fetch('/api/admin/research', { method: 'PATCH', headers: jsonHdrs(),
       body: JSON.stringify({ id: post.id, published: !post.published }) });
-    if (!res.ok) { alert('Failed to update'); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({})) as { error?: string };
+      setError(d.error ?? `Failed to ${post.published ? 'unpublish' : 'publish'} post.`);
+      return;
+    }
     await load();
   };
 
   /* ── Delete ─────────────────────────────────────────────────────────────── */
   const deletePost = async (post: ResearchPost) => {
     if (!confirm(`Delete "${post.title}"?`)) return;
+    setError(null);
     const res = await fetch(`/api/admin/research?id=${post.id}`, { method: 'DELETE', headers: authHdr() });
-    if (!res.ok) { alert('Delete failed'); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({})) as { error?: string };
+      setError(d.error ?? 'Delete failed.');
+      return;
+    }
     await load();
   };
 
   /* ── Image upload ───────────────────────────────────────────────────────── */
   const handleImageFile = async (file: File) => {
+    setFormError(null);
     setImageUploading(true);
     try {
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch('/api/admin/research/upload', { method: 'POST', headers: authHdr(), body: fd });
-      if (!res.ok) { const d = await res.json() as { error?: string }; throw new Error(d.error ?? 'Upload failed'); }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `Upload failed (HTTP ${res.status})`);
+      }
       const { url } = await res.json() as { url: string };
       setForm(f => ({ ...f, image_url: url }));
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Image upload failed');
+      setFormError(e instanceof Error ? e.message : 'Image upload failed');
     } finally {
       setImageUploading(false);
     }
@@ -434,15 +457,24 @@ export default function AdminResearchPage() {
             </div>
 
             {/* Modal footer */}
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#1E2433] flex-shrink-0">
-              <button onClick={() => setShowForm(false)} className="text-xs text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-[#1E2433] hover:border-[#2E3443] transition-colors">
-                Cancel
-              </button>
-              <button onClick={save} disabled={saving || !form.title.trim()}
-                className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 px-5 py-2 rounded-lg transition-colors">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Post'}
-              </button>
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-[#1E2433] flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                {formError && (
+                  <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 truncate" title={formError}>
+                    {formError}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => { setShowForm(false); setFormError(null); }} className="text-xs text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-[#1E2433] hover:border-[#2E3443] transition-colors">
+                  Cancel
+                </button>
+                <button onClick={save} disabled={saving}
+                  className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 px-5 py-2 rounded-lg transition-colors">
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Post'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

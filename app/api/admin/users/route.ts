@@ -18,21 +18,48 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from('profiles')
-      .select('id, first_name, last_name, username, email, created_at', { count: 'exact' })
+      .select(
+        'id, first_name, last_name, username, email, created_at, tier, tier_expires_at, tier_granted_reason, status, role',
+        { count: 'exact' },
+      )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (search) {
       query = query.or(
-        `username.ilike.%${search}%,email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`
+        `username.ilike.%${search}%,email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`,
       );
     }
 
     const { data: profiles, count, error } = await query;
     if (error) return NextResponse.json({ users: [], total: 0, page, limit });
 
+    // Bug §9.1: the page rendered `last_active`/`is_banned`/`subscription` but the
+    // GET only selected name+email+created_at, so every user looked anonymous and
+    // never-banned. Now we also pull `auth.users.last_sign_in_at` for the rows
+    // we're about to return (bounded by `limit`, so no N+1 against the full
+    // table) and stitch it onto each profile.
+    const ids = (profiles ?? []).map(p => p.id).filter(Boolean) as string[];
+    const lastSignInById = new Map<string, string | null>();
+    if (ids.length > 0) {
+      const lookups = await Promise.all(
+        ids.map(id =>
+          supabase.auth.admin
+            .getUserById(id)
+            .then(r => [id, r.data.user?.last_sign_in_at ?? null] as const)
+            .catch(() => [id, null] as const),
+        ),
+      );
+      for (const [id, ts] of lookups) lastSignInById.set(id, ts);
+    }
+
+    const users = (profiles ?? []).map(p => ({
+      ...p,
+      last_active: lastSignInById.get(p.id) ?? null,
+    }));
+
     return NextResponse.json({
-      users: profiles || [],
+      users,
       total: count || 0,
       page,
       limit,

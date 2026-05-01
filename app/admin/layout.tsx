@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, DollarSign, Users, Activity, BarChart3,
   Crosshair, Shield, Send, Bell, BookOpen, Eye, Landmark,
-  Settings, ScrollText, LifeBuoy, Zap, Search, Tag, Star,
+  Settings, LifeBuoy, Zap, Search, Tag, Star,
   Mail, LogOut, Menu, X, ChevronRight, Lock, FileText,
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
@@ -27,7 +27,6 @@ const NAV_ITEMS = [
   { href: '/admin/whale-submissions',   icon: FileText,        label: 'Whale Submissions' },
   { href: '/admin/treasury',            icon: Landmark,        label: 'Treasury' },
   { href: '/admin/settings',            icon: Settings,        label: 'Settings' },
-  { href: '/admin/logs',                icon: ScrollText,      label: 'Activity Logs' },
   { href: '/admin/support',             icon: LifeBuoy,        label: 'Support' },
   { href: '/admin/feature-usage',       icon: Zap,             label: 'Feature Usage' },
   { href: '/admin/search-logs',         icon: Search,          label: 'Search Logs' },
