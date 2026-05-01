@@ -1,10 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
+
+// §11 — lightweight-charts wrapper for the proof modal. Lazy-loaded
+// so the chart bundle ships only when a user opens the proof drawer.
+const ProofAdvancedChart = dynamic(
+  () => import('@/components/trading/AdvancedChart').then(m => {
+    const C = m.AdvancedChart;
+    return function ProofChart({ chain, token }: { chain: string; token: string }) {
+      return <C chain={chain} token={token} tf="1h" chartType="candlestick" indicators={{ ema21: true, ema50: true, volume: true }} height={400} />;
+    };
+  }),
+  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">Loading chart…</div> },
+);
 
 interface ProofEvent {
   id: string;
@@ -128,13 +141,12 @@ export default function ViewProofPage() {
   const trustColor = event.trustScore >= 70 ? '#10B981' : event.trustScore >= 40 ? '#F59E0B' : '#EF4444';
   const trustLabel = event.trustScore >= 70 ? 'TRUSTED' : event.trustScore >= 40 ? 'CAUTION' : 'DANGER';
   const chainId = event.chain || 'ethereum';
-  const hasPair = !!event.pairAddress;
   const tvSymbol = getTradingViewSymbol(event.tokenSymbol || '', event.chain);
   const useTradingView = !!tvSymbol && isKnownTradingViewSymbol(event.tokenSymbol || '');
-  const dexChartUrl = hasPair
-    ? `https://dexscreener.com/${chainId}/${event.pairAddress}?embed=1&theme=dark&trades=0&info=0`
-    : null;
-  const hasChart = useTradingView || !!dexChartUrl;
+  // §11 — dexChartUrl removed; AdvancedChart fetches its own OHLCV
+  // via /api/market/ohlcv. We still need to know whether to render
+  // the chart container at all (avoids an empty 400px hole).
+  const hasChart = useTradingView || !!event.pairAddress;
 
   const explorerUrl = chainId === 'ethereum'
     ? `https://etherscan.io/tx/${event.txHash}`
@@ -283,16 +295,16 @@ export default function ViewProofPage() {
               <h3 className="font-bold text-sm">Price Chart</h3>
             </div>
             <div style={{ height: 400 }}>
+              {/* §11 — replaced DexScreener iframe with native
+                  AdvancedChart (lightweight-charts). Falls back to
+                  TradingViewChart for known top-50 symbols since the
+                  TV widget is a script-loader (heavier but already
+                  loaded for the trading page) — DexScreener iframe
+                  is unconditionally removed. */}
               {useTradingView && tvSymbol ? (
                 <TradingViewChart symbol={tvSymbol} />
-              ) : dexChartUrl ? (
-                <iframe
-                  src={dexChartUrl}
-                  className="w-full h-full border-0"
-                  allow="clipboard-write"
-                  loading="lazy"
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                />
+              ) : event.pairAddress ? (
+                <ProofAdvancedChart chain={chainId} token={event.pairAddress} />
               ) : null}
             </div>
           </div>
