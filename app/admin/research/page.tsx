@@ -209,12 +209,21 @@ export default function AdminResearchPage() {
       const res = await fetch('/api/admin/research/upload', { method: 'POST', headers: authHdr(), body: fd });
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(d.error ?? `Upload failed (HTTP ${res.status})`);
+        // Translate common backend errors into user-friendly copy.
+        const raw = d.error ?? `Upload failed (HTTP ${res.status})`;
+        const friendly = raw.includes('exceeds 5 MB') ? 'Image is too large — keep it under 5 MB.'
+          : raw.includes('Unsupported file type') ? 'Unsupported file type. Use JPG, PNG, WebP, GIF, or SVG.'
+          : res.status === 401 ? 'Your admin session has expired — sign in again.'
+          : raw;
+        throw new Error(friendly);
       }
       const { url } = await res.json() as { url: string };
       setForm(f => ({ ...f, image_url: url }));
     } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Image upload failed');
+      const msg = e instanceof Error ? e.message : 'Image upload failed';
+      // TypeError: Failed to fetch → network/offline
+      const friendly = msg.toLowerCase().includes('failed to fetch') ? 'Network error — check your connection and try again.' : msg;
+      setFormError(friendly);
     } finally {
       setImageUploading(false);
     }
@@ -239,8 +248,8 @@ export default function AdminResearchPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg transition-colors">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={load} disabled={loading} aria-label="Refresh post list" className="p-2 text-gray-300 hover:text-white border border-[#1E2433] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
           <button onClick={openNew} className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0818CC] rounded-lg px-4 py-2 transition-colors">
             <Plus className="w-3.5 h-3.5" /> New Post
@@ -287,21 +296,23 @@ export default function AdminResearchPage() {
               <div className="flex items-center gap-1 flex-shrink-0">
                 {post.published && (
                   <a href={`/dashboard/research?post=${post.id}`} target="_blank"
-                    className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors" title="View live">
-                    <Globe className="w-3.5 h-3.5" />
+                    aria-label={`View "${post.title}" on the public site`}
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]" title="View live">
+                    <Globe className="w-3.5 h-3.5" aria-hidden="true" />
                   </a>
                 )}
                 <button onClick={() => togglePublish(post)} title={post.published ? 'Unpublish' : 'Publish'}
-                  className={`p-1.5 rounded-lg transition-colors ${post.published ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-gray-500 hover:text-white hover:bg-[#1E2433]'}`}>
-                  {post.published ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  aria-label={post.published ? `Unpublish "${post.title}"` : `Publish "${post.title}"`}
+                  className={`p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] ${post.published ? 'text-emerald-300 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
+                  {post.published ? <Eye className="w-3.5 h-3.5" aria-hidden="true" /> : <EyeOff className="w-3.5 h-3.5" aria-hidden="true" />}
                 </button>
-                <button onClick={() => openEdit(post)} title="Edit"
-                  className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors">
-                  <Edit2 className="w-3.5 h-3.5" />
+                <button onClick={() => openEdit(post)} title="Edit" aria-label={`Edit "${post.title}"`}
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                  <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
-                <button onClick={() => deletePost(post)} title="Delete"
-                  className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
+                <button onClick={() => deletePost(post)} title="Delete" aria-label={`Delete "${post.title}"`}
+                  className="p-1.5 text-gray-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -317,8 +328,8 @@ export default function AdminResearchPage() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E2433] flex-shrink-0">
               <h2 className="text-sm font-bold text-white">{editing ? 'Edit Post' : 'New Post'}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/[0.06]">
-                <X className="w-4 h-4" />
+              <button onClick={() => setShowForm(false)} aria-label="Close editor" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -380,9 +391,9 @@ export default function AdminResearchPage() {
                   {form.image_url && (
                     <div className="mt-2 relative">
                       <img src={form.image_url} alt="preview" className="w-full h-28 object-cover rounded-lg border border-white/10" />
-                      <button onClick={() => setForm(f => ({ ...f, image_url: null }))}
-                        className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/80">
-                        <X className="w-3 h-3" />
+                      <button onClick={() => setForm(f => ({ ...f, image_url: null }))} aria-label="Remove cover image"
+                        className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                        <X className="w-3 h-3" aria-hidden="true" />
                       </button>
                     </div>
                   )}
