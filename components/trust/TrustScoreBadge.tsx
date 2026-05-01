@@ -69,6 +69,10 @@ function bandFor(score: number): Band {
   return "dangerous";
 }
 
+// Module-level dedup so N badges on the same page share one fetch per
+// (chain, address). Same pattern as components/whales/WhaleAvatar.
+const inflight = new Map<string, Promise<ScoreData | null>>();
+
 export function TrustScoreBadge({
   chain,
   address,
@@ -98,16 +102,20 @@ export function TrustScoreBadge({
   useEffect(() => {
     if (data || !chain || !address) return;
     let cancelled = false;
-    fetch(`/api/trust-score/${chain}/${encodeURIComponent(address)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: ScoreData | null) => {
-        if (cancelled || !j) return;
-        setData(j);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const key = `${chain}:${address}`;
+    let promise = inflight.get(key);
+    if (!promise) {
+      promise = fetch(`/api/trust-score/${chain}/${encodeURIComponent(address)}`)
+        .then((r) => (r.ok ? (r.json() as Promise<ScoreData>) : null))
+        .catch(() => null)
+        .finally(() => inflight.delete(key));
+      inflight.set(key, promise);
+    }
+    promise.then((j) => {
+      if (cancelled) return;
+      if (j) setData(j);
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
