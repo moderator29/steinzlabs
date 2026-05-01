@@ -38,8 +38,11 @@ function isRenderableHttpUrl(s: unknown): s is string {
   // <img src=...> only renders absolute http(s) URLs. ipfs://, ar://,
   // data:, and relative paths break the avatar — fall through to ENS or
   // Dicebear instead of letting the broken URL persist on the row.
+  // Trim whitespace because some upstream APIs surface " https://..." with
+  // leading/trailing space and the regex would otherwise pass without
+  // <img> being able to actually load the URL.
   if (typeof s !== "string") return false;
-  return /^https?:\/\//i.test(s);
+  return /^https?:\/\//i.test(s.trim());
 }
 
 async function fromArkham(address: string, chain?: string): Promise<ResolvedLogo | null> {
