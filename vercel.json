@@ -32,6 +32,7 @@
     { "path": "/api/cron/health-watch",               "schedule": "*/15 * * * *" },
     { "path": "/api/cron/publish-scheduled-research", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/whale-backfill-pnl",         "schedule": "*/30 * * * *" },
-    { "path": "/api/cron/sniper-auto-execute",        "schedule": "* * * * *" }
+    { "path": "/api/cron/sniper-auto-execute",        "schedule": "* * * * *" },
+    { "path": "/api/cron/sniper-autosell",            "schedule": "* * * * *" }
   ]
 }

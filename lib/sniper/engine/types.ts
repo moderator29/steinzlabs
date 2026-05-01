@@ -48,8 +48,18 @@ export interface BuildResult {
   unsignedTx: string;
   /** Encoding of unsignedTx — informs the client how to decode/sign. */
   encoding: "solana-versioned-tx-base64" | "evm-eip1559-json" | "ton-boc-base64";
-  /** Estimated output in destination token (decimal, not wei). */
-  expectedOut: number;
+  /**
+   * Estimated output in destination token's smallest unit (lamports / wei /
+   * nanotons), as a decimal string to avoid Number precision loss on amounts
+   * larger than 2^53. Caller divides by 10**expectedOutDecimals to display.
+   */
+  expectedOutRaw: string;
+  /**
+   * Decimals of the destination token. Null when the adapter cannot infer
+   * them (e.g. 0x v2 quote does not include them) — caller resolves via the
+   * platform's token-metadata service before display.
+   */
+  expectedOutDecimals: number | null;
   /** Price impact percentage (0–100). */
   priceImpactPct: number;
   /** Route description for UI/logs (e.g. "Raydium → Orca via Jupiter"). */
