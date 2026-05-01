@@ -267,6 +267,51 @@ In chronological order (most recent first). Verify with `SELECT * FROM supabase_
 
 ---
 
+## 8.5 — Audit gaps from Session B (do these FIRST in Session C)
+
+Session B parallel-agent-audited 6 of the 8 sections it shipped. The two
+gaps below need the same treatment before Session C ships anything new.
+Treat as Session C task #0.
+
+### §2 phase 5 (sniper auto-sell) — NOT parallel-agent-audited
+
+Files to deep-audit:
+- `app/api/cron/sniper-autosell/route.ts`
+- `lib/sniper/autosell.ts`
+- `lib/sniper/priceFeed.ts`
+- migration `phase5_sniper_autosell` (already applied)
+
+Likely findings worth pre-checking:
+
+1. **`entry_price_usd` / `tokens_received` are never populated.**
+   The cron filters `WHERE entry_price_usd IS NOT NULL`, so it's a no-op
+   until the sniper execute path writes those columns at confirm time.
+   Find where `sniper_executions.status` flips to `'confirmed'` and add
+   the entry-price fill there. (`pending_trades` resolution path likely.)
+2. **TON has no price feed.** `priceFeed.ts` returns `null` for TON;
+   the cron correctly skips. But document the no-op so a future agent
+   doesn't think it's a bug.
+3. **Trailing-stop math.** Trailing arms only after price > entry — pure
+   function in `evaluatePosition()`. Re-derive against examples: entry
+   $100, peak $200, trailing 20% → triggers at $160. Spot-check the
+   `effectivePeak` branch when `peakPriceUsd` is null.
+4. **`pending_trades` insert shape.** The auto-sell cron writes
+   `amount_in: pos.tokens_received` (raw token amount), but the manual
+   sniper-auto-execute writes `amount_in_usd: criteria.amount_per_snipe_usd`.
+   Different field names. Verify the relayer / pending-trades pipeline
+   accepts both.
+5. **Solana case-sensitivity** — `pos.token_address` for Solana mints
+   should NOT be lowercased anywhere in the cron path. Audit.
+
+### §1 (auth contrast) and §0 (user upgrades) — Session A, light audit only
+
+These shipped in Session A with no parallel-agent treatment. WCAG AAA
+contrast ratios should be re-verified at runtime (Lighthouse), and the
+two comp-Max users should be re-checked in Supabase to confirm their
+`tier_expires_at` is still 2125-01-01 and roles are still `user`.
+
+---
+
 ## 9. What's left — DEEP detail per remaining section
 
 ### §9 — Admin Panel Fixes
@@ -287,6 +332,25 @@ Spec asks for three things:
 ### §10 — Swap Page Wallet Connection
 
 This is the section Session B punted on intentionally. Read carefully.
+
+**Before any code:** Phantomfcalls needs to set up a Reown / WalletConnect
+project. Free, ~2 minutes:
+
+1. Go to **https://cloud.reown.com** (Reown is the rebrand of
+   WalletConnect Cloud — same product, same project IDs).
+2. Sign up with GitHub or email.
+3. Click **Create Project** → name it "Steinz Labs" or "Naka Labs".
+4. Copy the **Project ID** (32-char hex).
+5. Add to Vercel for Production / Preview / Development:
+   ```bash
+   vercel env add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+   ```
+6. Add the same to local `.env.local`.
+7. In the Reown project settings, verify the production domain
+   (`nakalabs.xyz` or whatever it ends up being) under **Domains** so
+   origin-restricted requests work in prod.
+
+Free tier = 10k MAU, plenty for launch.
 
 **Spec verbatim:**
 
