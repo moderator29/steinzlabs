@@ -13,10 +13,14 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check } from 'lucide-react';
+import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
 
 export interface SwapCardData {
   fromToken: string;
   toToken: string;
+  /** Optional contract addresses — when set, receiver shows a §7 Naka Trust Score. */
+  fromTokenAddress?: string;
+  toTokenAddress?: string;
   fromAmount: string;
   toAmount: string;
   rate: string;
@@ -310,7 +314,17 @@ export function SwapCard({ swap, walletAddress }: Props) {
         <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-white/[0.04]">
           <TokenGlyph symbol={quote.toToken} />
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-wider text-gray-500">You receive</div>
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">You receive</div>
+              {quote.toTokenAddress && quote.chain && (
+                <TrustScoreBadge
+                  chain={quote.chain}
+                  address={quote.toTokenAddress}
+                  size="sm"
+                  showLabel={false}
+                />
+              )}
+            </div>
             <div className="text-base font-bold text-white font-mono leading-tight">
               {stage === 'quoting' ? (
                 <span className="inline-flex items-center gap-1.5 text-gray-500">
@@ -414,10 +428,11 @@ export function SwapCard({ swap, walletAddress }: Props) {
           <button
             onClick={handleSign}
             disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
-            className="w-full py-3 rounded-xl bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+            className="naka-button-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ paddingTop: 12, paddingBottom: 12 }}
           >
             {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}
-            {stage === 'ready' && (<><ArrowDownUp size={14} /> Sign &amp; Swap</>)}
+            {stage === 'ready' && (<><ArrowDownUp size={14} /> Confirm Swap</>)}
             {stage === 'signing' && (<><Loader2 size={14} className="animate-spin" /> Confirm in your wallet…</>)}
             {stage === 'error' && (<><ArrowDownUp size={14} /> Retry</>)}
           </button>
