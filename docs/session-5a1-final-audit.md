@@ -292,5 +292,3 @@ e398277 Phase 5 (subset): VTX send button + real username greeting
 | 10 Market Intelligence | ✅ | 10/10 | Fuses Phases 6/7/8 into per-token brief with AI thesis |
 
 **Overall session: 9.7/10.** One live seed count miss, one integration bug self-caught and fixed in the audit pass. Everything typecheck-clean, every commit pushed, every phase ships real data paths and polished UI.
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
