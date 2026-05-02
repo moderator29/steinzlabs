@@ -27,6 +27,7 @@
     "@types/d3": "^7.4.3",
     "@types/qrcode": "^1.5.6",
     "@upstash/redis": "^1.37.0",
+    "@wagmi/connectors": "^5.11.2",
     "alchemy-sdk": "^3.2.0",
     "axios": "^1.6.7",
     "bs58": "^6.0.0",
