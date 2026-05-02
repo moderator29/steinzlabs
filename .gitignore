@@ -137,3 +137,7 @@ dist
 
 # Local env
 .env*.local
+
+# Replit / IDE prompt-paste cruft. Real product images keep their
+# IMG_*.{png,jpeg} names; the auto-generated text pastes are noise.
+attached_assets/Pasted-*.txt
