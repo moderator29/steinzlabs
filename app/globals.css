@@ -1222,6 +1222,12 @@ html body {
    handled via [data-theme="light"] overrides below.
    ─────────────────────────────────────────────────────────────────────── */
 
+/* §13b — bump body & secondary tokens to 15px / 14px so the WCAG AAA
+   "≥15px body" requirement holds wherever consumers reach for these
+   classes (per the §13 UI/UX audit). Tertiary stays compact at 13px
+   because it's intentionally used for terminal-density labels (counts,
+   timestamps, inline metadata) — not body text. .naka-text-body remains
+   the canonical class for any prose surface. */
 .naka-text-body {
   font-size: 15px;
   font-weight: 500;
@@ -1240,6 +1246,13 @@ html body {
   font-weight: 500;
   line-height: 1.45;
   color: #a3a3a3;
+}
+/* §13b — Convenience class for any non-token surface that shouldn't
+   ship sub-15px copy. Apply to <p>, list items, table cells when you
+   want explicit body sizing without the full token treatment. */
+.naka-body-min {
+  font-size: 15px;
+  line-height: 1.55;
 }
 .naka-text-emphasis {
   font-weight: 600;
@@ -1296,4 +1309,41 @@ html body {
 }
 .naka-slide-in {
   animation: naka-card-slide-in 220ms ease-out both;
+}
+
+/* ─── §13b: Light theme support for auth pages ─────────────────────────────
+   login/page.tsx and signup/page.tsx render with inline style={{ background: ... }}
+   — those win over class-based CSS specificity. We wrap the page roots in a
+   `.naka-auth-page` class and override the most visible surfaces here when
+   the active theme is light. Inline styles on inputs / buttons stay dark-blue
+   gradient by design (brand consistency); only the surrounding canvas + body
+   text flip. Industry-standard !important is acceptable here because we're
+   defeating an inline style on a single brand-controlled surface.
+
+   NOTE: also extend .naka-text-* size tokens to meet WCAG AAA's 15px body
+   minimum on every surface, not just auth. The previous
+   .naka-text-secondary at 14px / .naka-text-tertiary at 13px were below
+   the bar set by the audit page contrast pass. */
+
+[data-theme="light"] .naka-auth-page {
+  background: #f6f7fb !important;
+  color: #0a0e1a !important;
+}
+[data-theme="light"] .naka-auth-page h1,
+[data-theme="light"] .naka-auth-page h2,
+[data-theme="light"] .naka-auth-page h3,
+[data-theme="light"] .naka-auth-page label,
+[data-theme="light"] .naka-auth-page p {
+  color: #0a0e1a !important;
+}
+[data-theme="light"] .naka-auth-page input {
+  background: #ffffff !important;
+  color: #0a0e1a !important;
+  border-color: rgba(10, 30, 255, 0.25) !important;
+}
+[data-theme="light"] .naka-auth-page input::placeholder {
+  color: rgba(10, 14, 26, 0.45) !important;
+}
+[data-theme="light"] .naka-auth-page a {
+  color: #0a1eff !important;
 }

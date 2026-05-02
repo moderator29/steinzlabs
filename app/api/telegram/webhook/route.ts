@@ -1,7 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendTelegramMessage, type TelegramUpdate } from "@/lib/telegram/client";
+import { sendTelegramMessage, answerCallbackQuery, type TelegramUpdate } from "@/lib/telegram/client";
 import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
+
+// §13b — per-user sliding-window rate limiter. 10 commands per 60s per
+// chat_id is generous for human use, harsh for an attacker spamming
+// /price in a tight loop. In-memory Map is correct here because the
+// Telegram webhook runs as a single Vercel function (no cross-instance
+// coordination needed for this scale; if we hit multi-instance fanout
+// later, swap for the Upstash Redis path used by /api/vtx-ai).
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const userHits = new Map<number, number[]>();
+function rateLimited(chatId: number): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const recent = (userHits.get(chatId) ?? []).filter(t => t > cutoff);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    userHits.set(chatId, recent); // trim
+    return true;
+  }
+  recent.push(now);
+  userHits.set(chatId, recent);
+  // Garbage-collect cold chat_ids opportunistically — keeps the Map
+  // bounded under serverless memory limits.
+  if (userHits.size > 5000) {
+    for (const [k, v] of userHits) {
+      if (v[v.length - 1] < cutoff) userHits.delete(k);
+    }
+  }
+  return false;
+}
 import {
   handlePrice,
   handleChart,
@@ -125,10 +154,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
+  // §13b — handle inline-button taps. Buttons like "❓ All commands"
+  // (callback_data: "help") were defined but had no server-side
+  // handler — clicks silently no-op'd and Telegram showed a stale
+  // loading spinner forever. Acknowledge the callback (dismiss
+  // spinner) and route known data values to the right reply.
+  if (update.callback_query) {
+    const cq = update.callback_query;
+    const cbChatId = cq.message?.chat.id;
+    if (cbChatId == null) {
+      // Inline-mode callbacks have no message.chat — just ack and bail.
+      await answerCallbackQuery(cq.id);
+      return NextResponse.json({ ok: true });
+    }
+    if (rateLimited(cbChatId)) {
+      await answerCallbackQuery(cq.id, { text: "Slow down — try again in a moment.", show_alert: false });
+      return NextResponse.json({ ok: true });
+    }
+    const data = cq.data ?? "";
+    if (data === "help") {
+      const linked = await getLinkedUser(cbChatId);
+      await answerCallbackQuery(cq.id);
+      await sendHelp(cbChatId, linked);
+    } else {
+      // Unknown payload — still ack so the spinner clears, then noop.
+      await answerCallbackQuery(cq.id);
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const msg = update.message;
   if (!msg?.text) return NextResponse.json({ ok: true });
 
   const chatId = msg.chat.id;
+  if (rateLimited(chatId)) {
+    // Don't reply with another message — that compounds the spam.
+    // Telegram retries on 429 by design, but with backoff.
+    return NextResponse.json({ ok: true }, { status: 429 });
+  }
   const text = msg.text.trim();
   const cmd = parseCmd(text);
   if (!cmd) return NextResponse.json({ ok: true });
