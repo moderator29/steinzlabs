@@ -1,9 +1,32 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { X, Loader2, Zap, Shield, Target, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
+
+// §11 — lazy-loaded so the chart bundle only ships when the user
+// actually opens the modal AND enters a token address.
+const AdvancedChart = dynamic(
+  () => import('@/components/trading/AdvancedChart').then(m => m.AdvancedChart),
+  { ssr: false, loading: () => <div className="h-[180px] rounded-lg border border-white/10 flex items-center justify-center text-[11px] text-white/50">Loading chart…</div> },
+);
+
+// Detect EVM (0x-prefixed, 42 chars) vs Solana (base58, 32-44 chars,
+// no 0x prefix). Same pattern used in app/dashboard/swap/page.tsx so
+// resolution stays consistent across the platform.
+function detectChainFromAddress(addr: string, fallback: SniperChain): string {
+  const t = addr.trim();
+  if (/^0x[a-fA-F0-9]{40}$/.test(t)) return fallback === 'solana' ? 'ethereum' : fallback;
+  if (t.length >= 32 && t.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(t)) return 'solana';
+  return fallback;
+}
+
+function isPlausibleAddress(addr: string): boolean {
+  const t = addr.trim();
+  return /^0x[a-fA-F0-9]{40}$/.test(t) || (t.length >= 32 && t.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(t));
+}
 
 interface Props {
   onClose: () => void;
@@ -48,6 +71,16 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userWallets, setUserWallets] = useState<{ address: string; chain?: string; label?: string }[]>([]);
+
+  // §11 audit fix: debounce tokenAddress before passing to AdvancedChart so
+  // we don't fire an OHLCV request on every keystroke (40 chars typed at
+  // 50ms cadence = ~30 wasted /api/market/ohlcv calls). 400ms feels live
+  // for paste, slow enough to skip mid-type churn.
+  const [debouncedTokenAddress, setDebouncedTokenAddress] = useState(tokenAddress);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedTokenAddress(tokenAddress), 400);
+    return () => clearTimeout(t);
+  }, [tokenAddress]);
 
   // Pull user's wallets so the multi-wallet picker isn't a free-text field
   // (typing the wrong address into a sniper config that auto-executes is
@@ -213,13 +246,35 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             </Field>
           )}
           {trigger === 'price_target' && (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Token Address" required>
-                <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)} placeholder="0x... or mint" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none font-mono text-sm transition" />
-              </Field>
-              <Field label="Buy When ≤ (USD)" required>
-                <input type="number" value={priceTarget} onChange={e => setPriceTarget(e.target.value)} placeholder="0.0001" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
-              </Field>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Token Address" required>
+                  <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)} placeholder="0x... or mint" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none font-mono text-sm transition" />
+                </Field>
+                <Field label="Buy When ≤ (USD)" required>
+                  <input type="number" value={priceTarget} onChange={e => setPriceTarget(e.target.value)} placeholder="0.0001" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
+                </Field>
+              </div>
+              {/* §11 — Live preview chart so the user can sanity-check the
+                  price target against the actual token. Only renders when
+                  the address looks plausible (EVM or base58); otherwise the
+                  modal stays clean. AdvancedChart handles its own loading
+                  + error states (gracefully shows "Failed to load chart"
+                  when the OHLCV API can't resolve the token). */}
+              {isPlausibleAddress(debouncedTokenAddress) && (
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-white/50 mb-1.5">Token preview</div>
+                  <AdvancedChart
+                    chain={detectChainFromAddress(debouncedTokenAddress, chains[0] ?? 'ethereum')}
+                    token={debouncedTokenAddress.trim()}
+                    tf="1h"
+                    chartType="candlestick"
+                    indicators={{ ema21: true, volume: true }}
+                    height={180}
+                    className="rounded-lg border border-white/10 overflow-hidden"
+                  />
+                </div>
+              )}
             </div>
           )}
 

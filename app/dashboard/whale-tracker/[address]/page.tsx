@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
@@ -8,6 +9,13 @@ import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 import { toast } from "sonner";
+
+// §11 — lazy-load the chart so the lightweight-charts bundle (~50KB)
+// only ships when a user opens the Activity tab.
+const WhaleActivityChart = dynamic(() => import("@/components/whales/WhaleActivityChart"), {
+  ssr: false,
+  loading: () => <div className="h-[220px] rounded-xl border border-white/10 flex items-center justify-center text-xs text-slate-500">Loading chart…</div>,
+});
 
 type Tab = "overview" | "activity" | "tokens" | "counterparties" | "copy";
 
@@ -288,7 +296,12 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
         )}
 
         {tab === "activity" && (
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
+          <div className="space-y-3">
+            {/* §11 — Cumulative trade-volume area chart fed by data.activity.
+                Renders an empty-state stub when fewer than 2 USD-valued trades
+                exist, so we don't show a flat line that looks broken. */}
+            <WhaleActivityChart activity={data.activity} />
+            <div className="rounded-xl border border-slate-800 overflow-hidden">
             {data.activity.length === 0 ? (
               <div className="py-12 text-center text-sm text-slate-500">
                 No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
@@ -319,6 +332,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 </tbody>
               </table>
             )}
+            </div>
           </div>
         )}
 
