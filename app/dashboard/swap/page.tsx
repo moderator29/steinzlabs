@@ -748,21 +748,20 @@ export default function SwapPage() {
         // AES-GCM decryption for stored keys
         let pk: string;
         try {
-          if (storedWallet.iv) {
-            // New AES-GCM format
-            const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
-            const cryptoKey = await crypto.subtle.importKey('raw', keyMaterial, 'AES-GCM', false, ['decrypt']);
-            const iv = Uint8Array.from(atob(storedWallet.iv), c => c.charCodeAt(0));
-            const encrypted = Uint8Array.from(atob(storedWallet.encryptedKey), c => c.charCodeAt(0));
-            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
-            pk = new TextDecoder().decode(decrypted);
-          } else {
-            // Legacy XOR format — decrypt and warn
-            const text = atob(storedWallet.encryptedKey);
-            let r = '';
-            for (let i = 0; i < text.length; i++) r += String.fromCharCode(text.charCodeAt(i) ^ pwd.charCodeAt(i % pwd.length));
-            pk = r;
+          if (!storedWallet.iv) {
+            // Legacy XOR format removed (§1 Critical) — XOR with a password
+            // keystream is cryptographically broken. User must re-import the
+            // seed phrase to upgrade the at-rest format to AES-256-GCM.
+            throw new Error(
+              'This wallet uses an outdated encryption format. Please re-import the seed phrase from the Wallet page to upgrade to AES-256-GCM.',
+            );
           }
+          const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
+          const cryptoKey = await crypto.subtle.importKey('raw', keyMaterial, 'AES-GCM', false, ['decrypt']);
+          const iv = Uint8Array.from(atob(storedWallet.iv), c => c.charCodeAt(0));
+          const encrypted = Uint8Array.from(atob(storedWallet.encryptedKey), c => c.charCodeAt(0));
+          const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
+          pk = new TextDecoder().decode(decrypted);
         } catch {
           throw new Error('Failed to decrypt wallet key. Wrong password or corrupted data.');
         }

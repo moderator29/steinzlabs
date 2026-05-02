@@ -1,4 +1,5 @@
 import 'server-only';
+import { addressesEqual } from '@/lib/utils/addressNormalize';
 
 /**
  * 0x Protocol Service Layer
@@ -36,7 +37,9 @@ export const ZX_CHAIN_IDS: Record<string, number> = {
 const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 export function isNativeToken(address: string): boolean {
-  return address.toLowerCase() === NATIVE_TOKEN.toLowerCase()
+  // 0x is always EVM; the chain hint isn't critical here, but going through
+  // addressesEqual keeps the comparison consistent with the rest of the codebase.
+  return addressesEqual(address, NATIVE_TOKEN, 'ethereum')
     || address === '0x0000000000000000000000000000000000000000';
 }
 

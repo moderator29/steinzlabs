@@ -328,10 +328,12 @@ function tagToolsForCache(tools: Anthropic.Tool[]): Anthropic.Tool[] {
   if (tools.length === 0) return tools;
   // Mark only the last tool — Anthropic caches everything up to and
   // including the cache_control breakpoint, so a single tag covers
-  // the whole tool array as the cached prefix.
+  // the whole tool array as the cached prefix. cache_control is a
+  // first-class field on Anthropic.Tool in current SDK versions, so
+  // no type assertion is needed here.
   const head = tools.slice(0, -1);
   const last = tools[tools.length - 1];
-  return [...head, { ...last, cache_control: { type: 'ephemeral' } } as Anthropic.Tool];
+  return [...head, { ...last, cache_control: { type: 'ephemeral' } }];
 }
 
 export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Message> {

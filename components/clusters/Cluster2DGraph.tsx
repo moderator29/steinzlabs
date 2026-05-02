@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 interface GraphMember {
   address: string;
@@ -59,7 +60,7 @@ export function Cluster2DGraph({ rootAddress, members, edges, height = 480 }: Cl
       id: m.address,
       label: m.label ?? `${m.address.slice(0, 6)}…${m.address.slice(-4)}`,
       score: m.whale_score,
-      isRoot: m.address.toLowerCase() === rootAddress.toLowerCase(),
+      isRoot: addressesEqual(m.address, rootAddress),
       verified: m.verified,
     }));
     const links: D3Link[] = edges.map((e) => ({

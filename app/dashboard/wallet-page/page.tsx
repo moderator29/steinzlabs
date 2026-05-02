@@ -170,19 +170,18 @@ async function encryptPrivateKey(plaintext: string, password: string): Promise<s
 }
 
 async function decryptPrivateKey(encoded: string, password: string): Promise<string> {
-  // Backward compatibility — old XOR format had no JSON wrapper
   let parsed: { v?: number; data: string; iv: string; salt: string };
   try {
     parsed = JSON.parse(encoded);
     if (parsed.v !== 2) throw new Error('Unsupported encryption version');
   } catch {
-    // Legacy XOR-encrypted wallet — decrypt with old algorithm
-    const text = atob(encoded);
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-      result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
-    }
-    return result;
+    // Legacy XOR fallback removed (§1 Critical) — XOR with a password
+    // keystream is cryptographically broken (known-plaintext recovery).
+    // Affected wallets must be re-imported from the seed phrase to
+    // upgrade the at-rest format to AES-256-GCM (PBKDF2/100k/SHA-256).
+    throw new Error(
+      'This wallet uses an outdated encryption format. Please re-import the seed phrase to upgrade to AES-256-GCM.',
+    );
   }
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { generateVerifyToken } from '@/lib/authTokens';
+import { validateVerifyToken } from '@/lib/authTokens';
 import { getSiteUrl } from '@/lib/siteUrl';
 
 export async function GET(request: Request) {
@@ -20,8 +20,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${getSiteUrl()}/login?error=user_not_found`);
     }
 
-    const expectedToken = await generateVerifyToken(userId, user.email || '');
-    if (token !== expectedToken) {
+    const ok = await validateVerifyToken(userId, token);
+    if (!ok) {
       return NextResponse.redirect(`${getSiteUrl()}/login?error=invalid_token`);
     }
 
