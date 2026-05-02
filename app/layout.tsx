@@ -4,6 +4,7 @@ import "@/styles/rtl.css";
 import AuthProvider from "@/components/providers/AuthProvider";
 import { ToastProvider } from "@/components/Toast";
 import { WalletProvider } from "@/context/WalletContext";
+import { WalletProviders as AppKitWalletProviders } from "./wallet-providers";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import AutoTranslate from "@/components/i18n/AutoTranslate";
@@ -81,13 +82,22 @@ export default function RootLayout({
           <AutoTranslate />
           <AuthProvider>
             <WalletProvider>
-              <ToastProvider>
-                <Suspense fallback={null}>
-                  <PostHogProvider>
-                    {children}
-                  </PostHogProvider>
-                </Suspense>
-              </ToastProvider>
+              {/* AppKit (Reown / WalletConnect v2) lives INSIDE the legacy
+                  custom WalletProvider so existing useWallet() consumers
+                  keep working. New surfaces (swap page) trigger the AppKit
+                  modal directly via useAppKit(); a thin bridge in
+                  components/wallet/AppKitBridge.tsx mirrors AppKit's
+                  connected account back into the legacy localStorage
+                  contract so legacy code reads it transparently. */}
+              <AppKitWalletProviders>
+                <ToastProvider>
+                  <Suspense fallback={null}>
+                    <PostHogProvider>
+                      {children}
+                    </PostHogProvider>
+                  </Suspense>
+                </ToastProvider>
+              </AppKitWalletProviders>
             </WalletProvider>
           </AuthProvider>
         </ThemeProvider>
