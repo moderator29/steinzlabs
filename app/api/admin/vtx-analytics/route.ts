@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       .from('vtx_conversations')
       .select('user_id')
       .gte('created_at', startOfMonth)
-      .limit(10000);
+      .limit(2000) // §13 audit fix: was 10000 — DoS-class blast;
 
     if (rowsErr) {
       console.error('[admin/vtx-analytics GET] Top users error:', rowsErr);
