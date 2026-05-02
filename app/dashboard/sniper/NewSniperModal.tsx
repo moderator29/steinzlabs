@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Zap, Shield, Target, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
+import { SecurityGate } from '@/components/security/SecurityGate';
 
 interface Props {
   onClose: () => void;
@@ -338,14 +339,27 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         {/* Footer */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 sticky bottom-0 bg-[#0a0d18]">
           <button onClick={onClose} className="px-4 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 font-semibold text-sm hover:bg-white/[0.1] transition">Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave || saving}
-            className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/30"
+          {/* §12 — Pre-create security gate. Only fires for the price_target
+              trigger because that's the only path with a known token at
+              criteria-creation time. Other triggers (new_pair / whale_buy /
+              manual) discover the token at webhook-match time, where
+              relayer.ts already runs the GoPlus + trust-score check on the
+              actual trade. SecurityGate fail-opens for missing token, so
+              non-price-target paths render the bare button. */}
+          <SecurityGate
+            action="snipe"
+            chain={trigger === 'price_target' ? (chains[0] ?? undefined) : undefined}
+            token={trigger === 'price_target' ? tokenAddress.trim() : undefined}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {saving ? 'Saving…' : 'Create Sniper'}
-          </button>
+            <button
+              onClick={handleSave}
+              disabled={!canSave || saving}
+              className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/30"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {saving ? 'Saving…' : 'Create Sniper'}
+            </button>
+          </SecurityGate>
         </div>
       </div>
     </div>
