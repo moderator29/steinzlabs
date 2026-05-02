@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { TrendingUp, TrendingDown, Bell, BarChart3, Eye, ShoppingCart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
 
 export interface TokenCardData {
   symbol: string;
@@ -18,6 +19,11 @@ export interface TokenCardData {
   fdv?: number;
   contractAddress?: string;
   chain?: string;
+  /**
+   * Legacy A–F grade. Still accepted for back-compat but the card now
+   * renders the §7 Naka Trust Score (numeric 0–100) when contractAddress
+   * + chain are present. Drop this field on new call sites.
+   */
   trustScore?: 'A' | 'B' | 'C' | 'D' | 'F';
 }
 
@@ -102,12 +108,21 @@ export function TokenCard({ token }: { token: TokenCardData }) {
             </div>
           )}
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-white font-bold text-sm">{token.symbol}</span>
-              {trust && (
-                <span className={`text-[9px] font-bold px-1 py-0.5 rounded border ${trust.color}`}>
-                  {trust.label}
-                </span>
+              {token.contractAddress && token.chain ? (
+                <TrustScoreBadge
+                  chain={token.chain}
+                  address={token.contractAddress}
+                  size="sm"
+                  showLabel={false}
+                />
+              ) : (
+                trust && (
+                  <span className={`text-[9px] font-bold px-1 py-0.5 rounded border ${trust.color}`}>
+                    {trust.label}
+                  </span>
+                )
               )}
             </div>
             <span className="text-gray-500 text-xs">{token.name}</span>
