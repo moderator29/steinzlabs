@@ -1,6 +1,7 @@
 "use client";
 
 import { getWalletSessionKey } from "./walletSession";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 /**
  * Inline signer for pending trades. Called from the PendingTradesBanner when
@@ -195,9 +196,7 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
   if (!storedJson) throw new Error("No built-in wallet found");
   const wallets = JSON.parse(storedJson) as StoredBuiltinWallet[];
   const activeAddr = localStorage.getItem("steinz_active_wallet_address") ?? "";
-  const wallet = wallets.find(
-    (w) => w.address?.toLowerCase() === activeAddr.toLowerCase(),
-  );
+  const wallet = wallets.find((w) => w.address && addressesEqual(w.address, activeAddr));
   if (!wallet) throw new Error("Active built-in wallet not found");
   if (!wallet.address) throw new Error("Built-in wallet missing address");
 
