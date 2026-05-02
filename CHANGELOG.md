@@ -8,6 +8,17 @@ the top.
 
 ## [Unreleased]
 
+### Documentation pass (May 2026)
+
+- `docs/feature-documentation.md` — every live feature with tier requirement, how-it-works, data sources, limitations, and a feature × tier matrix at the bottom.
+- `docs/pricing.md` — five tiers (Free / Mini / Pro / Max / NakaCult) with concrete numeric limits and support response targets.
+- `docs/slash-commands.md` — Telegram (27 commands) + VTX in-app slash command reference.
+- `docs/whitepaper.md` — markdown source-of-truth for the public whitepaper.
+- `docs/supabase-architecture.md` — 117 tables grouped by domain, RLS convention, function inventory, cron-job overview, webhook table, backup strategy.
+- `docs/security-audit-2026-05-02.md` — consolidated red-team report. 14 Critical findings with exploitation / impact / fix / commit references, threat model, attack chains, compliance notes (GDPR / CCPA / SOC 2 / financial regs).
+- `docs/docs-audit-2026-05-02.md` — inventory of every doc with status (current / frozen / stale / missing) and action.
+- README documentation index extended to link all new files.
+
 ### Repository polish (chore/repo-polish-files)
 
 - Add `CONTRIBUTING.md` with branch / commit / DB / security guidelines.
