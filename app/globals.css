@@ -1,3 +1,13 @@
+/* Next 16 / Turbopack: @import statements MUST come before any other
+   CSS rule (CSS spec — only @charset is allowed before). The previous
+   ordering put @import after @tailwind and @keyframes, which Webpack
+   tolerated but Turbopack (Next 16's default bundler) rejects with
+   "Parsing CSS source code failed". Moved to top here. A future cleanup
+   should migrate to next/font/google for `Inter` and `JetBrains Mono`
+   — that avoids the Google Fonts request blocking first paint and is
+   the modern Next pattern. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,8 +20,6 @@
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-10px); }
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   --primary: #0A1EFF;
