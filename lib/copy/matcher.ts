@@ -25,6 +25,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { queueTelegramNotification } from "@/lib/telegram/notify";
+import { normalizeAddress, isEvmChain } from "@/lib/utils/addressNormalize";
 
 export interface CopyEvent {
   whale_address: string;
@@ -88,18 +89,25 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
   if (!event.token_address) return out;
 
   const admin = getSupabaseAdmin();
-  const whaleLower = event.whale_address.toLowerCase();
+  // §13 audit fix: chain-aware address normalization (handoff §6).
+  // Solana addresses are base58 case-sensitive — `.ilike()` would let
+  // an attacker register a whale rule for "AbCd…" and match a totally
+  // different on-chain whale "abcd…". For Solana use exact .eq().
   const chainLower = event.chain.toLowerCase();
+  const whaleKey = normalizeAddress(event.chain, event.whale_address);
 
-  const { data: rules } = await admin
+  let rulesQuery = admin
     .from("user_copy_rules")
     .select(
       "user_id,whale_address,chain,mode,max_per_trade_usd,pct_of_whale," +
         "daily_cap_usd,chains_allowed,tokens_blacklist,min_liquidity_usd," +
         "max_slippage_bps,cooldown_until,paused,enabled,wallet_address",
     )
-    .eq("enabled", true)
-    .ilike("whale_address", whaleLower);
+    .eq("enabled", true);
+  rulesQuery = isEvmChain(event.chain)
+    ? rulesQuery.ilike("whale_address", whaleKey)
+    : rulesQuery.eq("whale_address", whaleKey);
+  const { data: rules } = await rulesQuery;
 
   const matches = (rules ?? []) as unknown as CopyRuleRow[];
   if (matches.length === 0) return out;
@@ -107,13 +115,16 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
   const userIds = Array.from(new Set(matches.map((r) => r.user_id)));
 
   // Per-user spend today, for daily_cap enforcement.
+  // §13 audit fix: 'alert' rows are intent signals only — the user
+  // hasn't actually spent USDC yet. Counting them toward the daily
+  // cap means 10 alerts can block real oneclick / auto_copy trades.
   const dayAgoIso = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { data: spendRows } = await admin
     .from("user_copy_trades")
     .select("user_id, amount_usd")
     .in("user_id", userIds)
     .gte("created_at", dayAgoIso)
-    .in("status", ["pending", "success", "alert"]);
+    .in("status", ["pending", "success"]);
   const spentMap = new Map<string, number>();
   for (const s of (spendRows ?? []) as { user_id: string; amount_usd: number | null }[]) {
     spentMap.set(s.user_id, (spentMap.get(s.user_id) ?? 0) + Number(s.amount_usd ?? 0));
@@ -221,7 +232,9 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
           `\nSize you'd copy: $${sizeUsd.toFixed(2)}\nTap to confirm.`,
         url:
           `/dashboard/copy-trading?action=${isSell ? "sell" : "buy"}` +
-          `&token=${event.token_address}&chain=${event.chain}&tx=${event.tx_hash}`,
+          `&token=${encodeURIComponent(event.token_address)}` +
+          `&chain=${encodeURIComponent(event.chain)}` +
+          `&tx=${encodeURIComponent(event.tx_hash)}`,
       });
       if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
       out.alerted++;

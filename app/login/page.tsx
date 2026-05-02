@@ -365,11 +365,12 @@ function LoginPageInner() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* Email */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-[1.5px] mb-2"
+              <label htmlFor="login-identifier" className="block text-[11px] font-bold uppercase tracking-[1.5px] mb-2"
                 style={{ color: '#E5E5E5' }}>EMAIL</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.6)' }} />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" aria-hidden="true" style={{ color: 'rgba(255,255,255,.6)' }} />
                 <input
+                  id="login-identifier"
                   type="text"
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setErrors({}); setNeedsVerification(false); }}
@@ -378,24 +379,29 @@ function LoginPageInner() {
                   placeholder="john@example.com or username"
                   autoComplete="username"
                   autoFocus
+                  aria-invalid={!!errors.identifier}
+                  aria-describedby={errors.identifier ? 'login-identifier-error' : undefined}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(125,163,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.18)'; }}
                   onBlur={e => { e.currentTarget.style.borderColor = errors.identifier ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
-              {errors.identifier && !needsVerification && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.identifier}</p>}
+              {errors.identifier && !needsVerification && (
+                <p id="login-identifier-error" role="alert" aria-live="polite" className="text-red-300 text-[13px] font-medium mt-2">{errors.identifier}</p>
+              )}
             </div>
 
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-[1.5px]" style={{ color: '#E5E5E5' }}>PASSWORD</label>
+                <label htmlFor="login-password" className="text-[11px] font-bold uppercase tracking-[1.5px]" style={{ color: '#E5E5E5' }}>PASSWORD</label>
                 <Link href="/forgot-password" className="text-[13px] font-medium transition-colors hover:opacity-80" style={{ color: '#7DA3FF' }}>
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,.6)' }} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" aria-hidden="true" style={{ color: 'rgba(255,255,255,.6)' }} />
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors({}); }}
@@ -403,16 +409,22 @@ function LoginPageInner() {
                   style={{ ...inputBase, paddingLeft: 40, paddingRight: 44, borderColor: errors.password ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)' }}
                   placeholder="Your password"
                   autoComplete="current-password"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'login-password-error' : undefined}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(125,163,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,58,204,.18)'; }}
                   onBlur={e => { e.currentTarget.style.borderColor = errors.password ? 'rgba(239,68,68,.5)' : 'rgba(26,58,204,.32)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-white"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
                   style={{ color: 'rgba(255,255,255,.65)' }}>
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.password}</p>}
+              {errors.password && (
+                <p id="login-password-error" role="alert" aria-live="polite" className="text-red-300 text-[13px] font-medium mt-2">{errors.password}</p>
+              )}
             </div>
 
             {/* Turnstile CAPTCHA — explicit render via window.turnstile */}
