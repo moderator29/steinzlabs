@@ -1,5 +1,7 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
 import { getCoingeckoUsage } from '@/lib/services/coingecko';
+import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 
 /**
  * Admin: surface the in-memory CoinGecko call counter so we can see what's
@@ -11,7 +13,10 @@ import { getCoingeckoUsage } from '@/lib/services/coingecko';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) return unauthorizedResponse();
+
   const usage = getCoingeckoUsage();
   return NextResponse.json({
     ...usage,

@@ -1,5 +1,30 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+
+const URL_RE = /^https?:\/\/[^\s]+$/;
+const EVM_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+const SOLANA_ADDR_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const HANDLE_RE = /^[A-Za-z0-9_.@-]{1,64}$/;
+
+function isAddr(v: unknown): boolean {
+  if (typeof v !== 'string' || !v) return false;
+  return EVM_ADDR_RE.test(v) || SOLANA_ADDR_RE.test(v);
+}
+function isUrlOrEmpty(v: unknown): boolean {
+  if (v === '' || v == null) return true;
+  return typeof v === 'string' && v.length <= 500 && URL_RE.test(v);
+}
+function isStr(v: unknown, max: number): boolean {
+  return typeof v === 'string' && v.length > 0 && v.length <= max;
+}
+function isStrOrEmpty(v: unknown, max: number): boolean {
+  return v === '' || v == null || (typeof v === 'string' && v.length <= max);
+}
+function isHandleOrEmpty(v: unknown): boolean {
+  if (v === '' || v == null) return true;
+  return typeof v === 'string' && HANDLE_RE.test(v);
+}
 
 interface BuilderApplication {
   id: string;
@@ -209,18 +234,31 @@ export async function POST(request: Request) {
     const { action } = body;
 
     if (action === 'apply_builder') {
+      if (!isStr(body.name, 100) || !isStr(body.role, 100) || !isStr(body.bio, 2000) || !isStr(body.experience, 2000)) {
+        return NextResponse.json({ error: 'Invalid name/role/bio/experience' }, { status: 400 });
+      }
+      if (!isAddr(body.walletAddress)) {
+        return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+      }
+      if (!isUrlOrEmpty(body.portfolio) || !isUrlOrEmpty(body.website)) {
+        return NextResponse.json({ error: 'Invalid portfolio/website URL' }, { status: 400 });
+      }
+      if (!isHandleOrEmpty(body.github) || !isHandleOrEmpty(body.twitter)) {
+        return NextResponse.json({ error: 'Invalid github/twitter handle' }, { status: 400 });
+      }
+      const skills = Array.isArray(body.skills) ? body.skills.filter((s: unknown) => isStr(s, 64)).slice(0, 20) : [];
       const app: BuilderApplication = {
         id: `b_${Date.now()}`,
-        name: body.name || '',
-        role: body.role || '',
-        skills: body.skills || [],
-        bio: body.bio || '',
-        walletAddress: body.walletAddress || '',
+        name: body.name,
+        role: body.role,
+        skills,
+        bio: body.bio,
+        walletAddress: body.walletAddress,
         portfolio: body.portfolio || '',
         github: body.github || '',
         twitter: body.twitter || '',
         website: body.website || '',
-        experience: body.experience || '',
+        experience: body.experience,
         verified: false,
         reputationScore: 0,
         completedProjects: 0,
@@ -233,27 +271,48 @@ export async function POST(request: Request) {
     }
 
     if (action === 'submit_project') {
+      if (!isStr(body.name, 200) || !isStr(body.description, 5000)) {
+        return NextResponse.json({ error: 'Invalid name/description' }, { status: 400 });
+      }
+      if (!isAddr(body.walletAddress)) {
+        return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+      }
+      if (!isUrlOrEmpty(body.website) || !isUrlOrEmpty(body.whitepaper)) {
+        return NextResponse.json({ error: 'Invalid website/whitepaper URL' }, { status: 400 });
+      }
+      if (typeof body.goal !== 'number' || body.goal <= 0 || body.goal > 10_000_000) {
+        return NextResponse.json({ error: 'Invalid goal amount' }, { status: 400 });
+      }
+      if (body.contractAddress && !isAddr(body.contractAddress)) {
+        return NextResponse.json({ error: 'Invalid contract address' }, { status: 400 });
+      }
+      const tags = Array.isArray(body.tags) ? body.tags.filter((t: unknown) => isStr(t, 32)).slice(0, 10) : [];
+      const milestones = Array.isArray(body.milestones)
+        ? body.milestones
+            .filter((m: { name?: unknown; amount?: unknown }) => isStr(m?.name, 200) && typeof m?.amount === 'number' && m.amount > 0)
+            .slice(0, 20)
+        : [];
       const proj: FundingProject = {
         id: `p_${Date.now()}`,
-        name: body.name || '',
-        description: body.description || '',
-        category: body.category || 'DeFi',
-        chain: body.chain || 'Ethereum',
-        goal: body.goal || 0,
+        name: body.name,
+        description: body.description,
+        category: isStr(body.category, 64) ? body.category : 'DeFi',
+        chain: isStr(body.chain, 32) ? body.chain : 'Ethereum',
+        goal: body.goal,
         raised: 0,
-        builder: body.walletAddress || '',
-        builderName: body.builderName || 'Anonymous',
+        builder: body.walletAddress,
+        builderName: isStrOrEmpty(body.builderName, 100) ? (body.builderName || 'Anonymous') : 'Anonymous',
         verified: false,
         daysLeft: 60,
         status: 'pending',
-        teamSize: body.teamSize || 1,
+        teamSize: typeof body.teamSize === 'number' && body.teamSize > 0 && body.teamSize <= 100 ? body.teamSize : 1,
         website: body.website || '',
         whitepaper: body.whitepaper || '',
         contractAddress: body.contractAddress || '',
         submittedAt: new Date().toISOString(),
-        milestones: body.milestones || [],
+        milestones,
         investors: 0,
-        tags: body.tags || [],
+        tags,
       };
       projects.push(proj);
       return NextResponse.json({ success: true, project: proj });
@@ -280,9 +339,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'admin_approve' || action === 'admin_reject') {
-      if (body.password !== '195656') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      const adminId = await verifyAdminRequest(request);
+      if (!adminId) return unauthorizedResponse();
       if (body.targetType === 'builder') {
         const builder = pendingApplications.find(b => b.id === body.targetId);
         if (builder) {
@@ -305,9 +363,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'approve_milestone') {
-      if (body.password !== '195656') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      const adminId = await verifyAdminRequest(request);
+      if (!adminId) return unauthorizedResponse();
       const project = projects.find(p => p.id === body.projectId);
       if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
       const milestone = project.milestones[body.milestoneIndex];

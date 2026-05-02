@@ -69,10 +69,26 @@ export async function PATCH(request: Request) {
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
     const body = await request.json();
+    // Whitelist updatable fields. Never trust raw body — would let an
+    // attacker (or compromised admin UI) overwrite arbitrary columns.
+    const updates: Record<string, unknown> = {};
+    if (typeof body.symbol === 'string') updates.symbol = body.symbol.slice(0, 32);
+    if (typeof body.name === 'string') updates.name = body.name.slice(0, 200);
+    if (typeof body.chain === 'string') updates.chain = body.chain.slice(0, 32);
+    if (typeof body.address === 'string') updates.address = body.address.slice(0, 64);
+    const order = body.display_order ?? body.displayOrder;
+    if (typeof order === 'number') updates.display_order = order;
+    if (typeof body.active === 'boolean') updates.active = body.active;
+    if (body.badge === null || typeof body.badge === 'string') updates.badge = body.badge;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('featured_tokens')
-      .update(body)
+      .update(updates)
       .eq('id', id);
 
     if (error) {
