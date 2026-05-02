@@ -3,7 +3,7 @@
 /**
  * §12 — Pre-trade security gate.
  *
- * Wraps a "Confirm Swap / Save Sniper / Copy Now" CTA button so the user
+ * Wraps a "Confirm Swap / Save Sniper / Copy Now" CTA so the user
  * sees a unified risk readout (Trust Score + GoPlus contract analysis)
  * BEFORE the wallet prompt fires. Blocks low-trust trades by default,
  * with an explicit acknowledge step for high-risk overrides.
@@ -15,21 +15,26 @@
  *
  * Behavior:
  *  - score >= 60 (trusted+): renders the child CTA inline, no extra UI.
- *  - 40 <= score < 60 (caution): renders a small inline warning banner
- *    above the CTA; CTA stays clickable.
+ *  - 40 <= score < 60 (caution): renders an inline amber banner above
+ *    the CTA; CTA stays clickable.
  *  - score < 40 (high_risk / dangerous): replaces the CTA with a
  *    "Review risk" button. Clicking opens a modal listing every red
  *    flag (honeypot, ownership, taxes, holder concentration). User
- *    must check "I understand the risk" before the original CTA
- *    re-appears.
- *  - score unknown (API down / no chain+token / non-EVM-non-Solana):
- *    fail-open — renders the CTA without a banner. Logs the gap.
+ *    must acknowledge before the original CTA re-appears.
+ *  - score endpoint 5xx / network error: renders a degraded amber
+ *    banner ("Could not verify trust score — proceed with caution")
+ *    so the user is never silently fail-opened in the dark.
+ *  - score unknown for legitimate reasons (no chain+token, native
+ *    tokens, non-listed pairs): fail-open silently — never block a
+ *    legitimate ETH→USDC swap because the gate has no data.
  *
  * The Trust Score endpoint already handles caching + Solana case-
- * sensitivity; we re-use its public GET path verbatim. No new backend.
+ * sensitivity; we re-use its public GET path verbatim. Module-level
+ * inflight Map dedupes concurrent fetches across multiple gates,
+ * matching the pattern in components/trust/TrustScoreBadge.tsx.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, ShieldCheck, ShieldAlert, X } from 'lucide-react';
 
 type Action = 'swap' | 'snipe' | 'copy';
@@ -50,10 +55,43 @@ interface TrustScoreResponse {
   reasoning?: string[];
 }
 
+/**
+ * Real shape returned by /api/security/contract-analyzer/route.ts.
+ * Tax values are formatted percent strings ("12.50%"), not numbers —
+ * parsePctNumber strips the "%" and returns a number for comparison.
+ */
 interface ContractAnalysis {
-  riskLevel?: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
-  flags?: string[];
-  goplus?: { isHoneypot?: boolean; buyTax?: number; sellTax?: number; ownershipRenounced?: boolean };
+  address: string;
+  chain: string;
+  overallScore: number;
+  verdict: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+  riskFlags: string[];
+  tokenSecurity: {
+    isHoneypot: boolean;
+    buyTax: string;          // e.g. "12.50%"
+    sellTax: string;         // e.g. "12.50%"
+    isOpenSource: boolean;
+    isMintable: boolean;
+    isProxy: boolean;
+    hasHiddenOwner: boolean;
+    canTakeBackOwnership: boolean;
+    ownerCanChangeBalance: boolean;
+    selfDestruct: boolean;
+    externalCall: boolean;
+    cannotBuy: boolean;
+    cannotSellAll: boolean;
+    holderCount?: number;
+    ownerAddress?: string;
+    creatorAddress?: string;
+  } | null;
+  addressIntel?: {
+    riskLevel?: string;
+    isBlacklisted?: boolean;
+    isMalicious?: boolean;
+    isPhishing?: boolean;
+    isMixer?: boolean;
+    labels?: string[];
+  } | null;
 }
 
 const ACTION_VERBS: Record<Action, string> = {
@@ -62,36 +100,68 @@ const ACTION_VERBS: Record<Action, string> = {
   copy: 'copy-trade',
 };
 
+function parsePctNumber(s: string | null | undefined): number {
+  if (typeof s !== 'string') return 0;
+  const n = parseFloat(s.replace('%', ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Module-level dedup so N gates on the same page share one fetch per
+// (chain, address). Same pattern as components/trust/TrustScoreBadge.tsx
+// + components/whales/WhaleAvatar.tsx.
+const trustInflight = new Map<string, Promise<TrustScoreResponse | null | 'error'>>();
+
+async function loadTrustScore(chain: string, token: string): Promise<TrustScoreResponse | null | 'error'> {
+  const key = `${chain}::${token}`;
+  let p = trustInflight.get(key);
+  if (p) return p;
+  p = (async () => {
+    try {
+      const res = await fetch(`/api/trust-score/${encodeURIComponent(chain)}/${encodeURIComponent(token)}`);
+      if (res.status === 404) return null;          // legitimate "no score for this token" → fail-open
+      if (!res.ok) return 'error' as const;          // 5xx / network → degraded mode
+      return (await res.json()) as TrustScoreResponse;
+    } catch {
+      return 'error' as const;
+    } finally {
+      // Clear after a short TTL so a degraded response can retry on
+      // remount; keep the success/null case in the page-level browser
+      // cache (the API sets Cache-Control headers).
+      setTimeout(() => trustInflight.delete(key), 30_000);
+    }
+  })();
+  trustInflight.set(key, p);
+  return p;
+}
+
 export function SecurityGate({ chain, token, action, children, className = '' }: Props) {
   const [score, setScore] = useState<TrustScoreResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [degraded, setDegraded] = useState(false);
   const [analysis, setAnalysis] = useState<ContractAnalysis | null>(null);
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Reset acknowledgment whenever the token changes.
+  // Reset acknowledgment AND any open modal whenever the token changes —
+  // an open modal showing stale data after a swap-direction flip would
+  // confuse the user.
   useEffect(() => {
     setAcknowledged(false);
+    setShowRiskModal(false);
+    setAnalysis(null);
   }, [chain, token]);
 
-  // Fetch the Trust Score. Fail-open: a missing chain/token, an API
-  // outage, or a non-listed token all leave `score` null and the gate
-  // renders the bare CTA.
+  // Fetch the Trust Score (deduped by module-level Map).
   useEffect(() => {
     if (!chain || !token) return;
     let cancelled = false;
-    setLoading(true);
+    setScore(null);
+    setDegraded(false);
     (async () => {
-      try {
-        const res = await fetch(`/api/trust-score/${encodeURIComponent(chain)}/${encodeURIComponent(token)}`);
-        if (!res.ok) return;
-        const j = await res.json();
-        if (!cancelled) setScore(j);
-      } catch {
-        /* fail-open */
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      const result = await loadTrustScore(chain, token);
+      if (cancelled) return;
+      if (result === 'error') setDegraded(true);
+      else setScore(result);
     })();
     return () => { cancelled = true; };
   }, [chain, token]);
@@ -124,7 +194,24 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
   const isCaution = band === 'caution';
   const blocked = isHighRisk && !acknowledged;
 
-  // No token / unsupported chain → fail-open: render the original CTA.
+  // Degraded mode (endpoint 5xx/timeout): show a caution banner so the
+  // user is never silently fail-opened on a token whose risk we
+  // genuinely can't assess. Original CTA still renders.
+  if (degraded && !score) {
+    return (
+      <div className={`space-y-2 ${className}`}>
+        <div role="alert" className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex-1 text-amber-100/90">
+            Couldn't verify the token's trust score right now. Proceed with extra caution and double-check the contract on a block explorer before you {ACTION_VERBS[action]}.
+          </div>
+        </div>
+        {children}
+      </div>
+    );
+  }
+
+  // No token / unsupported chain / no score → fail-open: render bare CTA.
   if (!chain || !token || !score) {
     return <div className={className}>{children}</div>;
   }
@@ -144,10 +231,11 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
 
       {blocked ? (
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setShowRiskModal(true)}
           aria-label={`Token Trust Score is ${score.score} out of 100 (${score.bandLabel}). Click to review risks before continuing.`}
-          className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-red-500/15 border-2 border-red-500/40 text-red-200 hover:bg-red-500/25 transition-colors"
+          className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-red-500/15 border-2 border-red-500/40 text-red-200 hover:bg-red-500/25 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           <ShieldAlert className="w-4 h-4" aria-hidden="true" />
           Review risk before {ACTION_VERBS[action]} ({score.score}/100)
@@ -172,13 +260,9 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
           token={token}
           action={action}
           isHighRisk={isHighRisk}
-          onAcknowledge={() => { setAcknowledged(true); setShowRiskModal(false); }}
-          onCancel={() => setShowRiskModal(false)}
+          onAcknowledge={() => { setAcknowledged(true); setShowRiskModal(false); triggerRef.current?.focus(); }}
+          onCancel={() => { setShowRiskModal(false); triggerRef.current?.focus(); }}
         />
-      )}
-
-      {!score && loading && (
-        <div className="text-[10px] text-gray-500">Checking trust score…</div>
       )}
     </div>
   );
@@ -194,23 +278,80 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
   onAcknowledge: () => void;
   onCancel: () => void;
 }) {
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const lastFocusableRef = useRef<HTMLButtonElement>(null);
+
+  // Focus first focusable on open; trap Tab/Shift-Tab inside; close on
+  // ESC; lock body scroll; restore focus on close (handled by parent
+  // via triggerRef.focus() in onAcknowledge/onCancel).
+  useEffect(() => {
+    cancelBtnRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const first = cancelBtnRef.current;
+        const last = lastFocusableRef.current;
+        if (!first || !last) return;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onCancel]);
+
+  // Build a human-readable flag list from the real analyzer schema.
+  // tokenSecurity.{buyTax,sellTax} are STRINGS like "12.50%"; parse
+  // before comparing. riskFlags is a separate array the analyzer
+  // emits server-side ("ownership not renounced", etc.) — we
+  // surface those verbatim.
   const flags: string[] = [];
-  if (analysis?.goplus?.isHoneypot) flags.push('Honeypot detected — sells may fail');
-  if ((analysis?.goplus?.buyTax ?? 0) > 10) flags.push(`High buy tax: ${analysis!.goplus!.buyTax}%`);
-  if ((analysis?.goplus?.sellTax ?? 0) > 10) flags.push(`High sell tax: ${analysis!.goplus!.sellTax}%`);
-  if (analysis?.goplus?.ownershipRenounced === false) flags.push('Owner has not renounced — can change rules');
-  if (Array.isArray(analysis?.flags)) for (const f of analysis.flags) flags.push(f);
+  const ts = analysis?.tokenSecurity;
+  if (ts?.isHoneypot) flags.push('Honeypot detected — sells may fail');
+  if (ts?.cannotSellAll) flags.push('Cannot sell entire balance');
+  if (ts?.cannotBuy) flags.push('Buy is currently disabled by the contract');
+  if (parsePctNumber(ts?.buyTax) > 10) flags.push(`High buy tax: ${ts!.buyTax}`);
+  if (parsePctNumber(ts?.sellTax) > 10) flags.push(`High sell tax: ${ts!.sellTax}`);
+  if (ts?.isMintable) flags.push('Owner can mint more supply');
+  if (ts?.hasHiddenOwner || ts?.canTakeBackOwnership) flags.push('Hidden owner / can re-take ownership');
+  if (ts?.ownerCanChangeBalance) flags.push('Owner can change any balance');
+  if (ts?.selfDestruct) flags.push('Contract has selfdestruct');
+  if (ts?.externalCall) flags.push('Makes external calls');
+  if (analysis?.addressIntel?.isMalicious) flags.push('Owner / creator address flagged malicious');
+  if (analysis?.addressIntel?.isPhishing) flags.push('Linked to phishing campaigns');
+  if (analysis?.addressIntel?.isMixer) flags.push('Linked to mixer activity');
+  if (Array.isArray(analysis?.riskFlags)) for (const f of analysis.riskFlags) flags.push(f);
   if (flags.length === 0 && isHighRisk) flags.push(`Composite Trust Score ${score.score}/100 (${score.bandLabel})`);
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4" onClick={onCancel} role="dialog" aria-modal="true" aria-label="Token risk review">
-      <div className="w-full max-w-md bg-[#0D1120] border border-white/10 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="securitygate-modal-title"
+    >
+      <div className="w-full max-w-md bg-[#0D1120] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-300" aria-hidden="true" />
-            <h2 className="text-sm font-bold text-white">Risk review</h2>
+            <h2 id="securitygate-modal-title" className="text-sm font-bold text-white">Risk review</h2>
           </div>
-          <button onClick={onCancel} aria-label="Close risk review" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <button onClick={onCancel} aria-label="Close risk review" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-white/30">
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
@@ -257,17 +398,22 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
 
           <div className="text-[11px] text-gray-400 pt-2 border-t border-white/10">
             Token <span className="font-mono text-gray-300">{token.slice(0, 8)}…{token.slice(-6)}</span> on {chain}.
-            You're about to {ACTION_VERBS[action]} a token rated <strong className="text-red-200">{score.bandLabel}</strong>.
+            You&apos;re about to {ACTION_VERBS[action]} a token rated <strong className="text-red-200">{score.bandLabel}</strong>.
             Past Trust Scores are no guarantee of future safety.
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10 bg-white/[0.02]">
-          <button onClick={onCancel} className="text-xs text-gray-300 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30">
+          <button
+            ref={cancelBtnRef}
+            onClick={onCancel}
+            className="text-xs text-gray-300 hover:text-white px-4 py-2 rounded-lg border border-white/10 hover:border-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
+          >
             Cancel
           </button>
           {isHighRisk ? (
             <button
+              ref={lastFocusableRef}
               onClick={onAcknowledge}
               className="text-xs font-semibold text-white bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
             >
@@ -275,6 +421,7 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
             </button>
           ) : (
             <button
+              ref={lastFocusableRef}
               onClick={onAcknowledge}
               className="text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0918CC] px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
             >
