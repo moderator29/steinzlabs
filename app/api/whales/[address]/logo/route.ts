@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveWhaleLogo } from "@/lib/whales/logo";
+import { normalizeAddress, isEvmChain } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,14 @@ export async function GET(
   }
 
   const admin = getSupabaseAdmin();
-  const addrLower = address.toLowerCase();
+  // §13 audit fix: chain-aware normalization. Solana mints are
+  // case-sensitive base58 — lowercasing produces an unrelated address
+  // that won't match anything. EVM stays lowercase as before.
+  const addrKey = normalizeAddress(address, chain);
+
+  // For EVM use .ilike() (checksum/casing tolerant); for Solana .eq()
+  // (any case mutation = wrong wallet).
+  const useIlike = isEvmChain(chain);
 
   // Whale rows are unique per (address, chain) — pinning the chain to the
   // query stops a write from clobbering the same address on a different
@@ -46,8 +54,8 @@ export async function GET(
     let cacheQuery = admin
       .from("whales")
       .select("logo_url, logo_source, logo_resolved_at")
-      .ilike("address", addrLower);
-    if (chain) cacheQuery = cacheQuery.eq("chain", chain);
+      .eq("chain", chain);
+    cacheQuery = useIlike ? cacheQuery.ilike("address", addrKey) : cacheQuery.eq("address", addrKey);
     const { data } = await cacheQuery.maybeSingle<{
       logo_url: string | null;
       logo_source: string | null;
@@ -74,8 +82,8 @@ export async function GET(
       logo_source: resolved.source,
       logo_resolved_at: new Date().toISOString(),
     })
-    .ilike("address", addrLower);
-  if (chain) updateQuery = updateQuery.eq("chain", chain);
+    .eq("chain", chain);
+  updateQuery = useIlike ? updateQuery.ilike("address", addrKey) : updateQuery.eq("address", addrKey);
   await updateQuery;
 
   return NextResponse.json({ ...resolved, cached: false });
