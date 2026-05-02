@@ -1214,3 +1214,86 @@ html.naka-translating body {
 html body {
   transition: opacity 180ms ease-out;
 }
+
+/* ─── §6 — platform UI/UX tokens ────────────────────────────────────────────
+   Twitter-style readability, Bloomberg-density containers, lucrative CTAs.
+   Apply `.naka-card`, `.naka-text-body`, `.naka-button-primary` etc. to
+   migrate a surface to the new bar without touching layout. Light theme
+   handled via [data-theme="light"] overrides below.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.naka-text-body {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+.naka-text-secondary {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #e5e5e5;
+}
+.naka-text-tertiary {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #a3a3a3;
+}
+.naka-text-emphasis {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+[data-theme="light"] .naka-text-body { color: #000000; }
+[data-theme="light"] .naka-text-secondary { color: #333333; }
+[data-theme="light"] .naka-text-tertiary { color: #666666; }
+
+.naka-card {
+  background: rgba(15, 23, 42, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px;
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.naka-card:hover {
+  border-color: rgba(125, 163, 255, 0.35);
+  box-shadow: 0 6px 28px rgba(10, 30, 255, 0.08);
+}
+[data-theme="light"] .naka-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+[data-theme="light"] .naka-card:hover {
+  border-color: rgba(10, 30, 255, 0.25);
+  box-shadow: 0 6px 28px rgba(10, 30, 255, 0.12);
+}
+
+.naka-button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0A1EFF 0%, #5566FF 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: transform 150ms ease, box-shadow 200ms ease, filter 150ms ease;
+  box-shadow: 0 4px 16px rgba(10, 30, 255, 0.25);
+}
+.naka-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(10, 30, 255, 0.45), 0 0 24px rgba(10, 30, 255, 0.2);
+  filter: brightness(1.08);
+}
+.naka-button-primary:active { transform: translateY(0); }
+
+@keyframes naka-card-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.naka-slide-in {
+  animation: naka-card-slide-in 220ms ease-out both;
+}
