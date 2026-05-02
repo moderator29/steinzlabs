@@ -1,12 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
 import { SmartMoneyPanel } from '@/components/intelligence/SmartMoneyPanel';
 import { HolderBreakdown } from '@/components/intelligence/HolderBreakdown';
 import { Bubblemaps } from '@/components/visualization/Bubblemaps';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
+
+// §11 — concentration timeline. Lazy-loaded so the lightweight-charts
+// bundle (~50KB) only ships on this surface.
+const BubbleMapTimelineChart = dynamic(
+  () => import('@/components/intelligence/BubbleMapTimelineChart'),
+  { ssr: false, loading: () => <div className="h-[260px] rounded-xl border border-white/10 flex items-center justify-center text-xs text-gray-500">Loading concentration history…</div> },
+);
 
 export default function ViewProofPage() {
   const params = useParams();
@@ -163,6 +171,19 @@ export default function ViewProofPage() {
             width={1200}
             height={600}
           />
+
+          {/* §11 — Concentration timeline below the static bubble map.
+              Reads /api/intelligence/holders/[token]/timeline (returns
+              the holder_snapshots accumulated by write-on-read in the
+              parent route). Empty-state explains the cold start. */}
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-white mb-2">Concentration timeline (90d)</h4>
+            <BubbleMapTimelineChart
+              token={tokenAddress}
+              chain={intelligence.chain ?? 'unknown'}
+              days={90}
+            />
+          </div>
 
           <div className="mt-4 bg-[#141824] rounded-lg p-4">
             <div className="grid grid-cols-4 gap-4 text-sm">
