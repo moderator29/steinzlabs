@@ -11,6 +11,7 @@ import { MetaMaskLogo, PhantomLogo, NakaLogo, WalletConnectLogo } from '@/compon
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
+import { SecurityGate } from '@/components/security/SecurityGate';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -1226,6 +1227,20 @@ export default function SwapPage() {
               </div>
             )}
 
+            {/* §12 — Pre-trade security gate. Resolves the destination
+                token's contract address via the existing CHAIN+symbol
+                map and pre-fetches Trust Score. High-risk tokens
+                replace the CTA with a "Review risk" modal that the
+                user must explicitly acknowledge before swap. Fail-open
+                if the chain/address can't be resolved (native tokens,
+                non-listed pairs) so we never hard-block a legitimate
+                trade because the score endpoint doesn't have data. */}
+            <SecurityGate
+              action="swap"
+              chain={chain}
+              token={getTokenAddresses(fromToken, toToken, chain).buyToken}
+              className="w-full"
+            >
             <button
               onClick={() => {
                 if (!connectedAddress) { handleSwap(); return; }
@@ -1263,6 +1278,7 @@ export default function SwapPage() {
                 </>
               )}
             </button>
+            </SecurityGate>
 
             {swapError && (
               <div className="mt-2 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
