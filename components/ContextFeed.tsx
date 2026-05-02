@@ -710,9 +710,11 @@ export default function ContextFeed() {
                     sessionStorage.setItem('steinz_proof_event', JSON.stringify(event));
                     window.location.href = `/dashboard/proof?id=${event.id}`;
                   }}
-                  className="text-[#0A1EFF] font-semibold text-xs hover:underline flex-shrink-0 ml-2"
+                  className="naka-button-primary flex-shrink-0 ml-2"
+                  aria-label="View proof for this event"
                 >
-                  View Proof &rarr;
+                  View Proof
+                  <span aria-hidden="true">→</span>
                 </button>
               </div>
 
