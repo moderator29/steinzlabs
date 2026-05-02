@@ -1,18 +1,20 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
 
-function verifyAdmin(request: Request): boolean {
-  const auth = request.headers.get('authorization') ?? '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const expected = process.env.ADMIN_BEARER_TOKEN;
-  return !!(expected && token && token === expected);
+// §13 audit fix: was using a custom verifyAdmin() that ONLY accepted
+// the env bearer token, locking out admins who authenticate via Supabase
+// JWT. Switched to the canonical verifyAdminRequest helper used by
+// every other /api/admin/** route — accepts both auth modes.
+async function verifyAdmin(request: Request): Promise<boolean> {
+  return Boolean(await verifyAdminRequest(request));
 }
 
 // ─── GET: list all posts (including unpublished) ──────────────────────────────
 
 export async function GET(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
 // ─── POST: create a new post ──────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
 // ─── PATCH: update a post ─────────────────────────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -136,7 +138,7 @@ export async function PATCH(request: NextRequest) {
 // ─── DELETE: delete a post ────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
