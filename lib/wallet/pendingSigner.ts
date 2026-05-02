@@ -1,6 +1,7 @@
 "use client";
 
 import { getWalletSessionKey } from "./walletSession";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 /**
  * Inline signer for pending trades. Called from the PendingTradesBanner when
@@ -155,23 +156,23 @@ async function signExternalSolana(trade: PendingTradeForSigning): Promise<Inline
 
 async function decryptBuiltinKey(pwd: string, wallet: StoredBuiltinWallet): Promise<string> {
   if (!wallet.encryptedKey) throw new Error("Built-in wallet has no stored key");
-  if (wallet.iv) {
-    const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
-    const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, [
-      "decrypt",
-    ]);
-    const iv = Uint8Array.from(atob(wallet.iv), (c) => c.charCodeAt(0));
-    const encrypted = Uint8Array.from(atob(wallet.encryptedKey), (c) => c.charCodeAt(0));
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, encrypted);
-    return new TextDecoder().decode(decrypted);
+  if (!wallet.iv) {
+    // Legacy XOR fallback removed — XOR with a password keystream is
+    // cryptographically broken (known-plaintext recovery) and was a
+    // §1 audit Critical. Affected users must re-import the seed phrase
+    // to upgrade the at-rest format to AES-256-GCM.
+    throw new Error(
+      "This wallet uses an outdated encryption format. Please re-import the seed phrase from the Wallet page to upgrade to AES-256-GCM.",
+    );
   }
-  // Legacy XOR format — mirrors swap page fallback.
-  const text = atob(wallet.encryptedKey);
-  let out = "";
-  for (let i = 0; i < text.length; i++) {
-    out += String.fromCharCode(text.charCodeAt(i) ^ pwd.charCodeAt(i % pwd.length));
-  }
-  return out;
+  const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
+  const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, [
+    "decrypt",
+  ]);
+  const iv = Uint8Array.from(atob(wallet.iv), (c) => c.charCodeAt(0));
+  const encrypted = Uint8Array.from(atob(wallet.encryptedKey), (c) => c.charCodeAt(0));
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, encrypted);
+  return new TextDecoder().decode(decrypted);
 }
 
 const BUILTIN_RPC: Record<string, string> = {
@@ -195,9 +196,7 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
   if (!storedJson) throw new Error("No built-in wallet found");
   const wallets = JSON.parse(storedJson) as StoredBuiltinWallet[];
   const activeAddr = localStorage.getItem("steinz_active_wallet_address") ?? "";
-  const wallet = wallets.find(
-    (w) => w.address?.toLowerCase() === activeAddr.toLowerCase(),
-  );
+  const wallet = wallets.find((w) => w.address && addressesEqual(w.address, activeAddr));
   if (!wallet) throw new Error("Active built-in wallet not found");
   if (!wallet.address) throw new Error("Built-in wallet missing address");
 

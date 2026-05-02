@@ -3,6 +3,8 @@
  * Internal security data provider — backend only, never expose provider name in UI
  */
 
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
+
 const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1';
 const API_KEY = process.env.GOPLUS_API_KEY || '';
 const TIMEOUT_MS = parseInt(process.env.GOPLUS_TIMEOUT_MS || '15000', 10);
@@ -76,7 +78,10 @@ export async function scanTokenSecurity(
   const data = await goplusGet(
     `/token_security/${chainId}?contract_addresses=${contractAddress}`
   );
-  const t = data[contractAddress.toLowerCase()] ?? Object.values(data)[0] ?? {};
+  // GoPlus indexes EVM responses by lowercased address; Solana keeps native case.
+  // normalizeAddress handles the chain branch so a Solana mint isn't flattened.
+  const key = normalizeAddress(contractAddress, chain);
+  const t = data[key] ?? data[contractAddress] ?? Object.values(data)[0] ?? {};
   return parseTokenSecurity(t);
 }
 

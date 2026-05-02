@@ -73,7 +73,12 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
   ].join(',');
   const keys = keysRaw.split(',').map((k) => k.trim()).filter(Boolean);
 
-  if (keys.length === 0) return true; // dev mode — no signing configured anywhere
+  if (keys.length === 0) {
+    // Production MUST have signing keys — fail closed.
+    if (process.env.NODE_ENV === 'production') return false;
+    // Local dev only: explicit opt-in to bypass.
+    return process.env.ALCHEMY_WEBHOOK_DEV_BYPASS === 'true';
+  }
   if (!signature) return false;
 
   for (const key of keys) {
