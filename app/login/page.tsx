@@ -293,7 +293,7 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+    <div className="naka-auth-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: '#07090f' }}>
       <style>{`
         .auth-card input::placeholder { color: rgba(255,255,255,.55); font-weight: 400; }
