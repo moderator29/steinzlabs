@@ -133,6 +133,25 @@ export async function middleware(request: NextRequest) {
       return applyHeaders(redirectResp);
     }
 
+    // Server-side admin role gate. The /admin/layout.tsx client component
+    // also checks a bearer token, but that's UI-level only — the route is
+    // reachable without it. This block enforces profiles.role='admin'
+    // before any /admin/* page renders. Non-admins get bounced to
+    // /dashboard with ?denied=admin so the UI can surface a toast.
+    if (isAdminRoute) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single<{ role: string | null }>();
+      if (!profile || profile.role !== 'admin') {
+        const denyUrl = request.nextUrl.clone();
+        denyUrl.pathname = '/dashboard';
+        denyUrl.searchParams.set('denied', 'admin');
+        return applyHeaders(NextResponse.redirect(denyUrl));
+      }
+    }
+
     return applyHeaders(response);
   }
 
