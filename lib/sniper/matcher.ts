@@ -18,6 +18,7 @@
 
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { queueTelegramNotification } from "@/lib/telegram/notify";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import type { SniperChain } from "./chains";
 import { getChainConfig } from "./chains";
 
@@ -118,7 +119,11 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
   todayStart.setUTCHours(0, 0, 0, 0);
   const todayIso = todayStart.toISOString();
   const dedupSince = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
-  const tokenLower = input.tokenAddress.toLowerCase();
+  // §13 audit fix: don't unconditionally lowercase the token address.
+  // Solana mints are base58 case-sensitive — lowercasing produces a
+  // valid-looking but non-existent address. normalizeAddress() picks
+  // the right form per chain (EVM lowercased, Solana/TON preserved).
+  const tokenKey = normalizeAddress(input.tokenAddress, input.chain);
 
   for (const raw of criteria as unknown as CriteriaRow[]) {
     const c = raw;
@@ -142,11 +147,12 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
     }
 
     // Whale-targeted criteria: skip if the whale doesn't match.
+    // Use chain-aware normalization (Solana base58 case-sensitive).
     if (
       input.trigger === "whale_buy" &&
       c.trigger_whale_address &&
       input.whaleAddress &&
-      c.trigger_whale_address.toLowerCase() !== input.whaleAddress.toLowerCase()
+      normalizeAddress(c.trigger_whale_address, input.chain) !== normalizeAddress(input.whaleAddress, input.chain)
     ) {
       out.skipped++;
       continue;
@@ -182,7 +188,7 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
       .from("sniper_match_events")
       .select("id", { count: "exact", head: true })
       .eq("criteria_id", c.id)
-      .eq("matched_token_address", tokenLower)
+      .eq("matched_token_address", tokenKey)
       .gte("created_at", dedupSince);
     if ((dupCount ?? 0) > 0) {
       out.skipped++;
@@ -198,7 +204,7 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
     const { error: insErr } = await admin.from("sniper_match_events").insert({
       criteria_id: c.id,
       user_id: c.user_id,
-      matched_token_address: tokenLower,
+      matched_token_address: tokenKey,
       matched_chain: input.chain,
       trigger_reason: reason,
       decision,

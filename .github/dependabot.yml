@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # Application dependencies. Daily for security patches; weekly batched
+  # PRs for everything else so the PR queue doesn't fill up.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore(deps)
+    # Pin majors that are known-fragile for this project.
+    ignore:
+      # wagmi v6 introduces breaking peer-dep changes; we are intentionally
+      # on ^5.x. Remove this ignore when the migration is planned.
+      - dependency-name: wagmi
+        update-types: [version-update:semver-major]
+      - dependency-name: "@wagmi/*"
+        update-types: [version-update:semver-major]
+    groups:
+      next-stack:
+        patterns:
+          - next
+          - "@next/*"
+          - eslint-config-next
+      supabase:
+        patterns:
+          - "@supabase/*"
+      anthropic:
+        patterns:
+          - "@anthropic-ai/*"
+      types-only:
+        dependency-type: development
+        patterns:
+          - "@types/*"
+
+  # GitHub Actions versions in workflow files.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: chore(actions)
