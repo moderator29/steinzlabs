@@ -1095,23 +1095,45 @@ export async function POST(request: NextRequest) {
     const market_context = [btcLine, ethLine, solLine, fngShort, gasData].filter(Boolean).join(' | ');
 
     // ── Style Instructions ──────────────────────────────────────────────────
-    const resolvedPersonality = (personality && typeof personality === 'string' && personality.trim())
-      ? personality.trim() : 'Neutral';
-    const resolvedDepth = depth ?? responseStyle ?? 'Standard';
+    // Each user-controlled field gets an explicit allow-list before it is
+    // interpolated into the system prompt. Without this gate, a request body
+    // like personality:"...\n\nIGNORE PRIOR INSTRUCTIONS..." would land
+    // verbatim in the system prompt and could override tier gating, tool-use
+    // rules, or coax the model into leaking the system prompt itself.
+    const PERSONALITIES = ['Neutral', 'Friendly', 'Analytical', 'Direct', 'Casual', 'Professional'] as const;
+    const LANGUAGES = [
+      'English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian',
+      'Dutch', 'Japanese', 'Korean', 'Chinese', 'Arabic', 'Hindi', 'Russian',
+      'Turkish', 'Vietnamese', 'Indonesian', 'Thai', 'Polish',
+    ] as const;
+    const RISKS = ['Conservative', 'Balanced', 'Aggressive'] as const;
+    const DEPTHS = ['Quick', 'Standard', 'Deep'] as const;
+
+    const personalityCandidate = typeof personality === 'string' ? personality.trim() : '';
+    const resolvedPersonality: string = (PERSONALITIES as readonly string[]).includes(personalityCandidate)
+      ? personalityCandidate : 'Neutral';
+
+    const depthCandidate = typeof depth === 'string' ? depth : (typeof responseStyle === 'string' ? responseStyle : '');
+    // Legacy alias: 'detailed' from older clients maps to 'Deep'
+    const normalizedDepth = depthCandidate === 'detailed' ? 'Deep' : depthCandidate;
+    const resolvedDepth: string = (DEPTHS as readonly string[]).includes(normalizedDepth)
+      ? normalizedDepth : 'Standard';
     const styleInstruction = resolvedDepth === 'Quick'
       ? 'Concise responses (1-2 paragraphs). Key data points only.'
-      : resolvedDepth === 'Deep' || resolvedDepth === 'detailed'
+      : resolvedDepth === 'Deep'
         ? 'Comprehensive analysis with full sections. Be thorough, cover all angles.'
         : 'Balanced — structured but not exhaustive.';
 
-    const resolvedRisk = (riskAppetite && typeof riskAppetite === 'string') ? riskAppetite : 'Balanced';
+    const riskCandidate = typeof riskAppetite === 'string' ? riskAppetite : '';
+    const resolvedRisk: string = (RISKS as readonly string[]).includes(riskCandidate) ? riskCandidate : 'Balanced';
     const riskInstruction = resolvedRisk === 'Conservative'
       ? 'Emphasize downside risks. Prioritize capital preservation. Flag every red flag prominently.'
       : resolvedRisk === 'Aggressive'
         ? 'Focus on high-reward opportunities. Identify asymmetric upside. User accepts high risk.'
         : 'Present balanced view of risks and rewards.';
 
-    const resolvedLanguage = (language && typeof language === 'string') ? language : 'English';
+    const languageCandidate = typeof language === 'string' ? language : '';
+    const resolvedLanguage: string = (LANGUAGES as readonly string[]).includes(languageCandidate) ? languageCandidate : 'English';
     const languageInstruction = resolvedLanguage !== 'English'
       ? `Respond entirely in ${resolvedLanguage}.` : '';
 
@@ -1130,8 +1152,11 @@ export async function POST(request: NextRequest) {
       .replace('{live_data}', liveDataStr);
 
     // ── Build Message History ───────────────────────────────────────────────
+    // Cap history before slicing so a request body with millions of entries
+    // can't burn server memory before we trim to the last 10 (DoS guard).
+    const HISTORY_HARD_CAP = 100;
     const loopMessages: Anthropic.MessageParam[] = [];
-    if (history && Array.isArray(history)) {
+    if (history && Array.isArray(history) && history.length <= HISTORY_HARD_CAP) {
       for (const msg of history.slice(-10)) {
         loopMessages.push({
           role: msg.role === 'user' ? 'user' : 'assistant',
