@@ -1,5 +1,7 @@
 'use client';
 
+import { addressesEqual } from '@/lib/utils/addressNormalize';
+
 const WALLET_STORAGE_KEY = 'steinz_connected_wallet';
 const WALLET_CHAIN_KEY = 'steinz_wallet_chain';
 
@@ -61,8 +63,7 @@ export async function attemptAutoConnect(): Promise<StoredWallet | null> {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
         if (accounts && accounts.length > 0) {
-          const currentAddress = accounts[0].toLowerCase();
-          if (currentAddress === stored.address.toLowerCase()) {
+          if (addressesEqual(accounts[0], stored.address, stored.chain)) {
             return stored;
           }
         }

@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
+
 /**
  * §4.2 — Shared whale avatar.
  *
@@ -28,7 +30,7 @@ const inflight = new Set<string>();
 
 function dicebearFor(address: string): string {
   return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
-    address.toLowerCase(),
+    normalizeAddress(address),
   )}&backgroundColor=0a0e1a`;
 }
 
@@ -48,7 +50,7 @@ export function WhaleAvatar({ address, chain, logoUrl, size = 32, className = ""
     // sibling whales). When the caller doesn't know the chain we keep
     // showing the Dicebear floor rather than firing a guaranteed 400.
     if (!chain) return;
-    const key = `${chain}:${address.toLowerCase()}`;
+    const key = `${chain}:${normalizeAddress(address, chain)}`;
     if (inflight.has(key)) return;
     inflight.add(key);
     let cancelled = false;
