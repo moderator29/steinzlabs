@@ -1017,7 +1017,32 @@ export async function POST(request: NextRequest) {
     const headersList = await headers();
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
       || headersList.get('x-real-ip') || 'unknown';
-    const isPro = tier === 'pro';
+
+    // §13b audit fix: trust the SERVER, not the client. The body's `tier`
+    // value comes from localStorage, which a malicious user can flip to
+    // "pro" to bypass the daily message limit. Look it up from profiles
+    // for authenticated callers; anonymous callers always count as free.
+    // checkTier() also honors tier_expires_at so expired comp-Max
+    // accounts auto-revert.
+    let serverTier: 'free' | 'mini' | 'pro' | 'max' = 'free';
+    if (callerUserId) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: prof } = await admin
+          .from('profiles')
+          .select('tier, tier_expires_at')
+          .eq('id', callerUserId)
+          .maybeSingle();
+        if (prof) {
+          const { checkTier } = await import('@/lib/subscriptions/tierCheck');
+          serverTier = checkTier(prof.tier, prof.tier_expires_at, 'free').currentTier;
+        }
+      } catch {
+        // Fall through to free; never crash the request because the
+        // tier lookup hiccupped.
+      }
+    }
+    const isPro = serverTier === 'pro' || serverTier === 'max';
 
     if (!isPro && !skipRateLimit) {
       const rateInfo = await getRateLimitInfo(ip);
@@ -1325,7 +1350,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       reply: finalReply,
-      tier: isPro ? 'pro' : 'free',
+      tier: serverTier, // §13b — return the actual server-side tier, not the client claim
+      isPro,
       toolsUsed: [...new Set(toolsUsed)],
       toolIterations,
       dailyUsage: isPro ? null : {

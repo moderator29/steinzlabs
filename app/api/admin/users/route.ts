@@ -6,6 +6,26 @@ import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 const MAX_LIMIT = 200;
 const AUTH_PAGE_SIZE = 1000; // Supabase admin listUsers max
 
+/**
+ * §13b — partial-mask an email for PII-aware list views.
+ * "phantom@gmail.com" → "ph****m@gm***l.com". Full email is still
+ * returned only when the admin opens a single user's drawer with an
+ * explicit `?reveal=1&id=<uuid>` query, so support flows still work
+ * but a leaked admin token doesn't spill the entire user table.
+ */
+function maskEmail(email: string | null): string | null {
+  if (!email) return email;
+  const at = email.indexOf('@');
+  if (at < 1) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const dot = domain.lastIndexOf('.');
+  const maskPart = (s: string) => s.length <= 2 ? s : `${s[0]}${'*'.repeat(Math.min(4, s.length - 2))}${s[s.length - 1]}`;
+  const maskedLocal = maskPart(local);
+  const maskedDomain = dot > 0 ? `${maskPart(domain.slice(0, dot))}${domain.slice(dot)}` : maskPart(domain);
+  return `${maskedLocal}@${maskedDomain}`;
+}
+
 interface AuthUserSlim {
   email: string | null;
   last_sign_in_at: string | null;
@@ -131,11 +151,21 @@ export async function GET(request: Request) {
       }
     }
 
+    // §13b PII masking. Default: list response returns masked emails
+    // ("ph****m@gm***l.com") so an exfiltrated admin token doesn't
+    // hand attackers a phishing-ready user list. Admins acting on a
+    // specific user can opt in to the full email by passing
+    // `?reveal=1&id=<userId>` (matches one row). The full email is
+    // also visible in the drawer's separate fetch path if needed.
+    const reveal = searchParams.get('reveal') === '1';
+    const revealId = searchParams.get('id');
     const merged = [...profiles, ...extraUsers].map(p => {
       const auth = authIndex.get(p.id);
+      const rawEmail = auth?.email ?? null;
+      const showFull = reveal && revealId === p.id;
       return {
         ...p,
-        email: auth?.email ?? null,
+        email: showFull ? rawEmail : maskEmail(rawEmail),
         last_active: auth?.last_sign_in_at ?? null,
         // banned_until is the source of truth; the old `profiles.status`
         // column doesn't exist, so the UI must read this instead.
@@ -175,10 +205,25 @@ export async function POST(request: Request) {
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
     const supabase = getSupabaseAdmin();
 
+    // §13b — every admin write goes into admin_audit_log. Best-effort
+    // (never fails the user-visible action), append-only, queryable
+    // by target_user_id or admin_id.
+    const audit = (action: string, details: Record<string, unknown> = {}) => {
+      supabase.from('admin_audit_log').insert({
+        admin_id: adminId,
+        target_user_id: userId,
+        action,
+        details,
+      }).then(({ error }) => {
+        if (error) console.error('[admin/users] audit insert failed', error.message);
+      });
+    };
+
     if (action === 'delete') {
       const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       await supabase.from('profiles').delete().eq('id', userId);
+      audit('delete');
       return NextResponse.json({ success: true, message: 'User deleted' });
     }
 
@@ -192,6 +237,7 @@ export async function POST(request: Request) {
       // Supabase types are loose around ban_duration; cast at boundary only.
       const { error } = await supabase.auth.admin.updateUserById(userId, { ban_duration } as { ban_duration: string });
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      audit(action);
       return NextResponse.json({ success: true, banned: action === 'ban' });
     }
 
@@ -205,6 +251,7 @@ export async function POST(request: Request) {
         .update({ role })
         .eq('id', userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      audit('set_role', { role });
       return NextResponse.json({ success: true });
     }
 
@@ -233,7 +280,7 @@ export async function POST(request: Request) {
         .update({ tier, tier_expires_at: expires })
         .eq('id', userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      console.log(`[admin/users] set_tier admin=${adminId} user=${userId} tier=${tier} expires=${expires} reason=${reason ?? '-'}`);
+      audit('set_tier', { tier, expires, months, reason: reason ?? null });
       return NextResponse.json({ success: true, tier, tier_expires_at: expires });
     }
 

@@ -308,6 +308,32 @@ export interface VTXQueryOptions {
   maxTokens?: number;    // Override default 4096
 }
 
+/**
+ * §13b: Wrap a system prompt + tool list with Anthropic ephemeral
+ * prompt-cache breakpoints. Cuts ~80% off the input-token cost of every
+ * repeat VTX request because the system prompt (~8KB) and the tools
+ * array (~12KB) are stable across turns. The cache lives 5 minutes by
+ * default — well-suited to chat where users send several messages in a
+ * row. We mark the system as an array with cache_control on the last
+ * (only) block, and put cache_control on the LAST tool so everything
+ * before it lands in the cached prefix.
+ *
+ * Docs: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+ */
+function buildCachedSystem(system: string): Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }> {
+  return [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }];
+}
+
+function tagToolsForCache(tools: Anthropic.Tool[]): Anthropic.Tool[] {
+  if (tools.length === 0) return tools;
+  // Mark only the last tool — Anthropic caches everything up to and
+  // including the cache_control breakpoint, so a single tag covers
+  // the whole tool array as the cached prefix.
+  const head = tools.slice(0, -1);
+  const last = tools[tools.length - 1];
+  return [...head, { ...last, cache_control: { type: 'ephemeral' } } as Anthropic.Tool];
+}
+
 export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Message> {
   const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096 } = options;
 
@@ -323,8 +349,8 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
     {
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
-      system: system ?? VTX_SYSTEM_PROMPT,
-      tools: [advisorTool, ...tools],
+      system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
+      tools: tagToolsForCache([advisorTool, ...tools] as Anthropic.Tool[]),
       messages,
     },
     {
@@ -355,8 +381,10 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
     {
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
-      system: system ?? VTX_SYSTEM_PROMPT,
-      tools: [advisorTool, ...tools],
+      // §13b: same prompt-cache wrapping as vtxQuery — keeps streaming
+      // and non-streaming paths on the same cached prefix.
+      system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
+      tools: tagToolsForCache([advisorTool, ...tools] as Anthropic.Tool[]),
       messages,
     },
     {

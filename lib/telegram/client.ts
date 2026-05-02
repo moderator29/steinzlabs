@@ -14,9 +14,47 @@ export interface TelegramMessage {
   date: number;
 }
 
+export interface TelegramCallbackQuery {
+  id: string;
+  from: { id: number; username?: string; first_name?: string };
+  message?: TelegramMessage;
+  data?: string;
+}
+
 export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
+}
+
+/**
+ * §13b — answer a callback_query so Telegram dismisses the loading
+ * spinner on the inline button. Optionally show a transient toast at
+ * the top of the chat (text param). Failure is non-fatal — Telegram
+ * deletes the unanswered callback after 30s anyway.
+ */
+export async function answerCallbackQuery(
+  callbackQueryId: string,
+  opts: { text?: string; show_alert?: boolean } = {},
+): Promise<void> {
+  const t = token();
+  if (!t) return;
+  try {
+    await fetchWithRetry(`${API_BASE}/bot${t}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        ...(opts.text ? { text: opts.text } : {}),
+        ...(opts.show_alert ? { show_alert: true } : {}),
+      }),
+      source: "telegram.answerCallbackQuery",
+      timeoutMs: 4000,
+      retries: 1,
+    });
+  } catch (err) {
+    console.error("[telegram.answerCallback] failed:", err);
+  }
 }
 
 export async function sendTelegramMessage(
