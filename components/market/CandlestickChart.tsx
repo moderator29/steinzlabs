@@ -22,10 +22,14 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
     if (loading || !data.length || typeof window === 'undefined') return;
 
     let chart: any = null; // lightweight-charts IChartApi type is incompatible with dynamic import
+    let cancelled = false;
+    let handleResize: (() => void) | null = null;
 
     const init = async () => {
       const { createChart, ColorType, CrosshairMode } = await import('lightweight-charts');
-      if (!containerRef.current) return;
+      // §13 audit fix: cancel guard for the case where the cleanup
+      // function ran while the dynamic import was still in flight.
+      if (cancelled || !containerRef.current) return;
 
       chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
@@ -53,17 +57,30 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
       chart.timeScale().fitContent();
       chartRef.current = chart;
 
-      const handleResize = () => {
+      handleResize = () => {
         if (containerRef.current && chart) {
-          chart.applyOptions({ width: containerRef.current.clientWidth });
+          try {
+            chart.applyOptions({ width: containerRef.current.clientWidth });
+          } catch { /* chart was removed under us */ }
         }
       };
       window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
     };
 
     init();
-    return () => { if (chart) { chart.remove(); chartRef.current = null; } };
+    // §13 audit fix: the inner init() returned a remove-listener
+    // closure that the outer cleanup never invoked, leaking one
+    // resize listener per remount. Track handleResize at the outer
+    // scope and clean it up here.
+    return () => {
+      cancelled = true;
+      if (handleResize) window.removeEventListener('resize', handleResize);
+      if (chart) {
+        chartRef.current = null;
+        chart.remove();
+        chart = null;
+      }
+    };
   }, [data, volumeData, height, loading, fullscreen]);
 
   if (loading) return <LoadingSkeleton variant="chart" />;

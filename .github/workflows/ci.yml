@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs on the same ref so a quick follow-up commit
+# doesn't sit behind a stale build.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npx tsc --noEmit
+
+  build:
+    name: Next.js build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: typecheck
+    env:
+      # Build-time placeholders. Real values live in Vercel.
+      # Provide non-empty strings so build-time validation doesn't
+      # short-circuit; the keys themselves don't have to be valid since
+      # we don't make outbound calls during `next build`.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      ANTHROPIC_API_KEY: ci-placeholder
+      ALCHEMY_API_KEY: ci-placeholder
+      JWT_SECRET: ci-placeholder-must-be-at-least-32-chars-long
+      NEXT_PUBLIC_SITE_URL: https://nakalabs.xyz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+
+  audit:
+    name: npm audit (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Informational only — failing audits don't block PRs. Critical
+      # CVEs should still be triaged via Dependabot alerts.
+      - run: npm audit --audit-level=high

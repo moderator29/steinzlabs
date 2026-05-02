@@ -1,211 +1,278 @@
-# STEINZ LABS
+# Steinz Labs
 
-On-chain crypto intelligence platform built for serious traders.
+> Multi-chain crypto intelligence and self-custodial trading platform built for serious traders, whales, and analysts.
+
+[Live Platform](https://nakalabs.xyz) · [Documentation](./docs/) · [Security Policy](./SECURITY.md) · [Changelog](./CHANGELOG.md)
+
+---
 
 ## Overview
 
-STEINZ LABS is a full-stack on-chain intelligence operating system that gives traders institutional-grade analytics in a consumer-grade interface. The platform aggregates real-time blockchain data across 12+ chains, applies proprietary scoring models, and surfaces actionable intelligence through a unified dashboard. From wallet DNA analysis and smart money tracking to token safety scanning and multi-chain swaps, every tool is built for traders who need speed, depth, and precision.
+Steinz Labs is a Next.js 15 multi-chain platform delivering on-chain intelligence, AI-assisted trading analysis, whale tracking, sniper bot automation, and a non-custodial wallet across **Ethereum, Solana, BNB Chain, Polygon, Base, Arbitrum, Optimism, Avalanche, and TON**. Every tool is wired to real on-chain data — no mock feeds, no synthetic numbers.
+
+The product is split across four layers:
+
+- **Intelligence** — what's happening on-chain right now, who's moving, what's emerging.
+- **Trading** — execute on it, safely, across any supported chain.
+- **Security** — verify before you sign, protect what you hold.
+- **Cult** — the NakaCult tier and the Vault for $NAKA holders and NFT owners.
+
+---
 
 ## Features
 
 ### Intelligence Layer
-- **Context Feed** — Real-time AI-curated on-chain intelligence stream. Every event tagged BULLISH, HYPE, BEAR, or NEUTRAL with Trust Score. Bookmarks, history, and multi-chain filters.
-- **VTX AI Engine** — Natural language on-chain analyst. Ask anything, get live data-backed answers in seconds. Free and Pro tiers with live web search integration.
-- **Trading DNA Analyzer** — Drop any wallet address and decode its full behavioral and performance profile. Win rates, P&L, archetype classification, and Alpha Intelligence Report.
-- **Wallet Intelligence** — Classify every active wallet: Whales, Smart Money, Retail, Bots, Dormant. Real-time cluster following and deep wallet relationship mapping.
-- **Smart Money Watchlist** — Curated feed of consistently top-performing on-chain wallets. Full transaction fingerprints and one-click copy trading.
-- **Whale Tracker** — Real-time monitoring of large on-chain movements with configurable alert thresholds across chains.
-- **Network Graph** — Interactive visualization of wallet relationships, fund flows, and entity clustering.
 
-### Security & Risk
-- **Token Safety Scanner** — 0-100 Trust Score on any contract. Verification status, liquidity lock, holder concentration, tax analysis, dev history, and honeypot simulation.
-- **Contract Analyzer** — Paste any contract address. VTX AI reads the bytecode and explains exactly what it does in plain English. Flags dangerous functions, owner privileges, and hidden traps.
-- **Rug Pull Detector** — Full deployer history, serial rugger flagging, liquidity removal pattern analysis, and community-powered scam reporting.
-- **Domain Shield** — Every link checked in real time. Domain age, scam database cross-reference, community reports. SAFE / SUSPICIOUS / PHISHING verdict.
-- **Risk Scanner** — Portfolio-level risk scoring with exposure breakdown by chain, sector, and concentration.
+- **VTX Agent** — Claude-powered AI analyst with live on-chain context, slash commands, token cards, and swap shortcuts. Sonnet for fast queries, Opus on advisor escalation.
+- **Whale Tracker** — Live feed of 15K+ verified whale wallets across 8 chains. Profiles, watchlist, AI summaries, and one-click copy trading.
+- **Wallet Clusters** — 5 clustering algorithms (direct transfer, common funding, coordinated trading, behavioral fingerprint, Sybil pattern) surface connected wallet groups.
+- **Smart Money** — Continuously curated set of consistently profitable on-chain wallets with full transaction fingerprints and convergence alerts.
+- **On-Chain Trends** — Real-time narrative and sector momentum tracking with historical context (7d / 30d) and percentile ranking.
+- **Bubble Map** — Token ecosystem visualization with concentration, suspicious cluster detection, and an embedded VTX risk read.
+- **Wallet Intelligence** — Drop any address, get archetype classification, P&L, win-rate, and an Alpha Intelligence Report.
+- **Network Graph** — Interactive D3 visualization of wallet relationships, fund flows, and entity clustering.
+- **Naka Trust Score** — Proprietary 0–100 token rating from five layers: security, liquidity, holders, market, social.
+- **Network Metrics** — Chain health, gas, mempool, and infrastructure status.
+- **DNA Analyzer** — Behavioral fingerprinting that classifies wallet style and recommends a copy mode.
+- **Context Feed** — AI-curated on-chain news stream tagged BULLISH / HYPE / BEAR / NEUTRAL with Trust Score per event.
+- **Research** — Long-form deep-dives on protocols, sectors, and market structure.
 
-### Trading
-- **Multi-Chain Swap** — Trade across 12+ chains inside the intelligence layer. Safety check runs before every swap. Best price routing via Jupiter (Solana) and 0x Protocol (EVM).
-- **Copy Trading** — One-click wallet mirroring with configurable size limits and token filters.
-- **Sniper** — Automated entry on new token launches with configurable trust score gates.
-- **Trading Suite** — Advanced order types, position tracking, and cross-chain P&L dashboard.
+### Trading Layer
 
-### Portfolio & Analytics
-- **Portfolio Tracker** — Connect wallet, auto-sync all holdings, USD values, P&L, 24h change, and historical chart. Zero manual input required.
-- **Signature Insight** — Full decoded transaction history with intent labeling and value attribution.
-- **Predictions** — Create and participate in on-chain prediction markets. Stake positions, earn rewards, build your win rate.
-- **Trend Analysis** — Cross-chain narrative and sector momentum tracking with historical data.
+- **Multi-Chain Swap** — Powered by **0x Protocol** on EVM and **Jupiter** on Solana. 5-step safety flow runs before every swap.
+- **Sniper Bot** — Sub-2-second execution across 5 chains with anti-MEV protection, server-enforced kill switch, and tier-gated access.
+- **Copy Trading** — Three modes: Alerts, One-Click, Auto-Copy. Configurable allocation, slippage, and per-token blacklists.
+- **Internal Wallet** — BIP39 seed-phrase wallet encrypted at rest with **AES-256-GCM** (PBKDF2 / 100k iterations / SHA-256 salt). Non-custodial by design — keys never leave the browser.
+- **Approval Manager** — Token approval monitoring + revoke flow.
+- **Signature Insight** — Pre-sign transaction analysis with intent labeling and value attribution.
+- **Alerts** — Custom alert system over price, whale activity, and on-chain trend metrics.
 
-### Discovery & Research
-- **Project Discovery** — Curated pipeline of vetted early-stage on-chain projects.
-- **Launchpad** — Token launch platform with integrated trust scoring and community vetting.
-- **Builder Network** — Directory of active on-chain builders and projects seeking funding or community.
-- **Research** — Deep-dive reports on protocols, sectors, and market structure.
-- **Social Trading** — Community alpha sharing with reputation scoring and verifiable track records.
+### Security Layer
 
-### Engagement
-- **WGM Runner** — Gamified daily engagement with on-chain rewards.
-- **HODL Runner** — Long-term holding streaks with yield incentives.
-- **Leaderboards** — Cross-platform performance rankings.
+- **Domain Shield** — Real-time URL scanning against scam databases with community reporting layer.
+- **Contract Analyzer** — VTX reads bytecode and flags dangerous functions, owner privileges, and hidden traps in plain English.
+- **Risk Scanner** — Continuous wallet-portfolio risk monitoring with exposure breakdown.
+- **GoPlus Integration** — Real-time honeypot, mint, and ownership checks pre-trade.
+- **Naka Trust Score** — Proprietary aggregate trust score per token (see Intelligence).
+- **Security Center** — Combined dashboard surfacing every active risk on the connected wallet.
+
+### Cult Layer
+
+- **NakaCult** — Token-gated tier for $NAKA holders (≥600K) or NFT owners.
+- **The Vault** — Cinematic governance and intelligence experience.
+- **The Conclave** — NAKA-weighted DAO voting on proposals.
+- **The Oracle** — Daily intelligence briefings, exclusive AI assistant, and an anonymous alpha network.
+
+### Telegram Bot
+
+Full feature parity for the most-used flows. Slash commands include `/price`, `/chart`, `/info`, `/security`, `/whales`, `/follow`, `/portfolio`, `/balance`, `/holdings`, `/pnl`, `/alerts`, `/setalert`, `/buy`, `/sell`, `/snipe`, `/connect`, `/upgrade`. See [docs/slash-commands.md](./docs/slash-commands.md) for the full reference.
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
+| Language | TypeScript (strict) |
 | Styling | Tailwind CSS |
-| Database | Supabase (PostgreSQL) |
-| Authentication | Supabase Auth + Firebase (Google/Apple OAuth) |
-| State Management | Zustand |
-| Charts | Recharts, Lightweight Charts, D3.js |
-| Animations | Framer Motion |
-| Forms | React Hook Form + Zod |
-| Email | Resend |
-| EVM Data | Alchemy SDK, Ethers.js |
-| Solana Data | Alchemy Solana RPC, @solana/web3.js |
-| Market Data | CoinGecko API, DexScreener API |
-| On-chain Intel | Arkham Intelligence API |
+| State | Zustand + React hooks |
+| Auth | Supabase Auth (email + SIWE wallet) |
+| Database | Supabase Postgres 17 with Row-Level Security |
+| AI | Anthropic Claude (Sonnet executor + Opus advisor) with prompt caching |
+| EVM RPC | Alchemy SDK + Ethers.js + Viem |
+| Solana RPC | Helius + @solana/web3.js |
+| Wallet | Wagmi v5 + Reown AppKit + native BIP39 / AES-256-GCM |
+| EVM Swap | 0x Protocol (Swap + Gasless) |
+| Solana Swap | Jupiter Aggregator |
+| Market Data | CoinGecko + DexScreener + Birdeye |
 | Token Security | GoPlus Labs |
-| EVM Trading | 0x Protocol (Swap + Gasless) |
-| Solana Trading | Jupiter Aggregator |
-| AI Engine | VTX Intelligence Engine |
+| On-chain Intel | Arkham Intelligence |
+| Social Signals | LunarCrush |
+| Real-time | Supabase Realtime + Server-Sent Events |
+| Monitoring | Sentry + PostHog |
+| Email | Resend |
+| Cache + Rate Limit | Upstash Redis |
 | Bot Protection | Cloudflare Turnstile |
+| Hosting | Vercel |
 
-## Environment Variables
+---
 
-Copy and configure the following variables in your `.env.local` file:
+## Architecture
 
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_KEY=
-SUPABASE_JWT_SECRET=
-
-# Authentication
-JWT_SECRET=
-SESSION_SECRET=
-
-# Site
-NEXT_PUBLIC_SITE_URL=
-NEXT_PUBLIC_BASE_URL=
-
-# Blockchain Data
-ALCHEMY_API_KEY=
-NEXT_PUBLIC_ALCHEMY_API_KEY=
-NEXT_PUBLIC_ALCHEMY_RPC=
-NEXT_PUBLIC_ALCHEMY_SOLANA_RPC=
-SOLANA_RPC_URL=
-
-# Market & Intelligence Data
-ARKHAM_API_KEY=
-COINGECKO_API_KEY=
-NEXT_PUBLIC_ETHERSCAN_API_KEY=
-ETHERSCAN_API_KEY=
-ETHPLORER_API_KEY=
-
-# AI Engine
-ANTHROPIC_API_KEY=
-
-# Trading
-ONEINCH_API_KEY=
-
-# Email
-RESEND_API_KEY=
-SENDGRID_API_KEY=
-
-# Treasury
-TREASURY_WALLET_EVM=
-TREASURY_WALLET_SOLANA=
-
-# Admin
-ADMIN_PASSWORD=
-
-# Bot Protection
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 ```
+                ┌─────────────────────────────────────────────────────┐
+                │                  CLIENT                              │
+                │  Next.js App Router · React 18 · Tailwind            │
+                │  AppKit wallet bridge · BIP39/AES-256-GCM in browser │
+                └──────────────────────┬──────────────────────────────┘
+                                       │
+                ┌──────────────────────┴──────────────────────────────┐
+                │              EDGE / MIDDLEWARE                      │
+                │  Auth (Supabase SSR) · Admin role gate              │
+                │  Cookie budget guard · Security headers · HSTS      │
+                └──────────────────────┬──────────────────────────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        │                              │                              │
+┌───────▼────────┐          ┌──────────▼────────┐          ┌─────────▼─────────┐
+│   API ROUTES    │          │   SERVICE LAYER   │          │   WEBHOOKS        │
+│  (Node.js)      │          │  (lib/services/)  │          │  Alchemy / Helius │
+│  Tier-gated     │──────────│  Anthropic        │          │  HMAC-signed      │
+│  Zod validated  │          │  Alchemy / Helius │          │  Timing-safe auth │
+│  RLS-aware      │          │  0x / Jupiter     │          │  Rate-limited     │
+└────────┬────────┘          │  GoPlus / Arkham  │          └─────────┬─────────┘
+         │                   │  CoinGecko / etc. │                    │
+         │                   └─────────┬─────────┘                    │
+         │                             │                              │
+         └─────────────────────────────┼──────────────────────────────┘
+                                       │
+                ┌──────────────────────▼──────────────────────────────┐
+                │                  SUPABASE                            │
+                │  Postgres 17 · RLS on every public table             │
+                │  is_admin() · auth_tokens · pending_trades           │
+                │  whale_* · copy_trades · vtx_query_logs · etc.       │
+                └──────────────────────────────────────────────────────┘
+```
+
+**Key architectural decisions:**
+
+- **Server-trusted tier.** Tier (Free / Mini / Pro / Max / NakaCult) is verified server-side from `profiles.tier` via `withTierGate()`. The client cannot bypass.
+- **Non-custodial invariant.** Private keys are AES-256-GCM-encrypted in the browser, never sent to the server. The server only ever sees a signed transaction.
+- **Address normalization.** EVM is case-insensitive, Solana is case-sensitive. All comparisons go through `lib/utils/addressNormalize.ts`.
+- **Inflight-Map dedup.** Concurrent requests for the same expensive computation share a single promise.
+- **Write-on-read snapshots.** Daily snapshots (e.g. `holder_snapshots`) materialize the first time a route is hit and are reused for the rest of the day.
+- **Audit log fire-and-forget.** Every admin mutation writes to `admin_audit_log` without blocking the response.
+- **In-memory rate limit fallback.** Upstash Redis is primary; an in-process Map provides single-instance fallback.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- npm or yarn
-- A Supabase project
-- API keys for the services listed above
+
+- Node.js **20+**
+- npm (project uses `--legacy-peer-deps` for the wagmi v5 stack)
+- A Supabase project (or access to the team's)
+- API keys for the services in `.env.example`
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd steinz-labs
-
-# Install dependencies
-npm install
-
-# Configure environment variables
+git clone https://github.com/moderator29/steinzlabs.git
+cd steinzlabs
+npm install --legacy-peer-deps
 cp .env.example .env.local
-# Edit .env.local with your API keys
-
-# Run the development server
+# Fill in API keys — at minimum: Supabase, Anthropic, Alchemy, Helius
 npm run dev
 ```
 
-The application will be available at `http://localhost:5000`.
+The app starts on `http://localhost:3000`.
 
-### Build for Production
+### Build
 
 ```bash
 npm run build
 npm start
 ```
 
-## Architecture
+Type checking gate (run before pushing):
 
-STEINZ LABS is built on the Next.js 15 App Router with a clear separation between client and server code.
-
-```
-/
-├── app/                    # Next.js App Router pages and API routes
-│   ├── api/               # Server-side API handlers (REST endpoints)
-│   │   ├── vtx-ai/        # VTX AI intelligence engine
-│   │   ├── dna-analysis/  # Wallet DNA analyzer
-│   │   ├── context-feed/  # Real-time intelligence stream
-│   │   ├── token-scanner/ # Contract trust scoring
-│   │   ├── whale-tracker/ # Large wallet movement monitoring
-│   │   └── ...            # 30+ additional API endpoints
-│   └── dashboard/         # Protected dashboard routes
-│       ├── vtx-ai/        # AI analyst interface
-│       ├── wallet-intelligence/ # Wallet classification
-│       ├── smart-money/   # High-performance wallet tracking
-│       └── ...            # 40+ dashboard views
-├── components/            # Shared React components
-├── lib/                   # Server-side utilities and integrations
-│   ├── anthropic/         # AI engine integration
-│   ├── arkham/            # Arkham Intelligence client
-│   ├── intelligence/      # Proprietary scoring models
-│   ├── trading/           # DEX integration layer
-│   ├── wallet/            # Multi-chain wallet utilities
-│   └── security/          # Security and validation utilities
-└── middleware.ts           # Route protection and session validation
+```bash
+npx tsc --noEmit
 ```
 
-**Key architectural decisions:**
+---
 
-- **API-first**: All data fetching happens through typed server-side API routes. Client components never call external APIs directly.
-- **Server/Client boundary**: Heavy computation, API key usage, and database access are strictly server-side. Client components receive only serialized data.
-- **Multi-chain abstraction**: A unified wallet interface normalizes EVM and Solana data models so the UI never deals with chain-specific quirks.
-- **Rate limiting**: Built-in rate limiting on all public API endpoints to prevent abuse.
-- **Trust Score engine**: Proprietary scoring algorithm combining on-chain signals, historical behavior, and community data into a single 0-100 metric.
+## Environment Variables
+
+See [`.env.example`](./.env.example) for the complete reference with comments. Required for local boot:
+
+| Var | Purpose |
+|-----|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (client-safe) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; bypasses RLS |
+| `ANTHROPIC_API_KEY` | Claude — VTX Agent |
+| `ALCHEMY_API_KEY` | EVM RPC + token metadata |
+| `HELIUS_API_KEY` | Solana RPC + webhooks |
+| `JWT_SECRET` | Auth token signing — minimum 32 random chars |
+| `NEXT_PUBLIC_SITE_URL` | Canonical site URL (production: `https://nakalabs.xyz`) |
+
+Webhook secrets, rate-limit Redis, Sentry, Telegram, and the rest are documented in `.env.example`.
+
+---
+
+## Project Structure
+
+```
+/app                    # Next.js App Router pages and API routes
+  /api                  # Server-side route handlers (tier-gated, zod-validated)
+  /admin                # Admin panel pages — middleware-gated by profiles.role
+  /dashboard            # User-facing dashboard
+/components             # React components (TSX)
+  /admin                # Admin-only widgets
+  /clusters             # Wallet cluster graph
+  /whales               # Whale UI primitives
+  /wallet               # AppKit bridge, deeplink, signing UI
+/hooks                  # Custom React hooks
+/lib
+  /auth                 # adminAuth, apiAuth, withTierGate
+  /services             # External API integrations (one file per provider)
+  /wallet               # Internal wallet, encryption, session management
+  /utils                # addressNormalize, detectDevice, deeplink
+  /trading              # Relayer, executor
+  /security             # GoPlus, security scanning
+  /intelligence         # Proprietary scoring (holderAnalysis, cluster-detection)
+/supabase
+  /migrations           # SQL migrations (mirrored from Supabase MCP applies)
+/middleware.ts          # Route protection, security headers, admin role gate
+/docs
+  /sessions             # Per-session handoff documents
+  /cleanup-2026-05      # Audit findings + supabase cleanup log
+```
+
+---
+
+## Documentation
+
+- [Security Policy](./SECURITY.md) — vulnerability disclosure
+- [Contributing Guide](./CONTRIBUTING.md) — workflow, code style, PR checklist
+- [Code of Conduct](./CODE_OF_CONDUCT.md) — community standards
+- [Changelog](./CHANGELOG.md) — release notes
+- [Project Rules for Claude Code](./CLAUDE.md) — rules future AI sessions must follow
+- [Technical Debt](./TECHNICAL_DEBT.md) — deferred Medium/Low audit findings
+- [Security Backlog](./SECURITY_BACKLOG.md) — deferred Critical/High requiring owner action
+- [Supabase Cleanup Log](./docs/cleanup-2026-05/supabase-cleanup-log.md) — advisor 36→3 round
+- [GitHub UI Settings Checklist](./docs/github-ui-settings-checklist.md)
+- [Session Handoffs](./docs/sessions/)
+
+---
 
 ## Security
 
-- **Non-custodial**: STEINZ LABS only reads public blockchain data. No private keys are ever requested, stored, or transmitted.
-- **Session management**: JWT-based sessions signed with `SESSION_SECRET`, validated on every protected request via middleware.
-- **Server-side secrets**: All API keys are server-side only. No sensitive credentials are exposed to the client bundle.
-- **Input validation**: All API inputs validated with Zod schemas before processing.
-- **Rate limiting**: Per-IP rate limiting on all API routes to prevent scraping and abuse.
-- **Bot protection**: Cloudflare Turnstile integration on authentication flows.
-- **SQL injection prevention**: All database queries use parameterized statements via the Supabase SDK.
-- **Honeypot simulation**: Token scanner runs simulated buy/sell transactions to detect honeypot contracts before users trade.
-- **Phishing detection**: Real-time URL scanning against known scam databases with community reporting layer.
+We take security seriously. If you discover a vulnerability, please email **security@nakalabs.xyz** instead of opening a public issue. See [SECURITY.md](./SECURITY.md) for scope, safe-harbor, and severity guidance.
+
+Key posture:
+
+- **Row-Level Security on every public table** (`session_d_rls_advisor_cleanup` migration). Service-role catch-all + scoped policies (admin / users-own / public-read) per table.
+- **Server-side admin gate** — `middleware.ts` verifies `profiles.role = 'admin'` before any `/admin/*` page renders, in addition to the API-level `verifyAdminRequest()`.
+- **Opaque server-stored auth tokens** — `lib/authTokens.ts` issues 256-bit random tokens stored as SHA-256 hashes with single-use atomic consume. 30-min reset TTL, 24-hour verify TTL.
+- **AES-256-GCM at rest for wallets** with PBKDF2 100k iterations. No XOR fallback.
+- **Webhook signatures fail closed in production** for both Alchemy (HMAC-SHA256) and Helius (timing-safe header compare).
+- **Tier-gate enforcement** server-side via `withTierGate()`. Sniper, copy trading, and VTX Pro features verify session tier from Supabase, never from the client.
+- **Sentry PII scrub** strips cookies and is being extended to scrub wallet addresses and emails (see SECURITY_BACKLOG #10).
+
+---
+
+## License
+
+Proprietary. All rights reserved. See [LICENSE](./LICENSE).
+
+For licensing inquiries, contact licensing@nakalabs.xyz.
+
+---
+
+## Acknowledgments
+
+Built by the Steinz Labs team in honor of **Naka Go (中号)** — the Shiba Inu who saved his breed.

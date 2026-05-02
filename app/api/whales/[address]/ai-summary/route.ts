@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,10 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
   const chain = req.nextUrl.searchParams.get('chain') || '';
   if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });
 
+  // §13 audit fix: chain-aware address normalization. Previously every
+  // whale_address read/write here used .toLowerCase() unconditionally,
+  // corrupting Solana base58 mints (handoff §6 critical rule).
+  const addrKey = normalizeAddress(address, chain);
   const supabase = getSupabaseAdmin();
 
   // Check cache first. Stored in whale_ai_summaries keyed (address, chain).
@@ -51,7 +56,7 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
   const { data: cached } = await supabase
     .from('whale_ai_summaries')
     .select('*')
-    .eq('whale_address', address.toLowerCase())
+    .eq('whale_address', addrKey)
     .eq('chain', chain)
     .gte('generated_at', cutoff)
     .maybeSingle();
@@ -74,7 +79,7 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
   const { data: whale } = await supabase
     .from('whales')
     .select('label, entity_type, portfolio_value_usd, pnl_30d_usd, pnl_7d_usd, win_rate, trade_count_30d, whale_score')
-    .eq('address', address.toLowerCase())
+    .eq('address', addrKey)
     .eq('chain', chain)
     .maybeSingle();
 
@@ -86,7 +91,7 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
   const { data: activity } = await supabase
     .from('whale_activity')
     .select('action, token_symbol, value_usd, timestamp')
-    .eq('whale_address', address.toLowerCase())
+    .eq('whale_address', addrKey)
     .eq('chain', chain)
     .order('timestamp', { ascending: false })
     .limit(20);
@@ -116,7 +121,7 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
   // Persist to cache. Upsert on (whale_address, chain). Non-fatal if the
   // table doesn't exist yet — return fresh result anyway.
   await supabase.from('whale_ai_summaries').upsert({
-    whale_address: address.toLowerCase(),
+    whale_address: addrKey,
     chain,
     rating_30d: parsed.rating_30d,
     rating_10d: parsed.rating_10d,
