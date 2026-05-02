@@ -21,6 +21,7 @@
  */
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
 
@@ -59,9 +60,18 @@ interface HeliusTx {
 
 function authOk(req: NextRequest): boolean {
   const expected = process.env.HELIUS_WEBHOOK_SECRET;
-  if (!expected) return true; // dev mode
-  // Helius sends the configured auth value as the raw Authorization header.
-  return req.headers.get('authorization') === expected;
+  if (!expected) {
+    // Production MUST configure the secret — fail closed.
+    if (process.env.NODE_ENV === 'production') return false;
+    return process.env.HELIUS_WEBHOOK_DEV_BYPASS === 'true';
+  }
+  const got = req.headers.get('authorization');
+  if (!got) return false;
+  // Constant-time compare — plain `===` leaks length/prefix via response timing.
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 function classifyAction(tx: HeliusTx, whaleAddress: string): 'buy' | 'sell' | 'transfer_in' | 'transfer_out' {
