@@ -236,6 +236,7 @@ Webhook secrets, rate-limit Redis, Sentry, Telegram, and the rest are documented
 
 ## Documentation
 
+**Repo root:**
 - [Security Policy](./SECURITY.md) — vulnerability disclosure
 - [Contributing Guide](./CONTRIBUTING.md) — workflow, code style, PR checklist
 - [Code of Conduct](./CODE_OF_CONDUCT.md) — community standards
@@ -243,7 +244,23 @@ Webhook secrets, rate-limit Redis, Sentry, Telegram, and the rest are documented
 - [Project Rules for Claude Code](./CLAUDE.md) — rules future AI sessions must follow
 - [Technical Debt](./TECHNICAL_DEBT.md) — deferred Medium/Low audit findings
 - [Security Backlog](./SECURITY_BACKLOG.md) — deferred Critical/High requiring owner action
+- [License](./LICENSE)
+
+**Product:**
+- [Feature Documentation](./docs/feature-documentation.md) — every live feature with tier and data sources
+- [Pricing](./docs/pricing.md) — Free / Mini / Pro / Max / NakaCult
+- [Slash Commands](./docs/slash-commands.md) — Telegram + VTX command reference
+- [Whitepaper](./docs/whitepaper.md) — strategic narrative
+
+**Architecture:**
+- [Supabase Architecture](./docs/supabase-architecture.md) — schema, RLS, functions, cron, webhooks, backups
+- [Telegram Bot](./docs/TELEGRAM_BOT.md) — bot deployment + webhook setup
+
+**Audit & Operations:**
+- [Security Audit (2026-05-02)](./docs/security-audit-2026-05-02.md) — consolidated red-team report
+- [Docs Audit (2026-05-02)](./docs/docs-audit-2026-05-02.md) — what's current vs stale
 - [Supabase Cleanup Log](./docs/cleanup-2026-05/supabase-cleanup-log.md) — advisor 36→3 round
+- [12-Agent Audit Findings](./docs/cleanup-2026-05/audit-findings.md) — verbatim agent reports
 - [GitHub UI Settings Checklist](./docs/github-ui-settings-checklist.md)
 - [Session Handoffs](./docs/sessions/)
 
