@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -45,7 +45,7 @@ jobs:
       NEXT_PUBLIC_SITE_URL: https://nakalabs.xyz
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -59,7 +59,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
       # Informational only — failing audits don't block PRs. Critical
