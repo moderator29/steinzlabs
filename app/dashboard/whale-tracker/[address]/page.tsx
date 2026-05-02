@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
+import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 import { toast } from "sonner";
 
 type Tab = "overview" | "activity" | "tokens" | "counterparties" | "copy";
@@ -202,13 +203,13 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
           <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 flex items-start gap-3">
-              {/* §2.5 Whale avatar — prefer Arkham entity logo when we
-                  have one, else deterministic dicebear avatar seeded on
-                  the address so the same whale always gets the same
-                  generated face. No flicker on re-render. */}
+              {/* §4.2 Whale avatar — uses the cached logo_url from
+                  /api/whales/[address]/logo (Arkham → ENS → Dicebear).
+                  Falls back to live Arkham resolution if cache is empty. */}
               <WhaleAvatar
                 address={w.address}
-                logoUrl={data.arkham?.logo ?? null}
+                chain={w.chain}
+                logoUrl={(w as unknown as { logo_url?: string | null }).logo_url ?? data.arkham?.logo ?? null}
                 size={48}
               />
               <div className="flex-1 min-w-0">
@@ -430,27 +431,4 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
   );
 }
 
-/**
- * §2.5 — Whale avatar. Arkham entity logo when available (real logos for
- * Binance, Circle, Vitalik, etc.), otherwise a deterministic dicebear
- * face keyed on the wallet address so the same whale always shows the
- * same generated avatar across sessions. No flicker, no random seed.
- */
-function WhaleAvatar({
-  address, logoUrl, size = 48,
-}: { address: string; logoUrl: string | null; size?: number }) {
-  const [errored, setErrored] = useState(false);
-  const fallback = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(address)}&backgroundColor=0A1EFF,7C3AED,059669,dc2626,0891b2&backgroundType=gradientLinear`;
-  const src = logoUrl && !errored ? logoUrl : fallback;
-  return (
-    <img
-      src={src}
-      alt="whale"
-      width={size}
-      height={size}
-      onError={() => setErrored(true)}
-      className="rounded-full border border-slate-700 shrink-0"
-      style={{ width: size, height: size, objectFit: 'cover', background: '#0f172a' }}
-    />
-  );
-}
+// WhaleAvatar moved to components/whales/WhaleAvatar.tsx (§4 phase B).
