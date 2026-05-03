@@ -253,13 +253,22 @@ Webhook secrets, rate-limit Redis, Sentry, Telegram, and the rest are documented
 - [Whitepaper](./docs/whitepaper.md) — strategic narrative
 
 **Architecture:**
+- [System Architecture](./docs/architecture.md) — request lifecycle, trust boundaries, key decisions
 - [Supabase Architecture](./docs/supabase-architecture.md) — schema, RLS, functions, cron, webhooks, backups
+- [API Reference](./docs/api-reference.md) — route map + v1 public-API recommendation
+- [Deployment Guide](./docs/deployment-guide.md) — setup, env vars, rollback, secret rotation, incident response
 - [Telegram Bot](./docs/TELEGRAM_BOT.md) — bot deployment + webhook setup
 
 **Audit & Operations:**
 - [Security Audit (2026-05-02)](./docs/security-audit-2026-05-02.md) — consolidated red-team report
+- [Performance Baseline (2026-05-02)](./docs/performance-baseline-2026-05-02.md) — Lighthouse / bundle / DB / API capture template
 - [Docs Audit (2026-05-02)](./docs/docs-audit-2026-05-02.md) — what's current vs stale
+- [File Structure Audit (2026-05-02)](./docs/file-structure-audit-2026-05-02.md) — layout + naming convention check
+- [Repo Polish Review (2026-05-02)](./docs/repo-polish-review-2026-05-02.md) — §6.7 final pass
+- [Final Deliverables Checklist (2026-05-02)](./docs/final-deliverables-checklist-2026-05-02.md) — §8 closing sign-off
 - [Supabase Cleanup Log](./docs/cleanup-2026-05/supabase-cleanup-log.md) — advisor 36→3 round
+- [Schema/Storage/Realtime Audit](./docs/cleanup-2026-05/schema-storage-realtime-audit-2026-05-02.md)
+- [Scrub AI Footprints](./docs/cleanup-2026-05/scrub-ai-footprints-2026-05-02.md)
 - [12-Agent Audit Findings](./docs/cleanup-2026-05/audit-findings.md) — verbatim agent reports
 - [GitHub UI Settings Checklist](./docs/github-ui-settings-checklist.md)
 - [Session Handoffs](./docs/sessions/)
