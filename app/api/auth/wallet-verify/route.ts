@@ -3,6 +3,7 @@ import { verifyMessage } from "viem";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -57,14 +58,19 @@ export async function POST(request: NextRequest) {
 
     await supabase.from("auth_wallet_nonces").update({ consumed: true }).eq("nonce", nonce);
 
+    const normalized = normalizeAddress(address, chain === "evm" ? "ethereum" : "solana");
+
     const { data: existing } = await supabase
       .from("wallet_identities")
       .select("user_id")
-      .eq("address", address.toLowerCase())
+      .eq("address", normalized)
       .eq("chain", chain)
       .maybeSingle();
 
-    const email = `${address.toLowerCase()}@wallet.nakalabs.com`;
+    // Email synthesis must be deterministic per (address, chain). Lower-case
+    // the EVM canonical form for email-safe characters; Solana addresses are
+    // already email-safe (base58, no symbols), use them as-is.
+    const email = chain === "evm" ? `${normalized}@wallet.nakalabs.com` : `${normalized.toLowerCase()}@wallet.nakalabs.com`;
     let userId: string;
 
     if (existing) {
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       await supabase.from("wallet_identities").insert({
         user_id: userId,
-        address: address.toLowerCase(),
+        address: normalized,
         chain,
         is_primary: true,
       });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -11,12 +12,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid params" }, { status: 400 });
     }
 
+    // EVM normalizes to lowercase; Solana base58 preserves case.
+    const normalized = normalizeAddress(address, chain === "evm" ? "ethereum" : "solana");
+
     const supabase = getSupabaseAdmin();
     const nonce = randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const { error } = await supabase.from("auth_wallet_nonces").insert({
-      address: address.toLowerCase(),
+      address: normalized,
       chain,
       nonce,
       expires_at: expiresAt.toISOString(),
