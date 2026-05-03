@@ -1,0 +1,341 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Cinematic Layer — Vault / NakaCult / The Sanctum
+   Imported by app/globals.css. Adds new tokens + utility classes alongside
+   the existing Naka design system without overriding it. Reserved for the
+   /vault, /naka-cult, and Chosen surfaces; safe to opt into from any page.
+   ─────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Cinematic backgrounds — richer, deeper darks than --bg-primary */
+  --vault-bg-deepest: #02050E;
+  --vault-bg-base: #050816;
+  --vault-bg-elevated: #0A1030;
+  --vault-bg-card: rgba(15, 22, 60, 0.6);
+  --vault-bg-card-hover: rgba(20, 30, 80, 0.8);
+
+  /* Cult palette — silk neon blue + crimson stride */
+  --vault-blue: #0066FF;
+  --vault-blue-bright: #1E90FF;
+  --vault-blue-electric: #00C8FF;
+  --vault-blue-glow: rgba(0, 153, 255, 0.5);
+
+  --vault-crimson: #DC143C;
+  --vault-crimson-bright: #FF1744;
+  --vault-crimson-glow: rgba(220, 20, 60, 0.4);
+
+  --vault-gold: #FFD86B;
+  --vault-gold-glow: rgba(255, 216, 107, 0.5);
+
+  /* Aurora layer mix */
+  --aurora-blue-1: rgba(0, 102, 255, 0.18);
+  --aurora-blue-2: rgba(0, 200, 255, 0.12);
+  --aurora-crimson: rgba(220, 20, 60, 0.08);
+  --aurora-violet: rgba(120, 60, 200, 0.06);
+
+  /* Cult gradients */
+  --gradient-cult: linear-gradient(135deg, var(--vault-blue) 0%, var(--vault-crimson) 100%);
+  --gradient-electric: linear-gradient(135deg, var(--vault-blue-electric) 0%, var(--vault-blue) 100%);
+  --gradient-shadow: linear-gradient(135deg, var(--vault-bg-deepest) 0%, var(--vault-bg-base) 100%);
+
+  /* Brighter text family for cinematic surfaces */
+  --vault-text-primary: #FFFFFF;
+  --vault-text-secondary: #F0F4FF;
+  --vault-text-tertiary: #B4C0E0;
+  --vault-text-disabled: #5A6580;
+}
+
+/* ───────── Container system ───────── */
+
+.cinematic-container {
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(10, 15, 46, 0.85) 0%,
+    rgba(15, 22, 60, 0.75) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cinematic-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 60%; height: 60%;
+  background: radial-gradient(circle at top left,
+    rgba(0, 102, 255, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cinematic-container::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(0, 102, 255, 0.5),
+    rgba(220, 20, 60, 0.3),
+    rgba(0, 102, 255, 0.5));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+
+.cinematic-container > * { position: relative; z-index: 1; }
+
+.cinematic-container:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0, 102, 255, 0.2), 0 0 60px rgba(220, 20, 60, 0.05); }
+.cinematic-container:hover::after { opacity: 1; }
+
+.cinematic-container--cult::after {
+  background: linear-gradient(135deg,
+    var(--vault-blue) 0%,
+    var(--vault-crimson) 50%,
+    var(--vault-blue) 100%);
+  opacity: 0.6;
+}
+
+.cinematic-container--chosen::after {
+  background: linear-gradient(135deg,
+    var(--vault-gold) 0%,
+    var(--vault-blue) 50%,
+    var(--vault-gold) 100%);
+  opacity: 0.7;
+}
+
+/* ───────── Buttons ───────── */
+
+.btn-cinematic {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  background: var(--gradient-electric);
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px var(--vault-blue-glow),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-cinematic::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 600ms ease;
+}
+
+.btn-cinematic:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--vault-blue-glow), inset 0 1px 0 rgba(255,255,255,0.3); }
+.btn-cinematic:hover::before { left: 100%; }
+.btn-cinematic:active { transform: translateY(0); transition: transform 50ms; }
+
+.btn-cult {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(var(--vault-bg-elevated), var(--vault-bg-elevated)),
+    var(--gradient-cult);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  transition: box-shadow 300ms ease, background-image 300ms ease;
+}
+.btn-cult:hover {
+  background-image:
+    linear-gradient(var(--vault-bg-card-hover), var(--vault-bg-card-hover)),
+    var(--gradient-cult);
+  box-shadow: 0 0 30px rgba(0, 102, 255, 0.3);
+}
+
+/* ───────── Text ───────── */
+
+.cinematic-heading {
+  color: var(--vault-text-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 30px var(--vault-blue-glow);
+}
+
+.cinematic-stat {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-weight: 600;
+  background: linear-gradient(135deg, #FFFFFF 0%, #B4C0E0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(0, 153, 255, 0.4));
+}
+
+.cinematic-text-cult {
+  background: var(--gradient-cult);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+
+/* ───────── Aurora background ───────── */
+
+.aurora-bg-vault {
+  position: relative;
+  background: var(--vault-bg-base);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.aurora-bg-vault::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, var(--aurora-blue-1) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 80% 20%, var(--aurora-crimson) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 60% at 50% 80%, var(--aurora-blue-2) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, var(--aurora-violet) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aurora-bg-vault::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    var(--aurora-blue-1) 60deg,
+    transparent 120deg,
+    var(--aurora-crimson) 180deg,
+    transparent 240deg,
+    var(--aurora-blue-2) 300deg,
+    transparent 360deg);
+  animation: aurora-vault-drift 30s linear infinite;
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+.aurora-bg-vault > * { position: relative; z-index: 1; }
+
+@keyframes aurora-vault-drift {
+  0%   { transform: rotate(0deg)   scale(1);   }
+  50%  { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1);   }
+}
+
+/* ───────── Loaders ───────── */
+
+.pulse-loader {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+.pulse-loader__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--vault-blue);
+  border-radius: 50%;
+  opacity: 0;
+  animation: pulse-out 2s ease-out infinite;
+}
+.pulse-loader__ring--d1 { animation-delay: 0.7s; }
+.pulse-loader__ring--d2 { animation-delay: 1.4s; }
+
+@keyframes pulse-out {
+  0%   { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.energy-loader {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+}
+.energy-loader__line {
+  position: absolute;
+  top: 0; left: -30%;
+  width: 30%; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--vault-blue-electric), transparent);
+  animation: energy-sweep 1.4s ease-in-out infinite;
+}
+@keyframes energy-sweep {
+  0%   { left: -30%; }
+  100% { left: 100%; }
+}
+
+/* ───────── Interaction primitives ───────── */
+
+.cinematic-press { transition: transform 50ms ease; }
+.cinematic-press:active { transform: scale(0.97); }
+
+.cinematic-lift {
+  transition: transform 200ms cubic-bezier(0.4,0,0.2,1),
+              box-shadow 200ms ease,
+              border-color 200ms ease;
+}
+.cinematic-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 102, 255, 0.18);
+}
+
+/* Float animation for empty-state icons */
+@keyframes cinematic-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.cinematic-float { animation: cinematic-float 6s ease-in-out infinite; }
+
+/* Breathing animation for portals */
+@keyframes cinematic-breathe {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.015);}
+}
+.cinematic-breathe { animation: cinematic-breathe 4s ease-in-out infinite; }
+
+/* ───────── Reduced-motion guard ───────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-bg-vault::after,
+  .pulse-loader__ring,
+  .energy-loader__line,
+  .cinematic-float,
+  .cinematic-breathe {
+    animation: none !important;
+  }
+  .cinematic-container,
+  .cinematic-lift,
+  .btn-cinematic,
+  .btn-cult {
+    transition: none !important;
+  }
+}
