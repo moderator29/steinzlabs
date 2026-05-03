@@ -30,7 +30,6 @@ This is the canonical handoff for everything that happened in Session D (the "pr
 - **He gets overwhelmed by long status updates.** Keep replies tight. When a checkpoint is needed, present it as a small table or a 5-line summary, not paragraphs.
 - **He may say "push it" / "run it" / "go" as authorization** — treat these as explicit go-aheads for the most recent gated action.
 - **He is the only collaborator.** No team. Anything that requires "two people" (PR review approvals, Code Owner reviews) creates a deadlock — never enable those branch-protection rules.
-- **He uses Vultr** for at least one dedicated server (`144.202.29.124`, user `henk-deploy`, Ubuntu). Purpose not yet specified at handoff time — ask before assuming.
 
 ---
 
@@ -224,20 +223,7 @@ For Supabase work, **always verify against the live DB via MCP** (`mcp__supabase
 
 ---
 
-## §10 — Vultr server context
-
-Phantomfcalls has a Vultr Ubuntu server at `144.202.29.124` (user `henk-deploy`). Purpose not yet declared. Possible uses:
-
-- Persistent worker for cron / sniper / Telegram bot host (replaces the in-memory rate-limit + Map dedup with something durable)
-- Self-hosted database mirror / read replica
-- Monitoring / log aggregation
-- Build-runner
-
-Ask Phantomfcalls before assuming a deploy target — Vercel still hosts the Next.js app.
-
----
-
-## §11 — The "big build" coming
+## §10 — The "big build" coming
 
 At handoff time, Phantomfcalls said:
 > "i have a big work for you when we done with this all"
@@ -245,16 +231,11 @@ At handoff time, Phantomfcalls said:
 
 Scope not yet declared. When the next session starts, the first message will likely be the brief. Treat it as a fresh feature scope — read this handoff and CLAUDE.md before spinning up.
 
-Likely it relates to:
-- The Vultr server (deploying something new)
-- The Cult layer (Vault / Conclave / Oracle GA)
-- A new platform feature (he hinted at scope > the cleanup)
-
 Whatever it is — start by reading the spec carefully, asking targeted clarifying questions only if something is genuinely ambiguous, then execute per §1 working preferences (casual tone, picture-perfect bar, real data only, push-and-stop branching workflow).
 
 ---
 
-## §12 — Working state at end of Session D
+## §11 — Working state at end of Session D
 
 | Surface | State |
 |---------|-------|
