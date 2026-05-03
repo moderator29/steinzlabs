@@ -4,9 +4,10 @@
  * TierBadge — tier-aware verified mark shown next to a user's display name
  * across the platform.
  *
- *   Mini  → blue badge      (/branding/badge-mini.png)
- *   Pro   → platinum badge  (/branding/badge-pro.png)
- *   Max   → gold badge      (/branding/badge-max.png)
+ *   Mini       → blue badge       (/branding/badge-mini.png)
+ *   Pro        → platinum badge   (/branding/badge-pro.png)
+ *   Max        → gold badge       (/branding/badge-max.png)
+ *   Naka Cult  → cult sigil       (/branding/badge-naka-cult.png)
  *
  * Click the badge → a popover appears with a short tier-specific line.
  * Free users get no badge.
@@ -24,7 +25,7 @@ interface TierBadgeProps {
   nonInteractive?: boolean;
 }
 
-type Variant = 'mini' | 'pro' | 'max';
+type Variant = 'mini' | 'pro' | 'max' | 'naka_cult';
 
 const VARIANTS: Record<Variant, { src: string; label: string; message: string; ringRgba: string }> = {
   mini: {
@@ -45,10 +46,17 @@ const VARIANTS: Record<Variant, { src: string; label: string; message: string; r
     message: 'Max Plan — a legend in the making. Top tier. Top access. No limits.',
     ringRgba: 'rgba(250,204,21,0.6)',
   },
+  naka_cult: {
+    src: '/branding/badge-naka-cult.png',
+    label: 'Naka Cult',
+    message: 'Naka Cult — the lineage. Vault entry, the Conclave, the Oracle, the Sanctum.',
+    ringRgba: 'rgba(220,20,60,0.6)',
+  },
 };
 
 function resolveVariant(tier: TierBadgeProps['tier']): Variant | null {
   const t = (tier ?? 'free').toString().toLowerCase();
+  if (t === 'naka_cult') return 'naka_cult';
   if (t === 'max' || t === 'mini' || t === 'pro') return t;
   return null;
 }

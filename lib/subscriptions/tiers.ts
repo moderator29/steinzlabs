@@ -1,4 +1,4 @@
-export type SubscriptionTier = 'FREE' | 'PRO' | 'PREMIUM';
+export type SubscriptionTier = 'FREE' | 'PRO' | 'PREMIUM' | 'NAKA_CULT';
 
 export interface TierFeatures {
   basicTrading: boolean;
@@ -106,11 +106,45 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
     customAlerts: true,
     unlimitedVtxAi: true,
   },
+  // The Naka Cult — apex tier. Inherits everything in Premium and is
+  // gated by 600,000 $NAKA OR a NakaLabs NFT (Loyalty Gem / Development
+  // NFT). Unlocks the Vault (Conclave / Oracle / Sanctum) on top of the
+  // standard feature flags. Vault-specific gates live alongside the
+  // Vault feature in lib/cult/access.ts (Phase 4).
+  NAKA_CULT: {
+    basicTrading: true,
+    shadowGuardian: true,
+    contextFeed: true,
+    viewProofAccess: true,
+    bubblemapsAccess: true,
+    smartMoneyPanel: true,
+    holderAnalysis: 'elite',
+    historicalData: true,
+    patternMatching: true,
+    advancedOrders: true,
+    dcaBots: true,
+    moneyRadar: true,
+    copyTrading: true,
+    autoExit: true,
+    maxWallets: 25,
+    maxFollowedEntities: 9999,
+    maxAlerts: 500,
+    maxDCABots: 25,
+    apiAccess: true,
+    realtimeData: true,
+    historicalSnapshots: 730,
+    prioritySupport: true,
+    customAlerts: true,
+    unlimitedVtxAi: true,
+  },
 };
 
 export const TIER_PRICING = {
   PRO: { monthly: 19, yearly: 190 },
   PREMIUM: { monthly: 99, yearly: 990 },
+  // Naka Cult is gated by holdings, not subscription. Surface the
+  // entry threshold here so pricing UI can render it consistently.
+  NAKA_CULT: { monthly: 0, yearly: 0, holdingThreshold: 600_000, nftAlternative: true } as const,
 };
 
 export function hasFeatureAccess(
@@ -134,6 +168,6 @@ export function requiresUpgrade(
   userTier: SubscriptionTier,
   requiredTier: SubscriptionTier
 ): boolean {
-  const tierOrder = { FREE: 0, PRO: 1, PREMIUM: 2 };
+  const tierOrder = { FREE: 0, PRO: 1, PREMIUM: 2, NAKA_CULT: 3 };
   return tierOrder[userTier] < tierOrder[requiredTier];
 }

@@ -16,6 +16,7 @@ const TIER_LABEL: Record<Exclude<Tier, "free">, string> = {
   mini: "Mini",
   pro: "Pro",
   max: "Max",
+  naka_cult: "Naka Cult",
 };
 
 /**
