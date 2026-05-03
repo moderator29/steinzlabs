@@ -8,6 +8,22 @@ the top.
 
 ## [Unreleased]
 
+### Final deliverables (May 2026)
+
+- `docs/architecture.md` — system-level architecture with request lifecycle, trust boundaries, observability, background work, and key architectural decisions (server-trusted tier, non-custodial invariant, address normalization, inflight-Map dedup, write-on-read snapshots, fail-closed webhooks).
+- `docs/deployment-guide.md` — Vercel / Supabase setup runbook, env-var reference, CI overview, rollback, secret-rotation order, monitoring, incident response.
+- `docs/api-reference.md` — internal route map (267 endpoints) plus a v1 public-API recommendation (zod → OpenAPI → Swagger).
+- `docs/performance-baseline-2026-05-02.md` — Lighthouse / bundle / DB / API response-time capture template with targets and known performance characteristics from the 12-agent audit.
+- `docs/file-structure-audit-2026-05-02.md` — verifies the layout and naming match the cleanup-spec template (13/13 dirs present, 0 kebab-case violations).
+- `docs/repo-polish-review-2026-05-02.md` — the §6.7 final-pass checklist confirming the repo presents as senior-engineer solo work.
+- `docs/final-deliverables-checklist-2026-05-02.md` — the §8 closing checklist with sign-off and the user-action items that remain (secret rotation, GitHub UI settings, leaked-password protection, perf capture, real-device smoke test, backup-tag deletion).
+
+### History rewrite (Session D)
+
+- Stripped `Co-Authored-By: Claude`, `🤖 Generated with Claude Code`, and related AI-attribution trailers from every commit on every branch.
+- Remapped 4 non-canonical author identities (`Claude`, `Truckdriver-dev`, `phantomfcalls@replit`, `omojunioluwaseyifunmi@gmail`) to canonical `moderator29 <101205446+moderator29@users.noreply.github.com>`. Authors on origin now contain only `moderator29` and `dependabot[bot]`.
+- 19 branches force-pushed with `--force-with-lease`. Backup tags `backup-history-rewrite-2026-05-02/*` retained on origin for rollback safety net.
+
 ### Documentation pass (May 2026)
 
 - `docs/feature-documentation.md` — every live feature with tier requirement, how-it-works, data sources, limitations, and a feature × tier matrix at the bottom.
