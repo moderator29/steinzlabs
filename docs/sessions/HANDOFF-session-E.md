@@ -81,9 +81,17 @@ These cannot be done in a Claude session — they need you in the GitHub UI / Ve
 
 ---
 
+## §3.5 — Project rules honored this session
+
+All commits in this session were authored as `moderator29 <101205446+moderator29@users.noreply.github.com>`. **Zero AI attribution** anywhere — no `Co-Authored-By: Claude`, no `🤖 Generated with…`, no `AI-assisted` in code/comments/docs/PR descriptions. Branch prefixes are `feat/` / `docs/` only — no `claude/`, `ai/`, or `claude-code/`. Conventional Commits format throughout. Every `.toLowerCase()` on a raw address goes through `lib/utils/addressNormalize.ts`. No mock data — null/empty-state where data isn't available. CLAUDE.md is the canonical rulebook; this session adhered to it strictly. Future sessions: same contract.
+
+---
+
 ## §4 — What is NOT yet built (for the next session)
 
-The original spec was ~18 days of work; this overnight pass shipped the foundation + most-impactful chamber. Everything below is **scoped, documented, and ready for the next session** but not yet implemented:
+The original spec was ~18 days of work; this overnight pass shipped the foundation + most-impactful chamber. Below is the **honest, granular** punch list — not just the big missing pieces.
+
+### Major missing chambers / surfaces
 
 ### The Oracle (`/vault/oracle`)
 - Daily Seal (Anthropic-driven daily briefing, cinematic wax-seal reveal)
@@ -117,6 +125,59 @@ The original spec was ~18 days of work; this overnight pass shipped the foundati
 
 ### On-chain access resolver
 - `lib/cult/holdings.ts` — reads connected wallet's $NAKA balance + NakaLabs NFT ownership and auto-promotes to `naka_cult` tier (and sets `is_chosen` for Development NFT holders). Until this lands, tier is owner-set in admin panel.
+
+### Granular gaps from the spec (section-by-section honesty pass)
+
+These were specced but not shipped this session — calling them out explicitly so they don't get lost:
+
+**§1 Cinematic Foundation:**
+- §1.6 **Platform-wide icon ascension — NOT done.** Only the 3 chamber sigils (rocket / helmet / pentagon) match the new style. Every other icon on the platform (dashboard, market, wallet, settings, vtx, intelligence, smart-money, whale-tracer, dna-analyzer) is still `lucide-react`. Replacing all of them is a multi-PR pass.
+- §1.7 Cinematic loaders ✅ primitives, but not yet swapped into existing surfaces.
+
+**§2 Sound:**
+- SoundManager ✅. Sounds are NOT wired into Conclave votes / proposal-pass / Vault entry yet — wiring blocked on owner dropping MP3 assets into `/public/sounds/`. Once assets are there, wiring is ~30 mins.
+
+**§3 Particle & Visual Effects:**
+- ParticleField primitive ✅.
+- Vote orb burst when a proposal passes — NOT done.
+- Seal glow around Chosen avatars — NOT done.
+- Energy streams in Conclave (lines flowing on active proposals indicating yes/no leaning) — NOT done.
+- Aurora mist on the (not-yet-built) NakaCult landing — NOT done.
+
+**§4 The Vault v2:**
+- Cinematic entry ✅ (3s/0.6s, click-skip, reduced-motion).
+- Member identity strip ✅.
+- Cult stats counter ✅.
+- **Ambient music dock** with 8-track rotation, mini-player, EQ visualizer, draggable position, music persisting across chamber routes — NOT done. Table (`cult_ambient_tracks`) ✅.
+- **Lore notification system** (slides in when nakalibrary publishes) — NOT done.
+
+**§5 The Conclave v2:**
+- Proposal CRUD + voting ✅.
+- Treasury panel ✅ (empty-state until first snapshot).
+- **Vote orbs** (each individual vote is a glowing orb on the bar with size scaling by holdings, hover for voter info) — **NOT done; I shipped a percentage gradient bar instead.** This is a meaningful visual difference from the spec.
+- **Proposal-passing cinematic** (golden glow + particle burst + proposal-pass sound when status flips) — NOT done. Needs the resolution job + Realtime first.
+- **Real-time vote updates** via Supabase Realtime — NOT done. 10s polling instead.
+- **Resolution job** (cron flipping active → passed/failed at ends_at) — NOT done.
+- **Holdings-weighted voting** — NOT done. Flat 1× / 2× (Chosen) for now.
+- **Threaded comments UI** — table ✅, UI NOT done.
+
+**§6 Oracle, §7 Sanctum, §8 Chosen Exclusives:** NOT started. Database tables for §7/§8 (`cult_customizations`, `cult_titles_earned`, `cult_achievements`, `cult_audiences`, `cult_audience_questions`, `cult_early_access_features`, `cult_early_access_feedback`, `cult_library_progress`, `cult_playlists`) — NOT migrated.
+
+**§9 Dramatic landing page (`/naka-cult`):** NOT started. Vault layout currently redirects denied users to `/dashboard?denied=cult` as a fallback.
+
+**§10 Technical Architecture deps:**
+- Framer Motion ✅ (already in repo).
+- Howler.js — **intentionally skipped** (native HTMLAudio is enough; saves ~30KB).
+- @tsparticles — **intentionally skipped** (custom canvas; saves ~50KB).
+- Three.js — NOT added (planned for §9 NFT 3D rotation on landing).
+- lottie-react — NOT added.
+- react-intersection-observer — NOT added (using native IntersectionObserver in CultStatsCounter).
+
+**§11 Phase 9 — Platform-Wide UI Ascension:** **NOT started. This is the biggest missing piece by surface area.** The cinematic primitives exist; nothing has been applied across the existing platform. Every dashboard card, market row, VTX bubble, portfolio card, settings panel, etc., still uses the old `.naka-card` / `.glass-card-enhanced` tokens. Migrating them to `.cinematic-container` + `.btn-cinematic` + cinematic loaders + sound feedback is a dedicated pass.
+
+**§12 Testing:** Zero automated tests written this session. The `/api/cult/proposals` and `/api/cult/proposals/[id]/vote` routes are not covered. Manual smoke testing only.
+
+**§13 Deliverables Checklist:** Only the top portion (Cinematic Foundation, Sound Design infrastructure, Particle Effects primitive) is checked. The rest is open.
 
 ---
 
