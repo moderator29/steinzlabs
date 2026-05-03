@@ -1,0 +1,40 @@
+# Code owners for Steinz Labs
+#
+# GitHub auto-requests review from the listed owners whenever a PR
+# touches a matching path. Last matching pattern wins, so order
+# specific paths AFTER the catch-all.
+#
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+
+# Catch-all — every PR gets reviewed
+*                               @moderator29
+
+# Security-sensitive paths — explicit owner
+/lib/auth/                      @moderator29
+/lib/wallet/                    @moderator29
+/lib/security/                  @moderator29
+/lib/services/anthropic.ts      @moderator29
+/lib/authTokens.ts              @moderator29
+/middleware.ts                  @moderator29
+
+# Database — schema changes, RLS policies
+/supabase/                      @moderator29
+
+# Admin surface
+/app/admin/                     @moderator29
+/app/api/admin/                 @moderator29
+
+# Webhook handlers (signature-verified inbound)
+/app/api/webhooks/              @moderator29
+
+# Build / CI / repo config
+/.github/                       @moderator29
+/next.config.js                 @moderator29
+/vercel.json                    @moderator29
+/package.json                   @moderator29
+/tsconfig.json                  @moderator29
+
+# Project rules — must always be reviewed
+/CLAUDE.md                      @moderator29
+/SECURITY.md                    @moderator29
+/SECURITY_BACKLOG.md            @moderator29
