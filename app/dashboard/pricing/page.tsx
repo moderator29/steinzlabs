@@ -85,7 +85,32 @@ const TIERS = [
       'Early access to new features',
     ],
   },
-];
+  {
+    id: 'naka_cult',
+    name: 'Naka Cult',
+    price: 'Held',
+    period: 'not bought',
+    description: 'The Vault. The Conclave. The Oracle. The Sanctum.',
+    accent: '#DC143C',
+    popular: false,
+    gated: true,
+    features: [
+      'Everything in Max',
+      'Vault entry — three sealed chambers',
+      'The Conclave — vote on Decrees, shape the platform',
+      'The Oracle — Daily Seal briefings, VTX Sage, Whisper Network',
+      'The Sanctum — identity, achievements, lore, music',
+      'Holders of NakaLabs Development NFT receive The Chosen Seal',
+      'Quarterly Audience with the team (Chosen)',
+      'Early Access Lab — test features 24-72h before public',
+    ],
+    entryRules: [
+      'Hold ≥ 600,000 $NAKA, OR',
+      'Own a NakaLabs Loyalty Gem NFT, OR',
+      'Own a NakaLabs Development NFT (grants The Chosen)',
+    ],
+  },
+] as const;
 
 export default function PricingPage() {
   const router = useRouter();
@@ -94,6 +119,12 @@ export default function PricingPage() {
 
   const handleSubscribe = (tierId: string) => {
     if (tierId === 'free') return;
+    if (tierId === 'naka_cult') {
+      // Gated tier — owner action: hold $NAKA or mint a NakaLabs NFT.
+      // Route to the NakaCult landing instead of the Stripe stub.
+      router.push('/naka-cult');
+      return;
+    }
     toast.info('Crypto payment integration coming soon. Join our waitlist at support@nakalabs.com');
   };
 
@@ -110,15 +141,18 @@ export default function PricingPage() {
           <p className="text-gray-400 text-lg">Professional on-chain intelligence. Cancel anytime.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {TIERS.map(tier => {
             const isCurrent = currentPlan === tier.id;
+            const isCult = tier.id === 'naka_cult';
             return (
               <div
                 key={tier.id}
                 className={`relative bg-[#141824] rounded-2xl border p-5 flex flex-col ${
                   tier.popular
                     ? 'border-[#0A1EFF] shadow-lg shadow-[#0A1EFF]/10'
+                    : isCult
+                    ? 'border-[#DC143C]/40 shadow-lg shadow-[#DC143C]/15'
                     : 'border-[#1E2433]'
                 }`}
               >
@@ -156,6 +190,16 @@ export default function PricingPage() {
                       <span className="text-gray-300 text-xs">{f}</span>
                     </div>
                   ))}
+                  {isCult && 'entryRules' in tier && Array.isArray((tier as { entryRules?: readonly string[] }).entryRules) && (
+                    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-1.5">
+                      <div className="text-[10px] uppercase tracking-wider text-[#DC143C]/80 font-semibold mb-1.5">
+                        Entry
+                      </div>
+                      {(tier as { entryRules: readonly string[] }).entryRules.map(r => (
+                        <div key={r} className="text-gray-400 text-xs leading-snug">{r}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -166,13 +210,21 @@ export default function PricingPage() {
                       ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
                       : tier.id === 'free'
                       ? 'bg-[#1E2433] text-gray-500 cursor-default'
+                      : isCult
+                      ? 'border text-white hover:bg-[#DC143C]/10'
                       : tier.popular
                       ? 'bg-[#0A1EFF] hover:bg-[#0916CC] text-white'
                       : 'border text-white hover:bg-white/5 transition-colors'
                   }`}
                   style={!isCurrent && tier.id !== 'free' && !tier.popular ? { borderColor: tier.accent, color: tier.accent } : {}}
                 >
-                  {isCurrent ? 'Current Plan' : tier.id === 'free' ? 'Free Forever' : `Get ${tier.name}`}
+                  {isCurrent
+                    ? 'Current Plan'
+                    : tier.id === 'free'
+                    ? 'Free Forever'
+                    : isCult
+                    ? 'Enter the Cult'
+                    : `Get ${tier.name}`}
                 </button>
               </div>
             );

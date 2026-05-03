@@ -128,7 +128,7 @@ async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void
 }
 
 function tierGateMsg(needed: Tier): string {
-  const labels: Record<Tier, string> = { free: "Free", mini: "MINI", pro: "PRO", max: "MAX" };
+  const labels: Record<Tier, string> = { free: "Free", mini: "MINI", pro: "PRO", max: "MAX", naka_cult: "NAKA CULT" };
   return `🔒 This command requires *${labels[needed]}* or higher. Upgrade at ${APP_URL}/pricing`;
 }
 

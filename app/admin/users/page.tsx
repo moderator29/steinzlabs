@@ -38,6 +38,7 @@ const TIER_BADGE: Record<Tier, string> = {
   mini: 'bg-cyan-500/25 text-cyan-100 border border-cyan-400/50',
   pro:  'bg-[#0A1EFF]/30 text-[#C7D2FE] border border-[#0A1EFF]/60',
   max:  'bg-amber-500/25 text-amber-100 border border-amber-400/50',
+  naka_cult: 'bg-[#DC143C]/25 text-[#FFD0DC] border border-[#DC143C]/50',
 };
 
 function effectiveTierOf(u: Pick<AdminUser, 'tier' | 'tier_expires_at'>): Tier {
@@ -307,7 +308,7 @@ export default function AdminUsersPage() {
   }, []);
 
   const tierCounts = useMemo(() => {
-    const c: Record<Tier, number> = { free: 0, mini: 0, pro: 0, max: 0 };
+    const c: Record<Tier, number> = { free: 0, mini: 0, pro: 0, max: 0, naka_cult: 0 };
     for (const u of users) c[effectiveTierOf(u)]++;
     return c;
   }, [users]);
