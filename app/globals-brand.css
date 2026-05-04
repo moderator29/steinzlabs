@@ -1,0 +1,195 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Naka Cult Brand Layer — globals-brand.css
+   Tokens + primitive component classes (.cult-card, .cult-button, .cult-loader,
+   .cult-aurora-bg). Mirrors lib/brand/tokens.ts for CSS-side consumers.
+   Imported once from app/layout (or the cinematic root) so it's available
+   platform-wide without per-route reimports.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Canvas */
+  --cult-canvas-base: #050816;
+  --cult-canvas-deep: #020512;
+  --cult-canvas-elev: #0A0F2E;
+
+  /* Accents */
+  --cult-blue:        #0066FF;
+  --cult-blue-ice:    #00C8FF;
+  --cult-blue-deep:   #1230B3;
+  --cult-crimson:     #DC143C;
+  --cult-crimson-hot: #FF1744;
+  --cult-gold:        #FFD86B;
+
+  /* Semantic */
+  --cult-yes:     #10B981;
+  --cult-no:      #FF1744;
+  --cult-abstain: #B4C0E0;
+
+  /* Text */
+  --cult-text:        #FFFFFF;
+  --cult-text-soft:   #D5DEFF;
+  --cult-text-muted:  #B4C0E0;
+
+  /* Gradients */
+  --cult-grad-bluecrimson: linear-gradient(135deg, #0066FF 0%, #DC143C 100%);
+  --cult-grad-rocket:      linear-gradient(135deg, #7B2BFF 0%, #FF3DCB 50%, #00A1FF 100%);
+  --cult-grad-helmet:      linear-gradient(135deg, #0066FF 0%, #1230B3 60%, #050B40 100%);
+  --cult-grad-pentagon:    linear-gradient(135deg, #00C8FF 0%, #0066FF 100%);
+
+  /* Glows */
+  --cult-glow-blue-sm: 0 0 12px rgba(0, 102, 255, 0.35);
+  --cult-glow-blue-md: 0 0 24px rgba(0, 102, 255, 0.45);
+  --cult-glow-blue-lg: 0 0 48px rgba(0, 102, 255, 0.55);
+  --cult-glow-crimson: 0 0 24px rgba(220, 20, 60, 0.45);
+  --cult-glow-gold:    0 0 16px rgba(255, 216, 107, 0.40);
+
+  /* Radii */
+  --cult-r-sm:   8px;
+  --cult-r-md:   12px;
+  --cult-r-lg:   18px;
+  --cult-r-xl:   22px;
+  --cult-r-pill: 999px;
+
+  /* Easing + timing */
+  --cult-ease-std:  cubic-bezier(0.4, 0, 0.2, 1);
+  --cult-ease-cine: cubic-bezier(0.22, 1, 0.36, 1);
+  --cult-dur-fast:  150ms;
+  --cult-dur-base:  300ms;
+  --cult-dur-slow:  500ms;
+}
+
+/* ─── Aurora background (drop on any page hero / section) ─────────────── */
+.cult-aurora-bg {
+  position: relative;
+  background: var(--cult-canvas-base);
+  isolation: isolate;
+  overflow: hidden;
+}
+.cult-aurora-bg::before,
+.cult-aurora-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.cult-aurora-bg::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(220, 20, 60, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 60% at 50% 80%, rgba(0, 200, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(120, 60, 200, 0.06) 0%, transparent 50%);
+}
+.cult-aurora-bg::after {
+  inset: -50%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(0, 102, 255, 0.18)  60deg,
+    transparent 120deg,
+    rgba(220, 20, 60, 0.10) 180deg,
+    transparent 240deg,
+    rgba(0, 200, 255, 0.14) 300deg,
+    transparent 360deg);
+  animation: cult-aurora-drift 30s linear infinite;
+  opacity: 0.4;
+}
+.cult-aurora-bg > * { position: relative; z-index: 1; }
+
+@keyframes cult-aurora-drift {
+  0%   { transform: rotate(0deg)   scale(1);   }
+  50%  { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1);   }
+}
+
+/* ─── Cult card (matches the highlighted rocket frame in the W reference) */
+.cult-card {
+  position: relative;
+  border-radius: var(--cult-r-xl);
+  background: linear-gradient(135deg, rgba(10, 15, 46, 0.85), rgba(15, 22, 60, 0.75));
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+  transition: box-shadow var(--cult-dur-base) var(--cult-ease-std),
+              border-color var(--cult-dur-base) ease;
+}
+.cult-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--cult-grad-bluecrimson);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--cult-dur-base) ease;
+  pointer-events: none;
+}
+.cult-card:hover { box-shadow: var(--cult-glow-blue-lg); }
+.cult-card:hover::after { opacity: 0.85; }
+
+.cult-card--featured::after { opacity: 0.6; }
+.cult-card--featured:hover::after { opacity: 1; }
+
+/* ─── Cult button ─────────────────────────────────────────────────────── */
+.cult-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--cult-r-md);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--cult-text);
+  background: var(--cult-grad-bluecrimson);
+  border: 1px solid rgba(0, 102, 255, 0.55);
+  box-shadow: var(--cult-glow-blue-sm);
+  cursor: pointer;
+  transition: box-shadow var(--cult-dur-base) var(--cult-ease-std),
+              transform var(--cult-dur-fast) ease;
+}
+.cult-button:hover {
+  box-shadow: var(--cult-glow-blue-md);
+  transform: translateY(-1px);
+}
+.cult-button:active { transform: translateY(0); }
+.cult-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.cult-button--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+  color: var(--cult-text-soft);
+}
+.cult-button--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 200, 255, 0.45);
+  color: var(--cult-text);
+  box-shadow: var(--cult-glow-blue-sm);
+}
+
+/* ─── Cult loader ─────────────────────────────────────────────────────── */
+.cult-loader {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--cult-blue) 270deg, transparent 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 12px, #000 13px);
+          mask: radial-gradient(circle, transparent 12px, #000 13px);
+  animation: cult-loader-spin 900ms linear infinite;
+  filter: drop-shadow(var(--cult-glow-blue-sm));
+}
+@keyframes cult-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cult-aurora-bg::after { animation: none; }
+  .cult-loader            { animation-duration: 2400ms; }
+}
