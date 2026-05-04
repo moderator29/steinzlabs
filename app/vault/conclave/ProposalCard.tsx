@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Minus, Loader2 } from 'lucide-react';
+import { VoteOrbs } from './VoteOrbs';
 
 export interface Proposal {
   id: string;
@@ -87,11 +88,7 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
       </div>
 
       <div className="space-y-2">
-        <div className="vault-vote-bar" role="img"
-             aria-label={`Yes ${pctYes.toFixed(0)}%, No ${pctNo.toFixed(0)}%`}>
-          <span className="vault-vote-bar__yes" style={{ width: `${pctYes}%` }} />
-          <span className="vault-vote-bar__no"  style={{ width: `${pctNo}%`  }} />
-        </div>
+        <VoteOrbs proposalId={proposal.id} />
         <div className="flex items-center justify-between text-[12px] font-semibold">
           <span className="text-[#10B981]">✓ {yes.toLocaleString()} yes</span>
           <span className="text-[#B4C0E0]">{proposal.voter_count} voters</span>

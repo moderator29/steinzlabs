@@ -1,21 +1,35 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProposalCard, type Proposal } from './ProposalCard';
 import { Loader2, Plus } from 'lucide-react';
 import { CreateProposalModal } from './CreateProposalModal';
+import { supabase } from '@/lib/supabase';
+import { playSound } from '@/lib/cinematic/sound';
 
 export function ConclaveClient() {
   const [tab, setTab] = useState<'active' | 'passed' | 'failed' | 'all'>('active');
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const prevStatusRef = useRef<Map<string, Proposal['status']>>(new Map());
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/cult/proposals?status=${tab}`, { cache: 'no-store' });
       const j = await res.json();
-      setProposals(j.proposals ?? []);
+      const next: Proposal[] = j.proposals ?? [];
+
+      // Status-flip detection: if a proposal we already had as 'active' just
+      // became 'passed' or 'failed' on this fetch, fire the cinematic sound.
+      // No-ops silently until /public/sounds/ MP3s are dropped.
+      for (const p of next) {
+        const prev = prevStatusRef.current.get(p.id);
+        if (prev === 'active' && p.status === 'passed') playSound('proposal-pass');
+        if (prev === 'active' && p.status === 'failed') playSound('proposal-fail');
+        prevStatusRef.current.set(p.id, p.status);
+      }
+      setProposals(next);
     } finally {
       setLoading(false);
     }
@@ -23,13 +37,34 @@ export function ConclaveClient() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Light polling every 10s while the tab is visible — Supabase Realtime
-  // wiring is the next pass; polling keeps the bar fresh meanwhile.
+  // Realtime: any insert/update on proposals or votes triggers a re-fetch.
+  // Replaces the previous 10s polling loop. We debounce coalesced bursts
+  // (e.g. five votes landing in the same second) into a single load call.
   useEffect(() => {
+    let pending = false;
+    const trigger = () => {
+      if (pending) return;
+      pending = true;
+      setTimeout(() => { pending = false; load(); }, 250);
+    };
+
+    const channel = supabase
+      .channel('cult-conclave')
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'cult_proposals' },
+          trigger)
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'cult_proposal_votes' },
+          trigger)
+      .subscribe();
+
     const onVis = () => { if (!document.hidden) load(); };
-    const id = setInterval(() => { if (!document.hidden) load(); }, 10_000);
     document.addEventListener('visibilitychange', onVis);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [load]);
 
   const TABS: { id: typeof tab; label: string }[] = [
