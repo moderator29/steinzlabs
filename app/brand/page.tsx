@@ -4,6 +4,7 @@ import * as BrandIcons from '@/components/icons/brand';
 export const metadata = { title: 'Brand · Steinz Labs', robots: { index: false } };
 
 const ICONS = [
+  // Starter (Phase 2)
   ['Dashboard', BrandIcons.Dashboard],
   ['Search',    BrandIcons.Search],
   ['Bell',      BrandIcons.Bell],
@@ -28,6 +29,56 @@ const ICONS = [
   ['Activity',  BrandIcons.Activity],
   ['Whale',     BrandIcons.Whale],
   ['Sparkle',   BrandIcons.Sparkle],
+  // Phase C — navigation chevrons + arrows
+  ['ChevronRight', BrandIcons.ChevronRight],
+  ['ChevronLeft',  BrandIcons.ChevronLeft],
+  ['ChevronUp',    BrandIcons.ChevronUp],
+  ['ChevronDown',  BrandIcons.ChevronDown],
+  ['ArrowUp',      BrandIcons.ArrowUp],
+  ['ArrowDown',    BrandIcons.ArrowDown],
+  // Phase C — actions
+  ['Plus',         BrandIcons.Plus],
+  ['Minus',        BrandIcons.Minus],
+  ['Edit',         BrandIcons.Edit],
+  ['Trash2',       BrandIcons.Trash2],
+  ['Save',         BrandIcons.Save],
+  ['Copy',         BrandIcons.Copy],
+  ['ExternalLink', BrandIcons.ExternalLink],
+  ['Share',        BrandIcons.Share],
+  ['Download',     BrandIcons.Download],
+  ['Upload',       BrandIcons.Upload],
+  ['Send',         BrandIcons.Send],
+  ['RefreshCw',    BrandIcons.RefreshCw],
+  ['Filter',       BrandIcons.Filter],
+  ['MoreHorizontal', BrandIcons.MoreHorizontal],
+  ['MoreVertical', BrandIcons.MoreVertical],
+  // Phase C — feedback
+  ['Info',          BrandIcons.Info],
+  ['AlertCircle',   BrandIcons.AlertCircle],
+  ['AlertTriangle', BrandIcons.AlertTriangle],
+  ['HelpCircle',    BrandIcons.HelpCircle],
+  ['Star',          BrandIcons.Star],
+  ['Heart',         BrandIcons.Heart],
+  ['ThumbsUp',      BrandIcons.ThumbsUp],
+  ['ThumbsDown',    BrandIcons.ThumbsDown],
+  // Phase C — auth / privacy
+  ['Lock',   BrandIcons.Lock],
+  ['Unlock', BrandIcons.Unlock],
+  ['EyeOff', BrandIcons.EyeOff],
+  ['LogIn',  BrandIcons.LogIn],
+  ['LogOut', BrandIcons.LogOut],
+  // Phase C — date / time / theme
+  ['Calendar', BrandIcons.Calendar],
+  ['Clock',    BrandIcons.Clock],
+  ['Sun',      BrandIcons.Sun],
+  ['Moon',     BrandIcons.Moon],
+  // Phase C — media
+  ['Play',  BrandIcons.Play],
+  ['Pause', BrandIcons.Pause],
+  // Phase C — comms / brand
+  ['Mail',    BrandIcons.Mail],
+  ['Github',  BrandIcons.Github],
+  ['Twitter', BrandIcons.Twitter],
 ] as const;
 
 const SWATCHES: { label: string; cssVar: string }[] = [
