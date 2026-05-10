@@ -34,6 +34,8 @@
     { "path": "/api/cron/whale-backfill-pnl",         "schedule": "*/30 * * * *" },
     { "path": "/api/cron/sniper-auto-execute",        "schedule": "* * * * *" },
     { "path": "/api/cron/sniper-autosell",            "schedule": "* * * * *" },
-    { "path": "/api/cron/whale-logo-backfill",        "schedule": "0 4 * * 0" }
+    { "path": "/api/cron/whale-logo-backfill",        "schedule": "0 4 * * 0" },
+    { "path": "/api/cron/cult-verify-membership",     "schedule": "0 3 * * *" },
+    { "path": "/api/cron/cult-refresh-treasury",      "schedule": "0 */6 * * *" }
   ]
 }
