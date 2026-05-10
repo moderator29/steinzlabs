@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+// Naka Labs brand icons — swap what's in the library, lucide-fallback
+// for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
+// ArrowLeftRight, Telescope) — they remain visually consistent with the
+// other lucide icons elsewhere on the page until a follow-up wave adds them.
+import {
+  Search, Plus, Bell, Trash2, ChevronRight, X,
+} from "@/components/icons/brand";
 import {
   Loader2,
-  Search,
-  Plus,
-  Bell,
   BellOff,
-  Trash2,
-  ChevronRight,
   ArrowUpRight,
   ArrowDownLeft,
   ArrowLeftRight,
   Telescope,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
