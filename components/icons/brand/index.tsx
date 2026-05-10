@@ -1,16 +1,16 @@
 /**
- * Cult Icon System — glowing geometric, gradient-filled, soft outer glow.
+ * Naka Labs Brand Icon System — glowing geometric, gradient-filled, soft outer glow.
  *
  * Visual reference: the rocket / helmet / pentagon trio from the W
  * "REDEFINING THE WEB3 SPACE" image. Every icon in this library shares:
  *   - Gradient fill (signature: blue #0066FF → crimson #DC143C, with
  *     per-icon variants — rocket gets purple-pink, helmet stays pure blue,
  *     pentagon goes electric blue)
- *   - Soft outer glow halo via SVG filter (id: "cultGlow")
+ *   - Soft outer glow halo via SVG filter
  *   - 24×24 viewBox by default to drop in anywhere lucide-react fits
  *   - Same prop API as lucide-react (size, color, className, ...rest) so
  *     swapping is mechanical: `import { Wallet } from 'lucide-react'`
- *     becomes `import { Wallet } from '@/components/icons/cult'`
+ *     becomes `import { Wallet } from '@/components/icons/brand'`
  *
  * This file is the starter set covering the highest-frequency platform
  * icons (~24). The platform-wide ascension PR series adds the remaining
@@ -19,14 +19,14 @@
 
 import type { SVGProps } from 'react';
 
-export interface CultIconProps extends Omit<SVGProps<SVGSVGElement>, 'fill'> {
+export interface BrandIconProps extends Omit<SVGProps<SVGSVGElement>, 'fill'> {
   size?: number | string;
   variant?: 'blue' | 'crimson' | 'rocket' | 'pentagon' | 'gold';
 }
 
 // Shared gradient + glow defs. Inlined per-icon so each <svg> is fully
 // portable (drag-and-drop into any DOM context, no global filter dep).
-function CultDefs({ id, variant = 'blue' }: { id: string; variant: CultIconProps['variant'] }) {
+function BrandDefs({ id, variant = 'blue' }: { id: string; variant: BrandIconProps['variant'] }) {
   const stops = (() => {
     switch (variant) {
       case 'crimson':  return [['0%', '#FF3DCB'], ['100%', '#DC143C']];
@@ -55,8 +55,8 @@ function CultDefs({ id, variant = 'blue' }: { id: string; variant: CultIconProps
   );
 }
 
-function makeIcon(name: string, defaultVariant: CultIconProps['variant'], path: (gid: string, glowId: string) => React.ReactNode) {
-  const Icon = ({ size = 20, variant = defaultVariant, className = '', ...rest }: CultIconProps) => {
+function makeIcon(name: string, defaultVariant: BrandIconProps['variant'], path: (gid: string, glowId: string) => React.ReactNode) {
+  const Icon = ({ size = 20, variant = defaultVariant, className = '', ...rest }: BrandIconProps) => {
     const id = `${name}-${Math.random().toString(36).slice(2, 8)}`;
     return (
       <svg
@@ -69,12 +69,12 @@ function makeIcon(name: string, defaultVariant: CultIconProps['variant'], path: 
         aria-hidden="true"
         {...rest}
       >
-        <CultDefs id={id} variant={variant} />
+        <BrandDefs id={id} variant={variant} />
         {path(`g-${id}`, `glow-${id}`)}
       </svg>
     );
   };
-  Icon.displayName = `Cult${name}`;
+  Icon.displayName = `Brand${name}`;
   return Icon;
 }
 
@@ -269,6 +269,6 @@ export const Sparkle = makeIcon('Sparkle', 'rocket', (gid, glowId) => (
 ));
 
 // Re-export grouping for ergonomics. Consumers can do
-//   import { Wallet, Sigil } from '@/components/icons/cult'
+//   import { Wallet, Sigil } from '@/components/icons/brand'
 // or import the namespace:
-//   import * as CultIcons from '@/components/icons/cult'
+//   import * as BrandIcons from '@/components/icons/brand'
