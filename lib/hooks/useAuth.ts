@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-export type UserTier = 'free' | 'mini' | 'pro' | 'max';
+export type UserTier = 'free' | 'mini' | 'pro' | 'max' | 'naka_cult';
 export type UserRole = 'user' | 'admin';
 
 export interface UserProfile {
@@ -37,10 +37,13 @@ export function effectiveTier(profile: Pick<UserProfile, 'tier' | 'tier_expires_
 }
 
 /**
- * Tier rank for "is at least X tier" checks. e.g. hasTierAccess(user, 'pro')
- * returns true for pro AND max users.
+ * Tier rank for "is at least X tier" checks. naka_cult is the 5th tier
+ * sitting above max — held, not bought (NFT/holding-gated). Members get
+ * automatic access to every paid feature including MAX-only ones like the
+ * sniper bot. Without this rank, every `tier === 'max'` strict check on
+ * the platform locked Naka Cult members out of features they should own.
  */
-const TIER_RANK: Record<UserTier, number> = { free: 0, mini: 1, pro: 2, max: 3 };
+const TIER_RANK: Record<UserTier, number> = { free: 0, mini: 1, pro: 2, max: 3, naka_cult: 4 };
 export function hasTierAccess(profile: Pick<UserProfile, 'tier' | 'tier_expires_at'> | null | undefined, required: UserTier): boolean {
   return TIER_RANK[effectiveTier(profile)] >= TIER_RANK[required];
 }
@@ -78,7 +81,7 @@ export function useAuthProvider(): AuthContextType {
     // even before the profiles row resolves. Profile is the source of truth.
     const metaTier: UserTier = (() => {
       const m = (meta.subscription_tier ?? meta.tier) as string | undefined;
-      if (m === 'mini' || m === 'pro' || m === 'max' || m === 'free') return m;
+      if (m === 'mini' || m === 'pro' || m === 'max' || m === 'naka_cult' || m === 'free') return m;
       return 'free';
     })();
 
@@ -102,7 +105,7 @@ export function useAuthProvider(): AuthContextType {
         .single();
 
       if (profile) {
-        const dbTier = (profile.tier === 'mini' || profile.tier === 'pro' || profile.tier === 'max' || profile.tier === 'free')
+        const dbTier = (profile.tier === 'mini' || profile.tier === 'pro' || profile.tier === 'max' || profile.tier === 'naka_cult' || profile.tier === 'free')
           ? profile.tier as UserTier
           : metaTier;
         setUser({
@@ -192,7 +195,7 @@ export function useAuthProvider(): AuthContextType {
             const meta = (session.user.user_metadata ?? {}) as Record<string, unknown>;
             const metaTier: UserTier = (() => {
               const m = (meta.subscription_tier ?? meta.tier) as string | undefined;
-              if (m === 'mini' || m === 'pro' || m === 'max' || m === 'free') return m;
+              if (m === 'mini' || m === 'pro' || m === 'max' || m === 'naka_cult' || m === 'free') return m;
               return 'free';
             })();
             setUser({
