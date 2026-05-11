@@ -2,7 +2,14 @@
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity, BarChart3, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+// Brand icon library — gradient-glowing platform icons. Missing specialty
+// icons fall back to lucide-react (hybrid pattern used elsewhere on main).
+import {
+  Wallet, User, Menu, X, TrendingDown, Activity, ChartBar as BarChart3,
+} from '@/components/icons/brand';
+import {
+  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
@@ -71,14 +78,16 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 }) {
   // Compact Trust-Wallet / CoinGecko-style stat cell. Single row on desktop,
   // still single-row on mobile (the grid drops to 2 columns on small screens).
+  // Migrated to .cult-card primitive (Phase A ascension) — keeps the same
+  // density but adds the brand gradient halo on hover.
   return (
-    <div className="bg-[#111827] border border-white/[0.06] rounded-xl px-3 py-2.5 hover:border-[#0A1EFF]/20 transition-all duration-200">
+    <div className="cult-card px-3 py-2.5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <div className="p-1 rounded-md bg-[#0A1EFF]/[0.06]">
-            <Icon className="w-3 h-3 text-[#0A1EFF]" />
+          <div className="p-1 rounded-md bg-[#0066FF]/[0.10]">
+            <Icon className="w-3.5 h-3.5" />
           </div>
-          <span className="text-[10px] text-gray-500 tracking-wide">{label}</span>
+          <span className="text-[10px] text-[#B4C0E0] tracking-wide">{label}</span>
         </div>
         {change ? (
           <div className={`flex items-center gap-0.5 text-[10px] font-medium ${

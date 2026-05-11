@@ -37,8 +37,11 @@ export async function GET(request: NextRequest) {
       {
         tier,
         isPaid: tier !== 'free',
-        isPro: tier === 'pro' || tier === 'max',
-        isMax: tier === 'max',
+        // naka_cult sits ABOVE max — Cult members satisfy every paid-tier
+        // gate (isPro AND isMax) since the 5th tier is held, not bought.
+        isPro: tier === 'pro' || tier === 'max' || tier === 'naka_cult',
+        isMax: tier === 'max' || tier === 'naka_cult',
+        isCult: tier === 'naka_cult',
         isAdmin,
         verifiedBadge: profile?.verified_badge || null,
         tierExpiresAt: profile?.tier_expires_at || null,

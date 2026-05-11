@@ -3,12 +3,17 @@
 import { useEffect, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+// Brand icon library — gradient-glowing platform icons. Missing specialty
+// icons fall back to lucide-react until they land in the brand library
+// (mirrors the hybrid-import pattern used elsewhere on main).
 import {
-  X, BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio, Fish,
-  ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Wallet, CandlestickChart, Archive, Circle, FileCode,
-  FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network,
-  Globe, History
+  X, ChartBar as BarChart3, Search, TrendingUp, Whale as Fish, Bell, Shield,
+  Wallet, ChartCandle as CandlestickChart,
+} from '@/components/icons/brand';
+import {
+  Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
+  Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
+  Crosshair, Network, Globe, History,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
