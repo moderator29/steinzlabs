@@ -72,7 +72,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const watched = isWatched(address);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0E1A] text-white pb-20 md:pb-0">
+    <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
       {/* Top bar */}
       <div className="sticky top-0 z-20 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -242,7 +242,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           keeps the primary trade actions always-reachable without
           scrolling. Hidden on md+ where the right rail has the full
           inline form. Links to the same BUY/SELL scroll target. */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800 bg-[#0A0E1A]/95 backdrop-blur-xl px-3 py-2 grid grid-cols-2 gap-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800/95 backdrop-blur-xl px-3 py-2 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => {

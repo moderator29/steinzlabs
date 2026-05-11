@@ -19,7 +19,7 @@ export function MarketSubNav() {
   const router = useRouter();
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
+    <div className="flex items-center gap-1 p-1 rounded-lg border border-[#1E2433]">
       {TABS.map((tab) => {
         const active = pathname.startsWith(tab.path);
         const Icon = tab.icon;

@@ -113,7 +113,7 @@ export default function CopyTradingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex items-start justify-between gap-3 mb-6">
           <div>

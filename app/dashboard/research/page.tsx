@@ -119,7 +119,7 @@ function ArticleCard({
     return (
       <button
         onClick={onClick}
-        className="w-full text-left rounded-2xl border border-white/[0.06] bg-[#0A0E1A] overflow-hidden hover:border-[#0A1EFF]/30 hover:shadow-[0_0_24px_rgba(10,30,255,0.08)] transition-all duration-200 group"
+        className="w-full text-left rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0A1EFF]/30 hover:shadow-[0_0_24px_rgba(10,30,255,0.08)] transition-all duration-200 group"
       >
         {post.image_url ? (
           <div className="h-44 w-full overflow-hidden">
@@ -176,7 +176,7 @@ function ArticleCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl border border-white/[0.06] bg-[#0A0E1A] overflow-hidden hover:border-[#0A1EFF]/20 hover:shadow-[0_0_16px_rgba(10,30,255,0.06)] transition-all duration-200 group flex"
+      className="w-full text-left rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0A1EFF]/20 hover:shadow-[0_0_16px_rgba(10,30,255,0.06)] transition-all duration-200 group flex"
     >
       {post.image_url ? (
         <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '88px' }}>
@@ -400,7 +400,7 @@ export default function ResearchPage() {
 
         {/* ── Filter/Sort Panel ── */}
         {showFilters && (
-          <div className="mb-5 rounded-xl border border-white/[0.06] bg-[#0A0E1A] p-4 space-y-4">
+          <div className="mb-5 rounded-xl border border-white/[0.06] p-4 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-wider">Filters</span>
               <button onClick={() => setShowFilters(false)}>
@@ -459,7 +459,7 @@ export default function ResearchPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search research..."
-            className="w-full bg-[#0A0E1A] border border-white/[0.07] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
+            className="w-full border border-white/[0.07] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
           />
           {search && (
             <button
