@@ -2,12 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  ShieldAlert,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+// Naka Labs brand icons — TrendingUp/Down swapped. ArrowRight + ShieldAlert stay on lucide.
+import { TrendingUp, TrendingDown } from "@/components/icons/brand";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { createChart, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
@@ -228,7 +225,7 @@ export default function PortfolioPage() {
   const realizedTotal = perf?.realized.totalUsd ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-4 sm:p-6 space-y-6">
+    <div className="min-h-screen p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3">
         <BackButton href="/dashboard" />
         <div>

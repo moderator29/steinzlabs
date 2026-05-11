@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, Shield, Bell, Wallet, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
+// Naka Labs brand icons — User, Shield, Bell, Wallet, Eye, EyeOff,
+// AlertTriangle swapped. Loader2 stays on lucide.
+import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle } from '@/components/icons/brand';
+import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';

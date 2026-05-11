@@ -697,7 +697,7 @@ export default function ProfileTab() {
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="w-full bg-[#0A0E1A] border border-white/10 rounded-xl px-3 py-2 text-sm font-mono mb-3 focus:outline-none focus:border-[#EF4444]/40 text-white"
+                className="w-full border border-white/10 rounded-xl px-3 py-2 text-sm font-mono mb-3 focus:outline-none focus:border-[#EF4444]/40 text-white"
               />
               {deleteError && <p className="text-[11px] text-[#EF4444] mb-2">{deleteError}</p>}
               <div className="flex gap-2">

@@ -1,6 +1,17 @@
 'use client';
 
-import { Trophy, Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, DollarSign, Target, Clock, ChevronRight, Search, Users, Zap, Loader2, RefreshCw, TrendingDown, Flame, AlertTriangle, ArrowUpRight, SortAsc, Award, Fish, Building2, Settings2, X, Radio, Shield } from 'lucide-react';
+// Naka Labs brand icon library — swap subset (Star, TrendingUp, Eye, Bell,
+// Plus, Copy, Activity, Clock, ChevronRight, Search, RefreshCw, TrendingDown,
+// AlertTriangle, X, Shield) for glowing-geometric brand version. Whale icon
+// substituted for Fish (same semantic). Remaining icons stay on lucide until
+// brand library expands (Trophy, DollarSign, Target, Users, Zap, Flame,
+// ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio).
+import {
+  Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, Clock, ChevronRight, Search,
+  RefreshCw, TrendingDown, AlertTriangle, X, Shield,
+  Whale as Fish,
+} from '@/components/icons/brand';
+import { Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';

@@ -59,7 +59,7 @@ export default function SubmitWhalePage() {
     "w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm focus:outline-none focus:border-blue-500/40";
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="max-w-xl mx-auto px-4 py-6">
         <div className="mb-4"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
         <h1 className="text-2xl font-bold mb-1">Submit a whale</h1>

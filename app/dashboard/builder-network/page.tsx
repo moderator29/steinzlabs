@@ -119,7 +119,7 @@ export default function BuilderNetworkPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
@@ -223,8 +223,8 @@ export default function BuilderNetworkPage() {
 
       {showApply && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowApply(false)}>
-          <div className="w-full max-w-md max-h-[85vh] bg-[#0A0E1A] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between">
+          <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Apply as Builder</h2>
               <button onClick={() => setShowApply(false)} className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
@@ -292,8 +292,8 @@ export default function BuilderNetworkPage() {
 
       {selectedBuilder && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setSelectedBuilder(null)}>
-          <div className="w-full max-w-md max-h-[85vh] bg-[#0A0E1A] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between">
+          <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Builder Profile</h2>
               <button onClick={() => setSelectedBuilder(null)} className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
             </div>

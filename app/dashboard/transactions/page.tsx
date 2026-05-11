@@ -109,7 +109,7 @@ export default function TransactionsPage() {
   const filtered = filter === 'all' ? txs : txs.filter(t => t.type === filter);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
         <PageHeader title="Transactions" description="Your swap and snipe history across all chains" />
 
