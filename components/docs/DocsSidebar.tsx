@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, ChevronRight, FileText } from 'lucide-react';
+// Naka Labs brand icons — ChevronRight swap; BookOpen + FileText not yet in brand library.
+import { ChevronRight } from '@/components/icons/brand';
+import { BookOpen, FileText } from 'lucide-react';
 
 export interface DocSection {
   id: string;

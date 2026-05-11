@@ -2,12 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  ShieldAlert,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+// Naka Labs brand icons — TrendingUp/Down swapped. ArrowRight + ShieldAlert stay on lucide.
+import { TrendingUp, TrendingDown } from "@/components/icons/brand";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { createChart, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";

@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+// Naka Labs brand icons — broad swap. BarChart3 → ChartBar, Share2 → Share, LayoutDashboard → Dashboard aliased.
 import {
   Shield, LogOut, Eye, CheckCircle, XCircle, AlertTriangle, Clock,
-  Users, Activity, Lock, BarChart3, TrendingUp, TrendingDown, Zap,
-  RotateCcw, DollarSign, Layers, Bell, Settings, Database, Wifi,
-  ArrowUpRight, ArrowDownRight, Send, Trash2, Ban, UserCheck, Menu,
-  X, Home, ShieldCheck, Search, ExternalLink, Server, Briefcase,
-  Globe, ChevronRight, Heart, Share2, LayoutDashboard, UserPlus,
-  ShieldAlert, Radio, RefreshCw
+  Activity, Lock, ChartBar as BarChart3, TrendingUp, TrendingDown,
+  Bell, Settings, Send, Trash2, Menu, X, Search, ExternalLink,
+  ChevronRight, Heart, Share as Share2, Dashboard as LayoutDashboard, RefreshCw,
+} from '@/components/icons/brand';
+import {
+  Users, Zap, RotateCcw, DollarSign, Layers, Database, Wifi,
+  ArrowUpRight, ArrowDownRight, Ban, UserCheck, Home, ShieldCheck,
+  Server, Briefcase, Globe, UserPlus, ShieldAlert, Radio,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 

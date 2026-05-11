@@ -3,16 +3,18 @@
 import { useEffect, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-// Cult icon library — same names + props as lucide-react so the JSX below is
-// untouched. Renamed cult icons (BarChart3→ChartBar, CandlestickChart→
-// ChartCandle, Fish→Whale) come in via aliased imports.
+// Brand icon library — gradient-glowing platform icons. Missing specialty
+// icons fall back to lucide-react until they land in the brand library
+// (mirrors the hybrid-import pattern used elsewhere on main).
 import {
-  X, ChartBar as BarChart3, Dna, Search, Link2, TrendingUp, Trophy, Radio,
-  Whale as Fish, ArrowLeftRight, Bot, Bell, Shield, Target, PieChart, DollarSign,
-  Wallet, ChartCandle as CandlestickChart, Archive, Circle, FileCode,
-  FlaskConical, BookOpen, FileSearch, CheckSquare, Crosshair, Network,
-  Globe, History,
-} from '@/components/icons/cult';
+  X, ChartBar as BarChart3, Search, TrendingUp, Whale as Fish, Bell, Shield,
+  Wallet, ChartCandle as CandlestickChart,
+} from '@/components/icons/brand';
+import {
+  Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
+  Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
+  Crosshair, Network, Globe, History,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SidebarMenuProps {

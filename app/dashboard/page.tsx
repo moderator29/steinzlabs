@@ -2,11 +2,14 @@
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// Cult icon library — gradient-glowing brand icons. Aliased for legacy names.
+// Brand icon library — gradient-glowing platform icons. Missing specialty
+// icons fall back to lucide-react (hybrid pattern used elsewhere on main).
 import {
-  Home, MessageSquare, Wallet, User, Menu, X, TrendingDown, Activity,
-  ChartBar as BarChart3, Zap, ArrowUpRight, ArrowDownRight,
-} from '@/components/icons/cult';
+  Wallet, User, Menu, X, TrendingDown, Activity, ChartBar as BarChart3,
+} from '@/components/icons/brand';
+import {
+  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
+} from 'lucide-react';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';

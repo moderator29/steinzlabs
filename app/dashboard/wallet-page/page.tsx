@@ -2,7 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Plus, Download, Send, Copy, Eye, EyeOff, RotateCcw, Trash2, ChevronRight, Wallet, Key, Shield, Check, AlertTriangle, ExternalLink, Globe, Layers, ArrowUpRight, ArrowDownLeft, Repeat, DollarSign, TrendingUp, TrendingDown, Settings, Search, QrCode, X, RefreshCw, ChevronDown, ShoppingCart, Zap, Share2 } from 'lucide-react';
+// Naka Labs brand icons — broad swap of available glowing-geometric versions.
+// Icons not yet in the brand library stay on lucide for now.
+import {
+  Plus, Download, Send, Copy, Eye, EyeOff, Trash2, ChevronRight, Wallet,
+  Shield, CheckCircle as Check, AlertTriangle, ExternalLink, Settings, Search,
+  X, RefreshCw, ChevronDown, Share as Share2, TrendingUp, TrendingDown,
+} from '@/components/icons/brand';
+import {
+  ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap,
+} from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';

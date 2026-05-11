@@ -1,7 +1,10 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart2, Star, ListOrdered } from 'lucide-react';
+// Naka Labs brand icons — BarChart2 → ChartBar, Star → brand gold variant.
+// ListOrdered kept on lucide (no brand equivalent in starter set yet).
+import { ChartBar as BarChart2, Star } from '@/components/icons/brand';
+import { ListOrdered } from 'lucide-react';
 
 // §4.7 — "Trade" tab removed. The standalone trading terminal at
 // /market/trade was deleted per product spec; users now click any coin
