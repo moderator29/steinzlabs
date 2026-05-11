@@ -602,6 +602,191 @@ export const Twitter = makeIcon('Twitter', 'blue', (gid, glowId) => (
   </g>
 ));
 
+// ─── Expansion wave 2 (feat/expand-icons-2) ───────────────────────────────
+// Adds the icons cluster ascensions B/C/D/E need but the foundation set
+// didn't ship. Same makeIcon factory, same prop API — pure lucide drop-in.
+
+export const BookOpen = makeIcon('BookOpen', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M2 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z" />
+    <path d="M22 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z" />
+  </g>
+));
+
+export const Tag = makeIcon('Tag', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
+    <circle cx="7.5" cy="7.5" r="1.2" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const SlidersHorizontal = makeIcon('SlidersHorizontal', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" fill="none">
+    <line x1="3" y1="6" x2="9" y2="6" /><line x1="13" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="15" y2="12" /><line x1="19" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="7" y2="18" /><line x1="11" y1="18" x2="21" y2="18" />
+    <circle cx="11" cy="6" r="1.8" fill={`url(#${gid})`} />
+    <circle cx="17" cy="12" r="1.8" fill={`url(#${gid})`} />
+    <circle cx="9" cy="18" r="1.8" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const Zap = makeIcon('Zap', 'gold', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} fill={`url(#${gid})`}>
+    <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+  </g>
+));
+
+export const ArrowRight = makeIcon('ArrowRight', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <polyline points="14 6 20 12 14 18" />
+  </g>
+));
+
+export const ShieldAlert = makeIcon('ShieldAlert', 'crimson', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinejoin="round" fill="none">
+    <path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z" />
+    <line x1="12" y1="8" x2="12" y2="13" strokeLinecap="round" />
+    <circle cx="12" cy="16.5" r="0.9" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const Users = makeIcon('Users', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="3.5" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </g>
+));
+
+export const Database = makeIcon('Database', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" fill="none">
+    <ellipse cx="12" cy="5" rx="8" ry="3" />
+    <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+    <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+  </g>
+));
+
+export const Globe = makeIcon('Globe', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" fill="none">
+    <circle cx="12" cy="12" r="9" />
+    <ellipse cx="12" cy="12" rx="4" ry="9" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </g>
+));
+
+export const Server = makeIcon('Server', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <rect x="3" y="3" width="18" height="7" rx="1.5" />
+    <rect x="3" y="14" width="18" height="7" rx="1.5" />
+    <circle cx="7" cy="6.5" r="0.9" fill={`url(#${gid})`} />
+    <circle cx="7" cy="17.5" r="0.9" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const Briefcase = makeIcon('Briefcase', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinejoin="round" fill="none">
+    <rect x="2.5" y="7" width="19" height="13" rx="2" />
+    <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+    <line x1="2.5" y1="13" x2="21.5" y2="13" strokeLinecap="round" />
+  </g>
+));
+
+export const FileText = makeIcon('FileText', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 3 14 8 19 8" />
+    <line x1="9" y1="13" x2="15" y2="13" />
+    <line x1="9" y1="17" x2="15" y2="17" />
+  </g>
+));
+
+export const ToggleLeft = makeIcon('ToggleLeft', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`}>
+    <rect x="2" y="7" width="20" height="10" rx="5" stroke={`url(#${gid})`} strokeWidth="1.8" fill="none" />
+    <circle cx="8" cy="12" r="3" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const ToggleRight = makeIcon('ToggleRight', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`}>
+    <rect x="2" y="7" width="20" height="10" rx="5" stroke={`url(#${gid})`} strokeWidth="1.8" fill="none" />
+    <circle cx="16" cy="12" r="3" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const Rocket = makeIcon('Rocket', 'rocket', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} fill={`url(#${gid})`}>
+    <path d="M14.5 2.5c2.5 0 5 .5 5 .5s.5 2.5.5 5c0 4-3.5 8-7 11l-4-4c3-3.5 7-7 11-7l-5.5-5.5z" />
+    <path d="M5 14 3 21l7-2-5-5z" opacity="0.7" />
+    <circle cx="15" cy="9" r="1.6" fill="#fff" opacity="0.85" />
+  </g>
+));
+
+export const History = makeIcon('History', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <polyline points="3 3 3 8 8 8" />
+    <polyline points="12 7 12 12 15.5 14" />
+  </g>
+));
+
+export const Power = makeIcon('Power', 'crimson', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+    <line x1="12" y1="2" x2="12" y2="12" />
+  </g>
+));
+
+export const AtSign = makeIcon('AtSign', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" fill="none">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
+  </g>
+));
+
+export const DollarSign = makeIcon('DollarSign', 'gold', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <line x1="12" y1="2" x2="12" y2="22" />
+    <path d="M17 6.5h-7a3.5 3.5 0 0 0 0 7h4a3.5 3.5 0 0 1 0 7H6" />
+  </g>
+));
+
+export const ArrowUpRight = makeIcon('ArrowUpRight', 'blue', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <line x1="6" y1="18" x2="18" y2="6" />
+    <polyline points="9 6 18 6 18 15" />
+  </g>
+));
+
+export const Layers = makeIcon('Layers', 'pentagon', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinejoin="round" fill="none">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 12 12 17 22 12" />
+    <polyline points="2 17 12 22 22 17" />
+  </g>
+));
+
+export const Target = makeIcon('Target', 'crimson', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" fill="none">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5.5" />
+    <circle cx="12" cy="12" r="1.8" fill={`url(#${gid})`} />
+  </g>
+));
+
+export const Crosshair = makeIcon('Crosshair', 'crimson', (gid, glowId) => (
+  <g filter={`url(#${glowId})`} stroke={`url(#${gid})`} strokeWidth="1.8" strokeLinecap="round" fill="none">
+    <circle cx="12" cy="12" r="9" />
+    <line x1="22" y1="12" x2="17" y2="12" />
+    <line x1="7" y1="12" x2="2" y2="12" />
+    <line x1="12" y1="22" x2="12" y2="17" />
+    <line x1="12" y1="7" x2="12" y2="2" />
+  </g>
+));
+
 // Re-export grouping for ergonomics. Consumers can do
 //   import { Wallet, Sigil } from '@/components/icons/brand'
 // or import the namespace:
