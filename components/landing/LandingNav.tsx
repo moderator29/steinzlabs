@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+// Naka Labs brand icons — Menu, X swapped to glowing-geometric.
+import { Menu, X } from '@/components/icons/brand';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import GlobalControls from '@/components/GlobalControls';
 

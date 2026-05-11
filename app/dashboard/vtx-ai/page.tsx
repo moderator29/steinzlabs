@@ -1129,7 +1129,7 @@ function VtxAiPageInner() {
 
 export default function VtxAiPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <VtxAiPageInner />
     </Suspense>
   );

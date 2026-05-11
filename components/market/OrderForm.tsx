@@ -143,7 +143,7 @@ export function OrderForm({
             value={amount}
             onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="0.00"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors pr-16"
+            className="w-full border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors pr-16"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs font-medium">
             {side === 'buy' ? 'USD' : tokenSymbol.toUpperCase()}

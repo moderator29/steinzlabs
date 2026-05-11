@@ -62,7 +62,7 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
+    <div className="min-h-screen text-white">
       <div className="px-4 pt-4 pb-2 border-b border-white/10">
         <div className="mb-2"><BackButton href="/dashboard" label="Back" /></div>
         <div className="flex items-center gap-2">

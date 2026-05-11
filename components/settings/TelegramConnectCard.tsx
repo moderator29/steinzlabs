@@ -141,7 +141,7 @@ export function TelegramConnectCard() {
       {/* Connected state */}
       {status?.linked && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs bg-[#0A0E1A] rounded-lg px-3 py-2.5 border border-[#1E2433]">
+          <div className="flex items-center justify-between text-xs rounded-lg px-3 py-2.5 border border-[#1E2433]">
             <div>
               <div className="text-gray-500">Linked as</div>
               <div className="text-white font-mono">@{status.username || "unknown"}</div>
@@ -179,7 +179,7 @@ export function TelegramConnectCard() {
           <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside">
             <li>Tap <span className="text-white font-semibold">Generate Code</span> below.</li>
             <li>Open Telegram → search <span className="font-mono text-[#229ED9]">@{BOT_USERNAME}</span>.</li>
-            <li>Send <span className="font-mono bg-[#0A0E1A] px-1.5 py-0.5 rounded">/link &lt;your-code&gt;</span> to the bot.</li>
+            <li>Send <span className="font-mono px-1.5 py-0.5 rounded">/link &lt;your-code&gt;</span> to the bot.</li>
           </ol>
           <button
             onClick={generateCode}

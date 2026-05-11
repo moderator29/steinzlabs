@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, Mail, Lock, RefreshCw } from 'lucide-react';
+// Naka Labs brand icons — Eye, EyeOff, Mail, Lock, RefreshCw swapped.
+// Loader2 stays on lucide (animation-tuned spinner not yet in brand).
+import { Eye, EyeOff, Mail, Lock, RefreshCw } from '@/components/icons/brand';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
 import SteinzLogo from '@/components/ui/SteinzLogo';

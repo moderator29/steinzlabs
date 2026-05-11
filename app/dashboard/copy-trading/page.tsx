@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Pause, Play, Plus, Power, Shield, Trash2 } from "lucide-react";
+// Naka Labs brand icons — Pause, Play, Plus, Shield, Trash2 swapped.
+// Loader2 + Power stay on lucide (no brand equivalent yet).
+import { Pause, Play, Plus, Shield, Trash2 } from "@/components/icons/brand";
+import { Loader2, Power } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 import NewCopyRuleModal from "./NewCopyRuleModal";
@@ -113,7 +116,7 @@ export default function CopyTradingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex items-start justify-between gap-3 mb-6">
           <div>

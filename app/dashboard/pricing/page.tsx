@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Star, Zap } from 'lucide-react';
+// Naka Labs brand icons — Check via CheckCircle, Star (gold).
+// Zap stays on lucide (no brand equivalent yet).
+import { CheckCircle as Check, Star } from '@/components/icons/brand';
+import { Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -129,8 +132,8 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
-      <div className="sticky top-0 z-10 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
+    <div className="min-h-screen text-white pb-24">
+      <div className="sticky top-0 z-10/95 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
         <BackButton />
         <span className="text-white font-semibold">Pricing</span>
       </div>

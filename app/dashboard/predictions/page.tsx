@@ -280,7 +280,7 @@ function PredictionModal({
         className="bg-[#0A0E1A] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto mx-0 sm:mx-4"
         onClick={e => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#0A0E1A] border-b border-white/10 p-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
               side === 'yes' ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#EF4444]/20 text-[#EF4444]'
@@ -663,7 +663,7 @@ export default function PredictionsPage() {
   const userActiveCount = Object.keys(userPredictions).length;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="px-4 pt-6">
         <div className="mb-4"><BackButton href="/dashboard" label="Back to Dashboard" /></div>
 

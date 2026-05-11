@@ -190,7 +190,7 @@ export default function SniperPage() {
   // ── Render gates ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#07090f] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
       </div>
     );
@@ -203,7 +203,7 @@ export default function SniperPage() {
 
   if (!isMaxTier) {
     return (
-      <div className="min-h-screen bg-[#07090f] text-white p-6">
+      <div className="min-h-screen text-white p-6">
         <BackButton />
         <div className="max-w-md mx-auto mt-20 text-center">
           <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
@@ -222,7 +222,7 @@ export default function SniperPage() {
 
   // ── Main UI ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#07090f] text-white">
+    <div className="min-h-screen text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <BackButton />
 

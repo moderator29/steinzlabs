@@ -15,9 +15,10 @@ export const dynamic = 'force-dynamic';
 export default async function VaultLayout({ children }: { children: ReactNode }) {
   const access = await getCultAccess();
   if (!access.allowed) {
-    // /naka-cult is shipped in Phase 8 (dramatic landing). Until then
-    // /dashboard is a sane fallback so the redirect never 404s.
-    redirect('/dashboard?denied=cult');
+    // /naka-cult is the dramatic landing — explains the cult and how to
+    // enter. Replaces the previous /dashboard?denied=cult fallback now
+    // that the landing exists.
+    redirect('/naka-cult');
   }
 
   return (
