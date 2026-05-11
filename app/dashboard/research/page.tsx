@@ -3,20 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
+// Naka Labs brand icons — most swap. BookOpen / Tag / SlidersHorizontal /
+// Zap / Loader2 not yet in brand library; stay on lucide.
 import {
-  Search,
-  Tag,
-  Calendar,
-  ChevronRight,
-  Loader2,
-  BookOpen,
-  Clock,
-  RefreshCw,
-  SlidersHorizontal,
-  TrendingUp,
-  Zap,
-  X,
-} from 'lucide-react';
+  Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X,
+} from '@/components/icons/brand';
+import { BookOpen, Tag, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
