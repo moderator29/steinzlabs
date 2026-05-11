@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Star, Zap } from 'lucide-react';
+// Naka Labs brand icons — Check via CheckCircle, Star (gold).
+// Zap stays on lucide (no brand equivalent yet).
+import { CheckCircle as Check, Star } from '@/components/icons/brand';
+import { Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
