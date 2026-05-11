@@ -59,7 +59,7 @@ export default function SecurityScannerPage() {
     "w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm font-mono focus:outline-none focus:border-blue-500/40";
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
           <Shield size={22} className="text-blue-400" />

@@ -4,7 +4,7 @@ import { Users, Bell, ArrowRight, MessageCircle, Trophy, TrendingUp } from 'luci
 
 export default function CommunityPage() {
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pt-32 pb-24 px-4">
+    <div className="min-h-screen text-white pt-32 pb-24 px-4">
       <div className="max-w-4xl mx-auto text-center">
         <div className="w-24 h-24 bg-gradient-to-br from-[#7C3AED] to-[#0A1EFF] rounded-3xl flex items-center justify-center mx-auto mb-6">
           <Users className="w-12 h-12" />

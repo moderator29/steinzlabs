@@ -211,7 +211,7 @@ export default function WhaleTrackerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">

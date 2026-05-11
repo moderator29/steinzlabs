@@ -98,7 +98,7 @@ export default function ProjectDiscoveryPage() {
   }, [activeFilter, searchQuery, projects]);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       <div className="px-4 pt-6 max-w-6xl mx-auto">
         <div className="mb-4"><BackButton href="/dashboard" label="Back to Dashboard" /></div>
 
@@ -338,20 +338,20 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Token Name *</label>
-                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. Bitcoin" />
+                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. Bitcoin" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Symbol *</label>
-                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. BTC" />
+                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="e.g. BTC" />
               </div>
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Contract Address *</label>
-              <input value={form.contractAddress} onChange={e => setForm({...form, contractAddress: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
+              <input value={form.contractAddress} onChange={e => setForm({...form, contractAddress: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Chain *</label>
-              <select value={form.chain} onChange={e => setForm({...form, chain: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50">
+              <select value={form.chain} onChange={e => setForm({...form, chain: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50">
                 <option value="ethereum">Ethereum</option>
                 <option value="solana">Solana</option>
                 <option value="bsc">BSC</option>
@@ -363,29 +363,29 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 flex items-center gap-1"><Globe className="w-2.5 h-2.5" /> Website</label>
-                <input value={form.website} onChange={e => setForm({...form, website: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="https://" />
+                <input value={form.website} onChange={e => setForm({...form, website: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="https://" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 flex items-center gap-1"><MessageCircle className="w-2.5 h-2.5" /> Telegram</label>
-                <input value={form.telegram} onChange={e => setForm({...form, telegram: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="@group" />
+                <input value={form.telegram} onChange={e => setForm({...form, telegram: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="@group" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Twitter</label>
-                <input value={form.twitter} onChange={e => setForm({...form, twitter: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="@handle" />
+                <input value={form.twitter} onChange={e => setForm({...form, twitter: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="@handle" />
               </div>
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Description</label>
-              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50 resize-none" placeholder="Brief description of your token project..." />
+              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50 resize-none" placeholder="Brief description of your token project..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Logo URL</label>
-                <input value={form.logoUrl} onChange={e => setForm({...form, logoUrl: e.target.value})} className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="https://..." />
+                <input value={form.logoUrl} onChange={e => setForm({...form, logoUrl: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="https://..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Email *</label>
-                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" className="w-full bg-[#0A0E1A] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="team@project.com" />
+                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="team@project.com" />
               </div>
             </div>
             <button

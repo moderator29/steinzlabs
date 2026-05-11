@@ -225,7 +225,7 @@ export default function PortfolioPage() {
   const realizedTotal = perf?.realized.totalUsd ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-4 sm:p-6 space-y-6">
+    <div className="min-h-screen p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3">
         <BackButton href="/dashboard" />
         <div>
