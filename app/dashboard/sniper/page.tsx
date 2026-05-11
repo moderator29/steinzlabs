@@ -2,14 +2,19 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+// Naka Labs brand icons — broad swap. Crosshair, Power, SettingsIcon, Target,
+// Zap, Lock stay on lucide (not yet in brand library).
 import {
-  Crosshair, Shield, AlertTriangle, Play, Pause, ExternalLink,
-  CheckCircle, XCircle, Loader2, Lock, Plus, Power, Settings as SettingsIcon,
-  TrendingUp, Trash2, Zap, Target, Filter,
+  Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle,
+  Plus, TrendingUp, Trash2, Filter,
+} from '@/components/icons/brand';
+import {
+  Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { supabase } from '@/lib/supabase';
-import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
+import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
 import { NewSniperModal } from './NewSniperModal';
@@ -83,8 +88,9 @@ function timeAgo(iso: string): string {
 export default function SniperPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const tier = effectiveTier(user);
-  const isMaxTier = tier === 'max';
+  // Sniper Bot is MAX-tier OR above. naka_cult (5th tier) sits above max,
+  // so Cult members pass too — use the rank-aware helper, not strict ===.
+  const hasSniperAccess = hasTierAccess(user, 'max');
 
   const [tab, setTab] = useState<Tab>('snipers');
   const [chainFilter, setChainFilter] = useState<SniperChain | 'all'>('all');
@@ -190,9 +196,11 @@ export default function SniperPage() {
   // ── Render gates ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#07090f] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      </div>
+      <AuroraBackground fullHeight>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        </div>
+      </AuroraBackground>
     );
   }
 
@@ -201,29 +209,32 @@ export default function SniperPage() {
     return null;
   }
 
-  if (!isMaxTier) {
+  if (!hasSniperAccess) {
     return (
-      <div className="min-h-screen bg-[#07090f] text-white p-6">
-        <BackButton />
-        <div className="max-w-md mx-auto mt-20 text-center">
-          <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-          <h1 className="text-2xl font-bold mb-2">Sniper Bot is MAX-tier</h1>
-          <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
-          <button
-            onClick={() => router.push('/dashboard/pricing')}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-semibold hover:opacity-90 transition"
-          >
-            Upgrade to MAX
-          </button>
+      <AuroraBackground fullHeight>
+        <div className="min-h-screen text-white p-6">
+          <BackButton />
+          <div className="max-w-md mx-auto mt-20 text-center">
+            <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+            <h1 className="text-2xl font-bold mb-2">Sniper Bot is MAX-tier</h1>
+            <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
+            <button
+              onClick={() => router.push('/dashboard/pricing')}
+              className="nl-button px-6 py-3 rounded-xl font-semibold"
+            >
+              Upgrade to MAX
+            </button>
+          </div>
         </div>
-      </div>
+      </AuroraBackground>
     );
   }
 
   // ── Main UI ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#07090f] text-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+    <AuroraBackground fullHeight>
+      <div className="min-h-screen text-white">
+        <div className="max-w-7xl mx-auto px-4 py-6">
         <BackButton />
 
         <PageHeader
@@ -245,7 +256,7 @@ export default function SniperPage() {
               </button>
               <button
                 onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition shadow-lg shadow-blue-900/30"
+                className="nl-button flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
               >
                 <Plus className="w-4 h-4" />
                 New Sniper
@@ -321,14 +332,15 @@ export default function SniperPage() {
         </div>
       </div>
 
-      {showNewModal && (
-        <NewSniperModal
-          onClose={() => setShowNewModal(false)}
-          onSaved={() => { setShowNewModal(false); loadSnipers(); }}
-          userId={user.id}
-        />
-      )}
-    </div>
+        {showNewModal && (
+          <NewSniperModal
+            onClose={() => setShowNewModal(false)}
+            onSaved={() => { setShowNewModal(false); loadSnipers(); }}
+            userId={user.id}
+          />
+        )}
+      </div>
+    </AuroraBackground>
   );
 }
 
@@ -336,7 +348,7 @@ export default function SniperPage() {
 
 function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="nl-card p-4">
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/50 font-semibold mb-1.5">
         <Icon className="w-3.5 h-3.5" /> {label}
       </div>
@@ -383,7 +395,7 @@ function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperC
         <Crosshair className="w-12 h-12 mx-auto mb-3 text-white/30" />
         <h3 className="text-lg font-bold mb-1">No active snipers yet</h3>
         <p className="text-white/50 text-sm mb-5">Create your first sniper to start auto-executing on new launches, whale moves, or price targets.</p>
-        <button onClick={onCreate} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-semibold text-sm hover:opacity-90 transition inline-flex items-center gap-2">
+        <button onClick={onCreate} className="nl-button px-5 py-2.5 rounded-xl font-semibold text-sm inline-flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create Sniper
         </button>
       </div>
