@@ -1,10 +1,14 @@
 'use client';
 
+// Naka Labs brand icons — Whale aliased to Fish (same semantic). Rocket
+// kept on lucide (use the chamber Sigil component elsewhere for true cult
+// rocket). ToggleLeft/Right not yet in brand library.
 import {
-  Bell, Plus, Trash2, ToggleLeft, ToggleRight,
-  Fish, TrendingUp, Rocket, Activity, X,
-  History, Search, Check, AlertTriangle, Play,
-} from 'lucide-react';
+  Bell, Plus, Trash2, TrendingUp, Activity, X,
+  Search, CheckCircle as Check, AlertTriangle, Play,
+  Whale as Fish,
+} from '@/components/icons/brand';
+import { ToggleLeft, ToggleRight, Rocket, History } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
