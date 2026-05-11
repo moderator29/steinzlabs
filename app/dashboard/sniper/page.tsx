@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { supabase } from '@/lib/supabase';
-import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
+import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
 import { NewSniperModal } from './NewSniperModal';
@@ -83,8 +83,10 @@ function timeAgo(iso: string): string {
 export default function SniperPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const tier = effectiveTier(user);
-  const isMaxTier = tier === 'max';
+  // Sniper Bot is MAX-tier OR naka_cult (the 5th tier sits above max).
+  // Use hasTierAccess instead of strict === 'max' so Cult members aren't
+  // locked out of features they should own.
+  const hasSniperAccess = hasTierAccess(user, 'max');
 
   const [tab, setTab] = useState<Tab>('snipers');
   const [chainFilter, setChainFilter] = useState<SniperChain | 'all'>('all');
@@ -201,7 +203,7 @@ export default function SniperPage() {
     return null;
   }
 
-  if (!isMaxTier) {
+  if (!hasSniperAccess) {
     return (
       <div className="min-h-screen text-white p-6">
         <BackButton />
