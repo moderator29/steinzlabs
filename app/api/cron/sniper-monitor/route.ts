@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getNewPairs } from "@/lib/services/dexscreener";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,16 +97,45 @@ export async function GET(request: NextRequest) {
 
   const activity = (recentActivity ?? []) as WhaleActivityRow[];
 
-  // For new_token_launch: fetch tokens listed in last max_age_hours window
-  const maxAgeHours = Math.max(...criteria.map((c) => c.max_age_hours));
-  const tokenSince = new Date(Date.now() - maxAgeHours * 3_600_000).toISOString();
-  const { data: recentTokens } = await admin
-    .from("token_metadata")
-    .select("token_address,chain,liquidity_usd,buy_tax_bps,sell_tax_bps,holder_count,security_score,is_honeypot,listed_at")
-    .in("chain", Array.from(chainsNeeded))
-    .gte("listed_at", tokenSince);
+  // For new_token_launch / new_pair: pull live pairs directly from DexScreener.
+  // The /api/sniper UI feed reads the same source — this keeps "what the user
+  // sees in the feed" and "what the matcher considers" consistent.
+  //
+  // Previously this read from `token_metadata` (a Supabase table) but nothing
+  // in the codebase populates that table, so the matcher could never fire
+  // for new-pair triggers. Reading DexScreener directly removes that broken
+  // dependency. Each criteria's `max_age_hours` is still respected via the
+  // pairCreatedAt filter below. If max_age_hours is null/0 (NewSniperModal
+  // doesn't set it), we default to 24h so the filter doesn't reject all
+  // candidates with an invalid date math.
+  const maxAgeHoursRaw = Math.max(...criteria.map((c) => Number(c.max_age_hours) || 0));
+  const maxAgeHours = Number.isFinite(maxAgeHoursRaw) && maxAgeHoursRaw > 0 ? maxAgeHoursRaw : 24;
+  const minLiqAcrossCriteria = Math.min(...criteria.map((c) => Number(c.min_liquidity_usd) || 0));
+  const fetchFloor = Number.isFinite(minLiqAcrossCriteria) ? Math.max(0, minLiqAcrossCriteria) : 0;
 
-  const newTokens = (recentTokens ?? []) as TokenRow[];
+  const newTokens: TokenRow[] = [];
+  for (const chain of chainsNeeded) {
+    try {
+      const pairs = await getNewPairs(fetchFloor, chain);
+      for (const p of pairs) {
+        newTokens.push({
+          token_address: p.baseToken.address,
+          chain: p.chainId,
+          liquidity_usd: p.liquidity?.usd ?? null,
+          buy_tax_bps: null,        // GoPlus enrichment happens at execute-time
+          sell_tax_bps: null,
+          holder_count: null,
+          security_score: null,     // null = "not yet enriched"; criteria with
+                                    // a non-zero min_security_score will skip
+                                    // until /api/sniper POST scoring lands
+          is_honeypot: null,
+          listed_at: p.pairCreatedAt ? new Date(p.pairCreatedAt).toISOString() : null,
+        });
+      }
+    } catch {
+      // DexScreener flaked for this chain — skip, retry next tick.
+    }
+  }
 
   let matched = 0;
   const events: Array<Record<string, unknown>> = [];
@@ -186,16 +216,22 @@ export async function GET(request: NextRequest) {
     // created via NewSniperModal would silently never match in the cron.
     if (c.trigger_type === "new_token_launch" || c.trigger_type === "new_pair") {
       const cutoff = new Date(Date.now() - c.max_age_hours * 3_600_000).toISOString();
+      // Apply the criteria filters against the DexScreener-sourced pairs.
+      // Fields not yet enriched (buy_tax, sell_tax, holders, security_score,
+      // is_honeypot) come through as null — treat null as "unknown, allow"
+      // for tax / holder / honeypot, and as "skip" only for security_score
+      // when the user explicitly set a min. Without this we'd reject every
+      // candidate on the very first tick.
       const candidates = newTokens.filter(
         (t) =>
           c.chains_allowed.includes(t.chain) &&
           (t.listed_at ?? "") >= cutoff &&
           (t.liquidity_usd ?? 0) >= c.min_liquidity_usd &&
-          (t.buy_tax_bps ?? 0) <= c.max_buy_tax_bps &&
-          (t.sell_tax_bps ?? 0) <= c.max_sell_tax_bps &&
-          (t.holder_count ?? 0) >= c.min_holder_count &&
-          (t.security_score ?? 0) >= c.min_security_score &&
-          (!c.block_honeypots || !t.is_honeypot),
+          (t.buy_tax_bps == null || t.buy_tax_bps <= c.max_buy_tax_bps) &&
+          (t.sell_tax_bps == null || t.sell_tax_bps <= c.max_sell_tax_bps) &&
+          (t.holder_count == null || t.holder_count >= c.min_holder_count) &&
+          (c.min_security_score === 0 || (t.security_score ?? 0) >= c.min_security_score) &&
+          (!c.block_honeypots || t.is_honeypot !== true),
       );
 
       for (const t of candidates) {

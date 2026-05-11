@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+// Naka Labs brand icons — broad swap. Crosshair, Power, SettingsIcon, Target,
+// Zap, Lock stay on lucide (not yet in brand library).
 import {
-  Crosshair, Shield, AlertTriangle, Play, Pause, ExternalLink,
-  CheckCircle, XCircle, Loader2, Lock, Plus, Power, Settings as SettingsIcon,
-  TrendingUp, Trash2, Zap, Target, Filter,
+  Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle,
+  Plus, TrendingUp, Trash2, Filter,
+} from '@/components/icons/brand';
+import {
+  Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { supabase } from '@/lib/supabase';
@@ -213,7 +217,7 @@ export default function SniperPage() {
           <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
           <button
             onClick={() => router.push('/dashboard/pricing')}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-semibold hover:opacity-90 transition"
+            className="nl-button px-6 py-3 rounded-xl font-semibold"
           >
             Upgrade to MAX
           </button>
@@ -247,7 +251,7 @@ export default function SniperPage() {
               </button>
               <button
                 onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition shadow-lg shadow-blue-900/30"
+                className="nl-button flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
               >
                 <Plus className="w-4 h-4" />
                 New Sniper
@@ -338,7 +342,7 @@ export default function SniperPage() {
 
 function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="nl-card p-4">
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/50 font-semibold mb-1.5">
         <Icon className="w-3.5 h-3.5" /> {label}
       </div>
@@ -385,7 +389,7 @@ function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperC
         <Crosshair className="w-12 h-12 mx-auto mb-3 text-white/30" />
         <h3 className="text-lg font-bold mb-1">No active snipers yet</h3>
         <p className="text-white/50 text-sm mb-5">Create your first sniper to start auto-executing on new launches, whale moves, or price targets.</p>
-        <button onClick={onCreate} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 font-semibold text-sm hover:opacity-90 transition inline-flex items-center gap-2">
+        <button onClick={onCreate} className="nl-button px-5 py-2.5 rounded-xl font-semibold text-sm inline-flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create Sniper
         </button>
       </div>
