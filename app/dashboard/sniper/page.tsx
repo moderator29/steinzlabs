@@ -12,7 +12,6 @@ import {
   Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { supabase } from '@/lib/supabase';
 import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -196,11 +195,9 @@ export default function SniperPage() {
   // ── Render gates ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return (
-      <AuroraBackground fullHeight>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-        </div>
-      </AuroraBackground>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      </div>
     );
   }
 
@@ -211,30 +208,27 @@ export default function SniperPage() {
 
   if (!hasSniperAccess) {
     return (
-      <AuroraBackground fullHeight>
-        <div className="min-h-screen text-white p-6">
-          <BackButton />
-          <div className="max-w-md mx-auto mt-20 text-center">
-            <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-            <h1 className="text-2xl font-bold mb-2">Sniper Bot is MAX-tier</h1>
-            <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
-            <button
-              onClick={() => router.push('/dashboard/pricing')}
-              className="nl-button px-6 py-3 rounded-xl font-semibold"
-            >
-              Upgrade to MAX
-            </button>
-          </div>
+      <div className="min-h-screen text-white p-6">
+        <BackButton />
+        <div className="max-w-md mx-auto mt-20 text-center">
+          <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+          <h1 className="text-2xl font-bold mb-2">Sniper Bot is MAX-tier</h1>
+          <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
+          <button
+            onClick={() => router.push('/dashboard/pricing')}
+            className="nl-button px-6 py-3 rounded-xl font-semibold"
+          >
+            Upgrade to MAX
+          </button>
         </div>
-      </AuroraBackground>
+      </div>
     );
   }
 
   // ── Main UI ──────────────────────────────────────────────────────────────
   return (
-    <AuroraBackground fullHeight>
-      <div className="min-h-screen text-white">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="min-h-screen text-white">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         <BackButton />
 
         <PageHeader
@@ -332,15 +326,14 @@ export default function SniperPage() {
         </div>
       </div>
 
-        {showNewModal && (
-          <NewSniperModal
-            onClose={() => setShowNewModal(false)}
-            onSaved={() => { setShowNewModal(false); loadSnipers(); }}
-            userId={user.id}
-          />
-        )}
-      </div>
-    </AuroraBackground>
+      {showNewModal && (
+        <NewSniperModal
+          onClose={() => setShowNewModal(false)}
+          onSaved={() => { setShowNewModal(false); loadSnipers(); }}
+          userId={user.id}
+        />
+      )}
+    </div>
   );
 }
 

@@ -127,7 +127,7 @@ export default function ViewProofPage() {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] text-white flex items-center justify-center">
+      <div className="min-h-screen text-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">Event not found</p>
           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-[#0A1EFF] rounded-lg text-sm font-semibold">
@@ -179,8 +179,8 @@ export default function ViewProofPage() {
   const sentimentColor = event.sentiment === 'BULLISH' ? '#10B981' : event.sentiment === 'BEARISH' ? '#EF4444' : '#F59E0B';
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
-      <div className="fixed top-0 w-full z-40 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-white/[0.06]">
+    <div className="min-h-screen text-white">
+      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton href="/dashboard" />
           <div className="flex-1 min-w-0">

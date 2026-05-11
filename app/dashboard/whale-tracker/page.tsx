@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+// Naka Labs brand icons — swap what's in the library, lucide-fallback
+// for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
+// ArrowLeftRight, Telescope) — they remain visually consistent with the
+// other lucide icons elsewhere on the page until a follow-up wave adds them.
+import {
+  Search, Plus, Bell, Trash2, ChevronRight, X,
+} from "@/components/icons/brand";
 import {
   Loader2,
-  Search,
-  Plus,
-  Bell,
   BellOff,
-  Trash2,
-  ChevronRight,
   ArrowUpRight,
   ArrowDownLeft,
   ArrowLeftRight,
   Telescope,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -210,7 +211,7 @@ export default function WhaleTrackerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
