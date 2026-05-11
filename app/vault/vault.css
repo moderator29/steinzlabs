@@ -364,6 +364,144 @@
   }
 }
 
+/* ─── Oracle chamber ───────────────────────────────────────────────────── */
+.oracle-chamber__header { margin-bottom: 28px; }
+
+.oracle-chamber__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 900px) {
+  .oracle-chamber__grid {
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas:
+      'seal sub1'
+      'seal sub2'
+      'sub3 sub3';
+  }
+  .oracle-chamber__seal-slot { grid-area: seal; }
+  .oracle-subchamber:nth-of-type(1) { grid-area: sub1; }
+  .oracle-subchamber:nth-of-type(2) { grid-area: sub2; }
+  .oracle-subchamber:nth-of-type(3) { grid-area: sub3; }
+}
+
+.oracle-seal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(20, 8, 14, 0.92), rgba(8, 6, 18, 0.92));
+  border: 1px solid rgba(255, 216, 107, 0.18);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 216, 107, 0.08);
+  min-height: 360px;
+  overflow: hidden;
+}
+.oracle-seal--loading,
+.oracle-seal--empty {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.oracle-seal__date {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.oracle-seal__sealed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 12px auto 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 16px;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+              filter 320ms ease;
+}
+.oracle-seal__sealed:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08) drop-shadow(0 0 24px rgba(220, 20, 60, 0.5));
+}
+.oracle-seal__cta {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #FFD86B;
+  text-shadow: 0 0 12px rgba(255, 216, 107, 0.45);
+}
+.oracle-seal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.oracle-seal__title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  line-height: 1.25;
+}
+.oracle-seal__body { display: flex; flex-direction: column; gap: 10px; }
+.oracle-seal__body p {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #D5DEFF;
+}
+.oracle-seal__reseal {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #B4C0E0;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.oracle-seal__reseal:hover { color: #FFFFFF; }
+
+.oracle-subchamber {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(10, 15, 46, 0.78), rgba(6, 10, 32, 0.78));
+  border: 1px solid rgba(0, 200, 255, 0.10);
+  min-height: 168px;
+}
+.oracle-subchamber__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+.oracle-subchamber__tagline {
+  font-size: 13px;
+  color: #B4C0E0;
+  line-height: 1.55;
+}
+.oracle-subchamber__seam {
+  position: absolute;
+  left: 18px; right: 18px; bottom: 14px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.4), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oracle-seal__sealed { transition: none; }
+}
+
 /* ─── Sanctum chamber ──────────────────────────────────────────────────── */
 .sanctum-chamber__header { margin-bottom: 28px; }
 
