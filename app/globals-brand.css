@@ -1,0 +1,185 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Naka Labs Platform Brand Layer — globals-brand.css
+   Platform-wide tokens + primitive component classes (.nl-card, .nl-button,
+   .nl-loader, .nl-aurora-bg). Mirrors lib/brand/tokens.ts for CSS-side
+   consumers. Imported once from app/layout — available platform-wide.
+
+   "nl-" prefix = Naka Labs. The Vault / Cult area layers additional
+   crimson-sigil styling on top via vault.css using the .vault-* prefix.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --nl-canvas-base: #050816;
+  --nl-canvas-deep: #020512;
+  --nl-canvas-elev: #0A0F2E;
+
+  --nl-blue:        #0066FF;
+  --nl-blue-ice:    #00C8FF;
+  --nl-blue-deep:   #1230B3;
+  --nl-crimson:     #DC143C;
+  --nl-crimson-hot: #FF1744;
+  --nl-gold:        #FFD86B;
+
+  --nl-yes:     #10B981;
+  --nl-no:      #FF1744;
+  --nl-abstain: #B4C0E0;
+
+  --nl-text:        #FFFFFF;
+  --nl-text-soft:   #D5DEFF;
+  --nl-text-muted:  #B4C0E0;
+
+  --nl-grad-bluecrimson: linear-gradient(135deg, #0066FF 0%, #DC143C 100%);
+  --nl-grad-rocket:      linear-gradient(135deg, #7B2BFF 0%, #FF3DCB 50%, #00A1FF 100%);
+  --nl-grad-helmet:      linear-gradient(135deg, #0066FF 0%, #1230B3 60%, #050B40 100%);
+  --nl-grad-pentagon:    linear-gradient(135deg, #00C8FF 0%, #0066FF 100%);
+
+  --nl-glow-blue-sm: 0 0 12px rgba(0, 102, 255, 0.35);
+  --nl-glow-blue-md: 0 0 24px rgba(0, 102, 255, 0.45);
+  --nl-glow-blue-lg: 0 0 48px rgba(0, 102, 255, 0.55);
+  --nl-glow-crimson: 0 0 24px rgba(220, 20, 60, 0.45);
+  --nl-glow-gold:    0 0 16px rgba(255, 216, 107, 0.40);
+
+  --nl-r-sm:   8px;
+  --nl-r-md:   12px;
+  --nl-r-lg:   18px;
+  --nl-r-xl:   22px;
+  --nl-r-pill: 999px;
+
+  --nl-ease-std:  cubic-bezier(0.4, 0, 0.2, 1);
+  --nl-ease-cine: cubic-bezier(0.22, 1, 0.36, 1);
+  --nl-dur-fast:  150ms;
+  --nl-dur-base:  300ms;
+  --nl-dur-slow:  500ms;
+}
+
+.nl-aurora-bg {
+  position: relative;
+  background: var(--nl-canvas-base);
+  isolation: isolate;
+  overflow: hidden;
+}
+.nl-aurora-bg::before,
+.nl-aurora-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.nl-aurora-bg::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(220, 20, 60, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 60% at 50% 80%, rgba(0, 200, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(120, 60, 200, 0.06) 0%, transparent 50%);
+}
+.nl-aurora-bg::after {
+  inset: -50%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(0, 102, 255, 0.18)  60deg,
+    transparent 120deg,
+    rgba(220, 20, 60, 0.10) 180deg,
+    transparent 240deg,
+    rgba(0, 200, 255, 0.14) 300deg,
+    transparent 360deg);
+  animation: nl-aurora-drift 30s linear infinite;
+  opacity: 0.4;
+}
+.nl-aurora-bg > * { position: relative; z-index: 1; }
+
+@keyframes nl-aurora-drift {
+  0%   { transform: rotate(0deg)   scale(1);   }
+  50%  { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1);   }
+}
+
+.nl-card {
+  position: relative;
+  border-radius: var(--nl-r-xl);
+  background: linear-gradient(135deg, rgba(10, 15, 46, 0.85), rgba(15, 22, 60, 0.75));
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+  transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
+              border-color var(--nl-dur-base) ease;
+}
+.nl-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--nl-grad-bluecrimson);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--nl-dur-base) ease;
+  pointer-events: none;
+}
+.nl-card:hover { box-shadow: var(--nl-glow-blue-lg); }
+.nl-card:hover::after { opacity: 0.85; }
+
+.nl-card--featured::after { opacity: 0.6; }
+.nl-card--featured:hover::after { opacity: 1; }
+
+.nl-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--nl-r-md);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--nl-text);
+  background: var(--nl-grad-bluecrimson);
+  border: 1px solid rgba(0, 102, 255, 0.55);
+  box-shadow: var(--nl-glow-blue-sm);
+  cursor: pointer;
+  transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
+              transform var(--nl-dur-fast) ease;
+}
+.nl-button:hover {
+  box-shadow: var(--nl-glow-blue-md);
+  transform: translateY(-1px);
+}
+.nl-button:active { transform: translateY(0); }
+.nl-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.nl-button--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+  color: var(--nl-text-soft);
+}
+.nl-button--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 200, 255, 0.45);
+  color: var(--nl-text);
+  box-shadow: var(--nl-glow-blue-sm);
+}
+
+.nl-loader {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--nl-blue) 270deg, transparent 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 12px, #000 13px);
+          mask: radial-gradient(circle, transparent 12px, #000 13px);
+  animation: nl-loader-spin 900ms linear infinite;
+  filter: drop-shadow(var(--nl-glow-blue-sm));
+}
+@keyframes nl-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nl-aurora-bg::after { animation: none; }
+  .nl-loader            { animation-duration: 2400ms; }
+}
