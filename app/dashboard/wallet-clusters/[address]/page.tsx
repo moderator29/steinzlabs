@@ -87,18 +87,18 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0E1A]">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
       </div>
     );
   }
   if (!data) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0A0E1A] text-slate-500">Cluster not found</div>;
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">Cluster not found</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-20">
-      <div className="sticky top-0 z-30 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800">
+    <div className="min-h-screen text-white pb-20">
+      <div className="sticky top-0 z-30/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="mb-3">
             <BackButton href="/dashboard/wallet-clusters" label="Wallet clusters" />

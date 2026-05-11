@@ -6,6 +6,7 @@ import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import FloatingNotificationBell from '@/components/FloatingNotificationBell';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -14,8 +15,11 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  // Aurora is lifted to the layout so every dashboard page inherits the
+  // brand canvas. Per-page solid backgrounds were stripped via the
+  // second-wave sweep so the aurora actually shows through.
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
+    <AuroraBackground fullHeight>
       <SessionGuardProvider />
       <AlertMonitorProvider />
       <PlatformEventMonitor />
@@ -23,6 +27,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <PendingSignerProvider />
       <PendingTradesBanner />
       {children}
-    </div>
+    </AuroraBackground>
   );
 }

@@ -109,7 +109,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const chartData = chartPoints.length > 1 ? chartPoints : sparklineData;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
         <BackButton />
@@ -215,7 +215,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           Buy + Sell removed per spec (they were Coming Soon stubs;
           fiat on/off-ramp ships with the Yellowcard integration).
           Send + Receive deep-link into the working wallet flows. */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-[#0A0E1A]/95 backdrop-blur-xl px-3 py-3 grid grid-cols-3 gap-2 z-40">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-800/95 backdrop-blur-xl px-3 py-3 grid grid-cols-3 gap-2 z-40">
         <WalletAction icon={<ArrowUpRight size={16} />} label="Send" primary onClick={() => router.push(`/dashboard/wallet-page?action=send&token=${symbol}&chain=${chain}`)} />
         <WalletAction icon={<ArrowDownLeft size={16} />} label="Receive" onClick={() => router.push(`/dashboard/wallet-page?action=receive&chain=${chain}`)} />
         <WalletAction icon={<Repeat size={16} />} label="Swap" onClick={() => setComingSoonOpen('Swap')} />

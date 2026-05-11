@@ -494,10 +494,10 @@ export default function NetworkGraphPage() {
   const tooltipY = tooltip ? tooltip.screenY - 20 : 0;
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-40 bg-[#0A0E1A]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="sticky top-0 z-40/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
@@ -523,7 +523,7 @@ export default function NetworkGraphPage() {
               onChange={e => setWalletInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="Enter wallet address or token CA..."
-              className="w-full bg-[#0A0E1A] border border-white/[0.08] rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 focus:bg-[#0A0E1A] transition-all"
+              className="w-full border border-white/[0.08] rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 focus:bg-[#0A0E1A] transition-all"
             />
           </div>
           <button
@@ -640,12 +640,12 @@ export default function NetworkGraphPage() {
           style={{ minHeight: '400px' }}
         >
           {loading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0A0E1A]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-[#0A1EFF]" />
               <p className="text-xs text-gray-500">Building network graph...</p>
             </div>
           ) : !data || nodes.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0A0E1A]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Network className="w-10 h-10 text-gray-700" />
               <p className="text-sm text-gray-500">No network data available</p>
               <button

@@ -1312,7 +1312,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-sm hover:text-white transition-colors">
@@ -1460,7 +1460,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -1612,7 +1612,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -1705,7 +1705,7 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
   }, [address]);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -1843,7 +1843,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -2450,8 +2450,8 @@ function AddNetworkView({
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
-      <div className="sticky top-0 z-20 bg-[#0A0E1A]/95 backdrop-blur-xl border-b border-slate-800/60">
+    <div className="min-h-screen text-white">
+      <div className="sticky top-0 z-20/95 backdrop-blur-xl border-b border-slate-800/60">
         <div className="flex items-center gap-3 px-4 py-3">
           <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
             <ArrowLeft size={18} />

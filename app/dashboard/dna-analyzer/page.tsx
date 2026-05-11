@@ -413,7 +413,7 @@ export default function DNAAnalyzerPage() {
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white pb-12">
+    <div className="min-h-screen text-white pb-12">
       {/* Header */}
       <div className="fixed top-0 w-full z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center px-4 h-14 gap-3">
@@ -465,7 +465,7 @@ export default function DNAAnalyzerPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-              <div className="relative flex justify-center"><span className="px-4 bg-[#0A0E1A] text-xs text-gray-500">or analyze any wallet</span></div>
+              <div className="relative flex justify-center"><span className="px-4 text-xs text-gray-500">or analyze any wallet</span></div>
             </div>
 
             <div className="flex gap-2">

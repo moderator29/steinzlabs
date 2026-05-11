@@ -10,7 +10,7 @@ const shimmer = 'animate-pulse bg-[#1E2433] rounded';
 export function LoadingSkeleton({ rows = 5, variant = 'row' }: LoadingSkeletonProps) {
   if (variant === 'chart') {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-[#0A0E1A] rounded-lg">
+      <div className="w-full h-full flex items-center justify-center rounded-lg">
         <div className="flex flex-col items-center gap-3">
           <div className={`w-8 h-8 rounded-full ${shimmer}`} />
           <div className={`w-24 h-3 ${shimmer}`} />
