@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Check, X, Loader2, User, Mail, Lock, AtSign, Clock } from 'lucide-react';
+// Naka Labs brand icons — Eye, EyeOff, X, User, Mail, Lock, Clock swapped.
+// Check via CheckCircle alias. Loader2 + AtSign stay on lucide.
+import { Eye, EyeOff, CheckCircle as Check, X, User, Mail, Lock, Clock } from '@/components/icons/brand';
+import { Loader2, AtSign } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { supabase, clearSbCookies } from '@/lib/supabase';
