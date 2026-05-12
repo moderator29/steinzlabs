@@ -23,6 +23,7 @@ import {
   ColorType,
   CrosshairMode,
   LineStyle,
+  LineSeries,
   type IChartApi,
   type ISeriesApi,
   type UTCTimestamp,
@@ -94,7 +95,7 @@ export default function BubbleMapTimelineChart({ token, chain, days = 90, height
       height,
     });
 
-    const concSeries = chart.addLineSeries({
+    const concSeries = chart.addSeries(LineSeries, {
       color: CONCENTRATION,
       lineWidth: 2,
       priceScaleId: 'left',
@@ -102,7 +103,7 @@ export default function BubbleMapTimelineChart({ token, chain, days = 90, height
       title: 'Top-10 %',
     });
 
-    const holdSeries = chart.addLineSeries({
+    const holdSeries = chart.addSeries(LineSeries, {
       color: HOLDERS,
       lineWidth: 2,
       lineStyle: LineStyle.Dotted,

@@ -5,6 +5,11 @@ import {
   createChart,
   CrosshairMode,
   LineStyle,
+  AreaSeries,
+  BarSeries,
+  CandlestickSeries,
+  HistogramSeries,
+  LineSeries,
   type IChartApi,
   type ISeriesApi,
   type UTCTimestamp,
@@ -114,7 +119,7 @@ export function AdvancedChart({
 
     let mainSeries: ISeriesApi<"Candlestick" | "Line" | "Area" | "Bar">;
     if (chartType === "candlestick") {
-      const s = chart.addCandlestickSeries({
+      const s = chart.addSeries(CandlestickSeries, {
         upColor: BRAND_UP,
         downColor: BRAND_DOWN,
         borderUpColor: BRAND_UP,
@@ -132,21 +137,21 @@ export function AdvancedChart({
       s.setData(data);
       mainSeries = s;
     } else if (chartType === "bars") {
-      const s = chart.addBarSeries({ upColor: BRAND_UP, downColor: BRAND_DOWN });
+      const s = chart.addSeries(BarSeries, { upColor: BRAND_UP, downColor: BRAND_DOWN });
       s.setData(candles.map((c) => ({ time: c.time as UTCTimestamp, open: c.open, high: c.high, low: c.low, close: c.close })));
       mainSeries = s;
     } else if (chartType === "area") {
-      const s = chart.addAreaSeries({ lineColor: BRAND_BLUE, topColor: "rgba(77,128,255,0.3)", bottomColor: "rgba(77,128,255,0)" });
+      const s = chart.addSeries(AreaSeries, { lineColor: BRAND_BLUE, topColor: "rgba(77,128,255,0.3)", bottomColor: "rgba(77,128,255,0)" });
       s.setData(candles.map((c) => ({ time: c.time as UTCTimestamp, value: c.close })));
       mainSeries = s;
     } else {
-      const s = chart.addLineSeries({ color: BRAND_BLUE, lineWidth: 2 });
+      const s = chart.addSeries(LineSeries, { color: BRAND_BLUE, lineWidth: 2 });
       s.setData(candles.map((c) => ({ time: c.time as UTCTimestamp, value: c.close })));
       mainSeries = s;
     }
 
     if (indicators.volume) {
-      const volumeSeries = chart.addHistogramSeries({
+      const volumeSeries = chart.addSeries(HistogramSeries, {
         color: "rgba(77,128,255,0.4)",
         priceFormat: { type: "volume" },
         priceScaleId: "",
@@ -161,7 +166,7 @@ export function AdvancedChart({
     }
 
     function addLineOverlay(points: { time: number; value: number }[], color: string) {
-      const s = chart.addLineSeries({ color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      const s = chart.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
       s.setData(points.map((p) => ({ time: p.time as UTCTimestamp, value: p.value })) as LineData[]);
     }
 
