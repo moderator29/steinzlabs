@@ -1,8 +1,19 @@
-# Session G handoff — Phase F (Chosen exclusives) + cleanup sweep
+# Session G handoff — Phase F (Chosen exclusives) + cleanup sweep + STUB CRONS
 
 **For**: the next session (fresh context). Read this top-to-bottom before touching anything.
-**From**: session F continuation, 2026‑05‑12.
+**From**: session F continuation, 2026‑05‑12. **Revision 3** — 5-agent deep audit findings folded in.
 **User**: Phantomfcalls (founder/CEO Naka Labs, brand: Naka Labs / nakalabs.xyz, GitHub: moderator29).
+
+## ★ Top-of-mind callouts (most important things you must not miss)
+
+1. **9 cron jobs are STUBS** that return success without doing any work, burning Vercel cron credits hourly. Listed in §4m. Either implement or remove from `vercel.json`.
+2. **Sniper bot has a silent data gap**: `sniper-monitor` writes `security_score: null` to every match because DexScreener doesn't provide it; any user criteria with `min_security_score > 0` will NEVER match a new pair. GoPlus enrichment happens only at execute-time. Listed in §4n risk #1.
+3. **Most "open" branches are already merged** — 16 of 24 feature branches show `0 ahead, X behind` because they shipped via PRs that didn't delete the branch. Run the delete-merged-branches sweep in §4o.
+4. **Only 2 branches actually have new work**: `fix/wagmi-tempo-build-failure` (4 commits ahead, the CI unblocker — MERGE FIRST) and `docs/handoff-session-g` (this file). Everything else listed earlier as "ready to merge" was either already merged or is a Dependabot bump.
+5. **Public-facing branding gap is real** — 30+ pages outside `/dashboard/*` and `/vault/*` have no W aurora. Crimson `#DC143C` only appears in 12 files, almost all inside vault. Quantified in §4b.
+6. **`docs/slash-commands-pricing` has 5 file conflicts and is 124 commits behind main** — user explicitly excluded it from scope. Don't touch, but document it.
+7. **3 Chosen-exclusive (Phase F) features are not started**: Oracle next-day-seal write-access for Chosen, Sanctum playlist curation UI for Chosen, public-surface Chosen badge in dashboard identity strip. Conclave's 2x vote weight + Vault Chosen badge are already done.
+8. **`@wagmi/connectors` and `lightweight-charts` are pinned** via `package.json` overrides (6.1.4 and ^5.2.0 respectively, see §3). Dependabot may try to bump these — verify any future bump doesn't reintroduce `tempoWallet` or v4-API breakage.
 
 ---
 
@@ -272,11 +283,186 @@ From session F handoff + memory:
 
 ### 4l · Things explicitly OFF-LIMITS (don't touch in session G)
 
-- `docs/slash-commands-pricing` — user said "expect command pricing" during conflict resolution
+- `docs/slash-commands-pricing` — user said "expect command pricing" during conflict resolution. Branch is 124 commits behind main with 5 file conflicts; leave it stale.
 - Direct merges to `main` (always via PR)
 - `git config` changes
 - Force-push to any branch (sandbox blocks anyway)
 - Skipping CI hooks (`--no-verify`)
+
+### 4m · STUB CRONS — burning Vercel credits for nothing
+
+The deep audit found **9 cron routes** scheduled in `vercel.json` that exist as files but return `cronResponse("...", startedAt)` immediately without doing work. These fire on schedule and consume Vercel cron-invocation quota.
+
+| Cron path | Schedule | Status |
+|---|---|---|
+| `/api/cron/context-feed-poll` | `*/10 * * * *` | STUB — line 7-11 of route.ts is just `return cronResponse(...)` |
+| `/api/cron/smart-money-ranking` | `0 */6 * * *` | STUB |
+| `/api/cron/cluster-analysis` | `0 */6 * * *` | STUB |
+| `/api/cron/network-metrics` | `*/30 * * * *` | STUB |
+| `/api/cron/trends-aggregator` | `*/30 * * * *` | STUB |
+| `/api/cron/narrative-detection` | `0 */2 * * *` | STUB |
+| `/api/cron/fear-greed-index` | `0 * * * *` | STUB |
+| `/api/cron/alert-monitor` | `*/5 * * * *` | STUB — surprising, this is referenced everywhere as if it works |
+| `/api/cron/whale-ranking-refresh` | `0 */6 * * *` | STUB |
+
+**Action**: For each, decide IMPLEMENT or REMOVE. `alert-monitor` being a stub is the biggest problem — the alerts UI (`/dashboard/alerts`) and `AlertMonitorProvider` mounted in the dashboard layout suggest a fully wired alerts pipeline, but there's no actual evaluator. Either build it or stop pretending it exists.
+
+**Working crons that ARE implemented** (do NOT touch): sniper-monitor, sniper-auto-execute, sniper-autosell, limit-order-monitor, stop-loss-monitor, dca-executor, copy-trade-monitor, pending-trades-cleanup, receipt-reconciliation, security-monitor, whale-activity-poll, whale-backfill-pnl, whale-logo-backfill, market-stats-snapshot, daily-digest, token-popularity-aggregator, watchlist-refresh, notification-digest, expired-nonces-cleanup, stale-cache-cleanup, login-activity-prune, telegram-heartbeat, vtx-usage-reset, price-cache-refresh, health-watch, publish-scheduled-research, cult-generate-daily-seal, cult-verify-membership, cult-refresh-treasury, cult-resolve-proposals.
+
+### 4n · Sniper bot — production risks (must address before next sales pitch)
+
+| # | Risk | Severity | Fix |
+|---|---|---|---|
+| 1 | `sniper-monitor` writes `security_score: null` for every new-pair match because DexScreener doesn't provide GoPlus data. Criteria with `min_security_score > 0` (the default modal value is 60!) will reject all candidates indefinitely. | 🔴 HIGH | Option A: call GoPlus inline during sniper-monitor (adds 1–2s latency per token). Option B: new `sniper-enrich-security` cron that backfills matches with `security_score: null`. Do B — cheaper. |
+| 2 | Daily spend cap has a race condition: cron tick reads "$450 spent / $500 cap" then matches 5 tokens × $100 in same tick → writes $500 overage. No atomic check-and-set. | 🟡 MED | DB-level CHECK constraint or wrap match-loop in transaction with row-level lock on criteria. |
+| 3 | `verifyCron()` warns "CRON_SECRET not set, allowing (dev mode)" and lets unauthenticated crons run. If a non-prod deploy forgets to set `CRON_SECRET`, anyone can spam-trigger cron endpoints. | 🟡 MED | In `app/api/cron/_shared.ts`, only allow no-secret if `NODE_ENV === 'development'`. |
+| 4 | TON chain in `sniper-autosell` returns `null` from price feed → position never triggers. Silently held. | 🟡 MED | Either don't allow TON in sniper, OR add TonAPI / DEX price source. |
+| 5 | No per-user concurrency limit. A user with 100 enabled criteria gets all 100 processed every 5 min. Could timeout / OOM. | 🟡 MED | Cap at e.g. 10 criteria per user per tick; round-robin remaining on next tick. |
+| 6 | Slippage from criteria gets written into `pending_trades` but is NOT re-validated at confirm time. User signs assuming 1% slippage; market actually moved 5%. | 🟡 MED | Re-quote on confirm, reject if slippage exceeds tolerance. |
+| 7 | `POST /api/sniper/criteria` doesn't verify the supplied `wallet_addresses[]` actually belong to the user. | 🟡 MED | Validate each address against `user_wallets_v2` for the requester before insert. |
+
+### 4o · Branch cleanup — most "open" branches are actually merged
+
+Deep git audit ran `git cherry origin/main origin/<branch>` for every remote branch. Findings:
+
+**16 fully-merged branches to delete** (run `git push origin --delete <branch>` for each, or use GitHub UI):
+- `feat/ascension-B-market` (0 ahead, 43 behind — merged via PR #160, superseded by expand-icons-2)
+- `feat/ascension-C-wallet-settings` (PR #161)
+- `feat/ascension-D-trading` (PR #162)
+- `feat/ascension-E-longtail` (PR #163)
+- `feat/ascension-phase-a-dashboard` (PR #164)
+- `feat/brand-foundation`
+- `feat/conclave-hardening` (PR #165)
+- `feat/expand-icons-2` (PR #166)
+- `feat/icons-expansion`
+- `feat/naka-cult-landing` (PR #167)
+- `feat/onchain-resolver` (PR #168)
+- `feat/oracle-foundation` (PR #169)
+- `feat/sanctum-foundation` (PR #172)
+- `fix/sniper-real-functionality-and-branding` (PR #170)
+- `fix/sniper-tier-gate-naka-cult` (PR #171)
+- `docs/vault-v2-session-handoff` (57 behind, fully merged)
+
+**2 stale Dependabot branches to delete** (superseded by newer Dependabot PRs):
+- `dependabot/npm_and_yarn/supabase-ad8f279af5` (replaced by supabase-cc07b7ee10)
+- `dependabot/npm_and_yarn/zod-4.4.3` (47 behind, major bump, has lingered)
+
+**4 fresh Dependabot branches ready to merge** (created 2026-05-11, all clean):
+- `dependabot/npm_and_yarn/anthropic-f2f26f87af` — @anthropic-ai/sdk bump
+- `dependabot/npm_and_yarn/next-stack-a60a7d7079` — Next + related deps
+- `dependabot/npm_and_yarn/supabase-cc07b7ee10` — supabase-js bump
+- `dependabot/npm_and_yarn/types-only-e17aa6991a` — @types/node
+
+**Branches with real new work**:
+- `fix/wagmi-tempo-build-failure` (4 commits ahead — MUST MERGE FIRST, unblocks all CI; pins @wagmi/connectors 6.1.4 + migrates 6 chart files to lightweight-charts v5)
+- `docs/handoff-session-g` (this file, 6 commits ahead)
+
+**Conflict-stuck**:
+- `docs/slash-commands-pricing` (1 ahead, 124 behind, 5 conflicting files: `app/api/whales/[address]/ai-summary/route.ts`, `app/api/whales/[address]/logo/route.ts`, `lib/copy/matcher.ts`, `lib/sniper/matcher.ts`, `lib/utils/addressNormalize.ts`). User said OFF-LIMITS.
+
+**Merge order recommendation**:
+1. `fix/wagmi-tempo-build-failure` (MUST be first — every other CI run depends on it)
+2. The 4 fresh Dependabot PRs
+3. `docs/handoff-session-g`
+4. Delete the 16 + 2 stale branches in one sweep
+
+### 4p · Cult / Phase F — exact built-vs-not-built table
+
+| Feature | State | Files / Where to extend | Open work |
+|---|---|---|---|
+| Tier ladder + ranks (`free|mini|pro|max|naka_cult`) | ✅ SHIPPED | `lib/hooks/useAuth.ts:46`, `lib/subscriptions/tierCheck.ts:15-21` | none |
+| Server-side cult gate `getCultAccess()` | ✅ SHIPPED | `lib/cult/access.ts` | none |
+| Vault layout gate (server-side redirect) | ✅ SHIPPED | `app/vault/layout.tsx` | redirects to `/naka-cult` |
+| `/naka-cult` public landing page | ✅ SHIPPED | `app/naka-cult/page.tsx` + `landing.css` | full cinematic dramatic page |
+| Vault landing with 3 chamber portals | ✅ SHIPPED | `app/vault/page.tsx`, `components/vault/ChamberPortal.tsx`, sigils | none |
+| **Conclave** — proposals, votes, treasury, resolution | ✅ SHIPPED (complete cycle) | `app/vault/conclave/*`, `app/api/cult/proposals/*`, `cult-resolve-proposals` cron | none — fully working |
+| Conclave Treasury panel | ✅ SHIPPED | `app/vault/conclave/TreasuryPanel.tsx`; reads latest `cult_treasury_snapshots` row | USD conversion stubbed (`balance_usd` is null) |
+| **Oracle Daily Seal** | ✅ SHIPPED | `components/vault/oracle/DailySeal.tsx`, `app/api/cult/oracle/daily-seal/route.ts`, `cult-generate-daily-seal` cron (Claude Opus 4.7) | none — but model is hardcoded, no fallback |
+| Oracle 3 sub-chambers (VTX Sage, Whisper Network, Echo Chamber) | ⛔ STUB | `components/vault/oracle/OracleHubClient.tsx` — placeholder cards marked `eta="Next pass"` | All 3 need implementation |
+| **Sanctum Library** (music) | ✅ SHIPPED | `components/vault/sanctum/LibraryPlayer.tsx`, `app/api/cult/sanctum/library/route.ts`, `cult_ambient_tracks` table | Spotify embed when all tracks share playlist |
+| Sanctum 3 sub-chambers (The Mantle, The Annals, The Forge) | ⛔ STUB | `components/vault/sanctum/SanctumHubClient.tsx` — placeholder cards | All 3 need implementation |
+| Vault identity strip with Chosen badge (gold trim) | ✅ SHIPPED | `components/vault/IdentityStrip.tsx`, CSS `.vault-identity--chosen` | only visible inside Vault |
+| **Chosen 2x vote weight in Conclave** | ✅ SHIPPED | `app/api/cult/proposals/[id]/vote/route.ts:57` (`weight = access.isChosen ? 2 : 1`) | gold halo on `VoteOrbs.tsx` |
+| **Chosen Oracle next-day-seal write access** (Phase F) | ⛔ NOT STARTED | Need: `POST /api/cult/oracle/daily-seal/draft`, migration adding `cult_daily_seal_drafts` (or `author_id, is_draft` cols on `cult_daily_seals`), Chosen-only UI in OracleHubClient | full vertical slice |
+| **Chosen Sanctum playlist curation** (Phase F) | 🟡 PARTIAL plumbing | `cult_ambient_tracks` table has `display_order` + `is_active`. Need: `POST /api/cult/sanctum/library/reorder`, `DELETE .../:track_id`, drag-drop UI, RLS update | API + UI + RLS |
+| **Chosen badge in dashboard identity strip** (not just Vault) | 🟡 PARTIAL | `components/ui/TierBadge.tsx` shows tier only | Add Chosen marker to dashboard user menu |
+| On-chain holdings resolver | ⚙ WIRED but DISABLED | `lib/cult/holdings.ts`, `cult-verify-membership` cron | Awaits `NAKA_TOKEN_CONTRACT` / `NAKA_LOYALTY_GEM_CONTRACT` / `NAKA_DEV_NFT_CONTRACT` envs. Until then, tier is set manually via SQL. |
+| Treasury USD enrichment | ⛔ STUBBED null | `cult-refresh-treasury` cron writes `balance_usd: null` | Add price-API lookup in cron |
+| Treasury governance execution | ⛔ MANUAL | Treasury motions can be raised + resolved but execution is manual | Future: signer integration |
+
+### 4q · Schema snapshot — what's in Supabase right now
+
+Migration directory: `supabase/migrations/`. Files inventoried (chronological):
+- `20260413_auth_rate_limits.sql` — auth rate-limiting
+- `20260413_full_schema.sql` — **master schema**, 35+ tables: profiles, users, wallet_accounts, transaction_history, token_approvals, positions, limit_orders, stop_loss_orders, take_profit_orders, dca_configs, sniper_executions, swap_logs, alerts, price_alerts, followed_entities, contacts, watchlist, whale_watchlist, wallet_clusters, wallet_cluster_members, wallet_profiles, smart_money_wallets, holder_snapshots, notifications, notification_settings, push_subscriptions, push_delivery_log, scans, threats, research_posts, broadcasts, engagement, platform_settings, revenue_records, fee_revenue. All have RLS with `auth.uid()` checks; `handle_new_user()` trigger on auth.users.
+- `20260419_wave5_schema_heal.sql` — repair pass
+- `20260420_platform_stats.sql` — `platform_stats_history`
+- `20260420_research_scheduled_at.sql` — scheduled-post column
+- Subsequent (cult layer): `2026_05_02_vault_foundation.sql` (cult_ambient_tracks, cult_user_preferences, profiles.is_chosen), `2026_05_02_conclave.sql` (cult_proposals, cult_proposal_votes, cult_proposal_comments, cult_treasury_snapshots), `2026_05_04_cult_daily_seals.sql`, `2026_05_04_cult_proposals_resolution_columns.sql`
+- Plus migrations for sniper criteria v2, copy-trading, DCA bots, stop-loss orders (v2), pending_trades, receipt reconciliation columns, whale activity, whale labels, etc.
+
+Tables to remember (schema gotchas already in MEMORY.md): `whales.label` (not `name`), `price_alerts.price` (not `target_price`), `user_wallets_v2` (JSONB shape), `profiles.is_chosen` (boolean — Cult-Chosen flag, NOT in client-side UserProfile type, only fetched server-side via `getCultAccess()`).
+
+Supabase client wiring (verify on next session):
+- `lib/supabase.ts` — public client (anon key)
+- `lib/supabaseAdmin.ts` — admin client (service_role)
+- `lib/supabaseServer.ts` (or via `@supabase/ssr`) — server-side SSR client
+
+Realtime subscriptions — verify on next session by grepping `.channel(` and `.on('postgres_changes'` patterns. Known users: Conclave proposal feed + vote orbs.
+
+Storage buckets — unconfirmed; verify on next session.
+
+User upgrade for `nmcfface@gmail.com` to MAX:
+```sql
+UPDATE profiles SET tier = 'max', tier_expires_at = NULL WHERE email = 'nmcfface@gmail.com';
+SELECT id, email, tier, is_chosen FROM profiles WHERE email = 'nmcfface@gmail.com';
+```
+User said done via Supabase manually — verify before assuming.
+
+### 4r · Detailed branding gap counts (quantified)
+
+Run these greps to refresh numbers:
+```bash
+grep -rln "bg-white/\[0.03\] border\|bg-white/\[0\.03\]" app components 2>/dev/null | wc -l
+# Currently: 26 files still using raw card pattern instead of .nl-card
+
+grep -rln "DC143C\|FF1744\|#FF3DCB" app components 2>/dev/null | wc -l
+# Currently: 12 files — almost all inside cult/vault. W crimson barely visible elsewhere.
+
+grep -rln "from-blue-600 to-blue-800\|from-blue-500 to-purple-600" app components 2>/dev/null | wc -l
+# Currently: 1-2 files
+
+grep -rln "bg-\[#07090f\]\|bg-\[#0A0E1A\]\|bg-\[#080C18\]\|bg-\[#0B0F1A\]" app components 2>/dev/null | wc -l
+# Currently: ~14 inside cards/modals (intentional); but root landing + 30+ public pages still solid bg
+```
+
+**Worst-offender sub-component dirs** (lucide-only, zero brand adoption):
+- `components/intelligence/` — 5 files, 0 brand icons, 0 nl-card
+- `components/landing/` — 17 files, 0 brand icons, custom inline gradients everywhere
+- `components/whales/`, `components/security/`, `components/trading/`, `components/dashboard/` — same pattern
+- `components/market/` — 32 files, only 3 use brand icons
+
+**Inline-style anti-patterns** (verified file:line):
+- `app/page.tsx:15` — `style={{ background: '#07090f' }}`
+- `app/contact/page.tsx:11,21,37,53` — `bg-[#07090f]` + `bg-[#111827]` cards
+- `app/privacy/page.tsx:25`, `app/terms/page.tsx:25` — `bg-[#080C18]`
+- `app/research/page.tsx:45` — `bg-[#080C18]` + `bg-[#0A1EFF]` button
+- `app/error.tsx:23` — `background: '#0A0E1A'` + hand-rolled spinner + hand-rolled `#0A1EFF` button
+- `components/landing/LandingNav.tsx:31` — inline scroll-toggle bg
+- `components/landing/LandingNav.tsx:53` — `background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)'` (should be `--nl-grad-bluecrimson`)
+- `components/landing/HeroSection.tsx:29` — `linear-gradient(160deg,#0A1EFF 0%,#050ea8 20%,#07090f 55%)` (hand-rolled)
+- `app/globals.css:26-37` — old `--primary: #0A1EFF` / `--bg-card: #111827` token vars still in use; should migrate to `--nl-*` system
+
+### 4s · Other things found in deep audit — small but real
+
+- **Error boundary** (`app/error.tsx`) uses hand-rolled `#0A1EFF` spinner + button, not `.nl-loader` / `.nl-button`. Branded error UX is a quick win.
+- **No `app/not-found.tsx`** — Next.js shows default 404. Add a branded 404 page.
+- **Dashboard `TabSpinner`** (in `app/dashboard/page.tsx:33-39`) is hand-rolled. Use `.nl-loader`.
+- **`alert-monitor` cron is a stub** but `AlertMonitorProvider` is mounted in dashboard layout and `/dashboard/alerts` exists — the UX implies a wired alerts system. Either implement the cron or ship a "alerts in beta" disclaimer.
+- **`copy-trade-monitor` security gate**: if relayer returns `securityBlocked=true`, trade is marked failed but never retried. Consider adding a `failure_reason` UI surface so users know why their copy didn't execute.
+- **Telegram bot token** + **Anthropic API key** read directly from `process.env`. No secret rotation policy or secret manager integration. If either leaks, attacker can abuse the bot or rack up Anthropic spend.
+- **No `app/api/trades/confirm` route traced** during sniper audit — the non-custodial sniper flow REQUIRES the browser to pull a queued `pending_trade` and sign it. Verify this route + UX exists and works; otherwise sniper auto-execute writes events nobody can finalize.
+- **`wgm-runner` page** is 1300+ lines, unclear status. Ask user if it's actively maintained.
 
 ---
 
