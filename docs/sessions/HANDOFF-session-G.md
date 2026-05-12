@@ -521,4 +521,298 @@ done
 - Memory updated for: user role, feedback rules, schema gotchas, brand/icon style, todo style, prior session handoff pointers (B/C/D/E/F)
 - This handoff file at `docs/sessions/HANDOFF-session-G.md`
 
+## 5 · Drop-in reference for next session (no context-rebuilding needed)
+
+### 5.1 · MCP servers — connection cheatsheet
+
+**Supabase MCP** — connect first thing.
+- Project ID: `phvewrldcdxupsnakddx` (region: production)
+- Anon key + service role key live in user's Supabase dashboard → Settings → API. Don't ask user for them; ask user to paste only if MCP can't be reached.
+- Common tool calls you'll need:
+  - `mcp__supabase__list_tables` — verify schema before changes
+  - `mcp__supabase__execute_sql` — run reads/updates (e.g., user tier upgrade SQL)
+  - `mcp__supabase__apply_migration` — for schema additions (writes a new migration file). Always preview the SQL with user first.
+  - `mcp__supabase__get_advisors` — security/performance warnings, run before saying "schema is clean"
+  - `mcp__supabase__get_logs` — debug runtime failures
+
+**Vercel MCP** — known auth gotcha.
+- Team ID: `team_YiyNREYxlCCmV9Zx9JQmFbCU` (extracted from a 403 error message in session F)
+- Production project on this team owns `nakalabs.xyz`. Personal-scope account `moderator29` exists separately and tripped me up — the OAuth flow defaults to team scope only.
+- If `mcp__vercel__list_projects` returns "Failed to list projects." with the team ID, the OAuth grant is wrong. Tell user to:
+  1. Run `/mcp` in Claude Code
+  2. Find **Vercel** → Disconnect → Reconnect
+  3. During OAuth, pick BOTH personal + team scope (or whichever owns the project)
+- Once auth works, `mcp__vercel__list_deployments`, `mcp__vercel__get_deployment`, `mcp__vercel__get_runtime_logs` are how you debug deploys.
+- Fastest workaround when MCP is uncooperative: ask user to paste the deployment URL or error message from Vercel dashboard. Don't burn 5 turns on auth.
+
+### 5.2 · Full environment-variable inventory
+
+The repo has `.env.example` (committed, 110 lines) and `.env.local` (gitignored, ~6KB, holds real values). The next session can't read `.env.local`; ask user to confirm only the specific var(s) you suspect.
+
+**Critical (app will not run without these):**
+
+| Category | Var | Notes |
+|---|---|---|
+| Supabase | `NEXT_PUBLIC_SUPABASE_URL` | Project URL (public) |
+| Supabase | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | RLS-governed anon key (public) |
+| Supabase | `SUPABASE_SERVICE_ROLE_KEY` | Admin client (`lib/supabaseAdmin.ts`); NEVER expose to client |
+| Auth | `JWT_SECRET` | 32+ random chars, signs admin tokens |
+| Auth | `ADMIN_BEARER_TOKEN` | Static token gating `/admin` (verified in `middleware.ts`) |
+| Cron | `CRON_SECRET` | Vercel cron Bearer token. **Risk noted in §4n #3**: missing in dev = unauthenticated cron access allowed |
+| Site | `NEXT_PUBLIC_SITE_URL` | Defaults to `https://nakalabs.xyz` |
+| Turnstile | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | Cloudflare CAPTCHA on signup |
+
+**Required-if-feature-enabled:**
+
+| Feature | Var | Purpose |
+|---|---|---|
+| EVM crypto | `ALCHEMY_API_KEY` | RPC + webhook signing for EVM whale tracking |
+| EVM webhooks | `ALCHEMY_WEBHOOK_SIGNING_KEYS` | Comma-sep keys for verifying webhooks |
+| Solana | `HELIUS_API_KEY` + `HELIUS_WEBHOOK_SECRET` | Solana RPC + webhook auth |
+| AI / Daily Seal / VTX | `ANTHROPIC_API_KEY` | Claude Opus 4.7 for daily seal, Sonnet 4.6 for VTX |
+| WalletConnect | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Reown AppKit modal. Graceful no-op if missing (legacy `window.ethereum` still works) |
+| Telegram | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_WEBHOOK_SECRET` + `TELEGRAM_BOT_USERNAME` | Bot init + webhook verification |
+| Email | `RESEND_API_KEY` | Transactional email |
+| Redis | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Rate limits, caches, locks |
+| Sentry | `NEXT_PUBLIC_SENTRY_DSN` (runtime) + `SENTRY_ORG` + `SENTRY_PROJECT` + `SENTRY_AUTH_TOKEN` (build-time source maps) | Error reporting |
+| PostHog | `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` | Client analytics, optional |
+
+**Market-data APIs (all optional, app degrades gracefully):**
+- `COINGECKO_API_KEY` + `COINGECKO_PLAN` (`demo` | `pro` | `business`)
+- `ZX_API_KEY` + `NEXT_PUBLIC_ZX_API_KEY` (0x swap aggregator — server + client variants)
+- `GOPLUS_API_KEY` + `GOPLUS_TIMEOUT_MS` (security/rug check)
+- `LUNARCRUSH_API_KEY` (social sentiment)
+- `ARKHAM_API_KEY` (entity intelligence + logos)
+- `BIRDEYE_API_KEY` (Solana market data)
+
+**Cult on-chain (NOT YET SET — auto-disables membership resolver):**
+- `NAKA_TOKEN_CONTRACT`
+- `NAKA_LOYALTY_GEM_CONTRACT`
+- `NAKA_DEV_NFT_CONTRACT`
+
+Until these are set, `cult-verify-membership` cron is a no-op and `naka_cult` tier is set manually via SQL. Memory file [steinz_labs_session_c_handoff] has more context.
+
+**Dev escape hatches (NEVER true in prod):**
+- `ALCHEMY_WEBHOOK_DEV_BYPASS=true`
+- `HELIUS_WEBHOOK_DEV_BYPASS=true`
+- `CRONS_PAUSED=true` (kills crons mid-month if quota spikes)
+
+### 5.3 · Payments / tier upgrade — there is no Stripe
+
+`stripe@^22` is in `package.json` but **not wired**. No `/api/stripe/*` routes, no webhook handlers, no checkout flow. Schema has the columns ready:
+- `profiles.stripe_id`
+- `users.stripe_customer_id`, `users.stripe_subscription_id`
+- `subscription_events` table
+
+But **the only way to upgrade a user today is manual SQL**:
+
+```sql
+-- Upgrade user to MAX for 30 days
+UPDATE profiles
+SET tier = 'max',
+    tier_expires_at = NOW() + INTERVAL '30 days'
+WHERE email = '<email>';
+
+-- Grant Cult tier (no expiry; gated by on-chain in future)
+UPDATE profiles
+SET tier = 'naka_cult', is_chosen = false, tier_expires_at = NULL
+WHERE email = '<email>';
+
+-- Grant Chosen status on top of Cult
+UPDATE profiles SET is_chosen = true WHERE email = '<email>';
+```
+
+Tier-check logic (`lib/subscriptions/tierCheck.ts:36-47`) treats expired tiers as `free`. There's an admin UI at `/admin` (gated by `ADMIN_BEARER_TOKEN`) — verify if it has tier-mutation buttons, otherwise it's read-only.
+
+**Honest prod gap**: until Stripe lands, every user upgrade requires you (the next agent) to run SQL via Supabase MCP. Implementing checkout is a real backlog item.
+
+### 5.4 · Sentry / observability state
+
+- Wired via `@sentry/nextjs@8.x`. Config files: `sentry.client.config.ts`, `instrumentation.ts` (server + edge), build-time upload in `next.config.js`.
+- DSN: `NEXT_PUBLIC_SENTRY_DSN`. Sample rate 10% prod / 100% dev. Replay 10% session / 100% on-error.
+- Source maps uploaded at build (`SENTRY_AUTH_TOKEN` + org + project envs).
+- Tunnel route: `/monitoring` (bypasses ad blockers).
+- **Only 1 explicit `Sentry.captureException` call** in code (`app/api/cron/telegram-heartbeat/route.ts:36`). Everything else relies on Next's `onRequestError` hook + Sentry's auto-instrumentation. Most cron failures log to `cron_execution_log` table, NOT to Sentry. If something silently fails in cron, check that table before Sentry.
+- No `pino`/`winston`. Just `console.error`. Around 49 occurrences in `lib/`.
+- **PostHog**: client-only analytics (`lib/posthog.ts`); optional; not in error path.
+
+### 5.5 · AppKit / Reown / wagmi integration
+
+**File**: `lib/wallet/appkit.ts` (~112 lines, single source of truth).
+
+Chains wired:
+- **EVM** (7): Ethereum, BSC, Base, Arbitrum, Optimism, Polygon, Avalanche
+- **Solana**
+
+Adapters: `WagmiAdapter` (EVM) + `SolanaAdapter` (Solana). Connectors are implicit — `injected` (MetaMask / Phantom in browser) and WalletConnect v2 via Reown's modal.
+
+RPC: Reown defaults (no Alchemy key in AppKit config — Alchemy key is used separately for whale tracking in `lib/whales/`).
+
+Modal config:
+- `projectId` from `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`. If missing → `HAS_APPKIT=false`, legacy `window.ethereum`/`window.solana` flow still works.
+- Theme dark, accent `#0A1EFF`.
+- email + socials = false (no Web3Auth).
+- Reown analytics on.
+
+**Non-custodial constraint** (rule #6 in memory): AppKit ONLY does connect/select. All signing goes through `lib/trading/builtinSigner.ts` → `pending_trades` table → browser-side sign. Never server-sign.
+
+### 5.6 · GitHub Issues + repository surface
+
+The handoff has covered PRs in detail (§4o). **GitHub Issues**: not pulled into this audit — there may be open issues with bug reports / feature requests the user filed. Next session should run `gh issue list --state open --limit 50` early to see if there's parallel backlog.
+
+Repo settings to confirm:
+- Default branch protection (probably requires PR + CI green on main)
+- Required status checks: CI / TypeScript, CI / Next.js build
+- Auto-delete head branches on merge: probably OFF (which is why §4o cleanup exists)
+- Dependabot: enabled (4 fresh PRs as of this writing)
+
+### 5.7 · Test suite — zero, by design
+
+- **No tests anywhere**. No `__tests__/`, no `*.test.ts`, no Vitest/Jest/Playwright configs.
+- `package.json` has no `test` script. CI runs `tsc --noEmit` + `next build` only.
+- Codebase relies on: TypeScript strict mode, ESLint, manual QA on preview deployments, Sentry in prod.
+- **Don't add a test suite without asking the user first.** It's an explicit non-goal for now.
+
+### 5.8 · Production deployment specifics
+
+- **Domain**: `nakalabs.xyz` (`NEXT_PUBLIC_SITE_URL`). The user also mentioned `steinzlabs.vercel.app` as fallback in env defaults — preview deploys live there.
+- **Vercel project**: hosted under team `team_YiyNREYxlCCmV9Zx9JQmFbCU`. Exact project ID not in repo; pull via `mcp__vercel__list_projects` once OAuth scope is fixed.
+- **Build command**: `next build --webpack` (NOT Turbopack — lightweight-charts dynamic imports may break under Turbopack).
+- **Node version**: 20 (per `.github/workflows/ci.yml`).
+- **next.config.js highlights**:
+  - Image domains: supabase.co, coingecko.com, dexscreener.com
+  - WebP/AVIF, 1h cache TTL
+  - Redirect: `/whitepaper` → `/docs`
+  - Cache headers: `/_next/*` immutable 1y; `/api/auth/*` no-cache; other `/api/*` 10s + 30s SWR
+  - Sentry source-map upload + `/monitoring` tunnel
+- **middleware.ts**:
+  - Cookie-overflow guard (nukes cookies if header > 8KB to dodge Vercel 494)
+  - Auth gates `/dashboard/*` and `/admin/*`
+  - Admin gate: `profiles.role = 'admin'` (server-side, line ~147)
+  - Security headers: HSTS, CSP, X-Content-Type-Options, Permissions-Policy
+  - Session cookies capped at 1h max-age
+
+### 5.9 · Wagmi + lightweight-charts version pin — don't let Dependabot break this again
+
+Two upstream regressions broke every CI + Vercel build in session G. Both are now pinned via `package.json` overrides:
+
+```json
+"overrides": {
+  "glob": ">=11.1.0",
+  "minimatch": ">=10.2.3",
+  "@wagmi/connectors": "6.1.4",
+  "wagmi": {
+    "@wagmi/connectors": "6.1.4"
+  }
+}
+```
+
+**Why**:
+- `@wagmi/connectors@6.2.0+` (especially 8.x latest) exports `tempoWallet from '@wagmi/core/tempo'`. Our `@wagmi/core@2.22.1` doesn't have that path → Vercel build fails: *"Module not found: Package path ./tempo is not exported from package @wagmi/core"*. The nested override is required because `wagmi@2.19.5` exact-pins `@wagmi/connectors@6.2.0` as a transitive — npm's flat override doesn't propagate to exact-pinned children without the nested form.
+- `lightweight-charts@5.x` removed the per-series methods (`addAreaSeries`, `addLineSeries`, `addCandlestickSeries`, `addBarSeries`, `addHistogramSeries`). New API: `chart.addSeries(SeriesType, options)` with `SeriesType` being one of `AreaSeries | BarSeries | CandlestickSeries | HistogramSeries | LineSeries | BaselineSeries` (named exports). 6 chart files migrated on `fix/wagmi-tempo-build-failure` branch.
+
+**If Dependabot ever bumps these**: verify the new version doesn't reintroduce either regression before merging. Easy check after each PR: `npm ci --legacy-peer-deps && npx tsc --noEmit` must exit 0.
+
+### 5.10 · Conflict-resolution playbook (patterns I learned in session G)
+
+When a long-lived branch can't merge clean against `main`, the conflicts are almost always one of these patterns. Apply the right fix, not whack-a-mole:
+
+**Pattern 1 — Per-page `<AuroraBackground>` wrapper redundant**: Main lifted aurora to `app/dashboard/layout.tsx`. Any branch that earlier added `<AuroraBackground fullHeight>` directly inside a page now collides. **Fix**: take main's version (no wrapper), drop the now-unused `import { AuroraBackground } from '@/components/brand/AuroraBackground'`, leave brand styling (nl-button / nl-card) alone.
+
+**Pattern 2 — `components/icons/cult/index.tsx` deleted upstream**: Old cult icon library was folded into `@/components/icons/brand` (commit `9bb5478`). If a branch still references it: `git rm components/icons/cult/index.tsx`, then rewrite imports `@/components/icons/cult` → `@/components/icons/brand`. Specialty icons not in brand (Dna, Trophy, Network, Radio, Bot, FlaskConical, FileCode, etc.) fall back to lucide via the hybrid-import pattern in `app/dashboard/sniper/page.tsx`.
+
+**Pattern 3 — `vercel.json` cron tail conflicts**: Two branches both added a new cron to the end of the array. Both sides are non-conflicting facts; the conflict is just JSON-array syntax. **Fix**: keep both new crons, restore comma between them. (Real example: `cult-generate-daily-seal` from oracle branch + `cult-resolve-proposals` from main → keep both.)
+
+**Pattern 4 — `app/vault/vault.css` chamber CSS collision**: Oracle and Sanctum both scaffolded their chamber CSS with identical selectors (`.X-chamber__header`, `.X-chamber__grid`, `.X-subchamber`, etc.) but distinct prefixes (`oracle-*` vs `sanctum-*`). The git auto-merger thinks the blocks compete because the structure is byte-identical. **Fix**: keep both blocks in full, just side-by-side; they share zero class names.
+
+**Pattern 5 — Comment-only differences**: Two branches wrote slightly different inline comments for the same code line. **Fix**: take main's wording, it's the rebase target.
+
+After resolution: `npm ci --legacy-peer-deps && npx tsc --noEmit` must exit 0. Don't push until.
+
+### 5.11 · Schema gotchas — column names + flags that don't match the obvious
+
+Already in memory but worth restating with file:line:
+- **`whales.label`** is the display name, NOT `whales.name`. Used in `/dashboard/whale-tracker` table.
+- **`price_alerts.price`** is the target, NOT `target_price`. Watch this when building alert UIs.
+- **`user_wallets_v2`** is JSONB-typed; the wallet array shape is `{ id, chain, address, alias, created_at }`. Don't try to query individual wallets via SQL filters — fetch the row, parse JSONB client-side.
+- **`profiles.is_chosen`** is a server-only boolean. NOT exposed on the client-side `UserProfile` type — only `getCultAccess()` reads it server-side. Don't try `user.isChosen` in a client component; it's always undefined.
+- **`profiles.tier`** values: lowercase `'free' | 'mini' | 'pro' | 'max' | 'naka_cult'`. NOT `'NAKA_CULT'` or `'Naka Cult'`. RLS policies use exact lowercase.
+- **`profiles.tier_expires_at`**: when null, the tier is permanent. When set, expiry < `NOW()` treats user as `free`.
+- **`positions.status`** values: `'open' | 'closed' | 'partial'`. Closed positions retain `closed_at`.
+- **`sniper_match_events.decision`** values: `'matched' | 'sniped_pending' | 'sniped_executed' | 'skipped'`. The cron writes `sniped_pending` when `auto_execute=true`; browser-side confirm flips to `sniped_executed`.
+- **`pending_trades.status`** values: `'pending' | 'signed' | 'broadcasted' | 'confirmed' | 'failed' | 'expired'`. Used for non-custodial signer queue.
+
+### 5.12 · Branding implementation reference (don't re-derive)
+
+W-image style tokens (defined in `app/globals-brand.css` and mirrored in `lib/brand/tokens.ts`):
+- **Canvas**: `--nl-canvas-base: #050816` (deep navy), `--nl-canvas-deep: #020512`, `--nl-canvas-elev: #0A0F2E`
+- **Blue family**: `--nl-blue: #0066FF` (signature), `--nl-blue-ice: #00C8FF`, `--nl-blue-deep: #1230B3`
+- **Crimson family**: `--nl-crimson: #DC143C` (the "maybe red" user asked about), `--nl-crimson-hot: #FF1744`
+- **Gold**: `--nl-gold: #FFD86B` (Chosen + Daily Seal)
+- **State colors**: `--nl-yes: #10B981`, `--nl-no: #FF1744`, `--nl-abstain: #B4C0E0`
+- **Text**: `--nl-text: #FFFFFF`, `--nl-text-soft: #D5DEFF`, `--nl-text-muted: #B4C0E0`
+- **Gradients**: `--nl-grad-bluecrimson` (135deg, #0066FF → #DC143C), `--nl-grad-rocket` (purple→pink→blue), `--nl-grad-helmet` (electric blue)
+
+Brand class library (`app/globals-brand.css`):
+- `.nl-aurora-bg` — used by `AuroraBackground` component; positions a deep-navy canvas + radial blue/crimson hotspots + slowly drifting conic ribbon (only on `/vault` currently, see §4b motion note)
+- `.nl-card` — replaces `bg-white/[0.03] border border-white/10`; has gradient border on hover
+- `.nl-button` — replaces `bg-gradient-to-r from-blue-600 to-blue-800`; uses `--nl-grad-bluecrimson` + brand glow
+- `.nl-button--ghost` — outline variant
+- `.nl-loader` — branded spinner
+
+Brand icon library (`@/components/icons/brand`, ~80 icons):
+- Same prop API as lucide-react (size, color, className) so swapping is mechanical.
+- Three "W image" gradient variants: rocket (purple-pink-blue), helmet (deep blue tunnel), pentagon (electric blue).
+- See `app/brand/page.tsx` for the visual preview.
+- Specialty icons NOT yet in brand library (~25): Dna, Trophy, Network, Radio, Bot, FlaskConical, FileCode, FileSearch, CheckSquare, Link2, ArrowLeftRight, Circle, PieChart, ArrowDownRight, Home, MessageSquare, etc. — fall back to lucide via hybrid import (see `app/dashboard/sniper/page.tsx` and `components/SidebarMenu.tsx` patterns).
+
+### 5.13 · Things the next session SHOULD ASK USER before doing
+
+Don't assume on these — ask first:
+1. **Stripe / payments** — should we implement checkout + webhook flow as a Phase G task? Or stay manual-SQL for now?
+2. **Light theme** — current `[data-theme="light"]` only handles auth pages. Platform-wide light theme is real work — does the user want it?
+3. **Test suite** — adding Vitest is a big philosophical change. Has user signaled they want this, or stay zero-tests?
+4. **Tests for the 9 stub crons (§4m)** — are they intended to be implemented, or removed from `vercel.json`? Some (alert-monitor) imply a wired product feature; killing them means killing the feature visibly.
+5. **`/dashboard/wgm-runner`** — 1300+ line page, unclear status. Is it live, dead, or in-progress?
+6. **`app/api/trades/confirm`** — did the non-custodial signer's confirm route ship, or is sniper auto-execute writing events nobody can finalize?
+7. **Sentry team / org slugs** — needed for source map upload during CI builds (currently CI uses placeholders).
+
+Get answers before spending context on these.
+
+### 5.14 · Quick-start commands for the next session
+
+```bash
+# Repo location
+cd "c:\Users\DELL LATITUDE 5320\dev\steinzlabs"
+
+# Sync
+git fetch --prune origin
+git checkout main && git pull --ff-only
+
+# Verify CI passes locally (matches GitHub Actions exactly)
+npm ci --legacy-peer-deps
+npx tsc --noEmit  # must exit 0
+
+# Run dev server (port 5000 per package.json)
+npm run dev
+
+# Check branch graveyard
+git for-each-ref --format='%(refname:short) %(objectname:short)' refs/remotes/origin/ \
+  | grep -v 'origin/main$\|origin/HEAD'
+
+# Find which branches are fully merged (delete candidates)
+for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v 'origin/main$\|origin/HEAD'); do
+  ahead=$(git rev-list --count origin/main..$b 2>/dev/null)
+  [ "$ahead" = "0" ] && echo "$b — merged, can delete"
+done
+
+# Brand-adoption pulse-check
+grep -rln "bg-white/\[0.03\] border" app components 2>/dev/null | wc -l  # raw cards
+grep -rln "DC143C\|FF1744\|#FF3DCB" app components 2>/dev/null | wc -l    # crimson usage
+grep -rln "AuroraBackground\|nl-aurora-bg" app components 2>/dev/null | wc -l  # branded pages
+
+# Run a single cron route locally (replace SECRET with .env.local value)
+curl -H "Authorization: Bearer SECRET" http://localhost:5000/api/cron/sniper-monitor
+```
+
 End of handoff. Good luck — match the bar.
