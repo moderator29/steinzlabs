@@ -133,12 +133,60 @@ Concrete sub-features Phase F should ship:
 
 Server-side: every Chosen-only API route MUST check `getCultAccess(req)` before returning data. Don't trust client.
 
-### 4b · Pending UX / branding work not yet done
+### 4b · Pending UX / branding work — be honest, lots is undone
 
-- **Sub-component icon swaps (Step 2 from session F)**: deferred. Lucide imports remain in many sub-components across market/, smart-money/, whales/, intelligence/, security/, trading/, settings/. A sed sweep can't safely do this — needs per-file judgment because specialty names collide. Pick a cluster, swap mechanically, ship. Pattern in `app/dashboard/sniper/page.tsx` is the canonical template (hybrid lucide+brand import).
-- **`nl-card` adoption beyond AuroraBackground lift**: most dashboard pages still hand-roll `rounded-xl border border-white/10 bg-white/[0.03] p-4` cards. Replace with `nl-card` per page when touched.
-- **`nl-button` adoption**: same — most CTA buttons still use `bg-gradient-to-r from-blue-600 to-blue-800` hand-rolled. Swap to `nl-button` per page when touched.
-- **Mobile sidebar visual pass**: SidebarMenu hasn't had brand pass.
+The W image branding (deep navy `#050816` canvas + crimson `#DC143C` + electric blue `#0066FF`/`#00C8FF` aurora ribbons + 3 glowing icons rocket/helmet/pentagon) is what user means by "platform-wide branding." Status:
+
+**What IS branded (W look-and-feel applied):**
+- `/dashboard/*` — every dashboard page inherits aurora via `app/dashboard/layout.tsx` lift ✅
+- `/vault/*` (Cult chambers) — gold + crimson + blue aurora live in `app/vault/vault.css` ✅
+- `/brand` preview page ✅
+- Brand tokens defined in `app/globals-brand.css` (`--nl-canvas-base: #050816`, `--nl-blue: #0066FF`, `--nl-crimson: #DC143C`, etc.) and `lib/brand/tokens.ts` ✅
+- Brand icon library at `@/components/icons/brand` (~80 icons, with the 3 W glowing styles: rocket/helmet/pentagon variants) ✅
+- `.nl-aurora-bg`, `.nl-card`, `.nl-button` CSS classes defined ✅
+
+**What is NOT branded yet — significant gap, 30+ public pages:**
+
+The PUBLIC-facing pages — what visitors see BEFORE logging in — still use plain solid backgrounds, no W aurora, no crimson accents. **This is the gap user asked about** when he said "have platform wide branding been changed to the w logo branding color with that maybe red" — answer: NO for the public surface area. The W crimson `#DC143C` is barely visible outside the cult chamber.
+
+| Page | Current state | What's needed |
+|---|---|---|
+| `app/page.tsx` (root marketing/landing) | inline `style={{ background: '#07090f' }}`, no aurora | Wrap in `<AuroraBackground fullHeight>`, strip solid bg, use crimson+blue gradient on hero CTA |
+| `app/login/page.tsx` | `naka-auth-page` (theme-flip class only, no aurora) | Aurora + W gradient buttons |
+| `app/signup/page.tsx` | same | same |
+| `app/forgot-password/page.tsx`, `app/reset-password/page.tsx` | unbranded | aurora + brand pass |
+| `app/research/page.tsx` | `bg-[#080C18]`, hand-rolled `bg-[#0A1EFF]` button | aurora + nl-button |
+| `app/market/page.tsx`, `prices/`, `watchlist/`, `orders/` | unbranded | aurora |
+| `app/portfolio/page.tsx` | unbranded | aurora |
+| `app/security-center/page.tsx` | unbranded | aurora |
+| `app/dna-analyzer/page.tsx` | unbranded | aurora |
+| `app/docs/page.tsx` | unbranded | aurora |
+| `app/contact/page.tsx`, `app/privacy/page.tsx` | unbranded | aurora |
+| `app/alerts/page.tsx` | unbranded | aurora |
+| `app/intelligence/[token]/page.tsx` | unbranded | aurora |
+| `app/naka-cult/page.tsx` | partial (custom CSS at `app/naka-cult/landing.css`) | verify W brand alignment |
+| `app/s/[id]/page.tsx` (share previews) | unbranded — public OG cards, may need lighter treatment | UX call |
+| `app/auth/page.tsx`, `app/auth/callback/page.tsx`, `app/auth/clear/page.tsx` | transient flows, may not need full aurora | UX call |
+
+**Recommended fix pattern (per page):**
+1. Import `AuroraBackground` from `@/components/brand/AuroraBackground`
+2. Wrap the outer return in `<AuroraBackground fullHeight>...</AuroraBackground>`
+3. Strip `bg-[#07090f]` / `bg-[#080C18]` / inline `style={{ background }}` from the inner container
+4. Replace `bg-gradient-to-r from-blue-XXX to-blue-XXX` CTAs with `nl-button`
+5. Replace `rounded-xl border border-white/10 bg-white/[0.03]` cards with `nl-card`
+
+**Quantitative gaps:**
+- **26 files** still use raw `bg-white/[0.03] border border-white/10` card pattern instead of `nl-card`
+- **Only 12 files** currently use W crimson colors (`DC143C` / `FF1744` / `FF3DCB`) — almost all inside the cult/vault chamber. The platform feels "generic dark blue," not "Naka Labs W identity."
+- **Public homepage has zero crimson accents and no aurora** — first impression doesn't sell the brand
+
+**Sub-component icon swaps (Step 2 from session F)**: deferred. Lucide imports remain in many sub-components across `components/market/`, `components/smart-money/`, `components/whales/`, `components/intelligence/`, `components/security/`, `components/trading/`, `components/settings/`. A sed sweep can't safely do this — needs per-file judgment because specialty names collide. Pick a cluster, swap mechanically, ship. Pattern in `app/dashboard/sniper/page.tsx` is the canonical template (hybrid lucide+brand import).
+
+**Mobile sidebar visual pass**: `SidebarMenu.tsx` hasn't had brand pass — uses lucide icons + raw bg.
+
+**Light theme**: `[data-theme="light"]` handling exists in `app/globals.css` for `naka-auth-page` only. If user wants light theme platform-wide, that's a separate workstream.
+
+**Hero / homepage motion**: W image has implied motion from aurora ribbons. `.nl-aurora-bg::after` has a 30s `vault-drift` keyframe scoped to `/vault`. The dashboard aurora is static. If user wants cinematic motion everywhere, lift `vault-drift` keyframes to the global aurora.
 
 ### 4c · Schema / Supabase pending
 
@@ -181,6 +229,54 @@ Confirmed safe-to-delete: `fix/sniper-tier-gate-naka-cult` (already in main as P
 ### 4g · Open vulnerabilities at OS/repo level
 
 GitHub flagged **36 vulns on default branch** as of last push. Check `Security` tab on the repo, prioritize criticals/highs.
+
+### 4h · Sniper cron implementation gaps
+
+`vercel.json` schedules 40+ crons. The sniper-related ones to verify on next session:
+- `/api/cron/sniper-monitor` — fixed on `fix/sniper-real-functionality-and-branding` (matcher now reads DexScreener)
+- `/api/cron/sniper-auto-execute` — route file exists at `app/api/cron/sniper-auto-execute/route.ts`. Verify it actually consumes `decision: 'sniped_pending'` events and executes the buy via signer.
+- `/api/cron/sniper-autosell` — route file exists. Verify TP/SL/trailing-stop logic actually fires on open positions.
+- `/api/cron/limit-order-monitor`, `/api/cron/stop-loss-monitor` — verify same.
+- `/api/cron/dca-executor` — DCA path.
+
+For each: run a quick smoke (curl the route locally with `Authorization: Bearer ${CRON_SECRET}`) and check it doesn't 500. Production health is monitored via `/api/cron/health-watch`.
+
+### 4i · Product features the user has explicitly named but aren't in the handoff yet
+
+From session F handoff + memory:
+- **VTX AI inline commands**: the `/dashboard/vtx-ai` agent supports inline cards (rocket/helmet/pentagon triggers per memory). Verify all commands wired.
+- **Smart-money clustering**: `lib/cult/holdings.ts` deletion appeared in many ascension branches' diffs — was it intentional or a stale merge? Check `git log -- lib/cult/holdings.ts` to see when/why it was removed.
+- **Whale Tracker submit / directory flows**: `/dashboard/whale-tracker/submit`, `/dashboard/whale-tracker/directory` — verify the public submission flow has anti-spam (rate-limit, captcha).
+- **WGM Runner** (`/dashboard/wgm-runner`) — large file (1300+ lines), unknown state, ask user if it's actively maintained or dead-code candidate.
+- **Notifications**: `FloatingNotificationBell`, `AlertMonitorProvider`, `PendingTradesBanner`, `PlatformEventMonitor` — all mounted in dashboard layout. Verify each connects to a live event source.
+- **Telegram bot** integration: per memory, "Telegram Bot" tier-based commands + automatic notifications. Verify env wiring + cron `/api/cron/telegram-heartbeat`.
+- **Cult Conclave proposals / voting / resolution** — proposals table has a resolution_columns migration; verify the resolver cron `/api/cron/cult-resolve-proposals` actually closes votes correctly.
+- **Daily Seal** — Anthropic Opus call in `/api/cron/cult-generate-daily-seal`. Verify token usage doesn't blow budget; check error handling.
+
+### 4j · Build & deploy infra checks the user may want addressed
+
+- **Vercel project ID**: not stored locally — user has it. The team ID from a 403 error was `team_YiyNREYxlCCmV9Zx9JQmFbCU` but `list_projects` 403'd, meaning the OAuth scope was wrong. Either ask user to grant personal scope or paste deployment URL directly.
+- **Vercel env vars**: CI build uses placeholders (see `.github/workflows/ci.yml`). Real values are only in Vercel. If runtime breaks but local works, check Vercel env vs `.env.local`.
+- **`maxDuration` on serverless routes**: most cron routes have `export const maxDuration = 60`. Anthropic/DexScreener-heavy routes may need 300. Check timeouts in Vercel function logs.
+- **Domain**: production = `nakalabs.xyz` per memory. Verify `NEXT_PUBLIC_SITE_URL` matches.
+- **Next.js 16**: package.json pins `next: "^16.2.4"`. Next 16 is recent — watch for breaking changes when Dependabot bumps it.
+- **Webpack vs Turbopack**: build script uses `next build --webpack` explicitly. Don't switch to Turbopack without testing — lightweight-charts dynamic imports might break.
+
+### 4k · Brand consistency audit — small but visible
+
+- **`SteinzLogo` component**: appears in nav + sidebar. Verify it renders the W mark correctly + uses brand tokens, not hardcoded colors.
+- **Favicon / OG images / Twitter cards**: check `app/icon.tsx`, `app/opengraph-image.tsx`, `app/twitter-image.tsx`, `public/`. Should match W brand (deep navy + crimson + blue).
+- **Empty states**: every "no data yet" UI throughout the platform should use brand voice + crimson `nl-no` warning color (where appropriate) instead of generic gray.
+- **Loading skeletons**: many components use raw gray skeletons. Brand-aligned version uses subtle blue/crimson shimmer.
+- **Error pages**: `app/not-found.tsx`, error boundaries — verify they look like Naka Labs, not Next.js defaults.
+
+### 4l · Things explicitly OFF-LIMITS (don't touch in session G)
+
+- `docs/slash-commands-pricing` — user said "expect command pricing" during conflict resolution
+- Direct merges to `main` (always via PR)
+- `git config` changes
+- Force-push to any branch (sandbox blocks anyway)
+- Skipping CI hooks (`--no-verify`)
 
 ---
 
