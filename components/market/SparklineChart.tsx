@@ -17,7 +17,7 @@ export function SparklineChart({ data, isPositive, height = 48 }: SparklineChart
     let chart: { remove: () => void } | null = null;
 
     const init = async () => {
-      const { createChart, ColorType } = await import('lightweight-charts');
+      const { createChart, ColorType, AreaSeries } = await import('lightweight-charts');
       if (!containerRef.current) return;
 
       const color = isPositive ? '#22c55e' : '#ef4444';
@@ -35,7 +35,7 @@ export function SparklineChart({ data, isPositive, height = 48 }: SparklineChart
         handleScale: false,
       });
 
-      const areaSeries = (chart as unknown as { addAreaSeries: (o?: unknown) => { setData: (d: unknown) => void } }).addAreaSeries({
+      const areaSeries = (chart as unknown as { addSeries: (def: unknown, o?: unknown) => { setData: (d: unknown) => void } }).addSeries(AreaSeries, {
         lineColor: color,
         topColor: `${color}33`,
         bottomColor: `${color}00`,
