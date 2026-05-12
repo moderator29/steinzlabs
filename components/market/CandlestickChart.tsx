@@ -26,7 +26,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
     let handleResize: (() => void) | null = null;
 
     const init = async () => {
-      const { createChart, ColorType, CrosshairMode } = await import('lightweight-charts');
+      const { createChart, ColorType, CrosshairMode, CandlestickSeries } = await import('lightweight-charts');
       // §13 audit fix: cancel guard for the case where the cleanup
       // function ran while the dynamic import was still in flight.
       if (cancelled || !containerRef.current) return;
@@ -47,7 +47,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
         timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
       });
 
-      const candleSeries = chart.addCandlestickSeries({
+      const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e', downColor: '#ef4444',
         borderUpColor: '#22c55e', borderDownColor: '#ef4444',
         wickUpColor: '#22c55e', wickDownColor: '#ef4444',

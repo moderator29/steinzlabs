@@ -22,6 +22,7 @@ import {
   createChart,
   ColorType,
   CrosshairMode,
+  AreaSeries,
   type IChartApi,
   type ISeriesApi,
   type UTCTimestamp,
@@ -66,7 +67,7 @@ export default function WhaleActivityChart({ activity, height = 220, className =
       height,
     });
 
-    const series = chart.addAreaSeries({
+    const series = chart.addSeries(AreaSeries, {
       lineColor: BRAND_BLUE,
       topColor: 'rgba(77,128,255,0.3)',
       bottomColor: 'rgba(77,128,255,0.02)',

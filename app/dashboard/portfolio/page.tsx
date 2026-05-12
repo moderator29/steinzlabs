@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown } from "@/components/icons/brand";
 import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { createChart, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
+import { createChart, AreaSeries, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
 import { TokenLogo } from "@/components/market/TokenLogo";
 import { PriceChangeDisplay } from "@/components/market/PriceChangeDisplay";
@@ -462,7 +462,7 @@ function PerformanceChart({
       height: 180,
       autoSize: true,
     });
-    const areaSeries = chart.addAreaSeries({
+    const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: "#00BFFF",
       topColor: "rgba(0,191,255,0.30)",
       bottomColor: "rgba(0,191,255,0.02)",
