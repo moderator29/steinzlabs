@@ -17,6 +17,15 @@ export function verifyCron(request: NextRequest): { ok: boolean; response?: Resp
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
+    // CRON_SECRET missing in any non-development env is a hard fail. A
+    // preview / staging deploy that forgets to set it must NOT silently
+    // accept unauthenticated requests — anyone could spam the cron surface.
+    if (process.env.NODE_ENV !== "development") {
+      return {
+        ok: false,
+        response: new Response("CRON_SECRET not configured", { status: 500 }),
+      };
+    }
     console.warn("[cron] CRON_SECRET not set, allowing (dev mode)");
     return { ok: true };
   }
