@@ -27,7 +27,7 @@
     "@types/d3": "^7.4.3",
     "@types/qrcode": "^1.5.6",
     "@upstash/redis": "^1.37.0",
-    "@wagmi/connectors": "^5.11.2",
+    "@wagmi/connectors": "6.1.4",
     "alchemy-sdk": "^3.2.0",
     "axios": "^1.6.7",
     "bs58": "^6.0.0",
@@ -85,6 +85,10 @@
   },
   "overrides": {
     "glob": ">=11.1.0",
-    "minimatch": ">=10.2.3"
+    "minimatch": ">=10.2.3",
+    "@wagmi/connectors": "6.1.4",
+    "wagmi": {
+      "@wagmi/connectors": "6.1.4"
+    }
   }
 }
