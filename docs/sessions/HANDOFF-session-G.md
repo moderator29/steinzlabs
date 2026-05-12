@@ -21,16 +21,88 @@
 
 Phantomfcalls runs a tight, opinionated workflow. Match it exactly.
 
-1. **Always audit your own work before claiming done.** Re-grep, re-tsc, re-build. Session F shipped a chart-migration fix that "passed tsc" but missed two dynamic-import files (`CandlestickChart.tsx`, `SparklineChart.tsx`) that would have blown up at runtime — the audit caught them. Don't ship without auditing.
-2. **One branch per task. Never push to main directly. He merges every PR himself in the GitHub UI.** This is fast — he'll merge a lot, often back-to-back. Your job is to keep PRs green and conflict-free.
-3. **Every commit author = `moderator29` only. Zero AI attribution** (no "Co-Authored-By: Claude", no Generated-with footer). Git is already configured this way; just don't add author trailers.
-4. **Casual tone, picture-perfect bar.** Code quality is "top 1% MEVX/Nansen-grade." No mock data anywhere — real APIs only.
-5. **WCAG AAA on the UI.** Don't ship colour pairs that fail contrast.
-6. **Force-push is denied by sandbox.** Don't try `git push --force` / `--force-with-lease`. If you need to re-do a commit, make a new commit on top instead of amending+force.
-7. **Ask permission before destructive git ops** (reset --hard on remote, branch -D, rm -rf node_modules without reason).
-8. **TODO list = full backlog in plain English, then he picks.** When he says "todo list" he means the whole remaining surface, not just the current branch.
+Phantomfcalls runs a tight, opinionated workflow. Match it exactly. **Re-read this list before every commit — these are not soft preferences, they are hard rules.**
 
-Memory file index: `C:\Users\DELL LATITUDE 5320\.claude\projects\c--Users-DELL-LATITUDE-5320-Downloads\memory\MEMORY.md` — has more user/feedback memories. Load them.
+### 0.1 · Commit authoring rules (the most important rules — never break these)
+
+1. **Author = `moderator29` ONLY.** Verify with `git log --format='%an %ae' origin/main | sort -u` — there should be exactly one author/email pair on the entire history. Git is already configured globally for this; do not change it.
+
+2. **ZERO AI attribution in commits.** Hard ban list:
+   - ❌ NO `Co-Authored-By: Claude <noreply@anthropic.com>` trailer
+   - ❌ NO `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` trailer
+   - ❌ NO `🤖 Generated with [Claude Code](https://claude.com/claude-code)` footer
+   - ❌ NO `Generated-by:` / `Assisted-by:` / `Created-with:` / `Tool:` trailers
+   - ❌ NO emoji watermark in commit messages (no 🤖, no 🧠, no ✨ at the start of subject lines)
+   - ❌ NO "Claude wrote this" / "AI-generated" / "Created by Claude" inside the body
+   - ❌ NO mention of session ID, model name (`claude-opus-4-7`, `claude-sonnet-4-6`), or harness branding (`Claude Code`, `Anthropic`) anywhere in commits
+   - The default Claude Code commit template includes the Co-Authored-By trailer and the "🤖 Generated with" footer — **strip both every single time.** Use HEREDOC commits and just don't include them.
+
+3. **PR titles and bodies follow the same ban list.** When you draft a `gh pr create --body`, do not include the "🤖 Generated with [Claude Code]" footer that's in the default template. Clean PR descriptions, no AI watermarks.
+
+4. **Branch names**: no `claude/`, `ai/`, `agent/` prefixes. Use `feat/<feature>`, `fix/<area>`, `docs/<topic>`, `chore/<thing>`, `refactor/<area>`. Matches what the user has been doing.
+
+5. **Code comments**: no `// Claude:` / `// AI-generated` / `// TODO(claude)` markers. Comments must read like a human moderator29 wrote them — terse, blunt, explain *why* not *what*.
+
+6. **Never amend a published commit.** Force-push is denied by sandbox anyway, but the rule is: if you need to fix something, make a NEW commit on top. The user merges via GitHub UI and reads PR commit history; rewritten history confuses him.
+
+### 0.2 · Commit message template (use exactly this shape)
+
+```
+<type>(<scope>): <imperative subject ≤72 chars, lowercase>
+
+<wrapped body, 72-col, explains why not what>
+
+<optional follow-up line: testing notes, verified-with-tsc, etc.>
+```
+
+Allowed `<type>`: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `style`, `test`, `merge`. Examples from this session (all clean, all moderator29-only):
+
+```
+fix(deps): pin @wagmi/connectors to 6.1.4 to unblock Vercel builds
+fix(sniper): real matching against DexScreener + brand pass on sniper page
+merge main into feat/oracle-foundation — coexist with Sanctum CSS
+docs: handoff revision 4 — drop-in reference §5, the next session needs zero rebuilding
+```
+
+NO trailers. NO footers. NO emoji. End the message; commit; push.
+
+### 0.3 · Workflow rules
+
+7. **Always audit your own work before claiming done.** Re-grep, re-tsc, re-build. Session F shipped a chart-migration fix that "passed tsc" but missed two dynamic-import files (`CandlestickChart.tsx`, `SparklineChart.tsx`) that would have blown up at runtime — the audit caught them. Don't ship without auditing. **CI command for local repro**: `npm ci --legacy-peer-deps && npx tsc --noEmit` must exit 0.
+
+8. **One branch per task. Never push to `main` directly. He merges every PR himself in the GitHub UI.** This is fast — he'll merge a lot, often back-to-back. Your job is to keep PRs green and conflict-free.
+
+9. **Force-push is denied by sandbox.** Don't try `git push --force` / `--force-with-lease`. If you need to re-do a commit, make a new commit on top instead of amending+force.
+
+10. **Ask permission before destructive git ops** (reset --hard on remote, branch -D, rm -rf node_modules without reason). The sandbox will block most but don't try.
+
+11. **Never skip CI hooks.** No `--no-verify`, no `--no-gpg-sign`, no `-c commit.gpgsign=false`. If a hook fails, fix the underlying issue.
+
+12. **Never commit `.env*` files** (except `.env.example`). Don't even stage them. `.env.local` is gitignored — keep it that way.
+
+13. **TODO list = full backlog in plain English, then he picks.** When he says "todo list" he means the whole remaining surface, not just the current branch. Group by area, prioritize honestly, don't pad with already-done work.
+
+### 0.4 · Product/code quality rules
+
+14. **Casual tone, picture-perfect bar.** Code quality is "top 1% MEVX/Nansen-grade."
+
+15. **NO mock data anywhere. Real APIs only.** This is a hard rule. If a feature needs data that doesn't exist yet, build the integration or don't ship the feature. Never `const mockTrades = [...]` or `if (DEV) return fakeData`.
+
+16. **WCAG AAA on the UI.** Don't ship colour pairs that fail contrast.
+
+17. **Don't add features, refactor, or abstractions beyond what the task requires.** A bug fix doesn't need surrounding cleanup. A one-shot operation doesn't need a helper. No premature abstraction.
+
+18. **Default to writing no comments.** Only add one when the WHY is non-obvious (hidden constraint, subtle invariant, workaround for a specific bug, behavior that would surprise a reader). No "Used by X" or "Added for the Y flow" — those rot.
+
+19. **No backwards-compat hacks.** No renaming-but-keeping-old-export, no `// removed comments`, no feature flags that you can just delete. If something's unused, delete it.
+
+20. **Real-money path = non-custodial only.** Never server-sign trades. All signing flows through `lib/trading/builtinSigner.ts` → `pending_trades` table → browser sign. See §5.5 + the "rule 6" note.
+
+### 0.5 · The "wave" pattern Phantomfcalls uses
+
+The user works in named "ascensions" (B, C, D, E) and "phases" (A, F). Each is a coordinated visual+functional pass across a cluster of pages. When he says "Phase F" he means the Cult-exclusive chamber rollout. When he says "ascension D" he means the trading suite (swap, copy-trading, alerts, VTX). Don't re-define these terms — match the existing nomenclature.
+
+Memory file index: `C:\Users\DELL LATITUDE 5320\.claude\projects\c--Users-DELL-LATITUDE-5320-Downloads\memory\MEMORY.md` — has more user/feedback memories. Load them as your first action of the session.
 
 ---
 
