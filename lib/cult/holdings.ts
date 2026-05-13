@@ -19,7 +19,7 @@ import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
  * them before passing through.
  */
 
-const HOLDING_THRESHOLD = Number(process.env.NAKA_HOLDING_THRESHOLD ?? '600000');
+const HOLDING_THRESHOLD = Number(process.env.NAKA_HOLDING_THRESHOLD ?? '1227000');
 
 export interface CultHoldings {
   isMember: boolean;
