@@ -132,6 +132,14 @@ export function TrustScoreBadge({
 
   const px = size === "sm" ? "px-1.5 py-0.5 text-[10px]" : size === "lg" ? "px-3 py-1.5 text-sm" : "px-2 py-0.5 text-xs";
 
+  // Bug §6.4 — testers reported "Trust Score" had multiple meanings across
+  // the platform. There is exactly ONE definition: a proprietary 0–100
+  // score combining contract security, liquidity depth, holder
+  // distribution, market stability, and social sentiment. Any other "score"
+  // (signal reliability, sentiment, etc.) is renamed at its call site.
+  const CANONICAL_TOOLTIP =
+    'Naka Trust Score: Our proprietary 0-100 rating combining contract security, liquidity depth, holder distribution, market stability, and social sentiment. Higher is safer.';
+
   return (
     <span className={`relative inline-flex ${className}`}>
       <button
@@ -140,6 +148,7 @@ export function TrustScoreBadge({
         className={`inline-flex items-center gap-1 rounded-full font-bold uppercase tracking-wide ${px}`}
         style={{ background: `${data.bandColor}1F`, color: data.bandColor, border: `1px solid ${data.bandColor}55` }}
         aria-label={`Naka Trust Score ${data.score}: ${data.bandLabel}`}
+        title={CANONICAL_TOOLTIP}
       >
         <Shield size={size === "sm" ? 9 : size === "lg" ? 14 : 11} />
         {data.score}
@@ -147,13 +156,16 @@ export function TrustScoreBadge({
       </button>
       {open && (
         <div
-          className="absolute z-30 top-full mt-2 left-0 w-64 rounded-xl border border-white/10 bg-[#0F1320] shadow-2xl p-3"
+          className="absolute z-30 top-full mt-2 left-0 w-72 rounded-xl border border-white/10 bg-[#0F1320] shadow-2xl p-3"
           onMouseLeave={() => setOpen(false)}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Trust breakdown</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Naka Trust Score</span>
             <Info size={11} className="text-white/40" />
           </div>
+          <p className="text-[11px] leading-relaxed text-white/60 mb-3">
+            Proprietary 0–100 rating. Higher is safer. Five weighted signals below.
+          </p>
           <div className="space-y-1.5">
             <Row label="Security" value={data.layers.security} weight={40} />
             <Row label="Liquidity" value={data.layers.liquidity} weight={20} />

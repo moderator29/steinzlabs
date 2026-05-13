@@ -69,6 +69,23 @@ async function dexscreenerFallback(contract: string) {
   };
 }
 
+// Bug §6.8 — community tokens that aren't indexed by CoinGecko (NAKA,
+// Pleasure Coin, etc.) need their slug routed to the on-chain contract
+// so the DexScreener fallback kicks in instead of returning a CoinGecko
+// 404. Slug → EVM contract. Keep this list short — only the tokens we
+// explicitly support deep-link routes for. Anything else either resolves
+// via CoinGecko (handled below) or via the contract directly.
+const COMMUNITY_TOKEN_CONTRACTS: Record<string, string> = {
+  // $NAKA — ETH-only, Uniswap-traded community token. Memory: ETH-only,
+  // 0x6967b9a8c0b14849CFE8f9E5732B401433fD2898, threshold 1,227,000.
+  'naka':    '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
+  'naka-go': '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
+  // Pleasure Coin — Polygon-traded. DexScreener auto-detects chain from
+  // the contract address so we don't have to plumb chain through.
+  'pleasure':      '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+  'pleasure-coin': '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+};
+
 // Common wallet-side symbols the user might URL-ify (eth/btc/sol/etc)
 // don't match CoinGecko slugs directly. Map the obvious ones so the
 // coin-detail page stops showing $0.00 for native assets when the
@@ -102,7 +119,12 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id: rawId } = await context.params;
-  const id = SYMBOL_TO_SLUG[rawId.toLowerCase()] ?? rawId;
+  const lower = rawId.toLowerCase();
+  // Community-token slugs (NAKA, Pleasure) take precedence over the
+  // symbol-to-slug map so /dashboard/market/ethereum/naka-go resolves
+  // to the on-chain contract and serves real DexScreener data instead
+  // of crashing on a NAKA:USDT CoinGecko lookup that never existed.
+  const id = COMMUNITY_TOKEN_CONTRACTS[lower] ?? SYMBOL_TO_SLUG[lower] ?? rawId;
 
   // EVM contract shape → go straight to DexScreener; CoinGecko's
   // /coins/:id only accepts slugs (bitcoin, ethereum). Avoids a

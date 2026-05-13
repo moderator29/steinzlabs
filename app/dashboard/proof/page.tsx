@@ -123,6 +123,13 @@ export default function ViewProofPage() {
     } catch {
       // Malformed JSON — return default
     }
+    // Bug §6.3 — testers reported the Explain button scrolling them to
+    // the middle of the AI view with no scrollbar. The page itself was
+    // fine; what was missing was an explicit scroll-to-top on mount so
+    // the view always starts at the title, never mid-content.
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   }, []);
 
   if (!event) {
@@ -182,7 +189,13 @@ export default function ViewProofPage() {
     <div className="min-h-screen text-white">
       <div className="fixed top-0 w-full z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
-          <BackButton href="/dashboard" />
+          {/* Bug §6.3 — testers wanted an explicit "Back to Feed" path so
+              they don't land on dashboard overview after explaining a
+              signal. Routes through ?subtab=context which the dashboard
+              page reads on mount and switches to the Context Feed sub-tab.
+              The Context Feed itself restores its own scroll/filter state
+              from sessionStorage (Bug §6.2). */}
+          <BackButton href="/dashboard?subtab=context" label="Back to Feed" />
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold truncate">View Proof</h1>
             <p className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : 'Intelligence Report'}</p>
@@ -396,23 +409,35 @@ export default function ViewProofPage() {
           </div>
         )}
 
-        <div className="glass rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-sm">Go With This Signal?</h3>
+        {/* Bug §6.5 — "Go With This Signal?" was ambiguous to testers
+            (does it execute a trade? follow? upvote?). It is a community
+            sentiment poll. Renamed to "Endorse Signal" with subtitle and
+            tooltip making the action explicit, and the buttons relabeled
+            from "Yes, Go! / Skip This" to "Bullish / Bearish" so the
+            semantic is unmistakable. */}
+        <div
+          className="glass rounded-xl p-4 border border-white/10"
+          title="Endorse Signal: vote bullish or bearish to share your read with the community. This is a sentiment poll, not a trade."
+        >
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-bold text-sm">Endorse Signal</h3>
             {totalVotes > 0 && <span className="text-xs text-gray-500">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>}
           </div>
+          <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+            Community sentiment poll — this does not place a trade. Use Swap above to act.
+          </p>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               onClick={() => handleVote('yes')}
               className={`py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-all ${voted === 'yes' ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' : 'border border-white/10 text-[#10B981] hover:bg-[#10B981]/10'}`}
             >
-              <ThumbsUp className="w-4 h-4" /> Yes, Go!
+              <ThumbsUp className="w-4 h-4" /> Bullish
             </button>
             <button
               onClick={() => handleVote('no')}
               className={`py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-all ${voted === 'no' ? 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30' : 'border border-white/10 text-[#EF4444] hover:bg-[#EF4444]/10'}`}
             >
-              <ThumbsDown className="w-4 h-4" /> Skip This
+              <ThumbsDown className="w-4 h-4" /> Bearish
             </button>
           </div>
           {totalVotes > 0 && (

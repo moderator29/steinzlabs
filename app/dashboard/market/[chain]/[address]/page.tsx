@@ -149,6 +149,18 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
     <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
       {/* Top bar */}
       <div className="sticky top-0 z-20 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
+        {/* Bug §6.6 — breadcrumb above the back button gives users an
+            explicit two-level escape (Dashboard / Market / {Token}) so
+            they're never stuck on a coin detail page without a way back
+            to the dashboard root. Each level routes via next/link so the
+            browser back button continues to work normally. */}
+        <nav aria-label="Breadcrumb" className="px-4 pt-2 text-[11px] text-slate-500 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <a href="/dashboard" className="hover:text-slate-200 transition-colors">Dashboard</a>
+          <span className="text-slate-700">/</span>
+          <a href="/dashboard/market" className="hover:text-slate-200 transition-colors">Market</a>
+          <span className="text-slate-700">/</span>
+          <span className="text-slate-300 truncate max-w-[40vw]">{name || symbol || 'Token'}</span>
+        </nav>
         <div className="flex items-center gap-3 px-4 py-3">
           <BackButton href="/dashboard/market" />
           <TokenLogo src={logo} symbol={symbol} size={32} />

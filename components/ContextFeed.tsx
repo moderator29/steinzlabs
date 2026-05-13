@@ -209,8 +209,43 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
   );
 }
 
+const CONTEXT_FEED_STATE_KEY = 'steinz_context_feed_state';
+
+interface ContextFeedPersistedState {
+  activeMode: FeedMode;
+  activeFilter: 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info';
+  scrollY: number;
+}
+
+function readContextFeedState(): ContextFeedPersistedState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(CONTEXT_FEED_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ContextFeedPersistedState;
+    if (!parsed || typeof parsed.scrollY !== 'number') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeContextFeedState(state: ContextFeedPersistedState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(CONTEXT_FEED_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // sessionStorage can be unavailable in private mode — fail silent.
+  }
+}
+
 export default function ContextFeed() {
-  const [activeMode, setActiveMode] = useState<FeedMode>('all');
+  // Bug §6.2 — testers reported the back button losing scroll position
+  // and dropping the active tab/filter when returning from an item detail
+  // page. We persist (tab, filter, scrollY) to sessionStorage on every
+  // outbound click, then restore on mount.
+  const persisted = typeof window !== 'undefined' ? readContextFeedState() : null;
+  const [activeMode, setActiveMode] = useState<FeedMode>(persisted?.activeMode ?? 'all');
   const isArchive = activeMode === 'archive';
   const activeChain: ChainFilter = isArchive ? 'all' : activeMode as ChainFilter;
   const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
@@ -221,8 +256,50 @@ export default function ContextFeed() {
   const [shareEvent, setShareEvent] = useState<any>(null);
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-  const [activeFilter, setActiveFilter] = useState<'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info'>(persisted?.activeFilter ?? 'all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  // Restore scroll on mount once the first batch of events has rendered.
+  // We wait for events.length>0 (or 250ms whichever comes first) so the
+  // list has actual height; otherwise scrollTo would clamp to the body
+  // height before items hydrate.
+  useEffect(() => {
+    if (!persisted) return;
+    const target = persisted.scrollY;
+    if (target <= 0) return;
+    let cancelled = false;
+    const tryRestore = () => {
+      if (cancelled) return;
+      window.scrollTo({ top: target, behavior: 'auto' });
+    };
+    const t = setTimeout(tryRestore, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist on every tab/filter change so a refresh mid-browsing still
+  // restores to the same view.
+  useEffect(() => {
+    writeContextFeedState({
+      activeMode,
+      activeFilter,
+      scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
+    });
+  }, [activeMode, activeFilter]);
+
+  // Persist scroll on outbound navigation. pagehide fires reliably on
+  // back/forward navigation in modern browsers (Safari included).
+  useEffect(() => {
+    const persist = () => {
+      writeContextFeedState({
+        activeMode,
+        activeFilter,
+        scrollY: window.scrollY,
+      });
+    };
+    window.addEventListener('pagehide', persist);
+    return () => window.removeEventListener('pagehide', persist);
+  }, [activeMode, activeFilter]);
 
   const FEED_FILTERS = [
     { id: 'all' as const, label: 'All', icon: BarChart2 },

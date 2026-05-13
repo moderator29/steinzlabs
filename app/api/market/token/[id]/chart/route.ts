@@ -43,6 +43,18 @@ function intervalFor(days: string): number {
   return 604800;
 }
 
+// Bug §6.8 — community token slugs (NAKA, Pleasure) route to the
+// on-chain contract address so the chart endpoint can hand them
+// straight to GeckoTerminal/DexScreener pair OHLCV instead of failing
+// a CoinGecko slug lookup that doesn't exist (CoinGecko has no NAKA
+// listing — the user reported NAKA:USDT 404s).
+const COMMUNITY_TOKEN_CONTRACTS: Record<string, string> = {
+  'naka':          '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
+  'naka-go':       '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
+  'pleasure':      '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+  'pleasure-coin': '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+};
+
 // Same symbol→slug normalization the token detail route uses, so
 // wallet links like /coin/arbitrum/eth resolve to CoinGecko's
 // "ethereum" slug instead of a 404.
@@ -126,7 +138,8 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id: rawId } = await context.params;
-  const id = SYMBOL_TO_SLUG[rawId.toLowerCase()] ?? rawId;
+  const lower = rawId.toLowerCase();
+  const id = COMMUNITY_TOKEN_CONTRACTS[lower] ?? SYMBOL_TO_SLUG[lower] ?? rawId;
   const days = req.nextUrl.searchParams.get('days') ?? '1';
   const chainParam = req.nextUrl.searchParams.get('chain') ?? 'ethereum';
 

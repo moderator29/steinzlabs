@@ -98,7 +98,12 @@ export default function TrendingPage() {
             return (
               <Link
                 key={c.id}
-                href={buildDetailHref({ id: c.id, symbol: c.symbol })}
+                // Bug §6.7 — Most Searched / trending rows previously routed
+                // to the market list with ?coin=, which landed users on the
+                // generic table. Now we deep-link to the dedicated chart
+                // page (matches TopGainersCard convention) so the row click
+                // does what the row implies: open the chart for that token.
+                href={`/dashboard/market/ethereum/${c.id}`}
                 className="grid grid-cols-[32px_minmax(140px,1.3fr)_minmax(80px,0.8fr)_minmax(70px,0.7fr)_minmax(90px,0.9fr)_minmax(90px,0.9fr)_28px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors"
               >
                 <span className="text-xs font-mono text-gray-600">{i + 1}</span>
