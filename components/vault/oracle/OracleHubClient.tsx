@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
 import { VtxSagePanel } from './VtxSagePanel';
 import { WhisperNetworkPanel } from './WhisperNetworkPanel';
+import { ChosenSealDraftPanel } from './ChosenSealDraftPanel';
 
 /**
  * Oracle hub — the chamber's landing surface.
@@ -33,6 +34,8 @@ export function OracleHubClient() {
         >
           <DailySeal />
         </motion.div>
+
+        <ChosenSealDraftPanel />
 
         <VtxSagePanel />
         <WhisperNetworkPanel />

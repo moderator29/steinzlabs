@@ -41,6 +41,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, durationMs: duration, skipped: 'already_generated' });
     }
 
+    // Phase F: a Chosen member may have authored today's seal yesterday. If a
+    // pending draft exists for today's seal_date, accept the most recent one
+    // and use it instead of calling Anthropic. Carries author_id in
+    // context_json so the chamber can attribute it.
+    const { data: draft } = await admin
+      .from('cult_daily_seal_drafts')
+      .select('id, title, body, author_id')
+      .eq('seal_date', today)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (draft) {
+      const { error: sealErr } = await admin.from('cult_daily_seals').insert({
+        seal_date: today,
+        title: draft.title.slice(0, 140),
+        body: draft.body.slice(0, 4000),
+        model: 'chosen',
+        input_tokens: null,
+        output_tokens: null,
+        context_json: {
+          generated_by: NAME,
+          version: 1,
+          source: 'chosen_draft',
+          author_id: draft.author_id,
+          draft_id: draft.id,
+        },
+      });
+      if (sealErr) throw sealErr;
+
+      await admin
+        .from('cult_daily_seal_drafts')
+        .update({ status: 'accepted', reviewed_at: new Date().toISOString() })
+        .eq('id', draft.id);
+      await admin
+        .from('cult_daily_seal_drafts')
+        .update({ status: 'superseded', reviewed_at: new Date().toISOString() })
+        .eq('seal_date', today)
+        .eq('status', 'pending');
+
+      const duration = Date.now() - startedAt;
+      await logCronExecution(NAME, 'success', duration, undefined, 1);
+      return NextResponse.json({ ok: true, durationMs: duration, sealDate: today, source: 'chosen_draft' });
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY not set');
