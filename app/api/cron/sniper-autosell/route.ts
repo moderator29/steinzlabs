@@ -132,6 +132,20 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // TON has no live USD price feed wired (Ston.fi / DeDust integration is
+    // pending). Calling priceFeed for TON always returns null, which used to
+    // surface as a generic "no live price" skip and looked like an outage.
+    // Short-circuit explicitly so the log makes the unsupported-chain reason
+    // clear and we don't waste the RPC round trip.
+    if (pos.chain === "ton") {
+      summary.push({
+        id: pos.id,
+        action: "skip",
+        reason: "ton price feed unsupported — autosell cannot unwind TON positions",
+      });
+      continue;
+    }
+
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,
       pos.token_address,
