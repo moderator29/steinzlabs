@@ -129,10 +129,12 @@ export function PersonalizedHome() {
           {/* Tier badge takes priority — Mini blue, Pro platinum, Max gold.
               Falls back to legacy gold "verified" mark if user has no paid
               tier but is_verified flag is set (manually-verified accounts). */}
+          {/* Bug §4 — size matches ProfileTab (16) so the Welcome badge
+              and the profile-header badge are visually identical. */}
           {userTier !== "free" ? (
-            <TierBadge tier={userTier} size={18} isChosen={isChosen} />
+            <TierBadge tier={userTier} size={16} isChosen={isChosen} />
           ) : isVerified ? (
-            <VerifiedGoldBadge size={18} title="Verified by Naka Labs" />
+            <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />
           ) : null}
         </h1>
         <p className="text-sm text-slate-500 mt-1">

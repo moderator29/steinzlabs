@@ -4,6 +4,7 @@ import { DailySeal } from './DailySeal';
 import { VtxSagePanel } from './VtxSagePanel';
 import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 import { ChosenSealDraftPanel } from './ChosenSealDraftPanel';
+import { EchoChamberPanel } from './EchoChamberPanel';
 
 /**
  * Oracle hub — the chamber's landing surface.
@@ -39,11 +40,7 @@ export function OracleHubClient() {
 
         <VtxSagePanel />
         <WhisperNetworkPanel />
-        <SubChamberPlaceholder
-          title="Echo Chamber"
-          tagline="Stealth wallet tracking. 25-slot quiet pack — only the cult sees what they hold."
-          eta="Next pass"
-        />
+        <EchoChamberPanel />
       </div>
     </section>
   );
