@@ -180,7 +180,7 @@ export default function ViewProofPage() {
 
   return (
     <div className="min-h-screen text-white">
-      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <div className="fixed top-0 w-full z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton href="/dashboard" />
           <div className="flex-1 min-w-0">

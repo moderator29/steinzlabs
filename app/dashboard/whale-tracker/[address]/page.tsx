@@ -206,7 +206,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-30/95 backdrop-blur-xl border-b border-slate-800">
+      <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
           <div className="flex items-start justify-between gap-3">

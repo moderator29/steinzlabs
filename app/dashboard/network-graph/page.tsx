@@ -498,7 +498,7 @@ export default function NetworkGraphPage() {
     <div className="min-h-screen text-white flex flex-col">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-40/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>

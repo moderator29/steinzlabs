@@ -221,7 +221,7 @@ export default function TrendsPage() {
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#10B981] rounded-xl flex items-center justify-center">

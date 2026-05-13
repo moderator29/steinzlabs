@@ -98,7 +98,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-30/95 backdrop-blur-xl border-b border-slate-800">
+      <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="mb-3">
             <BackButton href="/dashboard/wallet-clusters" label="Wallet clusters" />
