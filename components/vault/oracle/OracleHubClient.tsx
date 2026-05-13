@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
+import { VtxSagePanel } from './VtxSagePanel';
 import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 
 /**
@@ -33,11 +34,7 @@ export function OracleHubClient() {
           <DailySeal />
         </motion.div>
 
-        <SubChamberPlaceholder
-          title="VTX Sage"
-          tagline="Cult-mode VTX. Sigil avatar, ink-writing voice, deeper context."
-          eta="Next pass"
-        />
+        <VtxSagePanel />
         <WhisperNetworkPanel />
         <SubChamberPlaceholder
           title="Echo Chamber"
