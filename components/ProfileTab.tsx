@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { TierBadge } from '@/components/ui/TierBadge';
+import { useChosenStatus } from '@/lib/hooks/useChosenStatus';
 import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
@@ -47,6 +48,7 @@ type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'secur
 export default function ProfileTab() {
   const { user, signOut, refreshProfile } = useAuth();
   const { tier, isPaid, verifiedBadge } = useTier();
+  const { isChosen } = useChosenStatus();
   // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
   const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
   const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
@@ -1344,7 +1346,7 @@ export default function ProfileTab() {
                 is still shown for accounts manually flagged is_verified=true
                 without any paid tier (admin/celeb verifications). */}
             {(user?.tier && user.tier !== 'free') ? (
-              <TierBadge tier={user.tier} size={16} />
+              <TierBadge tier={user.tier} size={16} isChosen={isChosen} />
             ) : user?.is_verified ? (
               <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />
             ) : null}
