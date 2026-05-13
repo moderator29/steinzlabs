@@ -17,8 +17,13 @@ export function verifyCron(request: NextRequest): { ok: boolean; response?: Resp
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
-    console.warn("[cron] CRON_SECRET not set, allowing (dev mode)");
-    return { ok: true };
+    // Dev-only bypass. In production a missing CRON_SECRET must reject so a
+    // misconfigured Vercel env can never silently expose cron routes to the
+    // internet. Local dev (and preview deploys without secrets) still works.
+    if (process.env.NODE_ENV !== "production") {
+      return { ok: true };
+    }
+    return { ok: false, response: new Response("Unauthorized", { status: 401 }) };
   }
 
   if (authHeader !== `Bearer ${cronSecret}`) {

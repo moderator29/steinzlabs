@@ -10,7 +10,7 @@ export function usePriceAlerts(userId: string | null, currentPrices: Record<stri
 
   useEffect(() => {
     if (!userId) return;
-    window.fetch(`/api/market/alerts?userId=${userId}`)
+    window.fetch(`/api/market/alerts`)
       .then((r) => r.json())
       .then((d: { alerts?: PriceAlert[] }) => setAlerts(d.alerts ?? []))
       .catch(() => {});
@@ -41,7 +41,7 @@ export function usePriceAlerts(userId: string | null, currentPrices: Record<stri
     const res = await window.fetch('/api/market/alerts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...input, userId }),
+      body: JSON.stringify(input),
     });
     const d = await res.json() as { alert?: PriceAlert };
     if (d.alert) setAlerts((prev) => [...prev, d.alert!]);

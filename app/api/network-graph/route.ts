@@ -36,7 +36,8 @@ export interface NetworkGraphResponse {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
   stats: NetworkStats;
-  source: 'alchemy' | 'dexscreener' | 'mock';
+  source: 'alchemy' | 'dexscreener';
+  available: boolean;
 }
 
 // Known Solana protocol/bridge addresses
@@ -65,97 +66,26 @@ function classifyNode(address: string, volume: number, txCount: number): Network
   return 'regular';
 }
 
-// ─── Static fallback: well-known Solana protocol addresses with representative values ──
+// ─── Empty fallback when APIs are unavailable ────────────────────────────────
+// No static / mock data is shipped per CLAUDE.md "Mock Data — Forbidden".
+// If both Alchemy Solana and DexScreener fail, we return an empty graph with
+// available=false so the UI can render an explicit error state.
 
-const STATIC_NODES: Array<{ address: string; volume: number; txCount: number }> = [
-  { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', volume: 28_400_000, txCount: 842 }, // USDC Mint
-  { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', volume: 14_200_000, txCount: 371 }, // USDT Mint
-  { address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', volume: 9_100_000,  txCount: 612 }, // Jupiter
-  { address: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', volume: 7_800_000,  txCount: 519 }, // Raydium AMM
-  { address: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3sFjno',  volume: 5_600_000,  txCount: 288 }, // Orca Whirlpool
-  { address: 'So11111111111111111111111111111111111111112',   volume: 18_700_000, txCount: 931 }, // Wrapped SOL
-  { address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', volume: 3_900_000,  txCount: 194 }, // mSOL
-  { address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', volume: 2_100_000,  txCount: 143 }, // Bonk
-  { address: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',  volume: 6_200_000,  txCount: 445 }, // Token Program
-  { address: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bM',  volume: 450_000,    txCount: 31  }, // Associated Token
-  { address: 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',  volume: 380_000,    txCount: 28  }, // Metaplex
-  { address: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM', volume: 2_400_000,  txCount: 127 }, // Wallet A
-  { address: '5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9', volume: 1_850_000,  txCount: 98  }, // Wallet B
-  { address: 'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ', volume: 980_000,    txCount: 67  }, // Wallet C
-  { address: '6FzXPMkMDWCHBkpqPCMrFP9xCxCVxCSApwBxXJCd4WHH', volume: 720_000,    txCount: 45  }, // Wallet D
-  { address: 'SysvarRent111111111111111111111111111111111',   volume: 120_000,    txCount: 18  }, // Sysvar Rent
-];
-
-// Pre-defined edges between the static nodes above (by index)
-const STATIC_EDGES: Array<{
-  srcIdx: number; tgtIdx: number; type: 'usdc' | 'usdt'; amount: number; count: number;
-}> = [
-  { srcIdx: 2,  tgtIdx: 0,  type: 'usdc', amount: 4_200_000, count: 312 }, // Jupiter → USDC
-  { srcIdx: 2,  tgtIdx: 1,  type: 'usdt', amount: 1_800_000, count: 142 }, // Jupiter → USDT
-  { srcIdx: 3,  tgtIdx: 0,  type: 'usdc', amount: 3_900_000, count: 287 }, // Raydium → USDC
-  { srcIdx: 3,  tgtIdx: 1,  type: 'usdt', amount: 1_200_000, count: 98  }, // Raydium → USDT
-  { srcIdx: 4,  tgtIdx: 0,  type: 'usdc', amount: 2_800_000, count: 195 }, // Orca → USDC
-  { srcIdx: 5,  tgtIdx: 2,  type: 'usdc', amount: 5_100_000, count: 421 }, // wSOL → Jupiter
-  { srcIdx: 5,  tgtIdx: 3,  type: 'usdc', amount: 4_300_000, count: 358 }, // wSOL → Raydium
-  { srcIdx: 5,  tgtIdx: 4,  type: 'usdc', amount: 2_200_000, count: 183 }, // wSOL → Orca
-  { srcIdx: 6,  tgtIdx: 2,  type: 'usdc', amount: 1_900_000, count: 112 }, // mSOL → Jupiter
-  { srcIdx: 7,  tgtIdx: 3,  type: 'usdc', amount: 890_000,   count: 74  }, // Bonk → Raydium
-  { srcIdx: 8,  tgtIdx: 5,  type: 'usdc', amount: 2_400_000, count: 198 }, // Token Prog → wSOL
-  { srcIdx: 11, tgtIdx: 2,  type: 'usdc', amount: 980_000,   count: 67  }, // Wallet A → Jupiter
-  { srcIdx: 11, tgtIdx: 3,  type: 'usdc', amount: 720_000,   count: 51  }, // Wallet A → Raydium
-  { srcIdx: 12, tgtIdx: 2,  type: 'usdc', amount: 820_000,   count: 58  }, // Wallet B → Jupiter
-  { srcIdx: 12, tgtIdx: 4,  type: 'usdt', amount: 490_000,   count: 34  }, // Wallet B → Orca
-  { srcIdx: 13, tgtIdx: 3,  type: 'usdc', amount: 340_000,   count: 26  }, // Wallet C → Raydium
-  { srcIdx: 14, tgtIdx: 2,  type: 'usdc', amount: 280_000,   count: 19  }, // Wallet D → Jupiter
-  { srcIdx: 9,  tgtIdx: 8,  type: 'usdc', amount: 180_000,   count: 14  }, // Assoc Token → Token Prog
-  { srcIdx: 10, tgtIdx: 9,  type: 'usdc', amount: 150_000,   count: 11  }, // Metaplex → Assoc Token
-  { srcIdx: 12, tgtIdx: 5,  type: 'usdc', amount: 620_000,   count: 43  }, // Wallet B → wSOL
-  { srcIdx: 13, tgtIdx: 4,  type: 'usdt', amount: 320_000,   count: 22  }, // Wallet C → Orca
-  { srcIdx: 14, tgtIdx: 4,  type: 'usdc', amount: 260_000,   count: 17  }, // Wallet D → Orca
-];
-
-// Static timeline — 8 buckets × 3h = 24h, normalized 0-100 (most recent = index 7)
-const STATIC_TIMELINE = [38, 45, 52, 61, 74, 83, 91, 78];
-
-function generateMockData(): NetworkGraphResponse {
-  const nodes: NetworkNode[] = STATIC_NODES.map((n, i) => ({
-    id: `node-${i}`,
-    address: n.address,
-    type: classifyNode(n.address, n.volume, n.txCount),
-    volume: n.volume,
-    txCount: n.txCount,
-  }));
-
-  const edges: NetworkEdge[] = STATIC_EDGES
-    .filter(e => e.srcIdx < nodes.length && e.tgtIdx < nodes.length)
-    .map(e => ({
-      source: nodes[e.srcIdx].id,
-      target: nodes[e.tgtIdx].id,
-      type: e.type,
-      amount: e.amount,
-      count: e.count,
-    }));
-
-  const usdcTxns = edges.filter(e => e.type === 'usdc').length;
-  const usdtTxns = edges.filter(e => e.type === 'usdt').length;
-  const n = nodes.length;
-  const maxEdges = n * (n - 1);
-  const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
-  const avgDegree = parseFloat(((edges.length * 2) / Math.max(n, 1)).toFixed(2));
-
+function emptyResponse(): NetworkGraphResponse {
   return {
-    nodes,
-    edges,
+    nodes: [],
+    edges: [],
     stats: {
-      clusters: Math.max(1, Math.floor(n / 5)),
-      avgDegree,
-      density,
-      usdcTxns,
-      usdtTxns,
-      totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
-      timelineData: STATIC_TIMELINE,
+      clusters: 0,
+      avgDegree: 0,
+      density: 0,
+      usdcTxns: 0,
+      usdtTxns: 0,
+      totalVolume: 0,
+      timelineData: [],
     },
-    source: 'mock',
+    source: 'alchemy',
+    available: false,
   };
 }
 
@@ -323,6 +253,7 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
         timelineData,
       },
       source: 'alchemy',
+      available: true,
     };
   } catch {
     return null;
@@ -458,6 +389,7 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
         timelineData,
       },
       source: 'dexscreener',
+      available: true,
     };
   } catch {
     return null;
@@ -478,9 +410,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Fallback to static deterministic mock if no wallet or APIs unavailable
+  // No mock fallback — if no wallet was provided or both APIs failed, return
+  // an explicit empty state and let the UI render an error/empty banner.
   if (!result) {
-    result = generateMockData();
+    result = emptyResponse();
   }
 
   return NextResponse.json(result, {
