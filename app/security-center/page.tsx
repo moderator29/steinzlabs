@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Shield, Search, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function SecurityCenterPage() {
   const [activeTab, setActiveTab] = useState<'scanner' | 'wallet' | 'threats'>('scanner');
@@ -49,7 +50,8 @@ export default function SecurityCenterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
         <PageHeader
           title="Security Center"
@@ -226,5 +228,6 @@ export default function SecurityCenterPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }

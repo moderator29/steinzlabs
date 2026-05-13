@@ -6,6 +6,7 @@ import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function ForgotPasswordPage() {
   const { showToast } = useToast();
@@ -53,7 +54,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white flex">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0A1EFF]/[0.04] rounded-full blur-[150px]" />
         <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
@@ -151,5 +153,6 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }

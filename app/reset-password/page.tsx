@@ -6,6 +6,7 @@ import { Shield, Eye, EyeOff, Lock, Loader2, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import SteinzLogo from '@/components/SteinzLogo';
 import { useToast } from '@/components/Toast';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 function getPasswordChecks(pw: string) {
   return [
@@ -32,7 +33,8 @@ function ResetPasswordInner() {
 
   if (!token || !uid) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] text-white flex items-center justify-center">
+      <AuroraBackground fullHeight>
+      <div className="min-h-screen text-white flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
             <Shield className="w-8 h-8 text-[#0A1EFF]" />
@@ -44,6 +46,7 @@ function ResetPasswordInner() {
           </Link>
         </div>
       </div>
+      </AuroraBackground>
     );
   }
 
@@ -91,11 +94,8 @@ function ResetPasswordInner() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0A1EFF]/[0.04] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
-      </div>
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white flex">
 
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">
@@ -185,12 +185,13 @@ function ResetPasswordInner() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0A0E1A]" />}>
+    <Suspense fallback={<AuroraBackground fullHeight><div className="min-h-screen" /></AuroraBackground>}>
       <ResetPasswordInner />
     </Suspense>
   );

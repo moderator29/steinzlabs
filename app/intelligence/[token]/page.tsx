@@ -8,6 +8,7 @@ import { SmartMoneyPanel } from '@/components/intelligence/SmartMoneyPanel';
 import { HolderBreakdown } from '@/components/intelligence/HolderBreakdown';
 import { Bubblemaps } from '@/components/visualization/Bubblemaps';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 // §11 — concentration timeline. Lazy-loaded so the lightweight-charts
 // bundle (~50KB) only ships on this surface.
@@ -43,7 +44,8 @@ export default function ViewProofPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] p-6">
+      <AuroraBackground fullHeight>
+      <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-[#141824] rounded w-1/3"></div>
@@ -55,12 +57,14 @@ export default function ViewProofPage() {
           </div>
         </div>
       </div>
+      </AuroraBackground>
     );
   }
 
   if (!intelligence) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] p-6 flex items-center justify-center">
+      <AuroraBackground fullHeight>
+      <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Failed to Load Intelligence</h1>
           <p className="text-gray-400 mb-4">Unable to fetch token data</p>
@@ -72,11 +76,13 @@ export default function ViewProofPage() {
           </button>
         </div>
       </div>
+      </AuroraBackground>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen">
       {/* Header */}
       <div className="bg-[#141824] border-b border-[#1E2433] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -294,5 +300,6 @@ export default function ViewProofPage() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }

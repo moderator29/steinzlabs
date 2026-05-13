@@ -1,5 +1,6 @@
 import { Mail, Twitter, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export const metadata = {
   title: 'Contact — Naka Labs',
@@ -8,7 +9,8 @@ export const metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-[#07090f] text-white flex flex-col items-center justify-center px-5 py-24">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white flex flex-col items-center justify-center px-5 py-24">
       <div className="max-w-lg w-full">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
@@ -72,5 +74,6 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Bell, Plus, Trash2, TrendingUp, Shield, Users, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 const ALERT_TYPES = [
   { value: 'PRICE', label: 'Price Alert', icon: TrendingUp, description: 'Alert when token price hits target' },
@@ -37,7 +38,8 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
         <PageHeader
           title="Alerts"
@@ -165,5 +167,6 @@ export default function AlertsPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }

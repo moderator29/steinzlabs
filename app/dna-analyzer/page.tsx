@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, TrendingUp, AlertTriangle } from 'lucide-react';
 import { VerifiedBadge } from '@/components/icons/VerifiedBadge';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function DNAAnalyzerPage() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -25,7 +26,8 @@ export default function DNAAnalyzerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -195,5 +197,6 @@ export default function DNAAnalyzerPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }
