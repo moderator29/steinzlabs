@@ -106,6 +106,57 @@ Memory file index: `C:\Users\DELL LATITUDE 5320\.claude\projects\c--Users-DELL-L
 
 ---
 
+## 0.6 · Bootstrap — getting access to the repo on a fresh session
+
+Sessions don't auto-inherit my filesystem. Before doing anything else, you need:
+
+1. **A local clone of the repo at a working directory.**
+   - Recommended path: `C:\Users\DELL LATITUDE 5320\Downloads\steinzlabs` (user's preferred working dir)
+   - Existing clone in session G was at `C:\Users\DELL LATITUDE 5320\dev\steinzlabs\` — that may already exist on the user's machine; check first with `Test-Path` before re-cloning.
+   - If you need to clone fresh: `git clone https://github.com/moderator29/steinzlabs.git "C:\Users\DELL LATITUDE 5320\Downloads\steinzlabs"` — uses the user's stored GitHub Desktop / browser credentials, no PAT needed.
+
+2. **Push capability** — the user has GitHub Desktop installed and signed in as `moderator29`, so `git push` works against `origin` via the OS credential manager. You do NOT need to set up a PAT.
+
+3. **`gh` CLI is OPTIONAL.** It's nice for `gh pr create` and `gh issue list`, but everything in this handoff can be done with `git` + browser UI. If user wants it: `winget install GitHub.cli` then `gh auth login`. Don't gate on it.
+
+4. **If the user is starting a fresh Claude Code session and you see an "auth dialog"** like:
+   > How should I authenticate to GitHub?
+   > - Paste a GH PAT now
+   > - Install gh + login
+   > - **Clone locally w/ creds** ← pick this
+   > - Other
+   
+   Answer **"Clone locally w/ creds"**. GitHub Desktop auth is already in place; `git clone` will Just Work.
+
+5. **Verify access after clone**:
+   ```powershell
+   cd "C:\Users\DELL LATITUDE 5320\Downloads\steinzlabs"
+   git fetch --prune origin
+   git remote -v
+   git log --format='%an %ae' origin/main | sort -u   # must show only moderator29
+   ```
+
+6. **Filesystem prerequisites already on the machine**:
+   - Node 20+ (verify: `node -v`)
+   - npm (verify: `npm -v`)
+   - Git with credential.helper = manager (default on Windows)
+   - Windows 11, PowerShell 5.1 (the harness uses PowerShell — see §0.7 quirks)
+   - No `gh` CLI (optional install)
+
+### 0.7 · PowerShell 5.1 quirks (Windows-specific gotchas I hit in session G)
+
+The user is on Windows. The harness uses PowerShell 5.1 by default unless you reach for Bash. Things I tripped on:
+
+- **`Get-Content -Raw` doesn't exist** in PS 5.1 (added in 7+). When doing read-modify-write loops, use Bash via the `Bash` tool, not PowerShell.
+- **`Set-Content -Encoding UTF8`** writes UTF-8 **with BOM** in PS 5.1, AND re-encodes content as Windows-1252 first — mangles em-dashes (`—` → `â€"`) and ellipses (`…` → `â€¦`). I corrupted 39 files this way before reverting. **For any file-write sweep across the codebase, use Bash + sed**, never PowerShell.
+- **Pipeline chains `&&` / `||`** don't work in PS 5.1. Use `; if ($?) { ... }` or just use Bash.
+- **No ternary, no null-coalescing, no null-conditional** in PS 5.1. Use `if/else`.
+- **`echo` and `Write-Output` work**, but to keep behavior portable just use the Bash tool for shell tasks.
+
+When in doubt: prefer Bash. PowerShell is for stuff like `Get-Process`, `Test-Path`, registry reads. Code-editing sweeps → Bash + sed.
+
+---
+
 ## 1 · Required MCP servers for this session
 
 **You must have all three connected before doing anything substantive:**
