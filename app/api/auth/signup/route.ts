@@ -4,9 +4,16 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
 import { generateVerifyToken } from '@/lib/authTokens';
 import { getSiteUrl } from '@/lib/siteUrl';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
+    // 5 signups per IP per hour — protects against mass-signup spam and the
+    // expensive admin listUsers + verification-email path that follows.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = rateLimit(`auth:signup:${ip}`, { interval: 3_600_000, maxRequests: 5 });
+    if (!rl.success) return rateLimitResponse(rl);
+
     const body = await request.json();
 
     if (body.username && !body.email) {

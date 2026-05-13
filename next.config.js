@@ -20,10 +20,15 @@ try {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
+    // ESLint config is currently broken (circular reference in @eslint/eslintrc).
+    // Leaving ignore-on until the flat-config migration so builds aren't held
+    // hostage by tooling we can't run.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    // tsc --noEmit is clean today — fail the build on any new TS error
+    // instead of silently shipping broken types.
+    ignoreBuildErrors: false,
   },
   compress: true,
   poweredByHeader: false,

@@ -424,7 +424,8 @@ export default function NetworkGraphPage() {
       const json: NetworkGraphResponse = await res.json();
       setData(json);
     } catch {
-      // Will show empty state — API should always return mock fallback
+      // Empty state — the API never fabricates a mock fallback. Either no
+      // wallet was supplied or both Alchemy/DexScreener calls failed.
       setData(null);
     } finally {
       setLoading(false);
