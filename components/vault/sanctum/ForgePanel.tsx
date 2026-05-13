@@ -131,7 +131,7 @@ export function ForgePanel() {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block rounded-lg border border-white/10 bg-white/[0.03] p-2 transition-transform duration-500 hover:[transform:rotateY(15deg)_translateZ(8px)] focus-visible:[transform:rotateY(15deg)_translateZ(8px)] focus-visible:ring-2 focus-visible:ring-[#00C8FF]"
+                  className="block rounded-lg border border-white/10 bg-white/[0.03] p-2 transition-transform duration-500 motion-safe:hover:[transform:rotateY(15deg)_translateZ(8px)] motion-safe:focus-visible:[transform:rotateY(15deg)_translateZ(8px)] focus-visible:ring-2 focus-visible:ring-[#00C8FF]"
                   style={{ transformStyle: 'preserve-3d' }}
                 >
                   <div
