@@ -88,7 +88,10 @@ export default function SignUpPage() {
         widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
           theme: 'dark',
-          size: 'flexible',
+          // See login/page.tsx for the size='flexible' regression note —
+          // mirror the fixed 'normal' size + always appearance here.
+          size: 'normal',
+          appearance: 'always',
           callback: (token: string) => setCaptchaToken(token),
           'expired-callback': () => setCaptchaToken(''),
           'error-callback': () => setCaptchaToken(''),
@@ -471,7 +474,13 @@ export default function SignUpPage() {
               <div>
                 <div
                   ref={turnstileRef}
-                  style={{ minHeight: 65, colorScheme: 'dark', width: '100%' }}
+                  style={{
+                    minHeight: 78,
+                    minWidth: 300,
+                    colorScheme: 'dark',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
                 />
                 {errors.captcha && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.captcha}</p>}
               </div>
