@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { LibraryPlayer } from './LibraryPlayer';
 import { ForgePanel } from './ForgePanel';
 import { MantlePanel } from './MantlePanel';
+import { AnnalsPanel } from './AnnalsPanel';
 
 /**
  * Sanctum hub — the chamber's landing surface.
@@ -33,11 +34,7 @@ export function SanctumHubClient() {
         </motion.div>
 
         <MantlePanel />
-        <SubChamberPlaceholder
-          title="The Annals"
-          tagline="Achievements forged into the record. Bronze, silver, gold, mythic."
-          eta="Next pass"
-        />
+        <AnnalsPanel />
         <ForgePanel />
       </div>
     </section>
