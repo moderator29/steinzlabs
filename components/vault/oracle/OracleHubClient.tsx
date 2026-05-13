@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
+import { VtxSagePanel } from './VtxSagePanel';
 
 /**
  * Oracle hub — the chamber's landing surface.
@@ -32,11 +33,7 @@ export function OracleHubClient() {
           <DailySeal />
         </motion.div>
 
-        <SubChamberPlaceholder
-          title="VTX Sage"
-          tagline="Cult-mode VTX. Sigil avatar, ink-writing voice, deeper context."
-          eta="Next pass"
-        />
+        <VtxSagePanel />
         <SubChamberPlaceholder
           title="Whisper Network"
           tagline="Anonymous intel. Members surface signal; the cult votes Echo or silence."
