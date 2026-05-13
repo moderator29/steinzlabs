@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { BookOpen, Menu, X, ChevronRight, ExternalLink } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { DocsSidebar, DOC_SECTIONS } from '@/components/docs/DocsSidebar';
 import GlobalControls from '@/components/GlobalControls';
 import { DocsSection01 } from '@/components/docs/DocsSection01';
@@ -53,7 +54,8 @@ export default function DocsPage() {
   )?.label ?? 'Documentation';
 
   return (
-    <div className="min-h-screen bg-[#080C18] text-white">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white">
       {/* Top Nav — clean single-row layout on all sizes.
           Mobile: hamburger + compact "NAKA Docs" title + Open App only
                   (toggles live inside the sidebar drawer to avoid overflow).
@@ -168,5 +170,6 @@ export default function DocsPage() {
         </main>
       </div>
     </div>
+    </AuroraBackground>
   );
 }

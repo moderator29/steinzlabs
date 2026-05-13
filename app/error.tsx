@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function Error({
   error,
@@ -10,50 +11,31 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-
     // Auto-retry once after 800ms — most reload errors are transient hydration
-    // mismatches that resolve on the second render
+    // mismatches that resolve on the second render.
     const t = setTimeout(() => reset(), 800);
     return () => clearTimeout(t);
   }, [error, reset]);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0A0E1A',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
-      <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-        <div style={{
-          width: '48px', height: '48px', borderRadius: '50%',
-          border: '3px solid #0A1EFF',
-          borderTopColor: 'transparent',
-          margin: '0 auto 20px',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '20px' }}>
-          Loading...
-        </p>
-        <button
-          onClick={reset}
-          style={{
-            background: '#0A1EFF',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-          }}
-        >
-          Try Again
-        </button>
+    <AuroraBackground fullHeight>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+          <span className="nl-loader" aria-hidden="true" style={{ margin: '0 auto 20px' }} />
+          <p style={{ color: '#B4C0E0', fontSize: '14px', marginBottom: '20px' }}>Loading…</p>
+          <button onClick={reset} className="nl-button" style={{ padding: '10px 20px' }}>
+            Try again
+          </button>
+        </div>
       </div>
-    </div>
+    </AuroraBackground>
   );
 }

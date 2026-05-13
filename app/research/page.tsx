@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { BookOpen, Clock, Tag, ArrowRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 interface Post {
   id: string;
@@ -42,7 +43,8 @@ export default function PublicResearchPage() {
   const categories = ['All', 'Market', 'Security', 'DeFi', 'On-Chain', 'Macro', 'Research'];
 
   return (
-    <div className="min-h-screen bg-[#080C18] text-white">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white">
       <div className="sticky top-0 z-40 bg-[#080C18]/98 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <BackButton href="/" label="Home" />
@@ -142,5 +144,6 @@ export default function PublicResearchPage() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }
