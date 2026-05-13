@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkTier } from "@/lib/subscriptions/tierCheck";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,43 @@ interface CriteriaBody {
   daily_max_spend_usd?: number;
   auto_execute?: boolean;
   wallet_source: "metamask" | "phantom" | "builtin";
+  wallet_addresses?: string[];
+}
+
+interface UserWalletEntry {
+  address?: string;
+  chain?: string;
+}
+
+/**
+ * Risk #7 from session G §4n. The matcher / executor read
+ * sniper_criteria.wallet_addresses to know which user wallet to route a
+ * snipe through. Without this check, a user could submit any address —
+ * including someone else's — and the executor would happily insert a
+ * pending_trades row for that wallet on their own user_id. The user
+ * couldn't sign the trade (they don't hold the key), but the audit
+ * surface would be wrong and an admin tool that trusts the field would
+ * leak it.
+ *
+ * Returns the list of owned addresses (canonical form) so the caller can
+ * also re-canonicalize before storing.
+ */
+async function getOwnedAddresses(userId: string): Promise<string[]> {
+  const admin = getSupabaseAdmin();
+  const { data } = await admin
+    .from("user_wallets_v2")
+    .select("wallets,default_address")
+    .eq("user_id", userId)
+    .maybeSingle<{ wallets: unknown; default_address: string | null }>();
+  if (!data) return [];
+  const owned: string[] = [];
+  if (data.default_address) owned.push(data.default_address);
+  if (Array.isArray(data.wallets)) {
+    for (const w of data.wallets as UserWalletEntry[]) {
+      if (w && typeof w.address === "string" && w.address) owned.push(w.address);
+    }
+  }
+  return owned;
 }
 
 export const GET = withTierGate("pro", async (_request: NextRequest) => {
@@ -71,6 +109,36 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
   }
   if (!(body.amount_per_snipe_usd > 0)) {
     return NextResponse.json({ error: "amount_per_snipe_usd must be > 0" }, { status: 400 });
+  }
+
+  if (!["metamask", "phantom", "builtin"].includes(body.wallet_source)) {
+    return NextResponse.json({ error: "wallet_source must be metamask|phantom|builtin" }, { status: 400 });
+  }
+
+  // Ownership check on wallet_addresses (risk #7). Each submitted address must
+  // appear in the caller's user_wallets_v2 row. Reject the whole insert on a
+  // single mismatch — silently dropping unknown addresses would mask UI bugs
+  // and could let stale client state pollute the criteria row.
+  let walletAddresses: string[] | null = null;
+  if (body.wallet_addresses !== undefined) {
+    if (!Array.isArray(body.wallet_addresses)) {
+      return NextResponse.json({ error: "wallet_addresses must be a string array" }, { status: 400 });
+    }
+    const submitted = body.wallet_addresses
+      .filter((a): a is string => typeof a === "string" && a.length > 0);
+    if (submitted.length > 0) {
+      const owned = await getOwnedAddresses(user.id);
+      const unowned = submitted.filter(
+        (s) => !owned.some((o) => addressesEqual(o, s)),
+      );
+      if (unowned.length > 0) {
+        return NextResponse.json(
+          { error: "wallet_addresses_not_owned", unowned },
+          { status: 403 },
+        );
+      }
+    }
+    walletAddresses = submitted;
   }
 
   // auto_execute is Max-only.
@@ -111,6 +179,7 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
     daily_max_spend_usd: body.daily_max_spend_usd ?? 500,
     auto_execute: body.auto_execute ?? false,
     wallet_source: body.wallet_source,
+    ...(walletAddresses !== null ? { wallet_addresses: walletAddresses } : {}),
   };
 
   const { data, error } = body.id

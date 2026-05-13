@@ -78,10 +78,24 @@ export async function GET(request: NextRequest) {
     .select("*")
     .eq("enabled", true);
 
-  const criteria = (allCriteria ?? []) as CriteriaRow[];
-  if (criteria.length === 0) {
+  const allEnabled = (allCriteria ?? []) as CriteriaRow[];
+  if (allEnabled.length === 0) {
     return cronResponse("sniper-monitor", startedAt, { criteria: 0 });
   }
+
+  // Per-user concurrency cap. A user with 100 enabled criteria used to get
+  // all 100 processed every tick — N x DexScreener / Supabase queries that
+  // could OOM the lambda and starve other users. Round-robin by taking the
+  // oldest-first N criteria per user; the rest tick on the next run because
+  // sniper-criteria.id ordering is stable.
+  const PER_USER_TICK_CAP = 10;
+  const perUserCounts = new Map<string, number>();
+  const criteria = allEnabled.filter((c) => {
+    const n = perUserCounts.get(c.user_id) ?? 0;
+    if (n >= PER_USER_TICK_CAP) return false;
+    perUserCounts.set(c.user_id, n + 1);
+    return true;
+  });
 
   // Collect all chains we need to watch
   const chainsNeeded = new Set(criteria.flatMap((c) => c.chains_allowed));
@@ -162,7 +176,16 @@ export async function GET(request: NextRequest) {
     }
 
     const remainingSnipes = c.daily_max_snipes - todayFired;
+    const spendCap = c.daily_max_spend_usd;
+    const perSnipeCost = Math.max(0, Number(c.amount_per_snipe_usd) || 0);
     let firedToday = 0;
+    // Race fix: pre-existing code computed todaySpend once at the top of the
+    // loop, so a criteria at $450/$500 with 5 candidates × $100 would push
+    // all 5 events and overshoot the cap. Track the running spend including
+    // this tick's about-to-be-inserted events and re-check before each push.
+    let runningSpend = todaySpend;
+    const tickCapReached = () =>
+      firedToday >= remainingSnipes || runningSpend + perSnipeCost > spendCap;
 
     // ── whale_buy trigger ──────────────────────────────────────────────────
     if (c.trigger_type === "whale_buy") {
@@ -175,7 +198,7 @@ export async function GET(request: NextRequest) {
       );
 
       for (const a of candidates) {
-        if (firedToday >= remainingSnipes) break;
+        if (tickCapReached()) break;
         if (!a.token_address) continue;
 
         // Dedup: already matched this token+criteria in last 10 min
@@ -206,6 +229,7 @@ export async function GET(request: NextRequest) {
         };
         events.push(event);
         firedToday++;
+        runningSpend += perSnipeCost;
         matched++;
       }
     }
@@ -235,7 +259,7 @@ export async function GET(request: NextRequest) {
       );
 
       for (const t of candidates) {
-        if (firedToday >= remainingSnipes) break;
+        if (tickCapReached()) break;
 
         const { count } = await admin
           .from("sniper_match_events")
@@ -263,6 +287,7 @@ export async function GET(request: NextRequest) {
           },
         });
         firedToday++;
+        runningSpend += perSnipeCost;
         matched++;
       }
     }
