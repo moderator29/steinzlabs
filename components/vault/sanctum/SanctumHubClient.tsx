@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { LibraryPlayer } from './LibraryPlayer';
+import { ForgePanel } from './ForgePanel';
 import { MantlePanel } from './MantlePanel';
 
 /**
@@ -37,11 +38,7 @@ export function SanctumHubClient() {
           tagline="Achievements forged into the record. Bronze, silver, gold, mythic."
           eta="Next pass"
         />
-        <SubChamberPlaceholder
-          title="The Forge"
-          tagline="The sigils you hold, displayed. Auto-detected NFTs, 3D rotation."
-          eta="Next pass"
-        />
+        <ForgePanel />
       </div>
     </section>
   );
