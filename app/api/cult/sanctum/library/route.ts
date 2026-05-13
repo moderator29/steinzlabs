@@ -22,7 +22,8 @@ export async function GET(_req: NextRequest) {
     .from('cult_ambient_tracks')
     .select('id, title, artist, storage_path, duration_seconds, display_order')
     .eq('is_active', true)
-    .order('display_order', { ascending: true });
+    .order('display_order', { ascending: true })
+    .limit(100);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
