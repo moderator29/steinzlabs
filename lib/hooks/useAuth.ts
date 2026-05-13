@@ -108,11 +108,17 @@ export function useAuthProvider(): AuthContextType {
         const dbTier = (profile.tier === 'mini' || profile.tier === 'pro' || profile.tier === 'max' || profile.tier === 'naka_cult' || profile.tier === 'free')
           ? profile.tier as UserTier
           : metaTier;
+        // Bug §3.x — name flicker: edit-profile writes first_name/last_name
+        // to auth user_metadata (intentionally schema-independent), and
+        // writes username to profiles. If we prefer profile.* for names we
+        // can pick up a stale row that flashes the old name for ~300ms
+        // before the next render. Source of truth: meta for names, profiles
+        // for username/role/verified/tier.
         setUser({
           id: supaUser.id,
           email: supaUser.email,
-          first_name: profile.first_name ?? (meta.first_name as string | undefined),
-          last_name: profile.last_name ?? (meta.last_name as string | undefined),
+          first_name: (meta.first_name as string | undefined) ?? profile.first_name,
+          last_name: (meta.last_name as string | undefined) ?? profile.last_name,
           username: profile.username ?? (meta.username as string | undefined),
           created_at: supaUser.created_at || profile.created_at,
           tier: dbTier,
