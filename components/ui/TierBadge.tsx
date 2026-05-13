@@ -109,15 +109,25 @@ export function TierBadge({ tier, size = 16, title, className, nonInteractive, i
         height: size,
         display: 'inline-block',
         flexShrink: 0,
-        objectFit: 'contain',
+        objectFit: 'cover',
         verticalAlign: 'middle',
+        // Bug §4 — badges across the platform must share one shape. Every
+        // tier badge is now clipped to a circle (the PNG art is centered
+        // and already round-friendly). Chosen keeps its extra gold trim on
+        // top of the same base shape so the silhouette is consistent
+        // between the profile page, the dashboard Welcome card, sidebar,
+        // whispers, and the whale tracker user chip.
+        borderRadius: '50%',
+        outline: v.goldTrim
+          ? `1.5px solid rgba(255,216,107,0.9)`
+          : `1px solid ${v.ringRgba}`,
+        outlineOffset: v.goldTrim ? '1px' : '0',
+        boxShadow: v.goldTrim
+          ? 'inset 0 0 0 0.5px rgba(255,216,107,0.4)'
+          : undefined,
         filter: v.goldTrim
           ? `drop-shadow(0 0 5px ${v.ringRgba}) drop-shadow(0 0 2px rgba(220,20,60,0.7))`
           : `drop-shadow(0 0 4px ${v.ringRgba})`,
-        borderRadius: v.goldTrim ? '50%' : undefined,
-        outline: v.goldTrim ? `1.5px solid rgba(255,216,107,0.9)` : undefined,
-        outlineOffset: v.goldTrim ? '1px' : undefined,
-        boxShadow: v.goldTrim ? 'inset 0 0 0 0.5px rgba(255,216,107,0.4)' : undefined,
       }}
     />
   );
