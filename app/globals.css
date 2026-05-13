@@ -35,6 +35,18 @@
   --text-muted: #6B7280;
   --border-primary: #1F2937;
   --border-subtle: rgba(255, 255, 255, 0.06);
+
+  /* Z-index hierarchy — single source of truth. Every fixed/sticky overlay
+     in the platform MUST pick from this scale. Raw numeric z-index values
+     in component classNames are a bug. */
+  --z-base: 0;
+  --z-content: 1;
+  --z-sidebar: 40;
+  --z-header: 50;
+  --z-header-items: 51;
+  --z-dropdown: 100;
+  --z-modal: 200;
+  --z-toast: 300;
 }
 
 * {

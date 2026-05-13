@@ -2451,7 +2451,7 @@ function AddNetworkView({
 
   return (
     <div className="min-h-screen text-white">
-      <div className="sticky top-0 z-20/95 backdrop-blur-xl border-b border-slate-800/60">
+      <div className="sticky top-0 z-20 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800/60">
         <div className="flex items-center gap-3 px-4 py-3">
           <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
             <ArrowLeft size={18} />

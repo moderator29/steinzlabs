@@ -86,7 +86,15 @@
   animation: nl-aurora-drift 30s linear infinite;
   opacity: 0.4;
 }
-.nl-aurora-bg > * { position: relative; z-index: 1; }
+/* Lift content above the ::before/::after aurora layers, but DO NOT touch
+   fixed/sticky overlays — they manage their own stacking via Tailwind z-*
+   utilities and were being clamped to z-index:1 by the old `> *` rule,
+   which made the dashboard header, floating bell cluster, sidebar drawer,
+   and modals all appear blocked. */
+.nl-aurora-bg > *:not(.fixed):not(.sticky):not([data-overlay]) {
+  position: relative;
+  z-index: 1;
+}
 
 @keyframes nl-aurora-drift {
   0%   { transform: rotate(0deg)   scale(1);   }

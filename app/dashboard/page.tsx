@@ -112,7 +112,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   ];
 
   return (
-    <div className="fixed bottom-0 w-full/95 backdrop-blur-xl border-t border-white/[0.06] z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-[#0A0E27]/95 backdrop-blur-xl border-t border-white/[0.06] z-[var(--z-sidebar)]">
       <div className="grid grid-cols-4 gap-0 px-2 py-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -259,7 +259,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <div className="fixed top-0 left-0 right-0 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06] z-[var(--z-header)]">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
