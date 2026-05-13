@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { isEvmAddress, isSolanaAddress, normalizeAddress, type Chain } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 
@@ -102,7 +102,10 @@ export async function POST(req: NextRequest) {
     .from('cult_echo_wallets')
     .insert({
       position: nextPos,
-      address,
+      // Normalize per chain — EVM gets lower-cased, Solana stays exact.
+      // Storing un-normalized was a CLAUDE.md violation and would have
+      // poisoned later equality lookups against user_wallets_v2.
+      address: normalizeAddress(address, chain as Chain),
       chain,
       label: label || null,
       notes: notes || null,
