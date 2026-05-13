@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 15; // seconds — prevents Vercel cutting off before our timeout
 
@@ -9,6 +10,12 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function POST(request: Request) {
   try {
+    // 10 attempts per IP per minute. Brute-force attackers were unthrottled
+    // here; Vercel concurrency alone is not a security boundary.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = rateLimit(`auth:signin:${ip}`, { interval: 60_000, maxRequests: 10 });
+    if (!rl.success) return rateLimitResponse(rl);
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
