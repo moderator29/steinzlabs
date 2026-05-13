@@ -25,18 +25,22 @@ export async function GET(_req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
+  // Hard upper bounds — catalog won't ever hit 200, but unbounded SELECTs
+  // are an RLS/perf risk and the audit flagged them.
   const [{ data: catalog }, { data: earnings }] = await Promise.all([
     admin
       .from('cult_achievements')
       .select('id,code,title,description,tier')
       .eq('active', true)
       .order('tier', { ascending: true })
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true })
+      .limit(200),
     admin
       .from('cult_member_achievements')
       .select('achievement_id,earned_at,note')
       .eq('user_id', access.userId)
-      .order('earned_at', { ascending: false }),
+      .order('earned_at', { ascending: false })
+      .limit(500),
   ]);
 
   return NextResponse.json({
