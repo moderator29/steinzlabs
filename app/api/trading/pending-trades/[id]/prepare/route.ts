@@ -43,6 +43,7 @@ interface PendingRow {
   to_token_address: string;
   amount_in: string;
   slippage_bps: number;
+  expected_amount_out: string | null;
   status: string;
   expires_at: string;
 }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { data: pending } = await supabase
       .from("pending_trades")
       .select(
-        "id,user_id,chain,wallet_source,from_token_address,to_token_address,amount_in,slippage_bps,status,expires_at",
+        "id,user_id,chain,wallet_source,from_token_address,to_token_address,amount_in,slippage_bps,expected_amount_out,status,expires_at",
       )
       .eq("id", id)
       .single<PendingRow>();
@@ -113,6 +114,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       sellAmount: pending.amount_in,
       taker,
     });
+
+    // Risk #6 — slippage re-validation. The pending row was created with a
+    // route quoted at insert time; the market may have moved by now. Reject
+    // when the live buyAmount falls below the slippage tolerance applied to
+    // the original expected_amount_out. The user can re-queue from the UI
+    // instead of unwittingly signing a worse trade.
+    if (pending.expected_amount_out && quote.buyAmount) {
+      try {
+        const live = BigInt(quote.buyAmount);
+        const expected = BigInt(pending.expected_amount_out);
+        const tolerance = BigInt(Math.max(0, 10_000 - pending.slippage_bps));
+        const TEN_THOUSAND = BigInt(10_000);
+        const floor = (expected * tolerance) / TEN_THOUSAND;
+        if (live < floor) {
+          return NextResponse.json(
+            {
+              error: "slippage_exceeded",
+              expected_amount_out: pending.expected_amount_out,
+              live_amount_out: quote.buyAmount,
+              slippage_bps: pending.slippage_bps,
+            },
+            { status: 409 },
+          );
+        }
+      } catch {
+        // Non-integer amount strings just skip the gate — never block sign
+        // on a parse failure.
+      }
+    }
 
     return NextResponse.json({
       chain: pending.chain,

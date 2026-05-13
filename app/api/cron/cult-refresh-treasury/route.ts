@@ -4,6 +4,7 @@ import { verifyCron, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getTokenBalances } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
+import { getDexPrice } from '@/lib/services/dexscreener';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -65,10 +66,29 @@ export async function GET(request: NextRequest) {
       balanceNaka = match ? Number(match.uiAmount ?? 0) : 0;
     }
 
+    // USD enrichment. DexScreener is free, keyless and indexes both EVM and
+    // Solana, so it works for whichever chain the treasury is on without
+    // branching. Failure here must not poison the snapshot — balance_naka
+    // is the authoritative number; balance_usd stays null when pricing is
+    // cold and the UI degrades to "—".
+    let balanceUsd: number | null = null;
+    if (balanceNaka != null && balanceNaka > 0) {
+      try {
+        const priceUsd = await getDexPrice(tokenContract);
+        if (priceUsd > 0) {
+          balanceUsd = balanceNaka * priceUsd;
+        }
+      } catch {
+        // Swallow — see comment above.
+      }
+    } else if (balanceNaka === 0) {
+      balanceUsd = 0;
+    }
+
     const admin = getSupabaseAdmin();
     const { error: insErr } = await admin.from('cult_treasury_snapshots').insert({
       balance_naka: balanceNaka,
-      balance_usd: null, // USD pricing belongs to a future enrichment step
+      balance_usd: balanceUsd,
       source: isEvm ? 'alchemy' : 'helius',
       notes: `Auto-refresh by ${NAME}`,
     });
@@ -76,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - startedAt;
     await logCronExecution(NAME, 'success', duration, undefined, 1);
-    return NextResponse.json({ ok: true, durationMs: duration, balanceNaka });
+    return NextResponse.json({ ok: true, durationMs: duration, balanceNaka, balanceUsd });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     Sentry.captureException(err, { tags: { cron: NAME } });

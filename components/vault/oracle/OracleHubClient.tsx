@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
 import { VtxSagePanel } from './VtxSagePanel';
+import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 
 /**
  * Oracle hub — the chamber's landing surface.
@@ -34,11 +35,7 @@ export function OracleHubClient() {
         </motion.div>
 
         <VtxSagePanel />
-        <SubChamberPlaceholder
-          title="Whisper Network"
-          tagline="Anonymous intel. Members surface signal; the cult votes Echo or silence."
-          eta="Next pass"
-        />
+        <WhisperNetworkPanel />
         <SubChamberPlaceholder
           title="Echo Chamber"
           tagline="Stealth wallet tracking. 25-slot quiet pack — only the cult sees what they hold."
