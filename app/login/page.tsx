@@ -65,7 +65,13 @@ function LoginPageInner() {
         widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
           theme: 'dark',
-          size: 'flexible',
+          // Reverted from 'flexible' — that size leaves the widget stuck on the
+          // verifying spinner when the parent flex column is briefly narrower
+          // than 300px during first paint or mobile autocomplete reflow.
+          // 'normal' is a fixed 300x65 box that renders the challenge UI
+          // immediately and never collapses to 0 height.
+          size: 'normal',
+          appearance: 'always',
           callback: (token: string) => setCaptchaToken(token),
           'expired-callback': () => setCaptchaToken(''),
           'error-callback': () => setCaptchaToken(''),
@@ -442,7 +448,13 @@ function LoginPageInner() {
                 />
                 <div
                   ref={turnstileRef}
-                  style={{ minHeight: 65, colorScheme: 'dark', width: '100%' }}
+                  style={{
+                    minHeight: 78,
+                    minWidth: 300,
+                    colorScheme: 'dark',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
                 />
                 {errors.captcha && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.captcha}</p>}
               </div>
