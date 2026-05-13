@@ -10,7 +10,7 @@ import {
 import {
   Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
 
@@ -145,7 +145,17 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [activeNav, setActiveNav] = useState('home');
+  const searchParams = useSearchParams();
+  // ?tab=profile / ?tab=wallet / ?tab=vtxai routes external links (notably
+  // the /dashboard/profile redirect) to the right bottom-nav tab on mount.
+  // Without this, /dashboard/profile redirected to /dashboard?tab=profile
+  // and landed back on the home tab, leaving the user staring at a spinner
+  // that resolved to the wrong page.
+  const initialNav = (() => {
+    const t = searchParams?.get('tab');
+    return t === 'profile' || t === 'wallet' || t === 'vtxai' ? t : 'home';
+  })();
+  const [activeNav, setActiveNav] = useState<string>(initialNav);
   const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>('overview');
 
   // Restore market tab when navigating back from a coin detail page
