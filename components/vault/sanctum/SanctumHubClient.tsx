@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { LibraryPlayer } from './LibraryPlayer';
+import { MantlePanel } from './MantlePanel';
 
 /**
  * Sanctum hub — the chamber's landing surface.
@@ -30,11 +31,7 @@ export function SanctumHubClient() {
           <LibraryPlayer />
         </motion.div>
 
-        <SubChamberPlaceholder
-          title="The Mantle"
-          tagline="Avatar, frame, glow, banner, title, sigil. The cult dresses itself."
-          eta="Next pass"
-        />
+        <MantlePanel />
         <SubChamberPlaceholder
           title="The Annals"
           tagline="Achievements forged into the record. Bronze, silver, gold, mythic."

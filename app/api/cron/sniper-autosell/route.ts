@@ -132,6 +132,20 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // TON has no live USD price feed wired (Ston.fi / DeDust integration is
+    // pending). Calling priceFeed for TON always returns null, which used to
+    // surface as a generic "no live price" skip and looked like an outage.
+    // Short-circuit explicitly so the log makes the unsupported-chain reason
+    // clear and we don't waste the RPC round trip.
+    if (pos.chain === "ton") {
+      summary.push({
+        id: pos.id,
+        action: "skip",
+        reason: "ton price feed unsupported — autosell cannot unwind TON positions",
+      });
+      continue;
+    }
+
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,
       pos.token_address,
@@ -183,19 +197,30 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // Schema fix: pending_trades has from_token_address / to_token_address /
+    // source_reason / source_order_id / source_order_table, NOT the older
+    // token_in / token_out / source / source_id pair this route used to
+    // assume. Insert would 500 every tick on the wrong column names —
+    // autosell looked wired but never actually queued anything. Status uses
+    // "pending" so the prepare + confirm route gates pick it up.
+    const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
     const { data: pending, error: insErr } = await supabase
       .from("pending_trades")
       .insert({
         user_id: pos.user_id,
-        wallet_address: pos.wallet_address,
         chain: pos.chain,
-        token_in: pos.token_address,
-        token_out: "USDC",
+        wallet_source: "builtin",
+        from_token_address: pos.token_address,
+        from_token_symbol: pos.token_symbol,
+        to_token_address: "USDC",
+        to_token_symbol: "USDC",
         amount_in: pos.tokens_received,
         slippage_bps: c.max_slippage_bps ?? 200,
-        source: "sniper-autosell",
-        source_id: pos.id,
-        status: "queued",
+        source_reason: "sniper_autosell",
+        source_order_id: pos.id,
+        source_order_table: "sniper_executions",
+        status: "pending",
+        expires_at: expiresAt,
       })
       .select("id")
       .single();

@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
+import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 
 /**
  * Oracle hub — the chamber's landing surface.
@@ -37,11 +38,7 @@ export function OracleHubClient() {
           tagline="Cult-mode VTX. Sigil avatar, ink-writing voice, deeper context."
           eta="Next pass"
         />
-        <SubChamberPlaceholder
-          title="Whisper Network"
-          tagline="Anonymous intel. Members surface signal; the cult votes Echo or silence."
-          eta="Next pass"
-        />
+        <WhisperNetworkPanel />
         <SubChamberPlaceholder
           title="Echo Chamber"
           tagline="Stealth wallet tracking. 25-slot quiet pack — only the cult sees what they hold."

@@ -45,6 +45,7 @@ interface PendingRow {
     | "dca_bots"
     | "stop_loss_orders"
     | "user_copy_trades"
+    | "sniper_executions"
     | null;
   status: string;
   expires_at: string;
@@ -178,6 +179,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           })
           .eq("id", pending.source_order_id);
         break;
+      case "sniper_executions": {
+        // sniper-autosell queued the sell. Mark the position realized so the
+        // autosell cron doesn't redispatch it next tick. realized_at is the
+        // canonical signal; sell_tx_hash carries the client-reported hash for
+        // audit. Authoritative settled price arrives via receipt-reconciliation.
+        await admin
+          .from("sniper_executions")
+          .update({
+            realized_at: nowIso,
+            sell_tx_hash: body.txHash,
+            sell_pending_trade_id: null,
+          })
+          .eq("id", pending.source_order_id);
+        break;
+      }
     }
   }
 
