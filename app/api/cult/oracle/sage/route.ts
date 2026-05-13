@@ -95,10 +95,16 @@ export async function POST(req: NextRequest) {
   const history = ((prior ?? []) as StoredMsg[]).slice().reverse();
 
   // Persist the user turn before calling Anthropic so a network failure
-  // doesn't lose the input the user just typed.
-  await admin
+  // doesn't lose the input the user just typed. If the insert itself fails
+  // (constraint violation, DB unreachable) we reject 500 — otherwise the
+  // assistant reply would be saved against a missing user turn and the
+  // conversation history would be incoherent on reload.
+  const { error: userInsertErr } = await admin
     .from('cult_sage_messages')
     .insert({ user_id: access.userId, role: 'user', content: message });
+  if (userInsertErr) {
+    return NextResponse.json({ error: 'persistence_failed' }, { status: 500 });
+  }
 
   const messages: Anthropic.MessageParam[] = [
     ...history.map((m) => ({
