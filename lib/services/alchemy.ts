@@ -166,6 +166,38 @@ export async function getEthBalance(
   });
 }
 
+/**
+ * NFT ownership check via Alchemy NFT API. Returns true if `owner` holds
+ * any token of `contractAddress` on `chain`. Cached briefly because cult
+ * gating reads this on every membership refresh.
+ */
+export async function isHolderOfContract(
+  owner: string,
+  contractAddress: string,
+  chain: string
+): Promise<boolean> {
+  if (!isAlchemySupported(chain)) return false;
+  if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) return false;
+  const key = cacheKey('alchemy', 'nft_owner', {
+    owner: owner.toLowerCase(),
+    contract: contractAddress.toLowerCase(),
+    chain,
+  });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    try {
+      const alchemy = getAlchemy(chain);
+      const res = await alchemy.nft.getNftsForOwner(owner, {
+        contractAddresses: [contractAddress],
+        pageSize: 1,
+        omitMetadata: true,
+      });
+      return (res.ownedNfts?.length ?? 0) > 0;
+    } catch {
+      return false;
+    }
+  });
+}
+
 export async function getContractCode(
   contractAddress: string,
   chain: string

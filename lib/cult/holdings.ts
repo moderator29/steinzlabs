@@ -1,6 +1,6 @@
 import 'server-only';
-import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
-import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
+import { getTokenBalances, getEthBalance, isHolderOfContract } from '@/lib/services/alchemy';
+import { getSolanaWalletTokens, getSolanaAssetsByOwner } from '@/lib/services/alchemy-solana';
 
 /**
  * On-chain holdings resolver for the Naka Cult.
@@ -91,11 +91,11 @@ async function resolveEvm(addr: string): Promise<CultHoldings> {
     }
   }
 
-  // NFT ownership — Alchemy's NFT API would be cleaner; stubbed here as
-  // 'has at least one transfer to this wallet from the contract' isn't
-  // available without the NFT API. Return false until that wiring lands.
-  const hasLoyaltyGem = gemContract ? false : false;
-  const hasDevNft     = devNftContract ? false : false;
+  // NFT ownership via Alchemy NFT API (getNftsForOwner filtered by contract).
+  const [hasLoyaltyGem, hasDevNft] = await Promise.all([
+    gemContract    ? isHolderOfContract(addr, gemContract,    'ethereum').catch(() => false) : Promise.resolve(false),
+    devNftContract ? isHolderOfContract(addr, devNftContract, 'ethereum').catch(() => false) : Promise.resolve(false),
+  ]);
 
   const isMember = nakaBalance >= HOLDING_THRESHOLD || hasLoyaltyGem || hasDevNft;
   const isChosen = hasDevNft;
@@ -118,10 +118,31 @@ async function resolveSolana(addr: string): Promise<CultHoldings> {
     }
   }
 
-  // Solana NFT collections (Loyalty Gem / Dev NFT) — wire via Helius DAS
-  // when contract addresses become known. Stubbed false for now.
-  const hasLoyaltyGem = false;
-  const hasDevNft = false;
+  // Solana NFT ownership via Helius DAS. NAKA_LOYALTY_GEM_CONTRACT /
+  // NAKA_DEV_NFT_CONTRACT are interpreted as the **collection** address
+  // (the MCC group value) when the wallet looks Solana-shaped.
+  const gemCollection = process.env.NAKA_LOYALTY_GEM_CONTRACT ?? '';
+  const devCollection = process.env.NAKA_DEV_NFT_CONTRACT ?? '';
+  let hasLoyaltyGem = false;
+  let hasDevNft = false;
+  if (gemCollection || devCollection) {
+    try {
+      const res = (await getSolanaAssetsByOwner(addr, 1, 1000)) as
+        | { items?: Array<{ grouping?: Array<{ group_key?: string; group_value?: string }> }> }
+        | null;
+      const items = res?.items ?? [];
+      const collections = new Set<string>();
+      for (const it of items) {
+        for (const g of it.grouping ?? []) {
+          if (g.group_key === 'collection' && g.group_value) collections.add(g.group_value);
+        }
+      }
+      if (gemCollection) hasLoyaltyGem = collections.has(gemCollection);
+      if (devCollection) hasDevNft = collections.has(devCollection);
+    } catch {
+      /* swallow — empty NFT state on any error */
+    }
+  }
 
   const isMember = nakaBalance >= HOLDING_THRESHOLD || hasLoyaltyGem || hasDevNft;
   const isChosen = hasDevNft;
