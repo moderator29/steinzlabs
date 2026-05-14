@@ -15,6 +15,44 @@ import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
 import { SecurityGate } from '@/components/security/SecurityGate';
 
+// §12 — Safari private mode and some locked-down enterprise browsers
+// throw SecurityError on every localStorage read. The swap signing path
+// reads `steinz_wallets` and `steinz_active_wallet_address` during the
+// transaction-build step, so an unguarded throw there killed the swap
+// flow with no usable error. These helpers are local because they have
+// one consumer (this page) and the wider userScopedStorage layer doesn't
+// expose a parse helper. Catches Error explicitly — not a wildcard —
+// because we want logging for unexpected failure modes (e.g. parse).
+function safeLocalGet(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch (err) {
+    console.warn(`[swap] localStorage.getItem(${key}) failed:`, err);
+    return null;
+  }
+}
+
+function safeLocalParse<T>(key: string, fallback: T): T {
+  const raw = safeLocalGet(key);
+  if (raw === null) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (err) {
+    console.warn(`[swap] JSON.parse of localStorage ${key} failed:`, err);
+    return fallback;
+  }
+}
+
+function safeLocalSet(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn(`[swap] localStorage.setItem(${key}) failed:`, err);
+  }
+}
+
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
   { id: 'base', label: 'Base', symbol: 'ETH', color: '#0052FF', dex: 'Aerodrome' },
@@ -288,10 +326,8 @@ export default function SwapPage() {
   const [txHash, setTxHash] = useState('');
   const [detectedWallet, setDetectedWallet] = useState<'solana' | 'ethereum' | 'builtin' | null>(null);
   const [walletMode, setWalletMode] = useState<'naka' | 'metamask' | 'phantom'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('swap_wallet_mode') as 'naka' | 'metamask' | 'phantom') || 'naka';
-    }
-    return 'naka';
+    const stored = safeLocalGet('swap_wallet_mode');
+    return stored === 'metamask' || stored === 'phantom' || stored === 'naka' ? stored : 'naka';
   });
 
   // §10 — Reown AppKit hooks. `open()` triggers the wallet picker
@@ -309,7 +345,7 @@ export default function SwapPage() {
   const [phantomAddress, setPhantomAddress] = useState('');
   const quoteTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const nakaAddress = walletAddress || (typeof window !== 'undefined' ? localStorage.getItem('steinz_active_wallet_address') : null);
+  const nakaAddress = walletAddress || safeLocalGet('steinz_active_wallet_address');
   const connectedAddress = walletMode === 'metamask' ? metamaskAddress : walletMode === 'phantom' ? phantomAddress : nakaAddress;
 
   // Detect wallet provider and fetch native balance
@@ -344,7 +380,7 @@ export default function SwapPage() {
             setWalletBalance(prev => ({ ...prev, ETH: ethBal }));
           }
         } catch { /* Provider rejected — silently ignore */ }
-      } else if (localStorage.getItem('steinz_active_wallet_address')) {
+      } else if (safeLocalGet('steinz_active_wallet_address')) {
         setDetectedWallet('builtin');
       }
     };
@@ -407,7 +443,7 @@ export default function SwapPage() {
   const handleSelectWalletMode = async (mode: 'naka' | 'metamask' | 'phantom') => {
     setWalletConnectError('');
     if (mode === 'naka') {
-      localStorage.setItem('swap_wallet_mode', 'naka');
+      safeLocalSet('swap_wallet_mode', 'naka');
       setWalletMode('naka');
       setDetectedWallet('builtin');
       return;
@@ -426,7 +462,7 @@ export default function SwapPage() {
           setMetamaskConnected(true);
           setDetectedWallet('ethereum');
           setWalletMode('metamask');
-          localStorage.setItem('swap_wallet_mode', 'metamask');
+          safeLocalSet('swap_wallet_mode', 'metamask');
           // Sync chain from MetaMask
           const chainId = (await win.ethereum.request({ method: 'eth_chainId' })) as string;
           const chainIdNum = parseInt(chainId, 16);
@@ -453,7 +489,7 @@ export default function SwapPage() {
           setPhantomConnected(true);
           setDetectedWallet('solana');
           setWalletMode('phantom');
-          localStorage.setItem('swap_wallet_mode', 'phantom');
+          safeLocalSet('swap_wallet_mode', 'phantom');
           setChain('solana');
           setFromToken('SOL');
         }
@@ -487,7 +523,7 @@ export default function SwapPage() {
       setDetectedWallet('solana');
       if (walletMode !== 'phantom') {
         setWalletMode('phantom');
-        localStorage.setItem('swap_wallet_mode', 'phantom');
+        safeLocalSet('swap_wallet_mode', 'phantom');
         setChain('solana');
       }
       lastAppKitMirror.current = { address: appKitAddress, ns: 'solana' };
@@ -497,7 +533,7 @@ export default function SwapPage() {
       setDetectedWallet('ethereum');
       if (walletMode !== 'metamask') {
         setWalletMode('metamask');
-        localStorage.setItem('swap_wallet_mode', 'metamask');
+        safeLocalSet('swap_wallet_mode', 'metamask');
       }
       lastAppKitMirror.current = { address: appKitAddress, ns: 'eip155' };
     } else {
@@ -737,9 +773,9 @@ export default function SwapPage() {
         }
       } else if (detectedWallet === 'builtin') {
         // Builtin wallet: sign via ethers with stored encrypted key
-        const storedWallets = JSON.parse(localStorage.getItem('steinz_wallets') || '[]');
-        const activeAddr = localStorage.getItem('steinz_active_wallet_address') || connectedAddress;
-        const storedWallet = storedWallets.find((w: { address?: string }) => w.address?.toLowerCase() === activeAddr?.toLowerCase());
+        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
+        const activeAddr = safeLocalGet('steinz_active_wallet_address') || connectedAddress;
+        const storedWallet = storedWallets.find(w => w.address?.toLowerCase() === activeAddr?.toLowerCase());
         if (!storedWallet || !swapData.transaction) {
           throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
         }
@@ -848,9 +884,9 @@ export default function SwapPage() {
         timestamp: Date.now(),
         address: connectedAddress,
       };
-      const existing = JSON.parse(localStorage.getItem('steinz_swap_history') || '[]');
+      const existing = safeLocalParse<Array<typeof txRecord>>('steinz_swap_history', []);
       existing.unshift(txRecord);
-      localStorage.setItem('steinz_swap_history', JSON.stringify(existing.slice(0, 50)));
+      safeLocalSet('steinz_swap_history', JSON.stringify(existing.slice(0, 50)));
     } catch (err: any) {
       setTxStatus('failed');
       setSwapError(err?.message || 'Swap failed. Please try again.');
