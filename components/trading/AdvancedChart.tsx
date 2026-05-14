@@ -46,6 +46,13 @@ interface AdvancedChartProps {
   height?: number;
   className?: string;
   onPriceClick?: (price: number) => void;
+  /**
+   * §11.2 — when true, the chart renders as a clean visual only:
+   * crosshair, mouse wheel, pan, and pinch are disabled. Used by the
+   * VTX agent's TokenCard so the inline preview can't be accidentally
+   * dragged or zoomed by users scrolling the chat thread.
+   */
+  staticChart?: boolean;
 }
 
 const BRAND_UP = "#22c55e";
@@ -71,6 +78,7 @@ export function AdvancedChart({
   height = 420,
   className = "",
   onPriceClick,
+  staticChart = false,
 }: AdvancedChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -107,11 +115,18 @@ export function AdvancedChart({
       grid: { vertLines: { color: "rgba(148,163,184,0.06)" }, horzLines: { color: "rgba(148,163,184,0.06)" } },
       rightPriceScale: { borderColor: "rgba(148,163,184,0.1)", scaleMargins: { top: 0.1, bottom: indicators.volume ? 0.25 : 0.05 } },
       timeScale: { borderColor: "rgba(148,163,184,0.1)", timeVisible: true, secondsVisible: tf === "1m" },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(77,128,255,0.5)", style: LineStyle.Dashed, labelBackgroundColor: BRAND_BLUE },
-        horzLine: { color: "rgba(77,128,255,0.5)", style: LineStyle.Dashed, labelBackgroundColor: BRAND_BLUE },
-      },
+      crosshair: staticChart
+        ? { mode: CrosshairMode.Hidden }
+        : {
+            mode: CrosshairMode.Normal,
+            vertLine: { color: "rgba(77,128,255,0.5)", style: LineStyle.Dashed, labelBackgroundColor: BRAND_BLUE },
+            horzLine: { color: "rgba(77,128,255,0.5)", style: LineStyle.Dashed, labelBackgroundColor: BRAND_BLUE },
+          },
+      // §11.2 — disable every interaction primitive when staticChart is on
+      // so the VTX inline preview reads as art, not a controllable widget.
+      handleScroll: !staticChart,
+      handleScale: !staticChart,
+      kineticScroll: { touch: !staticChart, mouse: !staticChart },
       width: container.clientWidth,
       height,
       autoSize: true,
