@@ -1,6 +1,7 @@
 'use client';
 
-import { Search, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain } from 'lucide-react';
+import { Search, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain, GitCompare } from 'lucide-react';
+import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -445,6 +446,17 @@ export default function WalletIntelligencePage() {
             <Search className="w-4 h-4" />
           </div>
           <h1 className="text-sm font-heading font-bold">Wallet Intelligence</h1>
+          {/* §9.3 new feature — Compare two wallets side-by-side. Routes
+              to a dedicated comparison page that fetches both addresses
+              in parallel and surfaces the diff. */}
+          <Link
+            href="/dashboard/wallet-intelligence/compare"
+            className="ml-auto whale-pill"
+            title="Compare two wallets side by side"
+          >
+            <GitCompare className="w-3.5 h-3.5" />
+            Compare
+          </Link>
         </div>
       </div>
 
