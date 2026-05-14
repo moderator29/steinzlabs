@@ -98,8 +98,25 @@ export async function getDustTokens(
 }
 
 /**
- * Quick risk check — returns true if risk score exceeds threshold.
- * Used by swap engine to block dangerous tokens.
+ * Quick risk check — returns true if the token MUST be blocked from
+ * swap execution. Used by `getSwapQuote` to gate the EVM swap path.
+ *
+ * Block rules (any one is sufficient — these are non-negotiable):
+ *   - isHoneypot                        → confirmed honeypot
+ *   - cannotBuy                         → buys disabled at the contract level
+ *   - cannotSellAll                     → can buy but cannot fully exit
+ *   - selfDestruct                      → contract can self-destruct
+ *   - canTakeBackOwnership              → renounce can be reversed
+ *   - ownerCanChangeBalance             → owner can rug your balance directly
+ *   - hasHiddenOwner                    → opaque owner control
+ *   - sellTax > 30%                     → effectively a soft honeypot
+ *   - composite riskScore > threshold   → catch-all for combined signals
+ *
+ * §10 audit fix — earlier version relied solely on the composite score,
+ * meaning a pure honeypot (one -40 point hit, trustScore=60, risk=40)
+ * slipped through the default 70 threshold. Each individual block flag
+ * must independently trigger a block regardless of the rest of the
+ * scorecard.
  */
 export async function isHighRisk(
   contractAddress: string,
@@ -108,8 +125,14 @@ export async function isHighRisk(
 ): Promise<boolean> {
   try {
     const result = await getTokenSecurity(contractAddress, chain);
-    // trustScore is 0-100 where 0 = most dangerous, 100 = safest
-    // Convert to risk score (inverse) for consistency with master prompt
+    if (result.isHoneypot) return true;
+    if (result.cannotBuy) return true;
+    if (result.cannotSellAll) return true;
+    if (result.selfDestruct) return true;
+    if (result.canTakeBackOwnership) return true;
+    if (result.ownerCanChangeBalance) return true;
+    if (result.hasHiddenOwner) return true;
+    if ((result.sellTax ?? 0) > 0.30) return true;
     const riskScore = 100 - result.trustScore;
     return riskScore > threshold;
   } catch {
