@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Loader2, Search, Zap, ShieldAlert, Sparkles, Users, TrendingUp,
-  Brain, Bot, Activity, Crown, Cpu, Layers, ChevronRight, X,
+  Brain, Bot, Activity, Crown, Cpu, Layers, ChevronRight, X, Download,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 
@@ -115,6 +115,39 @@ export default function WalletClustersPage() {
 
   const totalMembers = useMemo(() => rows.reduce((s, r) => s + r.member_count, 0), [rows]);
 
+  // §9.2 — CSV export of the currently visible (filtered) cluster set.
+  // Streams the same rows the user is looking at; downstream tools (Excel,
+  // Sheets, BigQuery, custom analysis) get a clean spreadsheet without a
+  // round-trip to a separate export endpoint. Header row is intentional so
+  // the file is self-describing.
+  const exportCsv = useCallback(() => {
+    if (!rows.length) return;
+    const escape = (v: unknown) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = [
+      'cluster_id', 'archetype', 'whale_score', 'member_count',
+      'hub', 'community_label', 'token_address', 'updated_at',
+    ];
+    const body = rows.map(r => [
+      r.cluster_id, r.archetype ?? '', r.whale_score ?? '',
+      r.member_count, r.hub ?? '', r.community_label ?? '',
+      r.token_address ?? '', r.updated_at ?? '',
+    ].map(escape).join(','));
+    const csv = [header.join(','), ...body].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.download = `naka-clusters-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [rows]);
+
   return (
     <div className="min-h-screen bg-[#05081E] text-white pb-24">
       {/* Hero */}
@@ -131,6 +164,19 @@ export default function WalletClustersPage() {
               5-signal on-chain intelligence · AI-named archetypes · community reputation
             </p>
           </div>
+          {/* §9.2 new feature — export the filtered cluster view as CSV
+              for downstream analysis. Disabled until rows resolve so the
+              button can't produce an empty file. */}
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={!rows.length || loading}
+            title={rows.length ? `Export ${rows.length} cluster${rows.length === 1 ? '' : 's'} to CSV` : 'Nothing to export yet'}
+            className="whale-settings-btn disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Export clusters as CSV"
+          >
+            <Download className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Search + sort + min-score */}

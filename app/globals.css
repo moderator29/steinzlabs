@@ -76,6 +76,132 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
 }
 
+/* ───────────────────────────────────────────────────────────────
+   Whale Suite UI primitives (§9) — shared visual language across
+   Whale Tracker, Wallet Clusters, Wallet Intelligence. Each class
+   keeps logic untouched and only upgrades the surface so the three
+   pages feel like one premium intelligence product.
+   ─────────────────────────────────────────────────────────────── */
+.whale-glass-card {
+  position: relative;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(10, 15, 46, 0.78), rgba(15, 22, 60, 0.62));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
+}
+.whale-glass-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 102, 255, 0.30);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), 0 0 24px rgba(0, 102, 255, 0.15);
+}
+.whale-glass-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 102, 255, 0.55), rgba(220, 20, 60, 0.45));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.whale-glass-card:hover::after { opacity: 0.85; }
+
+.whale-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.whale-pill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 200, 255, 0.30);
+}
+.whale-pill[aria-pressed="true"],
+.whale-pill[data-active="true"] {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(0, 102, 255, 0.22), rgba(0, 200, 255, 0.18));
+  border-color: rgba(0, 200, 255, 0.55);
+  box-shadow: 0 0 18px rgba(0, 102, 255, 0.35);
+}
+
+.whale-tab {
+  position: relative;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.whale-tab:hover { color: rgba(255, 255, 255, 0.85); }
+.whale-tab[aria-selected="true"],
+.whale-tab[data-active="true"] { color: #fff; }
+.whale-tab[aria-selected="true"]::after,
+.whale-tab[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: -2px; height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #0066FF, #00C8FF);
+  box-shadow: 0 0 8px rgba(0, 200, 255, 0.65);
+}
+
+.whale-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+.whale-settings-btn:hover {
+  color: #fff;
+  background: rgba(0, 102, 255, 0.10);
+  border-color: rgba(0, 200, 255, 0.45);
+}
+
+.whale-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(10, 14, 39, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.whale-search:focus-within {
+  border-color: rgba(0, 200, 255, 0.55);
+  box-shadow: 0 0 18px rgba(0, 102, 255, 0.20);
+}
+.whale-search input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.whale-search input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
 ::-webkit-scrollbar {
   width: 4px;
 }
