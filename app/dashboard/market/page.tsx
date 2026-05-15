@@ -15,6 +15,7 @@ import { TopGainersBar } from "@/components/market/TopGainersBar";
 import { TokenRow } from "@/components/market/TokenRow";
 import { LoadingSkeleton } from "@/components/market/LoadingSkeleton";
 import { ErrorState } from "@/components/market/ErrorState";
+import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
 
 type CategoryId = "all" | "majors" | "defi" | "layer1" | "layer2" | "gaming" | "ai" | "meme" | "depin" | "pumpfun" | "bnb-meme";
 
@@ -45,19 +46,13 @@ const MAJORS_LIMIT = 10;
  * rest default to 'ethereum'. Users who land on the terminal with a
  * specific chain in the URL keep that chain.
  */
+// Audit B4 — was a hardcoded 4-token switch that defaulted everything
+// to ethereum. Routed BTC, BNB, BONK, JUP, WIF to broken pages. Now
+// delegates to resolveTokenChain in lib/market/tokenChainResolver,
+// which knows ~30 canonical tokens and uses ethereum as a sensible
+// long-tail default.
 function chainFor(id: string): string {
-  switch (id) {
-    case "solana":
-      return "solana";
-    case "binancecoin":
-      return "bsc";
-    case "avalanche-2":
-      return "avalanche";
-    case "matic-network":
-      return "polygon";
-    default:
-      return "ethereum";
-  }
+  return resolveTokenChain({ id }).chain;
 }
 
 export default function DashboardMarketPage() {
