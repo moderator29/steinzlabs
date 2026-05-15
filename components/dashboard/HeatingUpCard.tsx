@@ -51,7 +51,10 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
       }
     };
     void load();
-    const t = setInterval(load, 300_000);
+    // Audit M7 #4 — was 5min (300_000ms). 'Trending' loses meaning at
+    // 5min latency; GeckoTerminal / Birdeye refresh every 30-60s.
+    // Backed by a 2min cache on the API so this is safe for upstream.
+    const t = setInterval(load, 60_000);
     return () => { cancelled = true; clearInterval(t); };
   }, [limit]);
 
@@ -64,7 +67,13 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">Heating Up</h3>
-            <p className="text-[10px] text-gray-500">What people are searching</p>
+            {/* Audit M7 #1 — subtitle was 'What people are searching'
+                which implied platform-side search analytics. The
+                actual signal is CoinGecko's /search/trending endpoint,
+                which ranks by their global search velocity. Honest
+                label so users don't read it as 'what NAKA users are
+                searching'. */}
+            <p className="text-[10px] text-gray-500">Search-trending on CoinGecko · 24h</p>
           </div>
         </div>
         <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0A1EFF] flex items-center gap-1">
