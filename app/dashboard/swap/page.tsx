@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
+import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { MetaMaskLogo, PhantomLogo, NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
@@ -278,6 +279,13 @@ export default function SwapPage() {
   const [showTokenSelect, setShowTokenSelect] = useState<'from' | 'to' | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  // Audit B4 / P1 #8 — Naka built-in wallet unlock. setWalletSessionKey
+  // was previously orphaned (defined but never invoked anywhere), so
+  // every Naka-wallet swap reached the signing path with no cached
+  // password and threw "Wallet session expired." The modal below is
+  // the missing UI that actually unlocks the session.
+  const [unlockState, setUnlockState] = useState<null | { encryptedKey: string; addressShort?: string }>(null);
+  const pendingPostUnlock = useRef<(() => void) | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
@@ -744,7 +752,21 @@ export default function SwapPage() {
           throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
         }
         const { ethers } = await import('ethers');
-        const pwd = getWalletSessionKey() || '';
+        let pwd = getWalletSessionKey() || '';
+        if (!pwd && storedWallet.encryptedKey) {
+          // Audit B4 / P1 #8 — surface the unlock modal instead of
+          // throwing. handleSwap re-runs after the user enters their
+          // password; this keeps the swap flow continuous from the
+          // user's perspective rather than dumping them back to the
+          // form with an opaque "session expired" toast.
+          setSwapping(false);
+          pendingPostUnlock.current = () => { void handleSwap(); };
+          setUnlockState({
+            encryptedKey: storedWallet.encryptedKey as string,
+            addressShort: storedWallet.address ? `${storedWallet.address.slice(0, 6)}…${storedWallet.address.slice(-4)}` : undefined,
+          });
+          return;
+        }
         if (!pwd || !storedWallet.encryptedKey) {
           throw new Error('Wallet session expired. Please unlock your wallet.');
         }
@@ -1470,6 +1492,25 @@ export default function SwapPage() {
           </div>
         );
       })()}
+      {unlockState && (
+        <UnlockWalletModal
+          encryptedKey={unlockState.encryptedKey}
+          addressShort={unlockState.addressShort}
+          walletName="Naka Wallet"
+          onUnlocked={() => {
+            setUnlockState(null);
+            const next = pendingPostUnlock.current;
+            pendingPostUnlock.current = null;
+            // Re-run the original swap flow now that getWalletSessionKey()
+            // will return the verified password the modal just cached.
+            if (next) next();
+          }}
+          onClose={() => {
+            setUnlockState(null);
+            pendingPostUnlock.current = null;
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,166 @@
+'use client';
+
+/**
+ * UnlockWalletModal — collects the user's wallet password, verifies it
+ * by attempting decryption against the stored AES-GCM payload, then
+ * caches it via setWalletSessionKey so subsequent signing operations
+ * (swap, send, etc) can decrypt the private key without re-prompting
+ * inside the same 30-minute session.
+ *
+ * Wires up the previously-orphaned setWalletSessionKey: getWalletSessionKey
+ * was called from /dashboard/swap on Naka-wallet swaps, but no caller
+ * ever invoked the setter. Result: every Naka-wallet swap failed with
+ * "Wallet session expired. Please unlock your wallet." despite there
+ * being no UI path to actually unlock. This modal is that UI path.
+ *
+ * Industry parity: Trust Wallet, Phantom, Rabby all gate signing
+ * operations behind a session-cached password / biometric. The cache
+ * has a hard 30-min TTL plus pagehide / visibilitychange clearing —
+ * that lives in lib/wallet/walletSession.ts and is unchanged here.
+ */
+
+import { useEffect, useRef, useState } from 'react';
+import { Lock, X, Loader2, Eye, EyeOff } from 'lucide-react';
+import { verifyWalletPassword } from '@/lib/wallet/encryption';
+import { setWalletSessionKey } from '@/lib/wallet/walletSession';
+
+interface Props {
+  /** AES-GCM JSON payload from StoredWallet.encryptedKey. */
+  encryptedKey: string;
+  /** Friendly name for the active wallet — displayed in the modal title. */
+  walletName?: string;
+  /** Last-4 of the active address, for visual confirmation. */
+  addressShort?: string;
+  /** Called with the verified password after a successful unlock. */
+  onUnlocked: (password: string) => void;
+  onClose: () => void;
+}
+
+export default function UnlockWalletModal({
+  encryptedKey,
+  walletName,
+  addressShort,
+  onUnlocked,
+  onClose,
+}: Props) {
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Auto-focus the password field — users open this modal expecting
+    // to immediately type, no extra click required.
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const submit = async () => {
+    if (!password) {
+      setError('Enter your wallet password.');
+      return;
+    }
+    setVerifying(true);
+    setError(null);
+    try {
+      const ok = await verifyWalletPassword(encryptedKey, password);
+      if (!ok) {
+        setError('Wrong password. Try again.');
+        return;
+      }
+      setWalletSessionKey(password);
+      onUnlocked(password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to verify password.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Unlock wallet"
+    >
+      <div
+        className="w-full max-w-[420px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 flex items-center justify-center">
+              <Lock className="w-4 h-4 text-[#0A1EFF]" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white leading-tight">Unlock {walletName || 'wallet'}</h2>
+              {addressShort && (
+                <p className="text-[10px] font-mono text-gray-500 leading-tight">{addressShort}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/5"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Enter your wallet password to unlock signing for the next 30
+          minutes. The password is held in memory only and cleared
+          automatically when you close or background the tab.
+        </p>
+
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block font-medium">Password</label>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type={show ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+              placeholder="Wallet password"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShow((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300"
+              aria-label={show ? 'Hide password' : 'Show password'}
+            >
+              {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {error && (
+            <p className="text-[11px] text-[#EF4444] mt-2 bg-[#EF4444]/5 px-3 py-2 rounded-lg border border-[#EF4444]/15" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={() => void submit()}
+          disabled={verifying || !password}
+          className="w-full py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+        >
+          {verifying ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>) : 'Unlock'}
+        </button>
+      </div>
+    </div>
+  );
+}

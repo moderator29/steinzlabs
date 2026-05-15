@@ -18,6 +18,10 @@ import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
+// Audit B4 — shared AES-GCM crypto, lifted from this file so the new
+// UnlockWalletModal can verify a typed password without duplicating
+// the Web Crypto plumbing. Original inline definitions removed below.
+import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
 
 interface TokenBalance {
   symbol: string;
@@ -158,56 +162,8 @@ function resolveCoinGeckoId(symbol: string, chain: { coinGeckoId: string }): str
   return SYMBOL_TO_CG[symbol.toUpperCase()] || chain.coinGeckoId;
 }
 
-async function encryptPrivateKey(plaintext: string, password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt']
-  );
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plaintext));
-  return JSON.stringify({
-    v: 2,
-    data: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...salt)),
-  });
-}
-
-async function decryptPrivateKey(encoded: string, password: string): Promise<string> {
-  let parsed: { v?: number; data: string; iv: string; salt: string };
-  try {
-    parsed = JSON.parse(encoded);
-    if (parsed.v !== 2) throw new Error('Unsupported encryption version');
-  } catch {
-    // Legacy XOR fallback removed (§1 Critical) — XOR with a password
-    // keystream is cryptographically broken (known-plaintext recovery).
-    // Affected wallets must be re-imported from the seed phrase to
-    // upgrade the at-rest format to AES-256-GCM (PBKDF2/100k/SHA-256).
-    throw new Error(
-      'This wallet uses an outdated encryption format. Please re-import the seed phrase to upgrade to AES-256-GCM.',
-    );
-  }
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
-  const salt = Uint8Array.from(atob(parsed.salt), c => c.charCodeAt(0));
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['decrypt']
-  );
-  const iv = Uint8Array.from(atob(parsed.iv), c => c.charCodeAt(0));
-  const data = Uint8Array.from(atob(parsed.data), c => c.charCodeAt(0));
-  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
-  return new TextDecoder().decode(decrypted);
-}
+// encryptPrivateKey + decryptPrivateKey were defined here as file-locals.
+// They now live in lib/wallet/encryption.ts; see the top-of-file import.
 
 function CoinLogo({ symbol, size = 40, className = '' }: { symbol: string; size?: number; className?: string }) {
   const [imgError, setImgError] = useState(false);
@@ -1835,12 +1791,82 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
 function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: string[]; onAdd: (addr: string) => void }) {
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
+  // Audit B4 / P1 #12 — GoPlus pre-add scan. Without this, users can
+  // import any contract address as a custom token, including outright
+  // honeypots and fake stablecoins that show $50K balances they cannot
+  // sell. Now we run /api/security/scan before saving and surface the
+  // verdict so the user can confirm/cancel knowing the risk.
+  const [scanning, setScanning] = useState(false);
+  const [scanVerdict, setScanVerdict] = useState<null | {
+    score: number;
+    level: string;
+    reasons: string[];
+  }>(null);
 
-  const handleAdd = () => {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { setError('Invalid ERC-20 contract address'); return; }
-    if (tokens.includes(address.toLowerCase())) { setError('Token already added'); return; }
-    onAdd(address.toLowerCase());
+  // Audit B4 / P1 #11 — paste affordance. Long contract addresses are
+  // notoriously typo-prone; clipboard.readText (with permission) is the
+  // industry-standard one-tap fix used by Trust Wallet + Phantom.
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const cleaned = text.trim();
+      if (cleaned) {
+        setAddress(cleaned);
+        setError('');
+        setScanVerdict(null);
+      }
+    } catch (err) {
+      // Clipboard permission denied or HTTPS-only context — surface a
+      // gentle hint rather than a hard error.
+      console.warn('[AddToken] Clipboard read failed:', err);
+      setError('Clipboard access denied. Paste manually with Ctrl/Cmd+V.');
+    }
   };
+
+  const runScan = async (addr: string) => {
+    setScanning(true);
+    setScanVerdict(null);
+    try {
+      const res = await fetch('/api/security/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scan_type: 'token', target: addr, chain: 'ethereum' }),
+      });
+      if (!res.ok) throw new Error(`Scan failed (${res.status})`);
+      const json = (await res.json()) as { score: number; level: string; reasons: string[] };
+      setScanVerdict({ score: json.score, level: json.level, reasons: json.reasons ?? [] });
+    } catch (err) {
+      // Scan unavailable should not BLOCK the add — fall back to allowing
+      // the add with a clear warning that we couldn't verify safety.
+      console.warn('[AddToken] Security scan failed:', err);
+      setScanVerdict({ score: 0, level: 'unknown', reasons: ['Security scan unavailable. Proceed with caution.'] });
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { setError('Invalid ERC-20 contract address'); return; }
+    const lower = address.toLowerCase();
+    if (tokens.includes(lower)) { setError('Token already added'); return; }
+    if (!scanVerdict) {
+      await runScan(lower);
+      return; // First click runs the scan; user confirms with second click.
+    }
+    onAdd(lower);
+  };
+
+  // Static class map — Tailwind needs literal class names at build
+  // time, not runtime-interpolated ones, so each tone has its own
+  // pre-baked combo.
+  const VERDICT_CLASSES: Record<string, string> = {
+    safe: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+    danger: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
+    critical: 'bg-red-500/10 border-red-500/30 text-red-300',
+    unknown: 'bg-slate-500/10 border-slate-500/30 text-slate-300',
+  };
+  const verdictClass = VERDICT_CLASSES[scanVerdict?.level ?? 'unknown'] ?? VERDICT_CLASSES.unknown;
 
   return (
     <div className="min-h-screen text-white pb-24">
@@ -1862,11 +1888,48 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
         <div className="space-y-4">
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Token Contract Address</label>
-            <input value={address} onChange={e => { setAddress(e.target.value); setError(''); }} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0x..." />
+            <div className="relative">
+              <input
+                value={address}
+                onChange={e => { setAddress(e.target.value); setError(''); setScanVerdict(null); }}
+                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pr-20 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                placeholder="0x..."
+              />
+              <button
+                type="button"
+                onClick={handlePaste}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-slate-200 border border-white/10"
+                title="Paste from clipboard"
+              >
+                Paste
+              </button>
+            </div>
           </div>
           {error && <p className="text-xs text-[#EF4444]">{error}</p>}
-          <button onClick={handleAdd} disabled={!address} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
-            Add Token
+          {scanVerdict && (
+            <div className={`rounded-xl border p-3 text-xs space-y-1 ${verdictClass}`}>
+              <div className="flex items-center justify-between font-semibold">
+                <span>Security scan: {scanVerdict.level.toUpperCase()}</span>
+                <span className="font-mono">{scanVerdict.score}/100</span>
+              </div>
+              {scanVerdict.reasons.length > 0 && (
+                <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90">
+                  {scanVerdict.reasons.slice(0, 4).map((r, i) => (<li key={i}>{r}</li>))}
+                </ul>
+              )}
+              <p className="text-[10px] opacity-70 pt-1">
+                {scanVerdict.level === 'safe' || scanVerdict.level === 'unknown'
+                  ? 'Press Add Token again to confirm.'
+                  : 'This token has risk indicators. Press Add Token again only if you accept the risk.'}
+              </p>
+            </div>
+          )}
+          <button
+            onClick={handleAdd}
+            disabled={!address || scanning}
+            className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50"
+          >
+            {scanning ? 'Scanning…' : scanVerdict ? 'Add Token' : 'Scan + Add Token'}
           </button>
 
           {tokens.length > 0 && (
