@@ -1,5 +1,6 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 import { getTrendingByVolume, getTrendingByHolderGrowth } from '@/lib/services/birdeye';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
@@ -226,7 +227,11 @@ async function fetchCoinsWorthWatching(archetype: WalletArchetype, heldAddresses
 
 // ─── GET Handler ──────────────────────────────────────────────────────────────
 
-export async function GET(request: Request) {
+// withTierGate('pro') — DNA analysis fans out to Birdeye, Alchemy
+// + an Anthropic synthesis call (Sonnet 4.6, billable). Without an
+// auth + tier gate, a script could iterate addresses and burn
+// $150-300/day in API spend; tier-gating Pro+ caps the surface.
+export const GET = withTierGate('pro', async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 
@@ -267,4 +272,4 @@ export async function GET(request: Request) {
     const msg = error instanceof Error ? error.message : 'DNA analysis failed';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});

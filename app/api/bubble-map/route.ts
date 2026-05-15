@@ -1,5 +1,7 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { buildContractIntelligence, topHolderRisk, type ContractHolder } from '@/lib/services/contract-intelligence';
 import { getContractPrice, getTokenDetail } from '@/lib/services/coingecko';
 
@@ -102,8 +104,15 @@ function buildWalletConnections(nodes: BubbleNode[]): BubbleLink[] {
 }
 
 // ─── GET Handler ──────────────────────────────────────────────────────────────
+//
+// P0 audit fix: previously this route had ZERO auth or tier gate, so
+// any user (logged-in or not) could enumerate unlimited token holders
+// via the bubble-map API. The page hardcoded `tier:'pro'` client-side
+// which made the gate look enforced — it wasn't. Now wrapped in
+// withTierGate('pro') so free-tier callers get a clean 403 and the
+// expensive contract-intelligence pipeline doesn't run.
 
-export async function GET(request: Request) {
+export const GET = withTierGate('pro', async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
   const chain = (searchParams.get('chain') || 'ethereum').toLowerCase();
@@ -238,7 +247,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(bubbleData);
   } catch (err) {
-    console.error('[bubble-map] failed:', err);
+    // CLAUDE.md: no console.error in production — Sentry capture instead.
+    Sentry.captureException(err, { tags: { route: 'bubble-map' } });
     return NextResponse.json({ error: 'Failed to generate bubble map data' }, { status: 500 });
   }
-}
+});

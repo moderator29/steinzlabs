@@ -1137,8 +1137,21 @@ export async function POST(request: NextRequest) {
     const languageInstruction = resolvedLanguage !== 'English'
       ? `Respond entirely in ${resolvedLanguage}.` : '';
 
+    // Prompt-injection guard — currentPage and currentToken arrive
+    // from the client and (for tokens) ultimately from on-chain
+    // metadata that a malicious deployer can shape to break the
+    // system-prompt boundary. personality/language/depth already have
+    // allow-lists; context fields didn't. Strip control chars + cap
+    // length so a crafted symbol can't smuggle "Ignore prior
+    // instructions" into the system prompt.
+    const sanitizeCtx = (s: unknown, maxLen: number): string => {
+      if (typeof s !== 'string') return '';
+      return s.replace(/[ -]/g, ' ').replace(/[\r\n\t]/g, ' ').trim().slice(0, maxLen);
+    };
+    const safeCurrentPage = sanitizeCtx(context?.currentPage, 64);
+    const safeCurrentToken = sanitizeCtx(context?.currentToken, 32);
     const platformContextStr = context
-      ? `Current Page: ${context.currentPage ?? 'Unknown'} | Token in View: ${context.currentToken ?? 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────

@@ -1,21 +1,20 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 
-const ADDRESS_RE = /^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
-
-function sanitizeSymbol(s: unknown): string {
-  if (typeof s !== 'string') return 'UNKNOWN';
-  return s.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 16) || 'UNKNOWN';
+// Prompt-injection guard — token symbols come from on-chain metadata
+// that a malicious deployer can craft to break the system-prompt
+// boundary (e.g. `}\n\nIgnore prior instructions...`).
+function sanitizeSymbol(s: unknown, maxLen = 16): string {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[ -]/g, ' ').replace(/[\r\n\t"\\}]/g, ' ').trim().slice(0, maxLen);
 }
 
-function sanitizeNumeric(v: unknown): string {
-  const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
-  if (!Number.isFinite(n)) return '0';
-  return n.toString().slice(0, 32);
-}
-
-export async function POST(request: Request) {
+// withTierGate('pro') — DNA analysis calls Sonnet 4.6 (billable);
+// the route had zero auth or rate-limit so a script could iterate
+// addresses and burn $150-300/day in Anthropic spend. Pro+ only now.
+export const POST = withTierGate('pro', async (request: NextRequest) => {
   try {
     const { walletAddress, holdings, totalBalance, txCount } = await request.json() as {
       walletAddress?: string;
@@ -28,10 +27,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
     }
 
-    const safeHoldings = Array.isArray(holdings) ? holdings.slice(0, 50) : [];
-    const holdingsText = safeHoldings.length > 0
-      ? safeHoldings
-          .map(h => `${sanitizeSymbol(h.symbol)}: $${sanitizeNumeric(h.valueUsd)} (${sanitizeNumeric(h.balance)})`)
+    const holdingsText = holdings && holdings.length > 0
+      ? holdings
+          .map((h) => `${sanitizeSymbol(h.symbol)}: $${Number(h.valueUsd) || 0} (${Number(h.balance) || 0})`)
           .join(', ')
       : 'No on-chain holdings detected';
     const safeTotalBalance = sanitizeNumeric(totalBalance);
@@ -86,7 +84,24 @@ Provide a detailed JSON response with this EXACT structure. All text fields must
 Rules: Be specific and data-driven. Reference actual holdings when possible. Return ONLY valid JSON.`;
 
     const responseText = await vtxAnalyze(prompt, 2048);
-    if (!responseText) throw new Error('AI analysis unavailable');
+    if (!responseText) {
+      // Stub fallback — fail GRACEFULLY instead of throwing. Frontend
+      // shows a "AI analysis unavailable" notice over an on-chain-only
+      // summary instead of a generic 500.
+      return NextResponse.json({
+        analysis: {
+          tradingStyle: 'Unknown',
+          riskProfile: 'Moderate',
+          overallScore: 0,
+          portfolioGrade: 'C',
+          topInsight: 'AI analysis unavailable — using on-chain data only.',
+          marketOutlook: 'Insufficient data for AI synthesis at this time.',
+          note: 'AI analysis unavailable — using on-chain data only.',
+        },
+        wallet: walletAddress,
+        degraded: true,
+      });
+    }
 
     let analysis;
     try {
@@ -105,4 +120,4 @@ Rules: Be specific and data-driven. Reference actual holdings when possible. Ret
     const msg = error instanceof Error ? error.message : 'Analysis failed';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});
