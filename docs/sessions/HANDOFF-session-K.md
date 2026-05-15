@@ -5,6 +5,26 @@
 Owner: Phantomfcalls / moderator29. Brand: Naka Labs (Steinz Labs codename).
 Previous handoffs in `docs/sessions/HANDOFF-session-A.md` … `HANDOFF-session-J.md`.
 
+### 0z. Environment — confirm BEFORE you say "I can't"
+
+**The repo is on this machine.** All sessions A–K ran here. Do not assume otherwise.
+
+- **OS:** Windows 11 Pro, PowerShell + bash (Git Bash) both available.
+- **Repo path:** `c:\Users\DELL LATITUDE 5320\Downloads\steinzlabs` — `cd` into this before doing anything. The default working dir Claude Code lands in (`c:\Users\DELL LATITUDE 5320\Downloads`) is the parent, NOT a git repo. If `git status` errors, you're in the wrong folder — `cd steinzlabs`.
+- **Remote:** `https://github.com/moderator29/steinzlabs.git` — already cloned, already authenticated for `git push` (HTTPS credentials cached in Windows Credential Manager). You can push branches; you cannot open PRs.
+- **`gh` CLI is NOT installed.** This is intentional, NOT a blocker. The rule is **branch + push + STOP** — the owner opens PRs in the GitHub UI. Do not try `gh pr create`, do not try to install gh, do not block on it. Push the branch, tell the owner the URL `https://github.com/moderator29/steinzlabs/pull/new/<branch>` that GitHub returns in the push output, and stop.
+- **MCP servers connected:** Supabase + Vercel. There is no GitHub MCP. Branch operations (delete remote branch, list branches, check merge state) use `git` directly, not MCP:
+  - List remote branches: `git ls-remote --heads origin`
+  - Check if branch is merged into main: `git merge-base --is-ancestor <branch> origin/main` (exit 0 = merged)
+  - Delete remote branch: `git push origin --delete <branch>`
+  - Bulk delete merged branches: enumerate with the ancestor check, then xargs the deletes
+- **Conflict resolution:** done locally with `git rebase`, `git rebase -X theirs origin/main`, or `git merge`. No special tooling needed. Push with `--force-with-lease` after rebase.
+- **Supabase project:** `phvewrldcdxupsnakddx`. Apply migrations via `mcp__supabase__apply_migration` (may be classifier-blocked — fall back to writing SQL into `supabase/migrations/` and asking the owner to apply manually). Always `mcp__supabase__list_migrations` first to check live state vs the repo.
+- **Vercel:** auto-deploys from main; you don't push to Vercel directly. Use Vercel MCP only to read deployment/runtime logs when debugging.
+- **Dev server (if you need to test UI):** `cd steinzlabs && npm run dev` (Next.js 16 Turbopack on port 3000). Note: many sessions skip this; if you ship UI changes you should still try.
+
+If this section's claims don't match what you observe (e.g., `cd steinzlabs` fails, push is rejected for auth), STOP and tell the owner — don't try to "work around" by inventing missing tools.
+
 ### 0a. The full ruleset — do not violate any of these
 
 **Git identity & commits**
