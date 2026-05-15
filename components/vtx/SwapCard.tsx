@@ -34,6 +34,13 @@ export interface SwapCardData {
 interface Props {
   swap: SwapCardData;
   walletAddress?: string;
+  /**
+   * §11.4 — optional dismiss callback. When supplied, the card renders a
+   * secondary Cancel button next to the primary action so the user can
+   * back out without sending the message thread to a different chat.
+   * Parents that don't pass this just hide the cancel button.
+   */
+  onCancel?: () => void;
 }
 
 type Stage = 'quoting' | 'ready' | 'signing' | 'done' | 'error' | 'insufficient';
@@ -68,7 +75,7 @@ function TokenGlyph({ symbol }: { symbol: string }) {
   return <img src={src} alt={symbol} className="w-8 h-8 rounded-full bg-[#141824]" />;
 }
 
-export function SwapCard({ swap, walletAddress }: Props) {
+export function SwapCard({ swap, walletAddress, onCancel }: Props) {
   const [stage, setStage] = useState<Stage>('quoting');
   const [quote, setQuote] = useState<SwapCardData>(swap);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -443,17 +450,29 @@ export function SwapCard({ swap, walletAddress }: Props) {
             <RefreshCw size={14} /> Check balance again
           </button>
         ) : (
-          <button
-            onClick={handleSign}
-            disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
-            className="naka-button-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ paddingTop: 12, paddingBottom: 12 }}
-          >
-            {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}
-            {stage === 'ready' && (<><ArrowDownUp size={14} /> Confirm Swap</>)}
-            {stage === 'signing' && (<><Loader2 size={14} className="animate-spin" /> Confirm in your wallet…</>)}
-            {stage === 'error' && (<><ArrowDownUp size={14} /> Retry</>)}
-          </button>
+          <div className={onCancel ? 'grid grid-cols-[1fr_auto] gap-2' : ''}>
+            <button
+              onClick={handleSign}
+              disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
+              className="naka-button-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ paddingTop: 12, paddingBottom: 12 }}
+            >
+              {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}
+              {stage === 'ready' && (<><ArrowDownUp size={14} /> Confirm Swap</>)}
+              {stage === 'signing' && (<><Loader2 size={14} className="animate-spin" /> Confirm in your wallet…</>)}
+              {stage === 'error' && (<><ArrowDownUp size={14} /> Retry</>)}
+            </button>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                disabled={stage === 'signing'}
+                className="px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Cancel swap"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

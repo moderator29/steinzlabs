@@ -362,6 +362,7 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
               chartType="candlestick"
               indicators={{ ema21: true, volume: true }}
               height={176}
+              staticChart
             />
           </div>
         </div>
@@ -378,6 +379,7 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
             chartType="candlestick"
             indicators={{ ema21: true, volume: true }}
             height={176}
+            staticChart
           />
         </div>
       </div>
@@ -553,6 +555,16 @@ export default function VtxAiTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // §11.1 — preload the AdvancedChart bundle the moment the VTX tab
+  // mounts so the first chart render skips the dynamic-import wait.
+  // Without this, the user sees "Loading chart…" for ~600-1200ms while
+  // the lightweight-charts chunk downloads. Pre-warming it on tab open
+  // means by the time the user sends a token query the chunk is in the
+  // browser's module cache and the chart appears instantly.
+  useEffect(() => {
+    void import('@/components/trading/AdvancedChart');
+  }, []);
 
   useEffect(() => {
     if (!initialized.current) {
