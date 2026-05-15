@@ -62,9 +62,26 @@ async function dexscreenerFallback(contract: string) {
     _source: 'dexscreener',
     _dex: {
       volume_m5: pair.volume?.m5 ?? 0,
+      volume_h1: pair.volume?.h1 ?? 0,
+      volume_h6: pair.volume?.h6 ?? 0,
       volume_h24: pair.volume?.h24 ?? 0,
       buys_h24: pair.txns?.h24?.buys ?? 0,
       sells_h24: pair.txns?.h24?.sells ?? 0,
+      // Audit P1 #17 — DexScreener-parity full tier strip on the
+      // detail-page header. CoinGecko's price endpoint exposes only 1h
+      // and 24h percentages; DexScreener tracks m5/h1/h6/h24 per pair,
+      // which is what serious traders use to read momentum.
+      change_m5: pair.priceChange?.m5 ?? null,
+      change_h1: pair.priceChange?.h1 ?? null,
+      change_h6: pair.priceChange?.h6 ?? null,
+      change_h24: pair.priceChange?.h24 ?? null,
+      // Audit P1 #20 — needed so the chart for off-CEX tokens (Naka Go,
+      // Pleasure Coin, every long-tail) can render against the actual
+      // DEX pair instead of the broken BINANCE:{SYM}USDT fallback.
+      pair_address: pair.pairAddress,
+      pair_chain_id: pair.chainId,
+      dex_id: pair.dexId,
+      liquidity_usd: pair.liquidity?.usd ?? null,
     },
   };
 }
