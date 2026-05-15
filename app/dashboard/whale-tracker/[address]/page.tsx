@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, CheckCircle2, Loader2, Copy } from "lucide-react";
+import { ExternalLink, CheckCircle2, Loader2, Copy, Download } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
@@ -301,6 +301,20 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 Renders an empty-state stub when fewer than 2 USD-valued trades
                 exist, so we don't show a flat line that looks broken. */}
             <WhaleActivityChart activity={data.activity} />
+            {/* Audit B6 / P1 #27 — CSV export. Nansen offers this on
+                paid tiers; we put it in-page so any tier-gated user
+                can pull their own analysis without an API key. */}
+            {data.activity.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => downloadActivityCsv(address, chain, data.activity)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10"
+                >
+                  <Download size={12} /> Export CSV ({data.activity.length})
+                </button>
+              </div>
+            )}
             <div className="rounded-xl border border-slate-800 overflow-hidden">
             {data.activity.length === 0 ? (
               <div className="py-12 text-center text-sm text-slate-500">
@@ -337,15 +351,11 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
         )}
 
         {tab === "tokens" && (
-          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
-            Token holdings will populate as the on-chain indexer ships in Session 5B-2.
-          </div>
+          <HoldingsPanel address={address} chain={chain} />
         )}
 
         {tab === "counterparties" && (
-          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
-            Counterparty graph requires wallet_edges data. Run the cluster-analysis cron to populate.
-          </div>
+          <CounterpartiesPanel activity={data.activity} />
         )}
 
         {tab === "copy" && (
@@ -446,3 +456,273 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
 }
 
 // WhaleAvatar moved to components/whales/WhaleAvatar.tsx (§4 phase B).
+
+// ─── Audit B6 / P0 #7 — Holdings panel (was placeholder) ──────────────────
+
+interface Holding {
+  contract: string | null;
+  symbol: string;
+  name: string;
+  balance: number;
+  decimals: number;
+  priceUsd: number;
+  valueUsd: number;
+  logo: string | null;
+}
+
+function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
+  const [data, setData] = useState<{
+    holdings: Holding[];
+    total_value_usd: number;
+    message?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/whales/${address}/holdings?chain=${encodeURIComponent(chain)}`, {
+          signal: AbortSignal.timeout(15_000),
+          cache: 'no-store',
+        });
+        if (!res.ok) throw new Error(`Holdings ${res.status}`);
+        const json = (await res.json()) as { holdings: Holding[]; total_value_usd: number; message?: string };
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load holdings');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [address, chain]);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+        <Loader2 className="w-4 h-4 mx-auto mb-2 animate-spin" />
+        Loading on-chain holdings…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 text-sm text-rose-300">
+        Failed to load holdings: {error}
+      </div>
+    );
+  }
+  if (!data || (data.holdings.length === 0 && !data.message)) {
+    return (
+      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+        No holdings found for this wallet on {chain}.
+      </div>
+    );
+  }
+  if (data.message) {
+    return (
+      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+        {data.message}
+      </div>
+    );
+  }
+
+  const total = data.total_value_usd;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 flex items-baseline justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-slate-500">Total holdings (priced)</p>
+          <p className="text-2xl font-mono font-bold text-white">{fmtUsd(total)}</p>
+        </div>
+        <span className="text-[10px] text-slate-500">{data.holdings.length} tokens</span>
+      </div>
+      <div className="rounded-xl border border-slate-800 overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+            <tr>
+              <th className="text-left px-3 py-2">Token</th>
+              <th className="text-right px-3 py-2">Balance</th>
+              <th className="text-right px-3 py-2">Price</th>
+              <th className="text-right px-3 py-2">Value</th>
+              <th className="text-right px-3 py-2">% of port</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.holdings.map((h) => {
+              const pct = total > 0 ? (h.valueUsd / total) * 100 : 0;
+              return (
+                <tr key={h.contract ?? 'native'} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
+                  <td className="px-3 py-2 flex items-center gap-2">
+                    {h.logo
+                      ? <img src={h.logo} alt={h.symbol} className="w-5 h-5 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                      : <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] font-bold text-slate-300">{h.symbol.slice(0, 2)}</div>}
+                    <div className="min-w-0">
+                      <div className="font-mono text-white">{h.symbol}</div>
+                      <div className="text-[10px] text-slate-500 truncate max-w-[140px]">{h.name}</div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-slate-300 tabular-nums">
+                    {h.balance < 1 ? h.balance.toFixed(6) : h.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-slate-400 tabular-nums">
+                    {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-white tabular-nums">{fmtUsd(h.valueUsd)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="inline-flex items-center gap-1.5">
+                      <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, pct)}%` }} />
+                      </div>
+                      <span className="text-[10px] text-slate-400 tabular-nums w-10 text-right">{pct.toFixed(1)}%</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Audit B6 / P0 #7 — Counterparties panel (was placeholder) ────────────
+
+interface ActivityRow {
+  id: string;
+  action: string;
+  token_symbol: string | null;
+  value_usd: number | null;
+  counterparty: string | null;
+  counterparty_label: string | null;
+  timestamp: string;
+}
+
+interface CounterpartyAggregate {
+  address: string;
+  label: string | null;
+  txCount: number;
+  totalUsd: number;
+  buys: number;
+  sells: number;
+  transfers: number;
+  lastTimestamp: string;
+}
+
+function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
+  // Audit B6 / P0 #7 — instead of waiting on a wallet_edges cron we
+  // can derive counterparty graph entries directly from the activity
+  // rows we already render in the Activity tab. Aggregating client-
+  // side keeps the API surface unchanged and gives the user immediate
+  // value (Arkham parity for the most common "who did this whale
+  // trade with" question).
+  const aggregates = useMemo<CounterpartyAggregate[]>(() => {
+    const byAddr = new Map<string, CounterpartyAggregate>();
+    for (const a of activity) {
+      const key = a.counterparty;
+      if (!key) continue;
+      const prev = byAddr.get(key);
+      if (prev) {
+        prev.txCount += 1;
+        prev.totalUsd += a.value_usd ?? 0;
+        if (a.action === 'buy') prev.buys += 1;
+        else if (a.action === 'sell') prev.sells += 1;
+        else prev.transfers += 1;
+        if (a.timestamp > prev.lastTimestamp) prev.lastTimestamp = a.timestamp;
+      } else {
+        byAddr.set(key, {
+          address: key,
+          label: a.counterparty_label,
+          txCount: 1,
+          totalUsd: a.value_usd ?? 0,
+          buys: a.action === 'buy' ? 1 : 0,
+          sells: a.action === 'sell' ? 1 : 0,
+          transfers: a.action === 'transfer' ? 1 : 0,
+          lastTimestamp: a.timestamp,
+        });
+      }
+    }
+    return Array.from(byAddr.values()).sort((a, b) => b.totalUsd - a.totalUsd);
+  }, [activity]);
+
+  if (aggregates.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+        No counterparties in the recorded activity yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-800 overflow-hidden">
+      <table className="w-full text-xs">
+        <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+          <tr>
+            <th className="text-left px-3 py-2">Counterparty</th>
+            <th className="text-right px-3 py-2">Txs</th>
+            <th className="text-right px-3 py-2">Buy / Sell / Xfer</th>
+            <th className="text-right px-3 py-2">Total USD</th>
+            <th className="text-right px-3 py-2">Last seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {aggregates.map((a) => (
+            <tr key={a.address} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
+              <td className="px-3 py-2">
+                <div className="text-slate-300">{a.label ?? '—'}</div>
+                <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">{a.address}</div>
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-white">{a.txCount}</td>
+              <td className="px-3 py-2 text-right font-mono text-slate-400 text-[11px]">
+                <span className="text-emerald-400">{a.buys}</span> /{' '}
+                <span className="text-red-400">{a.sells}</span> /{' '}
+                <span className="text-slate-300">{a.transfers}</span>
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-white">{fmtUsd(a.totalUsd)}</td>
+              <td className="px-3 py-2 text-right text-slate-500 text-[11px]">{relativeTime(a.lastTimestamp)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Audit B6 / P1 #27 — CSV export of activity rows ──────────────────────
+
+function downloadActivityCsv(address: string, chain: string, rows: ActivityRow[]) {
+  // Standard CSV with quoted fields. Excel / Google Sheets / Pandas
+  // all read this format without preamble. Quote-escapes any embedded
+  // double-quotes in counterparty labels per RFC 4180.
+  const headers = ['timestamp', 'action', 'token', 'value_usd', 'counterparty_label', 'counterparty_address'];
+  const escape = (v: string | number | null): string => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [
+    headers.join(','),
+    ...rows.map((r) => [
+      r.timestamp,
+      r.action,
+      r.token_symbol ?? '',
+      r.value_usd ?? '',
+      r.counterparty_label ?? '',
+      r.counterparty ?? '',
+    ].map(escape).join(',')),
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `whale-${chain}-${address.slice(0, 8)}-activity-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
