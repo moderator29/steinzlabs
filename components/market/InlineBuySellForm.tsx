@@ -3,20 +3,30 @@
 /**
  * Batch 7 / checkprice-style — Inline Buy/Sell form. Lives in the
  * right rail of the coin detail page on desktop, and in a collapsible
- * sheet on mobile. Replaces the old modal flow.
+ * sheet on mobile.
  *
- * Mirrors checkprice layout: BUY / SELL pill tabs at top, USD amount
- * input, 0/25/50/75/MAX quick buttons, slippage + routing "Auto" labels,
- * big primary action button, Available-to-Trade balance, Deposit +
- * Withdraw text links.
+ * Audit branch fix/market-trading-panel-correctness:
+ *   - "Available to buy" was reading balance.totalUsd (the user's ENTIRE
+ *     portfolio across every chain). Press MAX → swap fails on-chain →
+ *     user loses gas. Now reads chain-scoped stablecoin (USDC + USDT)
+ *     balance only, so MAX matches what 0x can actually execute.
+ *   - Slippage was hardcoded to 0.5% with NO UI to change it. Now a
+ *     pill row with 0.1 / 0.5 / 1 / 3 / Custom presets, persisted per
+ *     chain in localStorage so a Solana 1% setting doesn't bleed into
+ *     Ethereum.
+ *   - Chain-mismatch guard: if the connected wallet is sitting on
+ *     Ethereum but the URL is /market/base/..., the form was firing
+ *     swaps on the wrong chain. Now surfaces a banner + disables the
+ *     execute button until the wallet matches.
  */
 
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
-import ChainMismatchBanner from './ChainMismatchBanner';
+import { Settings, AlertTriangle } from 'lucide-react';
 
 const QUICK = [0, 25, 50, 75, 100];
+const SLIPPAGE_PRESETS = ['0.1', '0.5', '1', '3'];
 
 interface Props {
   symbol: string;
@@ -26,10 +36,33 @@ interface Props {
   userId?: string;
 }
 
+function readSlippage(chain: string): string {
+  if (typeof window === 'undefined') return '0.5';
+  try {
+    const v = localStorage.getItem(`steinz_slippage_${chain}`);
+    return v && /^\d+(\.\d+)?$/.test(v) ? v : '0.5';
+  } catch {
+    return '0.5';
+  }
+}
+
+function writeSlippage(chain: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`steinz_slippage_${chain}`, value);
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+}
+
 export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUSD, userId }: Props) {
   const { address: walletAddr, balance, provider, walletPlatformChain } = useWallet();
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
   const [amount, setAmount] = useState('');
+  const [executing, setExecuting] = useState(false);
+  const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+  const [slippage, setSlippage] = useState<string>(() => readSlippage(chain));
+  const [showSlippageInput, setShowSlippageInput] = useState(false);
 
   // Audit M4 #2 — three-tier chain mismatch guard. The platform was
   // letting users sign trades on the wrong network silently:
@@ -67,31 +100,58 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
     window.addEventListener('market:quick-sell', handler);
     return () => window.removeEventListener('market:quick-sell', handler);
   }, [symbol]);
-  const [executing, setExecuting] = useState(false);
-  const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
 
-  const available = mode === 'BUY' ? balance.totalUsd : (balance.tokens[symbol.toUpperCase()] ?? 0) * priceUSD;
+  // Re-read slippage when chain changes — Solana setting shouldn't
+  // bleed into Ethereum.
+  useEffect(() => {
+    setSlippage(readSlippage(chain));
+  }, [chain]);
+
+  // Chain-scoped stablecoin available for BUY. We only count USDC + USDT
+  // because those are what the 0x router actually fills against. Native
+  // gas (ETH/BNB/MATIC/AVAX) is intentionally excluded — you can't pay
+  // for a token AND its gas with the same wei. Industry parity with
+  // Uniswap/MEVX which both quote against the active stablecoin.
+  // SELL mode reads the balance of the token being sold.
+  const chainStablecoinUsd = (balance.tokens['USDC'] ?? 0) + (balance.tokens['USDT'] ?? 0);
+  const tokenHeld = balance.tokens[symbol.toUpperCase()] ?? 0;
+  const available = mode === 'BUY' ? chainStablecoinUsd : tokenHeld * priceUSD;
   const amountNum = parseFloat(amount) || 0;
   const estTokens = priceUSD > 0 ? amountNum / priceUSD : 0;
+
+  const mismatchTarget = isPageSolana ? 'a Solana wallet (Phantom)' : 'an EVM wallet (MetaMask / Reown)';
 
   const onQuick = (pct: number) => {
     if (pct === 0) { setAmount(''); return; }
     setAmount(((available * pct) / 100).toFixed(2));
   };
 
+  const onSlippagePreset = (v: string) => {
+    setSlippage(v);
+    writeSlippage(chain, v);
+    setShowSlippageInput(false);
+  };
+
+  const onSlippageCustom = (v: string) => {
+    if (v && /^\d+(\.\d+)?$/.test(v)) {
+      setSlippage(v);
+      writeSlippage(chain, v);
+    }
+  };
+
   const submit = async () => {
     if (!walletAddr) { setStatus({ kind: 'err', msg: 'Connect a wallet first' }); return; }
     if (chainMismatch) {
-      setStatus({
-        kind: 'err',
-        msg: crossFamilyMismatch
-          ? `Switch to ${isPageSolana ? 'a Solana wallet (Phantom)' : 'an EVM wallet (MetaMask / Reown)'} to trade on ${chain}.`
-          : `Switch your wallet network to ${chain.toUpperCase()} to trade.`,
-      });
+      setStatus({ kind: 'err', msg: `Switch your wallet to ${chain} to execute this trade.` });
       return;
     }
     if (amountNum <= 0) return;
-    if (amountNum > available) { setStatus({ kind: 'err', msg: 'Insufficient balance' }); return; }
+    if (amountNum > available) { setStatus({ kind: 'err', msg: 'Insufficient balance on this chain' }); return; }
+    const slipNum = parseFloat(slippage);
+    if (!Number.isFinite(slipNum) || slipNum <= 0 || slipNum > 50) {
+      setStatus({ kind: 'err', msg: 'Slippage must be between 0 and 50%' });
+      return;
+    }
     setExecuting(true);
     setStatus(null);
     try {
@@ -104,7 +164,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           tokenOut: mode === 'BUY' ? tokenAddress : 'USDC',
           amountIn: amount,
           amountInUSD: amountNum,
-          slippage: 0.5,
+          slippage: slipNum,
           walletAddress: walletAddr,
           userId,
         }),
@@ -114,8 +174,8 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       setStatus({ kind: 'ok', msg: `${mode === 'BUY' ? 'Bought' : 'Sold'} ${estTokens.toFixed(4)} ${symbol}` });
       window.dispatchEvent(new Event('steinz:balance-changed'));
       setAmount('');
-    } catch (e: any) {
-      setStatus({ kind: 'err', msg: e?.message || 'Trade failed' });
+    } catch (e: unknown) {
+      setStatus({ kind: 'err', msg: e instanceof Error ? e.message : 'Trade failed' });
     } finally {
       setExecuting(false);
     }
@@ -141,18 +201,18 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
         </button>
       </div>
 
-      {/* Audit M4 #2 — chain-mismatch banner. Inline before the form
-          so the user can't miss it; trade button below is also
-          disabled. Industry parity: Uniswap blocks the swap and
-          shows "Switch network" inline. */}
+      {/* Chain-family mismatch banner — Industry parity with Uniswap
+          which surfaces "Switch network" before letting the user sign.
+          Cross-family signs (EVM tx on Phantom / SOL tx on MetaMask)
+          are silent-fail vectors so we hard-block them here. */}
       {chainMismatch && (
-        <ChainMismatchBanner
-          crossFamilyMismatch={crossFamilyMismatch}
-          isPageSolana={isPageSolana}
-          provider={provider}
-          chain={chain}
-          walletPlatformChain={walletPlatformChain}
-        />
+        <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
+          <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+          <span>
+            Connected via <span className="font-semibold">{provider}</span>; this page is{' '}
+            <span className="font-semibold uppercase">{chain}</span>. Connect {mismatchTarget} to trade.
+          </span>
+        </div>
       )}
 
       {/* Amount */}
@@ -186,14 +246,68 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
         ))}
       </div>
 
-      {/* Slippage / Routing labels */}
-      <div className="space-y-1.5 mb-3 text-[11px]">
-        <div className="flex justify-between text-slate-400">
-          <span>Slippage</span><span className="text-slate-200">Auto</span>
+      {/* Slippage row — clickable presets + custom input. Replaces the
+          static "Auto" label that gave the user no control. */}
+      <div className="mb-3 text-[11px]">
+        <div className="flex items-center justify-between text-slate-400 mb-1.5">
+          <span className="inline-flex items-center gap-1">
+            <Settings size={11} /> Slippage tolerance
+          </span>
+          <span className="text-slate-200 font-mono">{slippage}%</span>
         </div>
-        <div className="flex justify-between text-slate-400">
-          <span>Routing</span><span className="text-slate-200">Auto</span>
+        <div className="grid grid-cols-5 gap-1">
+          {SLIPPAGE_PRESETS.map((preset) => {
+            const active = slippage === preset && !showSlippageInput;
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => onSlippagePreset(preset)}
+                className={`py-1 rounded text-[10px] font-semibold transition-colors ${
+                  active
+                    ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                    : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-transparent'
+                }`}
+                aria-pressed={active}
+              >
+                {preset}%
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setShowSlippageInput((v) => !v)}
+            className={`py-1 rounded text-[10px] font-semibold transition-colors ${
+              showSlippageInput
+                ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-transparent'
+            }`}
+          >
+            Custom
+          </button>
         </div>
+        {showSlippageInput && (
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            max="50"
+            step="0.1"
+            defaultValue={slippage}
+            onBlur={(e) => onSlippageCustom(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+            placeholder="Custom %"
+            className="mt-1.5 w-full px-2 py-1 rounded bg-slate-900/60 border border-slate-800 text-[11px] focus:outline-none focus:border-[#0A1EFF]/50"
+            autoFocus
+          />
+        )}
+      </div>
+
+      {/* Routing label — actual route preview lives on the swap page;
+          this stays a simple "Auto via 0x" label since the inline form
+          doesn't show the multi-hop breakdown. */}
+      <div className="flex justify-between text-[11px] text-slate-400 mb-3">
+        <span>Routing</span><span className="text-slate-200">Auto via 0x</span>
       </div>
 
       {/* Primary action */}
@@ -217,7 +331,12 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       {/* Balance + deposit/withdraw links */}
       <div className="mt-3 pt-3 border-t border-slate-800/70 text-[11px]">
         <div className="flex justify-between text-slate-400 mb-2">
-          <span>Available to {mode.toLowerCase()}</span>
+          <span>
+            Available to {mode.toLowerCase()}
+            {mode === 'BUY' && (
+              <span className="text-[9px] uppercase ml-1 text-slate-600">on {chain}</span>
+            )}
+          </span>
           <span className="text-slate-200 font-mono">{formatPrice(available)}</span>
         </div>
         {/*

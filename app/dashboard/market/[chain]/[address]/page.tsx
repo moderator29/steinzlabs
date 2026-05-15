@@ -467,7 +467,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       </div>
 
       {/* Batch 9 — Portfolio / Trade History bottom table (checkprice-style) */}
-      <PortfolioHistoryPanel />
+      {/* Audit M4 #7 — scope Portfolio + Trade History to THIS token by
+          default. The component still ships a "Filter · All assets"
+          toggle for users who want the cross-token view. */}
+      <PortfolioHistoryPanel scopeSymbol={symbol} scopeAddress={address} />
 
       {showAlert && detail && (
         <AlertModal
