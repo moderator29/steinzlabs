@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { LABEL_META, type WhaleLabel } from "@/lib/whales/labels";
 // Naka Labs brand icons — swap what's in the library, lucide-fallback
 // for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
 // ArrowLeftRight, Telescope) — they remain visually consistent with the
@@ -98,6 +100,18 @@ export default function WhaleTrackerPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [actionFilter, setActionFilter] = useState<Action>(null);
   const [tokenSearch, setTokenSearch] = useState("");
+  // Audit B5 / P1 #25 — Smart Money / CEX / Bot label-pill filter.
+  // Empty array = no label filter (default Nansen / Arkham behaviour).
+  const [labelFilter, setLabelFilter] = useState<WhaleLabel[]>([]);
+  // Audit B5 / P0 #6 — realtime new-row indicator. We subscribe to
+  // Supabase realtime on whale_activity INSERTs and bump this counter
+  // when a row arrives that *would* match the current filters but
+  // hasn't yet been re-fetched into `feed`. The poll-on-tick still
+  // runs but realtime gives sub-second visibility into NEW activity
+  // instead of waiting up to 15 seconds for the next interval.
+  const [newRowsAvailable, setNewRowsAvailable] = useState(0);
+  const filtersRef = useRef({ size, timeRange, actionFilter, tokenSearch, selectedChains, labelFilter });
+  filtersRef.current = { size, timeRange, actionFilter, tokenSearch, selectedChains, labelFilter };
   const [feed, setFeed] = useState<FeedRow[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
@@ -114,11 +128,13 @@ export default function WhaleTrackerPage() {
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
     setFeedError(null);
+    setNewRowsAvailable(0);
     try {
       const params = new URLSearchParams({ size, time: timeRange, limit: "100" });
       if (activeChainParam) params.set("chains", activeChainParam);
       if (actionFilter) params.set("action", actionFilter);
       if (tokenSearch.trim()) params.set("token", tokenSearch.trim());
+      if (labelFilter.length > 0) params.set("labels", labelFilter.join(","));
       // 10s ceiling so a cold-start Redis miss never leaves the tracker spinning.
       const res = await fetch(`/api/whale-tracker/feed?${params}`, {
         signal: AbortSignal.timeout(10_000),
@@ -136,7 +152,7 @@ export default function WhaleTrackerPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, [size, timeRange, activeChainParam, actionFilter, tokenSearch]);
+  }, [size, timeRange, activeChainParam, actionFilter, tokenSearch, labelFilter]);
 
   const loadWatchlist = useCallback(async () => {
     try {
@@ -169,9 +185,41 @@ export default function WhaleTrackerPage() {
     void loadTopToday();
   }, [loadWatchlist, loadTopToday]);
 
-  // Poll feed every 15s. SSE upgrade can layer on top of this later.
+  // Audit B5 / P0 #6 — realtime first, polling as safety net.
+  // Supabase Realtime emits whale_activity INSERTs sub-second; we count
+  // matches against the active filters and surface a "N new whales —
+  // refresh" pill so the user can pull them in without their reading
+  // position getting yanked. Falling back to a 30s poll catches missed
+  // events (Realtime occasionally drops on reconnect) and keeps the
+  // value_usd freshness honest after enrichment crons run.
   useEffect(() => {
-    const t = setInterval(() => void loadFeed(), 15_000);
+    if (!supabase) return;
+    const channel = supabase
+      .channel('whale-tracker-live')
+      .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'whale_activity' },
+          (payload) => {
+            const row = payload.new as { value_usd?: number; chain?: string; action?: string; token_symbol?: string };
+            const f = filtersRef.current;
+            const minUsd = ({ '10k': 10_000, '50k': 50_000, '100k': 100_000, '500k': 500_000, '1m': 1_000_000 } as Record<string, number>)[f.size] ?? 100_000;
+            if ((row.value_usd ?? 0) < minUsd) return;
+            if (f.actionFilter && row.action !== f.actionFilter) return;
+            if (f.selectedChains.length > 0 && !f.selectedChains.includes('all') && row.chain && !f.selectedChains.includes(row.chain)) return;
+            if (f.tokenSearch && row.token_symbol && !row.token_symbol.toLowerCase().includes(f.tokenSearch.toLowerCase())) return;
+            // Label filter not applied here — we don't have entity_type
+            // on the raw INSERT row; the next refresh pulls it from the
+            // enriched feed endpoint. Indicator slightly over-counts but
+            // never misses, which is the safer direction.
+            setNewRowsAvailable((n) => n + 1);
+          })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, []);
+
+  // Polling safety net — drops to 30s now that realtime is the
+  // primary path. Pre-fix this was the only freshness mechanism at 15s.
+  useEffect(() => {
+    const t = setInterval(() => void loadFeed(), 30_000);
     return () => clearInterval(t);
   }, [loadFeed]);
 
@@ -315,13 +363,60 @@ export default function WhaleTrackerPage() {
             <option value="transfer">Transfer</option>
           </select>
         </div>
+        {/* Audit B5 / P1 #25 — Smart Money / CEX / Bot label-pill filter
+            row. Multi-select; each toggle adds/removes from labelFilter
+            and the feed re-fetches with ?labels=…. */}
+        <div className="max-w-7xl mx-auto px-4 pb-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 mr-1">Labels</span>
+          {(['smart_money', 'cex', 'mm', 'bot', 'insider', 'bridge'] as WhaleLabel[]).map((lbl) => {
+            const active = labelFilter.includes(lbl);
+            const meta = LABEL_META[lbl];
+            return (
+              <button
+                key={lbl}
+                onClick={() => setLabelFilter((prev) => active ? prev.filter((l) => l !== lbl) : [...prev, lbl])}
+                className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
+                  active
+                    ? 'text-white'
+                    : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:text-white'
+                }`}
+                style={active ? { backgroundColor: `${meta.color}20`, borderColor: `${meta.color}55`, color: meta.color } : undefined}
+                title={meta.tooltip}
+                aria-pressed={active}
+              >
+                {meta.short}
+              </button>
+            );
+          })}
+          {labelFilter.length > 0 && (
+            <button
+              onClick={() => setLabelFilter([])}
+              className="px-2 py-1 rounded-full text-[10px] font-semibold text-slate-500 hover:text-slate-300"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Body grid */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-3">
-            Live whale feed · {feedTotal.toLocaleString()} matches
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">
+              Live whale feed · {feedTotal.toLocaleString()} matches
+            </div>
+            {newRowsAvailable > 0 && (
+              <button
+                type="button"
+                onClick={() => void loadFeed()}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                aria-label="Load new whale activity"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {newRowsAvailable} new {newRowsAvailable === 1 ? 'whale' : 'whales'} — refresh
+              </button>
+            )}
           </div>
           {feedLoading && feed.length === 0 ? (
             <div className="space-y-2">
@@ -478,13 +573,26 @@ function FeedCard({
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-xs flex-wrap">
             <span className="font-mono text-slate-300">{short(row.whale_address)}</span>
+            {row.entity_type && (() => {
+              // Audit B5 / P1 #24 — styled entity badge from label taxonomy.
+              const meta = LABEL_META[row.entity_type as WhaleLabel];
+              if (!meta) {
+                return <span className="text-[10px] uppercase text-slate-500">{row.entity_type}</span>;
+              }
+              return (
+                <span
+                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border"
+                  style={{ backgroundColor: `${meta.color}1F`, color: meta.color, borderColor: `${meta.color}55` }}
+                  title={meta.tooltip}
+                >
+                  {meta.short}
+                </span>
+              );
+            })()}
             {row.label && (
-              <span className="px-1.5 py-0.5 rounded bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30 text-[10px] font-semibold uppercase">
+              <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={row.label}>
                 {row.label}
               </span>
-            )}
-            {row.entity_type && !row.label && (
-              <span className="text-[10px] uppercase text-slate-500">{row.entity_type}</span>
             )}
           </div>
           {row.token_symbol && (

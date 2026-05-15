@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { classifyAddress, type WhaleLabel } from "@/lib/whales/labels";
+
+const VALID_LABELS: ReadonlySet<WhaleLabel> = new Set([
+  'cex', 'mm', 'smart_money', 'bot', 'insider', 'whale', 'bridge', 'mev',
+]);
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,12 +61,21 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
   const tokenSearch = sp.get("token")?.toLowerCase() ?? "";
   const limit = Math.min(Math.max(parseInt(sp.get("limit") ?? "100", 10) || 100, 1), 200);
   const offset = Math.max(parseInt(sp.get("offset") ?? "0", 10) || 0, 0);
+  // Audit B5 / P1 #25 — Smart Money + label filter pills. labelsParam
+  // is a comma-separated list of WhaleLabel values; we narrow the
+  // server-enriched rows to only those whose entity_type matches.
+  // Invalid labels are silently dropped so a malformed query string
+  // can't break the feed.
+  const labelsParam = sp.get("labels")?.toLowerCase() ?? "";
+  const requestedLabels: WhaleLabel[] = labelsParam
+    ? labelsParam.split(",").map((l) => l.trim()).filter((l): l is WhaleLabel => VALID_LABELS.has(l as WhaleLabel))
+    : [];
 
   const minUsd = SIZE_MIN[size] ?? 100_000;
   const windowSec = TIME_WINDOW_SECONDS[timeRange] ?? 86_400;
   const since = new Date(Date.now() - windowSec * 1000).toISOString();
 
-  const cacheKey = `whale-tracker:feed:${chains.join(",")}:${size}:${timeRange}:${actionFilter ?? "all"}:${tokenSearch}:${offset}:${limit}`;
+  const cacheKey = `whale-tracker:feed:${chains.join(",")}:${size}:${timeRange}:${actionFilter ?? "all"}:${tokenSearch}:${requestedLabels.join("+")}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback<{ rows: FeedRow[]; total: number }>(cacheKey, 15, async () => {
@@ -118,14 +132,27 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
 
       const enriched: FeedRow[] = rows.map((r) => {
         const meta = labels.get(`${r.chain}:${r.whale_address.toLowerCase()}`) ?? null;
-        return {
-          ...r,
-          label: meta?.label ?? null,
-          entity_type: meta?.entity_type ?? null,
-        };
+        // Audit B5 / P1 #24 — fall back to the curated registry when
+        // the whales table doesn't have an entity_type for this row.
+        // Returns at minimum 'whale' so every row carries one label.
+        let entity_type = meta?.entity_type ?? null;
+        let label = meta?.label ?? null;
+        if (!entity_type) {
+          const cls = classifyAddress(r.whale_address, r.chain);
+          entity_type = cls.labels[0] ?? null;
+          if (!label && cls.name) label = cls.name;
+        }
+        return { ...r, label, entity_type };
       });
 
-      return { rows: enriched, total: count ?? enriched.length };
+      // Apply label filter after enrichment so registry-classified rows
+      // (not yet in the whales table) are still respected by the
+      // Smart Money / CEX / Bot pills.
+      const filtered = requestedLabels.length > 0
+        ? enriched.filter((r) => r.entity_type !== null && requestedLabels.includes(r.entity_type as WhaleLabel))
+        : enriched;
+
+      return { rows: filtered, total: requestedLabels.length > 0 ? filtered.length : (count ?? enriched.length) };
     });
 
     return NextResponse.json(data);
