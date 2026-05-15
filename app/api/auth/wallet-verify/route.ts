@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyMessage } from "viem";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
+import * as Sentry from "@sentry/nextjs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
+import { buildSiweMessage, resolveSiweOrigin } from "@/lib/auth/siwe";
 
 export const runtime = "nodejs";
 
@@ -41,10 +43,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired nonce" }, { status: 403 });
     }
 
-    // Reconstruct the message from the nonce row's address (not client input)
-    // so the signature is verified against what the user actually signed at
-    // nonce-issuance time.
-    const message = `Sign this message to authenticate with Naka Labs.\n\nAddress: ${nonceRow.address}\nNonce: ${nonce}\nExpires: ${nonceRow.expires_at}`;
+    // Reconstruct the message from the nonce row's stored values (not
+    // client input) so the signature is verified against EXACTLY what
+    // the user signed at issuance. Domain / URI / chainId now live
+    // inside the signed payload (EIP-4361 / SIWS), so a phishing site
+    // can't replay nakalabs-bound signatures.
+    //
+    // Backwards compat: legacy nonce rows (pre-migration) lack
+    // `chain_id` / `issued_at`. For those we fall back to the original
+    // free-form message so existing in-flight sign-ins don't 403
+    // mid-rollout. The migration backfills NULL → today, so this
+    // branch is only hit for the 5-minute nonce-TTL window after deploy.
+    const host = request.headers.get("host");
+    const { domain, uri } = resolveSiweOrigin(host);
+    const issuedAt = nonceRow.issued_at as string | null | undefined;
+    const chainIdStored = nonceRow.chain_id as number | null | undefined;
+    const message = issuedAt
+      ? buildSiweMessage({
+          domain,
+          address: nonceRow.address,
+          uri,
+          chain: chain as "evm" | "solana",
+          chainId: typeof chainIdStored === "number" ? chainIdStored : undefined,
+          nonce,
+          issuedAt,
+          expirationTime: nonceRow.expires_at,
+        })
+      : `Sign this message to authenticate with Naka Labs.\n\nAddress: ${nonceRow.address}\nNonce: ${nonce}\nExpires: ${nonceRow.expires_at}`;
 
     let verified = false;
     try {
@@ -125,7 +150,7 @@ export async function POST(request: NextRequest) {
       actionLink: linkData.properties.action_link,
     });
   } catch (err) {
-    console.error("[wallet-verify] failed:", err);
+    Sentry.captureException(err, { tags: { route: "auth/wallet-verify" } });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
