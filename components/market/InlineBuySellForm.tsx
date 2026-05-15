@@ -23,8 +23,8 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
-import { Settings, AlertTriangle } from 'lucide-react';
-import FirstTradeRiskModal, { hasAcknowledgedTradeRisk } from '@/components/legal/FirstTradeRiskModal';
+import { Settings, Shield, Info } from 'lucide-react';
+import ChainMismatchBanner from './ChainMismatchBanner';
 
 const QUICK = [0, 25, 50, 75, 100];
 const SLIPPAGE_PRESETS = ['0.1', '0.5', '1', '3'];
@@ -56,19 +56,26 @@ function writeSlippage(chain: string, value: string): void {
   }
 }
 
+// MEV-protect default ON for Solana (Jito relay sandwich/snipe shield)
+// and OFF for EVM (mainnet has Flashbots Protect but it requires RPC
+// switching at the wallet level which we don't drive yet). Persist
+// per chain so the user's preference survives reloads.
 function readMevProtect(chain: string): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') return chain === 'solana';
   try {
-    return localStorage.getItem(`steinz_mev_protect_${chain}`) === '1';
+    const v = localStorage.getItem(`steinz_mev_${chain}`);
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return chain === 'solana';
   } catch {
-    return false;
+    return chain === 'solana';
   }
 }
 
 function writeMevProtect(chain: string, on: boolean): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(`steinz_mev_protect_${chain}`, on ? '1' : '0');
+    localStorage.setItem(`steinz_mev_${chain}`, on ? '1' : '0');
   } catch {
     /* storage disabled — non-fatal */
   }
@@ -121,16 +128,19 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
     return () => window.removeEventListener('market:quick-sell', handler);
   }, [symbol]);
 
-  // Re-read slippage when chain changes — Solana setting shouldn't
-  // bleed into Ethereum.
+  // Re-read slippage + MEV setting when chain changes — Solana
+  // settings shouldn't bleed into Ethereum and vice versa.
   useEffect(() => {
     setSlippage(readSlippage(chain));
     setMevProtect(readMevProtect(chain));
   }, [chain]);
 
-  const onMevToggle = (next: boolean) => {
-    setMevProtect(next);
-    writeMevProtect(chain, next);
+  const onMevToggle = () => {
+    setMevProtect((prev) => {
+      const next = !prev;
+      writeMevProtect(chain, next);
+      return next;
+    });
   };
 
   // Chain-scoped stablecoin available for BUY. We only count USDC + USDT
@@ -242,17 +252,19 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
         </button>
       </div>
 
-      {/* Chain-family mismatch banner — Industry parity with Uniswap
-          which surfaces "Switch network" before letting the user sign.
-          Cross-family signs (EVM tx on Phantom / SOL tx on MetaMask)
-          are silent-fail vectors so we hard-block them here. */}
+      {/* Chain-family mismatch banner — delegates to ChainMismatchBanner
+          which gives within-EVM mismatches a one-click EIP-3326 switch
+          (with EIP-3085 add-chain fallback). Industry parity with
+          Uniswap, 1inch, Matcha. Cross-family stays an explainer. */}
       {chainMismatch && (
-        <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
-          <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-          <span>
-            Connected via <span className="font-semibold">{provider}</span>; this page is{' '}
-            <span className="font-semibold uppercase">{chain}</span>. Connect {mismatchTarget} to trade.
-          </span>
+        <div className="mb-3">
+          <ChainMismatchBanner
+            crossFamilyMismatch={crossFamilyMismatch}
+            isPageSolana={isPageSolana}
+            provider={provider}
+            chain={chain}
+            walletPlatformChain={walletPlatformChain}
+          />
         </div>
       )}
 
@@ -266,10 +278,10 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
             placeholder="0.00"
             className="flex-1 bg-transparent outline-none text-lg font-mono tabular-nums"
           />
-          <span className="text-[10px] uppercase text-slate-500 font-semibold">USD</span>
+          <span className="text-[10px] uppercase text-slate-300 font-semibold">USD</span>
         </div>
         {amountNum > 0 && priceUSD > 0 && (
-          <div className="text-[10px] text-slate-500 mt-1">≈ {estTokens.toFixed(6)} {symbol}</div>
+          <div className="text-[10px] text-slate-300 mt-1">≈ {estTokens.toFixed(6)} {symbol}</div>
         )}
       </div>
 
@@ -344,37 +356,63 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
         )}
       </div>
 
-      {/* MEV protect toggle — Industry parity with MEVX / Uniswap's
-          "Use private RPC" switch. Routes the tx through Flashbots /
-          Jito (per chain) so sandwich/frontrun bots can't see it in
-          the public mempool. Server-side trade-execute route reads
-          mevProtect and routes accordingly. Persisted per chain. */}
-      <div className="mb-3 flex items-center justify-between text-[11px]">
-        <span className="text-slate-400">MEV protection</span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={mevProtect}
-          onClick={() => onMevToggle(!mevProtect)}
-          className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-semibold transition-colors ${
-            mevProtect
-              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
-              : 'bg-slate-900/60 text-slate-400 border border-slate-800 hover:bg-slate-800'
+      {/* MEV protection — Solana parity with Jupiter (Jito MEV-protect)
+          and EVM parity with Uniswap (Flashbots Protect bundle). Default
+          ON for Solana sandwich/snipe-shielding; default OFF for EVM
+          since enabling it requires the user's wallet to switch to a
+          protected RPC, which we don't drive yet — flag is forwarded
+          to /api/market/trade/execute regardless so the executor can
+          choose the right relay. */}
+      <button
+        type="button"
+        onClick={onMevToggle}
+        className="w-full mb-3 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-[11px]"
+        aria-pressed={mevProtect}
+        title="MEV protection routes the swap through a private mempool / protected relay so sandwich bots can't front-run your trade."
+      >
+        <span className="inline-flex items-center gap-1.5 text-slate-300">
+          <Shield size={11} className={mevProtect ? 'text-emerald-400' : 'text-slate-400'} />
+          MEV protection
+          <Info size={10} className="text-slate-400" />
+        </span>
+        <span
+          className={`relative inline-block w-7 h-3.5 rounded-full transition-colors ${
+            mevProtect ? 'bg-emerald-500' : 'bg-slate-700'
           }`}
         >
           <span
-            aria-hidden
-            className={`inline-block w-2 h-2 rounded-full ${mevProtect ? 'bg-emerald-400' : 'bg-slate-600'}`}
+            className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform ${
+              mevProtect ? 'translate-x-3.5' : 'translate-x-0.5'
+            }`}
           />
-          {mevProtect ? 'On (private mempool)' : 'Off'}
-        </button>
-      </div>
+        </span>
+      </button>
 
-      {/* Routing label — actual route preview lives on the swap page;
-          this stays a simple "Auto via 0x" label since the inline form
-          doesn't show the multi-hop breakdown. */}
-      <div className="flex justify-between text-[11px] text-slate-400 mb-3">
-        <span>Routing</span><span className="text-slate-200">Auto via 0x</span>
+      {/* Routing + min-received preview. Industry parity with Uniswap /
+          Jupiter swap modal: shows the user the worst-case fill given
+          the slippage they set, so MAX + 3% slippage isn't a surprise
+          afterwards. */}
+      <div className="text-[11px] mb-3 space-y-1">
+        <div className="flex justify-between text-slate-300">
+          <span>Routing</span>
+          <span className="text-slate-200">Auto via 0x</span>
+        </div>
+        {amountNum > 0 && estTokens > 0 && (() => {
+          const slipNum = parseFloat(slippage);
+          const safeSlip = Number.isFinite(slipNum) && slipNum > 0 ? slipNum : 0.5;
+          const minOut = mode === 'BUY'
+            ? estTokens * (1 - safeSlip / 100)
+            : amountNum * (1 - safeSlip / 100);
+          const unit = mode === 'BUY' ? symbol : 'USD';
+          return (
+            <div className="flex justify-between text-slate-300">
+              <span>Min received</span>
+              <span className="text-slate-100 font-mono tabular-nums">
+                {mode === 'BUY' ? minOut.toFixed(6) : `$${minOut.toFixed(2)}`} {unit}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Primary action */}
@@ -401,7 +439,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           <span>
             Available to {mode.toLowerCase()}
             {mode === 'BUY' && (
-              <span className="text-[9px] uppercase ml-1 text-slate-600">on {chain}</span>
+              <span className="text-[9px] uppercase ml-1 text-slate-400">on {chain}</span>
             )}
           </span>
           <span className="text-slate-200 font-mono">{formatPrice(available)}</span>
