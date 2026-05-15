@@ -122,7 +122,14 @@ export async function GET(
       const res = await fetch(url.toString(), { headers: cgHeaders(), next: { revalidate: 120 } } as RequestInit);
       if (res.ok) {
         const data = await res.json();
-        return NextResponse.json(data, { headers: { 'Cache-Control': 'public, max-age=120' } });
+        // Audit M8 #2 — was max-age=120 only, no s-maxage, no SWR.
+        // Vercel's edge CDN never cached a hot token's payload across
+        // users, so every visitor within 2min hit origin -> CoinGecko.
+        // Now: 2min browser cache, 10min edge cache, 30min serve-stale-
+        // while-revalidating. Industry parity: DexScreener pattern.
+        return NextResponse.json(data, {
+          headers: { 'Cache-Control': 'public, max-age=120, s-maxage=600, stale-while-revalidate=1800' },
+        });
       }
     } catch { /* fall through to DexScreener */ }
   }
@@ -131,7 +138,11 @@ export async function GET(
   try {
     const data = await dexscreenerFallback(id);
     if (!data) return NextResponse.json({ error: 'Token not found on any data source' }, { status: 404 });
-    return NextResponse.json(data, { headers: { 'Cache-Control': 'public, max-age=60' } });
+    // DexScreener pair data refreshes faster than CoinGecko snapshots
+    // so 60s browser, 5min edge, 15min stale-while-revalidate.
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=900' },
+    });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
   }

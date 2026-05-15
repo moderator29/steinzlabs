@@ -377,7 +377,7 @@ export default function MarketDashboard() {
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
                         {coin.image
-                          ? <img src={coin.image} alt={coin.symbol} className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
+                          ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
                           : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0,2)}</span>}
                       </div>
                       <div>
@@ -438,7 +438,7 @@ export default function MarketDashboard() {
                   </div>
                   <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
                     {coin.image
-                      ? <img src={coin.image} alt={coin.symbol} className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
+                      ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
                       : <span className="text-xs font-bold text-white">{coin.symbol.slice(0,2)}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
