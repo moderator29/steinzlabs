@@ -23,10 +23,25 @@
  * DCA / Stop) is gone — that lives at /market/orders now (batch 6).
  */
 
-import { use, useState } from "react";
-import { Star, Bell, Share2, Brain, X } from "lucide-react";
+import { use, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2 } from "lucide-react";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
-import TradingViewChart, { getTradingViewSymbol } from "@/components/TradingViewChart";
+import { getTradingViewSymbol } from "@/components/TradingViewChart";
+
+// Audit M8 #1 — TradingViewChart and the 780KB tv.js it loads were
+// blocking first paint by 2–3 seconds. Dynamic-import keeps the rest
+// of the detail page (price strip, BackButton, Buy/Sell, recent
+// trades) interactive while the chart bundle streams in. Skeleton
+// matches the chart's outer dimensions so the layout doesn't jump.
+const TradingViewChart = dynamic(() => import("@/components/TradingViewChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-slate-950/40 text-xs text-slate-500">
+      Loading chart…
+    </div>
+  ),
+});
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
@@ -46,6 +61,39 @@ interface RouteParams {
   address: string;
 }
 
+// Audit M3 — chart timeframe was hardcoded to "15" with no UI. Industry
+// standard set: 1m / 5m / 15m / 1h / 4h / 1d / 1w (DexScreener / Birdeye
+// / TradingView). Persisted per token in localStorage so a returning
+// trader lands back on the timeframe they were studying.
+const CHART_INTERVALS: { id: string; label: string }[] = [
+  { id: '1',   label: '1m'  },
+  { id: '5',   label: '5m'  },
+  { id: '15',  label: '15m' },
+  { id: '60',  label: '1h'  },
+  { id: '240', label: '4h'  },
+  { id: 'D',   label: '1d'  },
+  { id: 'W',   label: '1w'  },
+];
+
+function readChartInterval(tokenKey: string): string {
+  if (typeof window === 'undefined') return '15';
+  try {
+    const v = localStorage.getItem(`steinz_chart_tf_${tokenKey}`);
+    return v && CHART_INTERVALS.some((i) => i.id === v) ? v : '15';
+  } catch {
+    return '15';
+  }
+}
+
+function writeChartInterval(tokenKey: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`steinz_chart_tf_${tokenKey}`, value);
+  } catch {
+    /* storage disabled (Safari private) — non-fatal */
+  }
+}
+
 export default function CoinDetailPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
   const { user } = useAuth();
@@ -54,6 +102,30 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
   const [showAlert, setShowAlert] = useState(false);
   const [showIntel, setShowIntel] = useState(false);
+  // Per-token timeframe persistence — keyed on chain:address so BTC at
+  // 4h doesn't bleed into ETH on the same browser.
+  const tokenKey = `${chain}:${address}`;
+  const [chartInterval, setChartInterval] = useState<string>(() => readChartInterval(tokenKey));
+  const [chartFullscreen, setChartFullscreen] = useState(false);
+
+  // Audit M8 #9 — preload the TradingView script so by the time the
+  // dynamic chart import resolves, the widget code is already in the
+  // browser cache. Costs us nothing on cold start (DNS + TCP only).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('tv-preload-link')) return;
+    const link = document.createElement('link');
+    link.id = 'tv-preload-link';
+    link.rel = 'preload';
+    link.as = 'script';
+    link.href = 'https://s3.tradingview.com/tv.js';
+    document.head.appendChild(link);
+  }, []);
+
+  const handleIntervalChange = (id: string) => {
+    setChartInterval(id);
+    writeChartInterval(tokenKey, id);
+  };
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -133,15 +205,56 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       {/* Body — checkprice-style 2-column on desktop, stacked on mobile */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* Chart */}
-          <div className="h-[380px] md:h-[560px] border-b border-slate-800/50">
-            <TradingViewChart
-              symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
-              interval="15"
-              height={560}
-              showTools
-              theme={theme}
-            />
+          {/* Audit M3 — chart with custom timeframe selector + fullscreen.
+              Selector pills above the chart drive the TradingView widget's
+              interval prop; selection persists per token. Fullscreen
+              toggles a position:fixed overlay so power users can read the
+              chart without losing the page. */}
+          <div className={
+            chartFullscreen
+              ? 'fixed inset-0 z-[80] bg-slate-950 flex flex-col'
+              : 'flex flex-col border-b border-slate-800/50'
+          }>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/40 bg-slate-950/40 gap-2">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                {CHART_INTERVALS.map((tf) => {
+                  const active = tf.id === chartInterval;
+                  return (
+                    <button
+                      key={tf.id}
+                      type="button"
+                      onClick={() => handleIntervalChange(tf.id)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors flex-shrink-0 ${
+                        active
+                          ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                      aria-pressed={active}
+                    >
+                      {tf.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setChartFullscreen((v) => !v)}
+                className="flex-shrink-0 p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5"
+                title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+                aria-label={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+              >
+                {chartFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            </div>
+            <div className={chartFullscreen ? 'flex-1 min-h-0' : 'h-[380px] md:h-[560px]'}>
+              <TradingViewChart
+                symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
+                interval={chartInterval}
+                height={chartFullscreen ? 0 : 560}
+                showTools
+                theme={theme}
+              />
+            </div>
           </div>
 
           {/* Mobile: inline Buy/Sell under the chart */}

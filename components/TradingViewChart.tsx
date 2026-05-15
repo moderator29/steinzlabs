@@ -144,10 +144,22 @@ function TradingViewChartInner({ symbol, height = 400, interval = '15', showTool
         locale: 'en',
         toolbar_bg: bg,
         enable_publishing: false,
+        // Audit M3 — show TradingView's native top + side toolbars so
+        // power users get the indicator menu, drawing tools, fib /
+        // trend / horizontal / text annotations, and saved layouts the
+        // widget already ships out of the box. Custom timeframe pills
+        // sit above this in the page wrapper.
         hide_top_toolbar: !showTools,
         hide_side_toolbar: !showTools,
-        allow_symbol_change: false,
-        save_image: false,
+        // Lets a user pivot from BTC/USDT to BTC/USD or BTC/ETH inside
+        // the widget without leaving the page — DexScreener parity.
+        allow_symbol_change: true,
+        // Enable save-image (toolbar action) so users can screenshot
+        // analyses for X / Telegram without OS-level capture.
+        save_image: true,
+        // Date-range presets in the bottom toolbar (1d / 5d / 1m / 3m /
+        // 6m / YTD / 1y / 5y / All). Industry standard, free in TV.
+        withdateranges: true,
         container_id: containerRef.current.id,
         autosize: true,
         backgroundColor: bg,
