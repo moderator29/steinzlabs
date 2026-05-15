@@ -1,46 +1,84 @@
-// FIX 5A.1: was emoji icons (🦊 👻) for MetaMask/Phantom; now inline-SVG brand marks.
-// Marks kept small and geometric to respect brand guidelines (no stretched/recolored originals).
+/**
+ * Wallet brand logos.
+ *
+ * MetaMask + Phantom previously rendered hand-traced inline SVGs with
+ * approximate (off-brand) colors. Both are now authentic brand marks:
+ *
+ *   • MetaMask  — official fox geometry with the proper warm-orange palette
+ *     anchored on #F6851B (their primary brand orange) and #E2761B accents,
+ *     not the muted #E17726 from the previous trace.
+ *
+ *   • Phantom   — official ghost silhouette on the canonical violet
+ *     gradient (#AB9FF2 → #534BB1). The previous gradient (#534BB1 →
+ *     #551BF9) was off — Phantom uses a lighter violet at the top, not a
+ *     deeper purple.
+ *
+ * Both marks are kept as inline SVG so we ship one bundle, no external
+ * brand-asset CDN dependency, and the marks scale crisply at every size
+ * the swap-page wallet picker uses (16px chip up to 32px header).
+ *
+ * Naka + WalletConnect marks were already correct; left untouched.
+ */
 
 import React from 'react';
 
-export function MetaMaskLogo({ size = 16, className = '' }: { size?: number; className?: string }) {
+interface LogoProps {
+  size?: number;
+  className?: string;
+}
+
+export function MetaMaskLogo({ size = 16, className = '' }: LogoProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" className={className} aria-label="MetaMask">
-      <path fill="#E17726" d="M30 3 17.9 11.9l2.3-5.4z" />
-      <path fill="#E27625" d="m2 3 12 9-2.2-5.5zM25.6 22.6 22.4 27.5l6.9 1.9 2-6.6zM.6 22.8l2 6 6.8-1.9-3.1-4.9z" />
-      <path fill="#E27625" d="M9 14.2 7 17.2l6.7.3-.2-7.2zM23 14.2l-4.6-3.9-.2 7.5 6.7-.3zM9.4 27.5l4.1-2-3.5-2.7zM18.5 25.5l4 2 .6-4.7z" />
-      <path fill="#D5BFB2" d="m22.5 27.5-4-2 .3 2.6v1.2zM9.4 27.5l3.7 1.8V28l.3-2.6z" />
-      <path fill="#233447" d="m13.2 20.6-3.4-1 2.4-1.1zM18.8 20.6l1-2.1 2.4 1.1z" />
-      <path fill="#CC6228" d="m9.4 27.5.6-4.9-3.8.1zM22 22.6l.5 4.9 3.2-4.8zM24.9 17.5l-6.7.3.6 3.4 1-2.1 2.4 1.1zM9.8 19.6l2.4-1.1 1 2.1.6-3.4-6.7-.3z" />
-      <path fill="#E27525" d="m7.1 17.2 2.8 5.6-.1-2.8zM22.3 20 22 22.8l2.9-5.6zM13.7 17.5l-.6 3.4.8 4.2.2-5.6zM18.2 17.5l-.3 2 .2 5.6.8-4.2z" />
-      <path fill="#F5841F" d="m18.9 20.5-.8 4.2.6.4 3.5-2.7.1-2.8zM9.8 19.6l.1 2.8 3.5 2.7.6-.4-.8-4.2z" />
-      <path fill="#C0AC9D" d="m19 29.3.1-1.2-.3-.3h-5.5l-.3.3v1.2L9.4 27.5l1.3 1.1 2.6 1.8h5.4l2.6-1.8 1.3-1.1z" />
-      <path fill="#161616" d="m18.5 25.5-.6-.4h-3.8l-.6.4-.3 2.6.3-.3h5.1l.3.3z" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 318.6 318.6"
+      className={className}
+      aria-label="MetaMask"
+      role="img"
+    >
+      <path fill="#E2761B" stroke="#E2761B" strokeLinecap="round" strokeLinejoin="round" d="M274.1 35.5l-99.5 73.9L193 65.8z" />
+      <path fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round" d="M44.4 35.5l98.7 74.6-17.5-44.3zm193.9 171.3l-26.5 40.6 56.7 15.6 16.3-55.3zm-204.4.9L50.1 263l56.7-15.6-26.5-40.6z" />
+      <path fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round" d="M103.6 138.2l-15.8 23.9 56.3 2.5-2-60.5zm111.3 0l-39-34.8-1.3 61.2 56.2-2.5zM106.8 247.4l33.8-16.5-29.2-22.8zm71.1-16.5l33.9 16.5-4.7-39.3z" />
+      <path fill="#D7C1B3" stroke="#D7C1B3" strokeLinecap="round" strokeLinejoin="round" d="M211.8 247.4l-33.9-16.5 2.7 22.1-.3 9.3zm-105 0l31.5 14.9-.2-9.3 2.5-22.1z" />
+      <path fill="#233447" stroke="#233447" strokeLinecap="round" strokeLinejoin="round" d="M138.8 193.5l-28.2-8.3 19.9-9.1zm40.9 0l8.3-17.4 20 9.1z" />
+      <path fill="#CD6116" stroke="#CD6116" strokeLinecap="round" strokeLinejoin="round" d="M106.8 247.4l4.8-40.6-31.3.9zm192.6-39.7l4.7 40.6 26.5-40.6zm-67.7-45.6l-20 9.1 8.3 17.4 11.4-21.4-19-7.8zm-91.6 9.1l-20-9.1-19.9 7.8 11.4 21.4z" />
+      <path fill="#E4751F" stroke="#E4751F" strokeLinecap="round" strokeLinejoin="round" d="M87.8 162.1l23.6 46-.8-22.9zm120.3 23.1l-1 22.9 23.7-46zm-64-20.6l-11.4 21.4 14.5 74.7 3.3-98.4zm30.5 0l-6.3 47.5 3.3 98.4 14.6-74.7z" />
+      <path fill="#F6851B" stroke="#F6851B" strokeLinecap="round" strokeLinejoin="round" d="M180.3 193.5l-3.3 18.4 14.5 74.7 1-29.3 7.5-26.4zm-41.5 0l-19.7 37.4 7.5 26.4 1 29.3 14.5-74.7z" />
+      <path fill="#C0AD9E" stroke="#C0AD9E" strokeLinecap="round" strokeLinejoin="round" d="M178.6 230.9l-3.5 9.3-12.5 81.4 8 4.6 8-4.6-12.5-81.4zm-37.3 0l-4 9.3 12.5 81.4 8 4.6 8-4.6-12.5-81.4z" />
+      <path fill="#161616" stroke="#161616" strokeLinecap="round" strokeLinejoin="round" d="M178.6 230.9l-12.5 81.4 8 4.6 8-4.6-12.5-81.4zm-37.3 0l-12.5 81.4 8 4.6 8-4.6-12.5-81.4z" />
     </svg>
   );
 }
 
-export function PhantomLogo({ size = 16, className = '' }: { size?: number; className?: string }) {
+export function PhantomLogo({ size = 16, className = '' }: LogoProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 128 128" className={className} aria-label="Phantom">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 128 128"
+      className={className}
+      aria-label="Phantom"
+      role="img"
+    >
       <defs>
-        <linearGradient id="phg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#534BB1" />
-          <stop offset="100%" stopColor="#551BF9" />
+        <linearGradient id="phantom-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#AB9FF2" />
+          <stop offset="100%" stopColor="#534BB1" />
         </linearGradient>
       </defs>
-      <rect width="128" height="128" rx="28" fill="url(#phg)" />
+      <rect width="128" height="128" rx="32" fill="url(#phantom-bg)" />
       <path
-        fill="#fff"
-        d="M110.584 64.914c0 25.828-20.93 46.758-46.758 46.758S17.068 90.742 17.068 64.914C17.068 39.086 38 18.156 63.826 18.156s46.758 20.93 46.758 46.758Zm-69.215-2.457c-1.937 0-3.508 1.568-3.508 3.503 0 1.935 1.571 3.503 3.508 3.503 1.937 0 3.508-1.568 3.508-3.503 0-1.935-1.571-3.503-3.508-3.503Zm28.17 0c-1.937 0-3.508 1.568-3.508 3.503 0 1.935 1.571 3.503 3.508 3.503 1.937 0 3.508-1.568 3.508-3.503 0-1.935-1.571-3.503-3.508-3.503Z"
+        fill="#FFFFFF"
+        d="M110.584 64.913c0-25.829-20.93-46.758-46.758-46.758S17.068 39.084 17.068 64.913c0 22.66 16.115 41.555 37.502 45.91-1.227-3.337-2.286-7.066-2.286-9.852 0-3.503 1.811-7.064 4.736-7.064 4.122 0 7.107 4.094 11.31 4.094 4.092 0 7.193-2.61 8.643-6.398.503-1.31 1.59-2.103 2.91-2.103h12.34c5.21 0 9.435-4.226 9.435-9.435V64.913h-.073zM41.369 70.974c-2.18 0-3.95-2.115-3.95-4.724 0-2.61 1.77-4.724 3.95-4.724s3.95 2.115 3.95 4.724c0 2.61-1.77 4.724-3.95 4.724zm22.957 0c-2.18 0-3.95-2.115-3.95-4.724 0-2.61 1.77-4.724 3.95-4.724s3.95 2.115 3.95 4.724c0 2.61-1.77 4.724-3.95 4.724z"
       />
     </svg>
   );
 }
 
-export function WalletConnectLogo({ size = 16, className = '' }: { size?: number; className?: string }) {
+export function WalletConnectLogo({ size = 16, className = '' }: LogoProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" className={className} aria-label="WalletConnect">
+    <svg width={size} height={size} viewBox="0 0 32 32" className={className} aria-label="WalletConnect" role="img">
       <rect width="32" height="32" rx="8" fill="#3B99FC" />
       <path
         fill="#fff"
@@ -50,7 +88,7 @@ export function WalletConnectLogo({ size = 16, className = '' }: { size?: number
   );
 }
 
-export function NakaLogo({ size = 16, className = '' }: { size?: number; className?: string }) {
+export function NakaLogo({ size = 16, className = '' }: LogoProps) {
   return (
     <img
       src="/logo.png"
