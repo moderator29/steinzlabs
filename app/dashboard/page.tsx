@@ -10,7 +10,7 @@ import {
 import {
   Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
 
@@ -112,31 +112,47 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#0A0E27]/95 backdrop-blur-xl border-t border-white/[0.06] z-[var(--z-sidebar)]">
-      <div className="grid grid-cols-4 gap-0 px-2 py-2 max-w-lg mx-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeNav === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.href) {
-                  window.location.href = item.href;
-                } else {
-                  onNavChange(item.id);
-                }
-              }}
-              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all ${
-                isActive ? 'text-[#0A1EFF]' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className={`text-[10px] ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
-              {isActive && <div className="w-1 h-1 rounded-full bg-[#0A1EFF] mt-0.5" />}
-            </button>
-          );
-        })}
+    // Floating glassmorphic capsule — replaces the old edge-to-edge bar.
+    // Sits 16px off the bottom with rounded-3xl corners, deep navy gradient,
+    // backdrop blur with saturation pop, and a subtle blue inner-border so
+    // the capsule reads as a premium nav surface against the aurora canvas.
+    <div className="fixed bottom-4 left-4 right-4 z-[var(--z-sidebar)] flex justify-center pointer-events-none">
+      <div
+        className="pointer-events-auto w-full max-w-lg rounded-3xl px-2.5 py-3 backdrop-blur-2xl border border-[#0066FF]/20 shadow-[0_10px_40px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(15,22,60,0.85) 0%, rgba(10,15,46,0.95) 100%)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        }}
+      >
+        <div className="grid grid-cols-4 gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeNav === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.href) {
+                    window.location.href = item.href;
+                  } else {
+                    onNavChange(item.id);
+                  }
+                }}
+                className={`group relative flex flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-all duration-200 active:scale-[0.97] ${
+                  isActive
+                    ? 'text-[#00C8FF] bg-[#0066FF]/[0.12] shadow-[0_0_20px_rgba(0,102,255,0.35)] scale-[1.04]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04] hover:scale-[1.02]'
+                }`}
+              >
+                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'drop-shadow-[0_0_6px_rgba(0,200,255,0.6)]' : ''}`} />
+                <span className={`text-[10px] tracking-wide ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -145,17 +161,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // ?tab=profile / ?tab=wallet / ?tab=vtxai routes external links (notably
-  // the /dashboard/profile redirect) to the right bottom-nav tab on mount.
-  // Without this, /dashboard/profile redirected to /dashboard?tab=profile
-  // and landed back on the home tab, leaving the user staring at a spinner
-  // that resolved to the wrong page.
-  const initialNav = (() => {
-    const t = searchParams?.get('tab');
-    return t === 'profile' || t === 'wallet' || t === 'vtxai' ? t : 'home';
-  })();
-  const [activeNav, setActiveNav] = useState<string>(initialNav);
+  const [activeNav, setActiveNav] = useState('home');
   const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>('overview');
 
   // Restore market tab when navigating back from a coin detail page
@@ -269,7 +275,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="fixed top-0 left-0 right-0 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06] z-[var(--z-header)]">
+      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
