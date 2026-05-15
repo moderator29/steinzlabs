@@ -28,12 +28,40 @@ export interface WalletBalance {
   loading: boolean;
 }
 
+/**
+ * Audit M4 #2 follow-up — within-EVM chain detection. Reads
+ * window.ethereum.chainId (EIP-1193) and maps the hex value to our
+ * platform chain id. The set is intentionally narrow — only the chains
+ * the platform actually trades on. Unknown chainIds return null so the
+ * UI can render an honest "unrecognized network" rather than guess.
+ */
+const EVM_CHAINID_TO_PLATFORM: Record<string, string> = {
+  '0x1':     'ethereum',
+  '0x2105':  'base',         // 8453
+  '0xa4b1':  'arbitrum',     // 42161
+  '0xa':     'optimism',     // 10
+  '0x89':    'polygon',      // 137
+  '0x38':    'bsc',          // 56
+  '0xa86a':  'avalanche',    // 43114
+};
+
+export function evmChainIdToPlatformChain(chainIdHex: string | null | undefined): string | null {
+  if (!chainIdHex) return null;
+  return EVM_CHAINID_TO_PLATFORM[chainIdHex.toLowerCase()] ?? null;
+}
+
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<WalletBalance>({ totalUsd: 0, tokens: {}, loading: false });
+  // Audit M4 #2 follow-up — current EVM chain id (hex). null when no
+  // EVM wallet is connected or window.ethereum doesn't expose chainId.
+  // Updated reactively via the EIP-1193 'chainChanged' event so the
+  // mismatch guard in trading panels reacts instantly when the user
+  // switches networks in MetaMask without needing to refresh.
+  const [chainId, setChainId] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async (addr: string) => {
     if (!addr) return;
@@ -86,10 +114,33 @@ export function useWallet() {
     window.addEventListener('storage', handleChange);
     window.addEventListener(BALANCE_CHANGE_EVENT, handleBalanceChange);
 
+    // Audit M4 #2 follow-up — read initial chainId off the EVM provider
+    // and subscribe to changes. If the user flips MetaMask from
+    // Ethereum to Base, the trading panel's mismatch guard updates
+    // without a refresh.
+    const win = window as unknown as { ethereum?: { chainId?: string; request?: (args: { method: string }) => Promise<string>; on?: (e: string, h: (id: string) => void) => void; removeListener?: (e: string, h: (id: string) => void) => void } };
+    const ethereum = win.ethereum;
+    let chainHandler: ((id: string) => void) | null = null;
+    if (ethereum) {
+      // Some providers expose chainId synchronously, others require an RPC.
+      if (ethereum.chainId) {
+        setChainId(ethereum.chainId);
+      } else if (ethereum.request) {
+        ethereum.request({ method: 'eth_chainId' }).then(setChainId).catch(() => {});
+      }
+      if (ethereum.on) {
+        chainHandler = (id: string) => setChainId(id);
+        ethereum.on('chainChanged', chainHandler);
+      }
+    }
+
     return () => {
       window.removeEventListener(WALLET_CHANGE_EVENT, handleChange);
       window.removeEventListener('storage', handleChange);
       window.removeEventListener(BALANCE_CHANGE_EVENT, handleBalanceChange);
+      if (ethereum?.removeListener && chainHandler) {
+        ethereum.removeListener('chainChanged', chainHandler);
+      }
     };
   }, [fetchBalance]);
 
@@ -218,5 +269,10 @@ export function useWallet() {
     connectAuto,
     disconnect,
     clearError: () => setError(null),
+    // Audit M4 #2 follow-up — exposed so trading panels can detect a
+    // within-EVM mismatch (e.g. wallet on Ethereum but page on Base)
+    // without each consumer re-implementing chainId reading.
+    chainId,
+    walletPlatformChain: evmChainIdToPlatformChain(chainId),
   };
 }
