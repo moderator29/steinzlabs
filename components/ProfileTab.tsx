@@ -14,6 +14,7 @@ import { useChosenStatus } from '@/lib/hooks/useChosenStatus';
 import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import NotificationSettingsPanel from '@/components/profile/NotificationSettingsPanel';
 
 interface Notification {
   id: string;
@@ -1115,6 +1116,14 @@ export default function ProfileTab() {
         </button>
         <h2 className="text-lg font-heading font-bold mb-1">Preferences</h2>
         <p className="text-xs text-gray-500 mb-4">Customize your STEINZ experience.</p>
+
+        {/* Phase B — Supabase-backed notification settings. Replaces the
+            localStorage toggles that lived inline. Web Push subscribe,
+            quiet hours, channel matrix, all sync cross-device via the
+            notification_settings + push_subscriptions tables. */}
+        <div className="mb-4">
+          <NotificationSettingsPanel userId={user?.id ?? null} />
+        </div>
 
         {/* Platform language — same dropdown that previously sat next to the
             notification bell on the dashboard header. Lives here now where
