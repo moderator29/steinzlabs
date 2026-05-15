@@ -665,6 +665,17 @@ export default function VtxAiTab() {
     setLoading(true);
 
     try {
+      // Phase D — opt into streaming for plain-text replies. Backend
+      // route at /api/vtx-ai already supports SSE via {stream: true}.
+      // We use a heuristic: if the message likely needs tool-use
+      // (price/swap/buy/sell/chart keywords), fall back to the
+      // non-streaming path so charts + tool results land correctly.
+      // Otherwise stream tokens for instant feedback. Industry parity
+      // with Claude.ai / ChatGPT / Perplexity: visible token streaming
+      // is now table stakes for AI chat UX.
+      const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|chart|price of|trade|send|approve)\b/i;
+      const useStream = !TOOL_USE_KEYWORDS.test(finalMessage);
+
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -679,12 +690,82 @@ export default function VtxAiTab() {
           autoCharts: settings.autoCharts,
           focusMode: settings.focusMode,
           defaultChain: settings.defaultChain,
+          stream: useStream,
           context: {
             walletAddress: typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null,
             currentPage: 'vtx-tab',
           },
         }),
       });
+
+      // ── Streaming branch ────────────────────────────────────────────
+      if (useStream && response.ok && response.body && response.headers.get('content-type')?.includes('text/event-stream')) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamedText = '';
+        let streamDone = false;
+        let finalReply = '';
+        // Push an empty assistant message we'll progressively fill.
+        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+        while (!streamDone) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // SSE is event-delimited by blank lines (\n\n).
+          let sep = buffer.indexOf('\n\n');
+          while (sep !== -1) {
+            const event = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            sep = buffer.indexOf('\n\n');
+            const dataLine = event.split('\n').find(l => l.startsWith('data:'));
+            if (!dataLine) continue;
+            try {
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string };
+              if (json.error) {
+                throw new Error(json.error);
+              }
+              if (typeof json.delta === 'string' && json.delta.length > 0) {
+                streamedText += json.delta;
+                setMessages(prev => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === 'assistant') {
+                    next[next.length - 1] = { ...last, content: streamedText };
+                  }
+                  return next;
+                });
+              }
+              if (json.done) {
+                streamDone = true;
+                finalReply = json.reply ?? streamedText;
+                // Run the same chart-tag scan we use on the non-streaming
+                // path so embedded [CHART:type] tags activate the inline
+                // chart panel.
+                const chartTagMatch = finalReply.match(/\[CHART:(price|bubble|portfolio|holders)\]/i);
+                const cleanReply = finalReply.replace(/\[CHART:(price|bubble|portfolio|holders)\]/gi, '').trim();
+                let chartInfo: ChartInfo | undefined;
+                if (chartTagMatch) {
+                  chartInfo = { type: chartTagMatch[1].toLowerCase() as ChartInfo['type'] };
+                }
+                setMessages(prev => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === 'assistant') {
+                    next[next.length - 1] = { ...last, content: cleanReply, chart: chartInfo && settings.autoCharts ? chartInfo : undefined };
+                  }
+                  return next;
+                });
+                if (settings.messageSound) playChime();
+              }
+            } catch (parseErr) {
+              console.warn('[vtx-stream] event parse failed:', parseErr);
+            }
+          }
+        }
+        setLoading(false);
+        return;
+      }
 
       const data = await response.json();
 
