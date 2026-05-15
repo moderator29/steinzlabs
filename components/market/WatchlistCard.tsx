@@ -20,7 +20,7 @@ export function WatchlistCard({ token, onRemove }: WatchlistCardProps) {
 
   return (
     <div
-      onClick={() => router.push(`/market/prices/${token.id}`)}
+      onClick={() => router.push(`/dashboard/market/ethereum/${token.id}`)}
       className="relative bg-[#0D1117] border border-[#1E2433] rounded-xl p-4 cursor-pointer
                  hover:border-[#0A1EFF]/40 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(10,30,255,0.08)]
                  transition-all duration-150"

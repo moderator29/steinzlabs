@@ -235,7 +235,14 @@ export default function MarketDashboard() {
 
   const handleCoinTap = (coin: CoinRow) => {
     try { localStorage.setItem('steinz_last_tab', 'markets'); } catch { /* localStorage unavailable — silently ignore */ }
-    router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
+    // Audit M2 — route directly to the canonical coin-detail page.
+    // Previously this pushed to /market/prices/[tokenId], a server-side
+    // redirect-only page that bounced to /dashboard/market/ethereum/{id};
+    // users saw a brief flicker and a URL-bar flash. Going straight to
+    // the destination matches DexScreener / Birdeye one-click behaviour.
+    // Per-token chain routing (so SOL doesn't land on ethereum) is the
+    // dedicated fix in branch #4 fix/market-routing-honesty.
+    router.push(`/dashboard/market/ethereum/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
   const toggleWatchlist = (e: React.MouseEvent, coinId: string) => {
