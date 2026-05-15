@@ -54,6 +54,12 @@ interface StoredWallet {
   // (user imported 12/24-word phrase), or 'private_key' (user imported raw pk).
   // Drives which reveal options the UI surfaces.
   importMethod?: 'generated' | 'seed' | 'private_key';
+  // Audit B3 / P0 #1 — Solana base58 public key derived from the same
+  // BIP-39 seed at Phantom's default path m/44'/501'/0'/0'. Populated
+  // at wallet-create or wallet-import time when a mnemonic is present.
+  // Wallets imported via raw private key never get this; the Receive
+  // view falls back to its "no SOL address" panel for those.
+  solanaAddress?: string;
 }
 
 interface ChainInfo {
@@ -707,7 +713,20 @@ export default function WalletPage() {
   if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletImported} />;
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
-  if (view === 'receive' && activeWallet) return <ReceiveView onBack={() => setView('main')} address={activeWallet.address} chain={activeChain} />;
+  if (view === 'receive' && activeWallet) {
+    // Audit B3 / P0 #1 — chain-correct address selection. EVM chains
+    // share the same secp256k1 0x… address; Solana uses the ed25519
+    // base58 pubkey derived at create/import time. Bitcoin and any
+    // other chain we don't yet derive for falls through to the EVM
+    // address, where the chain-aware ReceiveView (already part of the
+    // chain-picker fix) will render the honest "no {chain} address
+    // yet" panel instead of mislabelling.
+    const isSolanaChain = activeChain.id === 'solana';
+    const receiveAddress = isSolanaChain && activeWallet.solanaAddress
+      ? activeWallet.solanaAddress
+      : activeWallet.address;
+    return <ReceiveView onBack={() => setView('main')} address={receiveAddress} chain={activeChain} />;
+  }
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
@@ -1295,6 +1314,21 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
     // later. ethers can't re-derive a mnemonic from a private key, so without
     // this the seed is gone the moment the UI unmounts.
     const encryptedMnemonic = mnemonic ? await encryptPrivateKey(mnemonic, password) : undefined;
+    // Audit B3 / P0 #1 — derive the Solana address at create time from
+    // the same BIP-39 seed so Receive on Solana works without a second
+    // wallet. Phantom-compatible path m/44'/501'/0'/0'.
+    let solanaAddress: string | undefined;
+    if (mnemonic) {
+      try {
+        const { deriveSolanaPublicKey } = await import('@/lib/wallet/derive');
+        solanaAddress = deriveSolanaPublicKey(mnemonic);
+      } catch (err) {
+        // Non-fatal — wallet creation still succeeds; the user just
+        // won't have a SOL address (Receive panel will show its
+        // honest "no SOL address derived" state).
+        console.warn('[wallet] Solana derivation failed at create:', err);
+      }
+    }
     onCreated({
       address,
       encryptedKey: encrypted,
@@ -1302,6 +1336,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       importMethod: 'generated',
       name: walletName,
       createdAt: new Date().toISOString(),
+      solanaAddress,
     });
   };
 
@@ -1447,6 +1482,20 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
       }
       const encrypted = await encryptPrivateKey(wallet.privateKey, password);
       const encryptedMnemonic = phraseForStorage ? await encryptPrivateKey(phraseForStorage, password) : undefined;
+      // Audit B3 / P0 #1 — when the user imported a real BIP-39 seed,
+      // derive the Solana account from the same phrase so a single
+      // import gives them every chain. Raw private-key imports cannot
+      // derive Solana (no seed to walk down BIP-44 from), so those
+      // continue to surface the "no SOL address" Receive panel.
+      let solanaAddress: string | undefined;
+      if (phraseForStorage) {
+        try {
+          const { deriveSolanaPublicKey } = await import('@/lib/wallet/derive');
+          solanaAddress = deriveSolanaPublicKey(phraseForStorage);
+        } catch (err) {
+          console.warn('[wallet] Solana derivation failed at import:', err);
+        }
+      }
       onImported({
         address: wallet.address,
         encryptedKey: encrypted,
@@ -1454,6 +1503,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         importMethod: method === 'phrase' ? 'seed' : 'private_key',
         name: walletName,
         createdAt: new Date().toISOString(),
+        solanaAddress,
       });
     } catch (e: any) { setError(e.message || 'Invalid input. Check your recovery phrase or private key.'); }
     finally { setImporting(false); }
