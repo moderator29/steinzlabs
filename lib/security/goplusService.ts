@@ -74,15 +74,101 @@ export async function scanTokenSecurity(
   contractAddress: string,
   chain: string
 ): Promise<TokenSecurityResult> {
+  const isSolana = chain.toLowerCase() === 'solana' || chain.toLowerCase() === 'sol';
+
+  // Solana mints live at a different GoPlus path with a different
+  // payload shape (mintable.status, freezable.status, transfer_fee,
+  // etc — nested objects, not "1"/"0" flag strings). The old code
+  // routed Solana into the EVM path, so the parser silently produced
+  // empty fact rows for every SPL.
+  if (isSolana) {
+    const data = await goplusGet(
+      `/solana/token_security/?contract_addresses=${contractAddress}`
+    );
+    const t = data[contractAddress] ?? Object.values(data)[0] ?? {};
+    return parseSolanaTokenSecurity(t);
+  }
+
   const chainId = resolveChainId(chain);
   const data = await goplusGet(
     `/token_security/${chainId}?contract_addresses=${contractAddress}`
   );
-  // GoPlus indexes EVM responses by lowercased address; Solana keeps native case.
-  // normalizeAddress handles the chain branch so a Solana mint isn't flattened.
+  // GoPlus indexes EVM responses by lowercased address; normalizeAddress
+  // returns the lower-case form for EVM and preserves Solana case.
   const key = normalizeAddress(contractAddress, chain);
   const t = data[key] ?? data[contractAddress] ?? Object.values(data)[0] ?? {};
   return parseTokenSecurity(t);
+}
+
+/**
+ * Parse the Solana-specific GoPlus payload into the shared
+ * TokenSecurityResult shape so SecurityPanel + portfolio-risk can
+ * render uniformly across chains. Solana fields are nested objects
+ * with `.status` properties, not flat "1"/"0" strings.
+ */
+function parseSolanaTokenSecurity(t: Record<string, unknown>): TokenSecurityResult {
+  const status = (v: unknown): boolean => {
+    if (v && typeof v === 'object' && 'status' in v) {
+      const s = (v as { status: unknown }).status;
+      return s === '1' || s === 1 || s === true;
+    }
+    return v === '1' || v === 1 || v === true;
+  };
+  const isMintable = status(t.mintable);
+  const isFreezable = status(t.freezable);
+  const isClosable = status(t.closable);
+  const nonTransferable = status(t.non_transferable);
+  const metadataMutable = status(t.metadata_mutable);
+
+  let score = 100;
+  if (isMintable) score -= 20;
+  if (isFreezable) score -= 20;
+  if (isClosable) score -= 10;
+  if (nonTransferable) score -= 40;
+  if (metadataMutable) score -= 5;
+  score = Math.max(0, Math.min(100, score));
+
+  let safetyLevel: TokenSecurityResult['safetyLevel'] = 'SAFE';
+  let safetyColor = '#10B981';
+  if (score < 30) { safetyLevel = 'DANGER'; safetyColor = '#EF4444'; }
+  else if (score < 50) { safetyLevel = 'WARNING'; safetyColor = '#F59E0B'; }
+  else if (score < 70) { safetyLevel = 'CAUTION'; safetyColor = '#F59E0B'; }
+
+  const checks: { label: string; status: 'pass' | 'fail' | 'warn' }[] = [
+    { label: 'Mint Authority Renounced', status: isMintable ? 'fail' : 'pass' },
+    { label: 'Freeze Authority Renounced', status: isFreezable ? 'fail' : 'pass' },
+    { label: 'Account Not Closable', status: isClosable ? 'warn' : 'pass' },
+    { label: 'Transferable', status: nonTransferable ? 'fail' : 'pass' },
+    { label: 'Metadata Immutable', status: metadataMutable ? 'warn' : 'pass' },
+  ];
+
+  const holders = Array.isArray(t.holders) ? t.holders : [];
+
+  return {
+    isHoneypot: nonTransferable,
+    buyTax: 0,
+    sellTax: 0,
+    isOpenSource: true, // Not surfaced by GoPlus Solana — assume native programs
+    isMintable,
+    isProxy: false,
+    hasHiddenOwner: false,
+    canTakeBackOwnership: false,
+    ownerCanChangeBalance: isFreezable,
+    selfDestruct: isClosable,
+    externalCall: false,
+    cannotBuy: false,
+    cannotSellAll: nonTransferable,
+    tradingCooldown: false,
+    creatorAddress: typeof t.creator_address === 'string' ? t.creator_address : '',
+    ownerAddress: '',
+    holderCount: typeof t.holder_count === 'string' ? parseInt(t.holder_count) : (typeof t.holder_count === 'number' ? t.holder_count : 0),
+    lpHolders: Array.isArray(t.lp_holders) ? t.lp_holders : [],
+    trustScore: score,
+    safetyLevel,
+    safetyColor,
+    checks,
+    raw: { ...t, _holders: holders },
+  };
 }
 
 function parseTokenSecurity(t: any): TokenSecurityResult {
@@ -467,7 +553,12 @@ function localSignatureDecode(data: string): SignatureDecodeResult {
 export interface TxSimulationResult {
   success: boolean;
   expectedOutcome: string;
-  riskLevel: 'SAFE' | 'MEDIUM' | 'HIGH';
+  // UNKNOWN is the explicit fail-CLOSED value when GoPlus's simulation
+  // endpoint is unreachable. Callers (SecurityGate) MUST treat UNKNOWN
+  // as "do not green-light a sign" — the previous fallback fabricated
+  // MEDIUM and let signs through during outages, violating CLAUDE.md
+  // "no fabricated values".
+  riskLevel: 'SAFE' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
   estimatedGas: string;
   riskFlags: string[];
   balanceChanges: { token: string; change: string }[];
@@ -493,9 +584,13 @@ export async function simulateTransaction(
     const result = await res.json();
     return parseTxSimulation(result.result ?? result);
   } catch {
+    // CLAUDE.md "no fabricated values" — fail CLOSED. The prior code
+    // returned `success:true riskLevel:MEDIUM` so SecurityGate green-
+    // lighted signs even when no real check ran. UNKNOWN forces the
+    // caller to either retry, surface "verify manually", or block.
     return {
-      success: true, expectedOutcome: 'Transaction would likely execute',
-      riskLevel: 'MEDIUM', estimatedGas: 'Unknown',
+      success: false, expectedOutcome: 'Simulation unavailable',
+      riskLevel: 'UNKNOWN', estimatedGas: 'Unknown',
       riskFlags: ['Simulation unavailable — verify manually before signing'],
       balanceChanges: [],
     };
