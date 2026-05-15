@@ -150,18 +150,23 @@ export default function PortfolioPage() {
       chain: intel?.chain,
       symbol: h.symbol,
     }));
-    fetch('/api/portfolio/live-prices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tokens: payload }),
-    })
-      .then(async (r) => (r.ok ? ((await r.json()) as { prices: Record<string, { price: number; change24h: number }> }) : null))
-      .then((d) => {
-        if (!abort && d) setLivePrices(d.prices ?? {});
+    const pull = () => {
+      fetch('/api/portfolio/live-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokens: payload }),
       })
-      .catch(() => {});
+        .then(async (r) => (r.ok ? ((await r.json()) as { prices: Record<string, { price: number; change24h: number }> }) : null))
+        .then((d) => {
+          if (!abort && d) setLivePrices(d.prices ?? {});
+        })
+        .catch(() => {});
+    };
+    pull();
+    const id = window.setInterval(pull, 30_000);
     return () => {
       abort = true;
+      window.clearInterval(id);
     };
   }, [intel]);
 
@@ -401,7 +406,7 @@ export default function PortfolioPage() {
         </div>
 
         {tab === "holdings" && (
-          <HoldingsTable holdings={tradeableHoldings} loading={loadingIntel} onSelect={router.push} />
+          <HoldingsTable holdings={tradeableHoldings} loading={loadingIntel} totalValueUsd={totalValueUsd} onSelect={router.push} />
         )}
         {tab === "performance" && <PerformanceTab stats={perf?.stats ?? null} loading={loadingPerf} />}
         {tab === "alpha" && (
@@ -511,10 +516,12 @@ function PerformanceChart({
 function HoldingsTable({
   holdings,
   loading,
+  totalValueUsd,
   onSelect,
 }: {
   holdings: Holding[];
   loading: boolean;
+  totalValueUsd: number;
   onSelect: (path: string) => void;
 }) {
   if (loading) {
@@ -544,6 +551,7 @@ function HoldingsTable({
             <th className="px-4 py-3 text-right">Current Price</th>
             <th className="px-4 py-3 text-right">24h</th>
             <th className="px-4 py-3 text-right">Value</th>
+            <th className="px-4 py-3 text-right">Allocation</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
@@ -578,6 +586,23 @@ function HoldingsTable({
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
                   {valueUsd > 0 ? formatLargeNumber(valueUsd) : "—"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {totalValueUsd > 0 && valueUsd > 0 ? (
+                    <div className="inline-flex items-center gap-2 min-w-[88px] justify-end">
+                      <div className="h-1.5 w-12 rounded-full bg-slate-800/80 overflow-hidden">
+                        <div
+                          className="h-full bg-[#0A1EFF]"
+                          style={{ width: `${Math.min(100, (valueUsd / totalValueUsd) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-xs text-slate-300 tabular-nums">
+                        {((valueUsd / totalValueUsd) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-500">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
