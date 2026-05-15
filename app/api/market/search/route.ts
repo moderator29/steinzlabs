@@ -108,27 +108,55 @@ async function searchBirdeye(q: string): Promise<SearchResult[]> {
   }));
 }
 
-async function searchAlchemy(address: string): Promise<SearchResult[]> {
-  if (!process.env.ALCHEMY_API_KEY) return [];
-  const url = `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}/getTokenMetadata?contractAddress=${address}`;
+// Audit M1 #2 follow-up — was hardcoded to eth-mainnet so any EVM
+// contract that lives on Base/Arbitrum/Polygon/etc returned an
+// 'unknown token' miss when searched. Now probes every EVM chain we
+// trade on, in parallel. First chain that returns a real
+// name/symbol wins. The original audit phrased this as a Solana
+// routing bug — that was a false read of the code (Solana base58
+// addresses skip searchAlchemy entirely; isContractAddress only
+// matches 0x...), but the within-EVM gap is real and worth fixing.
+const ALCHEMY_EVM_NETWORKS: { chain: string; subdomain: string }[] = [
+  { chain: 'ethereum', subdomain: 'eth-mainnet' },
+  { chain: 'base',     subdomain: 'base-mainnet' },
+  { chain: 'arbitrum', subdomain: 'arb-mainnet' },
+  { chain: 'optimism', subdomain: 'opt-mainnet' },
+  { chain: 'polygon',  subdomain: 'polygon-mainnet' },
+];
+
+async function probeAlchemyChain(address: string, chain: string, subdomain: string): Promise<SearchResult | null> {
+  const url = `https://${subdomain}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}/getTokenMetadata?contractAddress=${address}`;
   const res = await fetch(url, { next: { revalidate: 300 } } as RequestInit);
-  if (!res.ok) return [];
+  if (!res.ok) return null;
   const data = await res.json() as {
     result?: { name?: string; symbol?: string; logo?: string; decimals?: number };
     error?: unknown;
   };
-  if (!data.result || data.error) return [];
+  if (!data.result || data.error) return null;
   const r = data.result;
-  if (!r.name && !r.symbol) return [];
-  return [{
-    id: address,
+  if (!r.name && !r.symbol) return null;
+  return {
+    id: `${chain}:${address}`,
     name: r.name ?? address,
     symbol: (r.symbol ?? '').toUpperCase(),
     thumb: r.logo ?? undefined,
-    chain: 'ethereum',
+    chain,
     source: 'alchemy' as const,
     contractAddress: address,
-  }];
+  };
+}
+
+async function searchAlchemy(address: string): Promise<SearchResult[]> {
+  if (!process.env.ALCHEMY_API_KEY) return [];
+  // Fan out to every EVM chain in parallel; collect every hit. A token
+  // can legitimately exist with the same address on multiple chains
+  // (USDC native + bridged copies), so we surface every match rather
+  // than picking one. The detail-page route uses the chain prefix so
+  // each result lands on the correct trading page.
+  const probes = await Promise.all(
+    ALCHEMY_EVM_NETWORKS.map((n) => probeAlchemyChain(address, n.chain, n.subdomain).catch(() => null)),
+  );
+  return probes.filter((r): r is SearchResult => r !== null);
 }
 
 export async function GET(req: NextRequest) {
