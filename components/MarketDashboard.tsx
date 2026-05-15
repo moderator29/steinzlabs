@@ -22,10 +22,12 @@ interface CoinRow {
   pairAddress?: string;
 }
 
-const MAJOR_IDS = [
-  'bitcoin','ethereum','solana','binancecoin','ripple',
-  'cardano','avalanche-2','polkadot','chainlink','uniswap',
-];
+// Audit M1 #10 — was a frozen 10-token list. If SOL fell out of top
+// 10, the pill still showed it; if PEPE climbed in, it was excluded.
+// "Majors" now means top N by market cap from the live response,
+// computed fresh on every render. Industry parity: CoinGecko /
+// CoinMarketCap rank live, never hardcode.
+const MAJORS_LIMIT = 10;
 
 const CHAIN_LABEL: Record<string, string> = {
   ethereum:'ETH', bsc:'BSC', polygon:'POLY', arbitrum:'ARB',
@@ -165,7 +167,12 @@ export default function MarketDashboard() {
           sparkline: Array.isArray(t.sparkline) ? t.sparkline as number[] : [],
           source:   'coingecko' as const,
         }));
-        if (category === 'majors') rows = rows.filter(c => MAJOR_IDS.includes(c.id));
+        if (category === 'majors') {
+          // Live top-N by market cap from the response itself, not a
+          // frozen ID list. The CoinGecko endpoint already returns
+          // the data sorted market_cap_desc in this category.
+          rows = rows.slice(0, MAJORS_LIMIT);
+        }
         // Cults is a curated subset of meme-token — CoinGecko has no
         // first-class category, so we fetch meme-token upstream (via
         // CAT_API_MAP) then post-filter to the platform's cult list.
@@ -238,23 +245,33 @@ export default function MarketDashboard() {
     router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
-  const toggleWatchlist = (e: React.MouseEvent, coinId: string) => {
+  // Audit M1 #3 — was fire-and-forget. UI flipped optimistically, the
+  // localStorage and React state both updated, then if Supabase failed
+  // the next page reload (which prefers the remote watchlist) showed
+  // the stale state. Users lost trust ("I starred this and it
+  // disappeared!"). Now we await the Supabase result and roll back
+  // local state if it fails. Industry parity: CoinMarketCap shows a
+  // brief "syncing" indicator and snaps back on failure.
+  const toggleWatchlist = async (e: React.MouseEvent, coinId: string) => {
     e.stopPropagation();
-    setWatchlist(prev => {
-      const isAdding = !prev.includes(coinId);
-      const next = isAdding ? [...prev, coinId] : prev.filter(id => id !== coinId);
-      try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch { /* ignore */ }
-      if (isAdding) {
-        void Promise.resolve(supabase.from('watchlist').insert({ token_id: coinId })).catch((err: unknown) =>
-          console.error('[MarketDashboard] Watchlist add failed:', err instanceof Error ? err.message : err)
-        );
-      } else {
-        void Promise.resolve(supabase.from('watchlist').delete().eq('token_id', coinId)).catch((err: unknown) =>
-          console.error('[MarketDashboard] Watchlist remove failed:', err instanceof Error ? err.message : err)
-        );
-      }
-      return next;
-    });
+    const wasIn = watchlist.includes(coinId);
+    const next = wasIn ? watchlist.filter((id) => id !== coinId) : [...watchlist, coinId];
+    // Optimistic local update so the UI is instantly responsive.
+    setWatchlist(next);
+    try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch { /* storage disabled */ }
+    try {
+      const op = wasIn
+        ? supabase.from('watchlist').delete().eq('token_id', coinId)
+        : supabase.from('watchlist').insert({ token_id: coinId });
+      const { error } = await op;
+      if (error) throw error;
+    } catch (err) {
+      // Roll back — local state matches whatever truth-of-record
+      // Supabase returned (or didn't).
+      console.error('[MarketDashboard] Watchlist sync failed, rolling back:', err instanceof Error ? err.message : err);
+      setWatchlist(watchlist);
+      try { localStorage.setItem('steinz_watchlist', JSON.stringify(watchlist)); } catch { /* storage disabled */ }
+    }
   };
 
   const activeFilterCount =

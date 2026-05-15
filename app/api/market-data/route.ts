@@ -10,8 +10,11 @@ async function fromCoinGecko(limit: number, category?: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 7000);
   const catParam = category && category !== 'top' ? `&category=${encodeURIComponent(category)}` : '';
+  // Audit M1 #9 — table renders a "1H%" column header but the API
+  // never returned the 1h field, so the cell stayed empty. Now we
+  // ask CoinGecko for the 1h percentage too (free tier supports it).
   const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=true&price_change_percentage=24h,7d${catParam}`,
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=true&price_change_percentage=1h,24h,7d${catParam}`,
     {
       headers: process.env.COINGECKO_API_KEY
         ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
@@ -88,10 +91,15 @@ export async function GET(request: Request) {
     symbol:   (coin.symbol ?? '').toUpperCase(),
     name:     coin.name ?? '',
     price:    coin.current_price ?? 0,
+    // Audit M1 #9 — surface 1h. Falls back to null when CoinCap is
+    // the upstream (CoinCap doesn't expose 1h), so the UI can render
+    // a dash instead of a fabricated 0%.
+    change1h: coin.price_change_percentage_1h_in_currency ?? null,
     change24h: coin.price_change_percentage_24h ?? 0,
     change7d:  coin.price_change_percentage_7d_in_currency ?? 0,
     volume24h: coin.total_volume ?? 0,
     marketCap: coin.market_cap ?? 0,
+    rank:      coin.market_cap_rank ?? null,
     sparkline: coin.sparkline_in_7d?.price ?? [],
     image:     coin.image ?? '',
   }));
