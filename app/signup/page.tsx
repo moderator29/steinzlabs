@@ -10,7 +10,7 @@ import Link from 'next/link';
 import Script from 'next/script';
 import { supabase, clearSbCookies } from '@/lib/supabase';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { WalletAuthButton } from '@/components/auth/WalletAuthButton';
+import { WalletConnectGroup } from '@/components/auth/WalletConnectGroup';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CoinIcon } from '@/components/landing/CoinIcon';
@@ -542,7 +542,7 @@ export default function SignUpPage() {
           </button>
 
           <div className="mb-4">
-            <WalletAuthButton mode="signup" />
+            <WalletConnectGroup mode="signup" />
           </div>
 
           <p className="text-center text-[15px] font-medium" style={{ color: '#E5E5E5' }}>

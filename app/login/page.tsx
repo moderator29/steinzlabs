@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { WalletAuthButton } from '@/components/auth/WalletAuthButton';
+import { WalletConnectGroup } from '@/components/auth/WalletConnectGroup';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase, clearSbCookies } from '@/lib/supabase';
@@ -506,7 +506,7 @@ function LoginPageInner() {
           </button>
 
           <div className="mb-4">
-            <WalletAuthButton mode="signin" />
+            <WalletConnectGroup mode="signin" />
           </div>
 
           <p className="text-center text-[15px] font-medium" style={{ color: '#E5E5E5' }}>
