@@ -217,13 +217,16 @@ export async function getTopTokens(
 export async function getTopGainers(limit = 10): Promise<CoinGeckoMarketToken[]> {
   const key = cacheKey('coingecko', 'gainers', { limit: String(limit) });
   return withCache(key, TTL.MARKET_CAP, async () => {
+    // Audit M6 #3 — also request 1h so the top-gainers route can sort
+    // by 1h timeframe without a second round-trip to CoinGecko. Free
+    // tier supports the 1h tier on /coins/markets.
     const data = await cgFetch('/coins/markets', {
       vs_currency: 'usd',
       order: 'price_change_percentage_24h_desc',
       per_page: String(limit),
       page: '1',
       sparkline: 'true',
-      price_change_percentage: '24h,7d',
+      price_change_percentage: '1h,24h,7d',
     });
     return data as CoinGeckoMarketToken[];
   });

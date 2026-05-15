@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TrendingUp, Star } from 'lucide-react';
+import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { MiniSpark } from '@/components/dashboard/TopGainersCard';
 
@@ -14,9 +14,19 @@ interface Gainer {
   current_price: number;
   market_cap: number;
   total_volume: number;
+  price_change_percentage_1h_in_currency?: number;
   price_change_percentage_24h: number;
   price_change_percentage_7d_in_currency?: number;
   sparkline_in_7d?: { price: number[] };
+}
+
+type Direction = 'gainers' | 'losers';
+type Timeframe = '1h' | '24h' | '7d';
+
+function pctFor(g: Gainer, tf: Timeframe): number {
+  if (tf === '1h') return g.price_change_percentage_1h_in_currency ?? 0;
+  if (tf === '7d') return g.price_change_percentage_7d_in_currency ?? 0;
+  return g.price_change_percentage_24h;
 }
 
 function fmtPrice(p: number): string {
@@ -40,12 +50,15 @@ function fmtCompact(m: number): string {
 export default function TopGainersPage() {
   const [rows, setRows] = useState<Gainer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [direction, setDirection] = useState<Direction>('gainers');
+  const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch('/api/dashboard/top-gainers?limit=30', {
+        const params = new URLSearchParams({ limit: '30', direction, timeframe });
+        const res = await fetch(`/api/dashboard/top-gainers?${params}`, {
           signal: AbortSignal.timeout(12_000),
           cache: 'no-store',
         });
@@ -61,18 +74,64 @@ export default function TopGainersPage() {
     void load();
     const t = setInterval(load, 120_000);
     return () => { cancelled = true; clearInterval(t); };
-  }, []);
+  }, [direction, timeframe]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3">
         <BackButton href="/dashboard" />
-        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-emerald-400" />
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+          direction === 'gainers' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+        }`}>
+          {direction === 'gainers'
+            ? <TrendingUp className="w-5 h-5 text-emerald-400" />
+            : <TrendingDown className="w-5 h-5 text-red-400" />}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">Top Gainers</h1>
-          <p className="text-xs text-gray-500">Biggest 24-hour movers. Click a row to open the trading terminal.</p>
+          <h1 className="text-xl font-bold text-white">Top {direction === 'gainers' ? 'Gainers' : 'Losers'}</h1>
+          <p className="text-xs text-gray-500">
+            Biggest {timeframe} movers · $1M+ market cap · click a row to open the trading terminal.
+          </p>
+        </div>
+      </div>
+
+      {/* Audit M6 #4 + #3 — direction tab + timeframe pills. CMC /
+          CoinGecko / Birdeye all expose gainers + losers as a paired
+          view with multi-timeframe toggles; matches that. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800/50">
+          {(['gainers', 'losers'] as Direction[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDirection(d)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                direction === d
+                  ? d === 'gainers'
+                    ? 'bg-emerald-500/15 text-emerald-300'
+                    : 'bg-red-500/15 text-red-300'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {d === 'gainers' ? 'Gainers' : 'Losers'}
+            </button>
+          ))}
+        </div>
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800/50">
+          {(['1h', '24h', '7d'] as Timeframe[]).map((tf) => (
+            <button
+              key={tf}
+              type="button"
+              onClick={() => setTimeframe(tf)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                timeframe === tf
+                  ? 'bg-[#0A1EFF]/20 text-[#8FA3FF]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -81,7 +140,7 @@ export default function TopGainersPage() {
           <div>#</div>
           <div>Coin</div>
           <div className="text-right">Price</div>
-          <div className="text-right">24h</div>
+          <div className="text-right">{timeframe}</div>
           <div className="text-right">7d Chart</div>
           <div className="text-right">Market Cap</div>
           <div></div>
@@ -92,8 +151,12 @@ export default function TopGainersPage() {
               <div key={i} className="h-14 mx-3 my-2 rounded bg-white/[0.02] animate-pulse" />
             ))
           ) : rows.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-gray-500">No gainers data available right now.</div>
-          ) : rows.map((g, i) => (
+            <div className="px-4 py-10 text-center text-sm text-gray-500">
+              No {direction} data available for {timeframe} right now.
+            </div>
+          ) : rows.map((g, i) => {
+            const pct = pctFor(g, timeframe);
+            return (
             <Link
               key={g.id}
               href={`/dashboard/market?coin=${g.id}`}
@@ -102,7 +165,7 @@ export default function TopGainersPage() {
               <span className="text-xs font-mono text-gray-600">{i + 1}</span>
               <div className="flex items-center gap-2.5 min-w-0">
                 {g.image && (
-                  <img src={g.image} alt={g.symbol} className="w-7 h-7 rounded-full shrink-0" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                  <img src={g.image} alt={g.symbol} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" onError={(e) => (e.currentTarget.style.display = 'none')} />
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-white truncate">{g.name}</div>
@@ -110,8 +173,8 @@ export default function TopGainersPage() {
                 </div>
               </div>
               <div className="text-right text-sm text-white font-mono">{fmtPrice(g.current_price)}</div>
-              <div className={`text-right text-sm font-semibold ${g.price_change_percentage_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {g.price_change_percentage_24h >= 0 ? '+' : ''}{g.price_change_percentage_24h.toFixed(2)}%
+              <div className={`text-right text-sm font-semibold ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
               </div>
               <div className="flex justify-end">
                 <MiniSpark prices={g.sparkline_in_7d?.price ?? []} width={90} height={28} />
@@ -121,7 +184,8 @@ export default function TopGainersPage() {
                 <Star className="w-4 h-4 text-gray-600 hover:text-yellow-400 inline" />
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
