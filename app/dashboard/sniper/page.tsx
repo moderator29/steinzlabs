@@ -166,6 +166,12 @@ export default function SniperPage() {
   // parity with sniping platforms (Photon, BullX, Trojan): execution
   // feed updates instantly without page action.
   const [liveConnected, setLiveConnected] = useState(false);
+  // Track which execution rows just landed via realtime so HistoryTab
+  // can flash them. Industry parity with Photon / BullX where new
+  // fills pulse for ~2s. Keep this as a ref-backed Set to avoid
+  // re-renders on every clear; React only re-renders the freshIds
+  // bumps via the version counter.
+  const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
   useEffect(() => {
     if (!user?.id || !supabase) return;
     const channel = supabase
@@ -176,6 +182,24 @@ export default function SniperPage() {
         (payload) => {
           const row = payload.new as ExecutionRow;
           setExecutions((prev) => [row, ...prev].slice(0, 50));
+          if (row.id) {
+            setFreshIds((prev) => {
+              const next = new Set(prev);
+              next.add(row.id);
+              return next;
+            });
+            // Drop the highlight after 2.4s (matches our `animate-pulse-fill`
+            // CSS, defined inline below). Use window.setTimeout so SSR
+            // doesn't choke on the missing global.
+            window.setTimeout(() => {
+              setFreshIds((prev) => {
+                if (!prev.has(row.id)) return prev;
+                const next = new Set(prev);
+                next.delete(row.id);
+                return next;
+              });
+            }, 2400);
+          }
         },
       )
       .subscribe((status) => {
@@ -328,10 +352,28 @@ export default function SniperPage() {
         </div>
 
         {/* Tabs */}
-        <div className="mt-4 flex gap-1 border-b border-white/10">
+        <div className="mt-4 flex items-center gap-1 border-b border-white/10">
           <Tab id="snipers" current={tab} onClick={setTab} count={visibleSnipers.length}>My Snipers</Tab>
           <Tab id="feed" current={tab} onClick={setTab}>New Token Feed</Tab>
           <Tab id="history" current={tab} onClick={setTab} count={executions.length}>History</Tab>
+          {/* Realtime status indicator. Industry parity with Photon /
+              BullX / Trojan: a pulsing green dot when the execution
+              feed channel is subscribed; muted gray dot otherwise.
+              Title attribute explains the state on hover. */}
+          <span
+            className="ml-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+            title={liveConnected
+              ? 'Realtime channel subscribed — new fills appear instantly'
+              : 'Realtime channel not connected — refresh to load latest fills'}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}
+              aria-hidden="true"
+            />
+            <span className={liveConnected ? 'text-emerald-300' : 'text-slate-400'}>
+              {liveConnected ? 'Live' : 'Offline'}
+            </span>
+          </span>
         </div>
 
         <div className="mt-5">
@@ -347,7 +389,7 @@ export default function SniperPage() {
             <FeedTab tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter} />
           )}
           {tab === 'history' && (
-            <HistoryTab executions={executions} chainFilter={chainFilter} />
+            <HistoryTab executions={executions} chainFilter={chainFilter} freshIds={freshIds} />
           )}
         </div>
       </div>
@@ -525,13 +567,24 @@ function TokenRow({ t }: { t: DetectedToken }) {
   );
 }
 
-function HistoryTab({ executions, chainFilter }: { executions: ExecutionRow[]; chainFilter: SniperChain | 'all' }) {
+function HistoryTab({ executions, chainFilter, freshIds }: { executions: ExecutionRow[]; chainFilter: SniperChain | 'all'; freshIds: Set<string> }) {
   const visible = chainFilter === 'all' ? executions : executions.filter(e => e.chain === chainFilter);
   if (visible.length === 0) {
     return <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No executions yet on this chain.</div>;
   }
   return (
     <div className="rounded-xl border border-white/10 overflow-hidden">
+      {/* Inline keyframes for the pulse-on-fill effect. Defined here
+          (instead of tailwind.config) so the animation is co-located
+          with the only consumer; cheap to extract later if reused. */}
+      <style jsx>{`
+        @keyframes naka-pulse-fill {
+          0%   { background-color: rgba(16, 185, 129, 0.18); box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.9); }
+          60%  { background-color: rgba(16, 185, 129, 0.08); box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.6); }
+          100% { background-color: transparent;              box-shadow: inset 3px 0 0 transparent; }
+        }
+        .naka-fresh-row { animation: naka-pulse-fill 2.4s ease-out 1; }
+      `}</style>
       <table className="w-full text-sm">
         <thead className="bg-white/[0.03]">
           <tr className="text-left text-xs uppercase tracking-wider text-white/50">
@@ -549,8 +602,9 @@ function HistoryTab({ executions, chainFilter }: { executions: ExecutionRow[]; c
           {visible.map(e => {
             const cfg = e.chain ? CHAIN_CONFIGS[e.chain as SniperChain] : null;
             const pnl = e.pnl_usd != null ? Number(e.pnl_usd) : null;
+            const isFresh = freshIds.has(e.id);
             return (
-              <tr key={e.id} className="border-t border-white/5 hover:bg-white/[0.02]">
+              <tr key={e.id} className={`border-t border-white/5 hover:bg-white/[0.02] ${isFresh ? 'naka-fresh-row' : ''}`}>
                 <td className="px-4 py-3 font-medium">{e.token_symbol ?? '—'}</td>
                 <td className="px-4 py-3">{cfg ? <span className="inline-flex items-center gap-1.5"><img src={cfg.logo} alt="" className="w-4 h-4 rounded-full" /> {cfg.symbol}</span> : (e.chain ?? '—')}</td>
                 <td className="px-4 py-3 text-white/80">{e.amount_native ?? e.amount_sol ?? '—'}</td>
