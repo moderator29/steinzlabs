@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity } from 'lucide-react';
+import { ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity, X } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
+import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
 
 // §11 — lightweight-charts wrapper for the proof modal. Lazy-loaded
 // so the chart bundle ships only when a user opens the proof drawer.
@@ -46,6 +47,27 @@ interface ProofEvent {
   tokenLiquidity?: number;
   tokenMarketCap?: number;
   tokenPriceChange24h?: number;
+}
+
+// Build the SwapCard payload from a context-feed proof event. The
+// receive-side (toToken) comes from the event; the pay-side defaults
+// to a sensible quote per chain. SwapCard fetches the real quote +
+// balance once it mounts, so these initial numbers are placeholders
+// the card overwrites within ~200ms.
+function buildProofSwapData(event: ProofEvent): SwapCardData {
+  const chain = (event.chain || 'ethereum').toLowerCase();
+  const fromToken = chain === 'solana' ? 'SOL' : 'USDC';
+  return {
+    fromToken,
+    toToken: event.tokenSymbol || event.tokenName || 'TOKEN',
+    toTokenAddress: event.pairAddress,
+    fromAmount: '0',
+    toAmount: '0',
+    rate: '—',
+    priceImpact: 0,
+    platformFee: '0.30%',
+    chain,
+  };
 }
 
 function BubbleVisualization({ event }: { event: ProofEvent }) {
@@ -113,6 +135,18 @@ export default function ViewProofPage() {
   const [voted, setVoted] = useState<'yes' | 'no' | null>(null);
   const [yesVotes, setYesVotes] = useState(0);
   const [noVotes, setNoVotes] = useState(0);
+  // Inline swap card — when the user clicks Buy we expand the same
+  // SwapCard that VTX AI uses (components/vtx/SwapCard.tsx) instead of
+  // routing them away to /dashboard/swap. The card auto-detects balance,
+  // fetches a live quote on mount, and signs in-place; user never leaves
+  // the proof modal.
+  const [showSwapCard, setShowSwapCard] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setWalletAddress(localStorage.getItem('wallet_address'));
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -380,33 +414,46 @@ export default function ViewProofPage() {
         </div>
 
         {(event.tokenSymbol || event.pairAddress) && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const params = new URLSearchParams();
-                if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
-                if (event.tokenName) params.set('name', event.tokenName || '');
-                if (event.pairAddress) params.set('pair', event.pairAddress);
-                if (event.chain) params.set('chain', event.chain);
-                router.push(`/dashboard/swap?${params.toString()}`);
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              Buy {event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}
-            </button>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams();
-                if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
-                if (event.chain) params.set('chain', event.chain);
-                router.push(`/dashboard/swap?${params.toString()}`);
-              }}
-              className="flex items-center justify-center gap-1.5 px-5 py-3 border border-white/10 rounded-xl text-xs font-semibold hover:bg-white/5 transition-colors"
-            >
-              Swap
-            </button>
-          </div>
+          <>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSwapCard((v) => !v)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+              >
+                {showSwapCard ? <X className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+                {showSwapCard ? 'Hide swap' : `Buy ${event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}`}
+              </button>
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
+                  if (event.chain) params.set('chain', event.chain);
+                  router.push(`/dashboard/swap?${params.toString()}`);
+                }}
+                className="flex items-center justify-center gap-1.5 px-5 py-3 border border-white/10 rounded-xl text-xs font-semibold hover:bg-white/5 transition-colors"
+              >
+                Open full swap
+              </button>
+            </div>
+            {showSwapCard && (
+              <div className="glass rounded-xl p-3 border border-white/10">
+                {/*
+                  Inline swap — uses the same SwapCard component VTX AI
+                  renders inside agent messages. fromToken defaults to
+                  the chain's native quote (USDC for EVM, SOL for Solana
+                  context — SOL is the routing native and the card flips
+                  to USDC if needed). toToken / toTokenAddress / chain
+                  come straight from the context-feed event so there's
+                  no DexScreener iframe and no page navigation.
+                */}
+                <SwapCard
+                  swap={buildProofSwapData(event)}
+                  walletAddress={walletAddress ?? undefined}
+                  onCancel={() => setShowSwapCard(false)}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Bug §6.5 — "Go With This Signal?" was ambiguous to testers
