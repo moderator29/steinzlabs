@@ -14,6 +14,7 @@ import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
 import { SecurityGate } from '@/components/security/SecurityGate';
+import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 
 const CHAINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH', color: '#627EEA', dex: 'Uniswap V3' },
@@ -1435,6 +1436,20 @@ export default function SwapPage() {
                   <span style={{ color: activeChain.color }} className="font-medium">{activeChain.dex}</span>
                 </div>
               </div>
+
+              {/* Audit B7 / P1 #13 — full route preview. Reads route
+                  data straight off quoteData; supports both 0x (EVM)
+                  and Jupiter (Solana) shapes via the component's
+                  internal normalizer. Falls back to the chain's default
+                  DEX label when no structured route is present so
+                  "Powered by Uniswap V3" still has somewhere to live. */}
+              <SwapRoutePreview
+                fromSymbol={fromToken}
+                toSymbol={toToken}
+                fallbackVenue={activeChain.dex}
+                zeroExRoute={(quoteData?.route as { fills?: Array<{ source?: string; proportionBps?: number; from?: string; to?: string }>; tokens?: Array<{ address: string; symbol: string }> } | undefined) ?? undefined}
+                jupiterRoutePlan={(quoteData?.routePlan as Array<{ protocol?: string; inputMint?: string; outputMint?: string; percent?: number }> | undefined) ?? undefined}
+              />
 
               {pi >= 5 && (
                 <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border ${piBlocked ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
