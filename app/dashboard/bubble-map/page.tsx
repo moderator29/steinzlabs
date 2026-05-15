@@ -359,20 +359,52 @@ export default function BubbleMapPage() {
     setChatInput('');
     setChatLoading(true);
     try {
-      const ctx = mapData
-        ? `\n[BUBBLE MAP]\nToken: ${mapData.tokenInfo.name} (${mapData.tokenInfo.symbol}) | Chain: ${mapData.tokenInfo.chain}\nPrice: $${mapData.tokenInfo.price} | 24h: ${mapData.tokenInfo.priceChange24h}%\nMcap: $${mapData.tokenInfo.marketCap} | Vol: $${mapData.tokenInfo.volume24h}\nTop holder conc: ${mapData.tokenInfo.topHolderConcentration}% | Risk: ${mapData.risk?.riskLevel ?? 'N/A'}\nHolders: ${mapData.nodes.length - 1}`
-        : '';
-      const res = await fetch('/api/vtx-ai', {
+      // Phase C — dedicated bubble-map agent with structured context +
+      // domain-specific system prompt, conversation persisted to
+      // bubblemap_conversations. Replaces the generic /api/vtx-ai
+      // call which had to infer cluster patterns from prose.
+      const context = mapData ? {
+        tokenName: mapData.tokenInfo.name,
+        tokenSymbol: mapData.tokenInfo.symbol,
+        chain: mapData.tokenInfo.chain,
+        tokenAddress: tokenAddress.trim(),
+        priceUsd: mapData.tokenInfo.price,
+        marketCap: mapData.tokenInfo.marketCap,
+        topHolderConcentration: mapData.tokenInfo.topHolderConcentration,
+        totalHolders: mapData.tokenInfo.totalHolders,
+        riskLevel: mapData.risk?.riskLevel,
+        topHolders: mapData.nodes
+          .filter(n => n.id !== 'token')
+          .sort((a, b) => b.percentage - a.percentage)
+          .slice(0, 10)
+          .map(n => ({
+            address: n.address ?? n.id,
+            label: n.entityLabel ?? n.entityName ?? null,
+            percent: n.percentage,
+            type: n.type,
+          })),
+      } : undefined;
+      const res = await fetch('/api/bubblemap-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg + ctx, history: chatMessages.slice(-8), tier: 'pro', responseStyle: 'concise', autoContext: false }),
+        body: JSON.stringify({ message: msg, history: chatMessages.slice(-8), context }),
       });
       const data = await res.json() as { reply?: string; error?: string };
       setChatMessages(p => [...p, { role: 'assistant', content: data.reply ?? data.error ?? 'No response.', timestamp: Date.now() }]);
     } catch {
       setChatMessages(p => [...p, { role: 'assistant', content: 'Connection failed.', timestamp: Date.now() }]);
     } finally { setChatLoading(false); }
-  }, [chatInput, chatLoading, chatMessages, mapData]);
+  }, [chatInput, chatLoading, chatMessages, mapData, tokenAddress]);
+
+  // Phase C — pre-canned questions surfaced above the chat input so
+  // first-time users have an instant on-ramp. Tap to fill the input
+  // (not auto-send) so they can edit before submitting.
+  const SUGGESTED_QUESTIONS: string[] = [
+    'Who are the top 3 holders?',
+    'Is this token risky?',
+    'Are there dev-wallet patterns?',
+    'How concentrated is supply?',
+  ];
 
   function copyMsg(i: number) {
     const m = chatMessages[i];
@@ -582,10 +614,27 @@ export default function BubbleMapPage() {
             </div>
 
             <div className="p-3 border-t border-white/[0.04] flex-shrink-0">
+              {/* Phase C — pre-canned questions appear when the chat is
+                  empty (just the welcome message). Tap to fill the
+                  input; user can still edit before sending. */}
+              {mapData && chatMessages.length <= 1 && (
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {SUGGESTED_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setChatInput(q)}
+                      className="text-[10px] px-2 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-[#0A1EFF]/40 transition-colors"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
-                  placeholder="Ask about holders, risk, entity labels…"
+                  placeholder="Ask about holders, risk, dev wallets, cluster patterns…"
                   className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30 transition-colors" />
                 <button onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
                   className="w-8 h-8 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 flex-shrink-0">
