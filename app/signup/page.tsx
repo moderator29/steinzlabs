@@ -196,11 +196,18 @@ export default function SignUpPage() {
             signal: AbortSignal.timeout(8000),
           });
           captchaData = await captchaRes.json();
-        } catch (captchaErr) {
-          // Network/timeout — fail open (server route also fails open). Without
-          // this catch the form silently hangs on "Creating account...".
-          console.warn('[signup] verify-captcha unreachable, proceeding:', captchaErr);
-          captchaData = { success: true };
+        } catch {
+          // Fail closed: blocking the verify endpoint must not skip the
+          // challenge. Surface the error and require the user to retry.
+          showToast('Security check unreachable. Please retry.', 'error');
+          setErrors(prev => ({ ...prev, captcha: 'Security verification unreachable' }));
+          const ts = (window as { turnstile?: { reset?: (id: string) => void } }).turnstile;
+          if (ts && widgetIdRef.current && typeof ts.reset === 'function') {
+            try { ts.reset(widgetIdRef.current); } catch { /* ignore */ }
+          }
+          setCaptchaToken('');
+          setLoading(false);
+          return;
         }
         if (!captchaData.success) {
           showToast('Security check failed. Please try again.', 'error');

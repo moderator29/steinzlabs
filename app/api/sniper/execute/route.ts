@@ -61,7 +61,6 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
   const { address, chain, amount, slippage } = parsed.data;
-  void slippage;
   const steps: { step: number; label: string; passed: boolean; detail: string }[] = [];
 
   // Step 0: kill switch from platform_settings
@@ -130,5 +129,5 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
     status: 'queued',
   }).catch(() => {});
 
-  return NextResponse.json({ blocked: false, approved: true, steps, liquidity: liq, pair: pairs[0]?.pairAddress ?? null, price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null });
+  return NextResponse.json({ blocked: false, approved: true, steps, liquidity: liq, slippage, pair: pairs[0]?.pairAddress ?? null, price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null });
 });

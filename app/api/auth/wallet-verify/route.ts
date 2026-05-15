@@ -23,11 +23,16 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
+    const normalized = normalizeAddress(address, chain === "evm" ? "ethereum" : "solana");
 
+    // Nonce is bound to (nonce, address, chain) so a stolen nonce cannot be
+    // replayed against a different wallet.
     const { data: nonceRow } = await supabase
       .from("auth_wallet_nonces")
       .select("*")
       .eq("nonce", nonce)
+      .eq("address", normalized)
+      .eq("chain", chain)
       .eq("consumed", false)
       .gt("expires_at", new Date().toISOString())
       .single();
@@ -36,29 +41,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired nonce" }, { status: 403 });
     }
 
-    const message = `Sign this message to authenticate with Naka Labs.\n\nAddress: ${address}\nNonce: ${nonce}\nExpires: ${nonceRow.expires_at}`;
+    // Reconstruct the message from the nonce row's address (not client input)
+    // so the signature is verified against what the user actually signed at
+    // nonce-issuance time.
+    const message = `Sign this message to authenticate with Naka Labs.\n\nAddress: ${nonceRow.address}\nNonce: ${nonce}\nExpires: ${nonceRow.expires_at}`;
 
     let verified = false;
-    if (chain === "evm") {
-      verified = await verifyMessage({
-        address: address as `0x${string}`,
-        message,
-        signature: signature as `0x${string}`,
-      });
-    } else {
-      const pubkeyBytes = bs58.decode(address);
-      const sigBytes = bs58.decode(signature);
-      const msgBytes = new TextEncoder().encode(message);
-      verified = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
+    try {
+      if (chain === "evm") {
+        verified = await verifyMessage({
+          address: nonceRow.address as `0x${string}`,
+          message,
+          signature: signature as `0x${string}`,
+        });
+      } else {
+        const pubkeyBytes = bs58.decode(nonceRow.address);
+        const sigBytes = bs58.decode(signature);
+        const msgBytes = new TextEncoder().encode(message);
+        verified = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
+      }
+    } catch {
+      return NextResponse.json({ error: "Malformed signature" }, { status: 400 });
     }
 
     if (!verified) {
       return NextResponse.json({ error: "Signature verification failed" }, { status: 403 });
     }
 
+    // Consume immediately on successful verify so a parallel request can't
+    // re-use the same nonce while the user-creation path is mid-flight.
     await supabase.from("auth_wallet_nonces").update({ consumed: true }).eq("nonce", nonce);
-
-    const normalized = normalizeAddress(address, chain === "evm" ? "ethereum" : "solana");
 
     const { data: existing } = await supabase
       .from("wallet_identities")
