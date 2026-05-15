@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, CheckCircle2, Loader2, Copy, Download } from "lucide-react";
+import { ExternalLink, CheckCircle2, Loader2, Copy, Download, Repeat2 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import NewCopyRuleModal from "@/app/dashboard/copy-trading/NewCopyRuleModal";
 import { toast } from "sonner";
 
 // §11 — lazy-load the chart so the lightweight-charts bundle (~50KB)
@@ -97,6 +98,11 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
   const [tab, setTab] = useState<Tab>("overview");
   const [following, setFollowing] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
+  // Copy-this-whale modal state — opens NewCopyRuleModal pre-filled
+  // with this whale's address + chain. Audit P0 fix: the Copy tab
+  // had no entry point; users had to leave for /dashboard/copy-trading
+  // and re-enter the address by hand.
+  const [copyRuleOpen, setCopyRuleOpen] = useState(false);
 
   const [fetchError, setFetchError] = useState<'auth' | 'tier' | 'notfound' | 'network' | null>(null);
 
@@ -359,9 +365,52 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
         )}
 
         {tab === "copy" && (
-          <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
-            Configure copy rules from <Link href="/dashboard/copy-trading" className="text-blue-400">/dashboard/copy-trading</Link>.
+          <div className="rounded-xl border border-slate-800 p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white mb-1">Copy this whale</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Mirror this whale&apos;s trades automatically, get instant Telegram alerts when they buy / sell,
+                  or one-click confirm each move from your wallet. Cancel anytime.
+                </p>
+              </div>
+              {/*
+                Audit fix — the tab used to be a static "go configure
+                rules elsewhere" message with no entry point. Industry
+                standard (BananaGun / Maestro / Cielo) is one-click
+                from the whale page into a pre-filled rule. Opens
+                NewCopyRuleModal with the whale's address and chain
+                already populated.
+              */}
+              <button
+                type="button"
+                onClick={() => setCopyRuleOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white text-sm font-semibold hover:scale-[1.02] transition-transform shrink-0"
+              >
+                <Repeat2 className="w-4 h-4" />
+                Copy this whale
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Need to manage existing rules? Open{" "}
+              <Link href="/dashboard/copy-trading" className="text-blue-400 hover:underline">
+                /dashboard/copy-trading
+              </Link>
+              .
+            </p>
           </div>
+        )}
+
+        {copyRuleOpen && (
+          <NewCopyRuleModal
+            initialWhaleAddress={address}
+            initialChain={chain}
+            onClose={() => setCopyRuleOpen(false)}
+            onSaved={() => {
+              setCopyRuleOpen(false);
+              toast.success("Copy rule saved — alerts will fire when this whale trades.");
+            }}
+          />
         )}
       </div>
     </div>
