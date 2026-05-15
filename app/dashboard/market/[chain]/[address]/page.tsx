@@ -27,21 +27,9 @@ import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2 } from "lucide-react";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
-import { getTradingViewSymbol } from "@/components/TradingViewChart";
-
-// Audit M8 #1 — TradingViewChart and the 780KB tv.js it loads were
-// blocking first paint by 2–3 seconds. Dynamic-import keeps the rest
-// of the detail page (price strip, BackButton, Buy/Sell, recent
-// trades) interactive while the chart bundle streams in. Skeleton
-// matches the chart's outer dimensions so the layout doesn't jump.
-const TradingViewChart = dynamic(() => import("@/components/TradingViewChart"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-slate-950/40 text-xs text-slate-500">
-      Loading chart…
-    </div>
-  ),
-});
+import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from "@/components/TradingViewChart";
+import { AdvancedChart } from "@/components/trading/AdvancedChart";
+import SecurityPanel from "@/components/market/SecurityPanel";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
@@ -84,6 +72,22 @@ function readChartInterval(tokenKey: string): string {
     return v && CHART_INTERVALS.some((i) => i.id === v) ? v : '15';
   } catch {
     return '15';
+  }
+}
+
+// Map TradingView interval IDs to lib/services/ohlcv Timeframe shape so
+// the off-CEX AdvancedChart honors the same toolbar as TradingView.
+type AdvancedTf = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
+function tfForAdvanced(tvInterval: string): AdvancedTf {
+  switch (tvInterval) {
+    case '1':   return '1m';
+    case '5':   return '5m';
+    case '15':  return '15m';
+    case '60':  return '1h';
+    case '240': return '4h';
+    case 'D':   return '1d';
+    case 'W':   return '1w';
+    default:    return '15m';
   }
 }
 
@@ -136,10 +140,32 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const volume24h = md?.total_volume?.usd ?? 0;
   const marketCap = md?.market_cap?.usd ?? 0;
   const fdv = md?.fully_diluted_valuation?.usd ?? 0;
-  const dex = (detail as any)?._dex as { volume_m5?: number; buys_h24?: number; sells_h24?: number } | undefined;
+  const dex = (detail as any)?._dex as {
+    volume_m5?: number;
+    volume_h1?: number;
+    volume_h6?: number;
+    volume_h24?: number;
+    buys_h24?: number;
+    sells_h24?: number;
+    // Audit P1 #17 — full DexScreener tier strip
+    change_m5?: number | null;
+    change_h1?: number | null;
+    change_h6?: number | null;
+    change_h24?: number | null;
+    // Audit P1 #20 — used by AdvancedChart fallback below
+    pair_address?: string;
+    liquidity_usd?: number | null;
+  } | undefined;
   const vol5m = dex?.volume_m5;
   const buys24h = dex?.buys_h24;
   const sells24h = dex?.sells_h24;
+  // Prefer DexScreener pair-level tiers when available; fall back to
+  // CoinGecko's coarser percentages so the strip never goes blank for
+  // major tokens that aren't in DexScreener.
+  const change5m = dex?.change_m5 ?? null;
+  const change6h = dex?.change_h6 ?? null;
+  const change1hUnified = dex?.change_h1 ?? change1h;
+  const change24hUnified = dex?.change_h24 ?? change24h;
   const symbol = detail?.symbol?.toUpperCase() ?? address.slice(0, 6).toUpperCase();
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
@@ -219,10 +245,22 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <span className="text-lg md:text-xl font-mono font-bold tabular-nums">
             {loading ? '—' : formatPrice(price)}
           </span>
-          <PriceChangeDisplay value={change24h} size="sm" />
+          <PriceChangeDisplay value={change24hUnified} size="sm" />
           <div className="h-4 w-px bg-slate-800/60 hidden md:block" />
-          <StatInline label="1h" value={change1h != null ? `${change1h >= 0 ? '+' : ''}${change1h.toFixed(2)}%` : '—'} tone={change1h >= 0 ? 'up' : 'down'} />
-          <StatInline label="24h" value={`${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%`} tone={change24h >= 0 ? 'up' : 'down'} />
+          {/*
+            Audit P1 #17 — DexScreener parity: 5m / 1h / 6h / 24h tier
+            strip. Each tier hides when its source is missing rather
+            than rendering "—" so we don't pad the row with empty cells
+            on tokens CoinGecko serves without DexScreener pair data.
+          */}
+          {change5m != null && (
+            <StatInline label="5m" value={`${change5m >= 0 ? '+' : ''}${change5m.toFixed(2)}%`} tone={change5m >= 0 ? 'up' : 'down'} />
+          )}
+          <StatInline label="1h" value={change1hUnified != null ? `${change1hUnified >= 0 ? '+' : ''}${change1hUnified.toFixed(2)}%` : '—'} tone={change1hUnified >= 0 ? 'up' : 'down'} />
+          {change6h != null && (
+            <StatInline label="6h" value={`${change6h >= 0 ? '+' : ''}${change6h.toFixed(2)}%`} tone={change6h >= 0 ? 'up' : 'down'} />
+          )}
+          <StatInline label="24h" value={`${change24hUnified >= 0 ? '+' : ''}${change24hUnified.toFixed(2)}%`} tone={change24hUnified >= 0 ? 'up' : 'down'} />
           <StatInline label="5m Vol" value={vol5m != null && vol5m > 0 ? `$${formatLargeNumber(vol5m)}` : '—'} />
           <StatInline label="24h Vol" value={volume24h ? `$${formatLargeNumber(volume24h)}` : '—'} />
           <StatInline label="24h Buy" value={buys24h != null && buys24h > 0 ? formatLargeNumber(buys24h) : '—'} tone={buys24h && buys24h > 0 ? 'up' : undefined} />
@@ -235,11 +273,19 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       {/* Body — checkprice-style 2-column on desktop, stacked on mobile */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* Audit M3 — chart with custom timeframe selector + fullscreen.
-              Selector pills above the chart drive the TradingView widget's
-              interval prop; selection persists per token. Fullscreen
-              toggles a position:fixed overlay so power users can read the
-              chart without losing the page. */}
+          {/*
+            Audit M3 — interval selector + fullscreen toggle. Restored
+            from main after the rebase dropped the toolbar; selection
+            persists per token via localStorage.
+
+            Audit P1 #20 — chart routing. TradingViewChart silently 404s
+            for off-CEX tokens (Naka Go, Pleasure Coin, every long-tail
+            asset). For those we render AdvancedChart, which fetches
+            OHLCV directly from the actual DEX pair via the contract
+            address. tfForAdvanced maps TradingView's interval IDs to
+            the lib/services/ohlcv Timeframe shape so the same toolbar
+            controls both renderers.
+          */}
           <div className={
             chartFullscreen
               ? 'fixed inset-0 z-[80] bg-slate-950 flex flex-col'
@@ -257,7 +303,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                       className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors flex-shrink-0 ${
                         active
                           ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
-                          : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
                       }`}
                       aria-pressed={active}
                     >
@@ -269,7 +315,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               <button
                 type="button"
                 onClick={() => setChartFullscreen((v) => !v)}
-                className="flex-shrink-0 p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5"
+                className="flex-shrink-0 p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/5"
                 title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
                 aria-label={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
               >
@@ -277,13 +323,24 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               </button>
             </div>
             <div className={chartFullscreen ? 'flex-1 min-h-0' : 'h-[380px] md:h-[560px]'}>
-              <TradingViewChart
-                symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
-                interval={chartInterval}
-                height={chartFullscreen ? 0 : 560}
-                showTools
-                theme={theme}
-              />
+              {isKnownTradingViewSymbol(symbol) ? (
+                <TradingViewChart
+                  symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
+                  interval={chartInterval}
+                  height={chartFullscreen ? 0 : 560}
+                  showTools
+                  theme={theme}
+                />
+              ) : (
+                <AdvancedChart
+                  chain={chain}
+                  token={address}
+                  tf={tfForAdvanced(chartInterval)}
+                  chartType="candlestick"
+                  indicators={{ ema21: true, volume: true }}
+                  height={chartFullscreen ? 0 : 560}
+                />
+              )}
             </div>
           </div>
 
@@ -306,6 +363,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           )}
           <div className="md:hidden p-3">
             <RecentTradesRail pairAddress={address} chain={chain} />
+          </div>
+          {/* Audit P0 #5 — security panel surfaced on mobile under recent
+              trades so a buyer can scan rug indicators without leaving
+              the page. */}
+          <div className="md:hidden px-3 pb-3">
+            <SecurityPanel chain={chain} address={address} liquidityUsd={dex?.liquidity_usd ?? null} />
           </div>
 
           {/* Contract + network metadata. Audit B4 — when the page
@@ -362,6 +425,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           {buys24h != null && sells24h != null && (buys24h + sells24h) > 0 && (
             <BuySellRatioBar buys={buys24h} sells={sells24h} />
           )}
+          <SecurityPanel chain={chain} address={address} liquidityUsd={dex?.liquidity_usd ?? null} />
           <RecentTradesRail pairAddress={address} chain={chain} />
           {showIntel && (
             <div className="pt-2 border-t border-slate-800/50">
