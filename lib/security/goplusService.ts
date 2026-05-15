@@ -456,6 +456,8 @@ export async function simulateTransaction(
     const res = await fetch(`${GOPLUS_BASE}/transaction/simulation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: API_KEY },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error('Simulation API error');
     const result = await res.json();
