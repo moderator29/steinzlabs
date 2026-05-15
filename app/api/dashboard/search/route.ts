@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
 import { cacheWithFallback } from "@/lib/cache/redis";
+import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
 
 export const runtime = "nodejs";
 
@@ -64,9 +65,16 @@ export async function GET(request: NextRequest) {
     );
 
     for (const coin of cgResults) {
+      // F4 polish — surface the token's native chain on the result
+      // row so the global search UI can render a chain badge. Same
+      // resolver the rest of the platform uses (see
+      // lib/market/tokenChainResolver.ts), so SOL/BONK/JUP/WIF land
+      // on Solana, MATIC on Polygon, etc.
+      const { chain } = resolveTokenChain({ id: coin.id, symbol: coin.symbol });
       results.push({
         type: "token",
         id: coin.id,
+        chain,
         label: `${coin.name} (${coin.symbol.toUpperCase()})`,
         subLabel: coin.market_cap_rank ? `#${coin.market_cap_rank}` : undefined,
       });

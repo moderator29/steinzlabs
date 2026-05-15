@@ -14,7 +14,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
-import { AlertTriangle } from 'lucide-react';
+import ChainMismatchBanner from './ChainMismatchBanner';
 
 const QUICK = [0, 25, 50, 75, 100];
 
@@ -146,24 +146,13 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           disabled. Industry parity: Uniswap blocks the swap and
           shows "Switch network" inline. */}
       {chainMismatch && (
-        <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
-          <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-          <span>
-            {crossFamilyMismatch ? (
-              <>
-                Connected via <span className="font-semibold">{provider}</span>; this page is{' '}
-                <span className="font-semibold uppercase">{chain}</span>. Connect{' '}
-                {isPageSolana ? 'a Solana wallet (Phantom)' : 'an EVM wallet (MetaMask / Reown)'} to trade.
-              </>
-            ) : (
-              <>
-                Wallet is on <span className="font-semibold uppercase">{walletPlatformChain ?? 'an unknown network'}</span>;
-                this page is <span className="font-semibold uppercase">{chain}</span>. Switch your wallet network in{' '}
-                <span className="font-semibold">{provider ?? 'your wallet'}</span> before trading.
-              </>
-            )}
-          </span>
-        </div>
+        <ChainMismatchBanner
+          crossFamilyMismatch={crossFamilyMismatch}
+          isPageSolana={isPageSolana}
+          provider={provider}
+          chain={chain}
+          walletPlatformChain={walletPlatformChain}
+        />
       )}
 
       {/* Amount */}
