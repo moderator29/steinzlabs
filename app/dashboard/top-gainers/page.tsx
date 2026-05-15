@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { TrendingUp, Star } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { MiniSpark } from '@/components/dashboard/TopGainersCard';
+import { buildDetailHref } from '@/lib/market/tokenChainResolver';
 
 interface Gainer {
   id: string;
@@ -96,7 +97,7 @@ export default function TopGainersPage() {
           ) : rows.map((g, i) => (
             <Link
               key={g.id}
-              href={`/dashboard/market?coin=${g.id}`}
+              href={buildDetailHref({ id: g.id, symbol: g.symbol })}
               className="grid grid-cols-[32px_minmax(140px,1.3fr)_minmax(80px,0.8fr)_minmax(70px,0.7fr)_minmax(90px,0.9fr)_minmax(90px,0.9fr)_28px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors"
             >
               <span className="text-xs font-mono text-gray-600">{i + 1}</span>

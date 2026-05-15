@@ -40,6 +40,8 @@ import { TokenLogo } from "@/components/market/TokenLogo";
 import { PriceChangeDisplay } from "@/components/market/PriceChangeDisplay";
 import { AlertModal } from "@/components/market/AlertModal";
 import { formatPrice, formatLargeNumber } from "@/lib/market/formatters";
+import { resolveWrappedAsset, explorerUrlFor } from "@/lib/market/wrappedAssets";
+import { ExternalLink } from "lucide-react";
 
 interface RouteParams {
   chain: string;
@@ -84,6 +86,34 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               <span className="text-[10px] uppercase text-slate-500">{symbol}</span>
               <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400">{chain}</span>
             </div>
+            {/* Audit B4 / P0 — wrapped-asset honesty label. When the
+                canonical asset (BTC, ETH on L2, etc) is not native to
+                the page chain, surface the actual contract being
+                traded + the issuer + verify link. Replaces the
+                misleading "Network: ETHEREUM · Contract: bitcoin"
+                three-line lie. */}
+            {(() => {
+              const wrap = resolveWrappedAsset(symbol, chain);
+              if (!wrap) return null;
+              const explorer = explorerUrlFor(wrap);
+              return (
+                <div className="text-[10px] text-amber-300/90 mt-0.5 truncate">
+                  Trading <span className="font-semibold">{wrap.wrappedSymbol}</span> on {wrap.chain}
+                  <span className="text-slate-500"> · wraps {wrap.canonicalSymbol} {wrap.backingRatio}:1 by {wrap.issuer}</span>
+                  {explorer && (
+                    <a
+                      href={explorer}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 ml-1.5 text-amber-300 hover:text-amber-200"
+                      title={`Verify ${wrap.wrappedSymbol} contract on the explorer`}
+                    >
+                      verify <ExternalLink size={9} />
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex items-center gap-1">
@@ -165,24 +195,46 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             <RecentTradesRail pairAddress={address} chain={chain} />
           </div>
 
-          {/* Contract + network metadata */}
-          <div className="p-4 space-y-2 text-xs border-t border-slate-800/50">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-500">Contract</span>
-              <button
-                type="button"
-                onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(address).catch(() => {}); }}
-                className="font-mono text-slate-300 hover:text-white truncate max-w-[280px] text-right"
-                title="Copy"
-              >
-                {address}
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">Network</span>
-              <span className="text-slate-300 uppercase">{chain}</span>
-            </div>
-          </div>
+          {/* Contract + network metadata. Audit B4 — when the page
+              represents a wrapped asset (BTC on Ethereum → WBTC), the
+              Contract row was rendering the raw URL slug ("bitcoin")
+              while the Network row screamed "ETHEREUM" — both lying
+              about what the user actually trades. We now render the
+              wrapped asset's real contract address (the thing 0x will
+              fill against) when applicable, and show a separate
+              "Underlying" row pointing at the canonical asset. */}
+          {(() => {
+            const wrap = resolveWrappedAsset(symbol, chain);
+            const traded = wrap?.contract ?? address;
+            const tradedLabel = wrap?.wrappedSymbol ?? symbol;
+            return (
+              <div className="p-4 space-y-2 text-xs border-t border-slate-800/50">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">Contract ({tradedLabel})</span>
+                  <button
+                    type="button"
+                    onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(traded).catch(() => {}); }}
+                    className="font-mono text-slate-300 hover:text-white truncate max-w-[280px] text-right"
+                    title="Copy"
+                  >
+                    {traded}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Network</span>
+                  <span className="text-slate-300 uppercase">{chain}</span>
+                </div>
+                {wrap && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Underlying</span>
+                    <span className="text-slate-300">
+                      {wrap.canonicalSymbol} <span className="text-slate-500">({wrap.backingRatio}:1 by {wrap.issuer})</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Desktop right rail — buy/sell + recent trades */}

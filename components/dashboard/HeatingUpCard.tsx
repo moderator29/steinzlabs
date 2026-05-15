@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Flame, ArrowUpRight } from 'lucide-react';
 import { MiniSpark } from './TopGainersCard';
+import { buildDetailHref } from '@/lib/market/tokenChainResolver';
 
 interface TrendingCoin {
   id: string;
@@ -83,7 +84,7 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
           return (
             <Link
               key={c.id}
-              href={`/dashboard/market/ethereum/${c.id}`}
+              href={buildDetailHref({ id: c.id, symbol: c.symbol })}
               className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
             >
               <span className="w-4 text-[11px] font-mono text-gray-600 text-center shrink-0">{i + 1}</span>
