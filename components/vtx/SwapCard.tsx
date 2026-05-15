@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check } from 'lucide-react';
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
+import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 
 export interface SwapCardData {
   fromToken: string;
@@ -355,6 +356,23 @@ export function SwapCard({ swap, walletAddress }: Props) {
           <span className="text-gray-300">{quote.platformFee}</span>
         </div>
       </div>
+
+      {/* Audit B7 / P1 #13 — route preview. Reads quoteData (set in
+          parent context) and renders the multi-hop DEX path so the
+          user can see exactly what aggregator and pools the swap
+          touches before signing. Only renders when quoteData is
+          present so the placeholder quote stage stays clean. */}
+      {quote.quoteData && (
+        <div className="px-4 pb-4">
+          <SwapRoutePreview
+            fromSymbol={quote.fromToken}
+            toSymbol={quote.toToken}
+            fallbackVenue="DEX Aggregator"
+            zeroExRoute={(quote.quoteData.route as { fills?: Array<{ source?: string; proportionBps?: number; from?: string; to?: string }>; tokens?: Array<{ address: string; symbol: string }> } | undefined) ?? undefined}
+            jupiterRoutePlan={(quote.quoteData.routePlan as Array<{ protocol?: string; inputMint?: string; outputMint?: string; percent?: number }> | undefined) ?? undefined}
+          />
+        </div>
+      )}
 
       {/* No wallet at all — prompt to connect one on the platform. */}
       {!walletAddress && stage === 'ready' && (
