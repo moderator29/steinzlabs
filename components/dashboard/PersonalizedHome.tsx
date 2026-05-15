@@ -151,7 +151,7 @@ export function PersonalizedHome() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <QuickAction icon={<ArrowLeftRight size={18} />} label="Swap" onClick={() => router.push("/dashboard/swap")} />
+        <QuickAction icon={<ArrowLeftRight size={18} />} label="Swap" onClick={() => router.push("/dashboard/swap?from=home")} />
         <QuickAction icon={<Send size={18} />} label="Send" onClick={() => router.push("/dashboard/wallet-page?action=send")} />
         <QuickAction icon={<Eye size={18} />} label="Track Wallet" onClick={() => router.push("/dashboard/wallet-intelligence")} />
         <QuickAction icon={<Bell size={18} />} label="Set Alert" onClick={() => router.push("/dashboard/alerts")} />

@@ -475,7 +475,26 @@ export default function WalletPage() {
     const wantedChainId = searchParams?.get('chain');
     if (!action) return;
     if (wantedChainId) {
-      const c = SUPPORTED_CHAINS.find((x) => x.id === wantedChainId);
+      // Normalize common chain-id aliases so deep-links from the market
+      // detail page (which uses `bsc`, `eth`, `avax`, `matic`, `op`,
+      // `arb`) resolve to the wallet page's canonical ids. Without this
+      // the SUPPORTED_CHAINS.find(...) returned undefined for `bsc` and
+      // the activeChain stayed as Solana — so a Deposit click on a BSC
+      // token landed the user on the Solana receive view.
+      const aliasMap: Record<string, string> = {
+        bsc: 'bnb',
+        eth: 'ethereum',
+        avax: 'avalanche',
+        matic: 'polygon',
+        op: 'optimism',
+        arb: 'arbitrum',
+        ftm: 'fantom',
+        cro: 'cronos',
+        sol: 'solana',
+        btc: 'bitcoin',
+      };
+      const canonical = aliasMap[wantedChainId.toLowerCase()] ?? wantedChainId;
+      const c = SUPPORTED_CHAINS.find((x) => x.id === canonical);
       if (c) setActiveChain(c);
     }
     if (action === 'send') setView('send');
@@ -669,20 +688,19 @@ export default function WalletPage() {
   if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletImported} />;
   if (view === 'send' && activeWallet) return <SendView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />;
-  if (view === 'receive' && activeWallet) {
-    // Audit B3 / P0 #1 — chain-correct address selection. EVM chains
-    // share the same secp256k1 0x… address; Solana uses the ed25519
-    // base58 pubkey derived at create/import time. Bitcoin and any
-    // other chain we don't yet derive for falls through to the EVM
-    // address, where the chain-aware ReceiveView (already part of the
-    // chain-picker fix) will render the honest "no {chain} address
-    // yet" panel instead of mislabelling.
-    const isSolanaChain = activeChain.id === 'solana';
-    const receiveAddress = isSolanaChain && activeWallet.solanaAddress
-      ? activeWallet.solanaAddress
-      : activeWallet.address;
-    return <ReceiveView onBack={() => setView('main')} address={receiveAddress} chain={activeChain} />;
-  }
+  if (view === 'receive' && activeWallet) return (
+    <ReceiveView
+      onBack={() => setView('main')}
+      address={activeWallet.address}
+      chain={activeChain}
+      // Bug §1 — let the user pick a chain right inside the receive
+      // screen so they don't have to back out and reopen the flow when
+      // the deep-link landed on the wrong chain. The picker only shows
+      // chains the user has enabled (matches the home pill row).
+      availableChains={SUPPORTED_CHAINS.filter((c) => enabledChains.includes(c.id))}
+      onChangeChain={(c) => setActiveChain(c)}
+    />
+  );
   if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
@@ -943,7 +961,7 @@ export default function WalletPage() {
               {[
                 { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: '#0A1EFF', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
                 { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: '#10B981', action: () => setView('receive'), enabled: true },
-                { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap'), enabled: true },
+                { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap?from=wallet'), enabled: true },
                 { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: '#F59E0B', action: () => { /* coming soon */ }, enabled: false },
               ].map(btn => (
                 <button
@@ -1690,25 +1708,88 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   );
 }
 
-function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: string; chain: ChainInfo }) {
+// Chains that share the same secp256k1 EVM address. A single 0x… address
+// from the Naka built-in wallet is valid on every chain in this set —
+// this is standard EVM behavior and matches Trust Wallet, MetaMask, etc.
+// Anything OUTSIDE this set (Solana, Bitcoin, Sui) needs a separately
+// derived address; the Naka built-in wallet is currently EVM-only, so
+// for those chains the receive view tells the user the truth instead of
+// rendering an EVM hex address mislabelled as Solana / BTC / Sui (which
+// is exactly the bug a tester reported).
+const EVM_RECEIVE_CHAINS = new Set([
+  'ethereum', 'base', 'polygon', 'avalanche', 'arbitrum',
+  'optimism', 'bnb', 'fantom', 'cronos',
+]);
+
+function isEvmAddress(addr: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
+function isAddressCompatibleWithChain(addr: string, chainId: string): boolean {
+  if (!addr) return false;
+  if (EVM_RECEIVE_CHAINS.has(chainId)) return isEvmAddress(addr);
+  if (chainId === 'solana') {
+    // Solana base58 pubkeys are 32-44 chars, base58 alphabet (no 0/O/I/l).
+    // EVM 0x… clearly fails this test which is what we want.
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+  }
+  if (chainId === 'bitcoin') {
+    // Quick legacy / segwit / taproot prefix check. Not a full validator
+    // (there's no checksum here), but enough to reject EVM addresses,
+    // which is the actual user-reported bug.
+    return /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/.test(addr);
+  }
+  // Sui addresses are 0x + 64 hex (different length than EVM).
+  if (chainId === 'sui') return /^0x[a-fA-F0-9]{64}$/.test(addr);
+  return false;
+}
+
+function ReceiveView({
+  onBack,
+  address,
+  chain,
+  availableChains,
+  onChangeChain,
+}: {
+  onBack: () => void;
+  address: string;
+  chain: ChainInfo;
+  availableChains: ChainInfo[];
+  onChangeChain: (c: ChainInfo) => void;
+}) {
   const [copied, setCopied] = useState(false);
   // FIX 5A.1 / Phase 4: was a <QrCode> icon placeholder (no real QR); now renders a real
   // scannable QR as an inline <img data:> URL generated client-side via `qrcode`.
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
+  // Bug §1 — only display the address when it matches the chain. The
+  // wallet currently stores a single EVM (0x…) address per StoredWallet;
+  // showing that on the Solana receive screen led a tester to see
+  // "Receive on Solana" alongside an Ethereum hex address, which would
+  // have lost any deposit they made.
+  const addressMatchesChain = isAddressCompatibleWithChain(address, chain.id);
+
   useEffect(() => {
-    if (!address) return;
+    if (!address || !addressMatchesChain) {
+      setQrDataUrl('');
+      return;
+    }
     let cancelled = false;
     import('qrcode')
       .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: '#0A0E1A', light: '#ffffff' } }))
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
-      .catch(() => {});
+      .catch((err) => {
+        // QR generation failure is non-fatal — the address text below is
+        // still copyable. Log so we surface it in Sentry instead of
+        // silently dropping the user back to a blank QR slot.
+        console.warn('[ReceiveView] QR generation failed:', err);
+      });
     return () => {
       cancelled = true;
     };
-  }, [address]);
+  }, [address, addressMatchesChain]);
 
   return (
     <div className="min-h-screen text-white pb-24">
@@ -1717,7 +1798,7 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${chain.color}15`, border: `1px solid ${chain.color}25` }}>
             <ArrowDownLeft className="w-5 h-5" style={{ color: chain.color }} />
           </div>
@@ -1727,6 +1808,74 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
           </div>
         </div>
 
+        {/* Bug §1 — inline chain picker. Lets the user fix a wrong-chain
+            deep link (e.g. when the market detail page passed a chain
+            that wasn't enabled, or when the user wants to switch chain
+            without backing out of the flow). Mirrors the wallet-home
+            pill row so the visual idiom is the same. */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-5 scrollbar-hide">
+          {availableChains.map((c) => {
+            const active = c.id === chain.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => onChangeChain(c)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-colors ${
+                  active
+                    ? 'text-white border-transparent'
+                    : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:bg-slate-900 hover:text-slate-200'
+                }`}
+                style={active ? { backgroundColor: `${c.color}20`, borderColor: `${c.color}55`, color: c.color } : undefined}
+                aria-pressed={active}
+              >
+                <ChainLogo chain={c} size={14} />
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bug §1 — when the active chain isn't compatible with the
+            stored wallet address (e.g. Solana / Bitcoin requested while
+            the Naka built-in is still EVM-only), short-circuit before
+            we ever render an address that would cause loss of funds.
+            User keeps the chain picker above so they can switch to a
+            chain we DO support, or follows the CTA below to connect an
+            external wallet for the chain they want. */}
+        {!addressMatchesChain ? (
+          <div className="rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 p-5 text-center">
+            <div className="mx-auto w-10 h-10 rounded-full bg-[#F59E0B]/20 flex items-center justify-center mb-3">
+              <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />
+            </div>
+            <h2 className="text-sm font-semibold text-white mb-1">
+              No {chain.name} address yet
+            </h2>
+            <p className="text-xs leading-relaxed text-amber-100/90 mb-4">
+              Your Naka wallet doesn&apos;t have a {chain.name} address derived
+              yet. Don&apos;t deposit {chain.symbol} to your EVM address —
+              funds sent on the wrong network are <span className="font-bold underline">lost forever</span>.
+            </p>
+            {chain.id === 'solana' && (
+              <p className="text-[11px] text-slate-400 mb-4">
+                To receive SOL right now, connect Phantom from the Swap
+                page or import a Solana account.
+              </p>
+            )}
+            {chain.id === 'bitcoin' && (
+              <p className="text-[11px] text-slate-400 mb-4">
+                Bitcoin support is coming. For now, use a Bitcoin-native
+                wallet to receive BTC.
+              </p>
+            )}
+            <button
+              onClick={onBack}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-semibold text-white transition-colors"
+            >
+              Back to Wallet
+            </button>
+          </div>
+        ) : (
+        <>
         {/* TRUST WALLET-STYLE warning bar — placed ABOVE the QR / address so the
             user reads it before they ever copy or share. The exact phrasing
             ("lost forever") matches what funds-handling apps use to make sure
@@ -1833,6 +1982,8 @@ function ReceiveView({ onBack, address, chain }: { onBack: () => void; address: 
             </p>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

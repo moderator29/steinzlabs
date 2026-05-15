@@ -231,9 +231,28 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           <span>Available to {mode.toLowerCase()}</span>
           <span className="text-slate-200 font-mono">{formatPrice(available)}</span>
         </div>
+        {/*
+          Bug §4 — Deposit + Withdraw used to hard-code
+          /dashboard/wallet-page?action=receive (no chain context). Clicking
+          Deposit on a BTC, ETH, or any non-Solana token would always land
+          the user on the Solana receive screen because the wallet page
+          defaults activeChain to SOLANA_CHAIN. We now propagate the
+          token's chain (and symbol for the warning copy) so the wallet
+          opens directly on the correct chain.
+        */}
         <div className="flex justify-between">
-          <a href="/dashboard/wallet-page?action=receive" className="text-[#6F7EFF] hover:text-white">Deposit</a>
-          <a href="/dashboard/wallet-page?action=send" className="text-slate-400 hover:text-white">Withdraw</a>
+          <a
+            href={`/dashboard/wallet-page?action=receive&chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(symbol)}`}
+            className="text-[#6F7EFF] hover:text-white"
+          >
+            Deposit
+          </a>
+          <a
+            href={`/dashboard/wallet-page?action=send&chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(symbol)}`}
+            className="text-slate-400 hover:text-white"
+          >
+            Withdraw
+          </a>
         </div>
       </div>
     </div>

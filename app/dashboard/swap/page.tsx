@@ -965,7 +965,25 @@ export default function SwapPage() {
       <div className="relative z-10 flex flex-col items-center px-4 pt-6 sm:pt-12 pb-20 min-h-screen">
         <div className="w-full max-w-[460px]">
           <div className="flex items-center justify-between mb-6">
-            <BackButton />
+            {/*
+              Bug §2 — when the user opened Swap from inside the Naka
+              Wallet (router.push('/dashboard/swap?from=wallet')), the
+              default router.back() behaviour was unreliable — for users
+              who arrived via a hard refresh or a deep link, history.back
+              landed them outside the wallet. Reading ?from= and giving
+              BackButton an explicit href makes the round-trip
+              deterministic and matches what the user actually wants:
+              return to wherever they launched Swap from.
+            */}
+            {(() => {
+              const from = searchParams?.get('from');
+              const backHref = from === 'wallet'
+                ? '/dashboard/wallet-page'
+                : from === 'home'
+                  ? '/dashboard'
+                  : undefined;
+              return <BackButton href={backHref} />;
+            })()}
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
             <button
               onClick={() => setShowSettings(!showSettings)}
