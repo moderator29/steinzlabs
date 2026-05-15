@@ -55,11 +55,15 @@ export async function GET(req: Request) {
   const perPage = category === 'majors' ? 200 : 100;
   const cgCategory = COINGECKO_CATEGORY_MAP[category] ?? null;
 
-  // Hard 8s deadline so the dashboard never blocks waiting for upstream.
+  // Audit M8 #11 — was 8s. Dashboard waited 8s for an empty list when
+  // CoinGecko was slow; the edge cache (s-maxage=300 + SWR) means
+  // we'd serve a stale-but-valid response anyway. Drop to 3s primary
+  // + 2s CoinCap fallback. Industry parity: Birdeye/DexScreener
+  // timeout at 1-2s and serve cached.
   try {
     const tokens = await withDeadline<CoinGeckoMarketToken[]>(
       getTopTokens(page, perPage, true, cgCategory ?? undefined),
-      8000,
+      3000,
       [],
     );
     if (tokens.length > 0) {
@@ -69,7 +73,7 @@ export async function GET(req: Request) {
     }
     // Empty CG result on majors/all? Try CoinCap so the page never goes blank.
     if (category === 'all' || category === 'majors') {
-      const cc = await withDeadline<CoinGeckoMarketToken[]>(fetchCoinCap(perPage), 6000, []);
+      const cc = await withDeadline<CoinGeckoMarketToken[]>(fetchCoinCap(perPage), 2000, []);
       return NextResponse.json(cc, {
         headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' },
       });

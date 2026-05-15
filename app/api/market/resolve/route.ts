@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { searchTokens, getContractPrice, getTokenDetail } from '@/lib/services/coingecko';
+import { searchTokens, getContractPrice } from '@/lib/services/coingecko';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,23 +103,19 @@ export async function GET(req: Request) {
   try {
     const result = await searchTokens(q);
     const topMatches = (result.coins ?? []).slice(0, 8);
-    // Enrich the first match with a live price so the UI can render a
-    // price pill alongside the result without waiting for a second call.
-    let priceUsd = 0;
-    if (topMatches[0]) {
-      try {
-        const detail = await getTokenDetail(topMatches[0].id);
-        priceUsd = detail.market_data?.current_price?.usd ?? 0;
-      } catch { /* ignore */ }
-    }
-    const matches: ResolvedMatch[] = topMatches.map((c, i) => ({
+    // Audit M8 #5 — was sequentially fetching getTokenDetail() for the
+    // first match (~200-300ms blocking). Search results land WITHOUT
+    // a price pill on first paint and the detail page (which the user
+    // is about to click anyway) hydrates the price. Drops search
+    // latency by ~half for popular tickers (BTC / ETH / SOL).
+    const matches: ResolvedMatch[] = topMatches.map((c) => ({
       id: c.id,
       name: c.name,
       symbol: c.symbol.toUpperCase(),
       image: c.thumb,
       chain: 'ethereum', // router will pick the right chain on click
       address: null,
-      priceUsd: i === 0 ? priceUsd : 0,
+      priceUsd: 0,
     }));
     return NextResponse.json({ kind: 'ticker', matches }, {
       headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' },
