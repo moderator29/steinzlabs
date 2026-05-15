@@ -13,6 +13,36 @@ interface SearchResult {
   subLabel?: string;
 }
 
+// F4 polish — per-chain badge palette so search results instantly
+// telegraph which chain each hit lives on. Colors mirror the chain
+// brand swatches used elsewhere in the platform.
+const CHAIN_BADGE: Record<string, { label: string; bg: string; text: string }> = {
+  ethereum: { label: 'ETH',   bg: 'bg-[#627EEA]/15', text: 'text-[#8FA3FF]' },
+  base:     { label: 'BASE',  bg: 'bg-[#0052FF]/15', text: 'text-[#5B8AFF]' },
+  arbitrum: { label: 'ARB',   bg: 'bg-[#28A0F0]/15', text: 'text-[#5BBFFF]' },
+  optimism: { label: 'OP',    bg: 'bg-[#FF0420]/15', text: 'text-[#FF5A6E]' },
+  polygon:  { label: 'POLY',  bg: 'bg-[#8247E5]/15', text: 'text-[#A88BFF]' },
+  bsc:      { label: 'BSC',   bg: 'bg-[#F0B90B]/15', text: 'text-[#F0CC4D]' },
+  avalanche:{ label: 'AVAX',  bg: 'bg-[#E84142]/15', text: 'text-[#FF6B6C]' },
+  solana:   { label: 'SOL',   bg: 'bg-[#9945FF]/15', text: 'text-[#C49DFF]' },
+};
+
+function ChainBadge({ chain }: { chain: string }) {
+  const meta = CHAIN_BADGE[chain.toLowerCase()];
+  if (!meta) {
+    return (
+      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-800/60 text-slate-400 flex-shrink-0">
+        {chain.slice(0, 4)}
+      </span>
+    );
+  }
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider flex-shrink-0 ${meta.bg} ${meta.text}`}>
+      {meta.label}
+    </span>
+  );
+}
+
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -123,12 +153,17 @@ export function GlobalSearch() {
               <button
                 key={`${r.type}-${r.id ?? r.address}-${i}`}
                 onClick={() => handleSelect(r)}
-                className="w-full text-left px-4 py-3 hover:bg-slate-800/50 border-b border-slate-800 last:border-0 flex items-center gap-3"
+                className="w-full text-left px-4 py-3 hover:bg-slate-800/50 border-b border-slate-800 last:border-0 flex items-center gap-3 group"
               >
-                <span className="text-[10px] uppercase tracking-wide text-slate-500 w-14 flex-shrink-0">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500 w-14 flex-shrink-0 group-hover:text-slate-400 transition-colors">
                   {r.type}
                 </span>
                 <span className="flex-1 text-white text-sm truncate">{r.label}</span>
+                {/* F4 polish — chain badge so users instantly see Base /
+                    Arbitrum / Polygon hits, not just an opaque
+                    "ETHEREUM" assumption. Color-coded per chain to
+                    match the rest of the platform's chain affordances. */}
+                {r.chain && <ChainBadge chain={r.chain} />}
                 {r.subLabel && <span className="text-xs text-slate-500 truncate">{r.subLabel}</span>}
               </button>
             ))
