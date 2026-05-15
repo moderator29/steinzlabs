@@ -605,6 +605,15 @@ export default function SwapPage() {
   const [gaslessEnabled, setGaslessEnabled] = useState(true);
   const isGaslessAvailable = chain !== 'solana' && !['ETH', 'MATIC', 'BNB', 'AVAX'].includes(fromToken);
   const [quoteData, setQuoteData] = useState<any>(null);
+  // Audit P0 #3 — quote auto-refresh. Each successful price fetch records
+  // a timestamp; an interval below refreshes the quote every QUOTE_TTL_MS
+  // and a 1s tick drives the countdown UI in the review modal so the user
+  // can see how fresh the rate they're about to sign actually is.
+  // Industry parity: Uniswap / Jupiter both refresh every 12-15s; 1inch
+  // shows an explicit "expires in Xs" badge.
+  const QUOTE_TTL_MS = 15_000;
+  const [quoteFetchedAt, setQuoteFetchedAt] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState<number>(() => Date.now());
 
   const simulateQuote = useCallback((amount: string, from?: string, to?: string, ch?: string) => {
     const f = from || fromToken;
@@ -644,6 +653,9 @@ export default function SwapPage() {
             gasEstimateUsd: data.gas ? Number(data.gas) * 30 / 1e9 : 2.4,
             minReceived: (toAmt * (1 - parseFloat(slippage) / 100)).toFixed(6),
           });
+          // Mark this quote as fresh so the countdown UI + auto-refresh
+          // loop below have a definitive anchor timestamp.
+          setQuoteFetchedAt(Date.now());
         }
       } catch (err) {
         console.error('[Swap] Price fetch failed:', err);
@@ -656,6 +668,28 @@ export default function SwapPage() {
     setFromAmount(val);
     simulateQuote(val);
   };
+
+  // Audit P0 #3 — auto-refresh stale quotes. Runs only while the review
+  // modal is open (quote-staleness only matters at the moment the user is
+  // about to sign). 1-second tick drives the countdown, and we
+  // re-simulate the quote whenever it crosses QUOTE_TTL_MS.
+  useEffect(() => {
+    if (!showReview) return;
+    const tick = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [showReview]);
+
+  useEffect(() => {
+    if (!showReview) return;
+    if (!quoteFetchedAt) return;
+    if (!fromAmount || parseFloat(fromAmount) <= 0) return;
+    const age = Date.now() - quoteFetchedAt;
+    if (age < QUOTE_TTL_MS) return;
+    // Quote expired — refetch with the same input. setFetchingQuote
+    // already toggles the spinner inside simulateQuote so the user sees
+    // the rate refresh in-place rather than the modal flickering.
+    simulateQuote(fromAmount);
+  }, [showReview, quoteFetchedAt, nowTick, fromAmount, simulateQuote]);
 
   const handleSwapTokens = () => {
     setSwapRotate(prev => prev + 180);
@@ -1410,7 +1444,20 @@ export default function SwapPage() {
           pi < 15 ? 'text-orange-400' :
           'text-red-400';
         const piLabel = pi < 1 ? 'Low' : pi < 5 ? 'Moderate' : pi < 15 ? 'High' : 'Severe';
-        const piBlocked = pi > 30;
+        // Audit P0 #4 — Uniswap blocks at 15%, we previously allowed
+        // anything under 30%. A 15-30% impact almost always indicates a
+        // honeypot, drained liquidity pool, or a routing pathology — the
+        // user is far better served by a hard block than by a confirm
+        // button that costs them most of their input. Industry parity
+        // with Uniswap V3.
+        const piBlocked = pi >= 15;
+        // Audit P0 #3 — quote staleness countdown. nowTick refreshes
+        // every second while the modal is open; secondsLeft drives the
+        // pill UI. Intentionally floor + max(0) so the user never sees
+        // negative time during the brief refetch window.
+        const quoteAgeMs = quoteFetchedAt ? nowTick - quoteFetchedAt : 0;
+        const secondsLeft = Math.max(0, Math.ceil((QUOTE_TTL_MS - quoteAgeMs) / 1000));
+        const refreshingQuote = fetchingQuote || (quoteFetchedAt !== null && quoteAgeMs >= QUOTE_TTL_MS);
         return (
           <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setShowReview(false)}>
             <div
@@ -1419,9 +1466,33 @@ export default function SwapPage() {
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-white">Review swap</h2>
-                <button onClick={() => setShowReview(false)} className="p-1.5 rounded-lg hover:bg-white/5">
-                  <X className="w-4 h-4 text-gray-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {/*
+                    Audit P0 #3 — quote freshness pill. Green while quote
+                    is fresh, amber as it approaches expiry, spinner while
+                    we're refetching. Mirrors 1inch's "expires in Xs"
+                    badge so users don't sign stale quotes.
+                  */}
+                  {quoteFetchedAt && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${
+                        refreshingQuote
+                          ? 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                          : secondsLeft <= 3
+                            ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      }`}
+                      title="Quote refreshes automatically every 15 seconds"
+                    >
+                      {refreshingQuote
+                        ? (<><RefreshCw className="w-3 h-3 animate-spin" /> Refreshing</>)
+                        : (<>Refresh in {secondsLeft}s</>)}
+                    </span>
+                  )}
+                  <button onClick={() => setShowReview(false)} className="p-1.5 rounded-lg hover:bg-white/5">
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
               </div>
 
               <div className="bg-[#0f1320] rounded-2xl p-4 space-y-3 border border-white/5">
