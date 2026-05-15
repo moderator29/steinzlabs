@@ -32,7 +32,12 @@ function looksLikeAddress(q: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(q) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
 }
 
-const MAJOR_IDS = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple", "cardano", "avalanche-2", "polkadot"];
+// Audit M1 #10 — was a frozen 8-token list. If SOL dropped below top
+// 10 the pill still showed it; if PEPE climbed into top 10 it was
+// excluded. Industry parity (CoinMarketCap / CoinGecko): rank live.
+// "Majors" now means top 10 by market cap from the API's current
+// market_cap_desc response.
+const MAJORS_LIMIT = 10;
 
 /**
  * Map a CoinGecko token id to the chain segment used by the unified
@@ -97,8 +102,11 @@ export default function DashboardMarketPage() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [search, tokens]);
 
+  // Live "Majors" = first MAJORS_LIMIT rows of the API's market_cap_desc
+  // response, computed each render against fresh data.
+  const majorsSet = new Set(tokens.slice(0, MAJORS_LIMIT).map((t) => t.id));
   const filtered = tokens.filter((t) => {
-    if (category === "majors") return MAJOR_IDS.includes(t.id);
+    if (category === "majors") return majorsSet.has(t.id);
     if (search) {
       const q = search.toLowerCase();
       return t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q);
