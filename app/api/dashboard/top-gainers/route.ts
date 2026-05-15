@@ -5,6 +5,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 10;
 
+const MIN_MARKET_CAP = 1_000_000; // $1M floor — avoid micro-caps masquerading as "gainers"
+
 async function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const t = new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); });
@@ -42,22 +44,21 @@ export async function GET(req: Request) {
   const tf: Timeframe = (tfRaw === '1h' || tfRaw === '7d') ? tfRaw : '24h';
 
   try {
-    // Pull a wider universe so the MC floor + direction filter still
-    // leaves us with `limit` rows.
-    const universe = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(Math.max(limit * 5, 50)), 8000, []);
-    const filtered = universe
-      .filter((t) => Number(t.market_cap ?? 0) >= MIN_MARKET_CAP_USD)
-      .filter((t) => {
-        const p = pctFor(t, tf);
-        return direction === 'gainers' ? p > 0 : p < 0;
-      })
-      .sort((a, b) => {
-        const pa = pctFor(a, tf);
-        const pb = pctFor(b, tf);
-        return direction === 'gainers' ? pb - pa : pa - pb;
-      })
+    // Bug §6.1 — testers reported the card showing top-market-cap tokens
+    // instead of actual gainers. CoinGecko's free tier sometimes returns
+    // unsorted results, and even when ordering works the unfiltered output
+    // is dominated by sub-$1M micro-caps with absurd % moves. We over-fetch
+    // (3x requested + 10 headroom), filter out negative/flat coins and any
+    // sub-$1M market cap, then slice to the requested limit. This produces
+    // a stable "real gainers" list across CoinGecko response variations.
+    const overFetch = Math.min(50, limit * 3 + 10);
+    const raw = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(overFetch), 8000, []);
+    const gainers = raw
+      .filter(t => typeof t.price_change_percentage_24h === 'number' && t.price_change_percentage_24h > 0)
+      .filter(t => typeof t.market_cap === 'number' && t.market_cap >= MIN_MARKET_CAP)
+      .sort((a, b) => (b.price_change_percentage_24h ?? 0) - (a.price_change_percentage_24h ?? 0))
       .slice(0, limit);
-    return NextResponse.json({ tokens: filtered, direction, timeframe: tf }, {
+    return NextResponse.json({ tokens: gainers }, {
       headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' },
     });
   } catch (err) {

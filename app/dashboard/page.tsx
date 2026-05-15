@@ -161,8 +161,25 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [activeNav, setActiveNav] = useState('home');
-  const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>('overview');
+  const searchParams = useSearchParams();
+  // ?tab=profile / ?tab=wallet / ?tab=vtxai routes external links (notably
+  // the /dashboard/profile redirect) to the right bottom-nav tab on mount.
+  // Without this, /dashboard/profile redirected to /dashboard?tab=profile
+  // and landed back on the home tab, leaving the user staring at a spinner
+  // that resolved to the wrong page.
+  const initialNav = (() => {
+    const t = searchParams?.get('tab');
+    return t === 'profile' || t === 'wallet' || t === 'vtxai' ? t : 'home';
+  })();
+  const [activeNav, setActiveNav] = useState<string>(initialNav);
+  // ?subtab=overview|context|markets restores the home sub-tab — used by
+  // /dashboard/proof's "Back to Feed" button (§6.3) so the user lands on
+  // the Context Feed instead of the overview after explaining a signal.
+  const initialSubtab = (() => {
+    const s = searchParams?.get('subtab');
+    return s === 'context' || s === 'markets' || s === 'overview' ? s : 'overview';
+  })();
+  const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>(initialSubtab);
 
   // Restore market tab when navigating back from a coin detail page
   useEffect(() => {
