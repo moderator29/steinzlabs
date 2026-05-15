@@ -159,6 +159,31 @@ export default function SniperPage() {
     if (tab === 'feed') loadFeed();
   }, [tab, chainFilter, loadFeed]);
 
+  // Phase E — Realtime sniper executions. Was a polled-on-mount load
+  // only; user had to refresh to see a new fill. Subscribe to inserts
+  // on sniper_executions for the current user and prepend new rows
+  // with a brief flash effect handled in the row component. Industry
+  // parity with sniping platforms (Photon, BullX, Trojan): execution
+  // feed updates instantly without page action.
+  const [liveConnected, setLiveConnected] = useState(false);
+  useEffect(() => {
+    if (!user?.id || !supabase) return;
+    const channel = supabase
+      .channel(`sniper-executions-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const row = payload.new as ExecutionRow;
+          setExecutions((prev) => [row, ...prev].slice(0, 50));
+        },
+      )
+      .subscribe((status) => {
+        setLiveConnected(status === 'SUBSCRIBED');
+      });
+    return () => { void supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   // ── Actions ──────────────────────────────────────────────────────────────
   const togglePause = async (s: SniperCriteriaRow) => {
     const next = !s.paused;
