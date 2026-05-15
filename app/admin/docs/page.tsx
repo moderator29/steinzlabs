@@ -691,6 +691,108 @@ export default function AdminDocsPage() {
             </Callout>
           </S>
 
+          <S id="vault-ops" n="15" title="The Naka Vault — operator runbook" kicker="Cult internals">
+            <p>
+              Public-facing Vault documentation lives at <Code>/docs/vault</Code>. This section is the operator
+              counterpart — the bits an admin needs to support cult-member tickets without paging a developer. Keep
+              answers consistent with the public doc; never invent new policy here.
+            </p>
+
+            <H3>Wallet detection — how it actually works</H3>
+            <ol className="list-decimal pl-6 space-y-1 text-gray-300 text-[13px]">
+              <li>User clicks &ldquo;Enter with $NAKA&rdquo;. AppKit opens; user picks a wallet.</li>
+              <li>Frontend hits <Code>/api/auth/wallet-nonce</Code> for a single-use SIWE nonce (5 min TTL).</li>
+              <li>User signs; frontend posts to <Code>/api/auth/wallet-verify</Code> which:
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Verifies the signature recovers the claimed address.</li>
+                  <li>Calls Alchemy <Code>alchemy_getTokenBalances</Code> for the NAKA contract.</li>
+                  <li>If balance &ge; 1,227,000 NAKA, sets <Code>profiles.tier = &apos;naka_cult&apos;</Code> and
+                    stores the address as the detection wallet.</li>
+                </ul>
+              </li>
+              <li>Returns a magic-link <Code>actionLink</Code>; client navigates → Supabase session is set.</li>
+            </ol>
+
+            <H3>Balance verification — what happens on every Cult-gated request</H3>
+            <p>
+              Server middleware re-checks Alchemy with a 5-minute cache. Below threshold &rarr; the 7-day grace timer
+              starts (stored on <Code>profiles.tier_expires_at</Code>). Sustained sub-threshold &rarr; tier silently
+              drops to free at the grace expiry. Restoration is automatic: the next gated call refreshes the cache and
+              flips the tier back.
+            </p>
+            <Callout variant="warn" icon={AlertTriangle} title="Common ticket: &lsquo;I have NAKA but the Vault says I&apos;m hibernated&rsquo;">
+              Most often: they sent NAKA to a different wallet than the one we have on record as their detection
+              wallet. Check <Code>profiles.detection_wallet_address</Code> for that user id, compare to where the NAKA
+              actually lives, and ask them to either move the NAKA back to the detection wallet or rotate the detection
+              wallet via Profile &rarr; Edit &rarr; Wallets.
+            </Callout>
+
+            <H3>Daily Seal — how the 07:00 UTC brief is generated</H3>
+            <ol className="list-decimal pl-6 space-y-1 text-gray-300 text-[13px]">
+              <li>Vercel cron fires at 07:00 UTC and hits <Code>/api/cron/cult-daily-seal</Code>.</li>
+              <li>Endpoint pulls the last 24h of Context Feed events and the previous Echo Chamber top-3.</li>
+              <li>Builds an Anthropic Claude prompt with the canonical Cult voice + recent on-chain context, calls
+                <Code>claude-opus-4-7</Code> (4.7 family), max 600 tokens.</li>
+              <li>Inserts the response into <Code>cult_daily_seal_drafts</Code> with <Code>status = &apos;auto&apos;</Code>
+                pinned for the next 24h.</li>
+              <li>Chosen Seal bearers can override the next day&apos;s draft via the Oracle hub between 18:00 UTC and
+                07:00 UTC. Their submission lands in the same table with <Code>status = &apos;chosen&apos;</Code>
+                and outranks the auto draft at publish time.</li>
+            </ol>
+            <Callout variant="info" icon={Activity} title="If the seal didn&apos;t publish">
+              Check the Vercel cron logs for the 07:00 UTC run. The endpoint is idempotent — if it ran and produced
+              nothing, the upstream issue is usually an Anthropic rate-limit or a stale ANTHROPIC_API_KEY. The endpoint
+              never fabricates a seal; an empty pin is the correct fail-state.
+            </Callout>
+
+            <H3>Treasury — how live balances are fetched</H3>
+            <p>
+              <Code>/api/cult/treasury</Code> calls Alchemy <Code>alchemy_getAssetTransfers</Code> + the multisig
+              contract&apos;s <Code>getOwners</Code> view, then aggregates current ERC-20 + native balances per chain.
+              Response is cached for 60s server-side and 120s on the CDN. Treasury moves require a passed Decree and
+              are queued via the on-chain Safe; the Codex pins the post-execution tx hash automatically when the Safe
+              emits its <Code>ExecutionSuccess</Code> event.
+            </p>
+
+            <H3>Vote tally — how Conclave decides pass / fail</H3>
+            <pre className="rounded-xl border border-white/10 bg-[#05070F] p-4 overflow-x-auto text-[12px] leading-relaxed font-mono text-gray-300 my-4">{`weight   = min(25, floor(naka_balance / 1_000_000))
+           * (is_chosen ? 2 : 1)
+           * (active_membership ? 1 : 0)
+
+quorum   = sum(cast_weight) / sum(total_cult_weight) >= 0.05
+pass     = sum(yes_weight) / sum(cast_weight)         >= 0.60
+window   = 72h, extends 12h if quorum missed at hour 60`}</pre>
+            <p>
+              All math lives in <Code>app/api/cult/proposals/[id]/vote/route.ts</Code> + the matching
+              <Code>cult_proposal_state</Code> view. Never compute these client-side.
+            </p>
+
+            <H3>Troubleshooting — the four most common Cult tickets</H3>
+            <ol className="list-decimal pl-6 space-y-2 text-gray-300 text-[13px]">
+              <li>
+                <strong>&ldquo;I sent NAKA, why am I still free tier?&rdquo;</strong> &mdash; their AppKit-connected
+                address is not the same as their detection wallet, or they connected with a Smart Account whose
+                detection-wallet read points to the owner EOA. Ask them to reconnect with the wallet that actually
+                holds the NAKA, then sign again.
+              </li>
+              <li>
+                <strong>&ldquo;My vote didn&apos;t count.&rdquo;</strong> &mdash; check their weight at snapshot time
+                (<Code>cult_proposal_votes.weight_at_cast</Code>). If they topped up NAKA <em>after</em> snapshot,
+                their weight reflects the snapshot moment, not now. By design.
+              </li>
+              <li>
+                <strong>&ldquo;My Whisper got removed.&rdquo;</strong> &mdash; check
+                <Code>cult_whisper_moderations</Code>. Removals require either Chosen flag majority or admin
+                override. Authorship is hashed; you cannot recover the author from the DB.
+              </li>
+              <li>
+                <strong>&ldquo;The Daily Seal is wrong.&rdquo;</strong> &mdash; the seal is auto-generated; never edit
+                it once published. If the content is genuinely problematic, soft-flag with
+                <Code>cult_daily_seal_drafts.flagged = true</Code> which surfaces an apology line in the Oracle hub.
+              </li>
+            </ol>
+          </S>
+
           {/* Footer */}
           <div className="pt-6 mt-10 border-t border-white/[0.06] text-xs text-gray-500">
             <p>Internal document · Admins only · Do not share externally. Last updated April 2026.</p>
