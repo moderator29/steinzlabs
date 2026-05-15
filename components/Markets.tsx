@@ -134,16 +134,22 @@ export default function Markets() {
   };
 
   const handleCoinTap = (coin: CoinRow) => {
-    // Go to the full coin detail / trading page
+    // Audit M2 — direct route to /dashboard/market/{chain}/{idOrAddress}.
+    // Was bouncing through /market/prices/[tokenId] redirect causing a
+    // visible URL flash + ~150-300ms latency on every list click.
+    // Per-token chain selection is intentionally still naive (defaults
+    // to ethereum for CoinGecko hits, uses coin.chain for DEX hits) —
+    // dedicated chain-aware routing lands in branch #4.
     if (coin.source === 'coingecko' && coin.id) {
-      router.push(`/market/prices/${coin.id}`);
+      router.push(`/dashboard/market/ethereum/${coin.id}`);
     } else if (coin.pairAddress) {
       const params = new URLSearchParams({ symbol: coin.symbol, name: coin.name });
-      if (coin.chain) params.set('chain', coin.chain);
       params.set('pair', coin.pairAddress);
-      router.push(`/market/prices/${coin.id}?${params.toString()}`);
+      const chain = coin.chain || 'ethereum';
+      router.push(`/dashboard/market/${chain}/${coin.id}?${params.toString()}`);
     } else {
-      router.push(`/market/prices/${coin.id || coin.symbol.toLowerCase()}`);
+      const chain = coin.chain || 'ethereum';
+      router.push(`/dashboard/market/${chain}/${coin.id || coin.symbol.toLowerCase()}`);
     }
   };
 

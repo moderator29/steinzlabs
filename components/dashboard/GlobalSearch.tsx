@@ -72,7 +72,7 @@ export function GlobalSearch() {
     setOpen(false);
     setQuery("");
     setResults([]);
-    if (r.type === "token" && r.id) router.push(`/market/prices/${r.id}`);
+    if (r.type === "token" && r.id) router.push(`/dashboard/market/ethereum/${r.id}`);
     else if (r.type === "wallet" && r.address)
       router.push(`/dashboard/wallet-intelligence?address=${r.address}&chain=${r.chain ?? ""}`);
     else if (r.type === "entity" && r.id) router.push(`/dashboard/wallet-clusters?cluster=${r.id}`);

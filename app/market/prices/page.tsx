@@ -35,7 +35,9 @@ export default function PricesPage() {
   });
 
   const handleSelect = useCallback((id: string) => {
-    router.push(`/market/prices/${id}`);
+    // Audit M2 — direct route to canonical detail page; was bouncing
+    // through /market/prices/[tokenId] redirect.
+    router.push(`/dashboard/market/ethereum/${id}`);
   }, [router]);
 
   return (
