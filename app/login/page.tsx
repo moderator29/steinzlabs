@@ -176,12 +176,18 @@ function LoginPageInner() {
             signal: AbortSignal.timeout(8000),
           });
           captchaData = await captchaRes.json();
-        } catch (captchaErr) {
-          // Network/timeout reaching verify-captcha — fail open, the server
-          // route also fails open on its own Cloudflare timeout. Without this
-          // catch the whole login form silently hangs.
-          console.warn('[login] verify-captcha unreachable, proceeding:', captchaErr);
-          captchaData = { success: true };
+        } catch {
+          // Fail closed: a network error reaching verify-captcha must not
+          // bypass Turnstile, otherwise an attacker can simply block the
+          // endpoint to skip the challenge.
+          showToast('Security check unreachable. Please retry.', 'error');
+          setErrors({ captcha: 'Security verification unreachable' });
+          const ts = (window as { turnstile?: { reset?: (id: string) => void } }).turnstile;
+          if (ts && widgetIdRef.current && typeof ts.reset === 'function') {
+            try { ts.reset(widgetIdRef.current); } catch { /* ignore */ }
+          }
+          setCaptchaToken('');
+          return;
         }
         if (!captchaData.success) {
           showToast('Security check failed. Please try again.', 'error');

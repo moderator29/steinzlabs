@@ -276,42 +276,72 @@ function parseDomainScan(d: any, url: string): DomainScanResult {
   };
 }
 
+// Canonical domains for the brands phishing kits most commonly impersonate.
+// A scan against any of these (or their subdomains) short-circuits to SAFE.
+const CANONICAL_DOMAINS = new Set([
+  'metamask.io', 'uniswap.org', 'app.uniswap.org', 'coinbase.com', 'wallet.coinbase.com',
+  'binance.com', 'phantom.app', 'ledger.com', 'opensea.io', 'magiceden.io',
+  'rainbow.me', 'trustwallet.com', 'safe.global', 'app.aave.com', 'jup.ag',
+]);
+
 function heuristicDomainScan(url: string): DomainScanResult {
-  const lower = url.toLowerCase();
   const signals: string[] = [];
+  let host = '';
+  try {
+    host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.toLowerCase();
+  } catch {
+    return {
+      verdict: 'SUSPICIOUS', confidenceScore: 50, isPhishing: false, isMalicious: false,
+      description: 'URL could not be parsed.',
+      signals: ['Malformed URL'],
+    };
+  }
+
+  for (const canon of CANONICAL_DOMAINS) {
+    if (host === canon || host.endsWith(`.${canon}`)) {
+      return {
+        verdict: 'SAFE', confidenceScore: 99, isPhishing: false, isMalicious: false,
+        description: 'Canonical domain — recognized as legitimate.',
+        signals: [],
+      };
+    }
+  }
+
   const PHISHING_PATTERNS = [
     'metamask', 'uniswap', 'coinbase', 'binance', 'phantom', 'ledger',
     'opensea', 'airdrop', 'freeclaim', 'verify-wallet', 'claim-nft',
     'connect-wallet', 'sync-wallet', 'recover-wallet',
   ];
-  const SUSPICIOUS_TLDS = ['.xyz', '.click', '.link', '.info', '.cc', '.tk', '.ml'];
+  const SUSPICIOUS_TLDS = ['.xyz', '.click', '.link', '.tk', '.ml'];
 
   let phishingScore = 0;
   for (const pattern of PHISHING_PATTERNS) {
-    if (lower.includes(pattern)) {
-      signals.push(`Keyword match: "${pattern}"`);
-      phishingScore += 30;
-    }
-  }
-  for (const tld of SUSPICIOUS_TLDS) {
-    if (lower.includes(tld)) {
-      signals.push(`Suspicious domain extension: ${tld}`);
+    if (host.includes(pattern)) {
+      signals.push(`Brand keyword in hostname: "${pattern}"`);
       phishingScore += 15;
     }
   }
-  if (/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lower)) {
-    signals.push('Direct IP address used (no domain)');
-    phishingScore += 20;
+  for (const tld of SUSPICIOUS_TLDS) {
+    if (host.endsWith(tld)) {
+      signals.push(`Suspicious TLD: ${tld}`);
+      phishingScore += 15;
+    }
   }
-  if (lower.includes('-') && (lower.includes('wallet') || lower.includes('secure'))) {
-    signals.push('Suspicious hyphenated domain pattern');
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    signals.push('Direct IP address (no domain)');
+    phishingScore += 30;
+  }
+  if (host.includes('-') && (host.includes('wallet') || host.includes('secure'))) {
+    signals.push('Suspicious hyphenated hostname pattern');
     phishingScore += 10;
   }
 
+  // Require at least 2 signals before escalating to SUSPICIOUS, and 3+
+  // before PHISHING, to avoid single-keyword false positives.
   phishingScore = Math.min(100, phishingScore);
   let verdict: DomainScanResult['verdict'] = 'SAFE';
-  if (phishingScore >= 60) verdict = 'PHISHING';
-  else if (phishingScore >= 25) verdict = 'SUSPICIOUS';
+  if (signals.length >= 3 && phishingScore >= 45) verdict = 'PHISHING';
+  else if (signals.length >= 2 && phishingScore >= 25) verdict = 'SUSPICIOUS';
 
   return {
     verdict,
