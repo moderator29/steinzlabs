@@ -8,6 +8,16 @@
  * by both the cron and on-demand analysis endpoints.
  */
 
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
+
+// CLAUDE.md: never .toLowerCase() raw addresses — Solana mints/wallets
+// are base58, case-sensitive. norm() wraps normalizeAddress with a
+// safe fallback so the detector keys clusters consistently per chain
+// without silently collapsing Solana case.
+function norm(addr: string, chain: string): string {
+  return normalizeAddress(addr, chain) ?? addr;
+}
+
 export type EdgeType =
   | "common_funding"
   | "coordinated_trading"
@@ -51,7 +61,9 @@ export function detectDirectTransfer(rows: ActivityRow[]): DetectedEdge[] {
     if (r.action !== "transfer_out" && r.action !== "transfer_in") continue;
     const from = r.action === "transfer_out" ? r.whale_address : r.counterparty;
     const to = r.action === "transfer_out" ? r.counterparty : r.whale_address;
-    const key = `${from.toLowerCase()}|${to.toLowerCase()}|${r.chain}`;
+    const fromN = norm(from, r.chain);
+    const toN = norm(to, r.chain);
+    const key = `${fromN}|${toN}|${r.chain}`;
     const existing = agg.get(key);
     if (existing) {
       existing.transaction_count += 1;
@@ -60,8 +72,8 @@ export function detectDirectTransfer(rows: ActivityRow[]): DetectedEdge[] {
       existing.confidence = Math.min(1, 0.4 + existing.transaction_count * 0.05);
     } else {
       agg.set(key, {
-        from_address: from.toLowerCase(),
-        to_address: to.toLowerCase(),
+        from_address: fromN,
+        to_address: toN,
         chain: r.chain,
         edge_type: "direct_transfer",
         weight: 1,
@@ -83,10 +95,10 @@ export function detectCommonFunding(rows: ActivityRow[]): DetectedEdge[] {
   const firstFund = new Map<string, { funder: string; ts: string; chain: string }>();
   for (const r of rows) {
     if (r.action !== "transfer_in" || !r.counterparty) continue;
-    const key = `${r.whale_address.toLowerCase()}|${r.chain}`;
+    const key = `${norm(r.whale_address, r.chain)}|${r.chain}`;
     const existing = firstFund.get(key);
     if (!existing || r.timestamp < existing.ts) {
-      firstFund.set(key, { funder: r.counterparty.toLowerCase(), ts: r.timestamp, chain: r.chain });
+      firstFund.set(key, { funder: norm(r.counterparty, r.chain), ts: r.timestamp, chain: r.chain });
     }
   }
   const byFunder = new Map<string, Array<{ address: string; ts: string; chain: string }>>();
@@ -132,7 +144,7 @@ export function detectCoordinatedTrading(rows: ActivityRow[]): DetectedEdge[] {
   const byToken = new Map<string, ActivityRow[]>();
   for (const r of buys) {
     if (!r.token_address) continue;
-    const k = `${r.chain}|${r.token_address.toLowerCase()}|${r.action}`;
+    const k = `${r.chain}|${norm(r.token_address, r.chain)}|${r.action}`;
     const arr = byToken.get(k) ?? [];
     arr.push(r);
     byToken.set(k, arr);
@@ -145,8 +157,10 @@ export function detectCoordinatedTrading(rows: ActivityRow[]): DetectedEdge[] {
       for (let j = i + 1; j < group.length; j++) {
         const dt = new Date(group[j].timestamp).getTime() - new Date(group[i].timestamp).getTime();
         if (dt > WINDOW_MS) break;
-        if (group[i].whale_address.toLowerCase() === group[j].whale_address.toLowerCase()) continue;
-        const [a, b] = [group[i].whale_address.toLowerCase(), group[j].whale_address.toLowerCase()].sort();
+        const wi = norm(group[i].whale_address, group[i].chain);
+        const wj = norm(group[j].whale_address, group[j].chain);
+        if (wi === wj) continue;
+        const [a, b] = [wi, wj].sort();
         const key = `${a}|${b}|${group[i].chain}`;
         const existing = edges.get(key);
         if (existing) {
@@ -178,9 +192,9 @@ export function detectBehavioralFingerprint(rows: ActivityRow[]): DetectedEdge[]
   const tokensByWallet = new Map<string, Set<string>>();
   for (const r of rows) {
     if (!r.token_address || (r.action !== "buy" && r.action !== "sell")) continue;
-    const k = `${r.whale_address.toLowerCase()}|${r.chain}`;
+    const k = `${norm(r.whale_address, r.chain)}|${r.chain}`;
     const set = tokensByWallet.get(k) ?? new Set<string>();
-    set.add(r.token_address.toLowerCase());
+    set.add(norm(r.token_address, r.chain));
     tokensByWallet.set(k, set);
   }
   const wallets = Array.from(tokensByWallet.entries());

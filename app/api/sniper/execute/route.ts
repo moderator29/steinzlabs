@@ -72,8 +72,10 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
       return NextResponse.json({ blocked: true, reason: 'Sniper bot is currently disabled by admin.', steps });
     }
   } catch (err) {
-    console.error('[Sniper] Kill switch DB check failed:', err);
-    Sentry.captureException(err);
+    // CLAUDE.md: no console.error in production — Sentry already
+    // captures below. Fail CLOSED ("blocked") so a DB outage can never
+    // green-light a snipe past the kill-switch.
+    Sentry.captureException(err, { tags: { route: 'sniper/execute', stage: 'killswitch-check' } });
     return NextResponse.json({ blocked: true, reason: 'Safety system unavailable. Snipe blocked for protection.' });
   }
 

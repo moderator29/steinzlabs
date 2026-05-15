@@ -103,8 +103,12 @@ export async function GET(_request: NextRequest) {
   for (const t of txs) {
     if (t.gas_fee_usd) totalGasUsd += Number(t.gas_fee_usd);
 
-    const buySym = t.to_token_symbol ? t.to_token_symbol.toUpperCase() : null;
-    const sellSym = t.from_token_symbol ? t.from_token_symbol.toUpperCase() : null;
+    // FIFO lots are keyed on `${chain}::${symbol}` so bridged twins
+    // (USDC.eth vs USDC.sol) get their own queues — keying on symbol
+    // alone merged them and produced wrong realized PnL across chains.
+    const chainKey = (t.chain ?? 'unknown').toLowerCase();
+    const buySym = t.to_token_symbol ? `${chainKey}::${t.to_token_symbol.toUpperCase()}` : null;
+    const sellSym = t.from_token_symbol ? `${chainKey}::${t.from_token_symbol.toUpperCase()}` : null;
     const usd = Number(t.usd_value ?? 0);
     if (usd <= 0) continue;
 

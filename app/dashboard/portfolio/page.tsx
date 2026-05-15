@@ -11,6 +11,8 @@ import { BackButton } from "@/components/ui/BackButton";
 import { TokenLogo } from "@/components/market/TokenLogo";
 import { PriceChangeDisplay } from "@/components/market/PriceChangeDisplay";
 import { formatPrice, formatLargeNumber, formatPercent } from "@/lib/market/formatters";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
+import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
@@ -160,7 +162,9 @@ export default function PortfolioPage() {
         .then((d) => {
           if (!abort && d) setLivePrices(d.prices ?? {});
         })
-        .catch(() => {});
+        .catch((err) => {
+          Sentry.captureException(err, { tags: { surface: 'portfolio/live-prices-poll' } });
+        });
     };
     pull();
     const id = window.setInterval(pull, 30_000);
@@ -173,7 +177,9 @@ export default function PortfolioPage() {
   const holdings: Holding[] = useMemo(
     () =>
       (intel?.holdings ?? []).map((h) => {
-        const key = h.contractAddress?.toLowerCase() || h.symbol.toUpperCase();
+        // CLAUDE.md: chain-aware address normalization. Lower-casing a
+        // Solana mint silently breaks live-price keying for every SPL.
+        const key = (h.contractAddress ? normalizeAddress(h.contractAddress, intel?.chain) : null) || h.symbol.toUpperCase();
         const live = livePrices[key];
         const balNum = Number(h.balance) || 0;
         const liveValue = live && live.price > 0 && balNum > 0 ? balNum * live.price : null;

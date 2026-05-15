@@ -60,12 +60,14 @@ export async function timed<T>(
     const { result, status } = await fn();
     void logApiCost({ ...meta, ok: true, durationMs: Date.now() - t0, status: status ?? null });
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    // CLAUDE.md: no `any`. Narrow to Error for the `.message` read.
+    const errorMsg = err instanceof Error ? err.message : String(err);
     void logApiCost({
       ...meta,
       ok: false,
       durationMs: Date.now() - t0,
-      errorMsg: err?.message ?? String(err),
+      errorMsg,
     });
     throw err;
   }
