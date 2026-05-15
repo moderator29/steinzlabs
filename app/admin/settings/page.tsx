@@ -34,6 +34,9 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [lastPoll, setLastPoll] = useState(new Date());
   const [loadingSettings, setLoadingSettings] = useState(true);
+  // §12 — exposed so the save-error path can tell the admin which call
+  // failed instead of leaving the UI looking like a successful save.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Load current settings from Supabase on mount
   useEffect(() => {
@@ -67,9 +70,16 @@ export default function AdminSettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ flags: flags.reduce<Record<string, boolean>>((acc, f) => { acc[f.key] = f.enabled; return acc; }, {}) }),
       });
+      setSaveError(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      // §12 — was an empty catch that silently failed flag saves with no
+      // signal to the admin. Log and surface so the admin knows the
+      // operation didn't land instead of assuming success.
+      console.error('[admin/settings] flag save failed:', err);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save flags');
+    } finally {
       setSaving(false);
       setLastPoll(new Date());
     }
@@ -88,6 +98,11 @@ export default function AdminSettingsPage() {
           {maintenanceOn && (
             <div className="flex items-center gap-1.5 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-lg">
               <AlertTriangle className="w-3 h-3" /> Maintenance Mode Active
+            </div>
+          )}
+          {saveError && (
+            <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg" role="alert">
+              <AlertTriangle className="w-3 h-3" /> {saveError}
             </div>
           )}
           <button onClick={save} disabled={saving}

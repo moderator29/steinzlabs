@@ -68,7 +68,12 @@ function AuthClearInner() {
         Object.keys(sessionStorage).forEach((k) => {
           if (k.startsWith('sb-') || k.startsWith('supabase.')) sessionStorage.removeItem(k);
         });
-      } catch {}
+      } catch (err) {
+        // Storage unavailable (Safari private mode, locked-down browsers).
+        // Non-fatal — clear flow proceeds and the finally block reports
+        // whatever keys we managed to drop before the access failed.
+        console.warn('[auth/clear] storage iteration failed:', err);
+      }
     } finally {
       setCleared(names);
       setDone(true);

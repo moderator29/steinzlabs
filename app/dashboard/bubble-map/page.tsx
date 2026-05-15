@@ -337,7 +337,14 @@ export default function BubbleMapPage() {
       );
       const data = await res.json() as BubbleMapData;
       if (!data.error) setMapData(data);
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch (err) {
+      // §12 — was an empty catch that swallowed every network/parse
+      // failure and left the user staring at an empty bubble map with no
+      // explanation. Log the underlying cause and surface a recoverable
+      // error state so the existing error UI renders.
+      console.error('[bubble-map] fetch failed:', err);
+      setMapData({ error: err instanceof Error ? err.message : 'Failed to load bubble map' } as BubbleMapData);
+    } finally { setLoading(false); }
   }, [tokenAddress, chain, mode]);
 
   function handleModeChange(m: ViewMode) {
