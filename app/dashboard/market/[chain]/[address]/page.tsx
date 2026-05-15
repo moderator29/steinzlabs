@@ -75,6 +75,22 @@ function readChartInterval(tokenKey: string): string {
   }
 }
 
+// Map TradingView interval IDs to lib/services/ohlcv Timeframe shape so
+// the off-CEX AdvancedChart honors the same toolbar as TradingView.
+type AdvancedTf = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
+function tfForAdvanced(tvInterval: string): AdvancedTf {
+  switch (tvInterval) {
+    case '1':   return '1m';
+    case '5':   return '5m';
+    case '15':  return '15m';
+    case '60':  return '1h';
+    case '240': return '4h';
+    case 'D':   return '1d';
+    case 'W':   return '1w';
+    default:    return '15m';
+  }
+}
+
 function writeChartInterval(tokenKey: string, value: string): void {
   if (typeof window === 'undefined') return;
   try {
@@ -258,33 +274,74 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
         <div className="flex-1 min-w-0 flex flex-col">
           {/*
-            Audit P1 #20 — chart routing. TradingViewChart maps majors to
-            Binance/Bybit symbols, then falls back to BINANCE:{SYM}USDT
-            for unknown tickers — which silently 404s for any off-CEX
-            token (Naka Go, Pleasure Coin, every long-tail). For those
-            we render AdvancedChart instead, which fetches OHLCV
-            directly from the actual DEX pair via the contract address,
-            so the chart works for ANY tradable token.
+            Audit M3 — interval selector + fullscreen toggle. Restored
+            from main after the rebase dropped the toolbar; selection
+            persists per token via localStorage.
+
+            Audit P1 #20 — chart routing. TradingViewChart silently 404s
+            for off-CEX tokens (Naka Go, Pleasure Coin, every long-tail
+            asset). For those we render AdvancedChart, which fetches
+            OHLCV directly from the actual DEX pair via the contract
+            address. tfForAdvanced maps TradingView's interval IDs to
+            the lib/services/ohlcv Timeframe shape so the same toolbar
+            controls both renderers.
           */}
-          <div className="h-[380px] md:h-[560px] border-b border-slate-800/50">
-            {isKnownTradingViewSymbol(symbol) ? (
-              <TradingViewChart
-                symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
-                interval="15"
-                height={560}
-                showTools
-                theme={theme}
-              />
-            ) : (
-              <AdvancedChart
-                chain={chain}
-                token={address}
-                tf="1h"
-                chartType="candlestick"
-                indicators={{ ema21: true, volume: true }}
-                height={560}
-              />
-            )}
+          <div className={
+            chartFullscreen
+              ? 'fixed inset-0 z-[80] bg-slate-950 flex flex-col'
+              : 'flex flex-col border-b border-slate-800/50'
+          }>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/40 bg-slate-950/40 gap-2">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                {CHART_INTERVALS.map((tf) => {
+                  const active = tf.id === chartInterval;
+                  return (
+                    <button
+                      key={tf.id}
+                      type="button"
+                      onClick={() => handleIntervalChange(tf.id)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors flex-shrink-0 ${
+                        active
+                          ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                      aria-pressed={active}
+                    >
+                      {tf.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setChartFullscreen((v) => !v)}
+                className="flex-shrink-0 p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/5"
+                title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+                aria-label={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+              >
+                {chartFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            </div>
+            <div className={chartFullscreen ? 'flex-1 min-h-0' : 'h-[380px] md:h-[560px]'}>
+              {isKnownTradingViewSymbol(symbol) ? (
+                <TradingViewChart
+                  symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
+                  interval={chartInterval}
+                  height={chartFullscreen ? 0 : 560}
+                  showTools
+                  theme={theme}
+                />
+              ) : (
+                <AdvancedChart
+                  chain={chain}
+                  token={address}
+                  tf={tfForAdvanced(chartInterval)}
+                  chartType="candlestick"
+                  indicators={{ ema21: true, volume: true }}
+                  height={chartFullscreen ? 0 : 560}
+                />
+              )}
+            </div>
           </div>
 
           {/* Mobile: inline Buy/Sell under the chart */}

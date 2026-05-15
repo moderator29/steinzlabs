@@ -307,7 +307,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
             <RefreshCw className="w-3 h-3" /> Retry
           </button>
         </div>
-        {error && <div className="mt-1.5 text-[10px] text-slate-500">{error}</div>}
+        {error && <div className="mt-1.5 text-[10px] text-slate-400">{error}</div>}
       </div>
     );
   }
@@ -363,7 +363,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
               title={f.hint}
             >
               <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-wide text-slate-500">{f.label}</div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">{f.label}</div>
                 <div
                   className={`text-xs font-semibold tabular-nums ${
                     f.tone === 'good' ? 'text-emerald-400'
@@ -386,11 +386,11 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
 
       {data.reasons.length > 0 && (
         <div className="rounded-lg bg-slate-950/40 border border-slate-800/60 px-3 py-2 mb-3">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">Findings</div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Findings</div>
           <ul className="space-y-1">
             {data.reasons.map((r, i) => (
               <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-300">
-                <span className="text-slate-600">•</span>
+                <span className="text-slate-400">•</span>
                 <span>{r}</span>
               </li>
             ))}
@@ -398,7 +398,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between text-[10px] text-slate-500">
+      <div className="flex items-center justify-between text-[10px] text-slate-400">
         <span className="inline-flex items-center gap-1">
           <Users className="w-3 h-3" /> Source: GoPlus + DEX
         </span>
