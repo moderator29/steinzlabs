@@ -77,6 +77,45 @@ export default function RootLayout({
             __html: `(function(){try{var l=localStorage.getItem('naka_language');if(l&&l!=='en'){document.documentElement.classList.add('naka-translating');if(l==='ar'){document.documentElement.setAttribute('dir','rtl');}}}catch(e){}})();`,
           }}
         />
+        {/* Organization schema.org JSON-LD. Google + Bing use this for
+            the knowledge-panel sidelines + sitelinks search box; missing
+            it costs us "Naka Labs" rich results. Site URL pulls from
+            env so the canonical URL flips correctly across preview
+            deploys. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Naka Labs',
+              url: process.env.NEXT_PUBLIC_SITE_URL || 'https://nakalabs.xyz',
+              logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nakalabs.xyz'}/icons/icon-192.png`,
+              sameAs: [
+                'https://x.com/nakalabs',
+                'https://t.me/nakalabs',
+              ],
+              description:
+                'On-chain intelligence for every trade. Real-time crypto analytics, whale tracking, wallet clusters, and AI-powered trading.',
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'Naka Labs',
+              url: process.env.NEXT_PUBLIC_SITE_URL || 'https://nakalabs.xyz',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nakalabs.xyz'}/dashboard/market?q={search_term_string}`,
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
