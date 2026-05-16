@@ -37,6 +37,7 @@ interface ProofEvent {
   shares?: number;
   likes?: number;
   pairAddress?: string;
+  tokenAddress?: string;
   dexUrl?: string;
   tokenName?: string;
   tokenSymbol?: string;
@@ -49,30 +50,87 @@ interface ProofEvent {
 }
 
 function BubbleVisualization({ event }: { event: ProofEvent }) {
-  const seed = (event.txHash || event.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const s = (i: number) => ((seed * (i + 1) * 17 + 31) % 100) / 100;
-  const holders = [
-    { label: 'Top Holder', pct: 12 + s(1) * 15, color: '#0A1EFF' },
-    { label: 'Holder 2', pct: 8 + s(2) * 10, color: '#7C3AED' },
-    { label: 'Holder 3', pct: 5 + s(3) * 8, color: '#10B981' },
-    { label: 'Holder 4', pct: 3 + s(4) * 6, color: '#F59E0B' },
-    { label: 'Holder 5', pct: 2 + s(5) * 5, color: '#EF4444' },
-    { label: 'Others', pct: 40 + s(6) * 20, color: '#6B7280' },
-  ];
+  const tokenAddress = event.tokenAddress;
+  const chain = event.chain || 'ethereum';
 
-  const total = holders.reduce((s, h) => s + h.pct, 0);
-  const normalized = holders.map(h => ({ ...h, pct: (h.pct / total) * 100 }));
+  type Holder = { label: string; pct: number; color: string; address?: string };
+  const [holders, setHolders] = useState<Holder[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!tokenAddress);
+  const [errored, setErrored] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!tokenAddress) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const palette = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899', '#84CC16'];
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/bubble-map?address=${encodeURIComponent(tokenAddress)}&chain=${encodeURIComponent(chain)}`,
+        );
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data = await res.json();
+        const top = Array.isArray(data?.holders) ? data.holders.slice(0, 5) : [];
+        if (top.length === 0) throw new Error('empty holders');
+        const totalTop = top.reduce((s: number, h: { percent?: number }) => s + (h.percent ?? 0), 0);
+        const rest = Math.max(0, 100 - totalTop);
+        const mapped: Holder[] = top.map((h: { percent?: number; address?: string; label?: string }, i: number) => ({
+          label: h.label || `Holder ${i + 1}`,
+          pct: h.percent ?? 0,
+          color: palette[i % palette.length],
+          address: h.address,
+        }));
+        if (rest > 0) mapped.push({ label: 'Others', pct: rest, color: '#6B7280' });
+        if (!cancelled) setHolders(mapped);
+      } catch {
+        if (!cancelled) setErrored(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenAddress, chain]);
+
+  if (!tokenAddress || errored || (!loading && !holders)) {
+    return (
+      <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="flex items-center gap-2 mb-2">
+          <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
+          <h3 className="font-bold text-sm">Token Distribution</h3>
+        </div>
+        <p className="text-[11px] text-gray-400">
+          Holder distribution unavailable for this event.
+        </p>
+      </div>
+    );
+  }
+
+  if (loading || !holders) {
+    return (
+      <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="flex items-center gap-2 mb-2">
+          <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
+          <h3 className="font-bold text-sm">Token Distribution</h3>
+        </div>
+        <p className="text-[11px] text-gray-500">Loading on-chain holders…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass rounded-xl p-4 border border-white/10">
       <div className="flex items-center gap-2 mb-4">
         <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
         <h3 className="font-bold text-sm">Token Distribution</h3>
-        <span className="text-[10px] text-gray-500 ml-auto">Powered by on-chain data</span>
+        <span className="text-[10px] text-emerald-400/80 ml-auto">On-chain (top 5 + rest)</span>
       </div>
 
       <div className="flex items-center justify-center gap-3 flex-wrap py-4">
-        {normalized.map((h, i) => {
+        {holders.map((h, i) => {
           const size = Math.max(36, Math.min(90, h.pct * 1.2));
           return (
             <div key={i} className="flex flex-col items-center gap-1">
@@ -88,16 +146,16 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
               >
                 {h.pct.toFixed(1)}%
               </div>
-              <span className="text-[9px] text-gray-500">{h.label}</span>
+              <span className="text-[9px] text-gray-400">{h.label}</span>
             </div>
           );
         })}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mt-3">
-        {normalized.slice(0, 3).map((h, i) => (
+        {holders.slice(0, 3).map((h, i) => (
           <div key={i} className="bg-[#111827] rounded-lg p-2 text-center">
-            <div className="text-[10px] text-gray-500">{h.label}</div>
+            <div className="text-[10px] text-gray-400">{h.label}</div>
             <div className="text-xs font-bold" style={{ color: h.color }}>{h.pct.toFixed(1)}%</div>
           </div>
         ))}
