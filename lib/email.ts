@@ -149,6 +149,43 @@ export async function sendWelcomeEmail(
   return sendEmail(to, 'Welcome to NAKA LABS', html);
 }
 
+export async function sendAlertDigestEmail(
+  to: string,
+  firstName: string | null,
+  alerts: Array<{ name: string | null; type: string | null; triggered_at: string }>,
+): Promise<boolean> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz';
+  const escape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const top = alerts.slice(0, 10);
+  const rows = top
+    .map((a) => {
+      const when = new Date(a.triggered_at).toLocaleString();
+      const name = escape(a.name ?? 'Alert');
+      const type = escape(a.type ?? 'generic');
+      return `<tr><td style="padding:8px 0;border-bottom:1px solid #1e293b;"><strong style="color:#fff;">${name}</strong> <span style="color:#94a3b8;">(${type})</span><br/><span style="color:#64748b;font-size:11px;">${escape(when)}</span></td></tr>`;
+    })
+    .join('');
+  const extra =
+    alerts.length > top.length
+      ? `<p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">…and ${alerts.length - top.length} more.</p>`
+      : '';
+  const hi = firstName ? `Hi ${escape(firstName)},` : 'Hi,';
+  const body = `
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#cbd5e1;">${hi}</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#cbd5e1;">${alerts.length} alert${alerts.length === 1 ? '' : 's'} fired in the last 4 hours.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">${rows}</table>
+    ${extra}
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${appUrl}/dashboard/alerts" style="display:inline-block;padding:12px 32px;background-color:#0A1EFF;color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:10px;">Open alerts</a>
+      </td></tr>
+    </table>
+    <p style="margin:24px 0 0;font-size:11px;color:#64748b;">Tune cadence or pause email digests in your <a href="${appUrl}/dashboard/settings" style="color:#4D6BFF;text-decoration:none;">notification settings</a>.</p>`;
+  const html = brandedEmailWrapper('Alert digest', 'Last 4 hours', body);
+  return sendEmail(to, `Naka digest — ${alerts.length} alert${alerts.length === 1 ? '' : 's'}`, html);
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string,
