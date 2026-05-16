@@ -6,7 +6,10 @@
    should migrate to next/font/google for `Inter` and `JetBrains Mono`
    — that avoids the Google Fonts request blocking first paint and is
    the modern Next pattern. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts now load via next/font/google in app/layout.tsx — see the
+   variable definitions there. The Google Fonts @import was blocking
+   first paint with an extra request to fonts.googleapis.com; the
+   self-hosted next/font path eliminates that round-trip. */
 @import './globals-cinematic.css';
 
 @tailwind base;
@@ -65,14 +68,14 @@ button, a, input, select, textarea {
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-weight: 700;
 }
 
