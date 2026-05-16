@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import AutoTranslate from "@/components/i18n/AutoTranslate";
 import CookieConsent from "@/components/legal/CookieConsent";
 import { Suspense } from "react";
+import { JurisdictionWarning } from "@/components/legal/JurisdictionWarning";
 
 // PDF S2 / B.11 — self-host Inter + JetBrains Mono via next/font so the
 // Google Fonts request doesn't block first paint. The CSS now references
@@ -128,6 +129,7 @@ export default function RootLayout({
                           Renders only on first visit until the user picks a
                           choice. Pure client; no server cost. */}
                       <CookieConsent />
+                      <JurisdictionWarning />
                     </PostHogProvider>
                   </Suspense>
                 </ToastProvider>
