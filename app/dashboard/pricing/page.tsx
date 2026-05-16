@@ -108,7 +108,7 @@ const TIERS = [
       'Early Access Lab — test features 24-72h before public',
     ],
     entryRules: [
-      'Hold ≥ 600,000 $NAKA, OR',
+      'Hold ≥ 1,227,000 $NAKA, OR',
       'Own a NakaLabs Loyalty Gem NFT, OR',
       'Own a NakaLabs Development NFT (grants The Chosen)',
     ],

@@ -47,7 +47,7 @@ For full disclosure policy see SECURITY.md. Backlog at SECURITY_BACKLOG.md.
 ## 5. Tokenomics ($NAKA)
 
 NakaCult tier is granted automatically when the verified wallet holds
-either ≥600,000 \$NAKA or any Naka Labs NFT. Verification runs on every
+either ≥1,227,000 \$NAKA or any Naka Labs NFT. Verification runs on every
 login and once daily via cron. Token contract address, supply schedule,
 and emissions are published separately on the official launch page and
 intentionally not duplicated here to avoid drift.

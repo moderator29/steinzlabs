@@ -43,7 +43,7 @@ Phantom / Solflare auth via `signMessage` from `@solana/wallet-adapter-react`. T
 
 ## Linking (post-Phase-4)
 
-Once Phase 4 lands the Vault, the same wallet flow gates NakaCult access via `wallet_identities.address` → `whales`/`token_balances` lookup for $NAKA holdings ≥ 600,000 OR NakaLabs NFT ownership.
+Once Phase 4 lands the Vault, the same wallet flow gates NakaCult access via `wallet_identities.address` → `whales`/`token_balances` lookup for $NAKA holdings ≥ 1,227,000 OR NakaLabs NFT ownership.
 
 ## Security notes
 

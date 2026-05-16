@@ -107,7 +107,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
     unlimitedVtxAi: true,
   },
   // The Naka Cult — apex tier. Inherits everything in Premium and is
-  // gated by 600,000 $NAKA OR a NakaLabs NFT (Loyalty Gem / Development
+  // gated by 1,227,000 $NAKA OR a NakaLabs NFT (Loyalty Gem / Development
   // NFT). Unlocks the Vault (Conclave / Oracle / Sanctum) on top of the
   // standard feature flags. Vault-specific gates live alongside the
   // Vault feature in lib/cult/access.ts (Phase 4).
@@ -144,7 +144,7 @@ export const TIER_PRICING = {
   PREMIUM: { monthly: 99, yearly: 990 },
   // Naka Cult is gated by holdings, not subscription. Surface the
   // entry threshold here so pricing UI can render it consistently.
-  NAKA_CULT: { monthly: 0, yearly: 0, holdingThreshold: 600_000, nftAlternative: true } as const,
+  NAKA_CULT: { monthly: 0, yearly: 0, holdingThreshold: 1_227_000, nftAlternative: true } as const,
 };
 
 export function hasFeatureAccess(

@@ -5,7 +5,7 @@
  * Phase-4 sets the tier manually; a future on-chain resolver will
  * upgrade users to `naka_cult` automatically when their connected
  * wallet holds:
- *   - ≥ 600,000 $NAKA, OR
+ *   - ≥ 1,227,000 $NAKA, OR
  *   - a NakaLabs Loyalty Gem NFT, OR
  *   - a NakaLabs Development NFT (also grants The Chosen Seal)
  *
