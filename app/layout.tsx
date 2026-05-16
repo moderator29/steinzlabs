@@ -101,6 +101,12 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" suppressHydrationWarning>
+        {/* WCAG 2.4.1 / a11y P0 — screen-reader-only skip link that
+            becomes visible on :focus so keyboard users can bypass the
+            sidebar + header and jump straight to main content. */}
+        <a href="#main" className="naka-skip-link">
+          Skip to main content
+        </a>
         <ThemeProvider>
           <AutoTranslate />
           <AuthProvider>

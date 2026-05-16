@@ -222,6 +222,30 @@ h1, h2, h3, h4, h5, h6 {
   background: #374151;
 }
 
+/* a11y: skip-to-content link. Visually hidden until focused; when
+   focused (keyboard tab) it becomes a top-left badge. WCAG 2.4.1. */
+.naka-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: #0A1EFF;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 150ms ease;
+}
+.naka-skip-link:focus,
+.naka-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
