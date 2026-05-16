@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 // Naka Labs brand icons — broad swap. Crosshair, Power, SettingsIcon, Target,
 // Zap, Lock stay on lucide (not yet in brand library).
 import {
@@ -143,7 +144,10 @@ export default function SniperPage() {
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
     } catch (err) {
-      console.error('[sniper.feed] load failed:', err);
+      // CLAUDE.md: no console.error in production. Sentry capture so
+      // sniper-feed outages are tracked; UI degrades gracefully via
+      // empty feedTokens array.
+      Sentry.captureException(err, { tags: { surface: 'sniper/feed' } });
     } finally {
       setFeedLoading(false);
     }

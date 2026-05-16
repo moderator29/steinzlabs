@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getContractPrice, getTokenPriceDetailed } from '@/lib/services/coingecko';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +45,10 @@ export async function POST(req: Request) {
     const contractJobs: Array<{ key: string; address: string; chain: string }> = [];
 
     for (const t of tokens) {
-      const key = (t.address?.toLowerCase()) || t.symbol.toUpperCase();
+      // CLAUDE.md: never .toLowerCase() raw addresses — Solana mints are
+      // base58, case-sensitive. normalizeAddress is chain-aware so an SPL
+      // mint isn't flattened (which silently broke price lookups).
+      const key = (t.address ? normalizeAddress(t.address, t.chain ?? undefined) : null) || t.symbol.toUpperCase();
       const cgId = SYMBOL_TO_CG_ID[t.symbol.toUpperCase()];
       if (cgId) {
         symbolIds.push(cgId);
@@ -76,7 +81,13 @@ export async function POST(req: Request) {
       headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' },
     });
   } catch (err) {
-    console.error('[portfolio/live-prices]', err);
-    return NextResponse.json({ prices: {} }, { status: 502 });
+    // CLAUDE.md: no console.* in prod. Sentry capture so price-source
+    // outages are observable; signal upstream failure to the client so
+    // it can show a "prices unavailable" hint instead of stale data.
+    Sentry.captureException(err, { tags: { route: 'portfolio/live-prices' } });
+    return NextResponse.json(
+      { prices: {}, error: 'Pricing unavailable upstream' },
+      { status: 502 },
+    );
   }
 }

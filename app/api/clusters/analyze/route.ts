@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { buildClustersFromActivity } from '@/lib/clusters/orchestrator';
 import type { ActivityRow } from '@/lib/clusters/detection';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // Phase 8 — on-demand cluster analysis.
 // Paste a wallet address: we pull its recent activity + all activity that touches
@@ -17,8 +18,12 @@ export const POST = withTierGate('pro', async (request: NextRequest) => {
   let body: { address?: string; chain?: string; persist?: boolean };
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Bad JSON' }, { status: 400 }); }
 
-  const address = (body.address || '').trim().toLowerCase();
+  // CLAUDE.md: normalize per chain (Solana case-sensitive). Falling back
+  // to the trimmed input if normalize returns null preserves exact-match
+  // queries against whale_activity rows that may not be EVM-style.
   const chain = body.chain || 'ethereum';
+  const rawAddress = (body.address || '').trim();
+  const address = normalizeAddress(rawAddress, chain) ?? rawAddress;
   const persist = !!body.persist;
   if (!address) return NextResponse.json({ error: 'Missing address' }, { status: 400 });
 
@@ -44,8 +49,14 @@ export const POST = withTierGate('pro', async (request: NextRequest) => {
     // Grab neighbours' recent activity too — gives behavioral detector something to chew on.
     const neighbours = new Set<string>();
     for (const row of [...(selfActivity ?? []), ...(counterActivity ?? [])]) {
-      if (row.counterparty) neighbours.add(String(row.counterparty).toLowerCase());
-      if (row.whale_address) neighbours.add(String(row.whale_address).toLowerCase());
+      if (row.counterparty) {
+        const n = normalizeAddress(String(row.counterparty), chain) ?? String(row.counterparty);
+        neighbours.add(n);
+      }
+      if (row.whale_address) {
+        const n = normalizeAddress(String(row.whale_address), chain) ?? String(row.whale_address);
+        neighbours.add(n);
+      }
     }
     neighbours.delete(address);
 

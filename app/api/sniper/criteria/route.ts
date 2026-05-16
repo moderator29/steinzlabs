@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkTier } from "@/lib/subscriptions/tierCheck";
-import { addressesEqual } from "@/lib/utils/addressNormalize";
+import { addressesEqual, normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -138,7 +138,10 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
         );
       }
     }
-    walletAddresses = submitted;
+    // Canonicalize before storing so downstream lookups (matcher,
+    // executor, history) compare addresses chain-correctly. Skipping
+    // this risks Solana mints being lower-cased on read elsewhere.
+    walletAddresses = submitted.map((addr) => normalizeAddress(addr) ?? addr);
   }
 
   // auto_execute is Max-only.
