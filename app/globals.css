@@ -65,6 +65,22 @@ button, a, input, select, textarea {
   transition-timing-function: ease;
 }
 
+/* a11y / WCAG 2.3.3 — respect prefers-reduced-motion. The aurora
+   background, glow-pulse keyframes, and marquee tickers cause real
+   discomfort for users with vestibular conditions. Globally clamp
+   animation + transition durations and disable scroll-behavior:smooth
+   so anything that opts into motion has to do so explicitly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
