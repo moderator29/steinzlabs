@@ -26,6 +26,15 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  // Bio + socials live in auth user_metadata alongside display_name —
+  // same persistence pattern as the existing display_name field. No
+  // schema change needed; the profile-fields audit asked for these and
+  // user_metadata is the path of least friction since updateUser({data})
+  // is already the save mechanism.
+  const [bio, setBio] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [discord, setDiscord] = useState('');
+  const [github, setGithub] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -58,15 +67,29 @@ export default function SettingsPage() {
       if (user) {
         setUserEmail(user.email || '');
         setDisplayName(user.user_metadata?.display_name || user.user_metadata?.full_name || '');
+        setBio(user.user_metadata?.bio ?? '');
+        setTwitter(user.user_metadata?.twitter ?? '');
+        setDiscord(user.user_metadata?.discord ?? '');
+        setGithub(user.user_metadata?.github ?? '');
       }
     });
   }, []);
+
+  // Strip a leading @ from handles so users can paste @phantomfcalls
+  // or phantomfcalls and we store the canonical form.
+  const cleanHandle = (s: string) => s.trim().replace(/^@+/, '').slice(0, 32);
 
   const handleSaveProfile = useCallback(async () => {
     setProfileLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName },
+        data: {
+          display_name: displayName,
+          bio: bio.slice(0, 280),
+          twitter: cleanHandle(twitter),
+          discord: cleanHandle(discord),
+          github: cleanHandle(github),
+        },
       });
       if (error) throw error;
       toast.success('Profile saved');
@@ -75,7 +98,7 @@ export default function SettingsPage() {
     } finally {
       setProfileLoading(false);
     }
-  }, [displayName]);
+  }, [displayName, bio, twitter, discord, github]);
 
   const handleChangePassword = useCallback(async () => {
     if (!newPassword || newPassword !== confirmPassword) {
@@ -208,6 +231,68 @@ export default function SettingsPage() {
                       className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-gray-400 placeholder-gray-600 cursor-not-allowed"
                     />
                   </div>
+
+                  {/* Bio — short free-form description shown on public
+                      profile surfaces. 280-char Twitter-style cap so it
+                      stays visually balanced in card / hover preview
+                      contexts. */}
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Bio</label>
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value.slice(0, 280))}
+                      placeholder="A short description of who you are and what you trade."
+                      rows={3}
+                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] resize-y"
+                    />
+                    <p className="text-[10px] text-gray-600 mt-1 text-right">{bio.length} / 280</p>
+                  </div>
+
+                  {/* Social handles. Stored without leading @ for a
+                      canonical form so links can prepend the platform
+                      base URL cleanly. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-sm text-gray-400 mb-1 block">Twitter / X</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@</span>
+                        <input
+                          type="text"
+                          value={twitter}
+                          onChange={(e) => setTwitter(e.target.value)}
+                          placeholder="handle"
+                          maxLength={32}
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-7 pr-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-400 mb-1 block">Discord</label>
+                      <input
+                        type="text"
+                        value={discord}
+                        onChange={(e) => setDiscord(e.target.value)}
+                        placeholder="username"
+                        maxLength={32}
+                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-400 mb-1 block">GitHub</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@</span>
+                        <input
+                          type="text"
+                          value={github}
+                          onChange={(e) => setGithub(e.target.value)}
+                          placeholder="username"
+                          maxLength={32}
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-7 pr-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <button
                     onClick={handleSaveProfile}
                     disabled={profileLoading}
