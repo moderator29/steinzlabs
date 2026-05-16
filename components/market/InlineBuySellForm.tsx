@@ -24,6 +24,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
 import { Settings, AlertTriangle } from 'lucide-react';
+import FirstTradeRiskModal, { hasAcknowledgedTradeRisk } from '@/components/legal/FirstTradeRiskModal';
 
 const QUICK = [0, 25, 50, 75, 100];
 const SLIPPAGE_PRESETS = ['0.1', '0.5', '1', '3'];
@@ -139,6 +140,12 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
     }
   };
 
+  // Compliance MVB — gate the FIRST trade on an explicit risk
+  // acknowledgment. Subsequent trades skip the modal because the
+  // acknowledgment is persisted client-side.
+  // See components/legal/FirstTradeRiskModal.tsx.
+  const [showRiskModal, setShowRiskModal] = useState(false);
+
   const submit = async () => {
     if (!walletAddr) { setStatus({ kind: 'err', msg: 'Connect a wallet first' }); return; }
     if (chainMismatch) {
@@ -152,6 +159,14 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       setStatus({ kind: 'err', msg: 'Slippage must be between 0 and 50%' });
       return;
     }
+    if (!hasAcknowledgedTradeRisk()) {
+      setShowRiskModal(true);
+      return;
+    }
+    await execute(slipNum);
+  };
+
+  const execute = async (slipNum: number) => {
     setExecuting(true);
     setStatus(null);
     try {
@@ -363,6 +378,18 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           </a>
         </div>
       </div>
+
+      <FirstTradeRiskModal
+        open={showRiskModal}
+        onCancel={() => setShowRiskModal(false)}
+        onConfirm={() => {
+          setShowRiskModal(false);
+          // hasAcknowledgedTradeRisk() is now true; submit() will pass
+          // straight through to execute() on the immediate retry.
+          const slipNum = parseFloat(slippage);
+          if (Number.isFinite(slipNum) && slipNum > 0) void execute(slipNum);
+        }}
+      />
     </div>
   );
 }

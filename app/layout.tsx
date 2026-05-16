@@ -10,6 +10,7 @@ import { WalletProviders as AppKitWalletProviders } from "./wallet-providers";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import AutoTranslate from "@/components/i18n/AutoTranslate";
+import CookieConsent from "@/components/legal/CookieConsent";
 import { Suspense } from "react";
 
 // PDF S2 / B.11 — self-host Inter + JetBrains Mono via next/font so the
@@ -123,6 +124,10 @@ export default function RootLayout({
                   <Suspense fallback={null}>
                     <PostHogProvider>
                       {children}
+                      {/* Compliance MVB — see components/legal/CookieConsent.tsx.
+                          Renders only on first visit until the user picks a
+                          choice. Pure client; no server cost. */}
+                      <CookieConsent />
                     </PostHogProvider>
                   </Suspense>
                 </ToastProvider>
