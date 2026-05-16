@@ -7,7 +7,7 @@
 
 /**
  * Five-tier ladder. `naka_cult` is the apex tier, gated by holding
- * 600,000 $NAKA OR a NakaLabs NFT — not a Stripe purchase. It implies
+ * 1,227,000 $NAKA OR a NakaLabs NFT — not a Stripe purchase. It implies
  * full Max-tier access plus Vault / NakaCult / Sanctum / Conclave.
  */
 export type Tier = "free" | "mini" | "pro" | "max" | "naka_cult";

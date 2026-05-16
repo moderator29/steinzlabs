@@ -58,7 +58,7 @@ The product is split across four layers:
 
 ### Cult Layer
 
-- **NakaCult** — Token-gated tier for $NAKA holders (≥600K) or NFT owners.
+- **NakaCult** — Token-gated tier for $NAKA holders (≥1,227,000) or NFT owners.
 - **The Vault** — Cinematic governance and intelligence experience.
 - **The Conclave** — NAKA-weighted DAO voting on proposals.
 - **The Oracle** — Daily intelligence briefings, exclusive AI assistant, and an anonymous alpha network.

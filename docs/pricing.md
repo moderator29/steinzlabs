@@ -8,7 +8,7 @@ Five tiers. Four are paid via card; the fifth (NakaCult) is token-gated and not 
 | **Mini** | $5 / month | Active retail traders |
 | **Pro** | $9 / month | Serious traders, multi-chain users, sniper users |
 | **Max** | $15 / month | Power users, alpha hunters, multi-account operators |
-| **NakaCult** | Token-gated | Hold ≥ 600,000 $NAKA **or** any Naka Labs NFT |
+| **NakaCult** | Token-gated | Hold ≥ 1,227,000 $NAKA **or** any Naka Labs NFT |
 
 ---
 
@@ -96,7 +96,7 @@ Everything in Pro, plus:
 
 Not purchasable. Granted automatically when you hold either:
 
-- **≥ 600,000 $NAKA** in a verified wallet, **or**
+- **≥ 1,227,000 $NAKA** in a verified wallet, **or**
 - **Any Naka Labs NFT** (genesis or commemorative drop)
 
 Verification runs on every login and once daily via cron. Drop below the threshold and access auto-revokes at the next sync.

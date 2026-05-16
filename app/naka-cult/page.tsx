@@ -108,7 +108,7 @@ export default async function NakaCultLanding() {
           <article className="nakacult-entry">
             <div className="nakacult-entry__head">
               <span className="nakacult-entry__num">1</span>
-              <h3 className="nakacult-entry__title">Hold ≥ 600,000 $NAKA</h3>
+              <h3 className="nakacult-entry__title">Hold ≥ 1,227,000 $NAKA</h3>
             </div>
             <p className="nakacult-entry__body">
               Direct on-chain holding. The on-chain resolver verifies your wallet daily and grants Cultist tier automatically.

@@ -229,7 +229,7 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 ### 29. NakaCult & The Vault
 
 - **What it does:** Token-gated experience for $NAKA holders. Includes The Vault (cinematic), The Conclave (NAKA-weighted DAO), The Oracle (daily intelligence + exclusive AI + anonymous alpha network).
-- **How to access:** `/cult` (auto-detected when wallet has ≥600,000 $NAKA or any Naka Labs NFT).
+- **How to access:** `/cult` (auto-detected when wallet has ≥1,227,000 $NAKA or any Naka Labs NFT).
 - **Tier:** NakaCult.
 - **How it works:** Holding check runs on every login + once daily via cron. Drop below threshold → access auto-revokes at next sync. Vault / Conclave / Oracle are React experiences; data flows through the same service layer with stricter tier gates.
 - **Limitations:** Only the holdings on the *verified* wallet count. Multi-wallet aggregation not currently supported.

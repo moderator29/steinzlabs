@@ -16,7 +16,7 @@ A wallet qualifies for `naka_cult` if **any** of the following is true:
 
 | Path | Detection |
 |------|-----------|
-| Hold ≥ **600,000 $NAKA** | On-chain balance check on connected wallet(s) |
+| Hold ≥ **1,227,000 $NAKA** | On-chain balance check on connected wallet(s) |
 | Own a **NakaLabs Loyalty Gem NFT** | Alchemy NFT API ownership check |
 | Own a **NakaLabs Development NFT** | Alchemy NFT API ownership check — also grants **The Chosen Seal** |
 
