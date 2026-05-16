@@ -192,9 +192,13 @@ interface D3GraphProps {
   onNodeClick: (n: BubbleNode | null) => void;
   selected: BubbleNode | null;
   fullscreen: boolean;
+  /** Address typed into the wallet-search input. When set, the
+   *  matching node renders with an amber pin + thicker stroke so
+   *  the user can locate a specific holder inside a busy graph. */
+  pinnedAddress?: string;
 }
 
-function D3ForceGraph({ data, onNodeClick, selected, fullscreen }: D3GraphProps) {
+function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }: D3GraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<d3.Simulation<BubbleNode, BubbleLink> | null>(null);
 
@@ -245,13 +249,17 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen }: D3GraphProps)
       }
     }
 
+    const pinNeedle = pinnedAddress?.trim().toLowerCase() ?? '';
+    const isPinned = (n: BubbleNode) =>
+      pinNeedle.length > 0 && (n.address ?? '').toLowerCase() === pinNeedle;
+
     // Nodes
     const nodeSel = g.append('g').selectAll<SVGCircleElement, BubbleNode>('circle')
       .data(nodes).join('circle')
-      .attr('r', n => getRadius(n, W, H))
+      .attr('r', n => getRadius(n, W, H) * (isPinned(n) ? 1.25 : 1))
       .attr('fill', n => n.color + (n.id === 'center' ? 'EE' : '99'))
-      .attr('stroke', n => n.color)
-      .attr('stroke-width', n => selected?.id === n.id ? 2.5 : 0.8)
+      .attr('stroke', n => (isPinned(n) ? '#F59E0B' : n.color))
+      .attr('stroke-width', n => (isPinned(n) ? 3 : selected?.id === n.id ? 2.5 : 0.8))
       .attr('cursor', 'pointer')
       .on('click', (_, n) => onNodeClick(n.id === 'center' ? null : n))
       .call(d3.drag<SVGCircleElement, BubbleNode>()
@@ -296,8 +304,24 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen }: D3GraphProps)
       pctSel.attr('x', n => n.x ?? W / 2).attr('y', n => (n.y ?? H / 2) + 8);
     });
 
+    // If the user searched for a specific holder address and we found a
+    // matching node, pull it toward the center so it doesn't end up
+    // hidden behind the cluster halo.
+    if (pinNeedle) {
+      const target = nodes.find((n) => (n.address ?? '').toLowerCase() === pinNeedle);
+      if (target) {
+        target.fx = W / 2;
+        target.fy = H / 2 - 80;
+        setTimeout(() => {
+          if (!simRef.current) return;
+          target.fx = null;
+          target.fy = null;
+        }, 1500);
+      }
+    }
+
     return () => { sim.stop(); svg.selectAll('*').remove(); };
-  }, [data, selected, onNodeClick, fullscreen]);
+  }, [data, selected, onNodeClick, fullscreen, pinnedAddress]);
 
   return <svg ref={svgRef} className="w-full h-full" />;
 }
@@ -312,6 +336,7 @@ export default function BubbleMapPage() {
   const [loading, setLoading] = useState(false);
   const [mapData, setMapData] = useState<BubbleMapData | null>(null);
   const [selectedNode, setSelectedNode] = useState<BubbleNode | null>(null);
+  const [pinnedAddress, setPinnedAddress] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showChainDrop, setShowChainDrop] = useState(false);
 
@@ -526,7 +551,25 @@ export default function BubbleMapPage() {
             </div>
           ) : (
             <>
-              <D3ForceGraph data={mapData} onNodeClick={setSelectedNode} selected={selectedNode} fullscreen={isFullscreen} />
+              <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-white/[0.04] border border-white/[0.10] rounded-lg px-2.5 py-1.5 backdrop-blur-md">
+                <Search className="w-3 h-3 text-gray-500" />
+                <input
+                  value={pinnedAddress}
+                  onChange={(e) => setPinnedAddress(e.target.value)}
+                  placeholder="Find wallet…"
+                  className="bg-transparent text-[11px] font-mono w-44 focus:outline-none placeholder-gray-600"
+                />
+                {pinnedAddress && (
+                  <button
+                    onClick={() => setPinnedAddress('')}
+                    className="text-[10px] text-gray-500 hover:text-white"
+                    aria-label="Clear pin"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <D3ForceGraph data={mapData} onNodeClick={setSelectedNode} selected={selectedNode} fullscreen={isFullscreen} pinnedAddress={pinnedAddress} />
               {selectedNode && <WalletPanel node={selectedNode} onClose={() => setSelectedNode(null)} />}
               <button onClick={() => setIsFullscreen(v => !v)}
                 className="absolute top-3 right-3 p-2 bg-[#0f1320]/80 border border-white/[0.08] rounded-lg hover:bg-white/[0.06] transition-colors backdrop-blur-sm z-10">
