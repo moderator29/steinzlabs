@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, Bell, MousePointerClick, Bot, Lock } from "lucide-react";
+import { X, Bell, MousePointerClick, Bot, Lock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, effectiveTier } from "@/lib/hooks/useAuth";
+import { useWallet } from "@/lib/hooks/useWallet";
 
 type Mode = "alerts_only" | "oneclick" | "auto_copy";
 
@@ -74,6 +75,24 @@ export default function NewCopyRuleModal({
   const [saving, setSaving] = useState(false);
 
   const modeAllowed = TIER_RANK[tier] >= TIER_RANK[MODE_META[mode].required];
+
+  // Chain-mismatch warning — if a wallet is connected on a different
+  // chain family than the rule targets, auto-copy / one-click will
+  // fail at signing time. Surface this up-front rather than at the
+  // moment of (failed) execution. Alerts-only mode is unaffected since
+  // it doesn't sign anything.
+  const { address: walletAddr, provider, walletPlatformChain } = useWallet();
+  const ruleIsSolana = chain === "solana";
+  const crossFamily = !!walletAddr && (
+    (provider === "phantom" && !ruleIsSolana) ||
+    (provider === "metamask" && ruleIsSolana)
+  );
+  const withinEvm = !!walletAddr && !crossFamily && !ruleIsSolana
+    && walletPlatformChain !== null && walletPlatformChain !== chain;
+  const showChainMismatch = mode !== "alerts_only" && (crossFamily || withinEvm);
+  const mismatchTarget = ruleIsSolana
+    ? "a Solana wallet (Phantom)"
+    : `an EVM wallet on ${chain}`;
 
   async function save() {
     if (!modeAllowed) {
@@ -190,6 +209,18 @@ export default function NewCopyRuleModal({
               options={["ethereum", "solana", "bsc", "base", "arbitrum", "optimism", "polygon", "avalanche"]}
             />
           </div>
+
+          {showChainMismatch && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300">
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>
+                Connected via <span className="font-semibold">{provider}</span>; this rule targets{" "}
+                <span className="font-semibold uppercase">{chain}</span>. {MODE_META[mode].title}
+                {" "}requires {mismatchTarget} to sign trades. You can still save the rule, but
+                trades will fail until the wallet matches.
+              </span>
+            </div>
+          )}
 
           <div>
             <label className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Sizing</label>
