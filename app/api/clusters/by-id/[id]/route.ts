@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // Phase 8 — cluster detail endpoint.
 // Returns cluster + members (roles) + edges + community labels with vote totals.
@@ -36,19 +37,47 @@ export const GET = withTierGate('pro', async (
         .order('upvotes', { ascending: false }),
     ]);
 
-    // Edges where BOTH endpoints are cluster members.
-    const memberAddrs = new Set((members ?? []).map((m) => m.address.toLowerCase()));
-    let edges: any[] = [];
+    // Edges where BOTH endpoints are cluster members. Normalize per chain so
+    // Solana members (case-sensitive) aren't dropped by EVM lower-casing.
+    const clusterChain = (cluster as { chain?: string } | null)?.chain;
+    const memberAddrs = new Set(
+      (members ?? []).map((m) => normalizeAddress(m.address, clusterChain)),
+    );
+    let edges: Array<Record<string, unknown>> = [];
     if (memberAddrs.size > 0) {
       const addrList = Array.from(memberAddrs);
-      const { data: edgeRows } = await supabase
-        .from('wallet_edges')
-        .select('from_address, to_address, edge_type, chain, weight, confidence, total_value_usd, transaction_count, first_seen_at, last_seen_at')
-        .or(`from_address.in.(${addrList.map((a) => `"${a}"`).join(',')}),to_address.in.(${addrList.map((a) => `"${a}"`).join(',')})`)
-        .limit(500);
-      edges = (edgeRows ?? []).filter(
-        (e) => memberAddrs.has(e.from_address.toLowerCase()) && memberAddrs.has(e.to_address.toLowerCase()),
+      const CHUNK = 50;
+      const chunks: string[][] = [];
+      for (let i = 0; i < addrList.length; i += CHUNK) {
+        chunks.push(addrList.slice(i, i + CHUNK));
+      }
+      const results = await Promise.all(
+        chunks.map((chunk) =>
+          supabase
+            .from('wallet_edges')
+            .select(
+              'from_address, to_address, edge_type, chain, weight, confidence, total_value_usd, transaction_count, first_seen_at, last_seen_at',
+            )
+            .or(
+              `from_address.in.(${chunk.map((a) => `"${a}"`).join(',')}),to_address.in.(${chunk.map((a) => `"${a}"`).join(',')})`,
+            )
+            .limit(500),
+        ),
       );
+      const seen = new Set<string>();
+      for (const { data: edgeRows } of results) {
+        for (const e of edgeRows ?? []) {
+          const from = normalizeAddress(e.from_address, e.chain ?? clusterChain);
+          const to = normalizeAddress(e.to_address, e.chain ?? clusterChain);
+          if (!memberAddrs.has(from) || !memberAddrs.has(to)) continue;
+          const key = `${from}|${to}|${e.edge_type}|${e.chain ?? ''}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          edges.push(e);
+          if (edges.length >= 500) break;
+        }
+        if (edges.length >= 500) break;
+      }
     }
 
     return NextResponse.json({

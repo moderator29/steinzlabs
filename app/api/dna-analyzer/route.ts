@@ -2,6 +2,19 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 
+const ADDRESS_RE = /^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
+
+function sanitizeSymbol(s: unknown): string {
+  if (typeof s !== 'string') return 'UNKNOWN';
+  return s.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 16) || 'UNKNOWN';
+}
+
+function sanitizeNumeric(v: unknown): string {
+  const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
+  if (!Number.isFinite(n)) return '0';
+  return n.toString().slice(0, 32);
+}
+
 export async function POST(request: Request) {
   try {
     const { walletAddress, holdings, totalBalance, txCount } = await request.json() as {
@@ -11,20 +24,27 @@ export async function POST(request: Request) {
       txCount?: number;
     };
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!walletAddress || !ADDRESS_RE.test(walletAddress)) {
+      return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
     }
 
-    const holdingsText = holdings && holdings.length > 0
-      ? holdings.map(h => `${h.symbol}: $${h.valueUsd} (${h.balance})`).join(', ')
+    const safeHoldings = Array.isArray(holdings) ? holdings.slice(0, 50) : [];
+    const holdingsText = safeHoldings.length > 0
+      ? safeHoldings
+          .map(h => `${sanitizeSymbol(h.symbol)}: $${sanitizeNumeric(h.valueUsd)} (${sanitizeNumeric(h.balance)})`)
+          .join(', ')
       : 'No on-chain holdings detected';
+    const safeTotalBalance = sanitizeNumeric(totalBalance);
+    const safeTxCount = Number.isFinite(txCount as number)
+      ? Math.max(0, Math.min(10_000_000, Math.floor(txCount as number))).toString()
+      : 'unknown';
 
     const prompt = `You are a senior crypto intelligence analyst for NAKA LABS — a professional on-chain analytics platform. Analyze this wallet comprehensively and produce a detailed intelligence report.
 
 Wallet: ${walletAddress}
-Total Portfolio Value: $${totalBalance || 0}
+Total Portfolio Value: $${safeTotalBalance}
 Holdings: ${holdingsText}
-Transaction Count: ${txCount || 'unknown'}
+Transaction Count: ${safeTxCount}
 
 Provide a detailed JSON response with this EXACT structure. All text fields must be detailed, specific sentences — not placeholders:
 {

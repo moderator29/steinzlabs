@@ -50,7 +50,13 @@ function mapToTokenRiskResult(contractAddress: string, sec: TokenSecurityResult)
   const isBlacklisted = raw?.is_blacklisted === '1';
   const creatorPercent = raw?.creator_percent != null ? parseFloat(String(raw.creator_percent)) * 100 : null;
   const lpHolders = Array.isArray(raw?.lp_holders) ? (raw!.lp_holders as Array<Record<string, unknown>>) : [];
-  const lpLockedPercent = lpHolders.reduce((sum, h) => sum + (h.is_locked === '1' || h.is_locked === 1 ? parseFloat(String(h.percent ?? '0')) * 100 : 0), 0) || null;
+  const isLocked = (v: unknown) =>
+    v === '1' || v === 1 || v === true || v === 'true';
+  const lpLockedPercent =
+    lpHolders.reduce(
+      (sum, h) => sum + (isLocked(h.is_locked) ? parseFloat(String(h.percent ?? '0')) * 100 : 0),
+      0,
+    ) || null;
   const top10Holders = Array.isArray(raw?.holders) ? (raw!.holders as Array<Record<string, unknown>>) : [];
   const top10HolderPercent = top10Holders.length > 0
     ? top10Holders.slice(0, 10).reduce((sum, h) => sum + parseFloat(String(h.percent ?? '0')), 0) * 100
