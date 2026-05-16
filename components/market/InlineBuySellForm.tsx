@@ -56,6 +56,24 @@ function writeSlippage(chain: string, value: string): void {
   }
 }
 
+function readMevProtect(chain: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(`steinz_mev_protect_${chain}`) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeMevProtect(chain: string, on: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`steinz_mev_protect_${chain}`, on ? '1' : '0');
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+}
+
 export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUSD, userId }: Props) {
   const { address: walletAddr, balance, provider, walletPlatformChain } = useWallet();
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
@@ -64,6 +82,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
   const [slippage, setSlippage] = useState<string>(() => readSlippage(chain));
   const [showSlippageInput, setShowSlippageInput] = useState(false);
+  const [mevProtect, setMevProtect] = useState<boolean>(() => readMevProtect(chain));
 
   // Audit M4 #2 — three-tier chain mismatch guard. The platform was
   // letting users sign trades on the wrong network silently:
@@ -106,7 +125,13 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   // bleed into Ethereum.
   useEffect(() => {
     setSlippage(readSlippage(chain));
+    setMevProtect(readMevProtect(chain));
   }, [chain]);
+
+  const onMevToggle = (next: boolean) => {
+    setMevProtect(next);
+    writeMevProtect(chain, next);
+  };
 
   // Chain-scoped stablecoin available for BUY. We only count USDC + USDT
   // because those are what the 0x router actually fills against. Native
@@ -180,6 +205,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           amountIn: amount,
           amountInUSD: amountNum,
           slippage: slipNum,
+          mevProtect,
           walletAddress: walletAddr,
           userId,
         }),
@@ -316,6 +342,32 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
             autoFocus
           />
         )}
+      </div>
+
+      {/* MEV protect toggle — Industry parity with MEVX / Uniswap's
+          "Use private RPC" switch. Routes the tx through Flashbots /
+          Jito (per chain) so sandwich/frontrun bots can't see it in
+          the public mempool. Server-side trade-execute route reads
+          mevProtect and routes accordingly. Persisted per chain. */}
+      <div className="mb-3 flex items-center justify-between text-[11px]">
+        <span className="text-slate-400">MEV protection</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={mevProtect}
+          onClick={() => onMevToggle(!mevProtect)}
+          className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-semibold transition-colors ${
+            mevProtect
+              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
+              : 'bg-slate-900/60 text-slate-400 border border-slate-800 hover:bg-slate-800'
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`inline-block w-2 h-2 rounded-full ${mevProtect ? 'bg-emerald-400' : 'bg-slate-600'}`}
+          />
+          {mevProtect ? 'On (private mempool)' : 'Off'}
+        </button>
       </div>
 
       {/* Routing label — actual route preview lives on the swap page;
