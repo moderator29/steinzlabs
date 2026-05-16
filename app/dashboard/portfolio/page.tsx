@@ -514,6 +514,9 @@ function PerformanceChart({
   );
 }
 
+type SortKey = "symbol" | "balance" | "price" | "change24h" | "value";
+type SortDir = "asc" | "desc";
+
 function HoldingsTable({
   holdings,
   loading,
@@ -525,6 +528,49 @@ function HoldingsTable({
   totalValueUsd: number;
   onSelect: (path: string) => void;
 }) {
+  const [sortKey, setSortKey] = useState<SortKey>("value");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [hideSpam, setHideSpam] = useState(true);
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "symbol" ? "asc" : "desc");
+    }
+  };
+
+  const view = useMemo(() => {
+    const filtered = hideSpam
+      ? holdings.filter((h) => (h.securityScore == null ? true : h.securityScore >= 30))
+      : holdings.slice();
+    const dir = sortDir === "asc" ? 1 : -1;
+    const priceOf = (h: Holding) => {
+      const v = Number(h.valueUsd ?? 0) || 0;
+      const b = Number(h.balance) || 0;
+      return b > 0 ? v / b : 0;
+    };
+    filtered.sort((a, b) => {
+      switch (sortKey) {
+        case "symbol":
+          return a.symbol.localeCompare(b.symbol) * dir;
+        case "balance":
+          return ((Number(a.balance) || 0) - (Number(b.balance) || 0)) * dir;
+        case "price":
+          return (priceOf(a) - priceOf(b)) * dir;
+        case "change24h":
+          return ((a.change24h ?? -Infinity) - (b.change24h ?? -Infinity)) * dir;
+        case "value":
+        default:
+          return ((Number(a.valueUsd ?? 0) || 0) - (Number(b.valueUsd ?? 0) || 0)) * dir;
+      }
+    });
+    return filtered;
+  }, [holdings, hideSpam, sortKey, sortDir]);
+
+  const hiddenCount = holdings.length - view.length;
+
   if (loading) {
     return <div className="p-6 text-sm text-slate-500">Loading holdings…</div>;
   }
@@ -550,22 +596,65 @@ function HoldingsTable({
     onSelect(`/dashboard/market/${chain}/${addr}`);
   };
 
+  const arrow = (key: SortKey) =>
+    sortKey === key ? <span className="ml-1 text-slate-300">{sortDir === "asc" ? "↑" : "↓"}</span> : null;
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-800/60">
-            <th className="px-4 py-3 text-left">Token</th>
-            <th className="px-4 py-3 text-right">Balance</th>
-            <th className="px-4 py-3 text-right">Current Price</th>
-            <th className="px-4 py-3 text-right">24h</th>
-            <th className="px-4 py-3 text-right">Value</th>
-            <th className="px-4 py-3 text-right">Allocation</th>
-            <th className="px-4 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {holdings.map((h) => {
+    <div>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-900/60">
+        <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={hideSpam}
+            onChange={(e) => setHideSpam(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[#0A1EFF]"
+          />
+          Hide suspected spam tokens
+          {hideSpam && hiddenCount > 0 ? (
+            <span className="text-[11px] text-slate-500">({hiddenCount} hidden)</span>
+          ) : null}
+        </label>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-800/60">
+              <th
+                className="px-4 py-3 text-left cursor-pointer select-none"
+                onClick={() => toggleSort("symbol")}
+              >
+                Token{arrow("symbol")}
+              </th>
+              <th
+                className="px-4 py-3 text-right cursor-pointer select-none"
+                onClick={() => toggleSort("balance")}
+              >
+                Balance{arrow("balance")}
+              </th>
+              <th
+                className="px-4 py-3 text-right cursor-pointer select-none"
+                onClick={() => toggleSort("price")}
+              >
+                Current Price{arrow("price")}
+              </th>
+              <th
+                className="px-4 py-3 text-right cursor-pointer select-none"
+                onClick={() => toggleSort("change24h")}
+              >
+                24h{arrow("change24h")}
+              </th>
+              <th
+                className="px-4 py-3 text-right cursor-pointer select-none"
+                onClick={() => toggleSort("value")}
+              >
+                Value{arrow("value")}
+              </th>
+              <th className="px-4 py-3 text-right">Allocation</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.map((h) => {
             const valueUsd = Number(h.valueUsd ?? 0) || 0;
             const balNum = Number(h.balance) || 0;
             const currentPrice = balNum > 0 ? valueUsd / balNum : 0;
@@ -629,8 +718,9 @@ function HoldingsTable({
               </tr>
             );
           })}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
