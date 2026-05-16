@@ -66,6 +66,26 @@
   100% { background-position: -200% 50%; }
 }
 
+/* iOS notch / Android gesture-bar safe areas — every fixed bottom
+   element (BottomNav capsule, FirstRunTour, JurisdictionWarning,
+   CookieConsent, etc.) reads padding-bottom: var(--naka-safe-bottom)
+   so content doesn't render under the home indicator. Same trick on
+   the top side for the dynamic island on iPhone 14+. */
+:root {
+  --naka-safe-top: env(safe-area-inset-top, 0px);
+  --naka-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --naka-safe-left: env(safe-area-inset-left, 0px);
+  --naka-safe-right: env(safe-area-inset-right, 0px);
+}
+
+.naka-safe-bottom { padding-bottom: var(--naka-safe-bottom); }
+.naka-safe-top    { padding-top: var(--naka-safe-top); }
+.naka-safe-px {
+  padding-left: var(--naka-safe-left);
+  padding-right: var(--naka-safe-right);
+}
+.naka-safe-mb     { margin-bottom: var(--naka-safe-bottom); }
+
 /* Transitions applied only to specific interactive elements, not globally */
 button, a, input, select, textarea {
   transition-property: background-color, border-color, color, opacity, box-shadow;
