@@ -61,6 +61,11 @@ export interface TokenSecurityResult {
   tradingCooldown: boolean;
   creatorAddress: string;
   ownerAddress: string;
+  /** True when the creator wallet sits in the top-N holders with a
+   *  meaningful share — a strong dump-risk indicator. */
+  creatorIsTopHolder: boolean;
+  /** Creator's own holdings as a fraction of supply (0..1). */
+  creatorHoldingPct: number;
   holderCount: number;
   lpHolders: any[];
   trustScore: number;
@@ -88,6 +93,28 @@ export async function scanTokenSecurity(
 function parseTokenSecurity(t: any): TokenSecurityResult {
   const buyTax = parseFloat(t.buy_tax || '0');
   const sellTax = parseFloat(t.sell_tax || '0');
+
+  // Dev-wallet auto-block heuristic: GoPlus returns the creator address
+  // and (when available) the top-10 holders. If the creator sits in
+  // that list with a non-trivial share, the snipe should be blocked —
+  // historically dev wallets at >2% of supply correlate with dump
+  // events within minutes of liquidity add.
+  const creatorAddrRaw = String(t.creator_address || '');
+  const creatorAddr = creatorAddrRaw.toLowerCase();
+  const topHolders: Array<Record<string, unknown>> = Array.isArray(t.holders) ? t.holders : [];
+  let creatorIsTopHolder = false;
+  let creatorHoldingPct = 0;
+  if (creatorAddr) {
+    for (const h of topHolders) {
+      const addr = String(h.address ?? '').toLowerCase();
+      if (addr && addr === creatorAddr) {
+        creatorIsTopHolder = true;
+        creatorHoldingPct = parseFloat(String(h.percent ?? '0')) || 0;
+        break;
+      }
+    }
+  }
+
   let score = 100;
   if (t.is_honeypot === '1') score -= 40;
   if (t.is_open_source !== '1') score -= 15;
@@ -104,6 +131,12 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
   else if (buyTax > 0.05) score -= 5;
   if (sellTax > 0.1) score -= 10;
   else if (sellTax > 0.05) score -= 5;
+  // Dev-wallet concentration penalty. A creator holding >5% is a hard
+  // dump-risk red flag (-20); >2% is concerning (-10). Lower exposure
+  // is still surfaced via creatorIsTopHolder so sniper-side rules can
+  // see it without losing the score signal.
+  if (creatorIsTopHolder && creatorHoldingPct > 0.05) score -= 20;
+  else if (creatorIsTopHolder && creatorHoldingPct > 0.02) score -= 10;
   score = Math.max(0, Math.min(100, score));
 
   let safetyLevel: TokenSecurityResult['safetyLevel'] = 'SAFE';
@@ -123,6 +156,15 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
     { label: 'Can Sell All', status: t.cannot_sell_all === '1' ? 'fail' : 'pass' },
     { label: 'Buy Tax Under 10%', status: buyTax > 0.1 ? 'fail' : buyTax > 0.05 ? 'warn' : 'pass' },
     { label: 'Sell Tax Under 10%', status: sellTax > 0.1 ? 'fail' : sellTax > 0.05 ? 'warn' : 'pass' },
+    {
+      label: 'Dev wallet not in top holders',
+      status:
+        creatorIsTopHolder && creatorHoldingPct > 0.05
+          ? 'fail'
+          : creatorIsTopHolder && creatorHoldingPct > 0.02
+            ? 'warn'
+            : 'pass',
+    },
   ];
 
   return {
@@ -142,6 +184,8 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
     tradingCooldown: t.trading_cooldown === '1',
     creatorAddress: t.creator_address || '',
     ownerAddress: t.owner_address || '',
+    creatorIsTopHolder,
+    creatorHoldingPct,
     holderCount: parseInt(t.holder_count || '0'),
     lpHolders: t.lp_holders || [],
     trustScore: score,
