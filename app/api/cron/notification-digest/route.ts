@@ -3,6 +3,36 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTelegramMessage } from "@/lib/telegram/client";
+import { sendAlertDigestEmail } from "@/lib/email";
+
+interface NotificationPrefs {
+  user_id: string;
+  email_enabled: boolean | null;
+  telegram_enabled: boolean | null;
+  quiet_hours_enabled: boolean | null;
+  quiet_hours_start_minute: number | null;
+  quiet_hours_end_minute: number | null;
+  quiet_hours_timezone: string | null;
+}
+
+function inQuietHours(prefs: NotificationPrefs, now: Date): boolean {
+  if (!prefs.quiet_hours_enabled) return false;
+  const start = prefs.quiet_hours_start_minute;
+  const end = prefs.quiet_hours_end_minute;
+  if (start == null || end == null) return false;
+  // Use the user's configured timezone if valid, otherwise UTC.
+  let local: Date;
+  try {
+    const tz = prefs.quiet_hours_timezone || "UTC";
+    local = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+  } catch {
+    local = now;
+  }
+  const minutes = local.getHours() * 60 + local.getMinutes();
+  return start <= end
+    ? minutes >= start && minutes < end
+    : minutes >= start || minutes < end;
+}
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -44,28 +74,73 @@ export async function GET(request: NextRequest) {
     if (userIds.length === 0) {
       return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, sent: 0 });
     }
-    const { data: tgLinks } = await supabase
-      .from("user_telegram_links")
-      .select("user_id, telegram_chat_id")
-      .in("user_id", userIds);
+    const [{ data: tgLinks }, { data: prefsRows }] = await Promise.all([
+      supabase
+        .from("user_telegram_links")
+        .select("user_id, telegram_chat_id")
+        .in("user_id", userIds),
+      supabase
+        .from("notification_settings")
+        .select(
+          "user_id, email_enabled, telegram_enabled, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone",
+        )
+        .in("user_id", userIds),
+    ]);
     const chatByUser = new Map<string, number>();
     (tgLinks ?? []).forEach((r: { user_id: string; telegram_chat_id: number | string }) => {
       chatByUser.set(r.user_id, Number(r.telegram_chat_id));
     });
+    const prefsByUser = new Map<string, NotificationPrefs>();
+    (prefsRows ?? []).forEach((p: NotificationPrefs) => {
+      prefsByUser.set(p.user_id, p);
+    });
 
-    for (const [userId, userAlerts] of byUser) {
-      const chatId = chatByUser.get(userId);
-      if (!chatId) continue;
-      const lines = userAlerts.slice(0, 10).map((a) => {
-        const when = new Date(a.triggered_at).toLocaleString();
-        return `• *${a.name ?? "Alert"}* (${a.type ?? "generic"}) — ${when}`;
-      });
-      const extra = userAlerts.length > 10 ? `\n…and ${userAlerts.length - 10} more.` : "";
-      await sendTelegramMessage(
-        chatId,
-        `*Naka Labs digest*\n${userAlerts.length} alert${userAlerts.length === 1 ? "" : "s"} in the last 4 hours:\n\n${lines.join("\n")}${extra}`,
+    // Resolve emails for users we plan to email (those with email_enabled !== false).
+    const emailCandidates = userIds.filter((id) => {
+      const p = prefsByUser.get(id);
+      return !p || p.email_enabled !== false;
+    });
+    const emailByUser = new Map<string, { email: string; firstName: string | null }>();
+    if (emailCandidates.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, email, first_name")
+        .in("id", emailCandidates);
+      (profiles ?? []).forEach(
+        (r: { id: string; email: string | null; first_name: string | null }) => {
+          if (r.email) emailByUser.set(r.id, { email: r.email, firstName: r.first_name });
+        },
       );
-      sent++;
+    }
+
+    const now = new Date();
+    for (const [userId, userAlerts] of byUser) {
+      const prefs = prefsByUser.get(userId);
+      if (prefs && inQuietHours(prefs, now)) continue;
+
+      // Telegram (existing path)
+      const tgOn = !prefs || prefs.telegram_enabled !== false;
+      const chatId = chatByUser.get(userId);
+      if (tgOn && chatId) {
+        const lines = userAlerts.slice(0, 10).map((a) => {
+          const when = new Date(a.triggered_at).toLocaleString();
+          return `• *${a.name ?? "Alert"}* (${a.type ?? "generic"}) — ${when}`;
+        });
+        const extra = userAlerts.length > 10 ? `\n…and ${userAlerts.length - 10} more.` : "";
+        await sendTelegramMessage(
+          chatId,
+          `*Naka Labs digest*\n${userAlerts.length} alert${userAlerts.length === 1 ? "" : "s"} in the last 4 hours:\n\n${lines.join("\n")}${extra}`,
+        );
+        sent++;
+      }
+
+      // Email (new path)
+      const emailOn = !prefs || prefs.email_enabled !== false;
+      const profile = emailByUser.get(userId);
+      if (emailOn && profile) {
+        const ok = await sendAlertDigestEmail(profile.email, profile.firstName, userAlerts);
+        if (ok) sent++;
+      }
     }
 
     const duration = Date.now() - startedAt;
