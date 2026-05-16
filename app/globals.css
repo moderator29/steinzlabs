@@ -223,14 +223,32 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
+  border: 1.5px solid var(--border-subtle);
 }
 
 .glass-strong {
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+}
+
+/* PDF S2.3 — canonical glassmorphic card. Wraps the bg / blur / border /
+   radius pattern so any new card surface picks it up with one class
+   instead of re-deriving the values inline. Existing `.glass` callers
+   stay backwards-compatible; this is the recommended class for new code. */
+.naka-card {
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.naka-card:hover {
+  border-color: rgba(10, 30, 255, 0.35);
+  box-shadow: 0 0 30px rgba(10, 30, 255, 0.18);
 }
 
 .card-hover {
