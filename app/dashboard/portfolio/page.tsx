@@ -9,6 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import { createChart, AreaSeries, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
 import { TokenLogo } from "@/components/market/TokenLogo";
+import { EmptyStateCta } from "@/components/dashboard/EmptyStateCta";
 import { PriceChangeDisplay } from "@/components/market/PriceChangeDisplay";
 import { formatPrice, formatLargeNumber, formatPercent } from "@/lib/market/formatters";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -529,8 +530,16 @@ function HoldingsTable({
   }
   if (holdings.length === 0) {
     return (
-      <div className="p-8 text-center text-sm text-slate-400">
-        Portfolio tracking begins with your first trade.
+      <div className="p-8">
+        <EmptyStateCta
+          icon={ShieldAlert}
+          title="No holdings detected"
+          body="Connect a wallet or make your first trade to start tracking balances, allocation, and realized PnL."
+          primaryHref="/dashboard/swap"
+          primaryLabel="Make first trade"
+          secondaryHref="/dashboard/settings"
+          secondaryLabel="Connect a wallet"
+        />
       </div>
     );
   }
