@@ -55,6 +55,20 @@ const nextConfig = {
     { source: '/whitepaper', destination: '/docs', permanent: false },
   ],
   headers: async () => [
+    // Global security headers — applied to every route. CSP is intentionally
+    // permissive for now (script 'self' + 'unsafe-inline' + 'unsafe-eval'
+    // because Next.js inlines hydration scripts and Sentry uses eval).
+    // Tighten with nonces once the app moves to strict CSP.
+    {
+      source: '/:path*',
+      headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+      ],
+    },
     {
       source: '/_next/static/:path*',
       headers: [
