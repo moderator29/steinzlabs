@@ -65,3 +65,17 @@ jobs:
       # Informational only — failing audits don't block PRs. Critical
       # CVEs should still be triaged via Dependabot alerts.
       - run: npm audit --audit-level=high
+
+  audit-critical:
+    name: npm audit (blocking on critical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+      # Hard gate: critical CVEs block the PR. High/moderate/low remain
+      # informational (see job above) until the 32-CVE backfill is done;
+      # this job ensures no new critical sneaks in meanwhile.
+      - run: npm audit --audit-level=critical
