@@ -710,7 +710,11 @@ function HistoryTab() {
       <div className="glass rounded-xl p-8 border border-white/10 text-center mt-4">
         <History className="w-10 h-10 text-gray-600 mx-auto mb-3" />
         <p className="text-sm font-semibold mb-1">No history yet</p>
-        <p className="text-xs text-gray-500">Your alert triggers will appear here</p>
+        <p className="text-xs text-gray-500">
+          Your alert triggers will appear here once they fire. Use the
+          <span className="text-slate-200 font-semibold"> + Create </span>
+          button in the header to set up your first alert.
+        </p>
       </div>
     );
   }
