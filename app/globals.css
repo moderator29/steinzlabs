@@ -58,6 +58,14 @@
   box-sizing: border-box;
 }
 
+/* Skeleton shimmer keyframes — backs the components/ui/Skeleton
+   primitives. 200% background size + animate background-position
+   for a smooth left-to-right wash. */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
 /* Transitions applied only to specific interactive elements, not globally */
 button, a, input, select, textarea {
   transition-property: background-color, border-color, color, opacity, box-shadow;
