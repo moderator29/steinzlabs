@@ -48,6 +48,16 @@ const config: Config = {
           foreground: "#9CA3AF",
         },
       },
+      // Branding migration: bump the default border thickness 1px → 1.5px
+      // so every `border`, `border-t/r/b/l`, and `divide-*` Tailwind utility
+      // renders 50% thicker without a per-element rewrite. Explicit
+      // `border-2`/`border-4`/`border-0` are untouched.
+      borderWidth: {
+        DEFAULT: "1.5px",
+      },
+      divideWidth: {
+        DEFAULT: "1.5px",
+      },
       fontFamily: {
         heading: ["Inter", "sans-serif"],
         body: ["Inter", "sans-serif"],
