@@ -555,6 +555,11 @@ export default function VtxAiTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // §5.3 — Stop button. Holds the live AbortController for the in-flight
+  // SSE / fetch so the user can interrupt long-running replies. Cleared
+  // after every send (success or failure).
+  const abortRef = useRef<AbortController | null>(null);
+  const [copiedAt, setCopiedAt] = useState<number | null>(null);
 
   // §11.1 — preload the AdvancedChart bundle the moment the VTX tab
   // mounts so the first chart render skips the dynamic-import wait.
@@ -676,9 +681,13 @@ export default function VtxAiTab() {
       const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|chart|price of|trade|send|approve)\b/i;
       const useStream = !TOOL_USE_KEYWORDS.test(finalMessage);
 
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: finalMessage,
           history: messages.slice(-10),
@@ -821,9 +830,29 @@ export default function VtxAiTab() {
         }
       }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please try again.' }]);
+      const aborted = error instanceof DOMException && error.name === 'AbortError';
+      if (!aborted) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failed. Please try again.' }]);
+      }
     } finally {
+      abortRef.current = null;
       setLoading(false);
+    }
+  };
+
+  const stopGeneration = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+  };
+
+  const copyMessage = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAt(idx);
+      setTimeout(() => setCopiedAt((v) => (v === idx ? null : v)), 1500);
+    } catch {
+      /* clipboard denied — non-fatal */
     }
   };
 
@@ -1147,6 +1176,16 @@ export default function VtxAiTab() {
                     data={msg.chart.data}
                   />
                 )}
+                {msg.role === 'assistant' && msg.content && (
+                  <button
+                    type="button"
+                    onClick={() => copyMessage(msg.content, i)}
+                    className="mt-2 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                    title="Copy message"
+                  >
+                    {copiedAt === i ? 'Copied' : 'Copy'}
+                  </button>
+                )}
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
@@ -1157,7 +1196,7 @@ export default function VtxAiTab() {
           ))}
 
           {loading && (
-            <div className="flex gap-3 justify-start">
+            <div className="flex gap-3 justify-start items-center">
               <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                 <SteinzLogo size={18} />
               </div>
@@ -1167,6 +1206,14 @@ export default function VtxAiTab() {
                   Searching Sargon Data Archive...
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={stopGeneration}
+                className="ml-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg border border-white/15 text-slate-300 hover:bg-white/[0.05]"
+                title="Stop generating"
+              >
+                Stop
+              </button>
             </div>
           )}
 
