@@ -23,6 +23,7 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
 import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
 import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
+import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
@@ -292,6 +293,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white pb-20">
+      <FirstRunTour />
       <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
