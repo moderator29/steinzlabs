@@ -45,6 +45,19 @@ export function LandingNav() {
 
           <div className="flex items-center gap-2">
             <GlobalControls className="hidden sm:flex" />
+            {/* NakaCult landing toggle — flips the user to the token-gated
+                cult marketing surface (/naka-cult) so they can read the
+                Cult lore before signing up. Crimson accent matches the
+                cult brand color and visually distinguishes from the
+                blue 'Get Started' primary CTA. */}
+            <Link
+              href="/naka-cult"
+              className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12px] font-bold uppercase tracking-wider text-white/90 border border-[#DC143C]/50 hover:border-[#DC143C] hover:text-white transition-all"
+              style={{ background: 'linear-gradient(135deg,rgba(220,20,60,0.18),rgba(220,20,60,0.06))', boxShadow: '0 0 14px rgba(220,20,60,0.18)' }}
+            >
+              <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-[#DC143C] shadow-[0_0_8px_rgba(220,20,60,0.8)]" />
+              NakaCult
+            </Link>
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>
@@ -74,6 +87,14 @@ export function LandingNav() {
                 <a key={l.label} href={l.href} onClick={() => setOpen(false)}
                   className="text-base font-medium text-white/70 hover:text-white transition-colors">{l.label}</a>
               ))}
+              <Link
+                href="/naka-cult"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-2 text-base font-bold uppercase tracking-wider text-[#FFD0DC] hover:text-white transition-colors"
+              >
+                <span aria-hidden className="inline-block w-2 h-2 rounded-full bg-[#DC143C] shadow-[0_0_10px_rgba(220,20,60,0.8)]" />
+                NakaCult
+              </Link>
               <Link href="/login" onClick={() => setOpen(false)}
                 className="text-base font-medium text-white/70 hover:text-white transition-colors">Log In</Link>
             </div>
