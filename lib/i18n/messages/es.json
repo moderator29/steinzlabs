@@ -1,0 +1,45 @@
+{
+  "common": {
+    "loading": "Cargando…",
+    "error": "Algo salió mal",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "skip": "Omitir",
+    "search": "Buscar"
+  },
+  "social": {
+    "follow": "Seguir",
+    "following": "Siguiendo",
+    "unfollow": "Dejar de seguir",
+    "requested": "Solicitado",
+    "mutual": "Mutuo",
+    "message": "Mensaje",
+    "block": "Bloquear",
+    "mute": "Silenciar",
+    "report": "Reportar",
+    "shareProfile": "Compartir perfil",
+    "copyLink": "Copiar enlace del perfil"
+  },
+  "onboarding": {
+    "getStarted": "Empezar",
+    "skipTour": "Omitir tour",
+    "skipConfirm": "¿Omitir el tour?",
+    "skipConfirmBody": "Puedes repetirlo desde Configuración cuando quieras.",
+    "keepWatching": "Seguir viendo",
+    "skipAnyway": "Omitir igualmente"
+  },
+  "leaderboard": {
+    "topSuccess": "Mejor tasa de éxito",
+    "topFollowers": "Más seguidores",
+    "newUsers": "Nuevos usuarios",
+    "maxTier": "Nivel Max",
+    "topTraders": "Mejores traders",
+    "copyTraders": "Top copy-traders",
+    "whaleWatchers": "Top ballenas seguidas",
+    "mostActive": "Más activos",
+    "viewAll": "Ver todos →"
+  }
+}
