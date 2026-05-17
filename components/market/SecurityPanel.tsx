@@ -21,6 +21,8 @@ import {
   Shield, ShieldAlert, ShieldCheck, ShieldX, Users,
   AlertTriangle, ExternalLink, Loader2, RefreshCw, CheckCircle2, XCircle,
 } from 'lucide-react';
+import { LpLockPanel } from '@/components/security/LpLockPanel';
+import { evaluateLpLock, type LpLockRecord } from '@/lib/security/lpLockWindow';
 
 interface SecurityScanResponse {
   scan_type: 'token';
@@ -316,6 +318,51 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
   const ToneIcon = tone.Icon;
   const facts = chain === 'solana' ? readSolanaFacts(data.raw) : readEvmFacts(data.raw);
 
+  // Derive LP lock records from GoPlus lp_holders (EVM only — Solana
+  // GoPlus payload does not surface lock metadata in the same shape).
+  // Each record covers the locked portion of an LP holder; we map the
+  // GoPlus `tag` to our locker enum and treat `locked_detail[].end_time`
+  // as the unlock timestamp when present. Holders without a locked
+  // portion or end_time are skipped — pure-presentation panel only
+  // shows real data.
+  let lpLockRecords: LpLockRecord[] = [];
+  if (chain !== 'solana') {
+    const rawHolders = Array.isArray(data.raw.lp_holders)
+      ? (data.raw.lp_holders as Array<{
+          is_locked?: number | string;
+          percent?: string | number;
+          tag?: string;
+          address?: string;
+          locked_detail?: Array<{ end_time?: string | number; amount?: string | number }>;
+        }>)
+      : [];
+    for (const h of rawHolders) {
+      if (!isFlagOn(h.is_locked)) continue;
+      const share = Number(h.percent ?? 0);
+      if (!isFinite(share) || share <= 0) continue;
+      const lockerTag = (h.tag ?? '').toLowerCase();
+      const locker: LpLockRecord['locker'] =
+        lockerTag.includes('team finance') ? 'team-finance'
+        : lockerTag.includes('unicrypt') ? 'unicrypt'
+        : lockerTag.includes('pinklock') ? 'pinklock'
+        : 'other';
+      const details = Array.isArray(h.locked_detail) ? h.locked_detail : [];
+      if (details.length === 0) {
+        // Locked but no end_time — record with sentinel unlockAt = now+forever-ish so it still counts as locked
+        lpLockRecords.push({ locker, unlockAt: Math.floor(Date.now() / 1000) + 10 * 365 * 86400, lpShare: share, owner: h.address ?? null });
+        continue;
+      }
+      for (const d of details) {
+        const end = Number(d.end_time ?? 0);
+        if (!isFinite(end) || end <= 0) continue;
+        const portion = Number(d.amount ?? 0);
+        const effectiveShare = portion > 0 && portion <= 1 ? portion : share / details.length;
+        lpLockRecords.push({ locker, unlockAt: end, lpShare: effectiveShare, owner: h.address ?? null });
+      }
+    }
+  }
+  const lpVerdict = lpLockRecords.length > 0 ? evaluateLpLock(lpLockRecords) : null;
+
   // Tack on a generic low-liquidity flag from the DexScreener pair
   // payload — GoPlus doesn't surface this directly and it's one of the
   // easiest rug indicators a trader can read.
@@ -381,6 +428,18 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
                 : null}
             </div>
           ))}
+        </div>
+      )}
+
+      {lpVerdict && (
+        <div className="mb-3">
+          <LpLockPanel
+            totalLockedPct={lpVerdict.totalLockedPct}
+            soonestUnlockAt={lpVerdict.soonestUnlockAt}
+            daysUntilUnlock={lpVerdict.daysUntilUnlock}
+            severity={lpVerdict.severity}
+            byLocker={lpVerdict.byLocker}
+          />
         </div>
       )}
 
