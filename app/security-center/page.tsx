@@ -5,8 +5,10 @@ import { Shield, Search, AlertTriangle, CheckCircle, XCircle } from 'lucide-reac
 import { PageHeader } from '@/components/common/PageHeader';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 
 export default function SecurityCenterPage() {
+  const naka = useNakaWallet();
   const [activeTab, setActiveTab] = useState<'scanner' | 'wallet' | 'threats'>('scanner');
   const [tokenAddress, setTokenAddress] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
@@ -38,7 +40,7 @@ export default function SecurityCenterPage() {
   const loadThreats = async () => {
     setThreatsLoading(true);
     try {
-      const wallet = localStorage.getItem('wallet_address') || '';
+      const wallet = naka.address ?? '';
       const res = await fetch(`/api/security/threats?wallet=${wallet}`);
       const data = await res.json();
       setThreats(data.threats || []);

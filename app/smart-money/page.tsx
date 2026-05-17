@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, TrendingUp, Star, Plus, Eye } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useRouter } from 'next/navigation';
+import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 
 const TOP_ENTITIES = [
   { id: 'jump-trading', name: 'Jump Trading', type: 'Market Maker', winRate: 89, description: 'Leading HFT firm and market maker' },
@@ -16,6 +17,7 @@ const TOP_ENTITIES = [
 
 export default function SmartMoneyPage() {
   const router = useRouter();
+  const naka = useNakaWallet();
   const [followed, setFollowed] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'vc' | 'market_maker' | 'whale'>('all');
   const [loading, setLoading] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export default function SmartMoneyPage() {
   const followEntity = async (entityId: string, entityName: string, entityType: string) => {
     setLoading(entityId);
     try {
-      const wallet = localStorage.getItem('wallet_address') || '';
+      const wallet = naka.address ?? '';
       const res = await fetch('/api/moneyRadar/follow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
