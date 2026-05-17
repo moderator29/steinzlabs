@@ -99,7 +99,7 @@ export function ChartToolbar({
                 <button
                   key={key}
                   onClick={() => onIndicatorsChange({ ...indicators, [key]: !active })}
-                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] rounded hover:bg-white/5 text-left transition"
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] rounded hover:bg-white/5 text-start transition"
                 >
                   <span className={active ? "text-white" : "text-slate-500"}>{label}</span>
                   <span className={`w-3 h-3 rounded border ${active ? "bg-blue-500/80 border-blue-400" : "border-slate-700"}`} />

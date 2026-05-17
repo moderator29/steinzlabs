@@ -228,7 +228,7 @@ export default function WhaleDirectoryPage() {
             <h1 className="text-sm font-semibold tracking-tight font-sans">Whale Directory</h1>
             <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <Link
               href="/dashboard/whale-tracker"
               className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300"
@@ -329,7 +329,7 @@ export default function WhaleDirectoryPage() {
 
           {/* §2.10 advanced filter pill rows */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Timeframe</span>
+            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Timeframe</span>
             {TIMEFRAME_PILLS.map((t) => {
               const active = timeframe === t.id;
               return (
@@ -347,7 +347,7 @@ export default function WhaleDirectoryPage() {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Performance</span>
+            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Performance</span>
             {PERFORMANCE_PILLS.map((p) => {
               const active = performance === p.id;
               return (
@@ -365,7 +365,7 @@ export default function WhaleDirectoryPage() {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider mr-1 shrink-0">Min portfolio</span>
+            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Min portfolio</span>
             {VOLUME_PILLS.map((v) => {
               const active = minPortfolio === v.id;
               return (
@@ -402,7 +402,7 @@ export default function WhaleDirectoryPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-24 text-slate-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading whales…
+            <Loader2 className="w-5 h-5 animate-spin me-2" /> Loading whales…
           </div>
         ) : rows.length === 0 ? (
           <div className="text-center py-24">
@@ -507,7 +507,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
           </div>
           <div className="text-[10px] text-slate-500 font-mono mt-1 truncate">{short(row.address)}</div>
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-end shrink-0">
           <div className="text-[9px] uppercase tracking-wider text-slate-500">Score</div>
           <div className={`text-lg font-black font-mono ${score >= 90 ? 'text-emerald-400' : score >= 75 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>
             {score}

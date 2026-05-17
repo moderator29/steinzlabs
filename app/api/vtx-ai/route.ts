@@ -868,7 +868,7 @@ async function fetchLiveMarketContext(): Promise<string> {
           const change = parseFloat(t.priceChangePercent);
           const vol = parseFloat(t.quoteVolume);
           const priceStr = price >= 1000
-            ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+            ? `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
             : price >= 1 ? `$${price.toFixed(4)}` : `$${price.toFixed(8)}`;
           return `${sym}: ${priceStr} (24h: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%, Vol: $${(vol/1e6).toFixed(0)}M)`;
         });

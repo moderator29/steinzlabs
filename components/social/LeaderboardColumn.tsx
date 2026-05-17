@@ -100,7 +100,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
                 href={`/u/${r.username ?? r.id}`}
                 className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.04]"
               >
-                <span className="w-6 text-[11px] tabular-nums text-slate-400 text-right">
+                <span className="w-6 text-[11px] tabular-nums text-slate-400 text-end">
                   {idx < 3 ? MEDAL[idx] : `${idx + 1}.`}
                 </span>
                 {r.avatar_url ? (

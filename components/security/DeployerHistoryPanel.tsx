@@ -40,7 +40,7 @@ export function DeployerHistoryPanel(props: DeployerHistoryPanelProps) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
           Deployer history
         </span>
-        <span className="ml-auto text-[11px] font-mono tabular-nums" style={{ color: b.color }}>
+        <span className="ms-auto text-[11px] font-mono tabular-nums" style={{ color: b.color }}>
           {props.trustScore}/100
         </span>
       </div>

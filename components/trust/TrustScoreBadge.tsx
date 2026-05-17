@@ -189,8 +189,8 @@ function Row({ label, value, weight }: { label: string; value: number; weight: n
           style={{ width: `${value}%`, background: BAND_COLOR[bandFor(value)] }}
         />
       </div>
-      <span className="text-[10px] font-mono text-white/60 w-9 text-right">{value}</span>
-      <span className="text-[9px] text-white/40 w-7 text-right">{weight}%</span>
+      <span className="text-[10px] font-mono text-white/60 w-9 text-end">{value}</span>
+      <span className="text-[9px] text-white/40 w-7 text-end">{weight}%</span>
     </div>
   );
 }

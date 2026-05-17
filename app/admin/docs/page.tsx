@@ -92,7 +92,7 @@ function Troubleshoot({
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 my-3">
       <div className="text-sm font-bold text-white mb-2">&ldquo;{symptom}&rdquo;</div>
       <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Check, in order:</div>
-      <ol className="text-[13px] text-gray-300 space-y-1 list-decimal pl-5 mb-3">
+      <ol className="text-[13px] text-gray-300 space-y-1 list-decimal ps-5 mb-3">
         {checks.map((c, i) => <li key={i}>{c}</li>)}
       </ol>
       <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Action:</div>
@@ -160,7 +160,7 @@ export default function AdminDocsPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-10 lg:flex lg:gap-12">
         {/* TOC */}
         <aside className="hidden lg:block w-60 flex-shrink-0">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2">
+          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pe-2">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Contents</div>
             <nav className="space-y-0.5">
               {filtered.map((t) => (
@@ -182,7 +182,7 @@ export default function AdminDocsPage() {
               You (the CEO) are not expected to be a deep systems engineer. You are expected to be able to speak intelligently about how the platform works, answer user questions in live settings, and triage incidents when they happen. This document exists to make that possible without you having to read code.
             </p>
             <p>Three use cases it&apos;s written for:</p>
-            <ol className="list-decimal pl-5 space-y-1 text-gray-300">
+            <ol className="list-decimal ps-5 space-y-1 text-gray-300">
               <li><strong className="text-white">Live Spaces and interviews.</strong> You will be asked technical-sounding questions. Section 13 gives you a talk-track for the most common ones.</li>
               <li><strong className="text-white">User escalations.</strong> &ldquo;Why can&apos;t I log in&rdquo;, &ldquo;My wallet disappeared&rdquo;, &ldquo;The platform is showing the wrong price&rdquo;. Section 10 walks through each symptom and the exact checks to run.</li>
               <li><strong className="text-white">Partner / investor briefings.</strong> Sections 02, 06 and 09 cover architecture, features, and moat in pitch-ready language.</li>
@@ -221,7 +221,7 @@ export default function AdminDocsPage() {
             <p>
               A simple example: a user clicks &ldquo;Buy&rdquo; on a token. The journey looks like this:
             </p>
-            <ol className="list-decimal pl-6 space-y-2 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-2 text-gray-300 text-[13px]">
               <li>The browser sends a signed request to our Next.js API route on Vercel.</li>
               <li>Our middleware verifies the Supabase JWT to confirm the user is logged in.</li>
               <li>We run a pre-flight security check on the destination token via GoPlus (honeypot, taxes, blacklist, unverified contract).</li>
@@ -260,7 +260,7 @@ export default function AdminDocsPage() {
               This is the most-asked-about subsystem. The answer is simple: <strong className="text-white">we never see the keys</strong>. Here&apos;s exactly how that works.
             </p>
             <H3>Wallet creation</H3>
-            <ol className="list-decimal pl-6 space-y-2 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-2 text-gray-300 text-[13px]">
               <li>User clicks &ldquo;Create wallet&rdquo;.</li>
               <li>The user&apos;s browser generates a BIP-39 mnemonic (12 random words) locally.</li>
               <li>The browser shows the mnemonic to the user once, with a big loud warning telling them to write it down physically.</li>
@@ -270,7 +270,7 @@ export default function AdminDocsPage() {
               <li>The ciphertext is synced to Supabase&apos;s <Code>user_wallets_v2</Code> table. RLS ensures only the owner can read their row.</li>
             </ol>
             <H3>Wallet use (signing a transaction)</H3>
-            <ol className="list-decimal pl-6 space-y-2 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-2 text-gray-300 text-[13px]">
               <li>User wants to swap. They enter their wallet password.</li>
               <li>Browser pulls ciphertext from Supabase.</li>
               <li>Browser decrypts locally using password-derived key.</li>
@@ -288,7 +288,7 @@ export default function AdminDocsPage() {
 
           {/* 06 — Feature deep-dives */}
           <S id="features" n="06" title="Feature deep-dives" kicker="Plain-English explainers">
-            <H3 children={<><Brain className="inline w-4 h-4 mr-1 text-[#4D6BFF]" />VTX AI Agent</>} />
+            <H3 children={<><Brain className="inline w-4 h-4 me-1 text-[#4D6BFF]" />VTX AI Agent</>} />
             <p>
               VTX is a wrapper around Anthropic&apos;s Claude model. Unlike ChatGPT-style chatbots, VTX has <strong className="text-white">tool use</strong> — it can directly call our on-chain APIs during the conversation. So when a user asks &ldquo;what is this wallet buying&rdquo;, VTX doesn&apos;t invent an answer from training data; it queries Alchemy live, gets the answer, and formats it in English.
             </p>
@@ -296,7 +296,7 @@ export default function AdminDocsPage() {
               VTX has about 30 slash commands (<Code>/price</Code>, <Code>/wallet</Code>, <Code>/whale</Code>, etc.) that preload the right tool call. Power users type commands; everyone else just asks in English.
             </p>
 
-            <H3 children={<><Activity className="inline w-4 h-4 mr-1 text-[#10B981]" />Context Feed</>} />
+            <H3 children={<><Activity className="inline w-4 h-4 me-1 text-[#10B981]" />Context Feed</>} />
             <p>
               A real-time stream of classified on-chain events. Four parallel data streams feed it:
             </p>
@@ -308,32 +308,32 @@ export default function AdminDocsPage() {
               A scoring function combines recency, trust score, USD size, and anti-spam penalties. Users see only the top-ranked events for their watchlist chains.
             </p>
 
-            <H3 children={<><TrendingUp className="inline w-4 h-4 mr-1 text-[#F59E0B]" />Whale Tracker</>} />
+            <H3 children={<><TrendingUp className="inline w-4 h-4 me-1 text-[#F59E0B]" />Whale Tracker</>} />
             <p>
               We monitor about 1,000 wallets across 10 chains. When any of them transact, the event is pushed to our backend via Alchemy/Helius webhooks. Our server classifies the wallet (mega/large/mid/small), calculates the 24h PnL, and fans out the event to every user who follows that wallet via Supabase Realtime.
             </p>
 
-            <H3 children={<><Users className="inline w-4 h-4 mr-1 text-[#8B5CF6]" />Smart Money & Wallet Clusters</>} />
+            <H3 children={<><Users className="inline w-4 h-4 me-1 text-[#8B5CF6]" />Smart Money & Wallet Clusters</>} />
             <p>
               Smart Money is an <em>algorithmic</em> classification — wallets are scored on win rate, risk-adjusted PnL, consistency, and timing. The top scorers are flagged Smart Money and can exit the pool if their performance drops. Wallet Clusters uses graph analysis: wallets that transact together frequently, fund each other, or move in lockstep are grouped into clusters.
             </p>
 
-            <H3 children={<><Crosshair className="inline w-4 h-4 mr-1 text-[#EF4444]" />Sniper Bot</>} />
+            <H3 children={<><Crosshair className="inline w-4 h-4 me-1 text-[#EF4444]" />Sniper Bot</>} />
             <p>
               Max-tier only. The Sniper Bot watches for newly launched tokens, runs a 5-layer safety check, and — if the user&apos;s criteria match and auto-execute is on — submits a buy transaction. The safety stack: GoPlus honeypot, tax threshold, liquidity lock, ownership renouncement, holder concentration. A kill switch in <Code>/admin/sniper-oversight</Code> stops all active snipes platform-wide in one click.
             </p>
 
-            <H3 children={<><Repeat className="inline w-4 h-4 mr-1 text-[#06B6D4]" />Swap Engine</>} />
+            <H3 children={<><Repeat className="inline w-4 h-4 me-1 text-[#06B6D4]" />Swap Engine</>} />
             <p>
               The swap engine aggregates every major DEX on each chain and picks the best route. 0x Protocol handles EVM; Jupiter handles Solana. The user sees a single quote; underneath, the quote is assembled from multiple liquidity sources. A 0.4% platform fee is charged on each swap, disclosed upfront and included in the displayed receive amount.
             </p>
 
-            <H3 children={<><BarChart3 className="inline w-4 h-4 mr-1 text-[#10B981]" />On-Chain Trends</>} />
+            <H3 children={<><BarChart3 className="inline w-4 h-4 me-1 text-[#10B981]" />On-Chain Trends</>} />
             <p>
               Aggregates network-wide metrics — DeFi TVL, stablecoin flows, gas trends, active addresses, cross-chain capital migration — into a single &ldquo;network pulse&rdquo; view. Sparklines with 24h/7d deltas. Auto-alerts when any tracked metric moves more than 10% in 24 hours.
             </p>
 
-            <H3 children={<><Network className="inline w-4 h-4 mr-1 text-[#EC4899]" />Bubble Map</>} />
+            <H3 children={<><Network className="inline w-4 h-4 me-1 text-[#EC4899]" />Bubble Map</>} />
             <p>
               A force-directed graph (D3.js) of any token&apos;s top holders. Node size scales with holding amount. The central token bubble colours green or red based on 24h price move. Three modes: holders, network (wallet-to-wallet edges), and cluster (group by type — whale, exchange, insider, team).
             </p>
@@ -659,7 +659,7 @@ export default function AdminDocsPage() {
             </p>
 
             <Callout variant="warn" icon={AlertTriangle} title="Things to never say publicly">
-              <ul className="list-disc pl-5 space-y-1">
+              <ul className="list-disc ps-5 space-y-1">
                 <li>Never name the data providers (Alchemy, Helius, GoPlus, CoinGecko) — we position them as &ldquo;Naka Labs Intelligence.&rdquo;</li>
                 <li>Never commit to dates. &ldquo;Coming soon&rdquo; always; &ldquo;next month&rdquo; never.</li>
                 <li>Never give financial advice. Always &ldquo;do your own research.&rdquo;</li>
@@ -675,7 +675,7 @@ export default function AdminDocsPage() {
               A small, limited NFT collection exists only as a <strong className="text-white">pre-raise funding mechanism</strong> for platform build-out. It is <em>not</em> the main Naka Labs token and should never be confused with one.
             </p>
             <H3>Mechanics (when launched)</H3>
-            <ol className="list-decimal pl-6 space-y-1 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-1 text-gray-300 text-[13px]">
               <li>Fixed supply, mint price set at launch.</li>
               <li>Holders get early access to new features, priority support escalation, and a portion of platform fee revenue share (terms finalising with legal).</li>
               <li>Holders are also the initial DAO voting pool alongside Max subscribers.</li>
@@ -699,11 +699,11 @@ export default function AdminDocsPage() {
             </p>
 
             <H3>Wallet detection — how it actually works</H3>
-            <ol className="list-decimal pl-6 space-y-1 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-1 text-gray-300 text-[13px]">
               <li>User clicks &ldquo;Enter with $NAKA&rdquo;. AppKit opens; user picks a wallet.</li>
               <li>Frontend hits <Code>/api/auth/wallet-nonce</Code> for a single-use SIWE nonce (5 min TTL).</li>
               <li>User signs; frontend posts to <Code>/api/auth/wallet-verify</Code> which:
-                <ul className="list-disc pl-5 mt-1">
+                <ul className="list-disc ps-5 mt-1">
                   <li>Verifies the signature recovers the claimed address.</li>
                   <li>Calls Alchemy <Code>alchemy_getTokenBalances</Code> for the NAKA contract.</li>
                   <li>If balance &ge; 1,227,000 NAKA, sets <Code>profiles.tier = &apos;naka_cult&apos;</Code> and
@@ -728,7 +728,7 @@ export default function AdminDocsPage() {
             </Callout>
 
             <H3>Daily Seal — how the 07:00 UTC brief is generated</H3>
-            <ol className="list-decimal pl-6 space-y-1 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-1 text-gray-300 text-[13px]">
               <li>Vercel cron fires at 07:00 UTC and hits <Code>/api/cron/cult-daily-seal</Code>.</li>
               <li>Endpoint pulls the last 24h of Context Feed events and the previous Echo Chamber top-3.</li>
               <li>Builds an Anthropic Claude prompt with the canonical Cult voice + recent on-chain context, calls
@@ -768,7 +768,7 @@ window   = 72h, extends 12h if quorum missed at hour 60`}</pre>
             </p>
 
             <H3>Troubleshooting — the four most common Cult tickets</H3>
-            <ol className="list-decimal pl-6 space-y-2 text-gray-300 text-[13px]">
+            <ol className="list-decimal ps-6 space-y-2 text-gray-300 text-[13px]">
               <li>
                 <strong>&ldquo;I sent NAKA, why am I still free tier?&rdquo;</strong> &mdash; their AppKit-connected
                 address is not the same as their detection wallet, or they connected with a Smart Account whose

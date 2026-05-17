@@ -104,7 +104,7 @@ export default function SearchLogsPage() {
                       <span className="text-gray-600 font-mono w-4">{i + 1}</span>
                       <span className={`flex-1 font-medium truncate ${q.noResults ? 'text-red-400' : 'text-white'}`}>{q.query}</span>
                       <span className="text-[10px] font-mono bg-[#1E2433] text-gray-400 px-1.5 py-0.5 rounded">{q.chain}</span>
-                      <span className="text-gray-400 w-12 text-right">{q.count.toLocaleString()}</span>
+                      <span className="text-gray-400 w-12 text-end">{q.count.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

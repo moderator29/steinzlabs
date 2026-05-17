@@ -614,7 +614,7 @@ function HoldingsTable({
   };
 
   const arrow = (key: SortKey) =>
-    sortKey === key ? <span className="ml-1 text-slate-300">{sortDir === "asc" ? "↑" : "↓"}</span> : null;
+    sortKey === key ? <span className="ms-1 text-slate-300">{sortDir === "asc" ? "↑" : "↓"}</span> : null;
 
   return (
     <div>
@@ -637,37 +637,37 @@ function HoldingsTable({
           <thead>
             <tr className="text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-800/60">
               <th
-                className="px-4 py-3 text-left cursor-pointer select-none"
+                className="px-4 py-3 text-start cursor-pointer select-none"
                 onClick={() => toggleSort("symbol")}
               >
                 Token{arrow("symbol")}
               </th>
               <th
-                className="px-4 py-3 text-right cursor-pointer select-none"
+                className="px-4 py-3 text-end cursor-pointer select-none"
                 onClick={() => toggleSort("balance")}
               >
                 Balance{arrow("balance")}
               </th>
               <th
-                className="px-4 py-3 text-right cursor-pointer select-none"
+                className="px-4 py-3 text-end cursor-pointer select-none"
                 onClick={() => toggleSort("price")}
               >
                 Current Price{arrow("price")}
               </th>
               <th
-                className="px-4 py-3 text-right cursor-pointer select-none"
+                className="px-4 py-3 text-end cursor-pointer select-none"
                 onClick={() => toggleSort("change24h")}
               >
                 24h{arrow("change24h")}
               </th>
               <th
-                className="px-4 py-3 text-right cursor-pointer select-none"
+                className="px-4 py-3 text-end cursor-pointer select-none"
                 onClick={() => toggleSort("value")}
               >
                 Value{arrow("value")}
               </th>
-              <th className="px-4 py-3 text-right">Allocation</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3 text-end">Allocation</th>
+              <th className="px-4 py-3 text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -690,19 +690,19 @@ function HoldingsTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                <td className="px-4 py-3 text-end font-mono text-white tabular-nums">
                   {balNum < 0.0001 ? balNum.toExponential(2) : balNum.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                <td className="px-4 py-3 text-end font-mono text-white tabular-nums">
                   {currentPrice > 0 ? formatPrice(currentPrice) : "—"}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-end">
                   {typeof h.change24h === "number" ? <PriceChangeDisplay value={h.change24h} size="sm" /> : <span className="text-slate-500">—</span>}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-white tabular-nums">
+                <td className="px-4 py-3 text-end font-mono text-white tabular-nums">
                   {valueUsd > 0 ? formatLargeNumber(valueUsd) : "—"}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-end">
                   {totalValueUsd > 0 && valueUsd > 0 ? (
                     <div className="inline-flex items-center gap-2 min-w-[88px] justify-end">
                       <div className="h-1.5 w-12 rounded-full bg-slate-800/80 overflow-hidden">
@@ -728,7 +728,7 @@ function HoldingsTable({
                       }}
                       className="text-xs px-2.5 py-1 rounded-lg bg-[#0A1EFF]/15 text-[#6F7EFF] hover:bg-[#0A1EFF]/25 transition-colors"
                     >
-                      Trade <ArrowRight size={10} className="inline ml-0.5" />
+                      Trade <ArrowRight size={10} className="inline ms-0.5" />
                     </button>
                   </div>
                 </td>

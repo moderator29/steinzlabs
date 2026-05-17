@@ -79,7 +79,7 @@ export function ResearchPostCard(props: ResearchPostCardProps) {
               {props.requiredTier === 'naka_cult' ? 'NakaCult' : props.requiredTier}
             </span>
           ) : null}
-          {props.badge ? <span className="ml-auto text-[10px]">{props.badge}</span> : null}
+          {props.badge ? <span className="ms-auto text-[10px]">{props.badge}</span> : null}
         </div>
         <h3 className="text-base font-bold text-white leading-snug line-clamp-2">{props.title}</h3>
         <p className="text-[12px] text-slate-400 leading-relaxed line-clamp-3">{props.excerpt}</p>

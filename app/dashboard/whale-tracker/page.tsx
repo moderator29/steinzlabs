@@ -290,7 +290,7 @@ export default function WhaleTrackerPage() {
               PRO
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             {/* Phase 6: surface the new Directory view. */}
             <Link
               href="/dashboard/whale-tracker/directory"
@@ -366,7 +366,7 @@ export default function WhaleTrackerPage() {
               value={tokenSearch}
               onChange={(e) => setTokenSearch(e.target.value)}
               placeholder="Token symbol…"
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs focus:outline-none focus:border-blue-500/40"
+              className="w-full ps-8 pe-3 py-1.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs focus:outline-none focus:border-blue-500/40"
             />
           </div>
           <select
@@ -384,7 +384,7 @@ export default function WhaleTrackerPage() {
             row. Multi-select; each toggle adds/removes from labelFilter
             and the feed re-fetches with ?labels=…. */}
         <div className="max-w-7xl mx-auto px-4 pb-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 mr-1">Labels</span>
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 me-1">Labels</span>
           {(['smart_money', 'cex', 'mm', 'bot', 'insider', 'bridge'] as WhaleLabel[]).map((lbl) => {
             const active = labelFilter.includes(lbl);
             const meta = LABEL_META[lbl];
@@ -584,7 +584,7 @@ function FeedCard({
             <span className={`inline-flex items-center gap-1 ${actionColor} font-semibold uppercase text-[10px]`}>
               <ActionIcon size={10} /> {action}
             </span>
-            <span className="ml-auto font-mono font-bold text-white tabular-nums">
+            <span className="ms-auto font-mono font-bold text-white tabular-nums">
               {fmtUsd(Number(row.value_usd ?? 0))}
             </span>
           </div>
@@ -705,7 +705,7 @@ function WatchlistPanel({
                 <button
                   type="button"
                   onClick={() => onOpen(it.whale_address, it.chain)}
-                  className="flex-1 text-left min-w-0"
+                  className="flex-1 text-start min-w-0"
                 >
                   <div className="text-sm font-semibold text-white truncate">
                     {it.label ?? short(it.whale_address)}
@@ -785,7 +785,7 @@ function TopTodayPanel({
               <button
                 type="button"
                 onClick={() => onOpen(w.whale_address, w.chain)}
-                className="flex-1 text-left min-w-0"
+                className="flex-1 text-start min-w-0"
               >
                 <div className="text-xs font-semibold text-white truncate">
                   {w.label ?? short(w.whale_address)}

@@ -107,7 +107,7 @@ export default function CookieConsent() {
         <button
           type="button"
           onClick={() => accept('essential')}
-          className="text-slate-400 hover:text-white shrink-0 -mr-1 -mt-1 p-1"
+          className="text-slate-400 hover:text-white shrink-0 -me-1 -mt-1 p-1"
           aria-label="Dismiss (Essential only)"
         >
           <X className="w-3.5 h-3.5" />

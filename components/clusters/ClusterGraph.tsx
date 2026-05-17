@@ -126,9 +126,9 @@ export default function ClusterGraph({
             {k.replace('_', ' ')}
           </span>
         ))}
-        <span className="ml-auto flex items-center gap-1 text-slate-400">
+        <span className="ms-auto flex items-center gap-1 text-slate-400">
           <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} /> Hub
-          <span className="inline-block w-2 h-2 rounded-full ml-2" style={{ background: '#10B981' }} /> Member
+          <span className="inline-block w-2 h-2 rounded-full ms-2" style={{ background: '#10B981' }} /> Member
         </span>
       </div>
     </div>

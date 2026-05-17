@@ -21,7 +21,7 @@ function param(req: NextRequest, key: string, fallback = ''): string {
 function fmtPrice(raw: string): string {
   const n = parseFloat(raw);
   if (!Number.isFinite(n) || n <= 0) return '$0';
-  if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  if (n >= 1000) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (n >= 1) return `$${n.toFixed(4)}`;
   if (n >= 0.0001) return `$${n.toFixed(6)}`;
   return `$${n.toExponential(2)}`;

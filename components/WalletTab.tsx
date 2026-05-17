@@ -75,7 +75,7 @@ export default function WalletTab() {
           </p>
         </div>
         {walletAddress && (
-          <button onClick={() => fetchBalances(walletAddress)} className="ml-auto hover:bg-white/10 p-2 rounded-lg">
+          <button onClick={() => fetchBalances(walletAddress)} className="ms-auto hover:bg-white/10 p-2 rounded-lg">
             <RotateCcw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
         )}
@@ -118,7 +118,7 @@ export default function WalletTab() {
                   <div className="text-xs font-semibold">{token.symbol}</div>
                   <div className="text-[10px] text-gray-500">{token.name}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <div className="text-xs font-mono font-semibold">${token.valueUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
                   <div className="text-[10px] text-gray-500">{parseFloat(token.balance).toFixed(4)}</div>
                 </div>

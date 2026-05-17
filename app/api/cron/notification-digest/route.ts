@@ -24,7 +24,7 @@ function inQuietHours(prefs: NotificationPrefs, now: Date): boolean {
   let local: Date;
   try {
     const tz = prefs.quiet_hours_timezone || "UTC";
-    local = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+    local = new Date(now.toLocaleString(undefined, { timeZone: tz }));
   } catch {
     local = now;
   }

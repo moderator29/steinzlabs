@@ -98,8 +98,8 @@ function genId(): string {
 
 function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="flex items-center gap-1 ml-auto">
-      <span className="text-[10px] text-gray-400 mr-1">Delete?</span>
+    <div className="flex items-center gap-1 ms-auto">
+      <span className="text-[10px] text-gray-400 me-1">Delete?</span>
       <button onClick={onConfirm} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Yes</button>
       <button onClick={onCancel} className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded">No</button>
     </div>
@@ -135,7 +135,7 @@ function AlertCard({
             <div className="text-[10px] text-gray-500">{getAlertTypeName(alert.type)}</div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+        <div className="flex items-center gap-1.5 shrink-0 ms-2">
           <button
             onClick={onTest}
             title="Test alert"
@@ -161,7 +161,7 @@ function AlertCard({
         <div className="text-[10px] text-gray-400 bg-white/5 px-2 py-1 rounded font-mono truncate flex-1">
           {alertConditionSummary(alert)}
         </div>
-        <div className="text-[10px] shrink-0 text-right">
+        <div className="text-[10px] shrink-0 text-end">
           {alert.triggerCount > 0
             ? <span className="text-[#F59E0B]">{alert.triggerCount} fired</span>
             : <span className="text-gray-600">never fired</span>}
@@ -258,7 +258,7 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             value={threshold}
             onChange={e => setThreshold(e.target.value)}
             min="0"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 pl-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
           />
         </div>
       </div>
@@ -375,7 +375,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search token by name or symbol..."
-              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 pl-9 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600"
+              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-9 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600"
             />
             {results.length > 0 && (
               <div className="absolute top-full mt-1 left-0 right-0 bg-[#0D1117] border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
@@ -383,7 +383,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
                   <button
                     key={coin.id}
                     onClick={() => { setSelected(coin); setQuery(''); setResults([]); }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.06] text-left transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.06] text-start transition-colors"
                   >
                     {coin.thumb && <img src={coin.thumb} alt="" className="w-5 h-5 rounded-full" />}
                     <span className="text-xs font-semibold">{coin.symbol.toUpperCase()}</span>
@@ -433,7 +433,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             placeholder="0.00"
             min="0"
             step="any"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 pl-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
           />
         </div>
       </div>
@@ -497,7 +497,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
               type="number"
               value={minLiquidity}
               onChange={e => setMinLiquidity(e.target.value)}
-              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 pl-6 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-6 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
             />
           </div>
         </div>
@@ -666,7 +666,7 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert:
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
+                  className={`flex items-center gap-2 p-3 rounded-xl border text-start transition-all ${
                     tab === t.id
                       ? 'border-white/20 bg-white/[0.08]'
                       : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
@@ -821,7 +821,7 @@ export default function AlertsPage() {
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
           <button
             onClick={() => setShowCreate(true)}
-            className="ml-auto bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
+            className="ms-auto bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             Create

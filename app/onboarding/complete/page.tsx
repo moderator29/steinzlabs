@@ -48,7 +48,7 @@ export default function OnboardingCompletePage() {
           href="/dashboard"
           className="block w-full text-center bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold"
         >
-          Go to dashboard <ArrowRight className="inline w-4 h-4 ml-1" />
+          Go to dashboard <ArrowRight className="inline w-4 h-4 ms-1" />
         </Link>
         <p className="text-center text-[11px] text-slate-500 mt-4">
           Need help? Reply to your verification email or hit /help on the

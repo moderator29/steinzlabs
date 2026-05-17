@@ -80,7 +80,7 @@ const CATEGORIES = [
 
 function fmtPrice(p: number): string {
   if (!p) return '--';
-  if (p >= 1) return `$${p.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
+  if (p >= 1) return `$${p.toLocaleString(undefined, { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
   if (p >= 0.01) return `$${p.toFixed(4)}`;
   if (p >= 0.000001) return `$${p.toFixed(6)}`;
   return `$${p.toFixed(8)}`;
@@ -351,7 +351,7 @@ export default function MarketDashboard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Search by name or CA..."
-            className="w-full pl-9 pr-10 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
+            className="w-full ps-9 pe-10 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
           {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1EFF] animate-spin" />}
           {search && !searching && (
             <button onClick={()=>{setSearch('');setSearchResults([]);}}
@@ -456,8 +456,8 @@ export default function MarketDashboard() {
               const inWl = watchlist.includes(coin.id);
               return (
                 <button key={`${coin.id}-${i}`} onClick={()=>handleCoinTap(coin)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-left">
-                  <div className="w-6 text-right text-[11px] text-gray-500 flex-shrink-0 font-mono">
+                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-start">
+                  <div className="w-6 text-end text-[11px] text-gray-500 flex-shrink-0 font-mono">
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
                   <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
@@ -479,7 +479,7 @@ export default function MarketDashboard() {
                       {coin.marketCap > 0 && <span>{fmtMcap(coin.marketCap)}</span>}
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-end flex-shrink-0">
                     <div className="text-sm font-mono font-semibold text-white">{fmtPrice(coin.price)}</div>
                     <div className={`text-[11px] font-semibold flex items-center justify-end gap-0.5 ${pos?'text-emerald-400':'text-red-400'}`}>
                       {pos?<TrendingUp className="w-3 h-3"/>:<TrendingDown className="w-3 h-3"/>}

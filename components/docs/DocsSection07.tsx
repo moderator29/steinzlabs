@@ -52,7 +52,7 @@ export function DocsSection07() {
         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-4 mb-4 font-mono text-xs">
           <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Example</p>
           <div className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-gray-500" /><span className="text-white">From: 100 USDC on Solana</span></div>
-          <div className="ml-4 text-gray-500">↓ best-of-3 aggregator</div>
+          <div className="ms-4 text-gray-500">↓ best-of-3 aggregator</div>
           <div className="flex items-center gap-2"><ArrowDown className="w-3 h-3 text-gray-500" /><span className="text-white">To: ≈ 0.54 SOL</span></div>
           <div className="mt-2 pt-2 border-t border-white/[0.06] space-y-1">
             <div className="flex justify-between"><span className="text-gray-500">Slippage</span><span className="text-white">1.0 %</span></div>

@@ -695,7 +695,7 @@ export default function ContextFeed() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-2 flex-shrink-0 ms-2">
                   <button
                     onClick={() => toggleBookmark(event.id)}
                     className={`transition-all duration-200 ${
@@ -787,7 +787,7 @@ export default function ContextFeed() {
                     sessionStorage.setItem('steinz_proof_event', JSON.stringify(event));
                     window.location.href = `/dashboard/proof?id=${event.id}`;
                   }}
-                  className="naka-button-primary flex-shrink-0 ml-2"
+                  className="naka-button-primary flex-shrink-0 ms-2"
                   aria-label="View proof for this event"
                 >
                   View Proof

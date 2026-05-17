@@ -513,7 +513,7 @@ export default function BubbleMapPage() {
               <div className="absolute top-full left-0 mt-1 w-40 bg-[#0f1320] border border-white/[0.08] rounded-xl overflow-hidden z-40 shadow-xl">
                 {CHAIN_OPTIONS.map(c => (
                   <button key={c.value} onClick={() => { setChain(c.value); setShowChainDrop(false); }}
-                    className={`w-full text-left px-3 py-2.5 text-xs hover:bg-white/[0.06] transition-colors ${chain === c.value ? 'text-[#0A1EFF]' : 'text-gray-400'}`}>
+                    className={`w-full text-start px-3 py-2.5 text-xs hover:bg-white/[0.06] transition-colors ${chain === c.value ? 'text-[#0A1EFF]' : 'text-gray-400'}`}>
                     {c.label}
                   </button>
                 ))}
@@ -560,7 +560,7 @@ export default function BubbleMapPage() {
               <span className="font-bold" style={{ color: mapData.risk.riskColor }}>Risk: {mapData.risk.riskLevel}</span>
               <span className="text-gray-400">—</span>
               <span className="text-gray-300">Top 5 wallets hold <span className="font-mono font-bold" style={{ color: mapData.risk.riskColor }}>{mapData.risk.topHoldersConcentration.toFixed(1)}%</span></span>
-              <span className="ml-auto text-gray-500 font-mono">Score: {mapData.risk.riskScore}/10</span>
+              <span className="ms-auto text-gray-500 font-mono">Score: {mapData.risk.riskScore}/10</span>
             </div>
           )}
           {/* Mode tabs */}
@@ -643,7 +643,7 @@ export default function BubbleMapPage() {
             {mapData && mapData.nodes.length > 1 && (
               <div className="border-b border-white/[0.04] max-h-[130px] lg:max-h-[180px] overflow-y-auto flex-shrink-0">
                 <div className="px-3 py-1.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wider sticky top-0 bg-[#060A12]/90">
-                  <div className="grid grid-cols-[20px_1fr_55px_55px] gap-2"><span>#</span><span>Holder</span><span className="text-right">%</span><span className="text-right">Type</span></div>
+                  <div className="grid grid-cols-[20px_1fr_55px_55px] gap-2"><span>#</span><span>Holder</span><span className="text-end">%</span><span className="text-end">Type</span></div>
                 </div>
                 {mapData.nodes.filter(n => n.id !== 'center').sort((a, b) => b.percentage - a.percentage).map((node, idx) => (
                   <div key={node.id} onClick={() => setSelectedNode(node.id === selectedNode?.id ? null : node)}
@@ -655,8 +655,8 @@ export default function BubbleMapPage() {
                         <span className="text-gray-300 truncate">{node.entityName || node.entity || node.label}</span>
                         {node.verified && <Check className="w-2.5 h-2.5 text-[#10B981] flex-shrink-0" />}
                       </div>
-                      <span className="text-right text-white font-mono">{node.percentage.toFixed(2)}%</span>
-                      <span className="text-right font-medium text-[9px]" style={{ color: node.color }}>{TYPE_LABELS[node.type]}</span>
+                      <span className="text-end text-white font-mono">{node.percentage.toFixed(2)}%</span>
+                      <span className="text-end font-medium text-[9px]" style={{ color: node.color }}>{TYPE_LABELS[node.type]}</span>
                     </div>
                   </div>
                 ))}

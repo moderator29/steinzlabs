@@ -154,7 +154,7 @@ export default function SignatureInsightPage() {
               <button
                 key={ex.label}
                 onClick={() => setInput(ex.data)}
-                className="w-full text-left bg-[#0f1320] border border-[#1a1f2e] hover:border-[#7C3AED]/20 rounded-xl p-3 transition-all"
+                className="w-full text-start bg-[#0f1320] border border-[#1a1f2e] hover:border-[#7C3AED]/20 rounded-xl p-3 transition-all"
               >
                 <p className="text-[11px] font-semibold text-gray-300 mb-1">{ex.label}</p>
                 <p className="text-[10px] text-gray-600 font-mono truncate">{ex.data.slice(0, 40)}...</p>

@@ -103,7 +103,7 @@ function EventRow({ icon, label, description, enabled, onToggle }: EventRowProps
     <button
       type="button"
       onClick={onToggle}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-slate-800 transition-all text-left"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-slate-800 transition-all text-start"
       aria-pressed={enabled}
     >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -138,7 +138,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
   if (loading || !settings) {
     return (
       <div className="flex items-center justify-center py-16 text-sm text-slate-500">
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading notification settings…
+        <Loader2 className="w-4 h-4 me-2 animate-spin" /> Loading notification settings…
       </div>
     );
   }

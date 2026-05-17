@@ -29,7 +29,7 @@ export default function ContactPage() {
               <div className="text-sm font-semibold text-white">Email Support</div>
               <div className="text-xs text-gray-400">support@nakalabs.com</div>
             </div>
-            <ExternalLink className="w-4 h-4 text-gray-600 ml-auto" />
+            <ExternalLink className="w-4 h-4 text-gray-600 ms-auto" />
           </a>
 
           <a
@@ -45,7 +45,7 @@ export default function ContactPage() {
               <div className="text-sm font-semibold text-white">Twitter / X</div>
               <div className="text-xs text-gray-400">@nakalabs</div>
             </div>
-            <ExternalLink className="w-4 h-4 text-gray-600 ml-auto" />
+            <ExternalLink className="w-4 h-4 text-gray-600 ms-auto" />
           </a>
 
           <a
@@ -61,7 +61,7 @@ export default function ContactPage() {
               <div className="text-sm font-semibold text-white">Discord Community</div>
               <div className="text-xs text-gray-400">discord.gg/steinzlabs</div>
             </div>
-            <ExternalLink className="w-4 h-4 text-gray-600 ml-auto" />
+            <ExternalLink className="w-4 h-4 text-gray-600 ms-auto" />
           </a>
         </div>
 

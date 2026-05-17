@@ -65,7 +65,7 @@ function P({ children }: { children: React.ReactNode }) {
 }
 
 function UL({ children }: { children: React.ReactNode }) {
-  return <ul className="list-disc list-outside pl-5 space-y-2 text-sm sm:text-[15px] text-white/75 mb-4">{children}</ul>;
+  return <ul className="list-disc list-outside ps-5 space-y-2 text-sm sm:text-[15px] text-white/75 mb-4">{children}</ul>;
 }
 
 function Callout({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'gold'; children: React.ReactNode }) {
@@ -135,7 +135,7 @@ export default function VaultDocsPage() {
               type="button"
               aria-label="Open navigation"
               onClick={() => setMobileOpen(v => !v)}
-              className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/[0.06]"
+              className="md:hidden p-2 -ms-2 rounded-lg hover:bg-white/[0.06]"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -144,7 +144,7 @@ export default function VaultDocsPage() {
               <BookOpen className="w-4 h-4 text-[#FFD86B]" />
               <span className="text-sm font-bold tracking-tight truncate">The Naka Vault — Documentation</span>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
               <GlobalControls />
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function VaultDocsPage() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search sections"
-                className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-[12px] placeholder:text-white/30 focus:outline-none focus:border-[#0066FF]/50"
+                className="w-full ps-8 pe-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-[12px] placeholder:text-white/30 focus:outline-none focus:border-[#0066FF]/50"
                 aria-label="Search documentation sections"
               />
             </div>

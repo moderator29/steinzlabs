@@ -49,7 +49,7 @@ function Column({ title, Icon, rows, tone }: { title: string; Icon: React.Compon
         <ol className="space-y-1">
           {rows.map((r, i) => (
             <li key={r.profile?.id ?? i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.04]">
-              <span className="w-6 text-[11px] tabular-nums text-slate-400 text-right">{i + 1}.</span>
+              <span className="w-6 text-[11px] tabular-nums text-slate-400 text-end">{i + 1}.</span>
               {r.profile ? (
                 <Link href={`/admin/social-users?id=${r.profile.id}`} className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="text-[12px] font-medium text-white truncate">@{r.profile.username}</span>

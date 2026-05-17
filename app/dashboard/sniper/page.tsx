@@ -354,7 +354,7 @@ export default function SniperPage() {
 
         {/* Chain filter */}
         <div className="mt-6 flex items-center gap-2 overflow-x-auto pb-2">
-          <span className="text-xs uppercase tracking-wider text-white/50 font-semibold mr-2 flex items-center gap-1.5">
+          <span className="text-xs uppercase tracking-wider text-white/50 font-semibold me-2 flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5" /> Chain:
           </span>
           <ChainPill active={chainFilter === 'all'} onClick={() => setChainFilter('all')}>All</ChainPill>
@@ -376,7 +376,7 @@ export default function SniperPage() {
               feed channel is subscribed; muted gray dot otherwise.
               Title attribute explains the state on hover. */}
           <span
-            className="ml-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+            className="ms-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
             title={liveConnected
               ? 'Realtime channel subscribed — new fills appear instantly'
               : 'Realtime channel not connected — refresh to load latest fills'}
@@ -455,7 +455,7 @@ function Tab({ id, current, onClick, count, children }: { id: Tab; current: Tab;
     >
       {children}
       {count != null && (
-        <span className={`ml-2 px-1.5 py-0.5 rounded text-[11px] font-bold ${active ? 'bg-blue-500/30 text-blue-200' : 'bg-white/10 text-white/60'}`}>
+        <span className={`ms-2 px-1.5 py-0.5 rounded text-[11px] font-bold ${active ? 'bg-blue-500/30 text-blue-200' : 'bg-white/10 text-white/60'}`}>
           {count}
         </span>
       )}
@@ -602,7 +602,7 @@ function HistoryTab({ executions, chainFilter, freshIds }: { executions: Executi
       `}</style>
       <table className="w-full text-sm">
         <thead className="bg-white/[0.03]">
-          <tr className="text-left text-xs uppercase tracking-wider text-white/50">
+          <tr className="text-start text-xs uppercase tracking-wider text-white/50">
             <th className="px-4 py-3 font-semibold">Token</th>
             <th className="px-4 py-3 font-semibold">Chain</th>
             <th className="px-4 py-3 font-semibold">Amount</th>

@@ -845,7 +845,7 @@ export default function WalletPage() {
                 <Download className="w-5 h-5" /> Import Existing Wallet
               </button>
             </div>
-            <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-left">
+            <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-start">
               <div className="flex items-center gap-2 mb-1">
                 <Shield className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-semibold text-emerald-400">100% Non-Custodial</span>
@@ -914,7 +914,7 @@ export default function WalletPage() {
             {activeWallet && typeof window !== 'undefined' && !localStorage.getItem(`naka_seed_backed_up_${activeWallet.address}`) && (
               <button
                 onClick={() => setView('wallet-settings')}
-                className="w-full mb-3 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 text-left hover:bg-amber-500/15 transition-colors"
+                className="w-full mb-3 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 text-start hover:bg-amber-500/15 transition-colors"
               >
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 <div className="flex-1">
@@ -950,7 +950,7 @@ export default function WalletPage() {
                     {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
                   </button>
                 </div>
-                <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ml-2 mt-1">
+                <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ms-2 mt-1">
                   <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
@@ -959,10 +959,10 @@ export default function WalletPage() {
             {/* ── 4 ACTION BUTTONS ─────────────────────────── */}
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 mb-5">
               {[
-                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: '#0A1EFF', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
-                { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: '#10B981', action: () => setView('receive'), enabled: true },
+                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
+                { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: 'var(--nl-success)', action: () => setView('receive'), enabled: true },
                 { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap?from=wallet'), enabled: true },
-                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: '#F59E0B', action: () => { /* coming soon */ }, enabled: false },
+                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => { /* coming soon */ }, enabled: false },
               ].map(btn => (
                 <button
                   key={btn.label}
@@ -1247,7 +1247,7 @@ function TokenRow({ token, chainSymbol, chainColor, hideBalance }: { token: Toke
         <p className="text-sm font-semibold">{token.name || token.symbol}</p>
         <p className="text-[11px] text-gray-500">{token.symbol}</p>
       </div>
-      <div className="text-right">
+      <div className="text-end">
         <p className="text-sm font-mono font-medium">{hideBalance ? '••••' : bal.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
         {value > 0 && <p className="text-[11px] text-gray-500 font-mono">{hideBalance ? '••••' : `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>}
       </div>
@@ -1407,7 +1407,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
               <p className="text-sm font-mono text-[#0A1EFF] break-all">{address}</p>
             </div>
 
-            <button type="button" onClick={() => setConfirmed(!confirmed)} className="flex items-center gap-3 cursor-pointer p-3 bg-[#111827] rounded-xl border border-white/5 w-full text-left">
+            <button type="button" onClick={() => setConfirmed(!confirmed)} className="flex items-center gap-3 cursor-pointer p-3 bg-[#111827] rounded-xl border border-white/5 w-full text-start">
               <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${confirmed ? 'bg-[#0A1EFF] border-[#0A1EFF]' : 'border-white/20 bg-transparent'}`}>
                 {confirmed && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
@@ -1776,7 +1776,7 @@ function ReceiveView({
     }
     let cancelled = false;
     import('qrcode')
-      .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: '#0A0E1A', light: '#ffffff' } }))
+      .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: 'var(--nl-canvas-base)', light: '#ffffff' } }))
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -1965,7 +1965,7 @@ function ReceiveView({
 
           {/* Deposit-from-exchange hint — Trust Wallet parity. Low-prominence
               but reminds users that CEX withdrawals land on the same address. */}
-          <div className="flex items-start gap-3 p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 text-left mb-4">
+          <div className="flex items-start gap-3 p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 text-start mb-4">
             <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
             </div>
@@ -2093,7 +2093,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
               <input
                 value={address}
                 onChange={e => { setAddress(e.target.value); setError(''); setScanVerdict(null); }}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pr-20 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-20 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
                 placeholder="0x..."
               />
               <button
@@ -2328,12 +2328,12 @@ function WalletSettingsView({
   };
 
   const SECTIONS = [
-    { id: 'identity', label: 'Identity', icon: <Key className="w-4 h-4" />, color: '#0A1EFF' },
-    { id: 'security', label: 'Security & Backup', icon: <Shield className="w-4 h-4" />, color: '#10B981' },
-    { id: 'password', label: 'Change Password', icon: <Key className="w-4 h-4" />, color: '#F59E0B' },
+    { id: 'identity', label: 'Identity', icon: <Key className="w-4 h-4" />, color: 'var(--nl-blue)' },
+    { id: 'security', label: 'Security & Backup', icon: <Shield className="w-4 h-4" />, color: 'var(--nl-success)' },
+    { id: 'password', label: 'Change Password', icon: <Key className="w-4 h-4" />, color: 'var(--nl-warning)' },
     { id: 'preferences', label: 'Preferences', icon: <Settings className="w-4 h-4" />, color: '#8B5CF6' },
     { id: 'notifications', label: 'Notifications', icon: <Zap className="w-4 h-4" />, color: '#06B6D4' },
-    { id: 'advanced', label: 'Advanced', icon: <Layers className="w-4 h-4" />, color: '#EF4444' },
+    { id: 'advanced', label: 'Advanced', icon: <Layers className="w-4 h-4" />, color: 'var(--nl-error)' },
   ];
 
   return (
@@ -2367,7 +2367,7 @@ function WalletSettingsView({
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.color + '18', color: s.color }}>
                   {s.icon}
                 </div>
-                <span className="flex-1 text-sm font-semibold text-left text-white">{s.label}</span>
+                <span className="flex-1 text-sm font-semibold text-start text-white">{s.label}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${activeSection === s.id ? 'rotate-180' : ''}`} />
               </button>
 
@@ -2662,7 +2662,7 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
               </p>
               <p className="text-[10px] text-gray-500">{dateStr} · {timeStr}</p>
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-end shrink-0">
               {isSwap ? (
                 <>
                   <p className="text-xs font-mono">-{parseFloat(tx.fromAmount || 0).toFixed(4)} {tx.from}</p>
@@ -2717,7 +2717,7 @@ function AddNetworkView({
     <div className="min-h-screen text-white">
       <div className="sticky top-0 z-20 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800/60">
         <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-white/5">
+          <button onClick={onBack} className="p-2 -ms-2 rounded-lg hover:bg-white/5">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -2737,7 +2737,7 @@ function AddNetworkView({
                 key={c.id}
                 type="button"
                 onClick={() => toggle(c.id)}
-                className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/[0.02] transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/[0.02] transition-colors text-start"
               >
                 <img src={c.logoUrl} alt={c.name} className="w-7 h-7 rounded-full bg-slate-900" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />
                 <div className="flex-1 min-w-0">

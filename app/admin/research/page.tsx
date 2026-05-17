@@ -78,9 +78,9 @@ function renderMarkdown(md: string): string {
     if (line.startsWith('## '))  { out.push(`<h2 class="text-lg font-bold text-white mt-5 mb-2">${inlineMarkdown(line.slice(3))}</h2>`); continue; }
     if (line.startsWith('# '))   { out.push(`<h1 class="text-2xl font-bold text-white mt-6 mb-3">${inlineMarkdown(line.slice(2))}</h1>`); continue; }
     if (/^---+$/.test(line.trim())) { out.push('<hr class="border-white/10 my-4" />'); continue; }
-    if (line.startsWith('> '))   { out.push(`<blockquote class="border-l-2 border-[#0A1EFF]/50 pl-4 py-1 my-2 text-gray-400 italic">${inlineMarkdown(line.slice(2))}</blockquote>`); continue; }
-    if (/^[-*] /.test(line))     { out.push(`<li class="ml-5 list-disc text-gray-300 my-0.5">${inlineMarkdown(line.slice(2))}</li>`); continue; }
-    if (/^\d+\. /.test(line))    { out.push(`<li class="ml-5 list-decimal text-gray-300 my-0.5">${inlineMarkdown(line.replace(/^\d+\. /, ''))}</li>`); continue; }
+    if (line.startsWith('> '))   { out.push(`<blockquote class="border-l-2 border-[#0A1EFF]/50 ps-4 py-1 my-2 text-gray-400 italic">${inlineMarkdown(line.slice(2))}</blockquote>`); continue; }
+    if (/^[-*] /.test(line))     { out.push(`<li class="ms-5 list-disc text-gray-300 my-0.5">${inlineMarkdown(line.slice(2))}</li>`); continue; }
+    if (/^\d+\. /.test(line))    { out.push(`<li class="ms-5 list-decimal text-gray-300 my-0.5">${inlineMarkdown(line.replace(/^\d+\. /, ''))}</li>`); continue; }
     if (line.trim() === '')      { out.push('<div class="my-2"></div>'); continue; }
     out.push(`<p class="text-gray-300 leading-relaxed my-1">${inlineMarkdown(line)}</p>`);
   }
@@ -263,7 +263,7 @@ export default function AdminResearchPage() {
       <div className="relative mb-5">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search posts…"
-          className="w-full bg-[#141824] border border-[#1E2433] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50" />
+          className="w-full bg-[#141824] border border-[#1E2433] rounded-xl ps-9 pe-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50" />
       </div>
 
       {/* Post list */}
@@ -290,7 +290,7 @@ export default function AdminResearchPage() {
                   {post.published && post.published_at
                     ? `Published ${formatTimeAgo(new Date(post.published_at))}`
                     : `Draft · Created ${formatTimeAgo(new Date(post.created_at))}`}
-                  {post.slug && <span className="ml-2 opacity-60">/{post.slug}</span>}
+                  {post.slug && <span className="ms-2 opacity-60">/{post.slug}</span>}
                 </p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -446,7 +446,7 @@ export default function AdminResearchPage() {
                       {tab}
                     </button>
                   ))}
-                  <div className="ml-auto flex items-center gap-2 px-4">
+                  <div className="ms-auto flex items-center gap-2 px-4">
                     <EmojiPickerButton onPick={(e) => setForm(f => ({ ...f, content: f.content + e }))} />
                     <span className="text-[10px] text-gray-600">Markdown supported</span>
                   </div>

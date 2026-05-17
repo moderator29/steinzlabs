@@ -76,7 +76,7 @@ export function LanguageSwitcher({ compact = false, className = '' }: LanguageSw
               <button
                 key={locale}
                 onClick={() => handleSelect(locale)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-start ${
                   current === locale
                     ? 'bg-[#0A1EFF]/15 text-[#0A1EFF]'
                     : 'text-gray-300 hover:bg-[#1E2433] hover:text-white'

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { setLocale } from './formatters';
 
 // Simple client-side translate hook. Reads the current language from
 // localStorage (set by LanguageSwitcher) and calls /api/translate.
@@ -13,12 +14,15 @@ const LISTENERS = new Set<() => void>();
 
 export function getCurrentLang(): string {
   if (typeof window === 'undefined') return 'en';
-  return localStorage.getItem(LANG_KEY) || 'en';
+  const lang = localStorage.getItem(LANG_KEY) || 'en';
+  setLocale(lang);
+  return lang;
 }
 
 export function setCurrentLang(lang: string) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(LANG_KEY, lang);
+  setLocale(lang);
   LISTENERS.forEach((fn) => fn());
   window.dispatchEvent(new Event('naka_lang_change'));
 }

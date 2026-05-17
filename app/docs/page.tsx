@@ -119,7 +119,7 @@ export default function DocsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-12 lg:flex lg:gap-12">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-60 flex-shrink-0">
-          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pe-2">
             <DocsSidebar activeSection={activeSection} />
           </div>
         </aside>

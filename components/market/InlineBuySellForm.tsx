@@ -439,7 +439,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           <span>
             Available to {mode.toLowerCase()}
             {mode === 'BUY' && (
-              <span className="text-[9px] uppercase ml-1 text-slate-400">on {chain}</span>
+              <span className="text-[9px] uppercase ms-1 text-slate-400">on {chain}</span>
             )}
           </span>
           <span className="text-slate-200 font-mono">{formatPrice(available)}</span>

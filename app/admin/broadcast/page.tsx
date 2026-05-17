@@ -90,7 +90,7 @@ export default function BroadcastPage() {
               const c = counts[key];
               return (
                 <button key={key} onClick={() => setAudience(key)}
-                  className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${audience === key ? 'border-[#0A1EFF] bg-[#0A1EFF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-start transition-all ${audience === key ? 'border-[#0A1EFF] bg-[#0A1EFF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
                   <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0A1EFF]' : 'text-gray-500'}`} />
                   <div>
                     <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>

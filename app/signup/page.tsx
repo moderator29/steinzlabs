@@ -429,7 +429,7 @@ export default function SignUpPage() {
               {form.password.length > 0 && (
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex-1 h-[3px] rounded-full mr-3" style={{ background: 'rgba(255,255,255,.05)' }}>
+                    <div className="flex-1 h-[3px] rounded-full me-3" style={{ background: 'rgba(255,255,255,.05)' }}>
                       <div className="h-full rounded-full transition-all duration-300"
                         style={{ width: `${strength.level}%`, background: strength.color }} />
                     </div>

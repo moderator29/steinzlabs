@@ -80,10 +80,10 @@ export default function TrendingPage() {
         <div className="grid grid-cols-[32px_minmax(140px,1.3fr)_minmax(80px,0.8fr)_minmax(70px,0.7fr)_minmax(90px,0.9fr)_minmax(90px,0.9fr)_28px] gap-2 px-4 py-2.5 text-[10px] uppercase tracking-wide text-gray-500 border-b border-white/[0.05] hidden md:grid">
           <div>#</div>
           <div>Coin</div>
-          <div className="text-right">Price</div>
-          <div className="text-right">24h</div>
-          <div className="text-right">7d Chart</div>
-          <div className="text-right">Market Cap</div>
+          <div className="text-end">Price</div>
+          <div className="text-end">24h</div>
+          <div className="text-end">7d Chart</div>
+          <div className="text-end">Market Cap</div>
           <div></div>
         </div>
         <div className="divide-y divide-white/[0.03]">
@@ -116,15 +116,15 @@ export default function TrendingPage() {
                     <div className="text-[10px] text-gray-500 uppercase">{c.symbol}</div>
                   </div>
                 </div>
-                <div className="text-right text-sm text-white font-mono">{fmtPrice(c.current_price)}</div>
-                <div className={`text-right text-sm font-semibold ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <div className="text-end text-sm text-white font-mono">{fmtPrice(c.current_price)}</div>
+                <div className={`text-end text-sm font-semibold ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
                 </div>
                 <div className="flex justify-end">
                   <MiniSpark prices={c.sparkline_in_7d?.price ?? []} width={90} height={28} />
                 </div>
-                <div className="text-right text-xs text-gray-400 font-mono">{fmtCompact(c.market_cap)}</div>
-                <div className="text-right">
+                <div className="text-end text-xs text-gray-400 font-mono">{fmtCompact(c.market_cap)}</div>
+                <div className="text-end">
                   <Star className="w-4 h-4 text-gray-600 hover:text-yellow-400 inline" />
                 </div>
               </Link>

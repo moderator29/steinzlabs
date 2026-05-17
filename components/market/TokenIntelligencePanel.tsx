@@ -126,7 +126,7 @@ export default function TokenIntelligencePanel({
                   </div>
                   <div className="text-[10px] text-slate-500 font-mono">{short(w.address)}</div>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-end shrink-0">
                   <div className="text-xs font-bold text-[#8FA3FF]">{w.whale_score ?? '—'}</div>
                   <div className="text-[9px] text-slate-500">score</div>
                 </div>
@@ -214,7 +214,7 @@ function Section({
     <div className="bg-white/[0.02] border border-white/10 rounded-lg overflow-hidden">
       <button onClick={onToggle} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02]">
         <span className="text-slate-400">{icon}</span>
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex-1 text-left">{title}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex-1 text-start">{title}</span>
         {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
       </button>
       {open && <div className="px-3 pb-3 pt-1">{children}</div>}

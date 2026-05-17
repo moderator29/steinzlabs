@@ -134,7 +134,7 @@ export default function SniperOversightPage() {
         <table className="w-full text-xs min-w-[800px]">
           <thead className="border-b border-[#1E2433]">
             <tr>{['Token', 'Chain', 'Target', 'Current', 'Wallet', 'Created', 'Status', 'PnL', 'Action'].map(h => (
-              <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>
+              <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
             ))}</tr>
           </thead>
           <tbody>

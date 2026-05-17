@@ -224,7 +224,7 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
           <div className="flex-1">
             <span className="text-amber-200 font-semibold">Caution: </span>
             <span className="text-amber-100/90">Trust Score {score.score}/100. Review the risk before you {ACTION_VERBS[action]}.</span>
-            <button onClick={() => setShowRiskModal(true)} className="ml-2 underline hover:text-white">View details</button>
+            <button onClick={() => setShowRiskModal(true)} className="ms-2 underline hover:text-white">View details</button>
           </div>
         </div>
       )}
@@ -425,7 +425,7 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
               onClick={onAcknowledge}
               className="text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0918CC] px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
             >
-              <ShieldCheck className="w-3.5 h-3.5 inline mr-1" aria-hidden="true" />
+              <ShieldCheck className="w-3.5 h-3.5 inline me-1" aria-hidden="true" />
               Continue
             </button>
           )}

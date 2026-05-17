@@ -291,7 +291,7 @@ export default function NotificationSettingsPage() {
           )}
           {!saved && <span className="text-xs text-gray-600">Changes are not saved automatically</span>}
           <button onClick={save} disabled={saving || !session}
-            className="ml-auto flex items-center gap-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition-opacity">
+            className="ms-auto flex items-center gap-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition-opacity">
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Settings'}
           </button>

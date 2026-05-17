@@ -63,7 +63,7 @@ export default function SecurityCenterPage() {
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
           <div>
             <span className="text-green-500 font-medium">Shadow Guardian Active</span>
-            <span className="text-gray-400 text-sm ml-3">Protecting all your transactions in real-time</span>
+            <span className="text-gray-400 text-sm ms-3">Protecting all your transactions in real-time</span>
           </div>
         </div>
 

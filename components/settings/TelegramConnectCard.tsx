@@ -146,7 +146,7 @@ export function TelegramConnectCard() {
               <div className="text-gray-500">Linked as</div>
               <div className="text-white font-mono">@{status.username || "unknown"}</div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <div className="text-gray-500">Since</div>
               <div className="text-gray-300">
                 {status.linkedAt ? new Date(status.linkedAt).toLocaleDateString() : "—"}

@@ -245,7 +245,7 @@ export default function SettingsPage() {
                       rows={3}
                       className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] resize-y"
                     />
-                    <p className="text-[10px] text-gray-600 mt-1 text-right">{bio.length} / 280</p>
+                    <p className="text-[10px] text-gray-600 mt-1 text-end">{bio.length} / 280</p>
                   </div>
 
                   {/* Social handles. Stored without leading @ for a
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                           onChange={(e) => setTwitter(e.target.value)}
                           placeholder="handle"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-7 pr-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
                         />
                       </div>
                     </div>
@@ -287,7 +287,7 @@ export default function SettingsPage() {
                           onChange={(e) => setGithub(e.target.value)}
                           placeholder="username"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-7 pr-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
                         />
                       </div>
                     </div>
@@ -318,7 +318,7 @@ export default function SettingsPage() {
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           placeholder="Min. 8 characters"
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] pr-10"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] pe-10"
                         />
                         <button onClick={() => setShowNewPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                           {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}

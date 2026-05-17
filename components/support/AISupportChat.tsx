@@ -127,7 +127,7 @@ export function AISupportChat({ onClose }: Props) {
                   <button
                     key={cat}
                     onClick={() => handleCategorySelect(cat)}
-                    className="text-left px-3 py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-sm text-gray-300 hover:border-[#0A1EFF]/50 hover:text-white transition-colors"
+                    className="text-start px-3 py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-sm text-gray-300 hover:border-[#0A1EFF]/50 hover:text-white transition-colors"
                   >
                     {cat}
                   </button>

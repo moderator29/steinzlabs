@@ -330,12 +330,12 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <table className="w-full text-xs">
                 <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
                   <tr>
-                    <th className="text-left px-3 py-2">Action</th>
-                    <th className="text-left px-3 py-2">Token</th>
-                    <th className="text-left px-3 py-2">Amount</th>
-                    <th className="text-left px-3 py-2">USD</th>
-                    <th className="text-left px-3 py-2">Counterparty</th>
-                    <th className="text-left px-3 py-2">When</th>
+                    <th className="text-start px-3 py-2">Action</th>
+                    <th className="text-start px-3 py-2">Token</th>
+                    <th className="text-start px-3 py-2">Amount</th>
+                    <th className="text-start px-3 py-2">USD</th>
+                    <th className="text-start px-3 py-2">Counterparty</th>
+                    <th className="text-start px-3 py-2">When</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -466,18 +466,18 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
         {state === 'idle' && (
           <button
             onClick={run}
-            className="ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
+            className="ms-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
           >
             Generate
           </button>
         )}
         {state === 'loading' && (
-          <span className="ml-auto text-xs text-slate-400 inline-flex items-center gap-1.5">
+          <span className="ms-auto text-xs text-slate-400 inline-flex items-center gap-1.5">
             <Loader2 className="w-3 h-3 animate-spin" /> Analyzing…
           </span>
         )}
         {state === 'ok' && data?.cached && (
-          <span className="ml-auto text-[10px] text-slate-500">cached · {new Date(data.generatedAt).toLocaleDateString()}</span>
+          <span className="ms-auto text-[10px] text-slate-500">cached · {new Date(data.generatedAt).toLocaleDateString()}</span>
         )}
       </div>
 
@@ -594,11 +594,11 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
         <table className="w-full text-xs">
           <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
             <tr>
-              <th className="text-left px-3 py-2">Token</th>
-              <th className="text-right px-3 py-2">Balance</th>
-              <th className="text-right px-3 py-2">Price</th>
-              <th className="text-right px-3 py-2">Value</th>
-              <th className="text-right px-3 py-2">% of port</th>
+              <th className="text-start px-3 py-2">Token</th>
+              <th className="text-end px-3 py-2">Balance</th>
+              <th className="text-end px-3 py-2">Price</th>
+              <th className="text-end px-3 py-2">Value</th>
+              <th className="text-end px-3 py-2">% of port</th>
             </tr>
           </thead>
           <tbody>
@@ -615,19 +615,19 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
                       <div className="text-[10px] text-slate-500 truncate max-w-[140px]">{h.name}</div>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-300 tabular-nums">
+                  <td className="px-3 py-2 text-end font-mono text-slate-300 tabular-nums">
                     {h.balance < 1 ? h.balance.toFixed(6) : h.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-400 tabular-nums">
+                  <td className="px-3 py-2 text-end font-mono text-slate-400 tabular-nums">
                     {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : '—'}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-white tabular-nums">{fmtUsd(h.valueUsd)}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end font-mono text-white tabular-nums">{fmtUsd(h.valueUsd)}</td>
+                  <td className="px-3 py-2 text-end">
                     <div className="inline-flex items-center gap-1.5">
                       <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                         <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, pct)}%` }} />
                       </div>
-                      <span className="text-[10px] text-slate-400 tabular-nums w-10 text-right">{pct.toFixed(1)}%</span>
+                      <span className="text-[10px] text-slate-400 tabular-nums w-10 text-end">{pct.toFixed(1)}%</span>
                     </div>
                   </td>
                 </tr>
@@ -712,11 +712,11 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
       <table className="w-full text-xs">
         <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
           <tr>
-            <th className="text-left px-3 py-2">Counterparty</th>
-            <th className="text-right px-3 py-2">Txs</th>
-            <th className="text-right px-3 py-2">Buy / Sell / Xfer</th>
-            <th className="text-right px-3 py-2">Total USD</th>
-            <th className="text-right px-3 py-2">Last seen</th>
+            <th className="text-start px-3 py-2">Counterparty</th>
+            <th className="text-end px-3 py-2">Txs</th>
+            <th className="text-end px-3 py-2">Buy / Sell / Xfer</th>
+            <th className="text-end px-3 py-2">Total USD</th>
+            <th className="text-end px-3 py-2">Last seen</th>
           </tr>
         </thead>
         <tbody>
@@ -726,14 +726,14 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
                 <div className="text-slate-300">{a.label ?? '—'}</div>
                 <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">{a.address}</div>
               </td>
-              <td className="px-3 py-2 text-right font-mono text-white">{a.txCount}</td>
-              <td className="px-3 py-2 text-right font-mono text-slate-400 text-[11px]">
+              <td className="px-3 py-2 text-end font-mono text-white">{a.txCount}</td>
+              <td className="px-3 py-2 text-end font-mono text-slate-400 text-[11px]">
                 <span className="text-emerald-400">{a.buys}</span> /{' '}
                 <span className="text-red-400">{a.sells}</span> /{' '}
                 <span className="text-slate-300">{a.transfers}</span>
               </td>
-              <td className="px-3 py-2 text-right font-mono text-white">{fmtUsd(a.totalUsd)}</td>
-              <td className="px-3 py-2 text-right text-slate-500 text-[11px]">{relativeTime(a.lastTimestamp)}</td>
+              <td className="px-3 py-2 text-end font-mono text-white">{fmtUsd(a.totalUsd)}</td>
+              <td className="px-3 py-2 text-end text-slate-500 text-[11px]">{relativeTime(a.lastTimestamp)}</td>
             </tr>
           ))}
         </tbody>

@@ -240,7 +240,7 @@ export default function SmartMoneyPage() {
 
       <div className="px-4 pt-4 space-y-4 max-w-3xl mx-auto">
         {lastUpdated && (
-          <div className="text-[10px] text-gray-600 text-right flex items-center justify-end gap-1">
+          <div className="text-[10px] text-gray-600 text-end flex items-center justify-end gap-1">
             <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
             Updated {lastUpdated.toLocaleTimeString()} · Auto-refreshes every 60s
           </div>
@@ -340,7 +340,7 @@ export default function SmartMoneyPage() {
                       {w.archetype && <ArchetypeBadge archetype={w.archetype} />}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-xs font-bold text-[#10B981]">+{(w.weeklyPnlChange ?? 0).toFixed(1)}%</div>
                     <div className="text-[9px] text-gray-600">this week</div>
                   </div>
@@ -390,7 +390,7 @@ export default function SmartMoneyPage() {
                       <div className="text-[11px] font-semibold font-mono truncate">{move.wallet || 'Whale'}</div>
                       <div className="text-[9px] text-gray-600">{move.action} {move.token}</div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="text-[11px] font-mono font-semibold">{move.amount}</div>
                       <div className="text-[9px] text-gray-600">{move.time}</div>
                     </div>
@@ -475,7 +475,7 @@ export default function SmartMoneyPage() {
                       </span>
                     </div>
                     <span className="text-[10px] text-gray-600">{wallet.trades.toLocaleString()} trades</span>
-                    <span className="text-[10px] text-gray-600 ml-auto flex items-center gap-1">
+                    <span className="text-[10px] text-gray-600 ms-auto flex items-center gap-1">
                       <Clock className="w-3 h-3" />{wallet.lastActive}
                     </span>
                   </div>
@@ -489,7 +489,7 @@ export default function SmartMoneyPage() {
                       <span key={t} className="text-[8px] px-1.5 py-0.5 bg-[#0A1EFF]/[0.06] rounded text-[#0A1EFF]/70">{t}</span>
                     ))}
                     <button onClick={e => { e.stopPropagation(); setPaperTrade(wallet); }}
-                      className="ml-auto text-[9px] px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg font-semibold">
+                      className="ms-auto text-[9px] px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg font-semibold">
                       Paper Trade
                     </button>
                   </div>
@@ -609,7 +609,7 @@ export default function SmartMoneyPage() {
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
                 </div>
-                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ml-4 cursor-pointer">
+                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ms-4 cursor-pointer">
                   <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
                 </div>
               </div>
@@ -625,7 +625,7 @@ export default function SmartMoneyPage() {
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
                 </div>
-                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ml-4 cursor-pointer">
+                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ms-4 cursor-pointer">
                   <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
                 </div>
               </div>
@@ -660,7 +660,7 @@ export default function SmartMoneyPage() {
                 </div>
               </div>
               <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 text-[11px] text-[#F59E0B]">
-                <ArrowUpRight className="w-3.5 h-3.5 inline mr-1" />
+                <ArrowUpRight className="w-3.5 h-3.5 inline me-1" />
                 Paper trading simulates copying without real funds. Results are for educational purposes only.
               </div>
               <div className="space-y-1.5">

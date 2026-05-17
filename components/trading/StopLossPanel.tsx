@@ -53,14 +53,14 @@ export function StopLossPanel() {
     <table className="w-full text-xs">
       <thead className="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-800">
         <tr>
-          <th className="text-left px-3 py-2">Token</th>
-          <th className="text-left px-3 py-2">Amount</th>
-          <th className="text-left px-3 py-2">Entry</th>
-          <th className="text-left px-3 py-2">Stop loss</th>
-          <th className="text-left px-3 py-2">Take profit</th>
-          <th className="text-left px-3 py-2">Trail %</th>
-          <th className="text-left px-3 py-2">Status</th>
-          <th className="text-left px-3 py-2" />
+          <th className="text-start px-3 py-2">Token</th>
+          <th className="text-start px-3 py-2">Amount</th>
+          <th className="text-start px-3 py-2">Entry</th>
+          <th className="text-start px-3 py-2">Stop loss</th>
+          <th className="text-start px-3 py-2">Take profit</th>
+          <th className="text-start px-3 py-2">Trail %</th>
+          <th className="text-start px-3 py-2">Status</th>
+          <th className="text-start px-3 py-2" />
         </tr>
       </thead>
       <tbody>

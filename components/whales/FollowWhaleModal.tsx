@@ -79,7 +79,7 @@ export default function FollowWhaleModal({
         <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
           <h2 className="font-bold">Follow {whale.label || whale.address.slice(0, 8)}</h2>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{whale.chain}</span>
-          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg hover:bg-white/5"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="ms-auto p-1.5 rounded-lg hover:bg-white/5"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -145,7 +145,7 @@ export default function FollowWhaleModal({
                 onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
                 className="flex-1 accent-[#0A1EFF]"
               />
-              <div className="w-20 text-right font-mono text-sm">${threshold.toLocaleString()}</div>
+              <div className="w-20 text-end font-mono text-sm">${threshold.toLocaleString()}</div>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">Only notify on trades ≥ this USD value.</p>
           </div>
@@ -235,7 +235,7 @@ function ModeCard({
       type="button"
       onClick={onClick}
       disabled={locked}
-      className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${
+      className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-start ${
         active ? 'bg-[#0A1EFF]/15 border-[#0A1EFF]/50'
         : locked ? 'bg-white/[0.02] border-white/10 opacity-60 cursor-not-allowed'
         : 'bg-white/[0.03] border-white/10 hover:border-white/20'
@@ -268,7 +268,7 @@ function NumberRow({ label, value, setValue, step }: { label: string; value: num
         value={value}
         step={step}
         onChange={(e) => setValue(parseInt(e.target.value || '0', 10) || 0)}
-        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-[#0A1EFF]/50"
+        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0A1EFF]/50"
       />
     </div>
   );

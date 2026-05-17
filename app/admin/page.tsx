@@ -431,7 +431,7 @@ export default function AdminPanel() {
                 <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : ''}`} />
                 <span className="font-medium">{section.label}</span>
                 {section.id === 'token-listings' && pendingListings > 0 && (
-                  <span className="ml-auto bg-[#F59E0B] text-black text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{pendingListings}</span>
+                  <span className="ms-auto bg-[#F59E0B] text-black text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{pendingListings}</span>
                 )}
               </button>
             );
@@ -604,7 +604,7 @@ export default function AdminPanel() {
                       value={userSearch}
                       onChange={(e) => handleUserSearch(e.target.value)}
                       placeholder="Search users..."
-                      className="bg-[#111827] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-56 transition-colors"
+                      className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-56 transition-colors"
                     />
                   </div>
                 }
@@ -627,10 +627,10 @@ export default function AdminPanel() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
-                          <th className="text-left px-4 py-3">User</th>
-                          <th className="text-left px-4 py-3">Username</th>
-                          <th className="text-left px-4 py-3">Email</th>
-                          <th className="text-left px-4 py-3">Joined</th>
+                          <th className="text-start px-4 py-3">User</th>
+                          <th className="text-start px-4 py-3">Username</th>
+                          <th className="text-start px-4 py-3">Email</th>
+                          <th className="text-start px-4 py-3">Joined</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -682,7 +682,7 @@ export default function AdminPanel() {
                 action={
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-48 transition-colors" />
+                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-48 transition-colors" />
                   </div>
                 }
               />
@@ -706,12 +706,12 @@ export default function AdminPanel() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
-                          <th className="text-left px-4 py-3">#</th>
-                          <th className="text-left px-4 py-3">Token</th>
-                          <th className="text-right px-4 py-3">Price</th>
-                          <th className="text-right px-4 py-3">24h</th>
-                          <th className="text-right px-4 py-3">Volume</th>
-                          <th className="text-right px-4 py-3">Market Cap</th>
+                          <th className="text-start px-4 py-3">#</th>
+                          <th className="text-start px-4 py-3">Token</th>
+                          <th className="text-end px-4 py-3">Price</th>
+                          <th className="text-end px-4 py-3">24h</th>
+                          <th className="text-end px-4 py-3">Volume</th>
+                          <th className="text-end px-4 py-3">Market Cap</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -727,15 +727,15 @@ export default function AdminPanel() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right text-xs font-mono font-semibold">{formatPrice(token.current_price)}</td>
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-end text-xs font-mono font-semibold">{formatPrice(token.current_price)}</td>
+                            <td className="px-4 py-3 text-end">
                               <span className={`text-xs font-semibold flex items-center gap-0.5 justify-end ${token.price_change_percentage_24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
                                 {token.price_change_percentage_24h >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 {Math.abs(token.price_change_percentage_24h || 0).toFixed(2)}%
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right text-xs text-gray-400 font-mono">{formatNumber(token.total_volume)}</td>
-                            <td className="px-4 py-3 text-right text-xs text-gray-400 font-mono">{formatNumber(token.market_cap)}</td>
+                            <td className="px-4 py-3 text-end text-xs text-gray-400 font-mono">{formatNumber(token.total_volume)}</td>
+                            <td className="px-4 py-3 text-end text-xs text-gray-400 font-mono">{formatNumber(token.market_cap)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -774,7 +774,7 @@ export default function AdminPanel() {
                         <div className="text-[10px] text-gray-600">Checked: {api.lastCheck}</div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className={`text-xs font-bold capitalize ${api.status === 'online' ? 'text-[#10B981]' : api.status === 'degraded' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>{api.status}</div>
                       <div className="text-[10px] text-gray-600 font-mono">{api.latency}ms</div>
                     </div>
@@ -976,7 +976,7 @@ export default function AdminPanel() {
                       <button
                         key={i}
                         onClick={() => setBroadcastMsg(alert.msg)}
-                        className="bg-[#0A0E1A]/60 rounded-xl p-3.5 border border-white/[0.04] hover:border-white/[0.1] text-left transition-all flex items-start gap-3"
+                        className="bg-[#0A0E1A]/60 rounded-xl p-3.5 border border-white/[0.04] hover:border-white/[0.1] text-start transition-all flex items-start gap-3"
                       >
                         <AlertIcon className={`w-4 h-4 ${alert.color} flex-shrink-0 mt-0.5`} />
                         <div>
@@ -1059,10 +1059,10 @@ export default function AdminPanel() {
                   <span className="text-xs font-heading font-bold text-[#EF4444]">Danger Zone</span>
                 </div>
                 <div className="space-y-2">
-                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-left flex items-center gap-2.5">
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-start flex items-center gap-2.5">
                     <Trash2 className="w-3.5 h-3.5" /> Clear All Caches
                   </button>
-                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-left flex items-center gap-2.5">
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-start flex items-center gap-2.5">
                     <Ban className="w-3.5 h-3.5" /> Enable Maintenance Mode
                   </button>
                 </div>

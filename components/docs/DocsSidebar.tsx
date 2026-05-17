@@ -104,7 +104,7 @@ export function DocsSidebar({ activeSection, onSectionClick }: DocsSidebarProps)
                 {isExact && <ChevronRight className="w-3 h-3 text-[#4D6BFF] flex-shrink-0" />}
               </a>
               {isActive && section.subsections && (
-                <ul className="ml-7 mt-0.5 space-y-0.5 mb-1">
+                <ul className="ms-7 mt-0.5 space-y-0.5 mb-1">
                   {section.subsections.map(sub => (
                     <li key={sub.id}>
                       <a

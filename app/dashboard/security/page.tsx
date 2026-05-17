@@ -139,7 +139,7 @@ export default function SecurityPage() {
             <Shield className="w-4 h-4" />
           </div>
           <h1 className="text-sm font-heading font-bold">Security Center</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">VERIFIED</span>
+          <span className="ms-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">VERIFIED</span>
         </div>
       </div>
 
@@ -345,7 +345,7 @@ export default function SecurityPage() {
                     <div key={check.label} className="flex items-center gap-3 py-1.5">
                       <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />
                       <span className="text-xs text-gray-300">{check.label}</span>
-                      <span className="ml-auto text-[10px] font-semibold uppercase" style={{ color }}>
+                      <span className="ms-auto text-[10px] font-semibold uppercase" style={{ color }}>
                         {check.status === 'pass' ? 'Pass' : check.status === 'fail' ? 'Fail' : 'Warning'}
                       </span>
                     </div>
@@ -399,7 +399,7 @@ export default function SecurityPage() {
                   <Brain className="w-4 h-4 text-[#0A1EFF]" />
                 </div>
                 <span className="font-bold text-sm">AI Security Assessment</span>
-                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
                   result.safetyLevel === 'SAFE'
                     ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
                     : result.safetyLevel === 'CAUTION'
@@ -421,7 +421,7 @@ export default function SecurityPage() {
                         line.startsWith('SUMMARY:') ? 'text-gray-300 font-medium' :
                         line.startsWith('RISKS:') ? 'text-amber-400 font-semibold mt-2' :
                         line.startsWith('VERDICT:') ? 'text-white font-bold mt-2' :
-                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 pl-2' :
+                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 ps-2' :
                         'text-gray-300'
                       }`}>{line}</p>
                     ))}

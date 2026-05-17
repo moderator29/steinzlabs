@@ -140,7 +140,7 @@ export default function SupportPage() {
         <div className="col-span-2 space-y-2 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-gray-500">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <Loader2 className="w-5 h-5 animate-spin me-2" />
               <span className="text-sm">Loading tickets…</span>
             </div>
           ) : filtered.length === 0 ? (
@@ -158,7 +158,7 @@ export default function SupportPage() {
                 <StatusDot status={STATUS_DOT[t.status]} size="sm" />
                 <span className="text-[10px] text-gray-500 capitalize">{t.status.replace('_', ' ')}</span>
                 <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]}`}>{t.priority}</span>
-                <span className="ml-auto text-[10px] text-gray-600">{formatTimeAgo(new Date(t.created_at).getTime())}</span>
+                <span className="ms-auto text-[10px] text-gray-600">{formatTimeAgo(new Date(t.created_at).getTime())}</span>
               </div>
             </div>
           ))}
@@ -200,7 +200,7 @@ export default function SupportPage() {
                   <p className="text-xs text-gray-300">{ticketBody(selected)}</p>
                 </div>
                 {selected.replies.map((r, i) => (
-                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 ml-6' : 'bg-[#0A0E1A]'}`}>
+                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 ms-6' : 'bg-[#0A0E1A]'}`}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-[10px] font-semibold ${r.from === 'admin' ? 'text-[#0A1EFF]' : 'text-gray-400'}`}>
                         {r.from === 'admin' ? 'Support Team' : r.from}

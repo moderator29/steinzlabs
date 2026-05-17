@@ -120,7 +120,7 @@ export function ChosenLibraryCurator() {
             key={t.id}
             className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
           >
-            <span className="w-5 text-right text-[10px] text-[#7F8AA8]">{i + 1}</span>
+            <span className="w-5 text-end text-[10px] text-[#7F8AA8]">{i + 1}</span>
             <span className="flex-1 min-w-0">
               <span className="block truncate text-[13px] text-white">{t.title}</span>
               <span className="block truncate text-[11px] text-[#B4C0E0]">{t.artist}</span>

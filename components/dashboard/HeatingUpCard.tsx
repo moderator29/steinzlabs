@@ -112,7 +112,7 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
               <div className="flex-1 flex justify-center">
                 <MiniSpark prices={c.sparkline_in_7d?.price ?? []} />
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-end shrink-0">
                 <div className="text-sm text-white font-mono leading-tight">{fmtPrice(c.current_price)}</div>
                 <div className={`text-[11px] font-semibold leading-tight ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%

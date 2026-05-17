@@ -36,7 +36,7 @@ export function HeroRight() {
               style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', backdropFilter: 'blur(12px)' }}>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xs font-semibold text-white/60">VTX Analysis</span>
-                <span className="w-2 h-2 rounded-full bg-[#3B82F6] animate-pulse ml-auto" />
+                <span className="w-2 h-2 rounded-full bg-[#3B82F6] animate-pulse ms-auto" />
               </div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-white">SOL/USDC</span>

@@ -229,11 +229,11 @@ function TokenCard({ token }: { token: TokenCardData }) {
             )}
           </div>
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-end shrink-0">
           <div className="text-lg font-bold text-white font-mono leading-none">{token.price}</div>
           <div className={`text-[11px] font-semibold mt-1 ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
             {isPositive ? '↗ +' : '↘ '}{token.change24h.toFixed(2)}%
-            <span className="text-gray-500 font-normal ml-1">24h</span>
+            <span className="text-gray-500 font-normal ms-1">24h</span>
           </div>
         </div>
       </div>
@@ -713,7 +713,7 @@ function VtxAiPageInner() {
                 >
                   + New Chat
                 </button>
-                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded ml-1"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded ms-1"><X className="w-3.5 h-3.5 text-gray-500" /></button>
               </div>
             </div>
             {chatSessions.length === 0 ? (
@@ -724,7 +724,7 @@ function VtxAiPageInner() {
                   <button
                     key={session.id}
                     onClick={() => loadChatSession(session)}
-                    className="w-full text-left p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all flex items-center gap-2"
+                    className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all flex items-center gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -923,7 +923,7 @@ function VtxAiPageInner() {
                 <button
                   key={card.label}
                   onClick={() => handleSend(card.query)}
-                  className="text-left p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0A1EFF]/30 hover:bg-slate-900/80 transition-all group"
+                  className="text-start p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0A1EFF]/30 hover:bg-slate-900/80 transition-all group"
                 >
                   <card.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
                   <p className="text-xs font-semibold text-gray-200">{card.label}</p>
@@ -940,7 +940,7 @@ function VtxAiPageInner() {
             {showTools && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {TOOLS.slice(4).map((tool) => (
-                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-left p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
+                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
                     <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
                     <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
                     <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
@@ -955,7 +955,7 @@ function VtxAiPageInner() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
                   <SteinzLogo size={18} animated={false} />
                 </div>
               )}
@@ -968,7 +968,7 @@ function VtxAiPageInner() {
                   <div className="flex items-center gap-1.5 mb-2">
                     <Sparkles className="w-3 h-3 text-[#0A1EFF]" />
                     <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX Agent</span>
-                    {msg.timestamp && <span className="text-[9px] text-gray-700 ml-auto">{formatTime(msg.timestamp)}</span>}
+                    {msg.timestamp && <span className="text-[9px] text-gray-700 ms-auto">{formatTime(msg.timestamp)}</span>}
                   </div>
                 )}
                 <div className="whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere' }}>{cleanContent(msg.content)}</div>
@@ -1001,7 +1001,7 @@ function VtxAiPageInner() {
                   </div>
                 )}
                 {msg.role === 'user' && msg.timestamp && (
-                  <div className="text-[9px] text-gray-600 mt-1 text-right">{formatTime(msg.timestamp)}</div>
+                  <div className="text-[9px] text-gray-600 mt-1 text-end">{formatTime(msg.timestamp)}</div>
                 )}
                 {msg.role === 'assistant' && i > 0 && (
                   <button
@@ -1014,7 +1014,7 @@ function VtxAiPageInner() {
                 )}
               </div>
               {msg.role === 'user' && (
-                <div className="w-7 h-7 bg-[#111827] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ml-2 border border-white/[0.06]">
+                <div className="w-7 h-7 bg-[#111827] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ms-2 border border-white/[0.06]">
                   <User className="w-3.5 h-3.5 text-gray-500" />
                 </div>
               )}
@@ -1023,7 +1023,7 @@ function VtxAiPageInner() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 mr-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
                 <SteinzLogo size={18} animated={false} />
               </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
@@ -1056,7 +1056,7 @@ function VtxAiPageInner() {
           </button>
           <div className="flex-1 flex items-start bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl px-3 py-2 focus-within:border-[#0A1EFF]/40 focus-within:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all">
             {settings.webSearch && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold mr-2 mt-1.5 flex-shrink-0">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold me-2 mt-1.5 flex-shrink-0">
                 <Globe className="w-2.5 h-2.5" /> WEB
               </div>
             )}
@@ -1095,7 +1095,7 @@ function VtxAiPageInner() {
               }}
               disabled={loading || !input.trim() || (rateLimited && !isPro)}
               aria-label="Send message"
-              className="ml-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(10,30,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="ms-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(10,30,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <Send className="w-4 h-4" />
             </button>

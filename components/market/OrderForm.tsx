@@ -143,7 +143,7 @@ export function OrderForm({
             value={amount}
             onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="0.00"
-            className="w-full border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors pr-16"
+            className="w-full border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors pe-16"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs font-medium">
             {side === 'buy' ? 'USD' : tokenSymbol.toUpperCase()}
@@ -153,7 +153,7 @@ export function OrderForm({
           <p className="text-xs text-gray-600 mt-1">
             {side === 'buy'
               ? `≈ ${(parsedAmount / priceUsd).toFixed(6)} ${tokenSymbol.toUpperCase()}`
-              : `≈ $${usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              : `≈ $${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </p>
         )}
       </div>
@@ -224,7 +224,7 @@ export function OrderForm({
           <div className="pt-1.5 border-t border-[#1E2433] flex justify-between text-xs">
             <span className="text-gray-500 font-medium">Total Cost</span>
             <span className="text-white font-mono font-semibold">
-              ${(usdValue + quote.feeUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${(usdValue + quote.feeUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>

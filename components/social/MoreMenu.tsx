@@ -82,20 +82,20 @@ export function MoreMenu({ targetId, targetUsername, isBlocked, isMuted, onChang
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 w-56 rounded-xl bg-[#0F1627] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] py-1 z-50">
-          <button onClick={share} className="w-full text-left flex items-center gap-2 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/[0.04]">
+          <button onClick={share} className="w-full text-start flex items-center gap-2 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/[0.04]">
             <Share2 className="w-3.5 h-3.5" />Share profile
           </button>
-          <button onClick={copyLink} className="w-full text-left flex items-center gap-2 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/[0.04]">
+          <button onClick={copyLink} className="w-full text-start flex items-center gap-2 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/[0.04]">
             <LinkIcon className="w-3.5 h-3.5" />Copy profile link
           </button>
           <div className="my-1 border-t border-white/[0.06]" />
-          <button onClick={toggleMute} className="w-full text-left flex items-center gap-2 px-3 py-2 text-[12px] text-amber-300 hover:bg-amber-500/[0.06]">
+          <button onClick={toggleMute} className="w-full text-start flex items-center gap-2 px-3 py-2 text-[12px] text-amber-300 hover:bg-amber-500/[0.06]">
             <VolumeX className="w-3.5 h-3.5" />{isMuted ? 'Unmute' : 'Mute'} @{targetUsername}
           </button>
-          <button onClick={toggleBlock} className="w-full text-left flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/[0.06]">
+          <button onClick={toggleBlock} className="w-full text-start flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/[0.06]">
             <UserMinus className="w-3.5 h-3.5" />{isBlocked ? 'Unblock' : 'Block'} @{targetUsername}
           </button>
-          <button onClick={() => setReporting(true)} className="w-full text-left flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/[0.06]">
+          <button onClick={() => setReporting(true)} className="w-full text-start flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/[0.06]">
             <Flag className="w-3.5 h-3.5" />Report @{targetUsername}
           </button>
         </div>

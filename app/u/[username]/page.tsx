@@ -141,7 +141,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                 });
                 load();
               }}
-              className="ml-auto text-[12px] px-3 py-1.5 rounded-lg bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25"
+              className="ms-auto text-[12px] px-3 py-1.5 rounded-lg bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25"
             >
               Approve their follow request
             </Link>

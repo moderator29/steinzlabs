@@ -215,7 +215,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                       href={explorer}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 ml-1.5 text-amber-300 hover:text-amber-200"
+                      className="inline-flex items-center gap-0.5 ms-1.5 text-amber-300 hover:text-amber-200"
                       title={`Verify ${wrap.wrappedSymbol} contract on the explorer`}
                     >
                       verify <ExternalLink size={9} />
@@ -402,7 +402,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                   <button
                     type="button"
                     onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(traded).catch(() => {}); }}
-                    className="font-mono text-slate-300 hover:text-white truncate max-w-[280px] text-right"
+                    className="font-mono text-slate-300 hover:text-white truncate max-w-[280px] text-end"
                     title="Copy"
                   >
                     {traded}

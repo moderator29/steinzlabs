@@ -51,7 +51,7 @@ export function SnipeRiskCell({
       )}
       {typeof maxGasUsd === 'number' && (
         <span className="tabular-nums text-slate-400">
-          Gas ≤<span className="font-mono ml-0.5">{fmtUsd(maxGasUsd)}</span>
+          Gas ≤<span className="font-mono ms-0.5">{fmtUsd(maxGasUsd)}</span>
         </span>
       )}
       {!killSwitchReason && (typeof maxLossUsd === 'number' || typeof maxGasUsd === 'number') && (

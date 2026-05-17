@@ -197,7 +197,7 @@ export default function SmartMoneyPage() {
                       </div>
                     </div>
                     {entity.winRate !== null && (
-                      <div className="text-right ml-2 flex-shrink-0">
+                      <div className="text-end ms-2 flex-shrink-0">
                         <div className="text-emerald-400 font-bold text-lg">{entity.winRate}%</div>
                         <div className="text-slate-500 text-xs">win rate</div>
                       </div>

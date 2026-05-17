@@ -30,7 +30,7 @@ function SkeletonRow() {
       </td>
       {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className={`h-3 w-16 ${shimmer} ml-auto`} />
+          <div className={`h-3 w-16 ${shimmer} ms-auto`} />
         </td>
       ))}
     </tr>
@@ -38,10 +38,10 @@ function SkeletonRow() {
 }
 
 function SortIcon({ col, sortKey, dir }: { col: SortKey; sortKey: SortKey; dir: SortDir }) {
-  if (col !== sortKey) return <ChevronDown size={12} className="text-gray-600 ml-0.5" />;
+  if (col !== sortKey) return <ChevronDown size={12} className="text-gray-600 ms-0.5" />;
   return dir === 'desc'
-    ? <ChevronDown size={12} className="text-[#0A1EFF] ml-0.5" />
-    : <ChevronUp size={12} className="text-[#0A1EFF] ml-0.5" />;
+    ? <ChevronDown size={12} className="text-[#0A1EFF] ms-0.5" />
+    : <ChevronUp size={12} className="text-[#0A1EFF] ms-0.5" />;
 }
 
 export function PortfolioTable({ positions, loading = false }: PortfolioTableProps) {
@@ -76,7 +76,7 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
 
   const colHeader = (label: string, key: SortKey) => (
     <th
-      className="px-4 py-3 text-right font-medium cursor-pointer select-none hover:text-white transition-colors"
+      className="px-4 py-3 text-end font-medium cursor-pointer select-none hover:text-white transition-colors"
       onClick={() => handleSort(key)}
     >
       <span className="inline-flex items-center justify-end gap-0.5">
@@ -103,14 +103,14 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
       <table className="w-full text-sm min-w-[900px]">
         <thead>
           <tr className="border-b border-[#1E2433] text-gray-500 text-xs">
-            <th className="px-4 py-3 text-left font-medium">Token</th>
+            <th className="px-4 py-3 text-start font-medium">Token</th>
             {colHeader('Balance', 'balance')}
             {colHeader('Price', 'price')}
             {colHeader('Value', 'value')}
-            <th className="px-4 py-3 text-right font-medium">Avg Entry</th>
+            <th className="px-4 py-3 text-end font-medium">Avg Entry</th>
             {colHeader('P&L ($)', 'pnl')}
             {colHeader('P&L (%)', 'pnlPct')}
-            <th className="px-4 py-3 text-right font-medium">24h Change</th>
+            <th className="px-4 py-3 text-end font-medium">24h Change</th>
           </tr>
         </thead>
         <tbody>
@@ -142,32 +142,32 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
                     </td>
 
                     {/* Balance */}
-                    <td className="px-4 py-3 text-right text-gray-300 font-mono text-xs">
-                      {pos.balance.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+                    <td className="px-4 py-3 text-end text-gray-300 font-mono text-xs">
+                      {pos.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                     </td>
 
                     {/* Price */}
-                    <td className="px-4 py-3 text-right text-white font-mono text-xs">
+                    <td className="px-4 py-3 text-end text-white font-mono text-xs">
                       {formatPrice(pos.currentPriceUSD)}
                     </td>
 
                     {/* Value */}
-                    <td className="px-4 py-3 text-right text-white font-mono text-sm font-semibold">
+                    <td className="px-4 py-3 text-end text-white font-mono text-sm font-semibold">
                       {formatLargeNumber(value)}
                     </td>
 
                     {/* Avg Entry */}
-                    <td className="px-4 py-3 text-right text-gray-400 font-mono text-xs">
+                    <td className="px-4 py-3 text-end text-gray-400 font-mono text-xs">
                       {formatPrice(pos.avgEntryUSD)}
                     </td>
 
                     {/* P&L $ */}
-                    <td className={`px-4 py-3 text-right font-mono text-xs font-semibold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                    <td className={`px-4 py-3 text-end font-mono text-xs font-semibold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                       {isProfit ? '+' : ''}{formatLargeNumber(pos.upnlUSD)}
                     </td>
 
                     {/* P&L % */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-semibold ${
                           isProfit ? 'text-green-400' : 'text-red-400'
@@ -179,7 +179,7 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
                     </td>
 
                     {/* 24h Change */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <span
                         className={`text-xs font-mono ${
                           change24hPct >= 0 ? 'text-green-400' : 'text-red-400'

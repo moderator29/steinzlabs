@@ -50,7 +50,7 @@ export default function TierGateOverlay({
             Upgrade your plan to unlock this and more.
           </p>
 
-          <ul className="mb-6 space-y-2 text-left">
+          <ul className="mb-6 space-y-2 text-start">
             {bulletPoints.map((bp) => (
               <li key={bp} className="flex items-start gap-2 text-xs text-slate-300">
                 <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0A1EFF]" />

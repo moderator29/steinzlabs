@@ -160,7 +160,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                   <button
                     key={p.label}
                     onClick={() => set({ minMarketCap: p.min, maxMarketCap: p.max })}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+                    className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
                       active
                         ? 'bg-[#0A1EFF]/20 border-[#0A1EFF] text-white'
                         : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#1E2433] hover:text-gray-300'
@@ -183,7 +183,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                   <button
                     key={p.label}
                     onClick={() => set({ minVolume: p.value })}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+                    className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
                       active
                         ? 'bg-[#0A1EFF]/20 border-[#0A1EFF] text-white'
                         : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#1E2433] hover:text-gray-300'

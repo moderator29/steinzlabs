@@ -108,7 +108,7 @@ export function WhaleAlphaCard({
           </span>
         )}
         {typeof followCount === 'number' && followCount > 0 && (
-          <span className="ml-auto text-[10px] text-slate-500">{followCount.toLocaleString('en-US')} followers</span>
+          <span className="ms-auto text-[10px] text-slate-500">{followCount.toLocaleString(undefined)} followers</span>
         )}
       </div>
     </Link>

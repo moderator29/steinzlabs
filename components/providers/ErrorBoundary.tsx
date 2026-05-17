@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
           Reload this panel
         </button>
         {process.env.NODE_ENV !== 'production' ? (
-          <pre className="mt-4 text-[10px] text-left text-slate-500 whitespace-pre-wrap break-all">
+          <pre className="mt-4 text-[10px] text-start text-slate-500 whitespace-pre-wrap break-all">
             {error.message}
           </pre>
         ) : null}

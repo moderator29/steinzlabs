@@ -120,7 +120,7 @@ export default function TreasuryPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-end flex-shrink-0">
                   <div className="text-lg font-bold text-white">{formatUSD(w.totalUsd)}</div>
                   <div className="text-xs text-gray-400">Total value</div>
                 </div>

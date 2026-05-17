@@ -373,34 +373,34 @@ export function Bubblemaps({ nodes, width = 800, height = 500, risk }: Bubblemap
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <span className="text-gray-500">Holdings:</span>
-              <span className="text-white ml-1 font-mono">{hoveredNode.percentage.toFixed(2)}%</span>
+              <span className="text-white ms-1 font-mono">{hoveredNode.percentage.toFixed(2)}%</span>
             </div>
             <div>
               <span className="text-gray-500">Value:</span>
-              <span className="text-white ml-1">${hoveredNode.valueUSD}</span>
+              <span className="text-white ms-1">${hoveredNode.valueUSD}</span>
             </div>
             {hoveredNode.entityLabel && (
               <div>
                 <span className="text-gray-500">Entity:</span>
-                <span className="text-white ml-1">{hoveredNode.entityLabel}</span>
+                <span className="text-white ms-1">{hoveredNode.entityLabel}</span>
               </div>
             )}
             {hoveredNode.entityType && (
               <div>
                 <span className="text-gray-500">Type:</span>
-                <span className="text-white ml-1">{hoveredNode.entityType}</span>
+                <span className="text-white ms-1">{hoveredNode.entityType}</span>
               </div>
             )}
             <div>
               <span className="text-gray-500">Risk:</span>
-              <span className={`ml-1 ${hoveredNode.riskScore > 5 ? 'text-red-500' : 'text-green-500'}`}>
+              <span className={`ms-1 ${hoveredNode.riskScore > 5 ? 'text-red-500' : 'text-green-500'}`}>
                 {hoveredNode.riskScore}/10
               </span>
             </div>
             {hoveredNode.winRate !== undefined && (
               <div>
                 <span className="text-gray-500">Win Rate:</span>
-                <span className="text-green-500 ml-1">{hoveredNode.winRate}%</span>
+                <span className="text-green-500 ms-1">{hoveredNode.winRate}%</span>
               </div>
             )}
             {hoveredNode.isScammer && (
@@ -429,7 +429,7 @@ export function Bubblemaps({ nodes, width = 800, height = 500, risk }: Bubblemap
           <div className="w-2.5 h-2.5 rounded-full bg-[#FF4444]" />
           <span>Scammer</span>
         </div>
-        <div className="flex items-center gap-1 ml-auto text-[10px]">
+        <div className="flex items-center gap-1 ms-auto text-[10px]">
           <span>Badges:</span>
           <span>CEX</span>
           <span>Protocol</span>

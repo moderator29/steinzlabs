@@ -83,7 +83,7 @@ export function LandingNav() {
       {open && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="relative ml-auto w-72 bg-[#0D1120] h-full p-6 flex flex-col border-l border-white/10">
+          <div className="relative ms-auto w-72 bg-[#0D1120] h-full p-6 flex flex-col border-l border-white/10">
             <div className="flex justify-end mb-8">
               <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white">
                 <X className="w-5 h-5" />

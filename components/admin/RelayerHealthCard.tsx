@@ -225,7 +225,7 @@ export default function RelayerHealthCard() {
                 <span className="font-mono text-slate-400">
                   {r.table}/{r.id.slice(0, 8)}
                 </span>
-                <span className="truncate text-rose-300 ml-3 max-w-[50%]">
+                <span className="truncate text-rose-300 ms-3 max-w-[50%]">
                   {r.revert_reason ?? "reverted"}
                 </span>
                 <span className="tabular-nums text-slate-500">

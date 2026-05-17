@@ -1148,7 +1148,7 @@ export default function STZRunnerPage() {
             {tips.map((tip, i) => (
               <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-[#0A1EFF] flex-shrink-0">{tip.icon}</div>
-                <p className="text-sm text-left text-gray-300">{tip.text}</p>
+                <p className="text-sm text-start text-gray-300">{tip.text}</p>
               </div>
             ))}
           </div>
@@ -1216,7 +1216,7 @@ export default function STZRunnerPage() {
                       <img src={s.image} alt={s.name} className={`w-full h-full object-cover ${locked ? 'blur-sm brightness-50' : ''}`} style={!locked ? { mixBlendMode: 'screen' } : {}} />
                       {locked && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><Lock className="w-4 h-4 text-gray-400" /></div>}
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="flex-1 text-start">
                       <p className="text-sm font-bold">{s.name}</p>
                       <p className="text-[10px] font-semibold" style={{ color: s.rarityColor }}>{s.rarity}</p>
                       {locked && <p className="text-[10px] text-gray-500">Unlock at {s.unlockScore.toLocaleString()} pts</p>}
@@ -1250,7 +1250,7 @@ export default function STZRunnerPage() {
                     {achieved ? (
                       <span className="text-[10px] text-[#10B981] font-semibold flex items-center gap-1"><Star className="w-3 h-3" /> Done</span>
                     ) : (
-                      <div className="text-right">
+                      <div className="text-end">
                         <span className="text-[10px] text-gray-500 font-mono">{Math.min(100, Math.floor((personalBestScore / m.score) * 100))}%</span>
                         <div className="w-12 h-1 bg-white/10 rounded-full mt-0.5 overflow-hidden">
                           <div className="h-full bg-[#0A1EFF] rounded-full" style={{ width: `${Math.min(100, (personalBestScore / m.score) * 100)}%` }} />
@@ -1326,7 +1326,7 @@ export default function STZRunnerPage() {
                   {idx === 0 ? <Crown className="w-5 h-5 text-[#F59E0B] mx-auto" /> : idx === 1 ? <Medal className="w-5 h-5 text-gray-300 mx-auto" /> : idx === 2 ? <Medal className="w-5 h-5 text-amber-600 mx-auto" /> : <span className="text-gray-500 text-sm">#{idx + 1}</span>}
                 </div>
                 <div className="flex-1 min-w-0"><p className="font-semibold text-sm truncate">{entry.username}</p><p className="text-[10px] text-gray-500">{entry.gamesPlayed} games</p></div>
-                <div className="text-right"><p className="font-bold text-sm text-[#0A1EFF]">{entry.score.toLocaleString()}</p><p className="text-[10px] text-gray-500">{entry.coins} $STZ</p></div>
+                <div className="text-end"><p className="font-bold text-sm text-[#0A1EFF]">{entry.score.toLocaleString()}</p><p className="text-[10px] text-gray-500">{entry.coins} $STZ</p></div>
               </div>
             ))}
           </div>

@@ -191,7 +191,7 @@ export default function SecurityAnalyticsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, symbol, or reason..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
             />
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function SecurityAnalyticsPage() {
             <thead className="border-b border-[#1E2433]">
               <tr>
                 {['Token', 'Chain', 'Reason', 'Severity', 'Flagged', 'Source', 'Active', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}
               </tr>
             </thead>

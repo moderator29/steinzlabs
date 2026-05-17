@@ -204,7 +204,7 @@ export default function FeaturedTokensPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tokens..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
           </div>
         </div>
 
@@ -222,7 +222,7 @@ export default function FeaturedTokensPage() {
           <table className="w-full text-xs min-w-[700px]">
             <thead className="border-b border-[#1E2433]">
               <tr>{['Order', 'Token', 'Chain', 'Address', 'Badge', 'Status', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>
+                <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
               ))}</tr>
             </thead>
             <tbody>

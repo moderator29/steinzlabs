@@ -194,7 +194,7 @@ export function MiniVtxPanel({
             }}
             placeholder="Ask VTX anything — paste a token, a wallet, or a thesis…"
             rows={2}
-            className="w-full px-4 pt-3.5 pb-2 pr-12 bg-transparent text-[14px] text-white placeholder-slate-600 resize-none focus:outline-none leading-relaxed"
+            className="w-full px-4 pt-3.5 pb-2 pe-12 bg-transparent text-[14px] text-white placeholder-slate-600 resize-none focus:outline-none leading-relaxed"
           />
           <button
             type="submit"
@@ -223,7 +223,7 @@ export function MiniVtxPanel({
                   : "bg-white/[0.02] border-white/[0.06] text-slate-400 hover:border-white/15 hover:text-slate-200"
               }`}
             >
-              <Sparkles size={10} className="inline mr-1 -mt-0.5" />
+              <Sparkles size={10} className="inline me-1 -mt-0.5" />
               Expert
             </button>
             <button
@@ -239,7 +239,7 @@ export function MiniVtxPanel({
             </button>
 
             {/* Credits pill — progress only (numeric counter hidden per product decision) */}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
               <div
                 className="w-16 sm:w-20 h-1 rounded-full bg-white/[0.05] overflow-hidden flex-shrink-0"
                 title={`${creditsUsed.toLocaleString()} / ${creditsLimit.toLocaleString()} credits used`}
@@ -265,7 +265,7 @@ export function MiniVtxPanel({
             <button
               key={p.id}
               onClick={() => handlePromptClick(p)}
-              className="group flex-shrink-0 w-[220px] text-left p-3.5 rounded-xl border border-white/[0.06] hover:border-blue-500/30 transition-all"
+              className="group flex-shrink-0 w-[220px] text-start p-3.5 rounded-xl border border-white/[0.06] hover:border-blue-500/30 transition-all"
               style={{
                 background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))",
               }}

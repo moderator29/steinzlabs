@@ -64,7 +64,7 @@ export function TokenDetailHeader({
         </div>
 
         {/* Right: price + change */}
-        <div className="sm:text-right">
+        <div className="sm:text-end">
           <div className="text-white font-bold text-3xl font-mono leading-none">
             {formatPrice(price)}
           </div>

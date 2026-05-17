@@ -191,7 +191,7 @@ export default function SupportPage() {
                   <button
                     key={t.id}
                     onClick={() => { setSelected(t.id); setShowForm(false); }}
-                    className={`w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors ${selected === t.id ? 'bg-white/[0.04]' : ''}`}
+                    className={`w-full text-start px-4 py-3 hover:bg-white/[0.03] transition-colors ${selected === t.id ? 'bg-white/[0.04]' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="text-sm font-semibold text-white truncate flex-1">{t.subject}</div>

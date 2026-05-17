@@ -524,7 +524,7 @@ export default function NetworkGraphPage() {
               onChange={e => setWalletInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="Enter wallet address or token CA..."
-              className="w-full border border-white/[0.08] rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 focus:bg-[#0A0E1A] transition-all"
+              className="w-full border border-white/[0.08] rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 focus:bg-[#0A0E1A] transition-all"
             />
           </div>
           <button

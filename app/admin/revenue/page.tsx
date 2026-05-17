@@ -163,7 +163,7 @@ export default function AdminRevenuePage() {
             <thead className="border-b border-[#1E2433]">
               <tr>
                 {['Pair', 'Chain', 'Amount', 'Fee', 'Trader', 'Time'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}
               </tr>
             </thead>

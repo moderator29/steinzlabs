@@ -78,7 +78,7 @@ export function LanguageSwitcher({ variant = 'nav' }: Props) {
             <button
               key={l.code}
               onClick={() => choose(l)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-xs transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start text-xs transition-colors ${
                 l.code === lang ? 'bg-[#0A1EFF]/15 text-white' : 'text-gray-300 hover:bg-white/[0.04]'
               }`}
             >

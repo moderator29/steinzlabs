@@ -71,7 +71,7 @@ export default function AlertsPage() {
                 <button
                   key={type.value}
                   onClick={() => setAlertType(type.value)}
-                  className={`p-3 rounded-lg border text-left transition-colors ${
+                  className={`p-3 rounded-lg border text-start transition-colors ${
                     alertType === type.value
                       ? 'border-[#0A1EFF] bg-[#0A1EFF]/10'
                       : 'border-[#1E2433] hover:border-gray-500'

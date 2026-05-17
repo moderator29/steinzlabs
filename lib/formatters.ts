@@ -17,7 +17,7 @@ export function formatUSD(value: number, options: { compact?: boolean; decimals?
     return `$${(value / 1_000).toFixed(decimals ?? 1)}K`;
   }
 
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString(undefined, {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: decimals ?? 2,
@@ -46,7 +46,7 @@ export function formatTokenAmount(value: number, symbol?: string, decimals = 4):
   } else if (Math.abs(value) < 1_000) {
     formatted = value.toFixed(Math.min(decimals, 4));
   } else {
-    formatted = value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    formatted = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
   }
 
   return symbol ? `${formatted} ${symbol}` : formatted;

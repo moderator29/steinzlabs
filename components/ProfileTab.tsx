@@ -1055,7 +1055,7 @@ export default function ProfileTab() {
                     </div>
                   )}
                   <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <span className="text-[8px] text-gray-600 mt-1 block text-right">
+                  <span className="text-[8px] text-gray-600 mt-1 block text-end">
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -1286,7 +1286,7 @@ export default function ProfileTab() {
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-bold flex items-center justify-center text-white">{unreadCount}</span>
               )}
             </div>
-            <div className="text-left">
+            <div className="text-start">
               <div className="text-sm font-semibold">Notifications</div>
               <div className="text-[10px] text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</div>
             </div>
@@ -1307,7 +1307,7 @@ export default function ProfileTab() {
               {notifLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="w-5 h-5 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
-                  <span className="text-xs text-gray-500 ml-2">Loading notifications...</span>
+                  <span className="text-xs text-gray-500 ms-2">Loading notifications...</span>
                 </div>
               ) : notifList.length === 0 ? (
                 <div className="text-center py-8">
@@ -1319,7 +1319,7 @@ export default function ProfileTab() {
                   <button
                     key={n.id}
                     onClick={() => markAsRead(n.id)}
-                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-start transition-colors border-b border-white/5 last:border-0 ${n.read ? 'opacity-50 hover:opacity-70' : 'hover:bg-white/5'}`}
                   >
                     <div className="mt-0.5 flex-shrink-0">{getNotifIcon(n.type)}</div>
                     <div className="flex-1 min-w-0">
@@ -1658,7 +1658,7 @@ export default function ProfileTab() {
         >
           <ExternalLink className="w-4 h-4 text-[#0A1EFF]" />
           <span>View on Etherscan</span>
-          <ChevronRight className="w-4 h-4 ml-auto text-gray-600" />
+          <ChevronRight className="w-4 h-4 ms-auto text-gray-600" />
         </a>
       )}
 
@@ -1690,7 +1690,7 @@ function ProfileRow({ icon: Icon, label, sub, onClick }: { icon: React.ElementTy
       className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/5 rounded-lg transition-colors border-b border-white/5"
     >
       <Icon className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
-      <div className="flex-1 text-left">
+      <div className="flex-1 text-start">
         <div className="text-sm font-semibold">{label}</div>
         <div className="text-[10px] text-gray-500">{sub}</div>
       </div>
@@ -1703,8 +1703,8 @@ function HelpItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`glass rounded-xl overflow-hidden border transition-all duration-300 ${open ? 'border-[#0A1EFF]/30 bg-gradient-to-r from-[#0A1EFF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06]'}`}>
-      <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-white/[0.02] transition-colors">
-        <span className="font-semibold text-xs pr-3">{question}</span>
+      <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex justify-between items-center text-start hover:bg-white/[0.02] transition-colors">
+        <span className="font-semibold text-xs pe-3">{question}</span>
         <ChevronDown className={`w-4 h-4 text-[#0A1EFF] transition-transform duration-300 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
       <div className={`grid transition-all duration-300 ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>

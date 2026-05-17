@@ -156,7 +156,7 @@ export function PendingTradesBanner() {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
+          className="flex w-full items-center justify-between px-4 py-3 text-start"
         >
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">

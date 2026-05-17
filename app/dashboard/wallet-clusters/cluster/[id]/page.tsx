@@ -106,7 +106,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className="min-h-screen bg-[#05081E] flex items-center justify-center text-slate-500">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading cluster…
+        <Loader2 className="w-5 h-5 animate-spin me-2" /> Loading cluster…
       </div>
     );
   }

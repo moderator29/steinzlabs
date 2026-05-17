@@ -80,7 +80,7 @@ export function VtxModelPicker({ value, onChange }: ModelPickerProps) {
                     onChange(m.id);
                     setOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
+                  className={`w-full text-start px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
                     active ? 'bg-[#0A1EFF]/10' : 'hover:bg-white/[0.04]'
                   }`}
                 >

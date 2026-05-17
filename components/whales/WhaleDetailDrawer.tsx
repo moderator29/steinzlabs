@@ -163,7 +163,7 @@ export default function WhaleDetailDrawer({
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <aside className="relative ml-auto w-full max-w-lg h-full bg-[#05081E] border-l border-white/10 overflow-y-auto shadow-2xl">
+      <aside className="relative ms-auto w-full max-w-lg h-full bg-[#05081E] border-l border-white/10 overflow-y-auto shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[#05081E]/95 backdrop-blur px-5 py-4 border-b border-white/10 flex items-center gap-3">
           <div
@@ -262,7 +262,7 @@ export default function WhaleDetailDrawer({
 
           {loading ? (
             <div className="flex items-center justify-center py-10 text-slate-500 text-sm">
-              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading activity…
+              <Loader2 className="w-4 h-4 animate-spin me-2" /> Loading activity…
             </div>
           ) : err ? (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">Unable to load activity. Try again later.</div>

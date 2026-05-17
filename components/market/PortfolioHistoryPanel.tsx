@@ -89,7 +89,7 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
           <button
             type="button"
             onClick={() => setScopeFilter((v) => !v)}
-            className="ml-auto pb-2 text-[10px] uppercase tracking-wide text-slate-400 hover:text-white"
+            className="ms-auto pb-2 text-[10px] uppercase tracking-wide text-slate-400 hover:text-white"
             title={scopeFilter ? `Showing only ${scopeSymbol}. Click for all assets.` : 'Showing all assets. Click to filter to this token.'}
           >
             {scopeFilter ? `Filter · ${scopeSymbol}` : 'Filter · All assets'}
@@ -110,13 +110,13 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-[9px] uppercase tracking-wider text-slate-500">
-                <th className="text-left pb-2">Asset</th>
-                <th className="text-right pb-2">Balance</th>
-                <th className="text-right pb-2">Avg Entry</th>
-                <th className="text-right pb-2">Current Price</th>
-                <th className="text-right pb-2">Cost Basis</th>
-                <th className="text-right pb-2">UPNL</th>
-                <th className="text-right pb-2">Quick Sell</th>
+                <th className="text-start pb-2">Asset</th>
+                <th className="text-end pb-2">Balance</th>
+                <th className="text-end pb-2">Avg Entry</th>
+                <th className="text-end pb-2">Current Price</th>
+                <th className="text-end pb-2">Cost Basis</th>
+                <th className="text-end pb-2">UPNL</th>
+                <th className="text-end pb-2">Quick Sell</th>
               </tr>
             </thead>
             <tbody>
@@ -131,14 +131,14 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
                 return (
                   <tr key={String(p.id ?? i)} className="border-t border-slate-900/60 font-mono tabular-nums">
                     <td className="py-2 text-slate-200">{sym}</td>
-                    <td className="py-2 text-right">{p.balance ?? p.amount ?? '—'}</td>
-                    <td className="py-2 text-right">{p.avg_entry_price_usd ? `$${Number(p.avg_entry_price_usd).toFixed(4)}` : '—'}</td>
-                    <td className="py-2 text-right">{p.current_price_usd ? `$${Number(p.current_price_usd).toFixed(4)}` : '—'}</td>
-                    <td className="py-2 text-right">{p.cost_basis_usd ? `$${Number(p.cost_basis_usd).toFixed(2)}` : '—'}</td>
-                    <td className={`py-2 text-right ${upnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <td className="py-2 text-end">{p.balance ?? p.amount ?? '—'}</td>
+                    <td className="py-2 text-end">{p.avg_entry_price_usd ? `$${Number(p.avg_entry_price_usd).toFixed(4)}` : '—'}</td>
+                    <td className="py-2 text-end">{p.current_price_usd ? `$${Number(p.current_price_usd).toFixed(4)}` : '—'}</td>
+                    <td className="py-2 text-end">{p.cost_basis_usd ? `$${Number(p.cost_basis_usd).toFixed(2)}` : '—'}</td>
+                    <td className={`py-2 text-end ${upnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {upnl === 0 ? '—' : `${upnl >= 0 ? '+' : ''}$${upnl.toFixed(2)}`}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-end">
                       <button
                         type="button"
                         onClick={() => window.dispatchEvent(new CustomEvent('market:quick-sell', { detail: { symbol: sym } }))}
@@ -156,12 +156,12 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-[9px] uppercase tracking-wider text-slate-500">
-                <th className="text-left pb-2">When</th>
-                <th className="text-left pb-2">Side</th>
-                <th className="text-left pb-2">Pair</th>
-                <th className="text-right pb-2">Amount USD</th>
-                <th className="text-right pb-2">Status</th>
-                <th className="text-right pb-2">Tx</th>
+                <th className="text-start pb-2">When</th>
+                <th className="text-start pb-2">Side</th>
+                <th className="text-start pb-2">Pair</th>
+                <th className="text-end pb-2">Amount USD</th>
+                <th className="text-end pb-2">Status</th>
+                <th className="text-end pb-2">Tx</th>
               </tr>
             </thead>
             <tbody>
@@ -174,9 +174,9 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
                     <td className="py-2 text-slate-400">{o.created_at ? new Date(String(o.created_at)).toLocaleString() : '—'}</td>
                     <td className={`py-2 ${side.toLowerCase() === 'buy' ? 'text-emerald-400' : 'text-red-400'}`}>{side || '—'}</td>
                     <td className="py-2 text-slate-200">{o.token_in ?? '—'} → {o.token_out ?? '—'}</td>
-                    <td className="py-2 text-right">{o.amount_in_usd ? `$${Number(o.amount_in_usd).toLocaleString()}` : '—'}</td>
-                    <td className="py-2 text-right text-slate-400">{o.status ?? '—'}</td>
-                    <td className="py-2 text-right text-slate-500">{txHash ? `${txHash.slice(0, 10)}…` : '—'}</td>
+                    <td className="py-2 text-end">{o.amount_in_usd ? `$${Number(o.amount_in_usd).toLocaleString()}` : '—'}</td>
+                    <td className="py-2 text-end text-slate-400">{o.status ?? '—'}</td>
+                    <td className="py-2 text-end text-slate-500">{txHash ? `${txHash.slice(0, 10)}…` : '—'}</td>
                   </tr>
                 );
               })}

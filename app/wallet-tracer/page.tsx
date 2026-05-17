@@ -63,7 +63,7 @@ export default function WalletTracerPage() {
               onChange={(e) => setWallet(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && traceWallet()}
               placeholder="Enter wallet address (0x... or Solana address)..."
-              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-12 pe-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
             />
           </div>
           <select
@@ -177,7 +177,7 @@ export default function WalletTracerPage() {
                           <div className="text-white text-sm font-mono">{tx.hash?.slice(0, 16)}...</div>
                           <div className="text-gray-400 text-xs mt-1">{tx.type || 'transfer'} • {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString() : ''}</div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                           <div className="text-white">{tx.valueUSD}</div>
                           <a href={`https://etherscan.io/tx/${tx.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#0A1EFF] text-xs flex items-center gap-1 justify-end mt-1">
                             <ExternalLink size={10} /> View

@@ -158,7 +158,7 @@ export default function DashboardMarketPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, ticker, or paste a contract address…"
-            className="w-full bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl pl-9 pr-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0A1EFF]/40 focus:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all"
+            className="w-full bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0A1EFF]/40 focus:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all"
           />
           {resolving && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" size={14} />
@@ -188,7 +188,7 @@ export default function DashboardMarketPage() {
               <button
                 key={`${m.id ?? m.address}-${i}`}
                 onClick={() => handleResolvedClick(m)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-start"
               >
                 {m.image ? (
                   <img src={m.image} alt={m.symbol} className="w-7 h-7 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -222,15 +222,15 @@ export default function DashboardMarketPage() {
             <table className="w-full">
               <thead>
                 <tr className="text-slate-500 text-xs uppercase tracking-wide border-b border-slate-800/60">
-                  <th className="px-4 py-3 text-left w-12">#</th>
-                  <th className="px-4 py-3 text-left">Coin</th>
-                  <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right">1H%</th>
-                  <th className="px-4 py-3 text-right">24H%</th>
-                  <th className="px-4 py-3 text-right">7D%</th>
-                  <th className="px-4 py-3 text-right">24H Volume</th>
-                  <th className="px-4 py-3 text-right">Market Cap</th>
-                  <th className="px-4 py-3 text-right w-28">7D Chart</th>
+                  <th className="px-4 py-3 text-start w-12">#</th>
+                  <th className="px-4 py-3 text-start">Coin</th>
+                  <th className="px-4 py-3 text-end">Price</th>
+                  <th className="px-4 py-3 text-end">1H%</th>
+                  <th className="px-4 py-3 text-end">24H%</th>
+                  <th className="px-4 py-3 text-end">7D%</th>
+                  <th className="px-4 py-3 text-end">24H Volume</th>
+                  <th className="px-4 py-3 text-end">Market Cap</th>
+                  <th className="px-4 py-3 text-end w-28">7D Chart</th>
                   <th className="px-4 py-3 w-10" />
                 </tr>
               </thead>

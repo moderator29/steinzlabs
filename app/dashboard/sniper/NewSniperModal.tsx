@@ -428,7 +428,7 @@ function Field({ label, hint, required, children }: { label: string; hint?: stri
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
         <label className="text-xs uppercase tracking-wider text-white/60 font-bold">
-          {label}{required && <span className="text-red-400 ml-1">*</span>}
+          {label}{required && <span className="text-red-400 ms-1">*</span>}
         </label>
       </div>
       {children}
@@ -450,7 +450,7 @@ function Toggle({ label, hint, value, onChange, disabled, icon: Icon, compact, c
       disabled={disabled}
       className={`w-full flex items-center justify-between gap-3 ${compact ? 'px-3 py-2' : 'px-4 py-3'} rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] transition disabled:opacity-50 disabled:cursor-not-allowed`}
     >
-      <div className="flex items-center gap-2.5 min-w-0 text-left">
+      <div className="flex items-center gap-2.5 min-w-0 text-start">
         {Icon && <Icon className="w-4 h-4 text-white/60 flex-shrink-0" />}
         <div className="min-w-0">
           <div className="text-sm font-semibold">{label}</div>

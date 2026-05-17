@@ -150,7 +150,7 @@ export default function SwapRoutePreview(props: Props) {
                 style={{ width: `${Math.min(100, percent)}%` }}
               />
             </div>
-            <span className="text-slate-400 tabular-nums w-10 text-right">{percent.toFixed(0)}%</span>
+            <span className="text-slate-400 tabular-nums w-10 text-end">{percent.toFixed(0)}%</span>
           </div>
         ))}
       </div>
