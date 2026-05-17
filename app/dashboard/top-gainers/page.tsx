@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { MiniSpark } from '@/components/dashboard/TopGainersCard';
 import { buildDetailHref } from '@/lib/market/tokenChainResolver';
+import { useNavState } from '@/lib/nav/useNavState';
 
 interface Gainer {
   id: string;
@@ -53,6 +54,17 @@ export default function TopGainersPage() {
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<Direction>('gainers');
   const [timeframe, setTimeframe] = useState<Timeframe>('24h');
+
+  // PDF S3 — preserve direction (gainers/losers) + timeframe across
+  // top-gainers → token detail → back.
+  useNavState(
+    'top-gainers',
+    () => ({ direction, timeframe }),
+    (s) => {
+      if (s.direction === 'gainers' || s.direction === 'losers') setDirection(s.direction);
+      if (typeof s.timeframe === 'string') setTimeframe(s.timeframe as Timeframe);
+    },
+  );
 
   useEffect(() => {
     let cancelled = false;

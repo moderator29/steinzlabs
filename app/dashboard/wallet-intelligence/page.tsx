@@ -5,6 +5,7 @@ import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useNavState } from '@/lib/nav/useNavState';
 
 type TabMode = 'wallet' | 'contract';
 
@@ -272,6 +273,19 @@ export default function WalletIntelligencePage() {
   const [activeTab, setActiveTab] = useState<TabMode>('wallet');
   const [address, setAddress] = useState('');
   const [selectedChain, setSelectedChain] = useState('auto');
+
+  // PDF S3 — preserve tab + last-searched address + chain across
+  // wallet-intel → DNA detail → back so the user lands back in the
+  // same lookup state.
+  useNavState(
+    'wallet-intelligence',
+    () => ({ activeTab, address, selectedChain }),
+    (s) => {
+      if (s.activeTab === 'wallet' || s.activeTab === 'contract') setActiveTab(s.activeTab);
+      if (typeof s.address === 'string') setAddress(s.address);
+      if (typeof s.selectedChain === 'string') setSelectedChain(s.selectedChain);
+    },
+  );
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
   const [loading, setLoading] = useState(false);

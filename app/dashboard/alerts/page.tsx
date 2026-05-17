@@ -11,6 +11,7 @@ import {
 import { ToggleLeft, ToggleRight, Rocket, History } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
+import { useNavState } from '@/lib/nav/useNavState';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   loadSmartAlerts, saveSmartAlerts, loadAlertHistory,
@@ -753,6 +754,14 @@ export default function AlertsPage() {
   const [initialized, setInitialized] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('alerts');
+
+  // PDF S3 — preserve activeTab so alerts → alert detail → back lands on
+  // the same tab the user was reading.
+  useNavState(
+    'alerts',
+    () => ({ activeTab }),
+    (s) => { if (typeof s.activeTab === 'string') setActiveTab(s.activeTab as TabType); },
+  );
 
   // Start polling all alert conditions (price, whale, wallet activity, launches)
   useAlertMonitor();
