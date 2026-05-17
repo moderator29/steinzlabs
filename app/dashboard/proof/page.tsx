@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShoppingCart, ThumbsUp, ThumbsDown, Eye, Link2, Heart, TrendingUp, ExternalLink, Shield, Activity, X } from 'lucide-react';
+import { z } from 'zod';
 import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
@@ -20,35 +21,64 @@ const ProofAdvancedChart = dynamic(
   { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">Loading chart…</div> },
 );
 
-interface ProofEvent {
-  id: string;
-  title: string;
-  summary: string;
-  from: string;
-  to: string;
-  value: number;
-  valueUsd: number;
-  chain: string;
-  trustScore: number;
-  txHash: string;
-  timestamp: string;
-  sentiment: string;
-  views?: number;
-  comments?: number;
-  shares?: number;
-  likes?: number;
-  pairAddress?: string;
-  tokenAddress?: string;
-  dexUrl?: string;
-  tokenName?: string;
-  tokenSymbol?: string;
-  tokenPrice?: string;
-  platform?: string;
-  tokenVolume24h?: number;
-  tokenLiquidity?: number;
-  tokenMarketCap?: number;
-  tokenPriceChange24h?: number;
-}
+// Bounded string — caps every user-visible text field so a malicious
+// sessionStorage payload can't blow out the layout or smuggle a
+// multi-megabyte string into React render. Trims to a sane length and
+// strips HTML-ish characters; we never dangerouslySetInnerHTML, but
+// belt-and-braces against future regressions.
+const safeText = (max: number) => z
+  .string()
+  .max(max)
+  .transform((s) => s.replace(/<[^>]*>/g, '').trim());
+
+const safeUrl = z
+  .string()
+  .max(2048)
+  .url()
+  .refine((u) => /^https?:\/\//i.test(u), 'http(s) only')
+  .optional();
+
+// Audit P0 — proof event used to be JSON.parsed straight out of
+// sessionStorage and rendered as-is. An attacker who could trigger any
+// JS on the origin (XSS chain, browser extension) could craft a fake
+// event with overlong fields, malicious URLs, or invalid structure
+// that crashed React or smuggled an attacker-controlled link past the
+// trust badge. Zod schema rejects malformed events at parse time.
+//
+// Note: tokenAddress carries the contract for the bubble-viz holder
+// fetch (see BubbleVisualization). Added alongside the Zod hardening
+// so on-chain top-holder data renders instead of fabricated seeds.
+const ProofEventSchema = z.object({
+  id: safeText(128),
+  title: safeText(280),
+  summary: safeText(2000),
+  from: safeText(128),
+  to: safeText(128),
+  value: z.number().finite(),
+  valueUsd: z.number().finite(),
+  chain: safeText(32),
+  trustScore: z.number().min(0).max(100),
+  txHash: safeText(128),
+  timestamp: safeText(64),
+  sentiment: safeText(32),
+  views: z.number().int().nonnegative().optional(),
+  comments: z.number().int().nonnegative().optional(),
+  shares: z.number().int().nonnegative().optional(),
+  likes: z.number().int().nonnegative().optional(),
+  pairAddress: safeText(128).optional(),
+  tokenAddress: safeText(128).optional(),
+  dexUrl: safeUrl,
+  tokenName: safeText(128).optional(),
+  tokenSymbol: safeText(32).optional(),
+  tokenPrice: safeText(64).optional(),
+  platform: safeText(64).optional(),
+  tokenVolume24h: z.number().finite().optional(),
+  tokenLiquidity: z.number().finite().optional(),
+  tokenMarketCap: z.number().finite().optional(),
+  tokenPriceChange24h: z.number().finite().optional(),
+});
+
+type ProofEvent = z.infer<typeof ProofEventSchema>;
 
 // Build the SwapCard payload from a context-feed proof event. The
 // receive-side (toToken) comes from the event; the pay-side defaults
@@ -210,10 +240,15 @@ export default function ViewProofPage() {
     try {
       const stored = sessionStorage.getItem('steinz_proof_event');
       if (stored) {
-        setEvent(JSON.parse(stored));
+        const raw = JSON.parse(stored);
+        // Validate structure before rendering. If a field is malformed
+        // we fall through to the "Event not found" screen rather than
+        // crashing or rendering attacker-shaped data.
+        const parsed = ProofEventSchema.safeParse(raw);
+        if (parsed.success) setEvent(parsed.data);
       }
     } catch {
-      // Malformed JSON — return default
+      // Malformed JSON — fall through to not-found state.
     }
     // Bug §6.3 — testers reported the Explain button scrolling them to
     // the middle of the AI view with no scrollbar. The page itself was
