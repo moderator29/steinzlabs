@@ -60,14 +60,16 @@ export interface FeeRevenue {
 export interface SniperExecution {
   id: string;
   user_id: string;
-  chain: string;
+  chain: string | null;
   token_address: string;
-  buy_amount_usd: number;
+  buy_amount_usd?: number | null;
   tx_hash: string | null;
-  status: 'queued' | 'executing' | 'completed' | 'failed';
+  status: string;
+  execution_time_ms?: number | null;
+  error_msg?: string | null;
   stop_loss_pct?: number;
   take_profit_pct?: number;
-  created_at: string;
+  executed_at: string;
 }
 
 export interface WhaleWatchlist {
@@ -220,15 +222,35 @@ export async function getSniperHistory(userId: string, limit = 100): Promise<Sni
   return data as SniperExecution[];
 }
 
-export async function createSniperExecution(params: Omit<SniperExecution, 'id' | 'created_at'>): Promise<SniperExecution | null> {
+export async function createSniperExecution(
+  params: Omit<SniperExecution, 'id' | 'executed_at'>,
+): Promise<{ data: SniperExecution | null; error: string | null }> {
   const db = getSupabaseAdmin();
-  const { data, error } = await db
-    .from('sniper_executions')
-    .insert({ ...params, created_at: new Date().toISOString() })
-    .select()
-    .single();
-  if (error || !data) return null;
-  return data as SniperExecution;
+  const row: Record<string, unknown> = {
+    user_id: params.user_id,
+    chain: params.chain,
+    token_address: params.token_address,
+    tx_hash: params.tx_hash,
+    status: params.status,
+    executed_at: new Date().toISOString(),
+  };
+  if (params.execution_time_ms != null) row.execution_time_ms = params.execution_time_ms;
+  if (params.error_msg != null) row.error_msg = params.error_msg;
+  if (params.buy_amount_usd != null) row.buy_amount_usd = params.buy_amount_usd;
+
+  let lastErr: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await db.from('sniper_executions').insert(row).select().single();
+    if (!error && data) return { data: data as SniperExecution, error: null };
+    lastErr = error?.message ?? 'unknown insert error';
+    // If the buy_amount_usd column hasn't been migrated yet, drop it and retry once.
+    if (lastErr.includes('buy_amount_usd') && 'buy_amount_usd' in row) {
+      delete row.buy_amount_usd;
+      continue;
+    }
+    await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+  }
+  return { data: null, error: lastErr };
 }
 
 export async function updateSniperExecution(
