@@ -98,9 +98,10 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
           <span className="text-white font-semibold text-base">Filters</span>
           <button
             onClick={onClose}
+            aria-label="Close filters"
             className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-[#1E2433]"
           >
-            <X size={18} />
+            <X size={18} aria-hidden />
           </button>
         </div>
 
@@ -148,7 +149,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
           {/* Market Cap Range */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Market Cap</h3>
-            <p className="text-xs text-gray-600 mb-3">
+            <p className="text-xs text-gray-300 mb-3">
               {filters.minMarketCap === 0 && filters.maxMarketCap === 0
                 ? 'Any range'
                 : `${formatCapLabel(filters.minMarketCap)} – ${filters.maxMarketCap === 0 ? 'Unlimited' : formatCapLabel(filters.maxMarketCap)}`}

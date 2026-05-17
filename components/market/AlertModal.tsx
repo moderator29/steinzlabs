@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Bell } from 'lucide-react';
 import { PriceAlertInput } from '@/lib/market/types';
 import { formatPrice } from '@/lib/market/formatters';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 interface AlertModalProps {
   tokenId: string;
@@ -30,15 +31,16 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
     }
   };
 
+  const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-5 w-full max-w-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
+      <div ref={trapRef} className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Bell size={16} className="text-[#0A1EFF]" />
-            <span className="text-white font-semibold">Set Price Alert — {symbol}</span>
+            <Bell size={16} className="text-[#0A1EFF]" aria-hidden />
+            <span id="alert-modal-title" className="text-white font-semibold">Set Price Alert — {symbol}</span>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close price alert modal" className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
         </div>
 
         <p className="text-gray-400 text-sm mb-4">Current: <span className="text-white font-mono">{formatPrice(currentPrice)}</span></p>
