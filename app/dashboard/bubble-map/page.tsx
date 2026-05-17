@@ -38,6 +38,26 @@ export interface BubbleLink extends d3.SimulationLinkDatum<BubbleNode> {
 
 interface ClusterInfo { id: string; label: string; color: string; nodeIds: string[] }
 
+// Chain-aware block-explorer mapper. Bubble map used to hardcode
+// solscan for every chain — clicking "View on Solscan" for an ETH
+// holder hit a dead Solana account page. This routes every chain's
+// address to the canonical explorer and labels the link with the
+// matching brand so users know what they're about to open.
+const EXPLORER_BY_CHAIN: Record<string, { base: string; label: string }> = {
+  solana:    { base: 'https://solscan.io/account/',   label: 'Solscan' },
+  ethereum:  { base: 'https://etherscan.io/address/', label: 'Etherscan' },
+  bsc:       { base: 'https://bscscan.com/address/',  label: 'BscScan' },
+  polygon:   { base: 'https://polygonscan.com/address/', label: 'PolygonScan' },
+  base:      { base: 'https://basescan.org/address/', label: 'BaseScan' },
+  arbitrum:  { base: 'https://arbiscan.io/address/',  label: 'Arbiscan' },
+  optimism:  { base: 'https://optimistic.etherscan.io/address/', label: 'Optimism Etherscan' },
+  avalanche: { base: 'https://snowtrace.io/address/', label: 'SnowTrace' },
+};
+function explorerForChain(chain: string, address: string): { url: string; label: string } {
+  const cfg = EXPLORER_BY_CHAIN[chain.toLowerCase()] ?? EXPLORER_BY_CHAIN.ethereum;
+  return { url: `${cfg.base}${address}`, label: cfg.label };
+}
+
 interface TokenInfo {
   name: string; symbol: string; chain: string; price: number;
   priceChange24h: number; volume24h: number; marketCap: number;
@@ -98,7 +118,7 @@ function getRadius(n: BubbleNode, W: number, H: number): number {
 
 // ─── Wallet Panel Slide-in ────────────────────────────────────────────────────
 
-function WalletPanel({ node, onClose }: { node: BubbleNode; onClose: () => void }) {
+function WalletPanel({ node, chain, onClose }: { node: BubbleNode; chain: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const addr = node.address ?? '';
 
@@ -173,13 +193,17 @@ function WalletPanel({ node, onClose }: { node: BubbleNode; onClose: () => void 
           </div>
         )}
 
-        {/* External link */}
-        {addr && (
-          <a href={`https://solscan.io/account/${addr}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs text-[#0A1EFF] hover:text-blue-400 transition-colors">
-            <ExternalLink className="w-3.5 h-3.5" />View on Solscan
-          </a>
-        )}
+        {/* External link — chain-aware. Was hardcoded to Solscan and
+            404'd for every non-Solana holder. */}
+        {addr && (() => {
+          const { url, label } = explorerForChain(chain, addr);
+          return (
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-xs text-[#0A1EFF] hover:text-blue-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />View on {label}
+            </a>
+          );
+        })()}
       </div>
     </div>
   );
@@ -267,6 +291,24 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
         .on('drag', (ev, n) => { n.fx = ev.x; n.fy = ev.y; })
         .on('end', (ev, n) => { if (!ev.active) sim.alphaTarget(0); if (n.id !== 'center') { n.fx = null; n.fy = null; } })
       );
+
+    // Native SVG <title> hover tooltips. Zero-cost vs a custom div
+    // overlay; readable by screen readers + standard browser hover.
+    // Industry-standard rich D3 tooltips (positioned div with token
+    // logos / sparklines) is a follow-up; this gets us the address +
+    // type + holdings on hover today.
+    nodeSel.append('title').text(n => {
+      const lines: string[] = [];
+      const name = n.entityName || n.entity || n.label || n.id;
+      lines.push(name);
+      if (n.entityLabel) lines.push(`Entity: ${n.entityLabel}`);
+      lines.push(`Type: ${TYPE_LABELS[n.type] ?? n.type}`);
+      lines.push(`Holdings: ${n.percentage.toFixed(3)}%`);
+      if (n.address) lines.push(`Address: ${n.address}`);
+      if (n.verified) lines.push('Verified');
+      if (n.type === 'scammer') lines.push('Flagged: scammer / rug puller');
+      return lines.join('\n');
+    });
 
     // Labels
     const labelSel = g.append('g').selectAll<SVGTextElement, BubbleNode>('text')
@@ -570,7 +612,13 @@ export default function BubbleMapPage() {
                 )}
               </div>
               <D3ForceGraph data={mapData} onNodeClick={setSelectedNode} selected={selectedNode} fullscreen={isFullscreen} pinnedAddress={pinnedAddress} />
-              {selectedNode && <WalletPanel node={selectedNode} onClose={() => setSelectedNode(null)} />}
+              {selectedNode && (
+                <WalletPanel
+                  node={selectedNode}
+                  chain={mapData.tokenInfo.chain || chain}
+                  onClose={() => setSelectedNode(null)}
+                />
+              )}
               <button onClick={() => setIsFullscreen(v => !v)}
                 className="absolute top-3 right-3 p-2 bg-[#0f1320]/80 border border-white/[0.08] rounded-lg hover:bg-white/[0.06] transition-colors backdrop-blur-sm z-10">
                 {isFullscreen ? <Minimize2 className="w-4 h-4 text-gray-400" /> : <Maximize2 className="w-4 h-4 text-gray-400" />}
