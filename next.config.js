@@ -19,12 +19,9 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // ESLint config is currently broken (circular reference in @eslint/eslintrc).
-    // Leaving ignore-on until the flat-config migration so builds aren't held
-    // hostage by tooling we can't run.
-    ignoreDuringBuilds: true,
-  },
+  // Next 16 dropped the in-config `eslint` key — lint is no longer wired
+  // into the build pipeline. Run `npx eslint` separately (currently broken
+  // by an upstream circular-config bug in @eslint/eslintrc; tracked).
   typescript: {
     // tsc --noEmit is clean today — fail the build on any new TS error
     // instead of silently shipping broken types.
@@ -69,12 +66,9 @@ const nextConfig = {
         { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
       ],
     },
-    {
-      source: '/_next/static/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-      ],
-    },
+    // Next 16 manages /_next/static/* cache headers itself (immutable hashed
+    // bundles already get max-age=31536000); a custom override here triggers
+    // a build warning + can break dev HMR. Drop and let the framework own it.
     {
       source: '/api/auth/:path*',
       headers: [
