@@ -11,6 +11,18 @@ function sanitizeSymbol(s: unknown, maxLen = 16): string {
   return s.replace(/[ -]/g, ' ').replace(/[\r\n\t"\\}]/g, ' ').trim().slice(0, maxLen);
 }
 
+// Accepts EVM 0x… 40-hex or Solana base58 32-44 char addresses. Used as a
+// gate before we forward an address into a billable Anthropic prompt.
+const ADDRESS_RE = /^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
+
+// Numeric coercion for prompt-injection-safe rendering. Caps the value so
+// a crafted huge number can't blow up the prompt budget.
+function sanitizeNumeric(n: unknown): string {
+  const v = typeof n === 'number' ? n : parseFloat(String(n ?? '0'));
+  if (!Number.isFinite(v) || v < 0) return '0';
+  return Math.min(v, 1e15).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
 // withTierGate('pro') — DNA analysis calls Sonnet 4.6 (billable);
 // the route had zero auth or rate-limit so a script could iterate
 // addresses and burn $150-300/day in Anthropic spend. Pro+ only now.

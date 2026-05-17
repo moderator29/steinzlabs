@@ -77,7 +77,10 @@ export async function subscribeToPush(userId: string): Promise<SubscribeResult> 
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        // TS 5.7 tightened ArrayBufferLike → ArrayBuffer; the runtime
+        // accepts a Uint8Array but the DOM lib type now insists on
+        // BufferSource backed by a real ArrayBuffer. Cast is safe.
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
       });
     }
   } catch (err) {

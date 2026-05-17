@@ -168,6 +168,11 @@ function parseSolanaTokenSecurity(t: Record<string, unknown>): TokenSecurityResu
     ownerAddress: '',
     holderCount: typeof t.holder_count === 'string' ? parseInt(t.holder_count) : (typeof t.holder_count === 'number' ? t.holder_count : 0),
     lpHolders: Array.isArray(t.lp_holders) ? t.lp_holders : [],
+    // Solana payload doesn't surface creator-as-top-holder concentration the
+    // way the EVM payload does; default to safe values so downstream
+    // consumers don't have to null-guard the field.
+    creatorIsTopHolder: false,
+    creatorHoldingPct: 0,
     trustScore: score,
     safetyLevel,
     safetyColor,
