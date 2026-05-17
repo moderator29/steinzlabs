@@ -46,6 +46,42 @@ interface ChatMessage {
 
 type SubPage = null | 'privacy' | 'help' | 'preferences' | 'ai-support' | 'security' | 'edit-profile' | 'telegram';
 
+function FollowersTile() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setCount(null); return; }
+    let cancelled = false;
+    Promise.resolve(
+      supabase
+        .from('social_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', user.id)
+        .eq('status', 'accepted'),
+    )
+      .then(({ count: c, error }) => {
+        if (cancelled) return;
+        if (error) { setCount(null); return; }
+        setCount(c ?? 0);
+      })
+      .catch(() => { if (!cancelled) setCount(null); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  const username = (user as { user_metadata?: { username?: string } } | null)?.user_metadata?.username;
+  return (
+    <button
+      type="button"
+      onClick={() => username && router.push(`/u/${username}/followers`)}
+      className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0A1EFF]/40 transition-colors"
+      aria-label="View followers"
+    >
+      <div className="text-lg font-bold text-[#0A1EFF]">{count === null ? '—' : count}</div>
+      <div className="text-[10px] text-gray-400">Followers</div>
+    </button>
+  );
+}
+
 export default function ProfileTab() {
   const { user, signOut, refreshProfile } = useAuth();
   const { tier, isPaid, verifiedBadge } = useTier();
@@ -289,11 +325,16 @@ export default function ProfileTab() {
   });
 
   useEffect(() => {
-    // Pull real login history from Supabase
+    // Pull real login history from Supabase. Audit fix: previously had no
+    // unmount cleanup — a slow response after navigation away would fire
+    // setLoginActivity on an unmounted component (React warning + leak).
     if (!user?.id) return;
-    fetch(`/api/account/login-activity?userId=${user.id}`)
+    let cancelled = false;
+    const ctrl = new AbortController();
+    fetch(`/api/account/login-activity?userId=${user.id}`, { signal: ctrl.signal })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
+        if (cancelled) return;
         if (Array.isArray(data?.sessions) && data.sessions.length > 0) {
           const mapped = data.sessions.map((s: { user_agent?: string; created_at: string; ip?: string; current?: boolean }) => ({
             device: s.user_agent?.split('(')[0]?.trim() || 'Unknown device',
@@ -304,7 +345,13 @@ export default function ProfileTab() {
           setLoginActivity(mapped);
         }
       })
-      .catch(err => console.error('[ProfileTab] login activity fetch failed:', err));
+      .catch(err => {
+        if (cancelled) return;
+        // Abort on unmount is expected; log only real failures.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('[ProfileTab] login activity fetch failed:', err);
+      });
+    return () => { cancelled = true; ctrl.abort(); };
   }, [user?.id]);
 
   // Bug §2.20 — hydrate Following count from user_whale_follows. Fires
@@ -316,15 +363,20 @@ export default function ProfileTab() {
       return;
     }
     let cancelled = false;
-    supabase
-      .from('user_whale_follows')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+    // Audit fix: .then() chain without .catch() leaves promise rejections
+    // unhandled (crashes some browsers/Node). Wrap with explicit catch.
+    Promise.resolve(
+      supabase
+        .from('user_whale_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    )
       .then(({ count, error }) => {
         if (cancelled) return;
         if (error) { setFollowingCount(null); return; }
         setFollowingCount(count ?? 0);
-      });
+      })
+      .catch(() => { if (!cancelled) setFollowingCount(null); });
     return () => { cancelled = true; };
   }, [user?.id]);
 
@@ -1390,7 +1442,7 @@ export default function ProfileTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
         {/* §2.19 — Rank / Win Rate / Points were reading from localStorage
             which (a) isn't durable across devices and (b) can be tampered.
             Points + alert-result storage is future server-side work; until
@@ -1422,6 +1474,12 @@ export default function ProfileTab() {
           </div>
           <div className="text-[10px] text-gray-400">Following</div>
         </button>
+        {/* Followers tile (5th) — Section 2 master prompt required a
+            5-container layout (3 existing + Followers + Following).
+            Counts come from social_follows where following_id=auth user
+            and status='accepted'. Audit Agent 12 flagged Followers
+            container as missing. */}
+        <FollowersTile />
       </div>
 
       {user?.email && (

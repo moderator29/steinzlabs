@@ -10,6 +10,8 @@ import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { Disclaimer } from '@/components/landing/Disclaimer';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { SocialSection } from '@/components/landing/SocialSection';
+import { OnboardingMention } from '@/components/landing/OnboardingMention';
 
 export default function LandingPage() {
   return (
@@ -21,6 +23,8 @@ export default function LandingPage() {
         <VTXSection />
         <FeatureShowcase />
         <SecurityShowcase />
+        <SocialSection />
+        <OnboardingMention />
         <StatsSection />
         <FAQSection />
         <CTASection />

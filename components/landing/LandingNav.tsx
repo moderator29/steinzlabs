@@ -50,13 +50,20 @@ export function LandingNav() {
                 Cult lore before signing up. Crimson accent matches the
                 cult brand color and visually distinguishes from the
                 blue 'Get Started' primary CTA. */}
+            {/* NakaCult landing toggle — now visible at every breakpoint
+                (was `hidden md:inline-flex`, which hid it on phones). The
+                compact mobile variant drops the label to a sigil-only
+                pill at <sm so the nav row still fits next to the
+                hamburger; from sm+ the full "NakaCult" label returns. */}
             <Link
               href="/naka-cult"
-              className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12px] font-bold uppercase tracking-wider text-white/90 border border-[#DC143C]/50 hover:border-[#DC143C] hover:text-white transition-all"
+              aria-label="Enter NakaCult"
+              className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-full text-[11px] sm:text-[12px] font-bold uppercase tracking-wider text-white/90 border border-[#DC143C]/50 hover:border-[#DC143C] hover:text-white transition-all"
               style={{ background: 'linear-gradient(135deg,rgba(220,20,60,0.18),rgba(220,20,60,0.06))', boxShadow: '0 0 14px rgba(220,20,60,0.18)' }}
             >
-              <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-[#DC143C] shadow-[0_0_8px_rgba(220,20,60,0.8)]" />
-              NakaCult
+              <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-[#DC143C] shadow-[0_0_8px_rgba(220,20,60,0.8)] animate-pulse" />
+              <span className="hidden sm:inline">NakaCult</span>
+              <span className="sm:hidden">Cult</span>
             </Link>
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In

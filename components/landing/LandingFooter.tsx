@@ -96,10 +96,10 @@ export function LandingFooter() {
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8"
           style={{ borderTop: '1px solid rgba(255,255,255,.06)' }}>
-          <p className="text-[11px]" style={{ color: '#080e20' }}>
+          <p className="text-[11px]" style={{ color: 'var(--nl-text-tertiary,#9CA3AF)' }}>
             &copy; {new Date().getFullYear()} Naka Labs. All rights reserved.
           </p>
-          <div className="flex items-center gap-3 text-[11px]" style={{ color: '#080e20' }}>
+          <div className="flex items-center gap-3 text-[11px]" style={{ color: 'var(--nl-text-tertiary,#9CA3AF)' }}>
             <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
             <span>·</span>
             <Link href="/terms" className="hover:text-white/40 transition-colors">Terms of Service</Link>
