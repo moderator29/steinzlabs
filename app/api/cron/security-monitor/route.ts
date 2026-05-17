@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
           );
         processed++;
       } catch (err) {
-        console.error(`[${NAME}] token ${chain}:${token_id} failed`, err);
+        logger.error({ err, chain, token_id }, `[${NAME}] token failed`);
       }
     }
 

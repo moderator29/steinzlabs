@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -55,7 +56,7 @@ async function getRateLimitInfo(ip: string): Promise<{ remaining: number; total:
         resetAt,
       };
     } catch (err) {
-      console.error("[vtx.rateLimit.get]", err);
+      logger.error({ err: err }, "[vtx.rateLimit.get]");
     }
   }
 
@@ -80,7 +81,7 @@ async function incrementUsage(ip: string): Promise<void> {
       if (count === 1) await redis.expire(key, 86400);
       return;
     } catch (err) {
-      console.error("[vtx.rateLimit.incr]", err);
+      logger.error({ err: err }, "[vtx.rateLimit.incr]");
     }
   }
 
@@ -1150,8 +1151,32 @@ export async function POST(request: NextRequest) {
     };
     const safeCurrentPage = sanitizeCtx(context?.currentPage, 64);
     const safeCurrentToken = sanitizeCtx(context?.currentToken, 32);
+    // Authenticated users get a 1-line portfolio summary injected into the
+    // system prompt so the agent can answer "what's in my portfolio?"
+    // questions without a separate tool roundtrip. Falls back silently when
+    // the query fails or the user has nothing — never blocks the response.
+    let portfolioContextStr = '';
+    if (callerUserId) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: pos } = await admin
+          .from('positions')
+          .select('token_symbol, value_usd')
+          .eq('user_id', callerUserId)
+          .order('value_usd', { ascending: false })
+          .limit(10);
+        if (pos && pos.length > 0) {
+          const totalUsd = pos.reduce((s, p) => s + (Number(p.value_usd) || 0), 0);
+          const topSymbols = pos.slice(0, 5).map((p) => p.token_symbol).filter(Boolean).join(', ');
+          portfolioContextStr = ` | User Portfolio: ${pos.length} positions, $${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} total${topSymbols ? `, top: ${topSymbols}` : ''}`;
+        }
+      } catch {
+        // Best-effort — portfolio context is a nice-to-have, not load-bearing.
+      }
+    }
+
     const platformContextStr = context
-      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}${portfolioContextStr}`
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────
@@ -1201,7 +1226,7 @@ export async function POST(request: NextRequest) {
             const scrubbed = sanitizeVtxResponse(scrubBranding(fullText));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
           } catch (streamErr) {
-            console.error('[VTX-AI] Stream error:', streamErr instanceof Error ? streamErr.message : streamErr);
+            logger.error({ err: streamErr instanceof Error ? streamErr.message : streamErr }, '[VTX-AI] Stream error:');
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
           } finally {
             controller.close();
@@ -1351,7 +1376,7 @@ export async function POST(request: NextRequest) {
           };
         }
       } catch (err) {
-        console.error('[vtx-ai] Token card build failed:', err);
+        logger.error({ err: err }, '[vtx-ai] Token card build failed:');
       }
     }
 
@@ -1382,7 +1407,7 @@ export async function POST(request: NextRequest) {
           needsWallet: !walletForSwap,
         };
       } catch (err) {
-        console.error('[vtx-ai] Swap card build failed:', err);
+        logger.error({ err: err }, '[vtx-ai] Swap card build failed:');
       }
     }
 
@@ -1406,7 +1431,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     const isDev = process.env.NODE_ENV === 'development';
-    console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+    logger.error({ msg, stack: err instanceof Error ? err.stack : undefined }, '[VTX] Error:');
     Sentry.captureException(err);
 
     // Surface specific errors
