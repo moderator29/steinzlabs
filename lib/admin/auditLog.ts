@@ -22,6 +22,10 @@ export type AdminAuditAction =
   | 'ban'
   | 'unban'
   | 'delete'
+  | 'copy_rule_create'
+  | 'copy_rule_update'
+  | 'copy_rule_delete'
+  | 'copy_trade_execute'
   | 'other';
 
 export interface AdminAuditEntry {
