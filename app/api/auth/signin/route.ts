@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     // 10 attempts per IP per minute. Brute-force attackers were unthrottled
     // here; Vercel concurrency alone is not a security boundary.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = rateLimit(`auth:signin:${ip}`, { interval: 60_000, maxRequests: 10 });
+    const rl = await rateLimit(`auth:signin:${ip}`, { interval: 60_000, maxRequests: 10 });
     if (!rl.success) return rateLimitResponse(rl);
 
     const { email, password } = await request.json();

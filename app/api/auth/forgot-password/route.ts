@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     // 3 reset-email requests per IP per hour. Stops email-enumeration probes
     // and protects the SendGrid quota.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = rateLimit(`auth:forgot:${ip}`, { interval: 3_600_000, maxRequests: 3 });
+    const rl = await rateLimit(`auth:forgot:${ip}`, { interval: 3_600_000, maxRequests: 3 });
     if (!rl.success) return rateLimitResponse(rl);
 
     const { email } = await request.json();
