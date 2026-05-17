@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export function verifyCron(request: NextRequest): { ok: boolean; response?: Response } {
@@ -75,6 +76,15 @@ export async function logCronExecution(
   errorMessage?: string,
   itemsProcessed?: number,
 ): Promise<void> {
+  // Surface any failed/timeout cron to Sentry so an on-call alert fires.
+  // Logging-only-to-DB hid silent prod failures behind a table no one watches.
+  if (status === "failed" || status === "timeout") {
+    Sentry.captureMessage(`Cron ${cronName} ${status}: ${errorMessage ?? "no message"}`, {
+      level: status === "timeout" ? "warning" : "error",
+      tags: { cron: cronName, cron_status: status },
+      extra: { durationMs, itemsProcessed: itemsProcessed ?? null },
+    });
+  }
   try {
     const supabase = getSupabaseAdmin();
     await supabase.from("cron_execution_log").insert({
@@ -86,6 +96,25 @@ export async function logCronExecution(
       completed_at: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("[cron] failed to log execution", err);
+    Sentry.captureException(err, { tags: { source: "cron-execution-log", cron: cronName } });
+  }
+}
+
+/**
+ * Wrap a cron handler body so any throw both logs to cron_execution_log and
+ * pages Sentry. Cleaner than copy-pasting the try/catch into every cron.
+ */
+export async function withCronErrorReporting<T>(
+  cronName: string,
+  startedAt: number,
+  body: () => Promise<T>,
+): Promise<T | Response> {
+  try {
+    return await body();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    Sentry.captureException(err, { tags: { cron: cronName, stage: "handler" } });
+    await logCronExecution(cronName, "failed", Date.now() - startedAt, message);
+    return Response.json({ ok: false, job: cronName, error: message }, { status: 500 });
   }
 }
