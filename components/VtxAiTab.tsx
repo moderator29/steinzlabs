@@ -12,6 +12,9 @@ import {
 import { Briefcase, Radio, Loader2, Globe, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { StreamingCursor } from '@/components/vtx/StreamingCursor';
+import { MessageActions } from '@/components/vtx/MessageActions';
+import { SuggestionPills } from '@/components/vtx/SuggestionPills';
 
 // §11 — Replace DexScreener / TradingView iframes with native
 // lightweight-charts. Lazy-loaded so the lightweight-charts bundle
@@ -32,6 +35,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   chart?: ChartInfo;
+  suggestions?: string[];
 }
 
 interface ChatHistoryEntry {
@@ -730,7 +734,7 @@ export default function VtxAiTab() {
             const dataLine = event.split('\n').find(l => l.startsWith('data:'));
             if (!dataLine) continue;
             try {
-              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string };
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown };
               if (json.error) {
                 throw new Error(json.error);
               }
@@ -757,11 +761,19 @@ export default function VtxAiTab() {
                 if (chartTagMatch) {
                   chartInfo = { type: chartTagMatch[1].toLowerCase() as ChartInfo['type'] };
                 }
+                const streamedSuggestions: string[] | undefined = Array.isArray(json.suggestions)
+                  ? (json.suggestions as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 4)
+                  : undefined;
                 setMessages(prev => {
                   const next = [...prev];
                   const last = next[next.length - 1];
                   if (last && last.role === 'assistant') {
-                    next[next.length - 1] = { ...last, content: cleanReply, chart: chartInfo && settings.autoCharts ? chartInfo : undefined };
+                    next[next.length - 1] = {
+                      ...last,
+                      content: cleanReply,
+                      chart: chartInfo && settings.autoCharts ? chartInfo : undefined,
+                      suggestions: streamedSuggestions,
+                    };
                   }
                   return next;
                 });
@@ -820,6 +832,11 @@ export default function VtxAiTab() {
 
         const assistantMsg: Message = { role: 'assistant', content: cleanReply };
         if (chartInfo && settings.autoCharts) assistantMsg.chart = chartInfo;
+        if (Array.isArray(data.suggestions)) {
+          assistantMsg.suggestions = (data.suggestions as unknown[])
+            .filter((s): s is string => typeof s === 'string')
+            .slice(0, 4);
+        }
 
         setMessages(prev => [...prev, assistantMsg]);
         if (settings.messageSound) playChime();
@@ -1155,45 +1172,85 @@ export default function VtxAiTab() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide min-h-0" style={{ maxHeight: settings.focusMode ? '70vh' : '45vh' }}>
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'assistant' && (
-                <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <SteinzLogo size={18} />
-                </div>
-              )}
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20'
-                  : 'glass border border-white/10'
-              }`}>
-                <div className="whitespace-pre-wrap">{msg.role === 'assistant' ? msg.content.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]+\s/gm, '').replace(/^—\s/gm, '') : msg.content}</div>
-                {msg.role === 'assistant' && msg.chart && (
-                  <InlineChart
-                    type={msg.chart.type}
-                    token={msg.chart.token}
-                    address={msg.chart.address}
-                    data={msg.chart.data}
-                  />
+          {messages.map((msg, i) => {
+            const isLastAssistant =
+              msg.role === 'assistant' && i === messages.length - 1;
+            const isStreamingHere = loading && isLastAssistant;
+            const cleanedAssistant =
+              msg.role === 'assistant'
+                ? msg.content
+                    .replace(/\*\*/g, '')
+                    .replace(/\*/g, '')
+                    .replace(/^#{1,6}\s/gm, '')
+                    .replace(/^[-]+\s/gm, '')
+                    .replace(/^—\s/gm, '')
+                : msg.content;
+            return (
+              <div
+                key={i}
+                className={`group flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <SteinzLogo size={18} />
+                  </div>
                 )}
-                {msg.role === 'assistant' && msg.content && (
-                  <button
-                    type="button"
-                    onClick={() => copyMessage(msg.content, i)}
-                    className="mt-2 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-                    title="Copy message"
-                  >
-                    {copiedAt === i ? 'Copied' : 'Copy'}
-                  </button>
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20'
+                      : 'glass border border-white/10'
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap">
+                    {cleanedAssistant}
+                    {isStreamingHere && <StreamingCursor />}
+                  </div>
+                  {msg.role === 'assistant' && msg.chart && (
+                    <InlineChart
+                      type={msg.chart.type}
+                      token={msg.chart.token}
+                      address={msg.chart.address}
+                      data={msg.chart.data}
+                    />
+                  )}
+                  {msg.content && (
+                    <MessageActions
+                      text={msg.content}
+                      role={msg.role}
+                      streaming={isStreamingHere}
+                      onStop={isStreamingHere ? stopGeneration : undefined}
+                      onCopyMarkdown={msg.role === 'assistant' ? () => copyMessage(msg.content, i) : undefined}
+                      onRegenerate={
+                        msg.role === 'assistant' && !isStreamingHere
+                          ? () => {
+                              const prevUser = [...messages.slice(0, i)].reverse().find(m => m.role === 'user');
+                              if (prevUser) sendMessage(prevUser.content);
+                            }
+                          : undefined
+                      }
+                      onEdit={
+                        msg.role === 'user' && !loading
+                          ? () => setMessage(msg.content)
+                          : undefined
+                      }
+                    />
+                  )}
+                  {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && !isStreamingHere && (
+                    <SuggestionPills
+                      suggestions={msg.suggestions}
+                      onPick={(s) => sendMessage(s)}
+                    />
+                  )}
+                </div>
+                {msg.role === 'user' && (
+                  <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <User className="w-3.5 h-3.5 text-gray-400" />
+                  </div>
                 )}
               </div>
-              {msg.role === 'user' && (
-                <div className="w-7 h-7 bg-[#1A2235] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <User className="w-3.5 h-3.5 text-gray-400" />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {loading && (
             <div className="flex gap-3 justify-start items-center">
