@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
+import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
@@ -217,6 +218,30 @@ export default function Dashboard() {
     }
   }, [user]);
 
+  // Onboarding gate — checks profiles.onboarding_completed_at and
+  // mounts the 10-card flow on first sign-in. Replay can be triggered
+  // from Settings by setting onboarding_completed_at back to null
+  // (the OnboardingGate re-reads on prop change).
+  const [onboardedAt, setOnboardedAt] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+        const { data } = await supabase
+          .from('profiles')
+          .select('onboarding_completed_at')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!cancelled) setOnboardedAt((data?.onboarding_completed_at as string | null) ?? null);
+      } catch {
+        if (!cancelled) setOnboardedAt(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   useEffect(() => {
     const fetchMarketStats = async () => {
       try {
@@ -382,6 +407,7 @@ export default function Dashboard() {
 
       <BottomNav activeNav={activeNav} onNavChange={handleNavChange} />
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
+      {onboardedAt === null && <OnboardingGate profileOnboardedAt={onboardedAt} />}
     </div>
   );
 }
