@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
 import { useNavState } from '@/lib/nav/useNavState';
+import { toast } from 'sonner';
 // Naka Labs brand icons — most swap. BookOpen / Tag / SlidersHorizontal /
 // Zap / Loader2 not yet in brand library; stay on lucide.
 import {
@@ -318,8 +319,14 @@ export default function ResearchPage() {
         setPosts(data.posts || []);
         setTotal(data.total || 0);
         setLastUpdated(new Date());
-      } catch {
-        if (!silent) setPosts([]);
+      } catch (err) {
+        // Best-effort Sentry; module-imported dynamically so the page doesn't
+        // crash if Sentry's transport is broken in the user's env.
+        import('@sentry/nextjs').then((s) => s.captureException(err)).catch(() => undefined);
+        if (!silent) {
+          setPosts([]);
+          toast.error(err instanceof Error ? err.message : 'Failed to load research');
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
