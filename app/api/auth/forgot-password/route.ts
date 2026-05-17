@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { generateResetToken } from '@/lib/authTokens';
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-
+    Sentry.captureException(err, { tags: { route: 'auth/forgot-password' } });
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
   }
 }
