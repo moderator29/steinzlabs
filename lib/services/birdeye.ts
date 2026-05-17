@@ -15,7 +15,7 @@ async function get<T>(path: string, chain = 'solana'): Promise<T> {
 
   const res = await fetch(`${BASE}${path}`, {
     headers: headers(chain),
-    signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
+    signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '15000')),
   });
   if (!res.ok) throw new Error(`Birdeye ${path} → ${res.status}`);
   const json = await res.json() as { data: T };
@@ -26,7 +26,7 @@ async function get<T>(path: string, chain = 'solana'): Promise<T> {
 async function getRaw<T>(path: string, chain = 'solana'): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: headers(chain),
-    signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '600000')),
+    signal: AbortSignal.timeout(parseInt(process.env.API_TIMEOUT_MS || '15000')),
   });
   if (!res.ok) throw new Error(`Birdeye ${path} → ${res.status}`);
   return res.json() as Promise<T>;

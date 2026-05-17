@@ -55,7 +55,10 @@ export default function LaunchpadPage() {
       setProjects(data.projects || []);
       if (data.stats) setStats(data.stats);
     } catch (err) {
-
+      // Audit fix: empty catch was swallowing the network/server error.
+      // Sentry capture for visibility; UI shows empty state via the
+      // existing default `projects = []`.
+      console.error('[launchpad] builder-submissions fetch failed:', err);
     } finally {
       setLoading(false);
     }

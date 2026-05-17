@@ -1,26 +1,102 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Users, TrendingUp, Star, Plus, Eye } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, TrendingUp, Star, Plus, Eye, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useRouter } from 'next/navigation';
 
-const TOP_ENTITIES = [
-  { id: 'jump-trading', name: 'Jump Trading', type: 'Market Maker', winRate: 89, description: 'Leading HFT firm and market maker' },
-  { id: 'wintermute', name: 'Wintermute', type: 'Market Maker', winRate: 84, description: 'Top crypto market maker' },
-  { id: 'a16z-crypto', name: 'a16z Crypto', type: 'VC', winRate: 91, description: 'Top-tier crypto VC fund' },
-  { id: 'paradigm', name: 'Paradigm', type: 'VC', winRate: 87, description: 'Crypto-focused investment firm' },
-  { id: 'multicoin-capital', name: 'Multicoin Capital', type: 'VC', winRate: 82, description: 'Research-driven investment fund' },
-  { id: 'alameda-research', name: 'Alameda Research', type: 'Whale', winRate: 78, description: 'Quantitative trading firm' },
-];
+/**
+ * /smart-money — real-data feed of top whales by score (replaces the
+ * prior hardcoded TOP_ENTITIES array that violated CLAUDE.md mock-data
+ * rule). Data source: `whales` table (`/api/whales`) which the
+ * whale-tracker page already consumes. Filters map UI categories to
+ * the table's `entity_type` column.
+ */
+
+interface SmartMoneyEntity {
+  id: string;
+  name: string;
+  type: 'Market Maker' | 'VC' | 'Whale' | string;
+  winRate: number | null;
+  description: string;
+  address?: string;
+}
+
+const FILTERS = [
+  { key: 'all',           label: 'All' },
+  { key: 'vc',            label: 'VCs' },
+  { key: 'market_maker',  label: 'Market Makers' },
+  { key: 'whale',         label: 'Whales' },
+] as const;
+type FilterKey = (typeof FILTERS)[number]['key'];
 
 export default function SmartMoneyPage() {
   const router = useRouter();
-  const [followed, setFollowed] = useState<string[]>([]);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'vc' | 'market_maker' | 'whale'>('all');
-  const [loading, setLoading] = useState<string | null>(null);
+  const [entities, setEntities] = useState<SmartMoneyEntity[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [followed, setFollowed] = useState<Set<string>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [loadingFollow, setLoadingFollow] = useState<string | null>(null);
+  const [totalTracked, setTotalTracked] = useState<number>(0);
 
-  const filteredEntities = TOP_ENTITIES.filter((e) => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/whales?limit=24&sort=whale_score', {
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) {
+          if (!cancelled) setError('Could not load smart-money feed');
+          return;
+        }
+        const json = (await res.json()) as {
+          whales?: Array<{
+            id?: string;
+            address?: string;
+            label?: string | null;
+            entity_type?: string | null;
+            win_rate?: number | null;
+            whale_score?: number | null;
+            chain?: string;
+          }>;
+          total?: number;
+        };
+        if (cancelled) return;
+        const mapped: SmartMoneyEntity[] = (json.whales ?? []).map((w) => ({
+          id: w.id ?? w.address ?? '',
+          name: w.label ?? `${(w.address ?? '').slice(0, 6)}…${(w.address ?? '').slice(-4)}`,
+          type: (w.entity_type ?? 'Whale') as SmartMoneyEntity['type'],
+          winRate: typeof w.win_rate === 'number' ? Math.round(w.win_rate) : null,
+          description: w.chain ? `${w.chain.toUpperCase()} · score ${w.whale_score ?? '—'}` : `Score ${w.whale_score ?? '—'}`,
+          address: w.address ?? undefined,
+        }));
+        setEntities(mapped);
+        setTotalTracked(json.total ?? mapped.length);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Network error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Restore followed entities from server (real persistence — was previously
+  // local-only state, lost on refresh).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/moneyRadar/follow', { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { followed?: Array<{ entity_id?: string }> };
+        const ids = new Set((json.followed ?? []).map((r) => r.entity_id ?? '').filter(Boolean));
+        if (!cancelled) setFollowed(ids);
+      } catch { /* non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = (entities ?? []).filter((e) => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'vc') return e.type === 'VC';
     if (activeFilter === 'market_maker') return e.type === 'Market Maker';
@@ -28,67 +104,64 @@ export default function SmartMoneyPage() {
     return true;
   });
 
-  const followEntity = async (entityId: string, entityName: string, entityType: string) => {
-    setLoading(entityId);
+  const followEntity = async (entity: SmartMoneyEntity) => {
+    setLoadingFollow(entity.id);
     try {
-      const wallet = localStorage.getItem('wallet_address') || '';
       const res = await fetch('/api/moneyRadar/follow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityId,
-          entityName,
-          entityType,
-          userWallet: wallet,
+          entityId: entity.id,
+          entityName: entity.name,
+          entityType: entity.type,
+          address: entity.address,
         }),
       });
       if (res.ok) {
-        setFollowed((prev) => [...prev, entityId]);
+        setFollowed((prev) => {
+          const next = new Set(prev);
+          next.add(entity.id);
+          return next;
+        });
       }
-    } catch (err) {
-      console.error('Failed to follow entity:', err);
+    } catch {
+      /* Best-effort; UI stays in not-followed state */
     } finally {
-      setLoading(null);
+      setLoadingFollow(null);
     }
   };
 
+  const avgWinRate = entities && entities.length
+    ? Math.round(
+        entities.filter((e) => typeof e.winRate === 'number').reduce((s, e) => s + (e.winRate ?? 0), 0)
+          / Math.max(1, entities.filter((e) => typeof e.winRate === 'number').length),
+      )
+    : null;
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <div className="min-h-screen bg-[var(--nl-canvas-base)] p-6">
       <div className="max-w-6xl mx-auto">
         <PageHeader
           title="Smart Money"
-          description="Follow top institutions and copy their trades in real-time"
+          description="Follow top whales by composite score. Real-time on-chain activity, copy-trade ready."
         />
 
-        {/* Stats */}
+        {/* Stats — real numbers from the feed, no fabricated values */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-[#141824] rounded-lg p-4 border border-[#1E2433]">
-            <div className="text-gray-400 text-sm">Entities Tracked</div>
-            <div className="text-white text-2xl font-bold mt-1">127</div>
-            <div className="text-green-500 text-xs mt-1">+12 this week</div>
-          </div>
-          <div className="bg-[#141824] rounded-lg p-4 border border-[#1E2433]">
-            <div className="text-gray-400 text-sm">You Follow</div>
-            <div className="text-white text-2xl font-bold mt-1">{followed.length}</div>
-            <div className="text-gray-500 text-xs mt-1">Active monitors</div>
-          </div>
-          <div className="bg-[#141824] rounded-lg p-4 border border-[#1E2433]">
-            <div className="text-gray-400 text-sm">Avg Win Rate</div>
-            <div className="text-white text-2xl font-bold mt-1">85%</div>
-            <div className="text-gray-500 text-xs mt-1">Top entities</div>
-          </div>
+          <Stat label="Entities Tracked" value={totalTracked.toLocaleString()} hint="From whales table" />
+          <Stat label="You Follow" value={String(followed.size)} hint="Active monitors" />
+          <Stat label="Avg Win Rate" value={avgWinRate === null ? '—' : `${avgWinRate}%`} hint="Across loaded entities" />
         </div>
 
-        {/* Filters */}
         <div className="flex gap-2 mb-6">
-          {([['all', 'All'], ['vc', 'VCs'], ['market_maker', 'Market Makers'], ['whale', 'Whales']] as [typeof activeFilter, string][]).map(([filter, label]) => (
+          {FILTERS.map(({ key, label }) => (
             <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
+              key={key}
+              onClick={() => setActiveFilter(key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeFilter === filter
-                  ? 'bg-[#0A1EFF] text-white'
-                  : 'bg-[#141824] text-gray-400 hover:text-white border border-[#1E2433]'
+                activeFilter === key
+                  ? 'bg-[var(--nl-blue,#0A1EFF)] text-white'
+                  : 'bg-[var(--nl-canvas-slightly-elev,#141824)] text-slate-300 hover:text-white border border-[var(--nl-border-dark,#1E2433)]'
               }`}
             >
               {label}
@@ -96,71 +169,97 @@ export default function SmartMoneyPage() {
           ))}
         </div>
 
-        {/* Entity Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {filteredEntities.map((entity) => (
-            <div
-              key={entity.id}
-              className="bg-[#141824] rounded-lg p-5 border border-[#1E2433] hover:border-[#0A1EFF]/50 transition-all"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center">
-                    <Users size={20} className="text-[#0A1EFF]" />
+        {error ? (
+          <div className="text-sm text-red-400">{error}</div>
+        ) : entities === null ? (
+          <div className="flex items-center gap-2 text-sm text-slate-400" aria-busy="true">
+            <Loader2 className="w-4 h-4 animate-spin" />Loading…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-sm text-slate-400 italic">No entities match this filter yet.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filtered.map((entity) => {
+              const isFollowed = followed.has(entity.id);
+              return (
+                <div
+                  key={entity.id}
+                  className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-5 border border-[var(--nl-border-dark,#1E2433)] hover:border-[var(--nl-blue,#0A1EFF)]/50 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-[var(--nl-blue,#0A1EFF)]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Users size={20} className="text-[var(--nl-blue,#0A1EFF)]" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-white font-bold truncate">{entity.name}</h3>
+                        <span className="text-xs text-slate-400">{entity.type}</span>
+                      </div>
+                    </div>
+                    {entity.winRate !== null && (
+                      <div className="text-right ml-2 flex-shrink-0">
+                        <div className="text-emerald-400 font-bold text-lg">{entity.winRate}%</div>
+                        <div className="text-slate-500 text-xs">win rate</div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="text-white font-bold">{entity.name}</h3>
-                    <span className="text-xs text-gray-400">{entity.type}</span>
+
+                  <p className="text-slate-300 text-sm mb-4">{entity.description}</p>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => router.push(`/dashboard/whale-tracker?address=${entity.address ?? entity.id}`)}
+                      className="flex-1 bg-[var(--nl-canvas-base,#0A0E1A)] hover:bg-[var(--nl-border-dark,#1E2433)] text-slate-300 hover:text-white border border-[var(--nl-border-dark,#1E2433)] px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                      aria-label={`View ${entity.name}`}
+                    >
+                      <Eye size={14} />
+                      View
+                    </button>
+                    <button
+                      onClick={() => followEntity(entity)}
+                      disabled={loadingFollow === entity.id || isFollowed}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                        isFollowed
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white'
+                      }`}
+                      aria-label={isFollowed ? `Following ${entity.name}` : `Follow ${entity.name}`}
+                    >
+                      {isFollowed ? (
+                        <><Star size={14} className="fill-current" /> Following</>
+                      ) : (
+                        <><Plus size={14} /> Follow</>
+                      )}
+                    </button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-green-500 font-bold text-lg">{entity.winRate}%</div>
-                  <div className="text-gray-500 text-xs">win rate</div>
-                </div>
-              </div>
+              );
+            })}
+          </div>
+        )}
 
-              <p className="text-gray-400 text-sm mb-4">{entity.description}</p>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => router.push(`/dna-analyzer?entity=${entity.id}`)}
-                  className="flex-1 bg-[#0A0E1A] hover:bg-[#1E2433] text-gray-400 hover:text-white border border-[#1E2433] px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <Eye size={14} />
-                  View
-                </button>
-                <button
-                  onClick={() => followEntity(entity.id, entity.name, entity.type)}
-                  disabled={loading === entity.id || followed.includes(entity.id)}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                    followed.includes(entity.id)
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                      : 'bg-[#0A1EFF] hover:bg-[#0916CC] text-white'
-                  }`}
-                >
-                  {followed.includes(entity.id) ? (
-                    <><Star size={14} className="fill-current" /> Following</>
-                  ) : (
-                    <><Plus size={14} /> Follow</>
-                  )}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {followed.length > 0 && (
-          <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-green-400">
+        {followed.size > 0 && (
+          <div className="mt-6 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-emerald-400">
               <TrendingUp size={18} />
               <span className="font-medium">Money Radar Active</span>
             </div>
-            <p className="text-gray-400 text-sm mt-1">
-              You are now tracking {followed.length} entity/entities. You&apos;ll receive alerts when they make significant moves.
+            <p className="text-slate-300 text-sm mt-1">
+              Tracking {followed.size} {followed.size === 1 ? 'entity' : 'entities'}. You&apos;ll receive alerts on significant moves.
             </p>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-4 border border-[var(--nl-border-dark,#1E2433)]">
+      <div className="text-slate-400 text-sm">{label}</div>
+      <div className="text-white text-2xl font-bold mt-1 tabular-nums">{value}</div>
+      {hint ? <div className="text-slate-500 text-xs mt-1">{hint}</div> : null}
     </div>
   );
 }
