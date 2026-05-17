@@ -8,7 +8,7 @@ import {
   Wallet, User, Menu, X, TrendingDown, Activity, ChartBar as BarChart3,
 } from '@/components/icons/brand';
 import {
-  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
+  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -108,6 +108,7 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', href: null },
+    { id: 'find', icon: Search, label: 'Find', href: '/discover' },
     { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent', href: '/dashboard/vtx-ai' },
     { id: 'wallet', icon: Wallet, label: 'Wallet', href: null },
     { id: 'profile', icon: User, label: 'Profile', href: null },
@@ -127,7 +128,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         }}
       >
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
