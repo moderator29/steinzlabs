@@ -4,6 +4,7 @@ import { Shield, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useNavState } from '@/lib/nav/useNavState';
 
 interface ScanResult {
   contract: string;
@@ -57,6 +58,11 @@ export default function SecurityPage() {
   const router = useRouter();
   const [scanInput, setScanInput] = useState('');
   const [selectedChain, setSelectedChain] = useState('ethereum');
+  useNavState<{ selectedChain: string }>(
+    'security',
+    () => ({ selectedChain }),
+    (saved) => { if (saved.selectedChain) setSelectedChain(saved.selectedChain); },
+  );
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);

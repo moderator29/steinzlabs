@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BackButton from "@/components/ui/BackButton";
+import { useNavState } from "@/lib/nav/useNavState";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -582,6 +583,11 @@ type Tab = "criteria" | "feed" | "history";
 
 export default function SniperBotPage() {
   const [tab, setTab] = useState<Tab>("criteria");
+  useNavState<{ tab: Tab }>(
+    'sniper-bot',
+    () => ({ tab }),
+    (saved) => { if (saved.tab) setTab(saved.tab); },
+  );
   const [criteria, setCriteria] = useState<SniperCriteria[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [platformState, setPlatformState] = useState<PlatformState | null>(null);

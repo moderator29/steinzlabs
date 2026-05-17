@@ -22,7 +22,28 @@ import {
   AlertTriangle, ExternalLink, Loader2, RefreshCw, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { LpLockPanel } from '@/components/security/LpLockPanel';
+import { TriangulationBadgeStack } from '@/components/security/TriangulationBadgeStack';
+import { DeployerHistoryPanel } from '@/components/security/DeployerHistoryPanel';
 import { evaluateLpLock, type LpLockRecord } from '@/lib/security/lpLockWindow';
+
+interface TriangulationResponse {
+  verdict: {
+    honeypot: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    honeypotSources: string[];
+    safeSources: string[];
+  };
+}
+
+interface DeployerResponse {
+  available: boolean;
+  trustScore?: number;
+  band?: 'pristine' | 'clean' | 'caution' | 'dangerous' | 'serial-rugger';
+  totalDeployed?: number;
+  rugged?: number;
+  abandoned?: number;
+  active?: number;
+}
 
 interface SecurityScanResponse {
   scan_type: 'token';
@@ -254,6 +275,29 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
   const [data, setData] = useState<SecurityScanResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [triangulation, setTriangulation] = useState<TriangulationResponse['verdict'] | null>(null);
+  const [deployer, setDeployer] = useState<DeployerResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/security/triangulation?chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(address)}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as TriangulationResponse;
+        if (!cancelled) setTriangulation(json.verdict);
+      } catch { /* triangulation unavailable — panel hides */ }
+    })();
+    (async () => {
+      try {
+        const res = await fetch(`/api/security/deployer-history?chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(address)}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as DeployerResponse;
+        if (!cancelled) setDeployer(json);
+      } catch { /* deployer history unavailable */ }
+    })();
+    return () => { cancelled = true; };
+  }, [chain, address]);
 
   const scan = async () => {
     setLoading(true);
@@ -318,13 +362,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
   const ToneIcon = tone.Icon;
   const facts = chain === 'solana' ? readSolanaFacts(data.raw) : readEvmFacts(data.raw);
 
-  // Derive LP lock records from GoPlus lp_holders (EVM only — Solana
-  // GoPlus payload does not surface lock metadata in the same shape).
-  // Each record covers the locked portion of an LP holder; we map the
-  // GoPlus `tag` to our locker enum and treat `locked_detail[].end_time`
-  // as the unlock timestamp when present. Holders without a locked
-  // portion or end_time are skipped — pure-presentation panel only
-  // shows real data.
+  // Derive LP lock records from GoPlus lp_holders (EVM only).
   let lpLockRecords: LpLockRecord[] = [];
   if (chain !== 'solana') {
     const rawHolders = Array.isArray(data.raw.lp_holders)
@@ -348,7 +386,6 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
         : 'other';
       const details = Array.isArray(h.locked_detail) ? h.locked_detail : [];
       if (details.length === 0) {
-        // Locked but no end_time — record with sentinel unlockAt = now+forever-ish so it still counts as locked
         lpLockRecords.push({ locker, unlockAt: Math.floor(Date.now() / 1000) + 10 * 365 * 86400, lpShare: share, owner: h.address ?? null });
         continue;
       }
@@ -431,6 +468,18 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
         </div>
       )}
 
+      {triangulation && (
+        <div className="mb-3 flex items-center gap-2">
+          <TriangulationBadgeStack
+            honeypot={triangulation.honeypot}
+            confidence={triangulation.confidence}
+            honeypotSources={triangulation.honeypotSources}
+            safeSources={triangulation.safeSources}
+          />
+          <span className="text-[10px] text-slate-400">Source triangulation</span>
+        </div>
+      )}
+
       {lpVerdict && (
         <div className="mb-3">
           <LpLockPanel
@@ -439,6 +488,19 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
             daysUntilUnlock={lpVerdict.daysUntilUnlock}
             severity={lpVerdict.severity}
             byLocker={lpVerdict.byLocker}
+          />
+        </div>
+      )}
+
+      {deployer?.available && deployer.band && (
+        <div className="mb-3">
+          <DeployerHistoryPanel
+            trustScore={deployer.trustScore ?? 0}
+            totalDeployed={deployer.totalDeployed ?? 0}
+            rugged={deployer.rugged ?? 0}
+            abandoned={deployer.abandoned ?? 0}
+            active={deployer.active ?? 0}
+            band={deployer.band}
           />
         </div>
       )}

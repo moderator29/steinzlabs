@@ -68,8 +68,9 @@ export function HeroLeft() {
       </div>
 
       {/* Wordmark */}
+      {/* AAA contrast fix — was #1a2855 (2.8:1 on hero gradient). */}
       <p className="mt-3 text-[11px] font-bold uppercase"
-        style={{ letterSpacing: 8, color: '#1a2855' }}>
+        style={{ letterSpacing: 8, color: 'var(--nl-text-muted,#B4C0E0)' }}>
         NAKA LABS
       </p>
 
@@ -81,8 +82,9 @@ export function HeroLeft() {
       </h1>
 
       {/* Sub */}
+      {/* AAA contrast fix — was #2e3f70 (3.2:1 on hero, fails AAA). */}
       <p className="mt-5 max-w-[500px] text-[17px] leading-relaxed"
-        style={{ color: '#2e3f70' }}>
+        style={{ color: 'var(--nl-text-secondary,#8FA3FF)' }}>
         Protect every transaction. Track every whale. Trade with institutional intelligence.
       </p>
 

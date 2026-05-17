@@ -9,6 +9,7 @@ import { Loader2, Power } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 import NewCopyRuleModal from "./NewCopyRuleModal";
+import { useNavState } from "@/lib/nav/useNavState";
 
 type CopyMode = "alerts_only" | "oneclick" | "auto_copy";
 
@@ -63,6 +64,14 @@ export default function CopyTradingPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"rules" | "trades">("rules");
   const [showNewRule, setShowNewRule] = useState(false);
+
+  // PDF S3 — preserve tab (rules / trades) across copy-trading →
+  // rule detail → back.
+  useNavState(
+    "copy-trading",
+    () => ({ tab }),
+    (s) => { if (s.tab === "rules" || s.tab === "trades") setTab(s.tab); },
+  );
 
   async function load() {
     setLoading(true);

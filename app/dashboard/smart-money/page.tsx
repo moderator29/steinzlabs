@@ -16,6 +16,7 @@ import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { addLocalNotification } from '@/lib/notifications';
+import { useNavState } from '@/lib/nav/useNavState';
 
 type WalletArchetype = 'DIAMOND_HANDS' | 'SCALPER' | 'DEGEN' | 'WHALE_FOLLOWER' | 'HOLDER' | 'INACTIVE' | 'NEW_WALLET';
 
@@ -78,6 +79,19 @@ export default function SmartMoneyPage() {
   const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
   const [activeTab, setActiveTab] = useState<SmartTab>('leaderboard');
   const [, setShowSettings] = useState(false);
+
+  // PDF S3 — preserve tab + filter + search + sort across smart-money
+  // → wallet detail → back.
+  useNavState(
+    'smart-money',
+    () => ({ activeTab, filter, searchQuery, sortKey }),
+    (s) => {
+      if (typeof s.activeTab === 'string') setActiveTab(s.activeTab as SmartTab);
+      if (s.filter === 'all' || s.filter === 'watching') setFilter(s.filter);
+      if (typeof s.searchQuery === 'string') setSearchQuery(s.searchQuery);
+      if (typeof s.sortKey === 'string') setSortKey(s.sortKey as SortKey);
+    },
+  );
 
   // Load watched wallets from localStorage
   useEffect(() => {

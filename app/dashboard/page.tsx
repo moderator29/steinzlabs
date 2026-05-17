@@ -8,11 +8,12 @@ import {
   Wallet, User, Menu, X, TrendingDown, Activity, ChartBar as BarChart3,
 } from '@/components/icons/brand';
 import {
-  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight,
+  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
+import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
@@ -107,6 +108,7 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', href: null },
+    { id: 'find', icon: Search, label: 'Find', href: '/discover' },
     { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent', href: '/dashboard/vtx-ai' },
     { id: 'wallet', icon: Wallet, label: 'Wallet', href: null },
     { id: 'profile', icon: User, label: 'Profile', href: null },
@@ -126,7 +128,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         }}
       >
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
@@ -215,6 +217,30 @@ export default function Dashboard() {
     if (user) {
       maybeNotifyWelcome(user.email);
     }
+  }, [user]);
+
+  // Onboarding gate — checks profiles.onboarding_completed_at and
+  // mounts the 10-card flow on first sign-in. Replay can be triggered
+  // from Settings by setting onboarding_completed_at back to null
+  // (the OnboardingGate re-reads on prop change).
+  const [onboardedAt, setOnboardedAt] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+        const { data } = await supabase
+          .from('profiles')
+          .select('onboarding_completed_at')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!cancelled) setOnboardedAt((data?.onboarding_completed_at as string | null) ?? null);
+      } catch {
+        if (!cancelled) setOnboardedAt(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user]);
 
   useEffect(() => {
@@ -382,6 +408,7 @@ export default function Dashboard() {
 
       <BottomNav activeNav={activeNav} onNavChange={handleNavChange} />
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
+      {onboardedAt === null && <OnboardingGate profileOnboardedAt={onboardedAt} />}
     </div>
   );
 }

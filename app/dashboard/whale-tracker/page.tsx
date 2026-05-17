@@ -24,6 +24,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BackButton } from "@/components/ui/BackButton";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import { useNavState } from "@/lib/nav/useNavState";
 
 type Action = "buy" | "sell" | "transfer" | null;
 type Size = "10k" | "50k" | "100k" | "500k" | "1m";
@@ -112,6 +113,22 @@ export default function WhaleTrackerPage() {
   const [newRowsAvailable, setNewRowsAvailable] = useState(0);
   const filtersRef = useRef({ size, timeRange, actionFilter, tokenSearch, selectedChains, labelFilter });
   filtersRef.current = { size, timeRange, actionFilter, tokenSearch, selectedChains, labelFilter };
+
+  // PDF S3 — preserve filter + scroll across whale → profile → back so
+  // the user lands in the same view they left. sessionStorage-backed
+  // via lib/nav/useNavState.
+  useNavState(
+    "whale-tracker",
+    () => ({ size, timeRange, actionFilter, tokenSearch, selectedChains, labelFilter }),
+    (s) => {
+      if (s.size) setSize(s.size as Size);
+      if (s.timeRange) setTimeRange(s.timeRange as TimeRange);
+      if (s.actionFilter !== undefined) setActionFilter(s.actionFilter as Action);
+      if (typeof s.tokenSearch === "string") setTokenSearch(s.tokenSearch);
+      if (Array.isArray(s.selectedChains)) setSelectedChains(s.selectedChains as string[]);
+      if (Array.isArray(s.labelFilter)) setLabelFilter(s.labelFilter as WhaleLabel[]);
+    },
+  );
   const [feed, setFeed] = useState<FeedRow[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
