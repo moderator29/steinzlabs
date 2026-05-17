@@ -16,6 +16,7 @@ import { TokenRow } from "@/components/market/TokenRow";
 import { LoadingSkeleton } from "@/components/market/LoadingSkeleton";
 import { ErrorState } from "@/components/market/ErrorState";
 import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
+import { useNavState } from "@/lib/nav/useNavState";
 
 type CategoryId = "all" | "majors" | "defi" | "layer1" | "layer2" | "gaming" | "ai" | "meme" | "depin" | "pumpfun" | "bnb-meme";
 
@@ -63,6 +64,16 @@ export default function DashboardMarketPage() {
 
   const { tokens, loading, error, refetch } = useMarketData({ category });
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
+
+  // PDF S3 — preserve category + search across market → token detail → back.
+  useNavState(
+    "market",
+    () => ({ category, search }),
+    (s) => {
+      if (typeof s.category === "string") setCategory(s.category as CategoryId);
+      if (typeof s.search === "string") setSearch(s.search);
+    },
+  );
 
   // Smart search — if the user pastes a contract or types a ticker that
   // isn't in the current category, we ask /api/market/resolve for a match.

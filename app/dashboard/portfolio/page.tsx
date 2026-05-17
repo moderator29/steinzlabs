@@ -15,6 +15,7 @@ import { formatPrice, formatLargeNumber, formatPercent } from "@/lib/market/form
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useNavState } from "@/lib/nav/useNavState";
 
 type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
 type TabId = "holdings" | "performance" | "alpha";
@@ -85,6 +86,16 @@ export default function PortfolioPage() {
   const [address, setAddress] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("holdings");
   const [timeframe, setTimeframe] = useState<Timeframe>("30D");
+
+  // PDF S3 — preserve tab + timeframe across portfolio → token detail → back.
+  useNavState(
+    "portfolio",
+    () => ({ tab, timeframe }),
+    (s) => {
+      if (typeof s.tab === "string") setTab(s.tab as TabId);
+      if (typeof s.timeframe === "string") setTimeframe(s.timeframe as Timeframe);
+    },
+  );
   const [intel, setIntel] = useState<IntelResponse | null>(null);
   const [perf, setPerf] = useState<PerformanceResponse | null>(null);
   const [loadingIntel, setLoadingIntel] = useState(false);
