@@ -39,6 +39,29 @@
   --border-primary: #1F2937;
   --border-subtle: rgba(255, 255, 255, 0.06);
 
+  /* Naka Labs design tokens — PDF S1/S2 sweep. Components must
+     reference var(--nl-*) for brand colors instead of inline hex.
+     Audit identified 1,348 inline #0A1EFF usages as top candidate
+     for the ongoing per-file sweep across ~200 files. */
+  --nl-blue:                  #0A1EFF;
+  --nl-blue-strong:           #0818CC;
+  --nl-blue-lighter:          #4D6BFF;
+  --nl-blue-darker:           #0818CC;
+  --nl-purple:                #7C3AED;
+  --nl-purple-secondary:      #8B5CF6;
+  --nl-cyan:                  #00C8FF;
+  --nl-success:               #10B981;
+  --nl-warning:               #F59E0B;
+  --nl-error:                 #EF4444;
+  --nl-canvas-base:           #0A0E1A;
+  --nl-canvas-sunken:         #060A12;
+  --nl-canvas-elev:           #111827;
+  --nl-canvas-slightly-elev:  #141824;
+  --nl-border-dark:           #1E2433;
+  --nl-text-muted:            #B4C0E0;
+  --nl-text-secondary:        #8FA3FF;
+  --nl-text-tertiary:         #6B7280;
+
   /* Z-index hierarchy — single source of truth. Every fixed/sticky overlay
      in the platform MUST pick from this scale. Raw numeric z-index values
      in component classNames are a bug. */
