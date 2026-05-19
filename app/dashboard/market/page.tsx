@@ -142,6 +142,16 @@ export default function DashboardMarketPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
+      {/* Bug §7f — explicit back-to-dashboard breadcrumb on the market
+          list itself. The terminal detail page already had this (we
+          added it during the trading-terminal back-button fix); now
+          the list above it does too so a user opening /dashboard/market
+          via a direct link still has a clear way home. */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-slate-400">
+        <a href="/dashboard" className="hover:text-slate-200 transition-colors">Dashboard</a>
+        <span className="text-slate-700">/</span>
+        <span className="text-slate-300">Market</span>
+      </nav>
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Market</h1>
