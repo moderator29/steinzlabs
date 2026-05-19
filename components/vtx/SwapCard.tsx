@@ -232,7 +232,7 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
       default:         return `https://etherscan.io/tx/${hash}`;
     }
   };
-  const explorerUrl = explorerForChain(quote.chain, txHash);
+  const explorerUrl = txHash ? explorerForChain(quote.chain, txHash) : '';
 
   // ── Stage 3 (terminal) — executed ──────────────────────────────────────
   if (stage === 'done' && txHash) {
