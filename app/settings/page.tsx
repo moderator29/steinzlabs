@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 // Naka Labs brand icons — User, Shield, Bell, Wallet, Eye, EyeOff,
 // AlertTriangle swapped. Loader2 stays on lucide.
 import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle } from '@/components/icons/brand';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download, RotateCcw } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -168,6 +168,7 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'trading', label: 'Trading', icon: Wallet },
+    { id: 'account', label: 'Account', icon: Download },
   ];
 
   return (
@@ -465,13 +466,95 @@ export default function SettingsPage() {
                       <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${expertMode ? 'right-0.5' : 'left-0.5'}`} />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500">Preferences are saved automatically.</p>
+                  <p className="text-xs text-gray-400">Preferences are saved automatically.</p>
                 </div>
+              </div>
+            )}
+
+            {activeSection === 'account' && (
+              <div className="space-y-4">
+                <AccountActionsCard />
               </div>
             )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function AccountActionsCard() {
+  const [replaying, setReplaying] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleReplay = async () => {
+    setReplaying(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not signed in');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed_at: null })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast.success('Onboarding reset — refreshing…');
+      setTimeout(() => window.location.assign('/dashboard'), 800);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not reset onboarding');
+    } finally {
+      setReplaying(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/account/export', { method: 'GET' });
+      if (!res.ok) throw new Error(`Export failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `naka-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Your data export has downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+        <h3 className="text-white font-bold text-lg mb-2">Replay onboarding</h3>
+        <p className="text-gray-300 text-sm mb-4">Run the 10-card onboarding flow again to revisit security, wallet, and notification setup.</p>
+        <button
+          onClick={handleReplay}
+          disabled={replaying}
+          className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+        >
+          {replaying ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <RotateCcw size={14} aria-hidden />}
+          Replay onboarding
+        </button>
+      </div>
+
+      <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+        <h3 className="text-white font-bold text-lg mb-2">Download my data</h3>
+        <p className="text-gray-300 text-sm mb-4">GDPR-compliant export of your profile, watchlists, trades, copy rules, notifications, and preferences as a single JSON file.</p>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+        >
+          {exporting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />}
+          Download my data
+        </button>
+      </div>
+    </>
   );
 }
