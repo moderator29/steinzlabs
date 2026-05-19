@@ -13,7 +13,7 @@ import {
 import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History,
+  Crosshair, Network, Globe, History, MessageCircle, Compass,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -39,6 +39,13 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
       { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
+    ],
+  },
+  {
+    title: 'Social',
+    items: [
+      { icon: Compass, label: 'Discover', path: '/discover' },
+      { icon: MessageCircle, label: 'Messages', path: '/dashboard/messages' },
     ],
   },
   {

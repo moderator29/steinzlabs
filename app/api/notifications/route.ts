@@ -1,6 +1,8 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getTopTokens, getTrendingTokens } from '@/lib/services/coingecko';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 export interface NotificationItem {
   id: string;
@@ -187,9 +189,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Per-user 100/60s cap — bot accounts were able to spam push/email/telegram
+  // when calling this endpoint without throttling.
+  const guard = await guardRoute(req, { rate: 'med', allowAnon: true });
+  if (!guard.ok) return guard.response;
   try {
     const body = await req.json();
-    const { type, title, message, metadata, userEmail } = body;
+    const { type, title, message, metadata, userEmail, eventId } = body;
     if (!type || !title || !message) {
       return NextResponse.json({ error: 'Missing required fields: type, title, message' }, { status: 400 });
     }
@@ -204,13 +210,30 @@ export async function POST(req: NextRequest) {
       if (serviceKey) {
         const { createClient } = await import('@supabase/supabase-js');
         const adminClient = createClient('https://phvewrldcdxupsnakddx.supabase.co', serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+        // Idempotency: if caller passes an eventId, fold it into metadata.event_id
+        // and skip insert when the same (user_id, event_id) has been seen in the
+        // last hour. Prevents duplicate push/email/telegram fanout on retry.
+        if (eventId && body.userId) {
+          const sinceIso = new Date(Date.now() - 3_600_000).toISOString();
+          const { data: existing } = await adminClient
+            .from('notifications')
+            .select('id')
+            .eq('user_id', body.userId)
+            .gte('created_at', sinceIso)
+            .contains('metadata', { event_id: String(eventId) })
+            .limit(1);
+          if (existing && existing.length > 0) {
+            return NextResponse.json({ notification, deduped: true, event_id: eventId });
+          }
+        }
+        const persistedMetadata = eventId ? { ...(metadata || {}), event_id: String(eventId) } : metadata || {};
         const { data, error } = await adminClient.from('notifications')
-          .insert([{ user_id: body.userId || null, type, title, message, read: false, created_at: now, metadata: metadata || {} }])
+          .insert([{ user_id: body.userId || null, type, title, message, read: false, created_at: now, metadata: persistedMetadata }])
           .select('id').single();
         if (!error && data) { supabaseId = data.id; notification.id = `sb-${data.id}`; }
       }
     } catch (err) {
-      console.error('[notifications POST] Supabase persist failed:', err);
+      Sentry.captureException(err, { tags: { route: 'notifications', stage: 'persist' } });
     }
     const emailAlertTypes = ['whale_alert', 'price_target'];
     if (emailAlertTypes.includes(type) && userEmail) {

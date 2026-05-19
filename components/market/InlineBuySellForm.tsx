@@ -25,6 +25,7 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { formatPrice } from '@/lib/market/formatters';
 import { Settings, Shield, Info } from 'lucide-react';
 import ChainMismatchBanner from './ChainMismatchBanner';
+import FirstTradeRiskModal, { hasAcknowledgedTradeRisk } from '@/components/legal/FirstTradeRiskModal';
 
 const QUICK = [0, 25, 50, 75, 100];
 const SLIPPAGE_PRESETS = ['0.1', '0.5', '1', '3'];

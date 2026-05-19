@@ -1,17 +1,28 @@
+'use client';
+
+import { useLocale } from 'next-intl';
+import { useMemo } from 'react';
+
 /**
- * Locale-aware number / currency / percent formatters.
+ * Locale-aware number / currency / date / percent formatters.
  *
- * The audit (Agent 14, §3) flagged 121 `.toLocaleString()` calls that
- * implicitly used the browser locale OR hardcoded 'en-US'. This module is
- * the canonical surface for all new formatting work — it reads the user's
- * chosen locale from the same source AutoTranslate uses
- * (`localStorage.naka_language` client-side, `Accept-Language` fallback on
- * server-side via the `setLocale` injection point) so platform-locale and
- * browser-locale stay aligned.
+ * Two surfaces coexist here:
  *
- * Server callers should pass `locale` explicitly; client callers can omit
- * it and the helper reads the cached locale.
+ *  1. Imperative singleton (`setLocale` / `getLocale` / `formatNumber` /
+ *     `formatCurrency` / `formatPercent`) — driven by
+ *     `lib/i18n/useTranslate` when the user switches language via
+ *     `LanguageSwitcher`. Used by call sites outside of a next-intl tree
+ *     (server routes, plain string helpers, classic components).
+ *
+ *  2. Next-intl hook (`useFormatters`) — returns a memo'd `Formatters`
+ *     bundle keyed off the route locale. Use this in components that
+ *     already sit under a `NextIntlClientProvider`.
+ *
+ * Both honour the same goal: stop hardcoding `'en-US'` so European users
+ * see `1.234,56` and Arabic users get RTL-safe digits.
  */
+
+// ─── Imperative singleton ────────────────────────────────────────────────
 
 let cachedLocale: string | null = null;
 
@@ -73,4 +84,33 @@ export function formatPercent(
     maximumFractionDigits: 2,
     ...options,
   });
+}
+
+// ─── Next-intl hook surface ──────────────────────────────────────────────
+
+export type Formatters = ReturnType<typeof formatters>;
+
+export function formatters(locale: string) {
+  const num = new Intl.NumberFormat(locale);
+  const compact = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 2 });
+  const currency = new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2 });
+  const dateLong = new Intl.DateTimeFormat(locale, { dateStyle: 'long' });
+  const dateShort = new Intl.DateTimeFormat(locale, { dateStyle: 'short' });
+  const time = new Intl.DateTimeFormat(locale, { timeStyle: 'short' });
+  return {
+    locale,
+    number: (n: number) => num.format(n),
+    compact: (n: number) => compact.format(n),
+    currency: (n: number) => currency.format(n),
+    percent: (n: number) => percent.format(n),
+    date: (d: Date | string | number) => dateLong.format(new Date(d)),
+    dateShort: (d: Date | string | number) => dateShort.format(new Date(d)),
+    time: (d: Date | string | number) => time.format(new Date(d)),
+  };
+}
+
+export function useFormatters(): Formatters {
+  const locale = useLocale();
+  return useMemo(() => formatters(locale), [locale]);
 }

@@ -7,10 +7,13 @@
     "build": "next build --webpack",
     "start": "next start -p 5000",
     "lint": "next lint",
+    "perf:lighthouse": "node scripts/lighthouse-ci.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "postinstall": "echo 'Setup complete'"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.95.2",
+    "@anthropic-ai/sdk": "^0.96.0",
     "@hookform/resolvers": "^3.3.4",
     "@reown/appkit": "^1.8.19",
     "@reown/appkit-adapter-solana": "^1.8.19",
@@ -22,13 +25,13 @@
     "@solana/web3.js": "^1.98.4",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.105.4",
+    "@supabase/supabase-js": "^2.106.0",
     "@tanstack/react-query": "^5.100.7",
     "@types/d3": "^7.4.3",
     "@types/libsodium-wrappers": "^0.7.14",
     "@types/qrcode": "^1.5.6",
     "@upstash/redis": "^1.37.0",
-    "@wagmi/connectors": "6.1.4",
+    "@wagmi/connectors": "6.2.0",
     "alchemy-sdk": "^3.2.0",
     "axios": "^1.6.7",
     "bip39": "^3.1.0",
@@ -49,7 +52,7 @@
     "lucide-react": "^0.358.0",
     "next": "^16.2.6",
     "next-intl": "^4.11.0",
-    "pg": "^8.20.0",
+    "pg": "^8.21.0",
     "pino": "^10.3.1",
     "posthog-js": "^1.198.0",
     "posthog-node": "^5.33.2",
@@ -74,7 +77,8 @@
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
-    "@types/node": "^25.7.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^25.9.0",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@types/web-push": "^3.6.4",
@@ -91,7 +95,7 @@
   "overrides": {
     "glob": ">=11.1.0",
     "minimatch": ">=10.2.3",
-    "@wagmi/connectors": "6.1.4",
+    "@wagmi/connectors": "6.2.0",
     "wagmi": {
       "@wagmi/connectors": "6.1.4"
     }

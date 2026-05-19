@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -44,6 +45,8 @@ function sanitizeResponse(text: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await guardRoute(request, { rate: 'med', allowAnon: true });
+  if (!guard.ok) return guard.response;
   try {
     const { messages, conversationId } = await request.json();
 

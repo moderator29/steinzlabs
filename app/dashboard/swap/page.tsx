@@ -816,7 +816,7 @@ export default function SwapPage() {
         }
       } else if (detectedWallet === 'builtin') {
         // Builtin wallet: sign via ethers with stored encrypted key
-        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
+        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; iv?: string }>>('steinz_wallets', []);
         const activeAddr = safeLocalGet('steinz_active_wallet_address') || connectedAddress;
         const storedWallet = storedWallets.find(w => w.address?.toLowerCase() === activeAddr?.toLowerCase());
         if (!storedWallet || !swapData.transaction) {

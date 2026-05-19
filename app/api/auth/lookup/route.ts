@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
             last_name: match.user_metadata?.last_name || '',
           }, { onConflict: 'id' });
         } catch (err) {
-          console.error('[auth/lookup] Upsert profile to Supabase failed:', err);
+          Sentry.captureException(err, { tags: { route: 'auth/lookup', phase: 'profile-upsert' } });
         }
         return NextResponse.json({ email: match.email });
       }
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'No account found with that username.' }, { status: 404 });
   } catch (err: any) {
-
+    Sentry.captureException(err, { tags: { route: 'auth/lookup' } });
     return NextResponse.json({ error: 'Unable to look up username.' }, { status: 500 });
   }
 }

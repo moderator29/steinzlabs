@@ -1639,6 +1639,7 @@ export default function ProfileTab() {
         </div>
       </div>
 
+      <ProfileRow icon={MessageCircle} label="Messages" sub="Encrypted DMs with mutual follows" onClick={() => router.push('/dashboard/messages')} />
       <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />
       <ProfileRow icon={Shield} label="Privacy" sub="Manage data & visibility" onClick={() => setSubPage('privacy')} />
       <ProfileRow icon={Settings} label="Preferences" sub="Customize your experience" onClick={() => setSubPage('preferences')} />

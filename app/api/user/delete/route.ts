@@ -1,8 +1,11 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 export async function DELETE(request: NextRequest) {
+  const guard = await guardRoute(request, { rate: 'med' });
+  if (!guard.ok) return guard.response;
   try {
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

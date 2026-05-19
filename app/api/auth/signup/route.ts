@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     // 5 signups per IP per hour — protects against mass-signup spam and the
     // expensive admin listUsers + verification-email path that follows.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = rateLimit(`auth:signup:${ip}`, { interval: 3_600_000, maxRequests: 5 });
+    const rl = await rateLimit(`auth:signup:${ip}`, { interval: 3_600_000, maxRequests: 5 });
     if (!rl.success) return rateLimitResponse(rl);
 
     const body = await request.json();
