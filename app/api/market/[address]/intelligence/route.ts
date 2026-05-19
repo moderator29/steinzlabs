@@ -42,15 +42,71 @@ interface Brief {
   thesis: string | null;  // AI-generated; null if Claude unavailable
 }
 
-async function aiThesis(tokenAddr: string, whaleCount: number, recentActions: string[]): Promise<string | null> {
+// Bug §6 — owner: "Intel should pull from whale tracker data. If whales
+// are holding this token, show: 'Whale [X] bought 100K of this 2 days ago'".
+// The old prompt only knew the WHALE COUNT, so the thesis came back
+// generic ("23 whales are active in this token"). Now we pass each
+// recent action with the whale's LABEL + USD value + age, and the
+// prompt tells the model to call them out by name.
+interface ThesisActivity {
+  label: string | null;
+  action: string;
+  valueUsd: number | null;
+  timestamp: string;
+}
+async function aiThesis(
+  tokenAddr: string,
+  whaleHoldersTop: Array<{ label: string | null; whale_score: number | null }>,
+  recentActions: ThesisActivity[],
+): Promise<string | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null;
-  const prompt = `You are a crypto on-chain analyst. Write a 2-sentence thesis for a token based on whale activity.
 
-Token: ${tokenAddr}
-Tracked whales holding/trading this token: ${whaleCount}
-Most recent whale actions: ${recentActions.slice(0, 8).join(', ') || 'none'}
+  const fmtUsd = (v: number | null): string => {
+    if (!v || !isFinite(v)) return '~';
+    const abs = Math.abs(v);
+    if (abs >= 1e6) return `$${(abs / 1e6).toFixed(2)}M`;
+    if (abs >= 1e3) return `$${(abs / 1e3).toFixed(0)}K`;
+    return `$${abs.toFixed(0)}`;
+  };
+  const ageOf = (iso: string): string => {
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!isFinite(ms) || ms < 0) return 'recently';
+    const m = Math.floor(ms / 60_000);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
 
-Return plain text, no markdown. Sentence 1: what's happening. Sentence 2: what to watch next.`;
+  const actionLines = recentActions
+    .slice(0, 8)
+    .map((a) => {
+      const who = a.label ?? 'Unlabelled whale';
+      return `- ${who} ${a.action} ${fmtUsd(a.valueUsd)} ${ageOf(a.timestamp)}`;
+    })
+    .join('\n') || '- (no recent whale activity recorded)';
+
+  const holderLines = whaleHoldersTop
+    .slice(0, 6)
+    .map((w) => `- ${w.label ?? 'Unlabelled whale'} (score ${w.whale_score ?? '—'})`)
+    .join('\n') || '- (no tracked whales currently holding)';
+
+  const prompt = `You are a crypto on-chain analyst. Write a 2-3 sentence thesis for the token using ONLY the whale data below. Call out at least one whale BY NAME if any whale name is present. Quote one specific USD amount + timing for the most consequential recent action.
+
+Token contract: ${tokenAddr}
+
+Top tracked-whale holders:
+${holderLines}
+
+Recent tracked-whale actions (newest first):
+${actionLines}
+
+Output rules:
+- Plain text, no markdown lists, no headings.
+- Sentence 1: what whales are doing right now, NAMED.
+- Sentence 2: what that pattern usually means.
+- Sentence 3 (optional): what to watch next.
+- If holders + actions are both empty, write a one-sentence honest "no tracked-whale activity yet" line — never fabricate.`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -165,8 +221,13 @@ export async function GET(
     // Don't block the response on the AI — fire it last with a short timeout.
     const thesis = await aiThesis(
       address,
-      whale_holders.length,
-      recent_whale_activity.map((r) => `${r.action} $${Math.round((r.value_usd ?? 0) / 1000)}k`),
+      whale_holders.map((w) => ({ label: w.label, whale_score: w.whale_score })),
+      recent_whale_activity.map((r) => ({
+        label: r.label,
+        action: r.action,
+        valueUsd: r.value_usd,
+        timestamp: r.timestamp,
+      })),
     );
 
     const brief: Brief = {
