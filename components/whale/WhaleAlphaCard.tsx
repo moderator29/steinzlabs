@@ -103,8 +103,14 @@ export function WhaleAlphaCard({
           </span>
         )}
         {typeof trustScore === 'number' && (
+          // Trust Score naming unification — this surface is the whale's
+          // credibility score (follower-weighted reputation), not the
+          // canonical Naka Trust Score (which is token-level via
+          // TrustScoreBadge). Relabel to 'Score' so users don't conflate
+          // the two. The prop name stays 'trustScore' to avoid a wider
+          // refactor; it just maps to the whale-credibility concept here.
           <span className="text-slate-400">
-            Trust <span className="text-slate-200 tabular-nums">{trustScore.toFixed(0)}</span>
+            Score <span className="text-slate-200 tabular-nums">{trustScore.toFixed(0)}</span>
           </span>
         )}
         {typeof followCount === 'number' && followCount > 0 && (

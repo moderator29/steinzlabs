@@ -105,11 +105,21 @@ export function WalletTokenRow({
         )}
       </div>
 
-      {/* Left — symbol + chain badge / price + change */}
+      {/* Left — symbol + chain badge / price + change.
+          Bug §10 — Arbitrum + Base both use native symbol 'ETH', so two
+          rows on the same wallet read 'ETH' and 'ETH' with only a tiny
+          chip differentiating them. For L2 natives where the symbol is
+          inherited from Ethereum, render the symbol as 'ETH · Base' /
+          'ETH · Arbitrum' / 'ETH · Optimism' so the chain is part of
+          the prominent line, not a side chip the user could miss. */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-[15px] font-bold text-white">{symbol}</span>
-          {chainLabel && (
+          <span className="text-[15px] font-bold text-white">
+            {symbol === 'ETH' && chainLabel && chainLabel !== 'Ethereum'
+              ? <>ETH <span className="text-slate-400 font-semibold">· {chainLabel}</span></>
+              : symbol}
+          </span>
+          {chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') && (
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 leading-none border border-slate-700/50">
               {chainLabel}
             </span>

@@ -187,7 +187,7 @@ function generateSuggestions(content: string): string[] {
 //   2. Replace the textual 'Loading chart…' placeholder with a subtle
 //      animated skeleton so even a first-time render feels populated
 //      while the real points stream in.
-const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; cachedAt: number }> = new Map();
+const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; cachedAt: number }> = new Map();
 const VTX_CHART_TTL_MS = 5 * 60 * 1000;
 
 function chartCacheKey(token: TokenCardData): string {
@@ -195,18 +195,29 @@ function chartCacheKey(token: TokenCardData): string {
 }
 
 function TokenCard({ token }: { token: TokenCardData }) {
-  const isPositive = token.change24h >= 0;
+  // Deep-dive fix — the price the LLM emitted (token.price) is whatever
+  // was true the instant the model wrote the card, often 1-5s stale by
+  // the time the card mounts. /api/vtx/token-card already returns a
+  // fresh `price` and `change24h` alongside the chart points in the
+  // SAME response we're already firing for the sparkline, so we just
+  // pull them out of the same fetch — no second round-trip.
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
 
+  // Unified: chart cache (Round-1 fix/vtx-card-instant-chart) AND live
+  // price/change extracted from the same fetch (round-2 reliability fix).
+  // Cache key + TTL guard means subsequent renders for the same token in
+  // the same session paint with NO network round-trip; first render fires
+  // /api/vtx/token-card once and pulls chart + price + change24h together.
   const cacheKey = chartCacheKey(token);
   const cached = VTX_CHART_CACHE.get(cacheKey);
   const cachedFresh = cached && Date.now() - cached.cachedAt < VTX_CHART_TTL_MS ? cached : null;
   const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(
     cachedFresh ? { points: cachedFresh.points, changePct: cachedFresh.changePct } : null,
   );
+  const [livePrice, setLivePrice] = useState<number | null>(cachedFresh?.price ?? null);
+  const [liveChange24h, setLiveChange24h] = useState<number | null>(cachedFresh?.change24h ?? null);
 
   useEffect(() => {
-    // If we already painted from cache, skip the network round-trip.
     if (cachedFresh) return;
     let cancelled = false;
     const q = token.address
@@ -215,14 +226,37 @@ function TokenCard({ token }: { token: TokenCardData }) {
     fetch(q)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (cancelled || !d?.points) return;
-        const next = { points: d.points as number[], changePct: (d.changePct as number) || 0 };
-        VTX_CHART_CACHE.set(cacheKey, { ...next, cachedAt: Date.now() });
-        setChart(next);
+        if (cancelled || !d) return;
+        const nextChart = d.points ? { points: d.points as number[], changePct: (d.changePct as number) || 0 } : null;
+        const nextPrice = typeof d.price === 'number' ? d.price : null;
+        const nextChange = typeof d.change24h === 'number' ? d.change24h : null;
+        if (nextChart) setChart(nextChart);
+        if (nextPrice !== null) setLivePrice(nextPrice);
+        if (nextChange !== null) setLiveChange24h(nextChange);
+        // Only cache when we have at least the chart points — partial
+        // responses (price-only, error path) shouldn't replace a future
+        // good fetch.
+        if (nextChart) {
+          VTX_CHART_CACHE.set(cacheKey, {
+            points: nextChart.points,
+            changePct: nextChart.changePct,
+            price: nextPrice,
+            change24h: nextChange,
+            cachedAt: Date.now(),
+          });
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
+
+  // Display the live values when present, fall back to whatever the LLM
+  // streamed so the card still has SOMETHING during the brief fetch window.
+  const displayChange = liveChange24h !== null ? liveChange24h : token.change24h;
+  const isPositive = displayChange >= 0;
+  const displayPrice = livePrice !== null
+    ? `$${livePrice < 1 ? livePrice.toFixed(6).replace(/\.?0+$/, '') : livePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    : token.price;
 
   const chainName = (() => {
     const c = (token.chain || '').toLowerCase();
@@ -259,9 +293,13 @@ function TokenCard({ token }: { token: TokenCardData }) {
           </div>
         </div>
         <div className="text-end shrink-0">
-          <div className="text-lg font-bold text-white font-mono leading-none">{token.price}</div>
-          <div className={`text-[11px] font-semibold mt-1 ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '↗ +' : '↘ '}{token.change24h.toFixed(2)}%
+          {/* Canonical platform price font: tabular monospace + bold,
+              matches WatchlistCard / WalletTokenRow / trading terminal so
+              digits align across the platform and the card rhymes with
+              every other price surface. */}
+          <div className="text-lg font-bold text-white font-mono tabular-nums leading-none">{displayPrice}</div>
+          <div className={`text-[11px] font-semibold mt-1 tabular-nums ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? '↗ +' : '↘ '}{displayChange.toFixed(2)}%
             <span className="text-gray-500 font-normal ms-1">24h</span>
           </div>
         </div>
@@ -1087,12 +1125,25 @@ function VtxAiPageInner() {
                 )}
                 {msg.swapCard && (
                   <div className="mt-3">
-                    <SwapCard swap={msg.swapCard} walletAddress={msg.swapCard.walletAddress} />
+                    {/* Deep-dive fix — render the needsWallet warning FIRST
+                        (above the card) when set, so users see the gate
+                        before tapping the disabled-feeling sign button. */}
                     {msg.swapCard.needsWallet && (
-                      <div className="mt-2 text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-2 py-1.5">
+                      <div className="mb-2 text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-2 py-1.5">
                         Connect a wallet to execute this swap. Insufficient balance? Deposit first from the Wallet page.
                       </div>
                     )}
+                    <SwapCard
+                      swap={msg.swapCard}
+                      walletAddress={msg.swapCard.walletAddress}
+                      onCancel={() => {
+                        // Strip the swap card from this message, keep the
+                        // assistant reply visible so the user retains context.
+                        setMessages((prev) => prev.map((m, j) =>
+                          j === i ? { ...m, swapCard: undefined } : m,
+                        ));
+                      }}
+                    />
                   </div>
                 )}
                 {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
