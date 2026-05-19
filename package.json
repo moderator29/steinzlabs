@@ -8,6 +8,8 @@
     "start": "next start -p 5000",
     "lint": "next lint",
     "perf:lighthouse": "node scripts/lighthouse-ci.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "postinstall": "echo 'Setup complete'"
   },
   "dependencies": {
@@ -75,6 +77,7 @@
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
+    "@playwright/test": "^1.49.0",
     "@types/node": "^25.9.0",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
