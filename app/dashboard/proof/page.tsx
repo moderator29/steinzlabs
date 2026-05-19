@@ -86,12 +86,18 @@ type ProofEvent = z.infer<typeof ProofEventSchema>;
 // to a sensible quote per chain. SwapCard fetches the real quote +
 // balance once it mounts, so these initial numbers are placeholders
 // the card overwrites within ~200ms.
-function buildProofSwapData(event: ProofEvent): SwapCardData {
+function buildProofSwapData(event: ProofEvent): SwapCardData | null {
+  // Deep-dive fix — the card needs at least a destination identity. Without
+  // tokenSymbol AND pairAddress AND tokenName the card mounts with 'TOKEN'
+  // as the receive ticker, which is a fake state the user should never see.
+  // Return null instead and let the caller hide the Buy block.
+  if (!event.tokenSymbol && !event.pairAddress && !event.tokenName) return null;
   const chain = (event.chain || 'ethereum').toLowerCase();
   const fromToken = chain === 'solana' ? 'SOL' : 'USDC';
+  const toToken = (event.tokenSymbol || event.tokenName || '').trim();
   return {
     fromToken,
-    toToken: event.tokenSymbol || event.tokenName || 'TOKEN',
+    toToken: toToken || 'TOKEN', // last-resort label — never null
     toTokenAddress: event.pairAddress,
     fromAmount: '0',
     toAmount: '0',
@@ -525,24 +531,41 @@ export default function ViewProofPage() {
                 Open full swap
               </button>
             </div>
-            {showSwapCard && (
-              <div className="glass rounded-xl p-3 border border-white/10">
-                {/*
-                  Inline swap — uses the same SwapCard component VTX AI
-                  renders inside agent messages. fromToken defaults to
-                  the chain's native quote (USDC for EVM, SOL for Solana
-                  context — SOL is the routing native and the card flips
-                  to USDC if needed). toToken / toTokenAddress / chain
-                  come straight from the context-feed event so there's
-                  no DexScreener iframe and no page navigation.
-                */}
-                <SwapCard
-                  swap={buildProofSwapData(event)}
-                  walletAddress={walletAddress ?? undefined}
-                  onCancel={() => setShowSwapCard(false)}
-                />
-              </div>
-            )}
+            {showSwapCard && (() => {
+              // Deep-dive fix — buildProofSwapData can now return null when
+              // the event lacks a coherent destination token. Render a
+              // friendly "swap data unavailable" panel instead of mounting
+              // SwapCard with a placeholder 'TOKEN' ticker that would let a
+              // user click Sign on garbage.
+              const swap = buildProofSwapData(event);
+              if (!swap) {
+                return (
+                  <div className="glass rounded-xl p-3 border border-amber-400/30 text-[11px] text-amber-300">
+                    Swap unavailable — this signal doesn&apos;t carry a
+                    resolvable token. Open the full swap if you want to pick
+                    a token manually.
+                  </div>
+                );
+              }
+              return (
+                <div className="glass rounded-xl p-3 border border-white/10">
+                  {/*
+                    Inline swap — uses the same SwapCard component VTX AI
+                    renders inside agent messages. fromToken defaults to
+                    the chain's native quote (USDC for EVM, SOL for Solana
+                    context — SOL is the routing native and the card flips
+                    to USDC if needed). toToken / toTokenAddress / chain
+                    come straight from the context-feed event so there's
+                    no DexScreener iframe and no page navigation.
+                  */}
+                  <SwapCard
+                    swap={swap}
+                    walletAddress={walletAddress ?? undefined}
+                    onCancel={() => setShowSwapCard(false)}
+                  />
+                </div>
+              );
+            })()}
           </>
         )}
 

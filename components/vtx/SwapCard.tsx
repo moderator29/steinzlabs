@@ -215,9 +215,24 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
     }
   };
 
-  const explorerUrl = quote.chain === 'solana'
-    ? `https://solscan.io/tx/${txHash}`
-    : `https://etherscan.io/tx/${txHash}`;
+  // Deep-dive fix — etherscan was the hardcoded fallback for every non-Solana
+  // chain, so a Base / Polygon / Arbitrum / Optimism / BSC swap landed the
+  // user on an etherscan URL that 404s. Map by chain so the explorer link
+  // actually opens the transaction.
+  const explorerForChain = (c: string, hash: string): string => {
+    switch (c) {
+      case 'solana':   return `https://solscan.io/tx/${hash}`;
+      case 'base':     return `https://basescan.org/tx/${hash}`;
+      case 'arbitrum': return `https://arbiscan.io/tx/${hash}`;
+      case 'optimism': return `https://optimistic.etherscan.io/tx/${hash}`;
+      case 'polygon':  return `https://polygonscan.com/tx/${hash}`;
+      case 'bsc':      return `https://bscscan.com/tx/${hash}`;
+      case 'avalanche':return `https://snowtrace.io/tx/${hash}`;
+      case 'fantom':   return `https://ftmscan.com/tx/${hash}`;
+      default:         return `https://etherscan.io/tx/${hash}`;
+    }
+  };
+  const explorerUrl = explorerForChain(quote.chain, txHash);
 
   // ── Stage 3 (terminal) — executed ──────────────────────────────────────
   if (stage === 'done' && txHash) {

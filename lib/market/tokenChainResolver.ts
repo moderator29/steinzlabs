@@ -63,6 +63,28 @@ const SLUG_TO_NATIVE_CHAIN: Record<string, string> = {
   pnut: 'solana',
   'peanut-the-squirrel': 'solana',
   'goatseus-maximus': 'solana',
+  // Deep-dive expansion — common L1/L2 + popular meme tokens still defaulting
+  // to ethereum because they weren't in the lookup before.
+  tron: 'tron',
+  toncoin: 'ton',
+  hedera: 'hedera-hashgraph',
+  stellar: 'stellar',
+  monero: 'monero',
+  filecoin: 'filecoin',
+  tezos: 'tezos',
+  algorand: 'algorand',
+  'kaspa-2': 'kaspa',
+  // Solana memecoin long-tail
+  'official-trump': 'solana',
+  melania: 'solana',
+  'ai16z': 'solana',
+  griffain: 'solana',
+  arc: 'solana',
+  // Base ecosystem
+  'mog-coin': 'base',
+  brett: 'base',
+  // Avalanche ecosystem
+  'joe': 'avalanche',
 };
 
 const SYMBOL_TO_NATIVE_CHAIN: Record<string, string> = {
@@ -98,6 +120,24 @@ const SYMBOL_TO_NATIVE_CHAIN: Record<string, string> = {
   FARTCOIN: 'solana',
   MOODENG: 'solana',
   PNUT: 'solana',
+  // Deep-dive additions — popular tickers from CoinGecko's top 150 that
+  // were defaulting to ethereum.
+  TRX: 'tron',
+  TON: 'ton',
+  HBAR: 'hedera-hashgraph',
+  XLM: 'stellar',
+  XMR: 'monero',
+  FIL: 'filecoin',
+  XTZ: 'tezos',
+  ALGO: 'algorand',
+  KAS: 'kaspa',
+  TRUMP: 'solana',
+  MELANIA: 'solana',
+  AI16Z: 'solana',
+  GRIFFAIN: 'solana',
+  MOG: 'base',
+  BRETT: 'base',
+  JOE: 'avalanche',
 };
 
 export interface ResolvedRoute {
