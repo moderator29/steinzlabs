@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { getCultAccess } from '@/lib/cult/access';
 import { IdentityStrip } from '@/components/vault/IdentityStrip';
+import { CultPlayer } from '@/components/vault/CultPlayer';
 import './vault.css';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,7 @@ export default async function VaultLayout({ children }: { children: ReactNode })
         />
       </header>
       <main className="vault-main">{children}</main>
+      <CultPlayer />
     </div>
   );
 }
