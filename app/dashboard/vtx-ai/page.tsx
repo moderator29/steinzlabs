@@ -180,9 +180,16 @@ function generateSuggestions(content: string): string[] {
 // buttons on the card — this is an intel surface, not a trade surface. If
 // the user wants to swap, they ask VTX and get a separate Swap Card.
 function TokenCard({ token }: { token: TokenCardData }) {
-  const isPositive = token.change24h >= 0;
+  // Deep-dive fix — the price the LLM emitted (token.price) is whatever
+  // was true the instant the model wrote the card, often 1-5s stale by
+  // the time the card mounts. /api/vtx/token-card already returns a
+  // fresh `price` and `change24h` alongside the chart points in the
+  // SAME response we're already firing for the sparkline, so we just
+  // pull them out of the same fetch — no second round-trip.
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
   const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(null);
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [liveChange24h, setLiveChange24h] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,10 +198,23 @@ function TokenCard({ token }: { token: TokenCardData }) {
       : `/api/vtx/token-card?symbol=${encodeURIComponent(token.symbol)}&tf=7d`;
     fetch(q)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!cancelled && d?.points) setChart({ points: d.points, changePct: d.changePct || 0 }); })
+      .then((d) => {
+        if (cancelled || !d) return;
+        if (d.points) setChart({ points: d.points, changePct: d.changePct || 0 });
+        if (typeof d.price === 'number') setLivePrice(d.price);
+        if (typeof d.change24h === 'number') setLiveChange24h(d.change24h);
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [token.address, token.chain, token.symbol]);
+
+  // Display the live values when present, fall back to whatever the LLM
+  // streamed so the card still has SOMETHING during the brief fetch window.
+  const displayChange = liveChange24h !== null ? liveChange24h : token.change24h;
+  const isPositive = displayChange >= 0;
+  const displayPrice = livePrice !== null
+    ? `$${livePrice < 1 ? livePrice.toFixed(6).replace(/\.?0+$/, '') : livePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    : token.price;
 
   const chainName = (() => {
     const c = (token.chain || '').toLowerCase();
@@ -231,9 +251,13 @@ function TokenCard({ token }: { token: TokenCardData }) {
           </div>
         </div>
         <div className="text-end shrink-0">
-          <div className="text-lg font-bold text-white font-mono leading-none">{token.price}</div>
-          <div className={`text-[11px] font-semibold mt-1 ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '↗ +' : '↘ '}{token.change24h.toFixed(2)}%
+          {/* Canonical platform price font: tabular monospace + bold,
+              matches WatchlistCard / WalletTokenRow / trading terminal so
+              digits align across the platform and the card rhymes with
+              every other price surface. */}
+          <div className="text-lg font-bold text-white font-mono tabular-nums leading-none">{displayPrice}</div>
+          <div className={`text-[11px] font-semibold mt-1 tabular-nums ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            {isPositive ? '↗ +' : '↘ '}{displayChange.toFixed(2)}%
             <span className="text-gray-500 font-normal ms-1">24h</span>
           </div>
         </div>
@@ -1055,12 +1079,25 @@ function VtxAiPageInner() {
                 )}
                 {msg.swapCard && (
                   <div className="mt-3">
-                    <SwapCard swap={msg.swapCard} walletAddress={msg.swapCard.walletAddress} />
+                    {/* Deep-dive fix — render the needsWallet warning FIRST
+                        (above the card) when set, so users see the gate
+                        before tapping the disabled-feeling sign button. */}
                     {msg.swapCard.needsWallet && (
-                      <div className="mt-2 text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-2 py-1.5">
+                      <div className="mb-2 text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-2 py-1.5">
                         Connect a wallet to execute this swap. Insufficient balance? Deposit first from the Wallet page.
                       </div>
                     )}
+                    <SwapCard
+                      swap={msg.swapCard}
+                      walletAddress={msg.swapCard.walletAddress}
+                      onCancel={() => {
+                        // Strip the swap card from this message, keep the
+                        // assistant reply visible so the user retains context.
+                        setMessages((prev) => prev.map((m, j) =>
+                          j === i ? { ...m, swapCard: undefined } : m,
+                        ));
+                      }}
+                    />
                   </div>
                 )}
                 {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (

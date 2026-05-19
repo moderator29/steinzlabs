@@ -45,16 +45,24 @@ async function fetchLiveActivityEvm(address: string, chain: string) {
       ...incoming.map((t) => ({ ...t, direction: 'in' as const })),
     ];
     rows.sort((a, b) => parseInt(b.blockNum || '0', 16) - parseInt(a.blockNum || '0', 16));
+    // Deep-dive fix — frontend (whale-tracker/[address]/page.tsx) expects
+    // { tx_hash, action, token_symbol, token_address, amount, value_usd,
+    //   counterparty, counterparty_label, timestamp } from whale_activity.
+    // Live Alchemy rows used to ship a different shape (from_address /
+    // to_address / value / direction / source), which left WhaleActivityChart
+    // filtering EVERY row out and downstream readers seeing undefined.
+    // Normalise here so live + stored rows are indistinguishable downstream.
     return rows.slice(0, 50).map((t) => ({
       tx_hash: t.hash,
-      from_address: t.from,
-      to_address: t.to,
-      value: parseFloat(t.value || '0'),
+      action: t.direction === 'out' ? 'send' : 'receive',
       token_symbol: t.asset || 'ETH',
-      direction: t.direction,
+      token_address: null,
+      amount: parseFloat(t.value || '0'),
+      value_usd: null,
+      counterparty: t.direction === 'out' ? t.to : t.from,
+      counterparty_label: null,
+      timestamp: new Date().toISOString(),
       chain,
-      block_number: t.blockNum,
-      timestamp: null, // Alchemy getAssetTransfers doesn't include block ts; UI falls back to "recent".
       source: 'alchemy_live',
     }));
   } catch {
@@ -77,16 +85,22 @@ async function fetchLiveActivitySolana(address: string) {
     if (!res.ok) return [];
     const data = await res.json();
     const sigs = (data.result || []) as Array<{ signature: string; slot: number; blockTime?: number }>;
+    // Same schema normalisation as the EVM live branch above. Solana RPC
+    // only gives us signatures + slots — no action/amount/counterparty,
+    // but the frontend tolerates nulls in those fields. The CRITICAL
+    // thing is that the SHAPE matches `whale_activity` rows so a downstream
+    // `.value_usd` access doesn't read `undefined` and crash WhaleActivityChart.
     return sigs.map((s) => ({
       tx_hash: s.signature,
-      from_address: address,
-      to_address: null,
-      value: null,
+      action: 'tx',
       token_symbol: null,
-      direction: 'unknown',
+      token_address: null,
+      amount: null,
+      value_usd: null,
+      counterparty: null,
+      counterparty_label: null,
+      timestamp: s.blockTime ? new Date(s.blockTime * 1000).toISOString() : new Date().toISOString(),
       chain: 'solana',
-      block_number: s.slot,
-      timestamp: s.blockTime ? new Date(s.blockTime * 1000).toISOString() : null,
       source: 'helius_live',
     }));
   } catch {
