@@ -148,20 +148,23 @@ export async function GET(_request: NextRequest) {
     }
   }
 
-  // Performance series: cumulative USD flow by day.
+  // Capital-flow series (NOT mark-to-market PnL): cumulative USD deployed
+  // over time, with stable-out as drawdown. Renamed in the UI accordingly;
+  // a real PnL series would require Alchemy transfer-history reconciliation
+  // against live prices and is tracked separately.
+  // time is binned per-day in UNIX seconds — lightweight-charts time format.
   const byDay = new Map<number, number>();
   let cumulative = 0;
   for (const t of txs) {
     const usd = Number(t.usd_value ?? 0);
     if (usd <= 0) continue;
-    // Treat buys of non-stable as money "deployed", sells as money
-    // "withdrawn". Cumulative roughly tracks capital deployed over time.
     const buySym = t.to_token_symbol?.toUpperCase() ?? null;
     const isStableOut = buySym && ["USD", "USDC", "USDT", "DAI"].includes(buySym);
     const signed = isStableOut ? -usd : usd;
     cumulative += signed;
-    const dayStart = Math.floor(new Date(t.timestamp).getTime() / 86_400_000) * 86_400;
-    byDay.set(dayStart, cumulative);
+    const dayStartMs = Math.floor(new Date(t.timestamp).getTime() / 86_400_000) * 86_400_000;
+    const dayStartSec = Math.floor(dayStartMs / 1000);
+    byDay.set(dayStartSec, cumulative);
   }
   const series: PerformancePoint[] = Array.from(byDay.entries())
     .sort((a, b) => a[0] - b[0])

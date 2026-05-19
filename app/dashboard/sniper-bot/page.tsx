@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BackButton from "@/components/ui/BackButton";
 import { useNavState } from "@/lib/nav/useNavState";
+import { AutosellStatusCard } from "@/components/sniper/AutosellStatusCard";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -708,6 +709,10 @@ export default function SniperBotPage() {
       )}
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <AutosellStatusCard />
+        </div>
+
         {/* Tab Bar */}
         <div className="flex gap-1 bg-slate-900/60 border border-slate-800/50 rounded-xl p-1 mb-6">
           {TABS.map((t) => (

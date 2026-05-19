@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { logAdminAction } from "@/lib/admin/auditLog";
 
 export const runtime = "nodejs";
 
@@ -57,6 +58,12 @@ export const PATCH = withTierGate("mini", async (
     .eq("id", id)
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await logAdminAction({
+    adminId: user.id,
+    targetUserId: user.id,
+    action: "copy_rule_update",
+    details: { rule_id: id, changes: update },
+  });
   return NextResponse.json({ ok: true });
 });
 
@@ -75,5 +82,11 @@ export const DELETE = withTierGate("mini", async (
     .eq("id", id)
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await logAdminAction({
+    adminId: user.id,
+    targetUserId: user.id,
+    action: "copy_rule_delete",
+    details: { rule_id: id },
+  });
   return NextResponse.json({ ok: true });
 });
