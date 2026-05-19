@@ -101,6 +101,10 @@ const COMMUNITY_TOKEN_CONTRACTS: Record<string, string> = {
   // the contract address so we don't have to plumb chain through.
   'pleasure':      '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
   'pleasure-coin': '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+  // Round-2 deep-dive — wallet rows pass token.symbol when contractAddress
+  // is null at click time. Map the on-chain symbol so the same
+  // /api/market/token/NSFW lookup that powers price + chart resolves.
+  'nsfw':          '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
 };
 
 // Common wallet-side symbols the user might URL-ify (eth/btc/sol/etc)

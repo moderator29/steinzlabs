@@ -291,7 +291,9 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <StatCard label="30d PnL" value={fmtUsd(w.pnl_30d_usd)} tone={(w.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
               <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
               <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
-              <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
+              {/* Deep-dive crash fix — followerCount can be undefined on
+                  unbackfilled rows; .toLocaleString() on undefined throws. */}
+              <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
               <StatCard label="Score" value={w.whale_score.toString()} />
               <StatCard label="First seen" value={w.first_seen_at ? new Date(w.first_seen_at).toLocaleDateString() : "—"} />
@@ -346,7 +348,10 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                       <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "—"}</td>
                       <td className="px-3 py-2 font-mono text-slate-300">{fmtUsd(a.value_usd)}</td>
                       <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-500">{new Date(a.timestamp).toLocaleString()}</td>
+                      {/* Deep-dive crash fix — a.timestamp can be null on
+                          live Alchemy/Helius rows; new Date(null) is Invalid
+                          Date and .toLocaleString() throws on that. */}
+                      <td className="px-3 py-2 text-slate-500">{a.timestamp ? new Date(a.timestamp).toLocaleString() : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -580,7 +585,14 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
     );
   }
 
-  const total = data.total_value_usd;
+  // Deep-dive crash fix — type assertion on the json earlier could lie when
+  // the API errored or returned a different shape. Validate both fields
+  // before render so .map() never sees undefined and .length never throws.
+  const holdings = Array.isArray(data?.holdings) ? data.holdings : [];
+  const total = typeof data?.total_value_usd === 'number' ? data.total_value_usd : 0;
+  if (holdings.length === 0) {
+    return <div className="text-xs text-slate-500 py-6 text-center">No holdings indexed for this whale yet.</div>;
+  }
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 flex items-baseline justify-between">
@@ -588,7 +600,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
           <p className="text-[10px] uppercase tracking-wide text-slate-500">Total holdings (priced)</p>
           <p className="text-2xl font-mono font-bold text-white">{fmtUsd(total)}</p>
         </div>
-        <span className="text-[10px] text-slate-500">{data.holdings.length} tokens</span>
+        <span className="text-[10px] text-slate-500">{holdings.length} tokens</span>
       </div>
       <div className="rounded-xl border border-slate-800 overflow-hidden">
         <table className="w-full text-xs">
@@ -602,7 +614,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
             </tr>
           </thead>
           <tbody>
-            {data.holdings.map((h) => {
+            {holdings.map((h) => {
               const pct = total > 0 ? (h.valueUsd / total) * 100 : 0;
               return (
                 <tr key={h.contract ?? 'native'} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
