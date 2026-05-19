@@ -179,22 +179,50 @@ function generateSuggestions(content: string): string[] {
 // and a spec row (Volume / Holders / MCap / Liquidity / FDV). No Buy/Swap
 // buttons on the card — this is an intel surface, not a trade surface. If
 // the user wants to swap, they ask VTX and get a separate Swap Card.
+// Bug §4 — VTX TokenCard used to render 'Loading chart…' text while a
+// per-card fetch ran. Watchlist tiles felt instant because they receive
+// pre-computed sparkline data in props. Two changes here:
+//   1. Module-level in-memory cache (per session) keyed on address|symbol.
+//      Second + subsequent renders of the same token render instantly.
+//   2. Replace the textual 'Loading chart…' placeholder with a subtle
+//      animated skeleton so even a first-time render feels populated
+//      while the real points stream in.
+const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; cachedAt: number }> = new Map();
+const VTX_CHART_TTL_MS = 5 * 60 * 1000;
+
+function chartCacheKey(token: TokenCardData): string {
+  return `${(token.address || token.symbol).toLowerCase()}:${(token.chain || '').toLowerCase()}`;
+}
+
 function TokenCard({ token }: { token: TokenCardData }) {
   const isPositive = token.change24h >= 0;
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
-  const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(null);
+
+  const cacheKey = chartCacheKey(token);
+  const cached = VTX_CHART_CACHE.get(cacheKey);
+  const cachedFresh = cached && Date.now() - cached.cachedAt < VTX_CHART_TTL_MS ? cached : null;
+  const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(
+    cachedFresh ? { points: cachedFresh.points, changePct: cachedFresh.changePct } : null,
+  );
 
   useEffect(() => {
+    // If we already painted from cache, skip the network round-trip.
+    if (cachedFresh) return;
     let cancelled = false;
     const q = token.address
       ? `/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=7d`
       : `/api/vtx/token-card?symbol=${encodeURIComponent(token.symbol)}&tf=7d`;
     fetch(q)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!cancelled && d?.points) setChart({ points: d.points, changePct: d.changePct || 0 }); })
+      .then((d) => {
+        if (cancelled || !d?.points) return;
+        const next = { points: d.points as number[], changePct: (d.changePct as number) || 0 };
+        VTX_CHART_CACHE.set(cacheKey, { ...next, cachedAt: Date.now() });
+        setChart(next);
+      })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [token.address, token.chain, token.symbol]);
+  }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
 
   const chainName = (() => {
     const c = (token.chain || '').toLowerCase();
@@ -239,13 +267,17 @@ function TokenCard({ token }: { token: TokenCardData }) {
         </div>
       </div>
 
-      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls) */}
+      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls).
+          Bug §4 — when chart points aren't in cache yet, render a faint
+          animated skeleton line instead of a 'Loading chart…' label so the
+          card never looks dead. The skeleton vanishes the instant real
+          points arrive. */}
       <div className="h-28 w-full rounded-lg bg-transparent mb-4 overflow-hidden">
         {chart && chart.points.length > 1 ? (
           <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
         ) : (
-          <div className="h-full flex items-center justify-center">
-            <span className="text-[11px] text-gray-600">Loading chart…</span>
+          <div className="h-full w-full flex items-center" aria-hidden="true">
+            <div className="w-full h-12 rounded bg-gradient-to-r from-white/[0.02] via-white/[0.06] to-white/[0.02] animate-pulse" />
           </div>
         )}
       </div>
