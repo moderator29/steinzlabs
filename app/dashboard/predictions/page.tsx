@@ -200,7 +200,7 @@ function DropdownFilter({ label, value, options, onChange }: {
               <button
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
-                className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors ${
+                className={`w-full text-start px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors ${
                   value === opt.value ? 'text-[#0A1EFF] font-semibold' : 'text-gray-400'
                 }`}
               >
@@ -467,7 +467,7 @@ function PredictionCard({
           <div className="text-[10px] text-gray-500">Current Price</div>
           <div className="text-sm font-bold font-mono">{formatPrice(prediction.currentPrice)}</div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-[10px] text-gray-500">24h Change</div>
           <div className={`text-sm font-bold ${prediction.priceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
             {prediction.priceChange24h >= 0 ? '+' : ''}{prediction.priceChange24h.toFixed(1)}%
@@ -528,7 +528,7 @@ function PredictionCard({
         }`}>
           <div className="font-bold text-[10px] uppercase tracking-wider mb-0.5">Your Prediction</div>
           {userPrediction.side.toUpperCase()} ${userPrediction.amount.toFixed(2)}
-          <span className="text-gray-400 ml-1">(Payout: ${userPrediction.potentialPayout.toFixed(2)})</span>
+          <span className="text-gray-400 ms-1">(Payout: ${userPrediction.potentialPayout.toFixed(2)})</span>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
@@ -670,7 +670,7 @@ export default function PredictionsPage() {
         <div className="flex items-center gap-3 mb-1">
           <Target className="w-5 h-5 text-[#FF6B35]" />
           <h1 className="text-xl font-heading font-bold">Predictions Market</h1>
-          <span className="ml-auto text-[10px] text-gray-500 font-mono">{stats.activePredictions} active</span>
+          <span className="ms-auto text-[10px] text-gray-500 font-mono">{stats.activePredictions} active</span>
         </div>
         <p className="text-gray-400 text-xs mb-4">Predict crypto outcomes. Winners split the pool.</p>
 
@@ -718,7 +718,7 @@ export default function PredictionsPage() {
         </div>
 
         <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-          <div className="flex items-center gap-1 text-gray-500 mr-1">
+          <div className="flex items-center gap-1 text-gray-500 me-1">
             <Filter className="w-3 h-3" />
           </div>
           <DropdownFilter

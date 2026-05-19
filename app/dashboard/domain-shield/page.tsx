@@ -124,7 +124,7 @@ export default function DomainShieldPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleScan()}
               placeholder="Enter URL or domain (e.g. uniswap.org)"
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl pl-9 pr-4 py-2.5 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl ps-9 pe-4 py-2.5 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
             />
           </div>
           <button
@@ -234,7 +234,7 @@ export default function DomainShieldPage() {
                   <Brain className="w-4 h-4 text-[#0A1EFF]" />
                 </div>
                 <span className="font-bold text-sm">AI Analysis</span>
-                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
                   result.verdict === 'SAFE'
                     ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
                     : result.verdict === 'SUSPICIOUS'

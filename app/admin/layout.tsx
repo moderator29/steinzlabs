@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="w-5 h-5" />
           </button>
           <span className="text-sm font-bold text-white">Admin Panel</span>
-          <div className="ml-auto">
+          <div className="ms-auto">
             <HealthBadge />
           </div>
         </header>

@@ -375,7 +375,7 @@ export default function ContractAnalyzerPage() {
                   <Brain className="w-4 h-4 text-[#0A1EFF]" />
                 </div>
                 <span className="font-bold text-sm">Security Assessment Summary</span>
-                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
                   result.overallScore >= 80
                     ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
                     : result.overallScore >= 55
@@ -397,7 +397,7 @@ export default function ContractAnalyzerPage() {
                         line.startsWith('ASSESSMENT:') ? 'text-gray-300 font-medium' :
                         line.startsWith('KEY RISKS:') ? 'text-amber-400 font-semibold mt-1' :
                         line.startsWith('VERDICT:') ? 'text-white font-bold mt-1' :
-                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 pl-2' :
+                        line.startsWith('•') || line.startsWith('-') ? 'text-gray-400 ps-2' :
                         'text-gray-300'
                       }`}>{line}</p>
                     ))}

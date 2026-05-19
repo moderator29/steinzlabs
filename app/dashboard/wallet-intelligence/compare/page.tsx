@@ -260,7 +260,7 @@ export default function WalletCompareePage() {
               </div>
               {side.loading && (
                 <div className="flex items-center justify-center py-12 text-slate-500 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading…
+                  <Loader2 className="w-4 h-4 animate-spin me-2" /> Loading…
                 </div>
               )}
               {side.error && !side.loading && (
@@ -303,7 +303,7 @@ export default function WalletCompareePage() {
         {a.data && b.data && (
           <div className="whale-glass-card p-4 sm:p-5">
             <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-3">Side-by-side</div>
-            <table className="w-full text-left">
+            <table className="w-full text-start">
               <thead>
                 <tr className="border-b border-white/[0.06]">
                   <th className="py-2 text-[10px] uppercase tracking-wide text-slate-500"></th>

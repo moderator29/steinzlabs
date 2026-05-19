@@ -170,7 +170,7 @@ export function VtxToolSidecar({ tokens, toolEvents, pendingSwap }: Props) {
                       <div className="text-xs font-semibold text-white truncate">{t.symbol}</div>
                       <div className="text-[10px] text-gray-500 truncate">{t.name}</div>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-end flex-shrink-0">
                       <div className="text-[11px] font-mono font-semibold text-white">{t.price}</div>
                       <div
                         className={`text-[9px] font-semibold ${t.isPositive ? "text-emerald-400" : "text-red-400"}`}

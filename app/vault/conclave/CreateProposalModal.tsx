@@ -101,7 +101,7 @@ export function CreateProposalModal({ onClose, onCreated }: Props) {
               placeholder="What is the change, and why?"
               className="w-full resize-y rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[14px] text-white placeholder:text-white/30 focus:border-[#0066FF]/60 focus:outline-none"
             />
-            <div className="mt-1 text-right text-[11px] text-white/40">{body.length}/5000</div>
+            <div className="mt-1 text-end text-[11px] text-white/40">{body.length}/5000</div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

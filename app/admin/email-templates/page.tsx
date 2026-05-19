@@ -247,7 +247,7 @@ export default function EmailTemplatesPage() {
                 <div className="flex items-center gap-2">
                   <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${TYPE_STYLES[t.type]}`}>{t.type}</span>
                   {t.active ? <span className="text-green-400 text-[9px]">Active</span> : <span className="text-gray-600 text-[9px]">Inactive</span>}
-                  <span className="text-[9px] text-gray-600 ml-auto">{t.variables.length} vars</span>
+                  <span className="text-[9px] text-gray-600 ms-auto">{t.variables.length} vars</span>
                 </div>
               </div>
             ))}

@@ -296,7 +296,7 @@ export default function WalletClustersPage() {
       <div className="max-w-7xl mx-auto px-4 mt-6">
         {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm mb-4">{error}</div>}
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-slate-500"><Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading clusters…</div>
+          <div className="flex items-center justify-center py-24 text-slate-500"><Loader2 className="w-5 h-5 animate-spin me-2" /> Loading clusters…</div>
         ) : rows.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-slate-300 font-semibold mb-1">No clusters yet.</p>
@@ -358,7 +358,7 @@ function ClusterCard({ row }: { row: ClusterRow }) {
           </div>
           <code className="text-[10px] font-mono text-slate-600 truncate block mt-1">{row.cluster_id}</code>
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-end shrink-0">
           <div className="text-[9px] uppercase tracking-wider text-slate-500">Score</div>
           <div className={`text-xl font-black font-mono ${score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>{score}</div>
         </div>

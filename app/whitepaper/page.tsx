@@ -166,7 +166,7 @@ export default function WhitepaperPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20 lg:flex lg:gap-16">
         {/* TOC - Desktop */}
         <aside className="hidden lg:block w-56 flex-shrink-0">
-          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-3">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pe-3">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-[0.15em] mb-4">Contents</div>
             <nav className="space-y-0.5">
               {TOC.map(t => (

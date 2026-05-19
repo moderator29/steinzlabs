@@ -196,7 +196,7 @@ function formatCompact(n: number): string {
 
 function formatPrice(n: number): string {
   if (!n || isNaN(n)) return '$0';
-  if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  if (n >= 1000) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (n >= 1) return `$${n.toFixed(4)}`;
   if (n >= 0.0001) return `$${n.toFixed(6)}`;
   return `$${n.toExponential(4)}`;
@@ -301,7 +301,7 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
             <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{cardData.name}</span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-base font-bold text-white">{formatPrice(cardData.price)}</div>
           <div className={`flex items-center gap-0.5 text-[11px] font-semibold justify-end ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -415,7 +415,7 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
                   style={{ width: `${Math.min(holder.percentage, 100)}%` }}
                 />
               </div>
-              <span className="text-[10px] text-white w-10 text-right flex-shrink-0">
+              <span className="text-[10px] text-white w-10 text-end flex-shrink-0">
                 {holder.percentage.toFixed(1)}%
               </span>
             </div>
@@ -1120,7 +1120,7 @@ export default function VtxAiTab() {
               >
                 + New Chat
               </button>
-              <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/10 rounded ml-1">
+              <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/10 rounded ms-1">
                 <X className="w-3.5 h-3.5 text-gray-500" />
               </button>
             </div>
@@ -1133,7 +1133,7 @@ export default function VtxAiTab() {
                 <button
                   key={entry.id}
                   onClick={() => loadHistoryEntry(entry)}
-                  className="w-full text-left p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all"
+                  className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all"
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <Clock className="w-2.5 h-2.5 text-gray-600 flex-shrink-0" />
@@ -1161,7 +1161,7 @@ export default function VtxAiTab() {
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
-                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#0A1EFF]/20 transition-all text-left"
+                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#0A1EFF]/20 transition-all text-start"
                 >
                   <Icon className="w-5 h-5 text-[#0A1EFF] mb-2" />
                   <div className="text-xs font-semibold">{action.label}</div>
@@ -1266,7 +1266,7 @@ export default function VtxAiTab() {
               <button
                 type="button"
                 onClick={stopGeneration}
-                className="ml-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg border border-white/15 text-slate-300 hover:bg-white/[0.05]"
+                className="ms-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg border border-white/15 text-slate-300 hover:bg-white/[0.05]"
                 title="Stop generating"
               >
                 Stop

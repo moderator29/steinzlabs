@@ -6,10 +6,88 @@ import { useMemo } from 'react';
 /**
  * Locale-aware number / currency / date / percent formatters.
  *
- * Replaces ad-hoc `n.toLocaleString('en-US', …)` calls so European
- * users see `1.234,56` and Arabic users see RTL-safe digits without
- * us hardcoding `'en-US'` at every call site.
+ * Two surfaces coexist here:
+ *
+ *  1. Imperative singleton (`setLocale` / `getLocale` / `formatNumber` /
+ *     `formatCurrency` / `formatPercent`) — driven by
+ *     `lib/i18n/useTranslate` when the user switches language via
+ *     `LanguageSwitcher`. Used by call sites outside of a next-intl tree
+ *     (server routes, plain string helpers, classic components).
+ *
+ *  2. Next-intl hook (`useFormatters`) — returns a memo'd `Formatters`
+ *     bundle keyed off the route locale. Use this in components that
+ *     already sit under a `NextIntlClientProvider`.
+ *
+ * Both honour the same goal: stop hardcoding `'en-US'` so European users
+ * see `1.234,56` and Arabic users get RTL-safe digits.
  */
+
+// ─── Imperative singleton ────────────────────────────────────────────────
+
+let cachedLocale: string | null = null;
+
+export function setLocale(locale: string): void {
+  cachedLocale = locale;
+}
+
+export function getLocale(): string {
+  if (cachedLocale) return cachedLocale;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = window.localStorage.getItem('naka_language');
+      if (stored) {
+        cachedLocale = stored;
+        return stored;
+      }
+    } catch {
+      /* localStorage blocked — fall through to navigator */
+    }
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      cachedLocale = navigator.language;
+      return navigator.language;
+    }
+  }
+  return 'en-US';
+}
+
+/** Locale-aware number formatting. Default fraction digits unbounded. */
+export function formatNumber(
+  value: number,
+  options: Intl.NumberFormatOptions = {},
+  locale?: string,
+): string {
+  return value.toLocaleString(locale ?? getLocale(), options);
+}
+
+/** USD by default; pass {currency: 'EUR'} etc. to override. */
+export function formatCurrency(
+  value: number,
+  options: Intl.NumberFormatOptions = {},
+  locale?: string,
+): string {
+  return value.toLocaleString(locale ?? getLocale(), {
+    style: 'currency',
+    currency: 'USD',
+    ...options,
+  });
+}
+
+/** Percent (input is a 0–1 ratio; 0.05 → "5%"). */
+export function formatPercent(
+  ratio: number,
+  options: Intl.NumberFormatOptions = {},
+  locale?: string,
+): string {
+  return ratio.toLocaleString(locale ?? getLocale(), {
+    style: 'percent',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+    ...options,
+  });
+}
+
+// ─── Next-intl hook surface ──────────────────────────────────────────────
+
 export type Formatters = ReturnType<typeof formatters>;
 
 export function formatters(locale: string) {

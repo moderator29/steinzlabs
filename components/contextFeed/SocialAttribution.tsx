@@ -66,7 +66,7 @@ export function SocialAttribution({ count, sample, verb = 'endorsed bullish' }: 
         ) : null}
       </div>
       <span className="text-slate-300">
-        <span className="font-semibold text-white tabular-nums">{count.toLocaleString('en-US')}</span> {verb}
+        <span className="font-semibold text-white tabular-nums">{count.toLocaleString(undefined)}</span> {verb}
       </span>
       <Users className="w-3 h-3 text-slate-500" />
     </div>

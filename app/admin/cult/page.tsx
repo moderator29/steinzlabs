@@ -58,7 +58,7 @@ export default function AdminCultPage() {
     };
   }, []);
 
-  const fmt = (n: number) => n.toLocaleString('en-US');
+  const fmt = (n: number) => n.toLocaleString(undefined);
 
   return (
     <div className="min-h-screen text-white px-6 py-8 max-w-4xl mx-auto">
@@ -81,7 +81,7 @@ export default function AdminCultPage() {
           <p className="text-[11px] text-slate-500 mt-2">
             Live value pulled from <code className="text-slate-300">NAKA_HOLDING_THRESHOLD</code> env (default
             1,227,000). Editable without redeploy in a follow-up that adds
-            <code className="ml-1 text-slate-300">platform_settings.naka_threshold</code>.
+            <code className="ms-1 text-slate-300">platform_settings.naka_threshold</code>.
           </p>
         </div>
 

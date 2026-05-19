@@ -60,7 +60,7 @@ export default function ThemeToggle() {
               >
                 <Icon className="w-4 h-4" />
                 {m.label}
-                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#0A1EFF]" />}
+                {active && <span className="ms-auto w-1.5 h-1.5 rounded-full bg-[#0A1EFF]" />}
               </button>
             );
           })}

@@ -98,7 +98,7 @@ export function Empty({ text }: { text: string }) {
   return <div className="flex items-center justify-center py-8 text-xs text-slate-500">{text}</div>;
 }
 function Th({ children }: { children?: React.ReactNode }) {
-  return <th className="text-left px-3 py-2 font-medium">{children}</th>;
+  return <th className="text-start px-3 py-2 font-medium">{children}</th>;
 }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
   return <td className={`px-3 py-2 text-slate-300 ${className}`}>{children}</td>;

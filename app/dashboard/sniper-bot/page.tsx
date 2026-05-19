@@ -370,7 +370,7 @@ function CreateModal({
               <div className="flex items-center justify-between py-2">
                 <div>
                   <span className="text-slate-300 text-sm">Auto Execute</span>
-                  <span className="ml-2 text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">MAX</span>
+                  <span className="ms-2 text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">MAX</span>
                 </div>
                 <button
                   onClick={() => set("auto_execute", !form.auto_execute)}
@@ -842,11 +842,11 @@ export default function SniperBotPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800/50">
-                      <th className="text-left px-4 py-3 text-slate-400 font-medium">Token</th>
-                      <th className="text-left px-4 py-3 text-slate-400 font-medium">Chain</th>
-                      <th className="text-left px-4 py-3 text-slate-400 font-medium">Decision</th>
-                      <th className="text-right px-4 py-3 text-slate-400 font-medium">PnL</th>
-                      <th className="text-right px-4 py-3 text-slate-400 font-medium">Time</th>
+                      <th className="text-start px-4 py-3 text-slate-400 font-medium">Token</th>
+                      <th className="text-start px-4 py-3 text-slate-400 font-medium">Chain</th>
+                      <th className="text-start px-4 py-3 text-slate-400 font-medium">Decision</th>
+                      <th className="text-end px-4 py-3 text-slate-400 font-medium">PnL</th>
+                      <th className="text-end px-4 py-3 text-slate-400 font-medium">Time</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -865,7 +865,7 @@ export default function SniperBotPage() {
                           <td className={`px-4 py-3 text-xs font-medium uppercase ${DECISION_COLORS[e.decision]}`}>
                             {e.decision.replace(/_/g, " ")}
                           </td>
-                          <td className={`px-4 py-3 text-right ${
+                          <td className={`px-4 py-3 text-end ${
                             e.pnl_usd === null
                               ? "text-slate-500"
                               : e.pnl_usd >= 0
@@ -874,7 +874,7 @@ export default function SniperBotPage() {
                           }`}>
                             {e.pnl_usd === null ? "—" : `${e.pnl_usd >= 0 ? "+" : ""}$${e.pnl_usd.toFixed(2)}`}
                           </td>
-                          <td className="px-4 py-3 text-right text-slate-500 text-xs whitespace-nowrap">
+                          <td className="px-4 py-3 text-end text-slate-500 text-xs whitespace-nowrap">
                             {new Date(e.created_at).toLocaleDateString()}
                           </td>
                         </motion.tr>

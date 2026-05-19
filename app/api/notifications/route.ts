@@ -36,7 +36,7 @@ async function fetchPriceAlerts(): Promise<NotificationItem[]> {
       const change1h = coin.price_change_percentage_1h_in_currency;
       if (change1h && Math.abs(change1h) > 5) {
         const direction = change1h > 0 ? 'up' : 'down';
-        const price = coin.current_price?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) || '$0';
+        const price = coin.current_price?.toLocaleString(undefined, { style: 'currency', currency: 'USD' }) || '$0';
         alerts.push({
           id: `price-${coin.id}-${Date.now()}`,
           type: 'price',

@@ -219,7 +219,7 @@ export default function NotificationBell() {
                 <button
                   key={n.id}
                   onClick={() => handleMarkRead(n.id)}
-                  className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-white/[0.04] last:border-0 transition-colors ${
+                  className={`w-full flex items-start gap-3 px-4 py-3 text-start border-b border-white/[0.04] last:border-0 transition-colors ${
                     n.read ? 'opacity-50 hover:opacity-70 hover:bg-white/[0.02]' : 'hover:bg-white/[0.04]'
                   }`}
                 >

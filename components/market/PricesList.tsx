@@ -21,9 +21,9 @@ function SkeletonRow() {
         <div className={`h-3.5 w-24 ${shimmer}`} />
         <div className={`h-2.5 w-12 ${shimmer}`} />
       </div>
-      <div className="text-right space-y-1.5 flex-shrink-0">
-        <div className={`h-3.5 w-20 ${shimmer} ml-auto`} />
-        <div className={`h-2.5 w-14 ${shimmer} ml-auto`} />
+      <div className="text-end space-y-1.5 flex-shrink-0">
+        <div className={`h-3.5 w-20 ${shimmer} ms-auto`} />
+        <div className={`h-2.5 w-14 ${shimmer} ms-auto`} />
       </div>
     </div>
   );
@@ -60,7 +60,7 @@ export function PricesList({ tokens, loading = false, onTokenClick }: PricesList
             onClick={() => onTokenClick?.(token)}
             className="flex items-center gap-3 px-4 py-3 border-b border-[#1E2433]/60 last:border-b-0 hover:bg-[#141824] active:bg-[#141824] transition-colors cursor-pointer"
           >
-            <span className="text-gray-600 text-xs tabular-nums w-5 text-right flex-shrink-0">
+            <span className="text-gray-600 text-xs tabular-nums w-5 text-end flex-shrink-0">
               {token.market_cap_rank ?? idx + 1}
             </span>
 
@@ -71,7 +71,7 @@ export function PricesList({ tokens, loading = false, onTokenClick }: PricesList
               <div className="text-gray-500 text-xs uppercase">{token.symbol}</div>
             </div>
 
-            <div className="text-right flex-shrink-0">
+            <div className="text-end flex-shrink-0">
               <div className="text-white font-mono text-sm">{formatPrice(token.current_price)}</div>
               <div
                 className={`text-xs font-medium mt-0.5 ${

@@ -213,14 +213,14 @@ export default function WalletLabelsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, label, or category..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
             />
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-16 text-gray-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            <Loader2 className="w-5 h-5 animate-spin me-2" />
             <span className="text-sm">Loading labels…</span>
           </div>
         ) : filtered.length === 0 ? (
@@ -232,7 +232,7 @@ export default function WalletLabelsPage() {
             <thead className="border-b border-[#1E2433]">
               <tr>
                 {['Address', 'Chain', 'Label', 'Category', 'Verified', 'Notes', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-gray-500 font-medium">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}
               </tr>
             </thead>

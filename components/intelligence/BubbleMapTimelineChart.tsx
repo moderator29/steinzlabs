@@ -164,7 +164,7 @@ export default function BubbleMapTimelineChart({ token, chain, days = 90, height
   if (snapshots === null) {
     return (
       <div className={`flex items-center justify-center text-xs text-gray-500 border border-white/10 rounded-xl ${className}`} style={{ height }}>
-        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading concentration history…
+        <Loader2 className="w-4 h-4 animate-spin me-2" /> Loading concentration history…
       </div>
     );
   }
@@ -186,7 +186,7 @@ export default function BubbleMapTimelineChart({ token, chain, days = 90, height
       <div className="px-3 py-1.5 text-[10px] text-gray-500 border-t border-white/10 bg-black/20 flex items-center gap-3">
         <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: CONCENTRATION }} /> Top-10 % (left)</span>
         <span className="flex items-center gap-1"><span className="inline-block w-2 h-0.5 border-t border-dotted" style={{ borderColor: HOLDERS }} /> Holders (right)</span>
-        <span className="ml-auto">{snapshots.length} snapshots · {days}d</span>
+        <span className="ms-auto">{snapshots.length} snapshots · {days}d</span>
       </div>
     </div>
   );

@@ -226,7 +226,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
               >
                 <TokenBadge symbol={t.symbol} size={36} />
-                <div className="text-left flex-1">
+                <div className="text-start flex-1">
                   <div className="text-sm font-semibold text-white">{t.symbol}</div>
                   <div className="text-xs text-gray-500">{t.name}</div>
                 </div>
@@ -1030,7 +1030,7 @@ export default function SwapPage() {
             <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span className="text-xs text-red-400">{walletConnectError}</span>
-              <button onClick={() => setWalletConnectError('')} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setWalletConnectError('')} className="ms-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" /></button>
             </div>
           )}
           <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -1055,10 +1055,10 @@ export default function SwapPage() {
                 {w.id === 'phantom' && <PhantomLogo size={16} />}
                 {w.label}
                 {walletMode === w.id && !w.connected && (
-                  <span className="text-[9px] text-amber-400 font-normal ml-0.5">Connect</span>
+                  <span className="text-[9px] text-amber-400 font-normal ms-0.5">Connect</span>
                 )}
                 {w.connected && walletMode === w.id && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 ms-0.5" />
                 )}
               </button>
             ))}
@@ -1080,7 +1080,7 @@ export default function SwapPage() {
               >
                 <WalletConnectLogo size={16} />
                 {onMobileDevice ? 'Mobile / WalletConnect' : 'WalletConnect'}
-                {appKitConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />}
+                {appKitConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ms-0.5" />}
               </button>
             )}
           </div>
@@ -1408,7 +1408,7 @@ export default function SwapPage() {
                     <a
                       href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
                       target="_blank" rel="noopener noreferrer"
-                      className="ml-2 underline inline-flex items-center gap-1"
+                      className="ms-2 underline inline-flex items-center gap-1"
                     >
                       View tx <ExternalLink className="w-3 h-3" />
                     </a>
@@ -1442,7 +1442,7 @@ export default function SwapPage() {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-sm font-bold text-white">{toToken}</div>
                     <div className="text-[10px] text-gray-500">{toAmount}</div>
                   </div>

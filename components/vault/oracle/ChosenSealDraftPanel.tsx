@@ -123,7 +123,7 @@ export function ChosenSealDraftPanel() {
             placeholder="Six to one-forty characters"
             className="mt-1 w-full rounded-md border border-white/10 bg-[#0b1022] px-3 py-2 text-[13px] text-white outline-none focus:border-[#FFD86B]/60"
           />
-          <span className="mt-1 block text-right text-[10px] text-[#7F8AA8]">
+          <span className="mt-1 block text-end text-[10px] text-[#7F8AA8]">
             {titleRemaining} left
           </span>
         </label>
@@ -138,7 +138,7 @@ export function ChosenSealDraftPanel() {
             rows={6}
             className="mt-1 w-full rounded-md border border-white/10 bg-[#0b1022] px-3 py-2 text-[13px] text-[#E6ECFF] outline-none focus:border-[#FFD86B]/60"
           />
-          <span className="mt-1 block text-right text-[10px] text-[#7F8AA8]">{bodyLen} / 4000</span>
+          <span className="mt-1 block text-end text-[10px] text-[#7F8AA8]">{bodyLen} / 4000</span>
         </label>
 
         {error ? (

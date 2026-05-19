@@ -70,7 +70,7 @@ function Row({
           aria-label={`${label} volume`}
         />
       </div>
-      <span className="naka-text-tertiary w-10 text-right tabular-nums">{Math.round(volume * 100)}%</span>
+      <span className="naka-text-tertiary w-10 text-end tabular-nums">{Math.round(volume * 100)}%</span>
     </div>
   );
 }

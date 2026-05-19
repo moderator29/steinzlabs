@@ -128,7 +128,7 @@ export function TokenCard({ token }: { token: TokenCardData }) {
             <span className="text-gray-500 text-xs">{token.name}</span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-white font-bold text-sm font-mono">{formatPrice(token.price)}</div>
           <div className={`flex items-center gap-0.5 justify-end text-xs font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
             {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}

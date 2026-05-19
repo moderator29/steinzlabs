@@ -132,7 +132,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
               <LegendDot label="Coordinated trading" color="#f59e0b" />
               <LegendDot label="Behavioral" color="#22c55e" />
               <LegendDot label="Sybil pattern" color="#ef4444" />
-              <span className="ml-auto text-slate-600">
+              <span className="ms-auto text-slate-600">
                 3D immersive view deferred to Session 5C
               </span>
             </div>
@@ -145,11 +145,11 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
             <table className="w-full text-xs">
               <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
                 <tr>
-                  <th className="text-left px-3 py-2">Address</th>
-                  <th className="text-left px-3 py-2">Label</th>
-                  <th className="text-left px-3 py-2">Entity</th>
-                  <th className="text-left px-3 py-2">Score</th>
-                  <th className="text-left px-3 py-2" />
+                  <th className="text-start px-3 py-2">Address</th>
+                  <th className="text-start px-3 py-2">Label</th>
+                  <th className="text-start px-3 py-2">Entity</th>
+                  <th className="text-start px-3 py-2">Score</th>
+                  <th className="text-start px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -164,7 +164,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
                     <td className="px-3 py-2">
                       {m.whale_score > 0 && <SecurityBadge score={m.whale_score} size="sm" compact />}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-end">
                       <Link href={`/dashboard/whale-tracker/${m.address}`} className="text-[11px] text-blue-400 hover:underline">
                         open →
                       </Link>

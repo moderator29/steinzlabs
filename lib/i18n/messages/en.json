@@ -41,5 +41,56 @@
     "whaleWatchers": "Top Whale Watchers",
     "mostActive": "Most Active",
     "viewAll": "View all →"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "security": "Security",
+      "research": "Research",
+      "docs": "Docs",
+      "logIn": "Log In",
+      "getStarted": "Get Started",
+      "nakacult": "NakaCult",
+      "cult": "Cult"
+    },
+    "hero": {
+      "tagline": "Naka Labs",
+      "subhead": "On-chain intelligence + non-custodial trading.",
+      "cta": "Open the dashboard",
+      "secondaryCta": "View the research feed"
+    },
+    "security": {
+      "honeypotTitle": "Honeypot + tax check on every token",
+      "honeypotBody": "GoPlus, Honeypot.is, RugCheck and de.fi are triangulated before any buy. If any flags critical, the snipe blocks fail-closed.",
+      "deployerTitle": "Deployer history scoring",
+      "deployerBody": "Every contract is checked against the deployer's prior tokens. Serial ruggers and high-abandonment wallets show a red banner before you can confirm.",
+      "lpLockTitle": "Liquidity lock readout",
+      "lpLockBody": "Team Finance / Unicrypt / PinkLock locks parsed out of the GoPlus lp_holders payload and surfaced with unlock countdowns — no more checking a separate dashboard.",
+      "auditFooter": "Audit reports for every shipped section live in /admin/audit-tracker. Nothing ships without industry-parity verification."
+    },
+    "faq": {
+      "q1": "Is Naka Labs custodial?",
+      "a1": "No. We never hold your keys. Trading is non-custodial across EVM and Solana via the user's connected wallet; the platform only signs server-attested transactions on the user's behalf when they explicitly opt in to auto-execute.",
+      "q2": "What chains are supported?",
+      "a2": "Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche, Solana.",
+      "q3": "How does the sniper bot prevent rug-pulls?",
+      "a3": "Five sequential safety gates fire on every snipe — honeypot, tax, holder concentration, liquidity depth, and a VTX AI risk assessment. Any single gate flagging blocks the snipe.",
+      "q4": "What does NAKA token unlock?",
+      "a4": "Holding ≥1,227,000 NAKA unlocks the Cult chambers (Conclave / Oracle / Sanctum) — gated research, governance, and curated alpha. NAKA is not required to use the trading platform itself.",
+      "q5": "How do you make money?",
+      "a5": "0.4% on swaps, tiered subscriptions for Pro / Elite, and a small revenue share with builders launching through the milestone-gated launchpad.",
+      "q6": "Is my data sold?",
+      "a6": "No. The privacy policy in /privacy lists every third party we share data with (Sentry for error tracking, PostHog for opt-in product analytics, the chain RPCs you trigger by trading). We do not sell wallet addresses, trade history, or personal data to anyone."
+    },
+    "cards": {
+      "whaleTitle": "Whale tracking",
+      "whaleBody": "Real-time activity from every wallet you follow + cluster-detected smart-money convergence.",
+      "sniperTitle": "Sniper bot",
+      "sniperBody": "Auto-execute on new pairs that pass the 5-gate safety flow. TP/SL/trailing executor included.",
+      "vtxTitle": "VTX AI research",
+      "vtxBody": "Ask anything in plain English. The agent pulls live on-chain data, decodes contracts, and ranks risk.",
+      "copyTitle": "Copy trading",
+      "copyBody": "Mirror proven wallets one-click or auto, with per-rule daily caps and per-token blacklists."
+    }
   }
 }

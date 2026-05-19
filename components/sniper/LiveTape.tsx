@@ -58,7 +58,7 @@ export function LiveTape({ rows, onRowClick }: LiveTapeProps) {
       role="log"
       aria-live="polite"
       aria-label="Live sniper fills"
-      className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto pr-1"
+      className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto pe-1"
     >
       {rows.length === 0 ? (
         <div className="text-[11px] text-slate-500 px-2 py-3 text-center">
@@ -72,7 +72,7 @@ export function LiveTape({ rows, onRowClick }: LiveTapeProps) {
             <button
               key={row.id}
               onClick={() => onRowClick?.(row.id)}
-              className="grid grid-cols-[1fr_auto] gap-2 items-center px-2 py-1.5 rounded-md border border-white/[0.05] hover:border-white/15 text-left transition-all"
+              className="grid grid-cols-[1fr_auto] gap-2 items-center px-2 py-1.5 rounded-md border border-white/[0.05] hover:border-white/15 text-start transition-all"
               style={{
                 background: t.bg,
                 animation: idx === 0 ? 'naka-tape-pop 220ms cubic-bezier(0.22,1,0.36,1)' : undefined,
@@ -82,7 +82,7 @@ export function LiveTape({ rows, onRowClick }: LiveTapeProps) {
                 <div className="text-[11px] font-semibold text-white truncate">{row.symbol}</div>
                 <div className="text-[10px] text-slate-500 tabular-nums">{timeShort(row.at)} · {fmtUsd(row.sizeUsd)}</div>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                 <div className="inline-flex items-center gap-0.5 font-mono font-bold text-[11px] tabular-nums" style={{ color: t.color }}>
                   {Icon ? <Icon className="w-2.5 h-2.5" /> : null}
                   {t.label}

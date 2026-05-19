@@ -125,7 +125,7 @@ export default function ForgotPasswordPage() {
                       type="email"
                       value={email}
                       onChange={e => { setEmail(e.target.value); setError(''); }}
-                      className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                      className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                       placeholder="john@example.com"
                       autoComplete="email"
                       autoFocus

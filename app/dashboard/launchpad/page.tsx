@@ -94,7 +94,7 @@ export default function LaunchpadPage() {
           <BackButton />
           <Rocket className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Launchpad</h1>
-          <span className="ml-auto px-2 py-0.5 bg-[#10B981]/20 text-[#10B981] rounded text-[10px] font-semibold">Milestone-Gated</span>
+          <span className="ms-auto px-2 py-0.5 bg-[#10B981]/20 text-[#10B981] rounded text-[10px] font-semibold">Milestone-Gated</span>
         </div>
       </div>
 

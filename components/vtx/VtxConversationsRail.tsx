@@ -91,7 +91,7 @@ export function VtxConversationsRail({
                 <button
                   key={session.id}
                   onClick={() => onSelect(session)}
-                  className={`w-full text-left p-2.5 rounded-lg transition-all border ${
+                  className={`w-full text-start p-2.5 rounded-lg transition-all border ${
                     isActive
                       ? "bg-[#0A1EFF]/10 border-[#0A1EFF]/40"
                       : "bg-transparent border-transparent hover:bg-white/[0.03] hover:border-white/[0.06]"

@@ -173,7 +173,7 @@ export default function RiskScannerPage() {
 
             <div className="mb-4">
               <div className="flex items-center bg-[#111827] rounded-xl border border-white/10 overflow-hidden">
-                <Search className="w-4 h-4 text-gray-500 ml-3 flex-shrink-0" />
+                <Search className="w-4 h-4 text-gray-500 ms-3 flex-shrink-0" />
                 <input
                   type="text"
                   value={manualAddress}
@@ -269,7 +269,7 @@ export default function RiskScannerPage() {
                     <Brain className="w-4 h-4 text-[#0A1EFF]" />
                   </div>
                   <span className="font-bold text-sm">Intelligence Report</span>
-                  <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
+                  <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
                     riskScore >= 75
                       ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
                       : riskScore >= 50
@@ -289,7 +289,7 @@ export default function RiskScannerPage() {
                   ) : aiReport ? (
                     <div className="space-y-1.5">
                       {aiReport.split('\n').filter(Boolean).map((line, i) => (
-                        <p key={i} className={`text-xs leading-relaxed ${line.startsWith('•') ? 'text-gray-400 pl-2' : 'text-gray-300'}`}>{line}</p>
+                        <p key={i} className={`text-xs leading-relaxed ${line.startsWith('•') ? 'text-gray-400 ps-2' : 'text-gray-300'}`}>{line}</p>
                       ))}
                     </div>
                   ) : (

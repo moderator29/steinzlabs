@@ -122,7 +122,7 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           placeholder="Search tokens, wallets, entities..."
-          className="w-full pl-9 pr-16 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+          className="w-full ps-9 pe-16 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
         />
         {query && (
           <button
@@ -153,7 +153,7 @@ export function GlobalSearch() {
               <button
                 key={`${r.type}-${r.id ?? r.address}-${i}`}
                 onClick={() => handleSelect(r)}
-                className="w-full text-left px-4 py-3 hover:bg-slate-800/50 border-b border-slate-800 last:border-0 flex items-center gap-3 group"
+                className="w-full text-start px-4 py-3 hover:bg-slate-800/50 border-b border-slate-800 last:border-0 flex items-center gap-3 group"
               >
                 <span className="text-[10px] uppercase tracking-wide text-slate-500 w-14 flex-shrink-0 group-hover:text-slate-400 transition-colors">
                   {r.type}

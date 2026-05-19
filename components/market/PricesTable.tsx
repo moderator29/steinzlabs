@@ -36,13 +36,13 @@ function SkeletonRow() {
           </div>
         </div>
       </td>
-      <td className="px-3 py-3"><div className={`h-3 w-16 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-3 w-20 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-3 w-20 ${shimmer} ml-auto`} /></td>
-      <td className="px-3 py-3"><div className={`h-8 w-20 ${shimmer} ml-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-16 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-12 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-20 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-3 w-20 ${shimmer} ms-auto`} /></td>
+      <td className="px-3 py-3"><div className={`h-8 w-20 ${shimmer} ms-auto`} /></td>
     </tr>
   );
 }
@@ -53,15 +53,15 @@ export function PricesTable({ tokens, loading = false, onTokenClick }: PricesTab
       <table className="w-full text-sm min-w-[900px]">
         <thead>
           <tr className="border-b border-[#1E2433] text-gray-500 text-xs">
-            <th className="px-3 py-3 text-left font-medium w-10">#</th>
-            <th className="px-3 py-3 text-left font-medium">Token</th>
-            <th className="px-3 py-3 text-right font-medium">Price</th>
-            <th className="px-3 py-3 text-right font-medium">1h %</th>
-            <th className="px-3 py-3 text-right font-medium">24h %</th>
-            <th className="px-3 py-3 text-right font-medium">7d %</th>
-            <th className="px-3 py-3 text-right font-medium">Volume 24h</th>
-            <th className="px-3 py-3 text-right font-medium">Market Cap</th>
-            <th className="px-3 py-3 text-right font-medium w-24">7d Chart</th>
+            <th className="px-3 py-3 text-start font-medium w-10">#</th>
+            <th className="px-3 py-3 text-start font-medium">Token</th>
+            <th className="px-3 py-3 text-end font-medium">Price</th>
+            <th className="px-3 py-3 text-end font-medium">1h %</th>
+            <th className="px-3 py-3 text-end font-medium">24h %</th>
+            <th className="px-3 py-3 text-end font-medium">7d %</th>
+            <th className="px-3 py-3 text-end font-medium">Volume 24h</th>
+            <th className="px-3 py-3 text-end font-medium">Market Cap</th>
+            <th className="px-3 py-3 text-end font-medium w-24">7d Chart</th>
           </tr>
         </thead>
         <tbody>
@@ -91,26 +91,26 @@ export function PricesTable({ tokens, loading = false, onTokenClick }: PricesTab
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-right text-white font-mono text-xs">
+                    <td className="px-3 py-3 text-end text-white font-mono text-xs">
                       {formatPrice(token.current_price)}
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="px-3 py-3 text-end">
                       <PctCell value={token.price_change_percentage_1h_in_currency} />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="px-3 py-3 text-end">
                       <PctCell value={token.price_change_percentage_24h} />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="px-3 py-3 text-end">
                       <PctCell value={token.price_change_percentage_7d_in_currency} />
                     </td>
-                    <td className="px-3 py-3 text-right text-gray-300 font-mono text-xs">
+                    <td className="px-3 py-3 text-end text-gray-300 font-mono text-xs">
                       {formatLargeNumber(token.total_volume)}
                     </td>
-                    <td className="px-3 py-3 text-right text-gray-300 font-mono text-xs">
+                    <td className="px-3 py-3 text-end text-gray-300 font-mono text-xs">
                       {formatLargeNumber(token.market_cap)}
                     </td>
                     <td className="px-3 py-3">
-                      <div className="w-20 ml-auto">
+                      <div className="w-20 ms-auto">
                         {sparkData.length > 0 ? (
                           <SparklineChart data={sparkData} isPositive={is24hPos} height={32} />
                         ) : (

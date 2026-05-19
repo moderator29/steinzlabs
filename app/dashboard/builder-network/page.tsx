@@ -125,7 +125,7 @@ export default function BuilderNetworkPage() {
           <BackButton />
           <Building2 className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Builder Network</h1>
-          <span className="ml-auto text-[10px] text-gray-500">{builders.length} builders</span>
+          <span className="ms-auto text-[10px] text-gray-500">{builders.length} builders</span>
         </div>
       </div>
 
@@ -196,7 +196,7 @@ export default function BuilderNetworkPage() {
                       <div className="text-[10px] text-gray-500">{builder.role}</div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-xs font-bold" style={{ color: getScoreColor(builder.reputationScore) }}>
                       {builder.reputationScore}
                     </div>
@@ -213,7 +213,7 @@ export default function BuilderNetworkPage() {
                 <div className="flex items-center gap-4 text-[10px] text-gray-500">
                   <span className="flex items-center gap-0.5"><Star className="w-3 h-3 text-[#F59E0B]" /> {builder.endorsements} endorsements</span>
                   <span className="flex items-center gap-0.5"><Code className="w-3 h-3" /> {builder.completedProjects} projects</span>
-                  <ChevronRight className="w-3 h-3 ml-auto text-gray-600" />
+                  <ChevronRight className="w-3 h-3 ms-auto text-gray-600" />
                 </div>
               </div>
             ))}

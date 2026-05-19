@@ -152,7 +152,7 @@ export function CommandPalette({ items = DEFAULT_ITEMS, hotkey = 'k' }: CommandP
                 key={item.id}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => select(item)}
-                className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors ${i === active ? 'bg-white/[0.05]' : 'hover:bg-white/[0.03]'}`}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-start text-sm transition-colors ${i === active ? 'bg-white/[0.05]' : 'hover:bg-white/[0.03]'}`}
               >
                 <span className="flex items-center gap-3 min-w-0">
                   <span className="text-slate-200 truncate">{item.label}</span>

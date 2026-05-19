@@ -82,7 +82,7 @@ export function detectBehaviorShifts(snapshots: BehaviorSnapshot[]): BehaviorShi
       shifts.push({
         at: curr.timestamp,
         kind: 'pnl',
-        summary: `Realized ${pnlDelta > 0 ? '+' : '-'}$${Math.abs(Math.round(pnlDelta)).toLocaleString('en-US')}`,
+        summary: `Realized ${pnlDelta > 0 ? '+' : '-'}$${Math.abs(Math.round(pnlDelta)).toLocaleString(undefined)}`,
         magnitude: pnlDelta,
       });
     }

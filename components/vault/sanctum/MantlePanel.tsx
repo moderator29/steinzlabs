@@ -148,7 +148,7 @@ export function MantlePanel() {
                 type="button"
                 onClick={() => equip(c)}
                 disabled={busy || equipped || locked}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-[12px] ${
+                className={`w-full rounded-lg border px-3 py-2 text-start text-[12px] ${
                   equipped
                     ? 'border-[#00C8FF]/60 bg-[#00C8FF]/[0.08]'
                     : locked

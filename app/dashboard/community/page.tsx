@@ -22,7 +22,7 @@ export default function CommunityPage() {
           Connect with thousands of on-chain traders. Share strategies, discuss signals, and learn from the best in the game.
         </p>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12 text-left">
+        <div className="grid md:grid-cols-3 gap-6 mb-12 text-start">
           <div className="glass rounded-xl p-6 border border-white/10">
             <MessageCircle className="w-10 h-10 text-[#0A1EFF] mb-3" />
             <h3 className="font-bold text-lg mb-2">Live Discussions</h3>

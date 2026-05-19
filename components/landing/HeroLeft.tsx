@@ -39,7 +39,7 @@ function StatBar() {
     <div className="flex items-center mt-8">
       {stats.map((s, i) => (
         <div key={s.label} className="flex items-center">
-          <div className="flex flex-col items-center px-5 first:pl-0">
+          <div className="flex flex-col items-center px-5 first:ps-0">
             <span className="text-2xl font-black text-white leading-none tabular-nums">{s.num}</span>
             <span className="text-[11px] mt-0.5" style={{ color: '#2a3a60' }}>{s.label}</span>
           </div>

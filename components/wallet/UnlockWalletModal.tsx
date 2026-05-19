@@ -133,7 +133,7 @@ export default function UnlockWalletModal({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
-              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-11 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
               placeholder="Wallet password"
               autoComplete="current-password"
             />

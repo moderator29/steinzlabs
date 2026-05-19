@@ -27,7 +27,7 @@ export function LoadingSkeleton({ rows = 5, variant = 'row' }: LoadingSkeletonPr
           <div className={`h-5 w-32 ${shimmer}`} />
           <div className={`h-4 w-20 ${shimmer}`} />
         </div>
-        <div className="text-right space-y-2">
+        <div className="text-end space-y-2">
           <div className={`h-7 w-28 ${shimmer}`} />
           <div className={`h-4 w-16 ${shimmer}`} />
         </div>

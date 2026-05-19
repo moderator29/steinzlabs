@@ -167,7 +167,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
           ].map(([label, val]) => (
             <div key={label} className="flex justify-between items-center py-2 border-b border-[#1E2433] gap-3">
               <span className="text-xs text-gray-400 flex-shrink-0">{label}</span>
-              <span className="text-xs text-white font-medium truncate text-right">{val}</span>
+              <span className="text-xs text-white font-medium truncate text-end">{val}</span>
             </div>
           ))}
 
@@ -334,7 +334,7 @@ export default function AdminUsersPage() {
               <span className="sr-only">Search users</span>
               <input value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search by name, email, or username..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] focus:border-[#0A1EFF]/40 transition-colors" />
+                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] focus:border-[#0A1EFF]/40 transition-colors" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -372,14 +372,14 @@ export default function AdminUsersPage() {
                 <option value="never">Never signed in</option>
               </select>
             </label>
-            <span className="ml-auto text-gray-300">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</span>
+            <span className="ms-auto text-gray-300">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</span>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="border-b border-[#1E2433]">
               <tr>{['User', 'Email', 'Tier', 'Created', 'Last Active', 'Status', ''].map(h => (
-                <th key={h || 'actions'} scope="col" className="px-4 py-2.5 text-left text-gray-300 font-medium">{h || <span className="sr-only">Open user</span>}</th>
+                <th key={h || 'actions'} scope="col" className="px-4 py-2.5 text-start text-gray-300 font-medium">{h || <span className="sr-only">Open user</span>}</th>
               ))}</tr>
             </thead>
             <tbody>

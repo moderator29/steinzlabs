@@ -48,7 +48,7 @@ export default function DNAAnalyzerPage() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && analyzeWallet()}
                 placeholder="Enter wallet address..."
-                className="w-full bg-[#141824] border border-[#1E2433] rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF] font-mono"
+                className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-10 pe-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF] font-mono"
               />
             </div>
             <button
@@ -109,7 +109,7 @@ export default function DNAAnalyzerPage() {
                       <div className="text-white font-medium">ETH</div>
                       <div className="text-sm text-gray-400">$420M (18%)</div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="text-white font-mono">HOLDING</div>
                     </div>
                   </div>
@@ -120,7 +120,7 @@ export default function DNAAnalyzerPage() {
                       <div className="text-white font-medium">BONK</div>
                       <div className="text-sm text-gray-400">$2.4M</div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="flex items-center gap-1">
                         <TrendingUp size={14} className="text-green-500" />
                         <div className="text-green-500 font-mono">ACCUMULATING</div>

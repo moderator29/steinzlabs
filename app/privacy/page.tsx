@@ -58,7 +58,7 @@ export default function PrivacyPage() {
         <p>If you link a Telegram account, we store your Telegram chat ID so we can deliver notifications you opt into. If you contact support, we store the message thread.</p>
 
         <H2 n="02">What We Never Collect</H2>
-        <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
+        <ul className="list-disc ps-6 space-y-2 my-4 text-gray-300">
           <li><strong>Your seed phrase.</strong> Generated in your browser, shown to you once for backup, and never transmitted to our servers. We have no copy.</li>
           <li><strong>Your private keys.</strong> Derived from your seed in your browser, encrypted locally with AES-256-GCM before any sync. We store ciphertext we cannot decrypt.</li>
           <li><strong>Your wallet password.</strong> Used in your browser to derive the encryption key. Never transmitted.</li>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
 
         <H2 n="03">How We Use Your Data</H2>
         <p>We use your data to:</p>
-        <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
+        <ul className="list-disc ps-6 space-y-2 my-4 text-gray-300">
           <li>Operate and deliver the platform features you access.</li>
           <li>Personalise your experience · VTX context, your feed, your watchlists.</li>
           <li>Send you transactional messages you opt into (alerts, security warnings, account notices).</li>
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
 
         <H2 n="05">Data Sharing</H2>
         <p>We share your data only with the third-party providers required to operate the platform, under contracts that constrain their use of that data to operating their service:</p>
-        <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
+        <ul className="list-disc ps-6 space-y-2 my-4 text-gray-300">
           <li><strong>Infrastructure:</strong> Vercel (hosting), Supabase (database), Cloudflare (CDN &amp; bot protection), Upstash (Redis rate-limiting cache).</li>
           <li><strong>Data providers:</strong> CoinGecko, Alchemy, Helius, Birdeye, DexScreener, GoPlus, LunarCrush. We pass public on-chain identifiers (addresses, token IDs) · not your personal data · to these providers.</li>
           <li><strong>AI:</strong> Anthropic Claude for VTX responses. We send only the chat content and relevant tool-call payloads. We do not send wallet passwords, seed phrases, or secrets.</li>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
 
         <H2 n="07">Your Rights</H2>
         <p>Depending on your jurisdiction, you have some or all of the following rights:</p>
-        <ul className="list-disc pl-6 space-y-2 my-4 text-gray-300">
+        <ul className="list-disc ps-6 space-y-2 my-4 text-gray-300">
           <li><strong>Access:</strong> request a copy of the personal data we hold about you.</li>
           <li><strong>Rectification:</strong> correct any inaccurate or incomplete personal data.</li>
           <li><strong>Erasure:</strong> request deletion of your personal data, subject to our legal retention obligations.</li>

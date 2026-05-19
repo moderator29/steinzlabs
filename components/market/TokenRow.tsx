@@ -26,17 +26,17 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
         onClick={() => onClick(token.id)}
         className="flex items-center gap-3 p-3 hover:bg-[#141824] rounded-lg cursor-pointer transition-colors"
       >
-        <span className="text-gray-500 text-xs w-6 text-right flex-shrink-0">{rank}</span>
+        <span className="text-gray-500 text-xs w-6 text-end flex-shrink-0">{rank}</span>
         <TokenLogo src={token.image} symbol={token.symbol} size={36} />
         <div className="flex-1 min-w-0">
           <div className="text-white font-medium text-sm truncate">{token.name}</div>
           <div className="text-gray-500 text-xs uppercase">{token.symbol}</div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-white font-mono text-sm">{formatPrice(token.current_price)}</div>
           <PriceChangeDisplay value={token.price_change_percentage_24h} size="sm" />
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onToggleWatch(token.id); }} className="ml-1 p-1">
+        <button onClick={(e) => { e.stopPropagation(); onToggleWatch(token.id); }} className="ms-1 p-1">
           <Star size={14} className={isWatched ? 'fill-[#0A1EFF] text-[#0A1EFF]' : 'text-gray-600'} />
         </button>
       </div>
@@ -59,12 +59,12 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
           </div>
         </div>
       </td>
-      <td className="px-4 py-3.5 text-white font-mono text-sm text-right">{formatPrice(token.current_price)}</td>
-      <td className="px-4 py-3.5 text-right"><PriceChangeDisplay value={token.price_change_percentage_1h_in_currency} size="sm" /></td>
-      <td className="px-4 py-3.5 text-right"><PriceChangeDisplay value={token.price_change_percentage_24h} size="sm" /></td>
-      <td className="px-4 py-3.5 text-right"><PriceChangeDisplay value={token.price_change_percentage_7d_in_currency} size="sm" /></td>
-      <td className="px-4 py-3.5 text-gray-300 text-sm text-right">{formatLargeNumber(token.total_volume)}</td>
-      <td className="px-4 py-3.5 text-gray-300 text-sm text-right">{formatLargeNumber(token.market_cap)}</td>
+      <td className="px-4 py-3.5 text-white font-mono text-sm text-end">{formatPrice(token.current_price)}</td>
+      <td className="px-4 py-3.5 text-end"><PriceChangeDisplay value={token.price_change_percentage_1h_in_currency} size="sm" /></td>
+      <td className="px-4 py-3.5 text-end"><PriceChangeDisplay value={token.price_change_percentage_24h} size="sm" /></td>
+      <td className="px-4 py-3.5 text-end"><PriceChangeDisplay value={token.price_change_percentage_7d_in_currency} size="sm" /></td>
+      <td className="px-4 py-3.5 text-gray-300 text-sm text-end">{formatLargeNumber(token.total_volume)}</td>
+      <td className="px-4 py-3.5 text-gray-300 text-sm text-end">{formatLargeNumber(token.market_cap)}</td>
       <td className="px-4 py-3.5 w-28">
         {sparkData.length > 0 && <SparklineChart data={sparkData} isPositive={isPositive} height={40} />}
       </td>

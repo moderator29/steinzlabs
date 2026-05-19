@@ -102,7 +102,7 @@ export default function WhaleSubmissionsAdminPage() {
         <h1 className="text-2xl font-bold">Whale Submissions</h1>
         <button
           onClick={load}
-          className="ml-auto inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/30 transition-colors"
+          className="ms-auto inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/30 transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>

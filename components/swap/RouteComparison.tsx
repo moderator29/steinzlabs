@@ -102,7 +102,7 @@ export function RouteComparison({
               <button
                 key={r.provider}
                 onClick={() => onSelect?.(r)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition text-left ${
+                className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition text-start ${
                   selectedProvider === r.provider ? "bg-blue-500/5" : ""
                 }`}
               >

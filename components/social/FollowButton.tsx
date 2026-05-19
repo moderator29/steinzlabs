@@ -92,7 +92,7 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
           : state === 'pending' ? (hover ? (<><X className="w-3 h-3" />Cancel</>) : (<><Clock className="w-3 h-3" />Requested</>))
           : hover ? (<><X className="w-3 h-3" />Unfollow</>) : (<><Check className="w-3 h-3" />Following</>)}
         {state === 'accepted' && mutual && !hover && (
-          <span className="ml-1 px-1.5 py-[1px] rounded text-[9px] bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25">
+          <span className="ms-1 px-1.5 py-[1px] rounded text-[9px] bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25">
             Mutual
           </span>
         )}

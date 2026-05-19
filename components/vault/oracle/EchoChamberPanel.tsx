@@ -142,7 +142,7 @@ export function EchoChamberPanel() {
               key={s.id}
               className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
             >
-              <span className="w-6 text-right text-[10px] text-[#7F8AA8]">#{s.position}</span>
+              <span className="w-6 text-end text-[10px] text-[#7F8AA8]">#{s.position}</span>
               <span className="flex-1 min-w-0">
                 <span className="block truncate text-[13px] text-white font-mono">
                   {shortAddr(s.address)}

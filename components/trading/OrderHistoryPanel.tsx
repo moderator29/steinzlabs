@@ -42,13 +42,13 @@ export function OrderHistoryPanel() {
     <table className="w-full text-xs">
       <thead className="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-800">
         <tr>
-          <th className="text-left px-3 py-2">Type</th>
-          <th className="text-left px-3 py-2">Pair</th>
-          <th className="text-left px-3 py-2">Amount</th>
-          <th className="text-left px-3 py-2">Price</th>
-          <th className="text-left px-3 py-2">Status</th>
-          <th className="text-left px-3 py-2">When</th>
-          <th className="text-left px-3 py-2">Tx</th>
+          <th className="text-start px-3 py-2">Type</th>
+          <th className="text-start px-3 py-2">Pair</th>
+          <th className="text-start px-3 py-2">Amount</th>
+          <th className="text-start px-3 py-2">Price</th>
+          <th className="text-start px-3 py-2">Status</th>
+          <th className="text-start px-3 py-2">When</th>
+          <th className="text-start px-3 py-2">Tx</th>
         </tr>
       </thead>
       <tbody>

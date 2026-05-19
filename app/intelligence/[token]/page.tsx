@@ -99,7 +99,7 @@ export default function ViewProofPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="text-right">
+              <div className="text-end">
                 <div className="text-sm text-gray-400">Safety Score</div>
                 <div className="text-2xl font-bold text-green-500">
                   {intelligence.safetyAnalysis.overallScore.toFixed(1)}/10

@@ -147,17 +147,17 @@ const RISK_BADGE_COLORS: Record<string, string> = {
 };
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return '#10B981';
-  if (score >= 60) return '#0A1EFF';
-  if (score >= 40) return '#F59E0B';
-  return '#EF4444';
+  if (score >= 80) return 'var(--nl-success)';
+  if (score >= 60) return 'var(--nl-blue)';
+  if (score >= 40) return 'var(--nl-warning)';
+  return 'var(--nl-error)';
 }
 
 function getGradeColor(grade: string): string {
-  if (grade?.startsWith('A')) return '#10B981';
-  if (grade?.startsWith('B')) return '#0A1EFF';
-  if (grade?.startsWith('C')) return '#F59E0B';
-  return '#EF4444';
+  if (grade?.startsWith('A')) return 'var(--nl-success)';
+  if (grade?.startsWith('B')) return 'var(--nl-blue)';
+  if (grade?.startsWith('C')) return 'var(--nl-warning)';
+  return 'var(--nl-error)';
 }
 
 // ─── Copy Button ──────────────────────────────────────────────────────────────
@@ -183,9 +183,9 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
 function SectorPie({ breakdown }: { breakdown: SectorBreakdown }) {
   const sectors = [
     { label: 'Memecoins', value: breakdown.memecoins, color: '#ef4444' },
-    { label: 'DeFi', value: breakdown.defi, color: '#7C3AED' },
-    { label: 'Stablecoins', value: breakdown.stablecoins, color: '#10B981' },
-    { label: 'L1/L2', value: breakdown.layer1layer2, color: '#0A1EFF' },
+    { label: 'DeFi', value: breakdown.defi, color: 'var(--nl-purple)' },
+    { label: 'Stablecoins', value: breakdown.stablecoins, color: 'var(--nl-success)' },
+    { label: 'L1/L2', value: breakdown.layer1layer2, color: 'var(--nl-blue)' },
   ].filter((s) => s.value > 0);
 
   return (
@@ -233,11 +233,11 @@ function LiveMarketContext() {
   }, []);
 
   const fgColor = fearGreed
-    ? fearGreed.value >= 75 ? '#10B981'
+    ? fearGreed.value >= 75 ? 'var(--nl-success)'
     : fearGreed.value >= 55 ? '#22d3ee'
-    : fearGreed.value >= 40 ? '#F59E0B'
+    : fearGreed.value >= 40 ? 'var(--nl-warning)'
     : fearGreed.value >= 25 ? '#F97316'
-    : '#EF4444'
+    : 'var(--nl-error)'
     : '#6B7280';
 
   return (
@@ -245,7 +245,7 @@ function LiveMarketContext() {
       <div className="flex items-center gap-2">
         <Activity className="w-4 h-4 text-[#0A1EFF]" />
         <span className="font-bold text-sm">Live Market Context</span>
-        <span className="ml-auto text-[9px] text-gray-600 uppercase tracking-wider">Real-time</span>
+        <span className="ms-auto text-[9px] text-gray-600 uppercase tracking-wider">Real-time</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -268,7 +268,7 @@ function LiveMarketContext() {
           {fearGreed ? (
             <div className="space-y-1">
               {[
-                { label: 'Sentiment', val: fearGreed.value >= 50 ? 'Bullish' : 'Bearish', color: fearGreed.value >= 50 ? '#10B981' : '#EF4444' },
+                { label: 'Sentiment', val: fearGreed.value >= 50 ? 'Bullish' : 'Bearish', color: fearGreed.value >= 50 ? 'var(--nl-success)' : 'var(--nl-error)' },
                 { label: 'Signal', val: fearGreed.value >= 75 ? 'Caution (overbought)' : fearGreed.value <= 25 ? 'Opportunity' : 'Neutral', color: fgColor },
               ].map(({ label, val, color }) => (
                 <div key={label} className="flex justify-between text-[10px]">
@@ -292,7 +292,7 @@ function LiveMarketContext() {
               const isPos = t.change >= 0;
               return (
                 <span key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border"
-                  style={{ backgroundColor: `${isPos ? '#10B981' : '#EF4444'}10`, borderColor: `${isPos ? '#10B981' : '#EF4444'}25`, color: isPos ? '#10B981' : '#EF4444' }}>
+                  style={{ backgroundColor: `${isPos ? 'var(--nl-success)' : 'var(--nl-error)'}10`, borderColor: `${isPos ? 'var(--nl-success)' : 'var(--nl-error)'}25`, color: isPos ? 'var(--nl-success)' : 'var(--nl-error)' }}>
                   {t.symbol}
                   <span className="text-[9px] opacity-70">{isPos ? '+' : ''}{t.change.toFixed(1)}%</span>
                 </span>
@@ -420,7 +420,7 @@ export default function DNAAnalyzerPage() {
           <BackButton href="/dashboard" />
           <Dna className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="font-heading font-bold">DNA Analyzer</h1>
-          <span className="ml-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>
+          <span className="ms-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>
         </div>
       </div>
 
@@ -523,7 +523,7 @@ export default function DNAAnalyzerPage() {
               onClick={() => router.push('/dashboard/security')}
               className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
             >
-              <Shield className="w-5 h-5" /> Go to Token Scanner <ArrowRight className="w-4 h-4 ml-1" />
+              <Shield className="w-5 h-5" /> Go to Token Scanner <ArrowRight className="w-4 h-4 ms-1" />
             </button>
             <button
               onClick={reset}
@@ -623,7 +623,7 @@ export default function DNAAnalyzerPage() {
                 <Shield className="w-4 h-4 text-[#0A1EFF]" />
                 <span className="font-bold text-sm">Identity Profile</span>
                 {dna.riskClassification && (
-                  <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${RISK_BADGE_COLORS[dna.riskClassification] || 'bg-white/10 text-white border-white/20'}`}>
+                  <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${RISK_BADGE_COLORS[dna.riskClassification] || 'bg-white/10 text-white border-white/20'}`}>
                     {dna.riskClassification}
                   </span>
                 )}
@@ -632,7 +632,7 @@ export default function DNAAnalyzerPage() {
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm text-gray-300">{shortAddr(dna.address)}</span>
                 <CopyButton text={dna.address} />
-                <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#0A1EFF]/20 text-[#0A1EFF] font-semibold">{dna.chain}</span>
+                <span className="ms-auto text-[10px] px-2 py-0.5 rounded-full bg-[#0A1EFF]/20 text-[#0A1EFF] font-semibold">{dna.chain}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -667,17 +667,17 @@ export default function DNAAnalyzerPage() {
                 const style = (dna.aiAnalysis?.tradingStyle || dna.tradingStyle || '').toLowerCase();
                 const score = dna.aiAnalysis?.overallScore || 0;
                 const sector = dna.aiAnalysis?.sectorBreakdown;
-                let archetype = { label: 'Analyst', icon: 'A', color: '#0A1EFF', desc: 'Methodical and data-driven trading approach' };
+                let archetype = { label: 'Analyst', icon: 'A', color: 'var(--nl-blue)', desc: 'Methodical and data-driven trading approach' };
                 if (style.includes('hodl') || style.includes('long') || (dna.aiAnalysis?.metrics?.conviction || 0) >= 80) {
-                  archetype = { label: 'Diamond Hands', icon: 'D', color: '#7C3AED', desc: 'Long-term conviction holder, rarely sells under pressure' };
+                  archetype = { label: 'Diamond Hands', icon: 'D', color: 'var(--nl-purple)', desc: 'Long-term conviction holder, rarely sells under pressure' };
                 } else if (style.includes('scalp') || style.includes('day') || (dna.txCount || 0) > 200) {
-                  archetype = { label: 'Scalper', icon: 'S', color: '#F59E0B', desc: 'High-frequency short-term trader, fast in and out' };
+                  archetype = { label: 'Scalper', icon: 'S', color: 'var(--nl-warning)', desc: 'High-frequency short-term trader, fast in and out' };
                 } else if (style.includes('whale') || style.includes('copy') || score < 40) {
-                  archetype = { label: 'Whale Follower', icon: 'W', color: '#10B981', desc: 'Tracks and mirrors large wallet movements' };
+                  archetype = { label: 'Whale Follower', icon: 'W', color: 'var(--nl-success)', desc: 'Tracks and mirrors large wallet movements' };
                 } else if (style.includes('degen') || (sector?.memecoins || 0) > 50) {
-                  archetype = { label: 'Degen', icon: 'DG', color: '#EF4444', desc: 'High-risk memecoin and speculative plays' };
+                  archetype = { label: 'Degen', icon: 'DG', color: 'var(--nl-error)', desc: 'High-risk memecoin and speculative plays' };
                 } else if (style.includes('defi') || (sector?.defi || 0) > 40) {
-                  archetype = { label: 'DeFi Native', icon: 'DF', color: '#10B981', desc: 'Protocol farmer and liquidity provider' };
+                  archetype = { label: 'DeFi Native', icon: 'DF', color: 'var(--nl-success)', desc: 'Protocol farmer and liquidity provider' };
                 }
                 return (
                   <div className="flex items-center gap-3 p-3 rounded-xl border mb-2" style={{ backgroundColor: `${archetype.color}08`, borderColor: `${archetype.color}25` }}>
@@ -766,7 +766,7 @@ export default function DNAAnalyzerPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Users className="w-4 h-4 text-[#10B981]" />
                   <span className="font-bold text-sm">Partner Wallets</span>
-                  <span className="text-[10px] text-gray-500 ml-1">Most frequent counterparties</span>
+                  <span className="text-[10px] text-gray-500 ms-1">Most frequent counterparties</span>
                 </div>
                 {dna.partnerWallets.slice(0, 5).map((pw, i) => (
                   <div key={i} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
@@ -807,7 +807,7 @@ export default function DNAAnalyzerPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Brain className="w-4 h-4 text-[#7C3AED]" />
                   <span className="font-bold text-sm">Naka Intelligence Analysis</span>
-                  <span className="ml-auto text-[10px] px-2 py-0.5 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-bold border border-[#7C3AED]/30">AI</span>
+                  <span className="ms-auto text-[10px] px-2 py-0.5 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-bold border border-[#7C3AED]/30">AI</span>
                 </div>
 
                 {/* personality profile */}
@@ -910,13 +910,13 @@ export default function DNAAnalyzerPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-4 h-4 text-[#0A1EFF]" />
                       <span className="font-bold text-sm">Recent Transactions</span>
-                      <span className="ml-auto text-[10px] text-gray-600">{dna.recentTransactions.length} shown</span>
+                      <span className="ms-auto text-[10px] text-gray-600">{dna.recentTransactions.length} shown</span>
                     </div>
                     <div className="rounded-xl border border-white/[0.06] overflow-hidden">
                       {dna.recentTransactions.map((tx, i) => {
                         const isOut = tx.from?.toLowerCase() === dna.address.toLowerCase();
                         const timeStr = tx.blockTime ? new Date(tx.blockTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-                        const typeColor = tx.type === 'erc20' || tx.type === 'transfer' ? '#0A1EFF' : tx.type === 'external' ? '#F59E0B' : '#6B7280';
+                        const typeColor = tx.type === 'erc20' || tx.type === 'transfer' ? 'var(--nl-blue)' : tx.type === 'external' ? 'var(--nl-warning)' : '#6B7280';
                         return (
                           <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
                             <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOut ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
@@ -931,7 +931,7 @@ export default function DNAAnalyzerPage() {
                                 {isOut ? `→ ${tx.to?.slice(0, 8)}...${tx.to?.slice(-4)}` : `← ${tx.from?.slice(0, 8)}...${tx.from?.slice(-4)}`}
                               </div>
                             </div>
-                            <div className="text-right flex-shrink-0">
+                            <div className="text-end flex-shrink-0">
                               <div className="text-[11px] font-mono font-semibold text-white">{tx.amount !== '—' ? tx.amount : ''}</div>
                               <div className="text-[9px] text-gray-600">{timeStr}</div>
                             </div>

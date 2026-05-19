@@ -51,7 +51,7 @@ export default function PricesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or contract address..."
-            className="w-full bg-[#141824] border border-[#1E2433] rounded-lg pl-9 pr-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF] transition-colors"
+            className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF] transition-colors"
           />
         </div>
         <button className="flex items-center gap-2 px-4 py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-gray-400 hover:text-white text-sm transition-colors">
@@ -79,15 +79,15 @@ export default function PricesPage() {
             <table className="w-full">
               <thead>
                 <tr className="text-gray-500 text-xs uppercase tracking-wide border-b border-[#1E2433]">
-                  <th className="px-4 py-3 text-left w-12">#</th>
-                  <th className="px-4 py-3 text-left">Coin</th>
-                  <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right">1H%</th>
-                  <th className="px-4 py-3 text-right">24H%</th>
-                  <th className="px-4 py-3 text-right">7D%</th>
-                  <th className="px-4 py-3 text-right">24H Volume</th>
-                  <th className="px-4 py-3 text-right">Market Cap</th>
-                  <th className="px-4 py-3 text-right w-28">7D Chart</th>
+                  <th className="px-4 py-3 text-start w-12">#</th>
+                  <th className="px-4 py-3 text-start">Coin</th>
+                  <th className="px-4 py-3 text-end">Price</th>
+                  <th className="px-4 py-3 text-end">1H%</th>
+                  <th className="px-4 py-3 text-end">24H%</th>
+                  <th className="px-4 py-3 text-end">7D%</th>
+                  <th className="px-4 py-3 text-end">24H Volume</th>
+                  <th className="px-4 py-3 text-end">Market Cap</th>
+                  <th className="px-4 py-3 text-end w-28">7D Chart</th>
                   <th className="px-4 py-3 w-10" />
                 </tr>
               </thead>

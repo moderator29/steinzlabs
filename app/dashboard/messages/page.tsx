@@ -74,7 +74,7 @@ export default function MessagesInboxPage() {
         <BackButton />
         <MessageCircle className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" />
         <h1 className="text-xl sm:text-2xl font-bold text-white">Messages</h1>
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
+        <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
           <Lock className="w-3 h-3" />End-to-end encrypted
         </span>
       </div>

@@ -33,7 +33,7 @@ export function DocsSection04() {
           <p>
             Open the <span className="text-white font-semibold">VTX Agent</span> tab from the dashboard bottom bar. Type or paste one of three things:
           </p>
-          <ul className="space-y-2 list-none pl-4">
+          <ul className="space-y-2 list-none ps-4">
             <li className="flex gap-2 items-start"><ArrowRight className="w-3.5 h-3.5 text-[#4D6BFF] mt-1 shrink-0" /><span><span className="text-white font-medium">A token</span> · ticker like <span className="font-mono text-[#4D6BFF]">PEPE</span> or a contract address.</span></li>
             <li className="flex gap-2 items-start"><ArrowRight className="w-3.5 h-3.5 text-[#4D6BFF] mt-1 shrink-0" /><span><span className="text-white font-medium">A wallet</span> · any EVM or Solana address.</span></li>
             <li className="flex gap-2 items-start"><ArrowRight className="w-3.5 h-3.5 text-[#4D6BFF] mt-1 shrink-0" /><span><span className="text-white font-medium">A thesis</span> · free-form question like &quot;which top-100 coins have the best 7-day momentum?&quot;.</span></li>

@@ -1,4 +1,7 @@
+<<<<<<< HEAD
+=======
 import { logger } from '@/lib/logger';
+>>>>>>> origin/main
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -56,7 +59,11 @@ async function getRateLimitInfo(ip: string): Promise<{ remaining: number; total:
         resetAt,
       };
     } catch (err) {
+<<<<<<< HEAD
+      console.error("[vtx.rateLimit.get]", err);
+=======
       logger.error({ err: err }, "[vtx.rateLimit.get]");
+>>>>>>> origin/main
     }
   }
 
@@ -81,7 +88,11 @@ async function incrementUsage(ip: string): Promise<void> {
       if (count === 1) await redis.expire(key, 86400);
       return;
     } catch (err) {
+<<<<<<< HEAD
+      console.error("[vtx.rateLimit.incr]", err);
+=======
       logger.error({ err: err }, "[vtx.rateLimit.incr]");
+>>>>>>> origin/main
     }
   }
 
@@ -869,7 +880,11 @@ async function fetchLiveMarketContext(): Promise<string> {
           const change = parseFloat(t.priceChangePercent);
           const vol = parseFloat(t.quoteVolume);
           const priceStr = price >= 1000
+<<<<<<< HEAD
+            ? `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+=======
             ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+>>>>>>> origin/main
             : price >= 1 ? `$${price.toFixed(4)}` : `$${price.toFixed(8)}`;
           return `${sym}: ${priceStr} (24h: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%, Vol: $${(vol/1e6).toFixed(0)}M)`;
         });
@@ -1151,6 +1166,10 @@ export async function POST(request: NextRequest) {
     };
     const safeCurrentPage = sanitizeCtx(context?.currentPage, 64);
     const safeCurrentToken = sanitizeCtx(context?.currentToken, 32);
+<<<<<<< HEAD
+    const platformContextStr = context
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}`
+=======
     // Authenticated users get a 1-line portfolio summary injected into the
     // system prompt so the agent can answer "what's in my portfolio?"
     // questions without a separate tool roundtrip. Falls back silently when
@@ -1177,6 +1196,7 @@ export async function POST(request: NextRequest) {
 
     const platformContextStr = context
       ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}${portfolioContextStr}`
+>>>>>>> origin/main
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────
@@ -1226,7 +1246,11 @@ export async function POST(request: NextRequest) {
             const scrubbed = sanitizeVtxResponse(scrubBranding(fullText));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
           } catch (streamErr) {
+<<<<<<< HEAD
+            console.error('[VTX-AI] Stream error:', streamErr instanceof Error ? streamErr.message : streamErr);
+=======
             logger.error({ err: streamErr instanceof Error ? streamErr.message : streamErr }, '[VTX-AI] Stream error:');
+>>>>>>> origin/main
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
           } finally {
             controller.close();
@@ -1376,7 +1400,11 @@ export async function POST(request: NextRequest) {
           };
         }
       } catch (err) {
+<<<<<<< HEAD
+        console.error('[vtx-ai] Token card build failed:', err);
+=======
         logger.error({ err: err }, '[vtx-ai] Token card build failed:');
+>>>>>>> origin/main
       }
     }
 
@@ -1407,7 +1435,11 @@ export async function POST(request: NextRequest) {
           needsWallet: !walletForSwap,
         };
       } catch (err) {
+<<<<<<< HEAD
+        console.error('[vtx-ai] Swap card build failed:', err);
+=======
         logger.error({ err: err }, '[vtx-ai] Swap card build failed:');
+>>>>>>> origin/main
       }
     }
 
@@ -1431,7 +1463,11 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     const isDev = process.env.NODE_ENV === 'development';
+<<<<<<< HEAD
+    console.error('[VTX] Error:', msg, err instanceof Error ? err.stack : '');
+=======
     logger.error({ msg, stack: err instanceof Error ? err.stack : undefined }, '[VTX] Error:');
+>>>>>>> origin/main
     Sentry.captureException(err);
 
     // Surface specific errors

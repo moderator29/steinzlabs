@@ -132,7 +132,7 @@ function ResetPasswordInner() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-12 pr-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl ps-12 pe-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
                   placeholder="Enter new password"
                   autoComplete="new-password"
                   autoFocus
@@ -161,7 +161,7 @@ function ResetPasswordInner() {
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
-                  className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl pl-12 pr-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                  className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />

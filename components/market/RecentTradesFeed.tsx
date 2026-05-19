@@ -26,11 +26,11 @@ export function RecentTradesFeed({ trades, symbol = '' }: RecentTradesFeedProps)
           <table className="w-full text-xs">
             <thead>
               <tr className="text-gray-500 border-b border-[#1E2433]">
-                <th className="px-3 py-2 text-left font-medium">Time</th>
-                <th className="px-3 py-2 text-left font-medium">Type</th>
-                <th className="px-3 py-2 text-right font-medium">Price</th>
-                <th className="px-3 py-2 text-right font-medium">Amount</th>
-                <th className="px-3 py-2 text-right font-medium">Value</th>
+                <th className="px-3 py-2 text-start font-medium">Time</th>
+                <th className="px-3 py-2 text-start font-medium">Type</th>
+                <th className="px-3 py-2 text-end font-medium">Price</th>
+                <th className="px-3 py-2 text-end font-medium">Amount</th>
+                <th className="px-3 py-2 text-end font-medium">Value</th>
               </tr>
             </thead>
             <tbody>
@@ -40,9 +40,9 @@ export function RecentTradesFeed({ trades, symbol = '' }: RecentTradesFeedProps)
                   <td className={`px-3 py-2 font-medium ${trade.type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
                     {trade.type === 'buy' ? 'Buy' : 'Sell'}
                   </td>
-                  <td className="px-3 py-2 text-right text-gray-300 font-mono">${trade.price.toFixed(4)}</td>
-                  <td className="px-3 py-2 text-right text-gray-300 font-mono">{trade.amount.toFixed(2)} {symbol}</td>
-                  <td className="px-3 py-2 text-right text-gray-300 font-mono">${trade.valueUSD.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-end text-gray-300 font-mono">${trade.price.toFixed(4)}</td>
+                  <td className="px-3 py-2 text-end text-gray-300 font-mono">{trade.amount.toFixed(2)} {symbol}</td>
+                  <td className="px-3 py-2 text-end text-gray-300 font-mono">${trade.valueUSD.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

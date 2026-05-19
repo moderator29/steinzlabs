@@ -130,7 +130,7 @@ export default function ArchivePage() {
           <BackButton />
           <Archive className="w-5 h-5 text-[#0A1EFF]" />
           <h1 className="text-sm font-heading font-bold">Archive</h1>
-          <span className="text-[10px] text-gray-500 ml-1">Events older than 24h</span>
+          <span className="text-[10px] text-gray-500 ms-1">Events older than 24h</span>
         </div>
       </div>
 

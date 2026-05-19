@@ -37,7 +37,7 @@ export function fmtPctEmoji(n: number): string {
 
 export function fmtNum(n: number): string {
   if (!isFinite(n)) return "—";
-  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
 export function truncAddress(addr: string, head = 6, tail = 4): string {

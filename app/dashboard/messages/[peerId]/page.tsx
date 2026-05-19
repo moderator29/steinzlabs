@@ -162,7 +162,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
         <h1 className="text-base font-semibold text-white">Conversation</h1>
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
+        <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
           <ShieldCheck className="w-3 h-3" />Encrypted
         </span>
       </div>

@@ -105,7 +105,7 @@ export function HolderBreakdown({ composition }: HolderBreakdownProps) {
                 </div>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <div className="text-sm text-white font-mono">
                 {seg.percentage.toFixed(1)}%
               </div>

@@ -77,7 +77,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
   if (!meta) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Unknown leaderboard. <Link href="/discover" className="ml-2 text-[var(--nl-blue,#0A1EFF)] underline">Back to Discover</Link>
+        Unknown leaderboard. <Link href="/discover" className="ms-2 text-[var(--nl-blue,#0A1EFF)] underline">Back to Discover</Link>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
         <ol className="rounded-2xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
           {rows.map((r, idx) => (
             <li key={r.id} className="flex items-center gap-3 p-3">
-              <span className="w-8 text-[12px] tabular-nums text-slate-400 text-right">{idx + 1}.</span>
+              <span className="w-8 text-[12px] tabular-nums text-slate-400 text-end">{idx + 1}.</span>
               <Link href={`/u/${r.username ?? r.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                 {r.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -120,7 +120,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
                   <div className="text-[11px] text-slate-400 truncate">@{r.username}</div>
                 </div>
               </Link>
-              <div className="text-[12px] tabular-nums text-slate-300 mr-2">{formatMetric(r.metric_value, kind)}</div>
+              <div className="text-[12px] tabular-nums text-slate-300 me-2">{formatMetric(r.metric_value, kind)}</div>
               <FollowButton targetId={r.id} initialState="not_following" size="sm" />
             </li>
           ))}

@@ -82,7 +82,7 @@ export function PlatformAnnouncementBanner({ announcement }: PlatformAnnouncemen
           {announcement.href && announcement.ctaLabel ? (
             <a
               href={announcement.href}
-              className="ml-2 underline font-bold"
+              className="ms-2 underline font-bold"
               style={{ color: style.color }}
             >
               {announcement.ctaLabel}

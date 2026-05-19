@@ -178,7 +178,7 @@ export default function NewCopyRuleModal({
                   <button
                     key={m}
                     onClick={() => setMode(m)}
-                    className={`w-full text-left rounded-xl border p-3 transition flex items-start gap-3 ${
+                    className={`w-full text-start rounded-xl border p-3 transition flex items-start gap-3 ${
                       mode === m ? "border-blue-400/60 bg-blue-500/15" : "border-white/10 bg-white/[0.03] hover:border-white/20"
                     } ${locked ? "opacity-60" : ""}`}
                   >

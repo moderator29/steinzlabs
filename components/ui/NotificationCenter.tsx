@@ -112,7 +112,7 @@ export function NotificationCenter({ items, onMarkAllRead, onItemClick }: Notifi
                       onItemClick?.(n.id);
                       if (n.href) window.location.href = n.href;
                     }}
-                    className="w-full text-left px-4 py-3 border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors flex items-start gap-3"
+                    className="w-full text-start px-4 py-3 border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors flex items-start gap-3"
                   >
                     <span
                       aria-hidden

@@ -18,7 +18,7 @@ export function OrderBook({ data, loading }: OrderBookProps) {
     <div className="space-y-1">
       <div className="w-full h-6 flex rounded overflow-hidden">
         <div
-          className="bg-green-500/30 flex items-center justify-start pl-2"
+          className="bg-green-500/30 flex items-center justify-start ps-2"
           style={{ width: `${data.buyersPercent}%` }}
         >
           <span className="text-green-500 text-xs font-medium whitespace-nowrap">
@@ -26,7 +26,7 @@ export function OrderBook({ data, loading }: OrderBookProps) {
           </span>
         </div>
         <div
-          className="bg-red-500/30 flex items-center justify-end pr-2"
+          className="bg-red-500/30 flex items-center justify-end pe-2"
           style={{ width: `${data.sellersPercent}%` }}
         >
           <span className="text-red-500 text-xs font-medium whitespace-nowrap">

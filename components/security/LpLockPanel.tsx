@@ -49,7 +49,7 @@ export function LpLockPanel(props: LpLockPanelProps) {
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: s.color }}>
           LP {s.label}
         </span>
-        <span className="ml-auto text-[11px] font-mono text-slate-300 tabular-nums">
+        <span className="ms-auto text-[11px] font-mono text-slate-300 tabular-nums">
           {props.totalLockedPct}%
         </span>
       </div>

@@ -13,7 +13,7 @@ function FAQItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultO
       style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-start"
         aria-expanded={open}
       >
         <span className="text-white font-semibold text-sm md:text-base leading-snug">{q}</span>

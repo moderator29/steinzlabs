@@ -167,7 +167,7 @@ function Table({ tab, rows }: { tab: Tab; rows: any[] }) {
         <thead className="bg-slate-900/60 border-b border-slate-800">
           <tr>
             {activeCols.map((c) => (
-              <th key={c.label} className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+              <th key={c.label} className="px-3 py-2 text-start text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
                 {c.label}
               </th>
             ))}

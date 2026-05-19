@@ -29,9 +29,9 @@ export default function RecentTradesRail({ pairAddress, chain }: Props) {
       {/* Column headers */}
       <div className="grid grid-cols-4 gap-2 px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 border-b border-slate-800/50 font-semibold">
         <span>Price</span>
-        <span className="text-right">Size</span>
-        <span className="text-right">Source</span>
-        <span className="text-right">Time</span>
+        <span className="text-end">Size</span>
+        <span className="text-end">Source</span>
+        <span className="text-end">Time</span>
       </div>
 
       <div className="max-h-[360px] overflow-y-auto">
@@ -56,9 +56,9 @@ export default function RecentTradesRail({ pairAddress, chain }: Props) {
                 }`}
               >
                 <span className="font-mono tabular-nums">{price > 0 ? price.toFixed(price < 0.01 ? 6 : 4) : '—'}</span>
-                <span className="text-right font-mono text-slate-300 tabular-nums">{size > 0 ? `$${Math.round(size).toLocaleString()}` : '—'}</span>
-                <span className="text-right text-slate-500 truncate">{src}</span>
-                <span className="text-right text-slate-500 tabular-nums">{ago < 60 ? `${ago}s` : `${Math.round(ago / 60)}m`}</span>
+                <span className="text-end font-mono text-slate-300 tabular-nums">{size > 0 ? `$${Math.round(size).toLocaleString()}` : '—'}</span>
+                <span className="text-end text-slate-500 truncate">{src}</span>
+                <span className="text-end text-slate-500 tabular-nums">{ago < 60 ? `${ago}s` : `${Math.round(ago / 60)}m`}</span>
               </div>
             );
           })

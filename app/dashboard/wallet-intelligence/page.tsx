@@ -71,9 +71,9 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
   }
 
   function txColor(type: string | undefined) {
-    if (type === 'send') return '#EF4444';
-    if (type === 'receive') return '#10B981';
-    return '#0A1EFF';
+    if (type === 'send') return 'var(--nl-error)';
+    if (type === 'receive') return 'var(--nl-success)';
+    return 'var(--nl-blue)';
   }
 
   return (
@@ -111,7 +111,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
                   </div>
                   <div className="text-[9px] font-mono text-gray-600">{tx.hash.slice(0, 12)}...{tx.hash.slice(-6)}</div>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-end flex-shrink-0">
                   <div className="text-[9px] text-gray-500">{formatTime(tx.blockTime)}</div>
                   <div className="flex items-center justify-end gap-1 mt-0.5">
                     <span className={`text-[9px] font-semibold ${tx.status === 'failed' ? 'text-red-400' : 'text-green-400'}`}>
@@ -412,9 +412,9 @@ export default function WalletIntelligencePage() {
   };
 
   const scoreColor = (score: number) => {
-    if (score >= 70) return '#10B981';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 70) return 'var(--nl-success)';
+    if (score >= 40) return 'var(--nl-warning)';
+    return 'var(--nl-error)';
   };
 
   const scoreLabel = (score: number) => {
@@ -434,19 +434,19 @@ export default function WalletIntelligencePage() {
     const tradingStyle = analysis?.tradingStyle?.toLowerCase() || '';
 
     // Bot/MEV detection (high tx count, small balance)
-    if (txCount > 500 && usd < 50000) return { type: 'Bot / MEV', color: '#EF4444', desc: 'High-frequency automated activity detected' };
+    if (txCount > 500 && usd < 50000) return { type: 'Bot / MEV', color: 'var(--nl-error)', desc: 'High-frequency automated activity detected' };
     // Dormant (very few txns)
     if (txCount < 3) return { type: 'Dormant', color: '#6B7280', desc: 'Low activity wallet, possibly inactive' };
     // Institutional (very large balance)
-    if (usd > 10000000) return { type: 'Institutional', color: '#7C3AED', desc: 'Large institutional-grade wallet' };
+    if (usd > 10000000) return { type: 'Institutional', color: 'var(--nl-purple)', desc: 'Large institutional-grade wallet' };
     // Whale
-    if (usd > 1000000) return { type: 'Whale', color: '#F59E0B', desc: 'High-net-worth crypto holder' };
+    if (usd > 1000000) return { type: 'Whale', color: 'var(--nl-warning)', desc: 'High-net-worth crypto holder' };
     // Smart Money
     if ((analysis?.overallScore || 0) >= 75 || tradingStyle.includes('degen') || tradingStyle.includes('defi')) {
-      return { type: 'Smart Money', color: '#10B981', desc: 'Sophisticated trader with strong on-chain track record' };
+      return { type: 'Smart Money', color: 'var(--nl-success)', desc: 'Sophisticated trader with strong on-chain track record' };
     }
     // Retail
-    return { type: 'Retail', color: '#0A1EFF', desc: 'Individual retail trader' };
+    return { type: 'Retail', color: 'var(--nl-blue)', desc: 'Individual retail trader' };
   }
 
   const walletClassification = classifyWallet(walletData, aiAnalysis);
@@ -465,7 +465,7 @@ export default function WalletIntelligencePage() {
               in parallel and surfaces the diff. */}
           <Link
             href="/dashboard/wallet-intelligence/compare"
-            className="ml-auto whale-pill"
+            className="ms-auto whale-pill"
             title="Compare two wallets side by side"
           >
             <GitCompare className="w-3.5 h-3.5" />
@@ -584,12 +584,12 @@ export default function WalletIntelligencePage() {
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                     {[
-                      { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: '#10B981' },
-                      { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: '#7C3AED' },
-                      { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: '#0A1EFF' },
-                      { label: 'Chain', value: walletData.chain, icon: Clock, color: '#F59E0B' },
-                      ...(walletData.firstSeen ? [{ label: 'First Seen', value: walletData.firstSeen, icon: Clock, color: '#10B981' }] : []),
-                      ...(walletData.lastActive ? [{ label: 'Last Active', value: walletData.lastActive, icon: Activity, color: '#F59E0B' }] : []),
+                      { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: 'var(--nl-success)' },
+                      { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: 'var(--nl-purple)' },
+                      { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: 'var(--nl-blue)' },
+                      { label: 'Chain', value: walletData.chain, icon: Clock, color: 'var(--nl-warning)' },
+                      ...(walletData.firstSeen ? [{ label: 'First Seen', value: walletData.firstSeen, icon: Clock, color: 'var(--nl-success)' }] : []),
+                      ...(walletData.lastActive ? [{ label: 'Last Active', value: walletData.lastActive, icon: Activity, color: 'var(--nl-warning)' }] : []),
                     ].map((stat) => (
                       <div key={stat.label} className="bg-[#0f1320] rounded-lg p-3">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -619,7 +619,7 @@ export default function WalletIntelligencePage() {
                         return (
                           <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/40 last:border-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[9px] text-gray-600 w-4 text-right">{i + 1}</span>
+                              <span className="text-[9px] text-gray-600 w-4 text-end">{i + 1}</span>
                               {h.logoUrl ? (
                                 <img src={h.logoUrl} alt={h.symbol} className="w-7 h-7 rounded-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                               ) : (
@@ -639,10 +639,10 @@ export default function WalletIntelligencePage() {
                                   <div className="hidden sm:block flex-1 bg-white/5 rounded-full h-1">
                                     <div className="h-1 rounded-full bg-[#0A1EFF]" style={{ width: `${Math.min(100, pct)}%` }} />
                                   </div>
-                                  <span className="text-[9px] text-gray-600 w-full sm:w-8 text-right">{pct.toFixed(1)}%</span>
+                                  <span className="text-[9px] text-gray-600 w-full sm:w-8 text-end">{pct.toFixed(1)}%</span>
                                 </div>
                               )}
-                              <div className="text-right">
+                              <div className="text-end">
                                 <div className="text-xs font-semibold">
                                   {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
                                 </div>
@@ -695,7 +695,7 @@ export default function WalletIntelligencePage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold">{aiAnalysis.tradingStyle}</span>
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: aiAnalysis.riskProfile?.toLowerCase().includes('ultra') ? '#EF4444' : aiAnalysis.riskProfile?.toLowerCase().includes('aggress') ? '#F59E0B' : '#10B981' }}>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: aiAnalysis.riskProfile?.toLowerCase().includes('ultra') ? 'var(--nl-error)' : aiAnalysis.riskProfile?.toLowerCase().includes('aggress') ? 'var(--nl-warning)' : 'var(--nl-success)' }}>
                               {aiAnalysis.riskProfile}
                             </span>
                           </div>
@@ -720,11 +720,11 @@ export default function WalletIntelligencePage() {
                         </div>
                         <div className="space-y-3">
                           {[
-                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: aiAnalysis.metrics.diversification >= 60 ? '#10B981' : aiAnalysis.metrics.diversification >= 35 ? '#0A1EFF' : '#EF4444' },
-                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: aiAnalysis.metrics.timing >= 60 ? '#0A1EFF' : '#F59E0B' },
-                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: aiAnalysis.metrics.riskManagement >= 60 ? '#10B981' : '#EF4444' },
-                            { label: 'Conviction', value: aiAnalysis.metrics.conviction, color: '#10B981' },
-                            { label: 'Consistency', value: aiAnalysis.metrics.consistency, color: '#7C3AED' },
+                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: aiAnalysis.metrics.diversification >= 60 ? 'var(--nl-success)' : aiAnalysis.metrics.diversification >= 35 ? 'var(--nl-blue)' : 'var(--nl-error)' },
+                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: aiAnalysis.metrics.timing >= 60 ? 'var(--nl-blue)' : 'var(--nl-warning)' },
+                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: aiAnalysis.metrics.riskManagement >= 60 ? 'var(--nl-success)' : 'var(--nl-error)' },
+                            { label: 'Conviction', value: aiAnalysis.metrics.conviction, color: 'var(--nl-success)' },
+                            { label: 'Consistency', value: aiAnalysis.metrics.consistency, color: 'var(--nl-purple)' },
                           ].map(m => (
                             <div key={m.label}>
                               <div className="flex justify-between text-[10px] mb-1">
@@ -813,7 +813,7 @@ export default function WalletIntelligencePage() {
                             <Shield className="w-4 h-4 text-[#EF4444]" />
                             <h3 className="font-bold text-sm">Risk Assessment</h3>
                           </div>
-                          <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={{ backgroundColor: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? '#EF444420' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? '#F59E0B20' : '#10B98120', color: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? '#EF4444' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? '#F59E0B' : '#10B981' }}>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={{ backgroundColor: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? '#EF444420' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? '#F59E0B20' : '#10B98120', color: aiAnalysis.riskAssessment.riskLevel === 'CRITICAL' ? 'var(--nl-error)' : aiAnalysis.riskAssessment.riskLevel === 'HIGH' ? 'var(--nl-warning)' : 'var(--nl-success)' }}>
                             {aiAnalysis.riskAssessment.riskLevel}
                           </span>
                         </div>
@@ -836,7 +836,7 @@ export default function WalletIntelligencePage() {
                         <div className="flex items-center gap-2 mb-2">
                           <Activity className="w-4 h-4 text-[#0A1EFF]" />
                           <h3 className="font-bold text-sm">Activity Pattern</h3>
-                          <span className="text-[10px] text-gray-500 ml-auto">{aiAnalysis.activityPattern.estimatedFrequency}</span>
+                          <span className="text-[10px] text-gray-500 ms-auto">{aiAnalysis.activityPattern.estimatedFrequency}</span>
                         </div>
                         <p className="text-xs text-gray-400 leading-relaxed">{aiAnalysis.activityPattern.summary}</p>
                       </div>
@@ -975,7 +975,7 @@ export default function WalletIntelligencePage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="text-2xl font-bold" style={{ color: contractResult.safetyColor }}>{contractResult.trustScore}</div>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: `${contractResult.safetyColor}20`, color: contractResult.safetyColor }}>
                         {contractResult.safetyLevel}
@@ -990,15 +990,15 @@ export default function WalletIntelligencePage() {
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Buy Tax</div>
-                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.buyTax}</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? 'var(--nl-error)' : 'var(--nl-success)' }}>{contractResult.buyTax}</div>
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Sell Tax</div>
-                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? '#EF4444' : '#10B981' }}>{contractResult.sellTax}</div>
+                      <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? 'var(--nl-error)' : 'var(--nl-success)' }}>{contractResult.sellTax}</div>
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Honeypot</div>
-                      <div className="text-sm font-bold" style={{ color: contractResult.isHoneypot ? '#EF4444' : '#10B981' }}>
+                      <div className="text-sm font-bold" style={{ color: contractResult.isHoneypot ? 'var(--nl-error)' : 'var(--nl-success)' }}>
                         {contractResult.isHoneypot ? 'YES' : 'NO'}
                       </div>
                     </div>
@@ -1029,7 +1029,7 @@ export default function WalletIntelligencePage() {
                       </div>
                       <div className="bg-[#0a0e1a] rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">24h Change</div>
-                        <div className="text-sm font-bold" style={{ color: contractResult.dexData.priceChange24h >= 0 ? '#10B981' : '#EF4444' }}>
+                        <div className="text-sm font-bold" style={{ color: contractResult.dexData.priceChange24h >= 0 ? 'var(--nl-success)' : 'var(--nl-error)' }}>
                           {contractResult.dexData.priceChange24h >= 0 ? '+' : ''}{contractResult.dexData.priceChange24h.toFixed(2)}%
                         </div>
                       </div>

@@ -38,14 +38,14 @@ export default function OnboardingAnalyticsPage() {
           <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] overflow-hidden">
             <table className="w-full text-[12px]">
               <thead>
-                <tr className="text-left text-slate-400 uppercase text-[10px] bg-white/[0.03]">
+                <tr className="text-start text-slate-400 uppercase text-[10px] bg-white/[0.03]">
                   <th className="px-3 py-2">Card</th>
-                  <th className="px-3 py-2 text-right">Viewed</th>
-                  <th className="px-3 py-2 text-right">Next</th>
-                  <th className="px-3 py-2 text-right">Skip clicked</th>
-                  <th className="px-3 py-2 text-right">Skip confirmed</th>
-                  <th className="px-3 py-2 text-right">Completed</th>
-                  <th className="px-3 py-2 text-right">Drop-off</th>
+                  <th className="px-3 py-2 text-end">Viewed</th>
+                  <th className="px-3 py-2 text-end">Next</th>
+                  <th className="px-3 py-2 text-end">Skip clicked</th>
+                  <th className="px-3 py-2 text-end">Skip confirmed</th>
+                  <th className="px-3 py-2 text-end">Completed</th>
+                  <th className="px-3 py-2 text-end">Drop-off</th>
                 </tr>
               </thead>
               <tbody>
@@ -54,12 +54,12 @@ export default function OnboardingAnalyticsPage() {
                   return (
                     <tr key={c.card_index} className="border-t border-white/[0.05]">
                       <td className="px-3 py-2 text-white font-semibold">{c.card_index}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.viewed}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.next}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-amber-300">{c.skipClicked}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-red-300">{c.skipConfirmed}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-emerald-300">{c.completed}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-slate-300">{dropoff}%</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{c.viewed}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{c.next}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-amber-300">{c.skipClicked}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-red-300">{c.skipConfirmed}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-emerald-300">{c.completed}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-slate-300">{dropoff}%</td>
                     </tr>
                   );
                 })}

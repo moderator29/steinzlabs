@@ -51,7 +51,7 @@ function VTXCard() {
             <div className="text-white/40 text-[10px]">Solana</div>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-white text-sm font-bold">$182.44</div>
           <div className="text-[10px]" style={{ color: '#4ade80' }}>+5.2%</div>
         </div>

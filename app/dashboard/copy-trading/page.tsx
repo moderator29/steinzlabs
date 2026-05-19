@@ -239,14 +239,14 @@ export default function CopyTradingPage() {
             <table className="w-full text-xs">
               <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
                 <tr>
-                  <th className="text-left px-3 py-2">When</th>
-                  <th className="text-left px-3 py-2">Whale</th>
-                  <th className="text-left px-3 py-2">Token</th>
-                  <th className="text-left px-3 py-2">Action</th>
-                  <th className="text-left px-3 py-2">Amount</th>
-                  <th className="text-left px-3 py-2">Security</th>
-                  <th className="text-left px-3 py-2">Status</th>
-                  <th className="text-left px-3 py-2">Reason</th>
+                  <th className="text-start px-3 py-2">When</th>
+                  <th className="text-start px-3 py-2">Whale</th>
+                  <th className="text-start px-3 py-2">Token</th>
+                  <th className="text-start px-3 py-2">Action</th>
+                  <th className="text-start px-3 py-2">Amount</th>
+                  <th className="text-start px-3 py-2">Security</th>
+                  <th className="text-start px-3 py-2">Status</th>
+                  <th className="text-start px-3 py-2">Reason</th>
                 </tr>
               </thead>
               <tbody>

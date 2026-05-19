@@ -92,7 +92,7 @@ export function WalletTokenRow({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-slate-900/60 active:bg-slate-900/80 transition-colors group text-left"
+      className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-slate-900/60 active:bg-slate-900/80 transition-colors group text-start"
     >
       {/* Logo */}
       <div className="relative w-10 h-10 shrink-0">
@@ -126,7 +126,7 @@ export function WalletTokenRow({
       </div>
 
       {/* Right — qty + USD value */}
-      <div className="text-right shrink-0">
+      <div className="text-end shrink-0">
         <div className="text-[15px] font-semibold text-white tabular-nums leading-tight">
           {hideBalance ? '••••' : formatQty(qty)}
         </div>

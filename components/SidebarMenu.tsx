@@ -187,7 +187,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
     <button
       onClick={onClick}
       onMouseEnter={onHover}
-      className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[12px] group relative ${
+      className={`w-full text-start px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[12px] group relative ${
         isActive
           ? 'bg-[#0A1EFF]/[0.08] text-white font-medium'
           : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
@@ -199,7 +199,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
       <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
       <span className="truncate">{label}</span>
       {badge && (
-        <span className={`ml-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
+        <span className={`ms-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
           badge === 'AI' ? 'bg-purple-500/15 text-purple-400' :
           badge === 'BETA' ? 'bg-[#10B981]/15 text-[#10B981]' :
           badge === 'PRO' ? 'bg-amber-500/15 text-amber-400' :

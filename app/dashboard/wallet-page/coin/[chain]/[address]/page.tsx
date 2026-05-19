@@ -119,7 +119,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           <div className="text-xl font-bold">{symbol}</div>
           <div className="text-[11px] text-slate-500">COIN · {chainLabel}</div>
         </div>
-        <button onClick={() => toggleWatchlist(address)} className="p-2 -mr-2 rounded-lg hover:bg-white/5">
+        <button onClick={() => toggleWatchlist(address)} className="p-2 -me-2 rounded-lg hover:bg-white/5">
           <Star size={20} className={watched ? 'fill-emerald-400 text-emerald-400' : 'text-slate-500'} />
         </button>
       </div>
