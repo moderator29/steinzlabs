@@ -16,6 +16,10 @@ import { supabase, clearSbCookies } from '@/lib/supabase';
 import { CoinIcon } from '@/components/landing/CoinIcon';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+// Emergency bypass — pair with TURNSTILE_EMERGENCY_BYPASS on the server.
+// Set BOTH to '1' in Vercel during a Cloudflare outage / domain whitelist
+// rotation. Banner stays visible so it's never accidentally left on.
+const TURNSTILE_BYPASS = process.env.NEXT_PUBLIC_TURNSTILE_BYPASS === '1';
 const SESSION_HOURS = 1;
 
 // Deterministic coin positions (no Math.random for SSR safety)
@@ -137,7 +141,7 @@ function LoginPageInner() {
     const e: Record<string, string> = {};
     if (!identifier.trim()) e.identifier = 'Email or username is required';
     if (!password) e.password = 'Password is required';
-    if (TURNSTILE_SITE_KEY && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
+    if (TURNSTILE_SITE_KEY && !TURNSTILE_BYPASS && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -446,8 +450,11 @@ function LoginPageInner() {
             {/* Turnstile CAPTCHA — explicit render via window.turnstile */}
             {TURNSTILE_SITE_KEY && (
               <div>
-                {/* Load the script with `?render=explicit` so it does not try
-                    to auto-render `.cf-turnstile` before our ref mount. */}
+                {TURNSTILE_BYPASS && (
+                  <div className="mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[12px]">
+                    Security check temporarily bypassed. Sign-in works normally.
+                  </div>
+                )}
                 <Script
                   src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
                   strategy="afterInteractive"
@@ -460,9 +467,32 @@ function LoginPageInner() {
                     colorScheme: 'dark',
                     display: 'flex',
                     justifyContent: 'center',
+                    pointerEvents: 'auto',
+                    position: 'relative',
+                    zIndex: 1,
                   }}
                 />
-                {errors.captcha && <p className="text-red-300 text-[13px] font-medium mt-2">{errors.captcha}</p>}
+                <div className="flex items-center justify-between mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ts = (window as unknown as { turnstile?: { reset: (id: string) => void } }).turnstile;
+                      if (ts && widgetIdRef.current) {
+                        try {
+                          ts.reset(widgetIdRef.current);
+                          setCaptchaToken('');
+                          setErrors((prev) => ({ ...prev, captcha: '' }));
+                        } catch { window.location.reload(); }
+                      } else {
+                        window.location.reload();
+                      }
+                    }}
+                    className="text-[11px] text-slate-300 hover:text-white underline underline-offset-2"
+                  >
+                    Refresh security check
+                  </button>
+                  {errors.captcha && <span role="alert" aria-live="polite" className="text-red-300 text-[12px] font-medium">{errors.captcha}</span>}
+                </div>
               </div>
             )}
 

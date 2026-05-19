@@ -3,7 +3,13 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   const { token } = await request.json();
 
+  // Emergency bypass mirrors /api/auth/verify-captcha.
+  const emergencyBypass = process.env.TURNSTILE_EMERGENCY_BYPASS === '1';
+
   if (!token) {
+    if (emergencyBypass) {
+      return NextResponse.json({ success: true, bypass: true, reason: 'emergency_bypass' });
+    }
     return NextResponse.json({ success: false, error: 'No token provided' }, { status: 400 });
   }
 

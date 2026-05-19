@@ -16,6 +16,8 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { CoinIcon } from '@/components/landing/CoinIcon';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+// Emergency bypass — pair with TURNSTILE_EMERGENCY_BYPASS on the server.
+const TURNSTILE_BYPASS = process.env.NEXT_PUBLIC_TURNSTILE_BYPASS === '1';
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_SECONDS = 60;
 
@@ -175,7 +177,7 @@ export default function SignUpPage() {
     if (!form.password) e.password = 'Required';
     else if (!getPasswordChecks(form.password).every(c => c.ok)) e.password = 'Password does not meet requirements';
     if (form.password && form.confirm !== form.password) e.confirm = "Passwords don't match";
-    if (TURNSTILE_SITE_KEY && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
+    if (TURNSTILE_SITE_KEY && !TURNSTILE_BYPASS && captchaReady && !captchaToken) e.captcha = 'Please complete the security check';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
