@@ -85,6 +85,15 @@ const SLUG_TO_NATIVE_CHAIN: Record<string, string> = {
   brett: 'base',
   // Avalanche ecosystem
   'joe': 'avalanche',
+  // Round-2 deep-dive — DeFi blue chips + Aptos + Raydium DEX gov token.
+  chainlink: 'ethereum',
+  uniswap: 'ethereum',
+  aave: 'ethereum',
+  maker: 'ethereum',
+  'lido-dao': 'ethereum',
+  'curve-dao-token': 'ethereum',
+  aptos: 'aptos',
+  raydium: 'solana',
 };
 
 const SYMBOL_TO_NATIVE_CHAIN: Record<string, string> = {
@@ -138,6 +147,15 @@ const SYMBOL_TO_NATIVE_CHAIN: Record<string, string> = {
   MOG: 'base',
   BRETT: 'base',
   JOE: 'avalanche',
+  // Round-2 deep-dive — DeFi blue chips + Aptos + Raydium.
+  LINK: 'ethereum',
+  UNI: 'ethereum',
+  AAVE: 'ethereum',
+  MKR: 'ethereum',
+  LDO: 'ethereum',
+  CRV: 'ethereum',
+  APT: 'aptos',
+  RAY: 'solana',
 };
 
 export interface ResolvedRoute {

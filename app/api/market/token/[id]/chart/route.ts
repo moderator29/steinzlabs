@@ -53,6 +53,12 @@ const COMMUNITY_TOKEN_CONTRACTS: Record<string, string> = {
   'naka-go':       '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
   'pleasure':      '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
   'pleasure-coin': '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
+  // Round-2 deep-dive — NSFW is the on-chain symbol for the Pleasure
+  // Coin contract, and the wallet seeds it without exposing the contract
+  // at click time (page.tsx:1140 falls back to symbol). Without this
+  // entry the chart route can't find a contract and the chart container
+  // on /dashboard/wallet-page/coin/<chain>/NSFW stays blank.
+  'nsfw':          '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
 };
 
 // Same symbol→slug normalization the token detail route uses, so

@@ -1,5 +1,7 @@
 'use client';
 
+import { PhantomLogo } from '@/components/wallet/WalletLogo';
+
 /**
  * "Sign in / Sign up with Solana wallet" — companion to WalletAuthButton
  * (which is EVM-only via wagmi). Uses the in-page Phantom provider
@@ -137,21 +139,11 @@ export function SolanaWalletAuthButton({ mode, className }: Props) {
       }
       aria-busy={busy}
     >
-      {/* Phantom logo — official ghost SVG, dropped inline so we don't
-          ship an external image request just for the auth page. */}
-      <svg width="18" height="18" viewBox="0 0 128 128" aria-hidden="true">
-        <defs>
-          <linearGradient id="phantom-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#534BB1" />
-            <stop offset="100%" stopColor="#551BF9" />
-          </linearGradient>
-        </defs>
-        <rect width="128" height="128" rx="28" fill="url(#phantom-grad)" />
-        <path
-          fill="#fff"
-          d="M110.584 64.914c0 25.828-20.93 46.758-46.758 46.758S17.068 90.742 17.068 64.914C17.068 39.086 38 18.156 63.826 18.156s46.758 20.93 46.758 46.758Zm-69.215-2.457c-1.937 0-3.508 1.568-3.508 3.503 0 1.935 1.571 3.503 3.508 3.503 1.937 0 3.508-1.568 3.508-3.503 0-1.935-1.571-3.503-3.508-3.503Zm28.17 0c-1.937 0-3.508 1.568-3.508 3.503 0 1.935 1.571 3.503 3.508 3.503 1.937 0 3.508-1.568 3.508-3.503 0-1.935-1.571-3.503-3.508-3.503Z"
-        />
-      </svg>
+      {/* Phantom logo — single source of truth in components/wallet/WalletLogo.tsx
+          (correct #AB9FF2 → #534BB1 official gradient). The hand-traced inline
+          SVG that used to live here had the gradient inverted (#534BB1 → #551BF9),
+          which is why the mark looked off-brand on the auth surface. */}
+      <PhantomLogo size={18} />
       <span>{busy ? 'Verifying…' : label}</span>
     </button>
   );

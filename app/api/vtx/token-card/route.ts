@@ -35,7 +35,20 @@ async function fetchCoinGeckoChart(symbol: string, tf: '1h' | '24h' | '7d') {
   const first = points[0] ?? 0;
   const last = points[points.length - 1] ?? 0;
   const changePct = first ? ((last - first) / first) * 100 : 0;
-  return { points, changePct, source: 'coingecko', price: last };
+  // Deep-dive fix — return change24h too (was missing). When tf=7d we
+  // still want the 24h change for the price-card label, so derive it
+  // from the last two points if the requested tf is 7d, else use changePct.
+  const change24h = tf === '24h'
+    ? changePct
+    : (() => {
+        const len = points.length;
+        if (len < 2) return changePct;
+        const cutoff = Math.max(0, len - Math.floor(len / Math.max(1, days)));
+        const a = points[cutoff];
+        const b = points[len - 1];
+        return a ? ((b - a) / a) * 100 : changePct;
+      })();
+  return { points, changePct, source: 'coingecko', price: last, change24h };
 }
 
 export async function GET(req: NextRequest) {
@@ -61,7 +74,10 @@ export async function GET(req: NextRequest) {
         headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
       });
     }
-    return NextResponse.json({ points: [], changePct: 0, source: 'none' });
+    // Deep-dive fix — empty fallback now includes price + change24h so
+    // the VTX TokenCard's destructure (d?.price, d?.change24h) never
+    // misses and the LLM-stale value won't be used.
+    return NextResponse.json({ points: [], changePct: 0, source: 'none', price: 0, change24h: 0 });
   }
 
   if (!address) return NextResponse.json({ error: 'missing address or symbol' }, { status: 400 });
@@ -90,7 +106,17 @@ export async function GET(req: NextRequest) {
       : null;
 
     if (!pair) {
-      const empty = { points: [], changePct: 0, source: 'none' };
+      // Deep-dive fix — when DexScreener has nothing and the caller
+      // also gave us a symbol, fall back to CoinGecko before giving up.
+      // Saves a stale-LLM-price moment for any token DexScreener missed.
+      if (symbol) {
+        const cg = await fetchCoinGeckoChart(symbol, tf);
+        if (cg) {
+          cache.set(key, { at: Date.now(), data: cg });
+          return NextResponse.json(cg);
+        }
+      }
+      const empty = { points: [], changePct: 0, source: 'none', price: 0, change24h: 0 };
       cache.set(key, { at: Date.now(), data: empty });
       return NextResponse.json(empty);
     }
@@ -152,6 +178,9 @@ export async function GET(req: NextRequest) {
       headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
     });
   } catch {
-    return NextResponse.json({ points: [], changePct: 0, source: 'error' });
+    // Deep-dive fix — even the error branch returns the shape the client
+    // expects (price + change24h zero) so the TokenCard fallback chain
+    // doesn't see undefined and silently keep showing LLM-stale data.
+    return NextResponse.json({ points: [], changePct: 0, source: 'error', price: 0, change24h: 0 });
   }
 }
