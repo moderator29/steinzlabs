@@ -179,6 +179,21 @@ function generateSuggestions(content: string): string[] {
 // and a spec row (Volume / Holders / MCap / Liquidity / FDV). No Buy/Swap
 // buttons on the card — this is an intel surface, not a trade surface. If
 // the user wants to swap, they ask VTX and get a separate Swap Card.
+// Bug §4 — VTX TokenCard used to render 'Loading chart…' text while a
+// per-card fetch ran. Watchlist tiles felt instant because they receive
+// pre-computed sparkline data in props. Two changes here:
+//   1. Module-level in-memory cache (per session) keyed on address|symbol.
+//      Second + subsequent renders of the same token render instantly.
+//   2. Replace the textual 'Loading chart…' placeholder with a subtle
+//      animated skeleton so even a first-time render feels populated
+//      while the real points stream in.
+const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; cachedAt: number }> = new Map();
+const VTX_CHART_TTL_MS = 5 * 60 * 1000;
+
+function chartCacheKey(token: TokenCardData): string {
+  return `${(token.address || token.symbol).toLowerCase()}:${(token.chain || '').toLowerCase()}`;
+}
+
 function TokenCard({ token }: { token: TokenCardData }) {
   // Deep-dive fix — the price the LLM emitted (token.price) is whatever
   // was true the instant the model wrote the card, often 1-5s stale by
@@ -187,11 +202,23 @@ function TokenCard({ token }: { token: TokenCardData }) {
   // SAME response we're already firing for the sparkline, so we just
   // pull them out of the same fetch — no second round-trip.
   const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
-  const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(null);
-  const [livePrice, setLivePrice] = useState<number | null>(null);
-  const [liveChange24h, setLiveChange24h] = useState<number | null>(null);
+
+  // Unified: chart cache (Round-1 fix/vtx-card-instant-chart) AND live
+  // price/change extracted from the same fetch (round-2 reliability fix).
+  // Cache key + TTL guard means subsequent renders for the same token in
+  // the same session paint with NO network round-trip; first render fires
+  // /api/vtx/token-card once and pulls chart + price + change24h together.
+  const cacheKey = chartCacheKey(token);
+  const cached = VTX_CHART_CACHE.get(cacheKey);
+  const cachedFresh = cached && Date.now() - cached.cachedAt < VTX_CHART_TTL_MS ? cached : null;
+  const [chart, setChart] = useState<{ points: number[]; changePct: number } | null>(
+    cachedFresh ? { points: cachedFresh.points, changePct: cachedFresh.changePct } : null,
+  );
+  const [livePrice, setLivePrice] = useState<number | null>(cachedFresh?.price ?? null);
+  const [liveChange24h, setLiveChange24h] = useState<number | null>(cachedFresh?.change24h ?? null);
 
   useEffect(() => {
+    if (cachedFresh) return;
     let cancelled = false;
     const q = token.address
       ? `/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=7d`
@@ -200,13 +227,28 @@ function TokenCard({ token }: { token: TokenCardData }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (cancelled || !d) return;
-        if (d.points) setChart({ points: d.points, changePct: d.changePct || 0 });
-        if (typeof d.price === 'number') setLivePrice(d.price);
-        if (typeof d.change24h === 'number') setLiveChange24h(d.change24h);
+        const nextChart = d.points ? { points: d.points as number[], changePct: (d.changePct as number) || 0 } : null;
+        const nextPrice = typeof d.price === 'number' ? d.price : null;
+        const nextChange = typeof d.change24h === 'number' ? d.change24h : null;
+        if (nextChart) setChart(nextChart);
+        if (nextPrice !== null) setLivePrice(nextPrice);
+        if (nextChange !== null) setLiveChange24h(nextChange);
+        // Only cache when we have at least the chart points — partial
+        // responses (price-only, error path) shouldn't replace a future
+        // good fetch.
+        if (nextChart) {
+          VTX_CHART_CACHE.set(cacheKey, {
+            points: nextChart.points,
+            changePct: nextChart.changePct,
+            price: nextPrice,
+            change24h: nextChange,
+            cachedAt: Date.now(),
+          });
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [token.address, token.chain, token.symbol]);
+  }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
 
   // Display the live values when present, fall back to whatever the LLM
   // streamed so the card still has SOMETHING during the brief fetch window.
@@ -263,13 +305,17 @@ function TokenCard({ token }: { token: TokenCardData }) {
         </div>
       </div>
 
-      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls) */}
+      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls).
+          Bug §4 — when chart points aren't in cache yet, render a faint
+          animated skeleton line instead of a 'Loading chart…' label so the
+          card never looks dead. The skeleton vanishes the instant real
+          points arrive. */}
       <div className="h-28 w-full rounded-lg bg-transparent mb-4 overflow-hidden">
         {chart && chart.points.length > 1 ? (
           <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
         ) : (
-          <div className="h-full flex items-center justify-center">
-            <span className="text-[11px] text-gray-600">Loading chart…</span>
+          <div className="h-full w-full flex items-center" aria-hidden="true">
+            <div className="w-full h-12 rounded bg-gradient-to-r from-white/[0.02] via-white/[0.06] to-white/[0.02] animate-pulse" />
           </div>
         )}
       </div>
