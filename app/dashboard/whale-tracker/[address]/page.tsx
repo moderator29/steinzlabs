@@ -173,6 +173,21 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     };
   }, [address, chain]);
 
+  // Bug §5a — hydrate `following` from the server so the button reflects
+  // reality on first paint, not the optimistic local default.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/whales/follow?whale_address=${encodeURIComponent(address)}&chain=${encodeURIComponent(chain)}`);
+        if (!res.ok) return;
+        const json = await res.json() as { following?: boolean };
+        if (!cancelled) setFollowing(!!json.following);
+      } catch { /* network / auth — keep optimistic default */ }
+    })();
+    return () => { cancelled = true; };
+  }, [address, chain]);
+
   async function toggleFollow() {
     setFollowingLoading(true);
     try {
