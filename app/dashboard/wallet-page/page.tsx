@@ -18,6 +18,7 @@ import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
+import { NftTab } from '@/components/wallet/NftTab';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
@@ -1037,8 +1038,61 @@ export default function WalletPage() {
               </button>
             </div>
 
+            {/* ── TAB SWITCHER: Holdings / NFTs / Activity ─────────── */}
+            <div className="flex items-center gap-1 mb-3 rounded-xl bg-slate-900/60 border border-slate-800/50 p-1" role="tablist" aria-label="Wallet content">
+              {([
+                { id: 'crypto' as const, label: 'Holdings' },
+                { id: 'nfts' as const, label: 'NFTs' },
+                { id: 'activity' as const, label: 'Activity' },
+              ]).map((t) => (
+                <button
+                  key={t.id}
+                  role="tab"
+                  aria-selected={activeTab === t.id}
+                  aria-controls={`wallet-panel-${t.id}`}
+                  id={`wallet-tab-${t.id}`}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    activeTab === t.id
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'nfts' && activeWallet && (
+              <div
+                role="tabpanel"
+                id="wallet-panel-nfts"
+                aria-labelledby="wallet-tab-nfts"
+                className="mb-6 rounded-xl bg-slate-900/30 border border-slate-800/40 overflow-hidden"
+              >
+                <NftTab address={activeWallet.address} chain={activeChain.id} />
+              </div>
+            )}
+
+            {activeTab === 'activity' && activeWallet && (
+              <div
+                role="tabpanel"
+                id="wallet-panel-activity"
+                aria-labelledby="wallet-tab-activity"
+                className="mb-6 rounded-xl bg-slate-900/30 border border-slate-800/40 p-3"
+              >
+                <ActivityTab address={activeWallet.address} chain={activeChain} />
+              </div>
+            )}
+
             {/* ── ASSETS LIST (Trust Wallet-style vertical rows) ──────── */}
-            <div className="flex flex-col mb-6 divide-y divide-slate-900/60">
+            <div
+              role="tabpanel"
+              id="wallet-panel-crypto"
+              aria-labelledby="wallet-tab-crypto"
+              hidden={activeTab !== 'crypto'}
+              className="flex flex-col mb-6 divide-y divide-slate-900/60"
+            >
               {loading ? (
                 <>
                   {[1, 2, 3].map(i => (
@@ -2612,74 +2666,128 @@ function WalletSettingsView({
   );
 }
 
+interface DecodedTx {
+  tx_hash: string;
+  chain: string;
+  tx_type: string;
+  token_in: string | null;
+  token_out: string | null;
+  amount_in: number | null;
+  amount_out: number | null;
+  usd_value: number | null;
+  timestamp: string;
+}
+
 function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) {
+  const [txs, setTxs] = useState<DecodedTx[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [upstreamWarning, setUpstreamWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setUpstreamWarning(null);
+      try {
+        const res = await fetch(
+          `/api/wallet/transactions?address=${encodeURIComponent(address)}&chain=${chain.id}&limit=30`,
+          { signal: AbortSignal.timeout(15_000), cache: 'no-store' },
+        );
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { transactions: DecodedTx[]; upstream_error?: string | null };
+        if (cancelled) return;
+        setTxs(json.transactions ?? []);
+        if (json.upstream_error) setUpstreamWarning(json.upstream_error);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load activity');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [address, chain.id]);
+
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4">
         <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-          <ArrowUpRight className="w-6 h-6 text-gray-500" />
+          <ArrowUpRight className="w-6 h-6 text-gray-300" />
         </div>
-        <p className="text-sm text-gray-400">No wallet selected</p>
+        <p className="text-sm text-gray-300">No wallet selected</p>
       </div>
     );
   }
 
-  const swapHistory: any[] = typeof window !== 'undefined'
-    ? (JSON.parse(localStorage.getItem('steinz_swap_history') || '[]') as any[]).filter(t => t.address?.toLowerCase() === address.toLowerCase())
-    : [];
-  const sendHistory: any[] = typeof window !== 'undefined'
-    ? (JSON.parse(localStorage.getItem('steinz_send_history') || '[]') as any[]).filter(t => t.address?.toLowerCase() === address.toLowerCase())
-    : [];
-  const all = [...swapHistory, ...sendHistory].sort((a, b) => b.timestamp - a.timestamp).slice(0, 30);
+  if (txs === null && !error) {
+    return (
+      <div className="py-6 text-center text-xs text-gray-300">Loading activity…</div>
+    );
+  }
 
-  if (all.length === 0) {
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs text-red-200">{error}</div>
+    );
+  }
+
+  if (!txs || txs.length === 0) {
     return (
       <div className="py-8 text-center">
         <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
-          <TrendingUp className="w-6 h-6 text-gray-500" />
+          <TrendingUp className="w-6 h-6 text-gray-300" />
         </div>
-        <p className="text-sm text-gray-400">No transactions yet</p>
-        <p className="text-xs text-gray-600 mt-1">Your swap & send history will appear here</p>
+        <p className="text-sm text-gray-300">No transactions yet</p>
+        <p className="text-xs text-gray-400 mt-1">Decoded on-chain activity will appear here</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      {all.map((tx, i) => {
-        const isSwap = tx.type === 'swap';
+      {upstreamWarning && (
+        <div className="mb-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[10px] text-amber-200">
+          Live decoder unavailable, showing cached entries · {upstreamWarning}
+        </div>
+      )}
+      {txs.map((tx) => {
+        const isSwap = tx.tx_type === 'swap';
+        const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
         const date = new Date(tx.timestamp);
         const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        const Icon = isSwap ? Repeat : ArrowUpRight;
+        const explorerTxHref = chain.id === 'solana'
+          ? `https://solscan.io/tx/${tx.tx_hash}`
+          : `${chain.explorerUrl}/tx/${tx.tx_hash}`;
         return (
-          <div key={i} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+          <div key={tx.tx_hash} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0A1EFF]/10' : 'bg-[#F59E0B]/10'}`}>
-              {isSwap ? <Repeat className="w-4 h-4 text-[#0A1EFF]" /> : <ArrowUpRight className="w-4 h-4 text-[#F59E0B]" />}
+              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0A1EFF]' : 'text-[#F59E0B]'}`} aria-hidden />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold">
-                {isSwap ? `Swap ${tx.from} → ${tx.to}` : `Send ${tx.symbol || chain.symbol}`}
+              <p className="text-xs font-semibold capitalize">
+                {isSwap
+                  ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
+                  : isSend
+                    ? `Send ${tx.token_out ?? chain.symbol}`
+                    : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`}
               </p>
-              <p className="text-[10px] text-gray-500">{dateStr} · {timeStr}</p>
+              <p className="text-[10px] text-gray-300">{dateStr} · {timeStr}</p>
             </div>
             <div className="text-end shrink-0">
-              {isSwap ? (
-                <>
-                  <p className="text-xs font-mono">-{parseFloat(tx.fromAmount || 0).toFixed(4)} {tx.from}</p>
-                  <p className="text-[10px] text-[#10B981] font-mono">+{parseFloat(tx.toAmount || 0).toFixed(4)} {tx.to}</p>
-                </>
-              ) : (
-                <p className="text-xs font-mono text-[#EF4444]">-{parseFloat(tx.amount || 0).toFixed(4)} {tx.symbol || chain.symbol}</p>
+              {tx.amount_out !== null && (
+                <p className="text-xs font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_out ?? ''}</p>
               )}
-              {tx.txHash && (
-                <a
-                  href={chain.id === 'solana' ? `https://solscan.io/tx/${tx.txHash}` : `${chain.explorerUrl}/tx/${tx.txHash}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="text-[9px] text-[#0A1EFF] hover:underline"
-                >
-                  View ↗
-                </a>
+              {tx.amount_in !== null && (
+                <p className="text-[10px] text-[#10B981] font-mono">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_in ?? ''}</p>
               )}
+              <a
+                href={explorerTxHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] text-[#0A1EFF] hover:underline"
+              >
+                View ↗
+              </a>
             </div>
           </div>
         );

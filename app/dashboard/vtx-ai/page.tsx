@@ -500,6 +500,12 @@ function VtxAiPageInner() {
     setLoading(true);
     setShowTools(false);
 
+    // Streaming opt-in: skip when the prompt likely needs tool-use (price,
+    // chart, swap, buy/sell) so tool results + token cards still land via
+    // the JSON branch. Mirrors VtxAiTab's heuristic so behaviour is parity.
+    const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|chart|price of|trade|send|approve)\b/i;
+    const useStream = !TOOL_USE_KEYWORDS.test(finalMessage);
+
     try {
       const response = await fetch('/api/vtx-ai', {
         method: 'POST',
@@ -514,13 +520,9 @@ function VtxAiPageInner() {
           language: settings.language,
           depth: settings.depth,
           riskAppetite: settings.riskAppetite,
+          stream: useStream,
           context: {
             walletAddress: typeof window !== 'undefined' ? (() => {
-              // Try the explicit "active wallet" key first (set when user
-              // opens the Wallet page), then fall back to the saved wallet
-              // vault so VTX sees the wallet even before Wallet has been
-              // visited in this session. Either way the wallet address is
-              // public on-chain info.
               const active = localStorage.getItem('wallet_address');
               if (active) return active;
               try {
@@ -533,6 +535,69 @@ function VtxAiPageInner() {
           },
         }),
       });
+
+      // Streaming branch — progressively fills the assistant bubble as
+      // SSE deltas arrive. Final `done` event carries the complete reply
+      // for chart-tag parsing + suggestions.
+      if (useStream && response.ok && response.body && response.headers.get('content-type')?.includes('text/event-stream')) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamedText = '';
+        let finalReply = '';
+        setMessages(prev => [...prev, { role: 'assistant', content: '', timestamp: Date.now() }]);
+        let streamDone = false;
+        while (!streamDone) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep = buffer.indexOf('\n\n');
+          while (sep !== -1) {
+            const event = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            sep = buffer.indexOf('\n\n');
+            const dataLine = event.split('\n').find(l => l.startsWith('data:'));
+            if (!dataLine) continue;
+            try {
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown; tokenCards?: unknown; swapCard?: unknown };
+              if (json.error) throw new Error(json.error);
+              if (typeof json.delta === 'string' && json.delta.length > 0) {
+                streamedText += json.delta;
+                setMessages(prev => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === 'assistant') next[next.length - 1] = { ...last, content: streamedText };
+                  return next;
+                });
+              }
+              if (json.done) {
+                streamDone = true;
+                finalReply = json.reply ?? streamedText;
+                const streamedSuggestions: string[] | undefined = Array.isArray(json.suggestions)
+                  ? (json.suggestions as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 4)
+                  : generateSuggestions(finalReply);
+                setMessages(prev => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === 'assistant') {
+                    next[next.length - 1] = { ...last, content: finalReply, suggestions: streamedSuggestions };
+                  }
+                  return next;
+                });
+                if (settings.messageSound) playPageChime();
+              }
+            } catch (parseErr) {
+              // Best-effort SSE parsing — drop malformed events instead of aborting.
+              if (parseErr instanceof Error && parseErr.message) {
+                setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${parseErr.message}`, timestamp: Date.now() }]);
+              }
+            }
+          }
+        }
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.rateLimited) {

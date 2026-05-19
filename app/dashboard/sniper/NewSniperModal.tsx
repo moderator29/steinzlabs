@@ -69,6 +69,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [showReview, setShowReview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userWallets, setUserWallets] = useState<{ address: string; chain?: string; label?: string }[]>([]);
@@ -407,16 +408,71 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             token={trigger === 'price_target' ? tokenAddress.trim() : undefined}
           >
             <button
-              onClick={handleSave}
+              onClick={() => setShowReview(true)}
               disabled={!canSave || saving}
               className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/30"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              {saving ? 'Saving…' : 'Create Sniper'}
+              <Zap className="w-4 h-4" />
+              Review &amp; Create
             </button>
           </SecurityGate>
         </div>
+
+        {showReview && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => !saving && setShowReview(false)}>
+            <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-2xl border-2 border-blue-500/30 bg-[#0a0d18] shadow-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> Confirm sniper</h3>
+                <button onClick={() => !saving && setShowReview(false)} disabled={saving} className="p-1.5 rounded-lg hover:bg-white/10 transition disabled:opacity-50"><X className="w-4 h-4" /></button>
+              </div>
+              <p className="text-xs text-white/60 mb-4">Review every value before this rule goes live. Once saved, it watches the chain on every match.</p>
+              <dl className="space-y-2 text-sm">
+                <ReviewRow k="Name" v={name} />
+                <ReviewRow k="Trigger" v={trigger.replace('_', ' ')} />
+                <ReviewRow k="Chains" v={chains.join(', ')} />
+                {trigger === 'whale_buy' && <ReviewRow k="Whale" v={`${whaleAddress.slice(0, 8)}…${whaleAddress.slice(-4)}`} />}
+                {trigger === 'price_target' && <ReviewRow k="Price target" v={`$${priceTarget}`} />}
+                <ReviewRow k="Amount / snipe" v={`$${amountUsd}`} />
+                <ReviewRow k="Slippage" v={`${slippagePct}%`} />
+                <ReviewRow k="Priority fee" v={priorityFee != null ? String(priorityFee) : '—'} />
+                <ReviewRow k="MEV protect" v={mevProtect ? 'on' : 'off'} />
+                <ReviewRow k="Take profit" v={tp === '' ? '—' : `+${tp}%`} />
+                <ReviewRow k="Stop loss" v={sl === '' ? '—' : `-${sl}%`} />
+                <ReviewRow k="Trailing stop" v={trailingStop === '' ? '—' : `${trailingStop}%`} />
+                <ReviewRow k="Auto-sell on target" v={autoSellOnTarget ? 'yes' : 'no'} />
+                <ReviewRow k="Daily cap" v={`${dailyMaxSnipes} snipes · $${dailyMaxSpend}`} />
+                <ReviewRow k="Auto-execute" v={autoExecute ? 'yes' : 'manual confirm'} highlight={autoExecute} />
+                <ReviewRow k="Min liquidity" v={`$${minLiqUsd.toLocaleString()}`} />
+                <ReviewRow k="Max tax (buy / sell)" v={`${maxBuyTaxPct}% / ${maxSellTaxPct}%`} />
+                <ReviewRow k="Block honeypots" v={blockHoneypots ? 'yes' : 'no'} highlight={!blockHoneypots} />
+              </dl>
+              {error && (
+                <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">{error}</div>
+              )}
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button onClick={() => setShowReview(false)} disabled={saving} className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/10 font-semibold text-xs hover:bg-white/[0.1] transition disabled:opacity-50">Back to edit</button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-xs hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                  {saving ? 'Saving…' : 'Confirm &amp; create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function ReviewRow({ k, v, highlight }: { k: string; v: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-white/5 pb-1.5">
+      <dt className="text-xs uppercase tracking-wider text-white/50">{k}</dt>
+      <dd className={`text-sm font-semibold tabular-nums text-right ${highlight ? 'text-amber-300' : 'text-white'}`}>{v}</dd>
     </div>
   );
 }

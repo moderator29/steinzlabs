@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     const data = await getSwapQuote({ chainId, sellToken, buyToken, sellAmount, taker });
     return NextResponse.json(data);
   } catch (error: unknown) {
-    console.error('[swap/quote] failed:', error);
+    logger.error({ err: error }, '[swap/quote] failed:');
     Sentry.captureException(error);
     const msg = error instanceof Error ? error.message : 'Swap quote failed';
     return NextResponse.json({ error: msg }, { status: 500 });

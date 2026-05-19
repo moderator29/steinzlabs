@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Wallet, ArrowDown, ArrowUp, Camera, RotateCcw, ExternalLink, Plus, Key } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
@@ -9,50 +10,70 @@ interface TokenBalance {
   symbol: string;
   name: string;
   balance: string;
-  valueUsd: number;
-  change24h: number;
+  balanceUi: number | null;
+  contractAddress: string | null;
+  decimals: number | null;
   icon: string;
+}
+
+interface BalancesResponse {
+  chain: string;
+  address: string;
+  tokens: Array<{
+    contract_address: string | null;
+    symbol: string | null;
+    name: string | null;
+    decimals: number | null;
+    balance: string;
+    balance_ui: number | null;
+    logo_url?: string | null;
+    is_native?: boolean;
+  }>;
 }
 
 export default function WalletTab() {
   const { address: walletAddress, shortAddress, provider, isConnected, connectAuto, connecting } = useWallet();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
-  const [totalBalance, setTotalBalance] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (walletAddress) {
       fetchBalances(walletAddress);
     } else {
       setBalances([]);
-      setTotalBalance(0);
     }
-  }, [walletAddress]);
+  }, [walletAddress, provider]);
 
   const fetchBalances = async (address: string) => {
     setLoading(true);
+    setError(null);
     try {
-      // 8s ceiling — on-chain RPC + token price enrichment can crawl on a cold
-      // start; without this the wallet card would spin forever on slow chains.
-      const response = await fetch(`/api/token-scanner?address=${address}`, {
-        signal: AbortSignal.timeout(8_000),
-        cache: 'no-store',
-      });
-      const data = await response.json();
-      if (data.tokens && data.tokens.length > 0) {
-        const tokens = data.tokens.map((t: any) => ({
-          symbol: t.symbol || 'ETH',
-          name: t.name || 'Ethereum',
-          balance: t.balance || '0',
-          valueUsd: t.valueUsd || 0,
-          change24h: t.change24h || 0,
-          icon: t.symbol?.charAt(0) || '?',
+      // /api/wallet/balances is the canonical balance lister (Alchemy for EVM,
+      // Helius for Solana). The old /api/token-scanner was a security scanner
+      // we were misusing here — wrong shape, no USD enrichment.
+      const chain = provider === 'phantom' ? 'solana' : 'ethereum';
+      const response = await fetch(
+        `/api/wallet/balances?address=${encodeURIComponent(address)}&chain=${chain}`,
+        { signal: AbortSignal.timeout(10_000), cache: 'no-store' },
+      );
+      if (!response.ok) throw new Error(`balances ${response.status}`);
+      const data = (await response.json()) as BalancesResponse;
+      const tokens: TokenBalance[] = (data.tokens || [])
+        .filter((t) => (t.balance_ui ?? 0) > 0 || t.is_native)
+        .map((t) => ({
+          symbol: t.symbol ?? '?',
+          name: t.name ?? 'Unknown token',
+          balance: t.balance,
+          balanceUi: t.balance_ui,
+          contractAddress: t.contract_address,
+          decimals: t.decimals,
+          icon: (t.symbol ?? '?').charAt(0).toUpperCase(),
         }));
-        setBalances(tokens);
-        setTotalBalance(tokens.reduce((sum: number, t: TokenBalance) => sum + t.valueUsd, 0));
-      }
-    } catch (error) {
-
+      setBalances(tokens);
+    } catch (err) {
+      Sentry.captureException(err, { tags: { component: 'WalletTab', stage: 'fetch-balances' } });
+      setError(err instanceof Error ? err.message : 'Failed to load balances');
     } finally {
       setLoading(false);
     }
@@ -82,9 +103,9 @@ export default function WalletTab() {
       </div>
 
       <div className="glass rounded-xl p-6 border border-white/10 text-center mb-4">
-        <div className="text-xs text-gray-400 mb-1">Total Balance</div>
-        <div className="text-3xl font-bold font-mono mb-4">
-          ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div className="text-xs text-gray-300 mb-1">{balances.length} {balances.length === 1 ? 'token' : 'tokens'} held</div>
+        <div className="text-sm text-gray-400 mb-4">
+          Open the portfolio dashboard for live USD pricing and 24h moves.
         </div>
         <div className="flex justify-center gap-6">
           {[
@@ -105,26 +126,42 @@ export default function WalletTab() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 mb-3 text-xs text-red-200">
+          {error}
+        </div>
+      )}
+
       {walletAddress && balances.length > 0 && (
         <div className="glass rounded-xl p-4 border border-white/10 mb-4">
           <h3 className="text-sm font-bold mb-3">Holdings</h3>
           <div className="space-y-2">
             {balances.map((token, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+              <div key={`${token.contractAddress ?? 'native'}-${i}`} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
                 <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold">
                   {token.icon}
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold">{token.symbol}</div>
-                  <div className="text-[10px] text-gray-500">{token.name}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate">{token.symbol}</div>
+                  <div className="text-[10px] text-gray-300 truncate">{token.name}</div>
                 </div>
                 <div className="text-end">
-                  <div className="text-xs font-mono font-semibold">${token.valueUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-                  <div className="text-[10px] text-gray-500">{parseFloat(token.balance).toFixed(4)}</div>
+                  <div className="text-xs font-mono font-semibold">
+                    {token.balanceUi !== null
+                      ? token.balanceUi.toLocaleString(undefined, { maximumFractionDigits: 6 })
+                      : Number(token.balance).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-gray-300">{token.symbol}</div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {walletAddress && !loading && balances.length === 0 && !error && (
+        <div className="glass rounded-xl p-4 border border-white/10 mb-4 text-center text-xs text-gray-300">
+          No token balances detected for this address on {provider === 'phantom' ? 'Solana' : 'Ethereum'}.
         </div>
       )}
 

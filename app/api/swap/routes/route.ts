@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from "next/server";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { getAllRoutes } from "@/lib/services/swap-aggregator";
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json({ routes, count: routes.length });
   } catch (err) {
-    console.error("[swap/routes]", err);
+    logger.error({ err: err }, "[swap/routes]");
     return NextResponse.json({ error: "Aggregation failed" }, { status: 502 });
   }
 }

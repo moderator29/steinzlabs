@@ -29,6 +29,7 @@ import { useWatchlist } from "@/hooks/market/useWatchlist";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useWallet } from "@/lib/hooks/useWallet";
 import { formatPrice } from "@/lib/market/formatters";
+import { LiteSwapModal } from "@/components/wallet/LiteSwapModal";
 
 interface RouteParams {
   chain: string;
@@ -47,13 +48,14 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const { chain, address } = use(params);
   const router = useRouter();
   const { user } = useAuth();
-  const { balance } = useWallet();
+  const { balance, address: takerAddress } = useWallet();
   const { detail, loading } = useTokenDetail(address);
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
 
   const [tab, setTab] = useState<Tab>('position');
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [comingSoonOpen, setComingSoonOpen] = useState<string | null>(null);
+  const [swapOpen, setSwapOpen] = useState(false);
   const [chartPoints, setChartPoints] = useState<number[]>([]);
   const [chartCandles, setChartCandles] = useState<Array<{ time: number; open: number; high: number; low: number; close: number }>>([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -218,10 +220,19 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-800/95 backdrop-blur-xl px-3 py-3 grid grid-cols-3 gap-2 z-40">
         <WalletAction icon={<ArrowUpRight size={16} />} label="Send" primary onClick={() => router.push(`/dashboard/wallet-page?action=send&token=${symbol}&chain=${chain}`)} />
         <WalletAction icon={<ArrowDownLeft size={16} />} label="Receive" onClick={() => router.push(`/dashboard/wallet-page?action=receive&chain=${chain}`)} />
-        <WalletAction icon={<Repeat size={16} />} label="Swap" onClick={() => setComingSoonOpen('Swap')} />
+        <WalletAction icon={<Repeat size={16} />} label="Swap" onClick={() => setSwapOpen(true)} />
       </div>
 
-      {/* Coming Soon modal — only Swap uses this now. */}
+      <LiteSwapModal
+        open={swapOpen}
+        onClose={() => setSwapOpen(false)}
+        tokenAddress={address}
+        tokenSymbol={symbol}
+        chain={chain}
+        takerAddress={takerAddress}
+      />
+
+      {/* Coming Soon modal — retained for future surface stubs. */}
       {comingSoonOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#0D1117] border border-slate-800 rounded-2xl p-6 w-full max-w-xs text-center">
