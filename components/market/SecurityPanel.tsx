@@ -21,6 +21,29 @@ import {
   Shield, ShieldAlert, ShieldCheck, ShieldX, Users,
   AlertTriangle, ExternalLink, Loader2, RefreshCw, CheckCircle2, XCircle,
 } from 'lucide-react';
+import { LpLockPanel } from '@/components/security/LpLockPanel';
+import { TriangulationBadgeStack } from '@/components/security/TriangulationBadgeStack';
+import { DeployerHistoryPanel } from '@/components/security/DeployerHistoryPanel';
+import { evaluateLpLock, type LpLockRecord } from '@/lib/security/lpLockWindow';
+
+interface TriangulationResponse {
+  verdict: {
+    honeypot: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    honeypotSources: string[];
+    safeSources: string[];
+  };
+}
+
+interface DeployerResponse {
+  available: boolean;
+  trustScore?: number;
+  band?: 'pristine' | 'clean' | 'caution' | 'dangerous' | 'serial-rugger';
+  totalDeployed?: number;
+  rugged?: number;
+  abandoned?: number;
+  active?: number;
+}
 
 interface SecurityScanResponse {
   scan_type: 'token';
@@ -252,6 +275,29 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
   const [data, setData] = useState<SecurityScanResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [triangulation, setTriangulation] = useState<TriangulationResponse['verdict'] | null>(null);
+  const [deployer, setDeployer] = useState<DeployerResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/security/triangulation?chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(address)}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as TriangulationResponse;
+        if (!cancelled) setTriangulation(json.verdict);
+      } catch { /* triangulation unavailable — panel hides */ }
+    })();
+    (async () => {
+      try {
+        const res = await fetch(`/api/security/deployer-history?chain=${encodeURIComponent(chain)}&token=${encodeURIComponent(address)}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as DeployerResponse;
+        if (!cancelled) setDeployer(json);
+      } catch { /* deployer history unavailable */ }
+    })();
+    return () => { cancelled = true; };
+  }, [chain, address]);
 
   const scan = async () => {
     setLoading(true);
@@ -315,6 +361,44 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
   const tone = toneFor(data.level);
   const ToneIcon = tone.Icon;
   const facts = chain === 'solana' ? readSolanaFacts(data.raw) : readEvmFacts(data.raw);
+
+  // Derive LP lock records from GoPlus lp_holders (EVM only).
+  let lpLockRecords: LpLockRecord[] = [];
+  if (chain !== 'solana') {
+    const rawHolders = Array.isArray(data.raw.lp_holders)
+      ? (data.raw.lp_holders as Array<{
+          is_locked?: number | string;
+          percent?: string | number;
+          tag?: string;
+          address?: string;
+          locked_detail?: Array<{ end_time?: string | number; amount?: string | number }>;
+        }>)
+      : [];
+    for (const h of rawHolders) {
+      if (!isFlagOn(h.is_locked)) continue;
+      const share = Number(h.percent ?? 0);
+      if (!isFinite(share) || share <= 0) continue;
+      const lockerTag = (h.tag ?? '').toLowerCase();
+      const locker: LpLockRecord['locker'] =
+        lockerTag.includes('team finance') ? 'team-finance'
+        : lockerTag.includes('unicrypt') ? 'unicrypt'
+        : lockerTag.includes('pinklock') ? 'pinklock'
+        : 'other';
+      const details = Array.isArray(h.locked_detail) ? h.locked_detail : [];
+      if (details.length === 0) {
+        lpLockRecords.push({ locker, unlockAt: Math.floor(Date.now() / 1000) + 10 * 365 * 86400, lpShare: share, owner: h.address ?? null });
+        continue;
+      }
+      for (const d of details) {
+        const end = Number(d.end_time ?? 0);
+        if (!isFinite(end) || end <= 0) continue;
+        const portion = Number(d.amount ?? 0);
+        const effectiveShare = portion > 0 && portion <= 1 ? portion : share / details.length;
+        lpLockRecords.push({ locker, unlockAt: end, lpShare: effectiveShare, owner: h.address ?? null });
+      }
+    }
+  }
+  const lpVerdict = lpLockRecords.length > 0 ? evaluateLpLock(lpLockRecords) : null;
 
   // Tack on a generic low-liquidity flag from the DexScreener pair
   // payload — GoPlus doesn't surface this directly and it's one of the
@@ -381,6 +465,43 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
                 : null}
             </div>
           ))}
+        </div>
+      )}
+
+      {triangulation && (
+        <div className="mb-3 flex items-center gap-2">
+          <TriangulationBadgeStack
+            honeypot={triangulation.honeypot}
+            confidence={triangulation.confidence}
+            honeypotSources={triangulation.honeypotSources}
+            safeSources={triangulation.safeSources}
+          />
+          <span className="text-[10px] text-slate-400">Source triangulation</span>
+        </div>
+      )}
+
+      {lpVerdict && (
+        <div className="mb-3">
+          <LpLockPanel
+            totalLockedPct={lpVerdict.totalLockedPct}
+            soonestUnlockAt={lpVerdict.soonestUnlockAt}
+            daysUntilUnlock={lpVerdict.daysUntilUnlock}
+            severity={lpVerdict.severity}
+            byLocker={lpVerdict.byLocker}
+          />
+        </div>
+      )}
+
+      {deployer?.available && deployer.band && (
+        <div className="mb-3">
+          <DeployerHistoryPanel
+            trustScore={deployer.trustScore ?? 0}
+            totalDeployed={deployer.totalDeployed ?? 0}
+            rugged={deployer.rugged ?? 0}
+            abandoned={deployer.abandoned ?? 0}
+            active={deployer.active ?? 0}
+            band={deployer.band}
+          />
         </div>
       )}
 

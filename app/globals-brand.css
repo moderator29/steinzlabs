@@ -107,7 +107,9 @@
   border-radius: var(--nl-r-xl);
   background: linear-gradient(135deg, rgba(10, 15, 46, 0.85), rgba(15, 22, 60, 0.75));
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  /* PDF S2.4 — 1.5x border thickness for stronger visible presence.
+     Was 1px / opacity 0.10; bumped to 1.5px / 0.12 platform-wide. */
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
               border-color var(--nl-dur-base) ease;
@@ -144,7 +146,8 @@
   letter-spacing: 0.01em;
   color: var(--nl-text);
   background: var(--nl-grad-bluecrimson);
-  border: 1px solid rgba(0, 102, 255, 0.55);
+  /* PDF S2.4 — 1.5x border thickness. */
+  border: 1.5px solid rgba(0, 102, 255, 0.6);
   box-shadow: var(--nl-glow-blue-sm);
   cursor: pointer;
   transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
@@ -162,7 +165,10 @@
 }
 .nl-button--ghost {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.10);
+  /* PDF S2.4 — 1.5x border on ghost variant, opacity bumped 0.10 → 0.14
+     for AAA contrast against canvas-base in dark mode. */
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.14);
   box-shadow: none;
   color: var(--nl-text-soft);
 }
@@ -191,3 +197,44 @@
   .nl-aurora-bg::after { animation: none; }
   .nl-loader            { animation-duration: 2400ms; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PDF S2.4 — platform border-thickness bump (1px → 1.5px).
+   Opt-in via .naka-thick-borders wrapping the dashboard layout so
+   marketing / landing surfaces stay pristine while every dashboard
+   surface gets the firmer visual presence the audit asked for.
+   ───────────────────────────────────────────────────────────────────────── */
+.naka-thick-borders .border,
+.naka-thick-borders [class*="border-t"]:not([class*="border-t-0"]):not([class*="border-t-2"]):not([class*="border-t-4"]),
+.naka-thick-borders [class*="border-b"]:not([class*="border-b-0"]):not([class*="border-b-2"]):not([class*="border-b-4"]),
+.naka-thick-borders [class*="border-l"]:not([class*="border-l-0"]):not([class*="border-l-2"]):not([class*="border-l-4"]),
+.naka-thick-borders [class*="border-r"]:not([class*="border-r-0"]):not([class*="border-r-2"]):not([class*="border-r-4"]) {
+  border-width: 1.5px;
+}
+.naka-thick-borders .border-x { border-left-width: 1.5px; border-right-width: 1.5px; }
+.naka-thick-borders .border-y { border-top-width: 1.5px; border-bottom-width: 1.5px; }
+
+/* Divider primitive — replaces inline 1px tall divs with a visually-
+   consistent 1.5px alternative. Useful for separators inside cards
+   that today use <div className="h-px bg-..." />. */
+.naka-divider {
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  border: 0;
+  margin: 16px 0;
+}
+.naka-divider--vertical {
+  height: 100%;
+  width: 1.5px;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  margin: 0 16px;
+}
+
+/* AAA text-contrast helpers. Audit B.12 flagged text-slate-500/600 on
+   the dark canvas fails WCAG AAA. These give the dashboard a one-character
+   migration target (e.g. text-slate-500 → naka-text-muted) without forcing
+   the whole sweep up-front. */
+.naka-text-primary  { color: var(--nl-text); }
+.naka-text-soft     { color: var(--nl-text-soft); }
+.naka-text-muted    { color: var(--nl-text-muted); }
+.naka-text-subtle   { color: #94A3B8; }

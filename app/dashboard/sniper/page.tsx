@@ -13,6 +13,7 @@ import {
   Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { useNavState } from '@/lib/nav/useNavState';
 import { supabase } from '@/lib/supabase';
 import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -95,6 +96,16 @@ export default function SniperPage() {
 
   const [tab, setTab] = useState<Tab>('snipers');
   const [chainFilter, setChainFilter] = useState<SniperChain | 'all'>('all');
+
+  // PDF S3 — preserve tab + chainFilter across sniper → config → back.
+  useNavState(
+    'sniper',
+    () => ({ tab, chainFilter }),
+    (s) => {
+      if (typeof s.tab === 'string') setTab(s.tab as Tab);
+      if (typeof s.chainFilter === 'string') setChainFilter(s.chainFilter as SniperChain | 'all');
+    },
+  );
   const [snipers, setSnipers] = useState<SniperCriteriaRow[]>([]);
   const [executions, setExecutions] = useState<ExecutionRow[]>([]);
   const [feedTokens, setFeedTokens] = useState<DetectedToken[]>([]);

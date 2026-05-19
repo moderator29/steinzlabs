@@ -1,0 +1,47 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SENTRY_SUPPRESS_TURBOPACK_WARNING: '1'
+      - name: Start server
+        run: |
+          npx next start -p 5000 &
+          npx wait-on http://localhost:5000 -t 60000
+      - name: Lighthouse audit
+        run: node scripts/lighthouse-ci.mjs
+        env:
+          LIGHTHOUSE_BASE_URL: http://localhost:5000
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: |
+            lighthouse-results/
+            lighthouse-report.html
+          if-no-files-found: ignore

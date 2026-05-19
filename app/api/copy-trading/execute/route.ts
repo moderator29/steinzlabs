@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { logAdminAction } from "@/lib/admin/auditLog";
+import { guardRoute } from "@/lib/api/guardRoute";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,8 @@ function usdcForChain(chain: string): string | null {
  * to /api/cron/copy-trade-monitor.
  */
 export async function POST(request: NextRequest) {
+  const guard = await guardRoute(request, { rate: 'high' });
+  if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

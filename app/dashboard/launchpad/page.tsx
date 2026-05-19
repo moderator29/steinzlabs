@@ -55,7 +55,10 @@ export default function LaunchpadPage() {
       setProjects(data.projects || []);
       if (data.stats) setStats(data.stats);
     } catch (err) {
-
+      // Audit fix: empty catch was swallowing the network/server error.
+      // Sentry capture for visibility; UI shows empty state via the
+      // existing default `projects = []`.
+      console.error('[launchpad] builder-submissions fetch failed:', err);
     } finally {
       setLoading(false);
     }
@@ -106,7 +109,7 @@ export default function LaunchpadPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
             <div className="text-lg font-bold text-[#10B981]">${(stats.totalRaised / 1000).toFixed(0)}K</div>
             <div className="text-[10px] text-gray-500">Total Raised</div>

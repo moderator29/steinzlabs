@@ -41,11 +41,11 @@ export const metadata: Metadata = {
   keywords: ["crypto intelligence", "on-chain analytics", "whale tracker", "token scanner", "rug pull detector", "DeFi tools", "blockchain analytics"],
   authors: [{ name: "Naka Labs" }],
   creator: "Naka Labs",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://steinzlabs.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://nakalabs.xyz"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: process.env.NEXT_PUBLIC_SITE_URL || "https://steinzlabs.vercel.app",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "https://nakalabs.xyz",
     siteName: "Naka Labs",
     title: "Naka Labs — On-Chain Intelligence Platform",
     description: "On-chain intelligence for every trade.",

@@ -19,7 +19,44 @@ import { getSolanaWalletTokens, getSolanaAssetsByOwner } from '@/lib/services/al
  * them before passing through.
  */
 
-const HOLDING_THRESHOLD = Number(process.env.NAKA_HOLDING_THRESHOLD ?? '1227000');
+/**
+ * Default threshold floor. The live value comes from
+ * platform_settings.naka_threshold (DB-editable from /admin/cult)
+ * via getCultThreshold(); this constant only kicks in when the DB
+ * read fails and the env override is also absent.
+ */
+const DEFAULT_HOLDING_THRESHOLD = Number(process.env.NAKA_HOLDING_THRESHOLD ?? '1227000');
+
+let _cachedThreshold: number | null = null;
+let _cachedAt = 0;
+const THRESHOLD_CACHE_MS = 60_000;
+
+async function getCultThreshold(): Promise<number> {
+  const now = Date.now();
+  if (_cachedThreshold !== null && now - _cachedAt < THRESHOLD_CACHE_MS) return _cachedThreshold;
+  try {
+    const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin');
+    const sb = getSupabaseAdmin();
+    const { data } = await sb.from('platform_settings').select('naka_threshold').limit(1).maybeSingle();
+    const v = typeof data?.naka_threshold === 'number' ? data.naka_threshold : Number(data?.naka_threshold);
+    if (Number.isFinite(v) && v > 0) {
+      _cachedThreshold = v;
+      _cachedAt = now;
+      return v;
+    }
+  } catch {
+    /* DB unreachable in this context — fall through. */
+  }
+  _cachedThreshold = DEFAULT_HOLDING_THRESHOLD;
+  _cachedAt = now;
+  return DEFAULT_HOLDING_THRESHOLD;
+}
+
+/** Hook for admin edits to bust the threshold cache. */
+export function invalidateCultThresholdCache() {
+  _cachedThreshold = null;
+  _cachedAt = 0;
+}
 
 export interface CultHoldings {
   isMember: boolean;
@@ -97,7 +134,8 @@ async function resolveEvm(addr: string): Promise<CultHoldings> {
     devNftContract ? isHolderOfContract(addr, devNftContract, 'ethereum').catch(() => false) : Promise.resolve(false),
   ]);
 
-  const isMember = nakaBalance >= HOLDING_THRESHOLD || hasLoyaltyGem || hasDevNft;
+  const threshold = await getCultThreshold();
+  const isMember = nakaBalance >= threshold || hasLoyaltyGem || hasDevNft;
   const isChosen = hasDevNft;
 
   return { isMember, isChosen, nakaBalance, hasLoyaltyGem, hasDevNft };
@@ -144,7 +182,8 @@ async function resolveSolana(addr: string): Promise<CultHoldings> {
     }
   }
 
-  const isMember = nakaBalance >= HOLDING_THRESHOLD || hasLoyaltyGem || hasDevNft;
+  const threshold = await getCultThreshold();
+  const isMember = nakaBalance >= threshold || hasLoyaltyGem || hasDevNft;
   const isChosen = hasDevNft;
 
   return { isMember, isChosen, nakaBalance, hasLoyaltyGem, hasDevNft };
