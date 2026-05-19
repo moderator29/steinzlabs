@@ -1,5 +1,12 @@
 'use client';
-import { DetailErrorBoundary } from '@/components/errors/DetailErrorBoundary';
-export default function Error(props: { error: Error & { digest?: string }; reset: () => void }) {
-  return <DetailErrorBoundary {...props} backHref="/dashboard/wallet-page" backLabel="Wallet" />;
+
+import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
+import { RouteErrorState } from '@/components/errors/RouteErrorState';
+
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error, { tags: { route: 'app/dashboard/wallet-page/coin/[chain]/[address]' } });
+  }, [error]);
+  return <RouteErrorState error={error} reset={reset} context="coin" />;
 }

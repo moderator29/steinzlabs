@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     await admin.auth.admin.updateUserById(user.id, { email_confirm: true });
     return NextResponse.json({ success: true });
   } catch (err: any) {
-
+    Sentry.captureException(err, { tags: { route: 'auth/confirm-user', phase: 'admin-update' } });
     return NextResponse.json({ error: 'Failed to confirm user' }, { status: 500 });
   }
 }
