@@ -26,6 +26,8 @@ interface CopyRuleRow {
   min_liquidity_usd: number | null;
   max_slippage_bps: number | null;
   enabled: boolean;
+  mode: string | null;
+  paused: boolean | null;
 }
 
 interface WhaleActivityRow {
@@ -59,11 +61,12 @@ export async function GET(request: NextRequest) {
 
   const sinceIso = new Date(Date.now() - LOOKBACK_SECONDS * 1000).toISOString();
 
-  // 1) Fetch oneclick follows and their matching copy rules.
+  // 1) Fetch ALL whale follows; the active copy mode lives on user_copy_rules
+  // now (was: user_whale_follows.copy_mode, which couldn't be edited from the
+  // UI's mode switcher). Filtering happens against user_copy_rules.mode below.
   const { data: follows } = await admin
     .from("user_whale_follows")
     .select("user_id,whale_address,chain")
-    .eq("copy_mode", "oneclick")
     .returns<FollowRow[]>();
 
   const followRows = follows ?? [];
@@ -96,7 +99,7 @@ export async function GET(request: NextRequest) {
   const { data: rules } = await admin
     .from("user_copy_rules")
     .select(
-      "user_id,whale_address,chain,max_per_trade_usd,daily_cap_usd,chains_allowed,tokens_blacklist,min_liquidity_usd,max_slippage_bps,enabled",
+      "user_id,whale_address,chain,max_per_trade_usd,daily_cap_usd,chains_allowed,tokens_blacklist,min_liquidity_usd,max_slippage_bps,enabled,mode,paused",
     )
     .eq("enabled", true)
     .returns<CopyRuleRow[]>();
@@ -149,6 +152,14 @@ export async function GET(request: NextRequest) {
 
       const rule = ruleMap.get(`${follower.user_id}:${act.chain}:${act.whale_address.toLowerCase()}`);
       if (!rule) {
+        ruleBlocked++;
+        continue;
+      }
+      // Mode gate (user_copy_rules.mode is the source of truth — UI mode
+      // switcher writes here). 'off' / 'manual' / paused skip the cron;
+      // 'auto' / 'oneclick' / 'auto_copy' proceed and queue the trade.
+      const mode = (rule.mode ?? "off").toLowerCase();
+      if (rule.paused === true || mode === "off" || mode === "manual") {
         ruleBlocked++;
         continue;
       }

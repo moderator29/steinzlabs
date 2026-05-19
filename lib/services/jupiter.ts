@@ -50,18 +50,53 @@ export interface JupiterTokenPrice {
   type: string;
 }
 
+const JUPITER_RETRY_DELAYS_MS = [250, 500, 1000];
+
 async function jupiterFetch(url: string, options?: RequestInit): Promise<unknown> {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...options?.headers,
-    },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`Jupiter error ${res.status}: ${await res.text()}`);
-  return res.json();
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= JUPITER_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...options?.headers,
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (res.ok) return res.json();
+      if (res.status >= 500 && attempt < JUPITER_RETRY_DELAYS_MS.length) {
+        await new Promise((r) => setTimeout(r, JUPITER_RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      const body = await res.text().catch(() => '');
+      // Sentry surfacing for terminal failures so the silent null-return paths
+      // downstream don't hide outages. Module-imported dynamically so this file
+      // stays usable from edge contexts without bundling @sentry/nextjs.
+      try {
+        const Sentry = await import('@sentry/nextjs');
+        Sentry.captureMessage(`Jupiter error ${res.status}`, {
+          level: 'warning',
+          tags: { service: 'jupiter', status: String(res.status) },
+          extra: { url, body: body.slice(0, 500) },
+        });
+      } catch { /* sentry unavailable */ }
+      throw new Error(`Jupiter error ${res.status}: ${body}`);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < JUPITER_RETRY_DELAYS_MS.length) {
+        await new Promise((r) => setTimeout(r, JUPITER_RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      try {
+        const Sentry = await import('@sentry/nextjs');
+        Sentry.captureException(err, { tags: { service: 'jupiter' }, extra: { url } });
+      } catch { /* sentry unavailable */ }
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Jupiter request failed after retries');
 }
 
 /**

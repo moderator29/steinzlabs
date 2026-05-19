@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { validateVerifyToken } from '@/lib/authTokens';
 import { getSiteUrl } from '@/lib/siteUrl';
@@ -52,13 +53,13 @@ export async function GET(request: Request) {
         }
       }
     } catch (linkErr: any) {
-
+      Sentry.captureException(linkErr, { tags: { route: 'auth/verify-email', phase: 'generate-link' } });
     }
 
     // Fallback — user verifies but signs in manually
     return NextResponse.redirect(`${getSiteUrl()}/login?verified=true`);
   } catch (err: any) {
-
+    Sentry.captureException(err, { tags: { route: 'auth/verify-email' } });
     return NextResponse.redirect(`${getSiteUrl()}/login?error=verify_failed`);
   }
 }

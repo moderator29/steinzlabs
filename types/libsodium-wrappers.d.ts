@@ -1,12 +1,3 @@
-/**
- * Minimal ambient type shim for libsodium-wrappers.
- *
- * @types/libsodium-wrappers is declared in package.json but isn't always
- * resolved on lockfile drift (CI sees the runtime package but not the
- * @types). Rather than fail the build for that race, this shim exposes
- * just the surface lib/social/encryption.ts uses. Replace with the
- * upstream @types when the install settles.
- */
 declare module 'libsodium-wrappers' {
   const sodium: {
     ready: Promise<void>;

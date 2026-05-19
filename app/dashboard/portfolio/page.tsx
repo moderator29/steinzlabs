@@ -98,6 +98,7 @@ export default function PortfolioPage() {
   );
   const [intel, setIntel] = useState<IntelResponse | null>(null);
   const [perf, setPerf] = useState<PerformanceResponse | null>(null);
+  const [perfError, setPerfError] = useState<string | null>(null);
   const [loadingIntel, setLoadingIntel] = useState(false);
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [intelError, setIntelError] = useState<string | null>(null);
@@ -143,7 +144,11 @@ export default function PortfolioPage() {
       .then((d) => {
         if (!abort && d) setPerf(d);
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (abort) return;
+        Sentry.captureException(err, { tags: { component: 'dashboard/portfolio', stage: 'fetch-performance' } });
+        setPerfError(err instanceof Error ? err.message : 'Failed to load performance');
+      })
       .finally(() => {
         if (!abort) setLoadingPerf(false);
       });
@@ -290,6 +295,14 @@ export default function PortfolioPage() {
           </span>
         </div>
 
+        <div className="mt-2 text-[11px] text-slate-500">
+          Cumulative capital flow over time — buys add, stable-out reduces. Not mark-to-market PnL.
+        </div>
+        {perfError && (
+          <div className="mt-2 rounded-lg border border-rose-500/40 bg-rose-500/5 px-3 py-2 text-xs text-rose-300">
+            {perfError} — chart may be empty.
+          </div>
+        )}
         <PerformanceChart series={perf?.series ?? []} timeframe={timeframe} loading={loadingPerf} />
 
         <div className="mt-3 flex gap-2">
@@ -331,17 +344,17 @@ export default function PortfolioPage() {
           {donutData.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-500">No holdings to show.</div>
           ) : (
-            <div className="h-64">
+            <div className="h-72 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 8, bottom: 24, left: 0, right: 0 }}>
                   <Pie
                     data={donutData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
+                    innerRadius="38%"
+                    outerRadius="72%"
                     paddingAngle={2}
                     stroke="#0A0E1A"
                   >
