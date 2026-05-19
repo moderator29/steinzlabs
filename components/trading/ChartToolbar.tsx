@@ -128,8 +128,10 @@ function IconButton({
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
+      aria-pressed={active ? true : undefined}
       className={`p-1 rounded transition ${
-        active ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-white hover:bg-white/5"
+        active ? "bg-blue-500/20 text-blue-300" : "text-slate-300 hover:text-white hover:bg-white/5"
       }`}
     >
       {children}

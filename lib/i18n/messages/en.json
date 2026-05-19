@@ -1,0 +1,45 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "search": "Search"
+  },
+  "social": {
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow",
+    "requested": "Requested",
+    "mutual": "Mutual",
+    "message": "Message",
+    "block": "Block",
+    "mute": "Mute",
+    "report": "Report",
+    "shareProfile": "Share profile",
+    "copyLink": "Copy profile link"
+  },
+  "onboarding": {
+    "getStarted": "Get Started",
+    "skipTour": "Skip tour",
+    "skipConfirm": "Skip the tour?",
+    "skipConfirmBody": "You can replay it anytime from Settings.",
+    "keepWatching": "Keep watching",
+    "skipAnyway": "Skip anyway"
+  },
+  "leaderboard": {
+    "topSuccess": "Top Success Rate",
+    "topFollowers": "Top Followers",
+    "newUsers": "New Users",
+    "maxTier": "Max Tier",
+    "topTraders": "Top Traders",
+    "copyTraders": "Top Copy Traders",
+    "whaleWatchers": "Top Whale Watchers",
+    "mostActive": "Most Active",
+    "viewAll": "View all →"
+  }
+}

@@ -49,6 +49,7 @@ const MAX_SNIPE_AMOUNT = 500;
  * previously allowed cross-user execution-history pollution.
  */
 export const POST = withTierGate('pro', async (req: NextRequest) => {
+  const t0 = Date.now();
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -122,14 +123,33 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
   if (aiBlocked) return NextResponse.json({ blocked: true, reason: 'AI flagged high risk', aiReason: aiText, steps });
 
   // Server-derived user.id — client cannot pollute another user's history.
-  createSniperExecution({
+  // Retry with backoff handled inside createSniperExecution; Sentry captures
+  // a terminal failure so safety-gate persistence regressions are visible.
+  const executionTimeMs = Date.now() - t0;
+  const persist = await createSniperExecution({
     user_id: user.id,
     token_address: address,
     chain,
     buy_amount_usd: amount,
     tx_hash: null,
     status: 'queued',
-  }).catch(() => {});
+    execution_time_ms: executionTimeMs,
+  });
+  if (persist.error) {
+    Sentry.captureException(new Error(`sniper_executions insert failed: ${persist.error}`), {
+      tags: { route: 'sniper/execute', stage: 'persist-queued' },
+      extra: { user_id: user.id, token_address: address, chain, execution_time_ms: executionTimeMs },
+    });
+  }
 
-  return NextResponse.json({ blocked: false, approved: true, steps, liquidity: liq, slippage, pair: pairs[0]?.pairAddress ?? null, price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null });
+  return NextResponse.json({
+    blocked: false,
+    approved: true,
+    steps,
+    liquidity: liq,
+    slippage,
+    pair: pairs[0]?.pairAddress ?? null,
+    price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null,
+    execution_time_ms: executionTimeMs,
+  });
 });

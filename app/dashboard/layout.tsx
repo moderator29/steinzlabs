@@ -20,13 +20,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // second-wave sweep so the aurora actually shows through.
   return (
     <AuroraBackground fullHeight>
-      <SessionGuardProvider />
-      <AlertMonitorProvider />
-      <PlatformEventMonitor />
-      <FloatingNotificationBell />
-      <PendingSignerProvider />
-      <PendingTradesBanner />
-      {children}
+      {/* PDF S2.4 — naka-thick-borders bumps every border-1 utility to
+          1.5px inside the dashboard, giving cards / dividers / form
+          inputs the firmer presence the audit asked for. Marketing
+          + landing pages outside this layout stay 1px. */}
+      <div className="naka-thick-borders contents">
+        <SessionGuardProvider />
+        <AlertMonitorProvider />
+        <PlatformEventMonitor />
+        <FloatingNotificationBell />
+        <PendingSignerProvider />
+        <PendingTradesBanner />
+        {children}
+      </div>
     </AuroraBackground>
   );
 }

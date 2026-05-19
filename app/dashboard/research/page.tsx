@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
+import { useNavState } from '@/lib/nav/useNavState';
+import { toast } from 'sonner';
 // Naka Labs brand icons — most swap. BookOpen / Tag / SlidersHorizontal /
 // Zap / Loader2 not yet in brand library; stay on lucide.
 import {
@@ -279,6 +281,18 @@ export default function ResearchPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('latest');
+
+  // PDF S3 — preserve search + category + sort across research index
+  // → post detail → back.
+  useNavState(
+    'research',
+    () => ({ search, category, sort }),
+    (s) => {
+      if (typeof s.search === 'string') setSearch(s.search);
+      if (typeof s.category === 'string') setCategory(s.category);
+      if (typeof s.sort === 'string') setSort(s.sort);
+    },
+  );
   const [selected, setSelected] = useState<ResearchPost | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -305,8 +319,14 @@ export default function ResearchPage() {
         setPosts(data.posts || []);
         setTotal(data.total || 0);
         setLastUpdated(new Date());
-      } catch {
-        if (!silent) setPosts([]);
+      } catch (err) {
+        // Best-effort Sentry; module-imported dynamically so the page doesn't
+        // crash if Sentry's transport is broken in the user's env.
+        import('@sentry/nextjs').then((s) => s.captureException(err)).catch(() => undefined);
+        if (!silent) {
+          setPosts([]);
+          toast.error(err instanceof Error ? err.message : 'Failed to load research');
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);

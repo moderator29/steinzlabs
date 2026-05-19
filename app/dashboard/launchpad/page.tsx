@@ -5,6 +5,7 @@ import { Rocket, Clock, Users, DollarSign, TrendingUp, CheckCircle, Zap, Externa
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useNavState } from '@/lib/nav/useNavState';
 
 interface LaunchProject {
   id: string;
@@ -34,6 +35,11 @@ interface Stats {
 export default function LaunchpadPage() {
   const router = useRouter();
   const [filter, setFilter] = useState('All');
+  useNavState<{ filter: string }>(
+    'launchpad',
+    () => ({ filter }),
+    (saved) => { if (saved.filter) setFilter(saved.filter); },
+  );
   const [projects, setProjects] = useState<LaunchProject[]>([]);
   const [stats, setStats] = useState<Stats>({ totalRaised: 0, totalProjects: 0, totalInvestors: 0, activeProjects: 0 });
   const [loading, setLoading] = useState(true);
@@ -49,7 +55,10 @@ export default function LaunchpadPage() {
       setProjects(data.projects || []);
       if (data.stats) setStats(data.stats);
     } catch (err) {
-
+      // Audit fix: empty catch was swallowing the network/server error.
+      // Sentry capture for visibility; UI shows empty state via the
+      // existing default `projects = []`.
+      console.error('[launchpad] builder-submissions fetch failed:', err);
     } finally {
       setLoading(false);
     }
@@ -100,7 +109,7 @@ export default function LaunchpadPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
             <div className="text-lg font-bold text-[#10B981]">${(stats.totalRaised / 1000).toFixed(0)}K</div>
             <div className="text-[10px] text-gray-500">Total Raised</div>

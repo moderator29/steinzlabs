@@ -1,4 +1,5 @@
 import 'server-only';
+import * as Sentry from '@sentry/nextjs';
 import { sendTelegramMessage } from '@/lib/telegram/client';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -10,6 +11,10 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 //   1. They have a row in user_telegram_links.
 //   2. Their user_preferences.telegram_notifications flag is not false.
 //   3. The notification kind is opted-in (price/whale/security/general).
+//
+// Delivery: tries Telegram up to 3x with exponential backoff (250ms / 500ms /
+// 1000ms). On terminal failure we persist to telegram_delivery_failures so the
+// user (and admin) can inspect what didn't reach them.
 
 type NotificationKind = 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general';
 
@@ -21,15 +26,18 @@ interface PushInput {
   url?: string;
 }
 
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = [250, 500, 1000];
+
 function formatMessage(kind: NotificationKind, title: string, body?: string, url?: string): string {
   const ICON: Record<NotificationKind, string> = {
-    price:    '\uD83D\uDCC8', // chart up
-    whale:    '\uD83D\uDC0B', // whale
-    security: '\uD83D\uDEE1\uFE0F', // shield
-    alert:    '\uD83D\uDD14', // bell
-    sniper:   '\uD83C\uDFAF', // target
-    copy:     '\uD83D\uDC65', // users
-    general:  '\uD83D\uDCA0', // dotted flower
+    price:    '📈',
+    whale:    '🐋',
+    security: '🛡️',
+    alert:    '🔔',
+    sniper:   '🎯',
+    copy:     '👥',
+    general:  '💠',
   };
   const icon = ICON[kind] ?? ICON.general;
   const parts = [`${icon} *${title}*`];
@@ -38,11 +46,30 @@ function formatMessage(kind: NotificationKind, title: string, body?: string, url
   return parts.join('\n');
 }
 
-export async function sendTelegramNotification(input: PushInput): Promise<boolean> {
-  try {
-    const admin = getSupabaseAdmin();
+async function deliverWithRetry(chatId: number, text: string): Promise<{ ok: true } | { ok: false; error: string; attempts: number }> {
+  let lastErr = 'unknown';
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      await sendTelegramMessage(chatId, text, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true,
+      });
+      return { ok: true };
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
+      }
+    }
+  }
+  return { ok: false, error: lastErr, attempts: MAX_ATTEMPTS };
+}
 
-    // Fetch link + preferences in one roundtrip each.
+export async function sendTelegramNotification(input: PushInput): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+
+  let chatId: number | null = null;
+  try {
     const [{ data: link }, { data: prefRow }] = await Promise.all([
       admin
         .from('user_telegram_links')
@@ -56,26 +83,44 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
         .maybeSingle(),
     ]);
 
-    if (!link?.telegram_chat_id) return false; // not linked
+    if (!link?.telegram_chat_id) return false;
+    chatId = link.telegram_chat_id as number;
 
     const prefs = (prefRow?.preferences ?? {}) as Record<string, unknown>;
-    // Master switch — defaults to ON once linked.
     if (prefs.telegram_notifications === false) return false;
-
-    // Per-category opt-outs.
     const perKindKey = `telegram_${input.kind}` as const;
     if (prefs[perKindKey] === false) return false;
-
-    const text = formatMessage(input.kind, input.title, input.body, input.url);
-    await sendTelegramMessage(link.telegram_chat_id as number, text, {
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true,
-    });
-    return true;
   } catch (err) {
-    console.error('[telegram/notify] failed:', err);
+    Sentry.captureException(err, { tags: { source: 'telegram/notify', stage: 'preflight' } });
     return false;
   }
+
+  const text = formatMessage(input.kind, input.title, input.body, input.url);
+  const result = await deliverWithRetry(chatId, text);
+  if (result.ok) return true;
+
+  // Persist failure so it's visible. Best-effort — Sentry on top so we still page if DB fails.
+  try {
+    await admin.from('telegram_delivery_failures').insert({
+      user_id: input.userId,
+      chat_id: chatId,
+      kind: input.kind,
+      title: input.title,
+      body: input.body ?? null,
+      url: input.url ?? null,
+      error_message: result.error,
+      attempts: result.attempts,
+      last_attempt_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    Sentry.captureException(err, { tags: { source: 'telegram/notify', stage: 'persist-failure' } });
+  }
+  Sentry.captureMessage(`Telegram delivery failed after ${result.attempts} attempts`, {
+    level: 'warning',
+    tags: { source: 'telegram/notify', kind: input.kind },
+    extra: { user_id: input.userId, error: result.error },
+  });
+  return false;
 }
 
 // Fire-and-forget wrapper for call-sites that don't want to await.

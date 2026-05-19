@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { guardRoute } from "@/lib/api/guardRoute";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,8 @@ interface RuleBody {
 }
 
 export const POST = withTierGate("mini", async (request: NextRequest) => {
+  const guard = await guardRoute(request, { rate: 'med' });
+  if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/common/PageHeader';
 import { formatTimeAgo, formatUSD } from '@/lib/formatters';
+import { useNavState } from '@/lib/nav/useNavState';
 
 type TxType = 'all' | 'swap' | 'snipe';
 type TxStatus = 'pending' | 'confirmed' | 'failed';
@@ -45,6 +46,15 @@ export default function TransactionsPage() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TxType>('all');
+
+  // PDF S3 — preserve filter across transactions → tx detail → back.
+  useNavState(
+    'transactions',
+    () => ({ filter }),
+    (s) => {
+      if (s.filter === 'all' || s.filter === 'swap' || s.filter === 'snipe') setFilter(s.filter);
+    },
+  );
 
   const load = useCallback(async () => {
     setLoading(true);

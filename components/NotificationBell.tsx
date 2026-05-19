@@ -193,9 +193,10 @@ export default function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
+                aria-label="Close notifications"
                 className="p-1 hover:bg-white/10 rounded transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-gray-500" />
+                <X className="w-3.5 h-3.5 text-gray-300" aria-hidden />
               </button>
             </div>
           </div>
@@ -211,7 +212,7 @@ export default function NotificationBell() {
               <div className="flex flex-col items-center justify-center py-10 text-center px-4">
                 <Bell className="w-8 h-8 text-gray-700 mb-2" />
                 <p className="text-xs font-semibold text-gray-400">No notifications yet</p>
-                <p className="text-[11px] text-gray-600 mt-1">Activity and alerts will appear here</p>
+                <p className="text-[11px] text-gray-300 mt-1">Activity and alerts will appear here</p>
               </div>
             ) : (
               notifications.map(n => (

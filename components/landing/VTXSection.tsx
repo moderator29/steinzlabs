@@ -39,7 +39,7 @@ export function VTXSection() {
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5 }}
         >
-          <p className="text-[9px] font-bold uppercase tracking-[5px] mb-4" style={{ color: '#8899cc' }}>
+          <p className="text-[9px] font-bold uppercase tracking-[5px] mb-4" style={{ color: '#6d85ff' }}>
             VTX AI
           </p>
           <h2 className="text-4xl md:text-[36px] font-black text-white leading-tight mb-4">

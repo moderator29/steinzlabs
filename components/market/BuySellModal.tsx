@@ -6,6 +6,7 @@ import { SwapResult } from '@/lib/market/types';
 import { formatPrice } from '@/lib/market/formatters';
 import { TokenLogo } from './TokenLogo';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 interface BuySellModalProps {
   tokenId?: string;
@@ -102,15 +103,16 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
     }
   };
 
+  const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-5 w-full max-w-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="buysell-modal-title">
+      <div ref={trapRef} className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <TokenLogo src={logo} symbol={symbol} size={28} />
-            <span className="text-white font-semibold">{name}</span>
+            <span id="buysell-modal-title" className="text-white font-semibold">{name}</span>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={18} /></button>
+          <button onClick={onClose} aria-label={`Close buy/sell ${symbol} modal`} className="text-gray-500 hover:text-white"><X size={18} /></button>
         </div>
 
         {result ? (

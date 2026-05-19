@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { useNavState } from '@/lib/nav/useNavState';
 import type { TrendCard, TrendAlertItem, TrendsResponse, TrendSparkpoint } from '@/app/api/intelligence/on-chain-trends/route';
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
@@ -185,6 +186,12 @@ export default function TrendsPage() {
   const [chain, setChain] = useState('all');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [selectedCard, setSelectedCard] = useState<TrendCard | null>(null);
+
+  useNavState<{ chain: string }>(
+    'trends',
+    () => ({ chain }),
+    (saved) => { if (saved.chain) setChain(saved.chain); },
+  );
 
   async function fetchTrends(selectedChain = chain) {
     setLoading(true);

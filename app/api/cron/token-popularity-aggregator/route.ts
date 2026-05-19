@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
             .from("token_popularity_history")
             .insert(records.slice(i, i + chunkSize));
           if (error) {
-            console.error(`[${NAME}] insert chunk failed`, error);
+            logger.error({ err: error }, `[${NAME}] insert chunk failed`);
           } else {
             inserted += Math.min(chunkSize, records.length - i);
           }
