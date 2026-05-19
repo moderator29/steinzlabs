@@ -8,6 +8,7 @@ import { z } from 'zod';
 import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
+import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 
 // §11 — lightweight-charts wrapper for the proof modal. Lazy-loaded
 // so the chart bundle ships only when a user opens the proof drawer.
@@ -229,12 +230,8 @@ export default function ViewProofPage() {
   // fetches a live quote on mount, and signs in-place; user never leaves
   // the proof modal.
   const [showSwapCard, setShowSwapCard] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setWalletAddress(localStorage.getItem('wallet_address'));
-    }
-  }, []);
+  const naka = useNakaWallet();
+  const walletAddress = naka.address;
 
   useEffect(() => {
     try {

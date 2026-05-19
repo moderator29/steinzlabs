@@ -11,6 +11,7 @@ import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 import { VtxSettingsDrawer } from '@/components/vtx/VtxSettingsDrawer';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
+import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 
 // TokenCardData accepts both legacy string fields (parsed from reply text)
 // and the richer server shape (numbers + contractAddress + chain) so the
@@ -364,6 +365,7 @@ const TOOLS = [
 function VtxAiPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const naka = useNakaWallet();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -522,7 +524,7 @@ function VtxAiPageInner() {
           riskAppetite: settings.riskAppetite,
           stream: useStream,
           context: {
-            walletAddress: typeof window !== 'undefined' ? (() => {
+            walletAddress: naka.address ?? (typeof window !== 'undefined' ? (() => {
               const active = localStorage.getItem('wallet_address');
               if (active) return active;
               try {
@@ -530,7 +532,7 @@ function VtxAiPageInner() {
                 if (Array.isArray(stored) && stored[0]?.address) return stored[0].address as string;
               } catch { /* ignore */ }
               return null;
-            })() : null,
+            })() : null),
             currentPage: 'vtx-ai',
           },
         }),

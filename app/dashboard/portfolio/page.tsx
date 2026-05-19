@@ -15,6 +15,7 @@ import { formatPrice, formatLargeNumber, formatPercent } from "@/lib/market/form
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useNakaWallet } from "@/lib/hooks/useNakaWallet";
 import { useNavState } from "@/lib/nav/useNavState";
 
 type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
@@ -83,7 +84,8 @@ function chainFor(symbol: string | undefined): string {
 export default function PortfolioPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [address, setAddress] = useState<string | null>(null);
+  const naka = useNakaWallet();
+  const address = naka.address;
   const [tab, setTab] = useState<TabId>("holdings");
   const [timeframe, setTimeframe] = useState<Timeframe>("30D");
 
@@ -102,12 +104,6 @@ export default function PortfolioPage() {
   const [loadingIntel, setLoadingIntel] = useState(false);
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [intelError, setIntelError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setAddress(localStorage.getItem("wallet_address"));
-    }
-  }, []);
 
   // Fetch wallet intelligence (holdings).
   useEffect(() => {

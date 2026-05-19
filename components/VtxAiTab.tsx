@@ -12,6 +12,7 @@ import {
 import { Briefcase, Radio, Loader2, Globe, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 import { StreamingCursor } from '@/components/vtx/StreamingCursor';
 import { MessageActions } from '@/components/vtx/MessageActions';
 import { SuggestionPills } from '@/components/vtx/SuggestionPills';
@@ -545,6 +546,7 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
 
 export default function VtxAiTab() {
   const router = useRouter();
+  const naka = useNakaWallet();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -705,7 +707,7 @@ export default function VtxAiTab() {
           defaultChain: settings.defaultChain,
           stream: useStream,
           context: {
-            walletAddress: typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null,
+            walletAddress: naka.address,
             currentPage: 'vtx-tab',
           },
         }),
