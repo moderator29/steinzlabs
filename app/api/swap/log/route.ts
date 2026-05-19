@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (swapError) {
-      console.error('[Swap Log] swap_logs insert failed:', swapError.message);
+      logger.error({ err: swapError.message }, '[Swap Log] swap_logs insert failed:');
     }
 
     // Log platform fee revenue
@@ -72,12 +73,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (feeError) {
-      console.error('[Swap Log] fee_revenue insert failed:', feeError.message);
+      logger.error({ err: feeError.message }, '[Swap Log] fee_revenue insert failed:');
     }
 
     return NextResponse.json({ success: true, feeUsd });
   } catch (error) {
-    console.error('[Swap Log] Unexpected error:', error);
+    logger.error({ err: error }, '[Swap Log] Unexpected error:');
     Sentry.captureException(error);
     return NextResponse.json({ error: 'Failed to log swap' }, { status: 500 });
   }
