@@ -32,6 +32,7 @@
     { "path": "/api/cron/cult-verify-membership",     "schedule": "0 3 * * *" },
     { "path": "/api/cron/cult-refresh-treasury",      "schedule": "0 */6 * * *" },
     { "path": "/api/cron/cult-resolve-proposals",     "schedule": "*/10 * * * *" },
-    { "path": "/api/cron/recompute-reputation",       "schedule": "0 5 * * *" }
+    { "path": "/api/cron/recompute-reputation",       "schedule": "0 5 * * *" },
+    { "path": "/api/cron/alert-monitor",              "schedule": "*/5 * * * *" }
   ]
 }

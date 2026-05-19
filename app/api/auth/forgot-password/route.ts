@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { generateResetToken } from '@/lib/authTokens';
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     // 3 reset-email requests per IP per hour. Stops email-enumeration probes
     // and protects the SendGrid quota.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = rateLimit(`auth:forgot:${ip}`, { interval: 3_600_000, maxRequests: 3 });
+    const rl = await rateLimit(`auth:forgot:${ip}`, { interval: 3_600_000, maxRequests: 3 });
     if (!rl.success) return rateLimitResponse(rl);
 
     const { email } = await request.json();
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-
+    Sentry.captureException(err, { tags: { route: 'auth/forgot-password' } });
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
   }
 }

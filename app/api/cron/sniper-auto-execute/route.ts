@@ -29,8 +29,11 @@ export const maxDuration = 300;
 export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const auth = verifyCron(request);
-  const adminOverride = request.headers.get('x-migration-secret') === process.env.ADMIN_MIGRATION_SECRET;
-  if (!auth.ok && !adminOverride) return auth.response!;
+  // ADMIN_MIGRATION_SECRET override removed — scoped to DB schema work only.
+  // Real-money execution must run under CRON_SECRET. Ad-hoc manual triggering
+  // belongs on a dedicated admin endpoint with proper RBAC, not a header
+  // bypass on a money-moving cron.
+  if (!auth.ok) return auth.response!;
 
   const url = request.nextUrl;
   const dryRun = url.searchParams.get('dryRun') === '1';

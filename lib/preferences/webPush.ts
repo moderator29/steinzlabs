@@ -24,8 +24,25 @@ export interface SubscribeResult {
   error?: string;
 }
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 const SW_PATH = '/push-sw.js';
+
+/**
+ * Fetch the active VAPID public key + version from the server. Falls back to
+ * the build-time env so existing deploys keep working before the vapid_keys
+ * table is seeded.
+ */
+async function fetchVapidKey(): Promise<{ publicKey: string; version: number | null }> {
+  try {
+    const res = await fetch('/api/push/vapid-public-key', { cache: 'no-store' });
+    if (res.ok) {
+      const data = (await res.json()) as { version: number | null; public_key: string };
+      if (data.public_key) return { publicKey: data.public_key, version: data.version };
+    }
+  } catch {
+    // fall through to env fallback
+  }
+  return { publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '', version: null };
+}
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -50,7 +67,8 @@ export function getNotificationPermission(): NotificationPermission | null {
 
 export async function subscribeToPush(userId: string): Promise<SubscribeResult> {
   if (!isPushSupported()) return { ok: false, reason: 'unsupported' };
-  if (!VAPID_PUBLIC_KEY) return { ok: false, reason: 'missing_vapid' };
+  const { publicKey: vapidKey, version: vapidVersion } = await fetchVapidKey();
+  if (!vapidKey) return { ok: false, reason: 'missing_vapid' };
 
   // 1. Permission prompt — user must approve.
   let permission = Notification.permission;
@@ -77,7 +95,7 @@ export async function subscribeToPush(userId: string): Promise<SubscribeResult> 
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });
     }
   } catch (err) {
@@ -97,6 +115,7 @@ export async function subscribeToPush(userId: string): Promise<SubscribeResult> 
       p256dh: keys.p256dh ?? '',
       auth: keys.auth ?? '',
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : null,
+      vapid_key_version: vapidVersion,
     }, { onConflict: 'endpoint' });
     if (error) throw error;
   } catch (err) {

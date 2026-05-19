@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,8 @@ async function broadcastSolana(signedB64: string): Promise<{ ok: boolean; txHash
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await guardRoute(req, { rate: 'high' });
+  if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (!user || authErr) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
