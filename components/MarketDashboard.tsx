@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
 
 interface CoinRow {
   id: string;
@@ -249,7 +250,11 @@ export default function MarketDashboard() {
     // the destination matches DexScreener / Birdeye one-click behaviour.
     // Per-token chain routing (so SOL doesn't land on ethereum) is the
     // dedicated fix in branch #4 fix/market-routing-honesty.
-    router.push(`/dashboard/market/ethereum/${coin.id || coin.symbol.toLowerCase()}`);
+    // Bug §3a — was hardcoded to /market/ethereum/{id}. Route to
+    // each token's canonical native chain (BTC → bitcoin, SOL → solana,
+    // XRP → xrp, etc.) so the terminal header doesn't label them ETHEREUM.
+    const chain = resolveTokenChain({ id: coin.id, symbol: coin.symbol }).chain;
+    router.push(`/dashboard/market/${chain}/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
   // Audit M1 #3 — was fire-and-forget. UI flipped optimistically, the

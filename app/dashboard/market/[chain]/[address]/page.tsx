@@ -188,7 +188,15 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <span className="text-slate-300 truncate max-w-[40vw]">{name || symbol || 'Token'}</span>
         </nav>
         <div className="flex items-center gap-3 px-4 py-3">
-          <BackButton href="/dashboard/market" />
+          {/* Trading-terminal back button — owner reported it as
+              'stuck' because the hardcoded href always shoved the
+              user to /dashboard/market regardless of where they came
+              from. Without the href the component uses router.back()
+              and falls back to /dashboard if history is empty, so the
+              user lands on the page they were actually on (portfolio,
+              dashboard, search, whales). The breadcrumb above still
+              shows the semantic location for orientation. */}
+          <BackButton />
           <TokenLogo src={logo} symbol={symbol} size={32} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
