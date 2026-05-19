@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
 
 interface CoinRow {
   id: string;
@@ -141,7 +142,11 @@ export default function Markets() {
     // to ethereum for CoinGecko hits, uses coin.chain for DEX hits) —
     // dedicated chain-aware routing lands in branch #4.
     if (coin.source === 'coingecko' && coin.id) {
-      router.push(`/dashboard/market/ethereum/${coin.id}`);
+      // Bug §3a — was hardcoded to /market/ethereum/{id} so XRP and SOL
+      // opened on the Ethereum terminal labelled "ETHEREUM". Route by
+      // the canonical native chain instead.
+      const chain = resolveTokenChain({ id: coin.id, symbol: coin.symbol }).chain;
+      router.push(`/dashboard/market/${chain}/${coin.id}`);
     } else if (coin.pairAddress) {
       const params = new URLSearchParams({ symbol: coin.symbol, name: coin.name });
       params.set('pair', coin.pairAddress);

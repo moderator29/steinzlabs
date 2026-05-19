@@ -692,7 +692,16 @@ export default function WalletPage() {
   if (view === 'receive' && activeWallet) return (
     <ReceiveView
       onBack={() => setView('main')}
-      address={activeWallet.address}
+      // Bug §3b — when the active chain is Solana, pass the derived
+      // base58 pubkey instead of the EVM 0x address. ReceiveView's
+      // `addressMatchesChain` guard catches this too, but routing the
+      // correct address up-front means the QR + warning logic show the
+      // right thing on the first paint, not after a re-render.
+      address={
+        activeChain.id === 'solana'
+          ? (activeWallet.solanaAddress ?? '')
+          : activeWallet.address
+      }
       chain={activeChain}
       // Bug §1 — let the user pick a chain right inside the receive
       // screen so they don't have to back out and reopen the flow when
