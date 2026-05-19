@@ -89,6 +89,45 @@ function fmtUsd(n: number | null): string {
   return `$${n.toFixed(0)}`;
 }
 
+/**
+ * Bug 5c — client-side estimated net-flow when the server-side PnL
+ * backfill hasn't populated whales.pnl_7d_usd / pnl_30d_usd yet.
+ *
+ * We can't compute true realized PnL on the client without cost-basis
+ * history (which lives on the server's Arkham FIFO backfill), but we
+ * CAN sum value_usd of sells minus buys in the window. That's a real
+ * indicative number — labelled as 'est.' so users don't mistake it for
+ * audited PnL — and it ships immediately instead of leaving the row
+ * showing '—' until the cron runs.
+ *
+ * Returns null when activity is empty or no rows in window — caller
+ * falls back to '—' as before.
+ */
+function estimateNetFlowUsd(
+  activity: ReadonlyArray<{ action: string; value_usd: number | null; timestamp: string | null }>,
+  windowDays: number,
+): number | null {
+  if (!activity || activity.length === 0) return null;
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  let net = 0;
+  let counted = 0;
+  for (const a of activity) {
+    if (!a.timestamp) continue;
+    const ts = new Date(a.timestamp).getTime();
+    if (!Number.isFinite(ts) || ts < cutoff) continue;
+    if (typeof a.value_usd !== 'number' || !Number.isFinite(a.value_usd)) continue;
+    const action = (a.action || '').toLowerCase();
+    // Sells / outflows count positive (realised exit), buys / inflows
+    // negative (deployed capital). Anything ambiguous ('tx', 'transfer')
+    // we skip — counting it would inflate the estimate either way.
+    if (action === 'sell' || action === 'send') net += a.value_usd;
+    else if (action === 'buy' || action === 'receive') net -= a.value_usd;
+    else continue;
+    counted += 1;
+  }
+  return counted > 0 ? net : null;
+}
+
 export default function WhaleDetailPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
   const sp = useSearchParams();
@@ -287,8 +326,23 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <StatCard label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} />
-              <StatCard label="7d PnL" value={fmtUsd(w.pnl_7d_usd)} tone={(w.pnl_7d_usd ?? 0) >= 0 ? "up" : "down"} />
-              <StatCard label="30d PnL" value={fmtUsd(w.pnl_30d_usd)} tone={(w.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
+              {/* Bug 5c — when the server-side PnL backfill hasn't run yet
+                  (whales.pnl_7d_usd / pnl_30d_usd null), compute an
+                  indicative net-flow estimate from the activity feed so
+                  the row doesn't sit blank for hours. Label '(est.)' so
+                  users see it's not audited PnL. */}
+              {(() => {
+                const est7d = w.pnl_7d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 7) : null;
+                const value = w.pnl_7d_usd !== null ? fmtUsd(w.pnl_7d_usd) : est7d !== null ? `${fmtUsd(est7d)} (est.)` : '—';
+                const tone = (w.pnl_7d_usd ?? est7d ?? 0) >= 0 ? 'up' : 'down';
+                return <StatCard label="7d PnL" value={value} tone={tone as 'up' | 'down'} />;
+              })()}
+              {(() => {
+                const est30d = w.pnl_30d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 30) : null;
+                const value = w.pnl_30d_usd !== null ? fmtUsd(w.pnl_30d_usd) : est30d !== null ? `${fmtUsd(est30d)} (est.)` : '—';
+                const tone = (w.pnl_30d_usd ?? est30d ?? 0) >= 0 ? 'up' : 'down';
+                return <StatCard label="30d PnL" value={value} tone={tone as 'up' | 'down'} />;
+              })()}
               <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
               <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
               <StatCard label="Followers" value={data.followerCount.toLocaleString()} />
