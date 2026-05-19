@@ -11,6 +11,7 @@ import { TopGainersBar } from '@/components/market/TopGainersBar';
 import { TokenRow } from '@/components/market/TokenRow';
 import { LoadingSkeleton } from '@/components/market/LoadingSkeleton';
 import { ErrorState } from '@/components/market/ErrorState';
+import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
 
 type CategoryId = 'all' | 'majors' | 'defi' | 'layer1' | 'layer2' | 'gaming' | 'ai' | 'meme' | 'depin' | 'pumpfun' | 'bnb-meme';
 
@@ -35,9 +36,10 @@ export default function PricesPage() {
   });
 
   const handleSelect = useCallback((id: string) => {
-    // Audit M2 — direct route to canonical detail page; was bouncing
-    // through /market/prices/[tokenId] redirect.
-    router.push(`/dashboard/market/ethereum/${id}`);
+    // Bug §3a — route to native chain so SOL/XRP/BTC don't land on the
+    // Ethereum terminal labelled ETHEREUM.
+    const chain = resolveTokenChain({ id }).chain;
+    router.push(`/dashboard/market/${chain}/${id}`);
   }, [router]);
 
   return (
