@@ -304,8 +304,197 @@
   margin-bottom: 20px;
 }
 
+/* ─── Live stats strip ───────────────────────────────────────────────── */
+.nakacult-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  max-width: 1120px;
+  margin: -40px auto 80px;
+  padding: 0 24px;
+}
+.nakacult-stats__cell {
+  text-align: center;
+  padding: 20px 16px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(0, 102, 255, 0.06), rgba(0, 0, 0, 0.30));
+  border: 1px solid rgba(0, 102, 255, 0.22);
+  backdrop-filter: blur(8px);
+}
+.nakacult-stats__value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  text-shadow: 0 0 24px rgba(0, 200, 255, 0.30);
+}
+.nakacult-stats__label {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: #C8D6FF;
+}
+.nakacult-stats__sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(200, 214, 255, 0.55);
+}
+@media (max-width: 720px) {
+  .nakacult-stats { grid-template-columns: repeat(2, 1fr); margin-top: -20px; }
+  .nakacult-stats__value { font-size: 22px; }
+}
+
+/* ─── Pillar bullet list (added on top of existing pillar styles) ────── */
+.nakacult-pillar__list {
+  list-style: none;
+  padding: 14px 0 0;
+  margin: 14px 0 0;
+  border-top: 1px solid rgba(0, 102, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nakacult-pillar__list li {
+  font-size: 12px;
+  color: rgba(200, 214, 255, 0.78);
+  position: relative;
+  padding-inline-start: 14px;
+}
+.nakacult-pillar__list li::before {
+  content: '◈';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #FFD86B;
+  font-size: 9px;
+}
+
+/* ─── What members get — feature grid ────────────────────────────────── */
+.nakacult-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.nakacult-feature {
+  padding: 24px 22px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(0, 102, 255, 0.05), rgba(5, 8, 22, 0.55));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.nakacult-feature:hover {
+  border-color: rgba(0, 200, 255, 0.35);
+  transform: translateY(-2px);
+}
+.nakacult-feature__num {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(255, 216, 107, 0.85);
+  margin-bottom: 12px;
+}
+.nakacult-feature__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.nakacult-feature__body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(200, 214, 255, 0.78);
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .nakacult-features { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .nakacult-features { grid-template-columns: 1fr; }
+}
+
+/* ─── Entry card — chosen variant ────────────────────────────────────── */
+.nakacult-entry--chosen {
+  border-color: rgba(255, 216, 107, 0.42) !important;
+  background: linear-gradient(180deg, rgba(255, 216, 107, 0.06), rgba(5, 8, 22, 0.55)) !important;
+}
+.nakacult-entry--chosen .nakacult-entry__num {
+  background: rgba(255, 216, 107, 0.18) !important;
+  color: #FFD86B !important;
+  border-color: rgba(255, 216, 107, 0.45) !important;
+}
+.nakacult-entry__foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 214, 255, 0.55);
+}
+
+/* ─── FAQ — accordion ────────────────────────────────────────────────── */
+.nakacult-faq {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nakacult-faq__item {
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(0, 102, 255, 0.04), rgba(5, 8, 22, 0.55));
+  border: 1px solid rgba(0, 102, 255, 0.18);
+  overflow: hidden;
+  transition: border-color 0.25s ease;
+}
+.nakacult-faq__item[open] {
+  border-color: rgba(0, 200, 255, 0.40);
+}
+.nakacult-faq__q {
+  padding: 18px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  padding-inline-end: 44px;
+}
+.nakacult-faq__q::-webkit-details-marker { display: none; }
+.nakacult-faq__q::after {
+  content: '+';
+  position: absolute;
+  inset-inline-end: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #FFD86B;
+  transition: transform 0.25s ease;
+}
+.nakacult-faq__item[open] .nakacult-faq__q::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+.nakacult-faq__a {
+  padding: 0 22px 20px;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: rgba(200, 214, 255, 0.78);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nakacult-shell::after,
   .nakacult-hero__sigil { animation: none !important; }
-  .nakacult-pillar:hover { transform: none; }
+  .nakacult-pillar:hover,
+  .nakacult-feature:hover { transform: none; }
+  .nakacult-faq__item[open] .nakacult-faq__q::after { transition: none; }
 }
