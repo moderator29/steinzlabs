@@ -759,7 +759,13 @@ export default function ContextFeed() {
               )}
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                {/* Trust Score naming unification — this bar represents
+                    SIGNAL confidence (how reliable this Context-Feed event
+                    is), not the token-level Naka Trust Score. Relabel to
+                    "Signal" with STRONG/MEDIUM/WEAK so users don't conflate
+                    it with the TrustScoreBadge on token detail pages. */}
+                <div className="flex items-center gap-2" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
+                  <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                     <div
                       className="h-1.5 rounded-full transition-all duration-500"
@@ -779,7 +785,7 @@ export default function ContextFeed() {
                       color: sentimentColor
                     }}
                   >
-                    {event.trustScore > 70 ? 'TRUSTED' : event.trustScore > 40 ? 'MEDIUM' : 'LOW'}
+                    {event.trustScore > 70 ? 'STRONG' : event.trustScore > 40 ? 'MEDIUM' : 'WEAK'}
                   </span>
                 </div>
                 <button

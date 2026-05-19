@@ -161,6 +161,57 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   );
 });
 
+// Bug §2 — /dashboard (and by extension /dashboard/profile via redirect)
+// showed an infinite spinner when useAuth() never resolved (Supabase hiccup,
+// stale session cookie, network drop). The user was trapped with no escape.
+// This component shows the spinner for the first 10 seconds and then renders
+// an actionable retry / sign-in / dashboard-bypass surface.
+function DashboardAuthLoadingGate() {
+  const router = useRouter();
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 10_000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!timedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+      </div>
+    );
+  }
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="max-w-sm w-full text-center space-y-4">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F59E0B]/10">
+          <div className="w-6 h-6 border-2 border-[#F59E0B]/30 border-t-[#F59E0B] rounded-full animate-spin" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-white">Taking longer than expected</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            We couldn&apos;t verify your session. Check your connection and try again.
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-sm font-semibold transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => router.replace('/login?from=/dashboard')}
+            className="px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 text-sm font-semibold border border-white/[0.08] transition-colors"
+          >
+            Sign in again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -282,11 +333,7 @@ export default function Dashboard() {
   }, []);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
-      </div>
-    );
+    return <DashboardAuthLoadingGate />;
   }
 
   if (!user) return null;
