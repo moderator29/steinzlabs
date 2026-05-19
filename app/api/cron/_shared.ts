@@ -63,10 +63,14 @@ export function cronResponse(
   jobName: string,
   startedAt: number,
   extra: Record<string, unknown> = {},
+  status: number = 200,
 ): Response {
   const durationMs = Date.now() - startedAt;
   console.log(`[cron:${jobName}] completed in ${durationMs}ms`);
-  return Response.json({ ok: true, job: jobName, durationMs, timestamp: Date.now(), ...extra });
+  return Response.json(
+    { ok: status < 400, job: jobName, durationMs, timestamp: Date.now(), ...extra },
+    { status },
+  );
 }
 
 export async function logCronExecution(
