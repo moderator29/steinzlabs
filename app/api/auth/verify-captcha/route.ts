@@ -17,7 +17,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Emergency bypass — paired with NEXT_PUBLIC_TURNSTILE_BYPASS on the
+  // client. Set BOTH to '1' in Vercel for the duration of a Cloudflare
+  // outage or domain-whitelist rotation so users aren't locked out of
+  // auth. Unset it the moment Turnstile is back to refuse missing tokens.
+  const emergencyBypass = process.env.TURNSTILE_EMERGENCY_BYPASS === '1';
+
   if (!token) {
+    if (emergencyBypass) {
+      return NextResponse.json({ success: true, failOpen: true, reason: 'emergency_bypass' });
+    }
     return NextResponse.json(
       { success: false, error: 'Missing security token' },
       { status: 400 },
