@@ -197,7 +197,7 @@ export function PersonalizedHome() {
             sub: w.chain.toUpperCase(),
           }))}
           emptyMessage="Watchlist is empty"
-          link={{ label: "View all", href: "/market/watchlist" }}
+          link={{ label: "View all", href: "/dashboard/market?filter=watchlist" }}
           accent="blue"
         />
         <InsightCard

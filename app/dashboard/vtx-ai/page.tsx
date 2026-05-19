@@ -961,8 +961,15 @@ function VtxAiPageInner() {
         )}
       </div>
 
+      {/* Bug §1 / VTX half-render — the welcome card used to only render
+          when messages.length <= 1. After a Supabase-synced session
+          dropped two assistant-only seed messages into local state the
+          UI showed an empty middle (no welcome + no user content to
+          render). Derive `hasConversation` from whether ANY user
+          message exists; the welcome carries us until the first real
+          user prompt. */}
       <div className="flex-1 overflow-y-auto min-h-0" style={settings.focusMode ? { minHeight: '80vh' } : undefined}>
-        {messages.length <= 1 && (
+        {!messages.some(m => m.role === 'user') && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10 overflow-hidden">
