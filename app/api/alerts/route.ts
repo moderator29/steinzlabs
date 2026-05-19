@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -35,6 +36,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await guardRoute(request, { rate: 'med' });
+  if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,6 +69,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = await guardRoute(request, { rate: 'med' });
+  if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

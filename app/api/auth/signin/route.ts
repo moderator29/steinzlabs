@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     // 10 attempts per IP per minute. Brute-force attackers were unthrottled
     // here; Vercel concurrency alone is not a security boundary.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = rateLimit(`auth:signin:${ip}`, { interval: 60_000, maxRequests: 10 });
+    const rl = await rateLimit(`auth:signin:${ip}`, { interval: 60_000, maxRequests: 10 });
     if (!rl.success) return rateLimitResponse(rl);
 
     const { email, password } = await request.json();
@@ -79,8 +79,7 @@ export async function POST(request: Request) {
         .single();
       profile = profileData;
     } catch (err) {
-      console.error('[signin] Profile fetch failed:', err);
-      Sentry.captureException(err);
+      Sentry.captureException(err, { tags: { route: 'auth/signin', phase: 'profile-fetch' } });
     }
 
     // Log login activity (non-blocking)
@@ -96,10 +95,10 @@ export async function POST(request: Request) {
           user_agent: userAgent,
           ip,
         }).then(({ error }) => {
-          if (error) console.error('[signin] login_activity insert failed:', error.message);
+          if (error) Sentry.captureException(error, { tags: { route: 'auth/signin', phase: 'login-activity-insert' } });
         });
       } catch (err) {
-        console.error('[signin] login activity logging failed:', err);
+        Sentry.captureException(err, { tags: { route: 'auth/signin', phase: 'login-activity' } });
       }
     }
 
@@ -111,8 +110,7 @@ export async function POST(request: Request) {
       profile,
     });
   } catch (err: any) {
-    console.error('[signin] failed:', err);
-    Sentry.captureException(err);
+    Sentry.captureException(err, { tags: { route: 'auth/signin', phase: 'handler' } });
     return NextResponse.json({ error: 'Sign in failed. Please try again.' }, { status: 500 });
   }
 }

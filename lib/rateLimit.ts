@@ -1,57 +1,37 @@
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
+import 'server-only';
+import { rateLimit as upstashRateLimit, rateLimitHeaders } from './rateLimit/rateLimit';
 
-const cache = new Map<string, RateLimitEntry>();
-const MAX_CACHE_SIZE = 10000;
-
-function evictExpired() {
-  const now = Date.now();
-  for (const [key, entry] of cache) {
-    if (now > entry.resetTime) {
-      cache.delete(key);
-    }
-  }
-}
+/**
+ * Compatibility shim — auth routes (signin / signup / forgot-password) used
+ * to call this in-memory limiter directly. Forwards to the Upstash sliding-
+ * window primitive in lib/rateLimit/rateLimit.ts so we have one canonical
+ * limiter platform-wide. lib/security/rateLimit.ts had zero callers and is
+ * being deleted in the same change.
+ */
 
 export interface RateLimitConfig {
-  interval: number;
+  interval: number; // ms
   maxRequests: number;
 }
 
 export interface RateLimitResult {
   success: boolean;
   remaining: number;
-  resetIn: number;
+  resetIn: number; // ms
 }
 
-export function rateLimit(
+export async function rateLimit(
   key: string,
-  config: RateLimitConfig = { interval: 60000, maxRequests: 60 }
-): RateLimitResult {
-  const now = Date.now();
-
-  if (cache.size > MAX_CACHE_SIZE) {
-    evictExpired();
-  }
-
-  const entry = cache.get(key);
-
-  if (!entry || now > entry.resetTime) {
-    cache.set(key, { count: 1, resetTime: now + config.interval });
-    return { success: true, remaining: config.maxRequests - 1, resetIn: config.interval };
-  }
-
-  entry.count += 1;
-  const remaining = Math.max(0, config.maxRequests - entry.count);
-  const resetIn = entry.resetTime - now;
-
-  if (entry.count > config.maxRequests) {
-    return { success: false, remaining: 0, resetIn };
-  }
-
-  return { success: true, remaining, resetIn };
+  config: RateLimitConfig = { interval: 60000, maxRequests: 60 },
+): Promise<RateLimitResult> {
+  const r = await upstashRateLimit({
+    scope: 'auth',
+    key,
+    limit: config.maxRequests,
+    windowSec: Math.max(1, Math.floor(config.interval / 1000)),
+  });
+  const resetIn = Math.max(0, r.resetAt * 1000 - Date.now());
+  return { success: r.ok, remaining: r.remaining, resetIn };
 }
 
 export function rateLimitResponse(result: RateLimitResult): Response {
@@ -65,6 +45,8 @@ export function rateLimitResponse(result: RateLimitResult): Response {
         'X-RateLimit-Remaining': String(result.remaining),
         'X-RateLimit-Reset': String(Math.ceil(result.resetIn / 1000)),
       },
-    }
+    },
   );
 }
+
+export { rateLimitHeaders };
