@@ -9,6 +9,36 @@ import { addressesEqual } from '@/lib/utils/addressNormalize';
 
 const BASE_URL = 'https://api.0x.org';
 const TIMEOUT_MS = 15_000;
+const RETRY_DELAYS_MS = [250, 500, 1000];
+
+/**
+ * fetch with retry+backoff for transient 5xx / network errors. 0x flakes
+ * occasionally with 502/503; surfacing those as a hard throw on the trader's
+ * first attempt is a worse UX than retrying. 4xx responses are NOT retried
+ * (input error, no point).
+ */
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+      if (res.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      return res; // 4xx: surface to caller
+    } catch (err) {
+      lastErr = err;
+      if (attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('0x request failed after retries');
+}
 
 function getHeaders(serverSide = false): Record<string, string> {
   const key = serverSide
@@ -115,7 +145,7 @@ export async function getSwapPrice(params: {
     qs.set('buyTokenPercentageFee', feePct);
   }
 
-  const res = await fetch(`${BASE_URL}/swap/allowance-holder/price?${qs}`, {
+  const res = await fetchWithRetry(`${BASE_URL}/swap/allowance-holder/price?${qs}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -149,7 +179,7 @@ export async function getSwapQuote(params: {
     qs.set('buyTokenPercentageFee', feePct);
   }
 
-  const res = await fetch(`${BASE_URL}/swap/allowance-holder/quote?${qs}`, {
+  const res = await fetchWithRetry(`${BASE_URL}/swap/allowance-holder/quote?${qs}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -186,7 +216,7 @@ export async function getGaslessPrice(params: {
     qs.set('swapFeeToken', params.buyToken);
   }
 
-  const res = await fetch(`${BASE_URL}/gasless/price?${qs}`, {
+  const res = await fetchWithRetry(`${BASE_URL}/gasless/price?${qs}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -221,7 +251,7 @@ export async function getGaslessQuote(params: {
     qs.set('swapFeeToken', params.buyToken);
   }
 
-  const res = await fetch(`${BASE_URL}/gasless/quote?${qs}`, {
+  const res = await fetchWithRetry(`${BASE_URL}/gasless/quote?${qs}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -234,7 +264,7 @@ export async function getGaslessQuote(params: {
 }
 
 export async function submitGasless(body: Record<string, unknown>): Promise<{ tradeHash: string }> {
-  const res = await fetch(`${BASE_URL}/gasless/submit`, {
+  const res = await fetchWithRetry(`${BASE_URL}/gasless/submit`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(body),
@@ -249,7 +279,7 @@ export async function submitGasless(body: Record<string, unknown>): Promise<{ tr
 }
 
 export async function getGaslessStatus(tradeHash: string): Promise<{ status: string; txHash?: string }> {
-  const res = await fetch(`${BASE_URL}/gasless/status/${tradeHash}`, {
+  const res = await fetchWithRetry(`${BASE_URL}/gasless/status/${tradeHash}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -264,7 +294,7 @@ export async function getGaslessStatus(tradeHash: string): Promise<{ status: str
 // ─── TRADE ANALYTICS API (SERVER-SIDE ONLY) ──────────────────────────────────
 
 export async function getSwapTrades(): Promise<ZxTradeRecord[]> {
-  const res = await fetch(`${BASE_URL}/trade-analytics/swap`, {
+  const res = await fetchWithRetry(`${BASE_URL}/trade-analytics/swap`, {
     headers: getHeaders(true),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -278,7 +308,7 @@ export async function getSwapTrades(): Promise<ZxTradeRecord[]> {
 }
 
 export async function getGaslessTrades(): Promise<ZxTradeRecord[]> {
-  const res = await fetch(`${BASE_URL}/trade-analytics/gasless`, {
+  const res = await fetchWithRetry(`${BASE_URL}/trade-analytics/gasless`, {
     headers: getHeaders(true),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
