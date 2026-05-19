@@ -19,12 +19,7 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // ESLint config is currently broken (circular reference in @eslint/eslintrc).
-    // Leaving ignore-on until the flat-config migration so builds aren't held
-    // hostage by tooling we can't run.
-    ignoreDuringBuilds: true,
-  },
+  // Next 16 dropped in-config eslint wiring — lint runs out-of-band.
   typescript: {
     // tsc --noEmit is clean today — fail the build on any new TS error
     // instead of silently shipping broken types.
@@ -69,12 +64,7 @@ const nextConfig = {
         { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
       ],
     },
-    {
-      source: '/_next/static/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-      ],
-    },
+    // Next 16 manages /_next/static/* cache headers itself.
     {
       source: '/api/auth/:path*',
       headers: [
