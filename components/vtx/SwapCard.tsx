@@ -232,6 +232,10 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
       default:         return `https://etherscan.io/tx/${hash}`;
     }
   };
+  // explorerForChain is only ever read inside the `if (stage === 'done'
+  // && txHash)` block below, but TS doesn't narrow across the const
+  // boundary. Pass an empty string when null so the type checks; the
+  // URL itself is never rendered until the guard above passes.
   const explorerUrl = txHash ? explorerForChain(quote.chain, txHash) : '';
 
   // ── Stage 3 (terminal) — executed ──────────────────────────────────────
