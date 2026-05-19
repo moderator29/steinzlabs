@@ -13,7 +13,7 @@ import {
 import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History, MessageCircle, Compass,
+  Crosshair, Network, Globe, History, MessageCircle, Compass, Flame, Gem,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -90,6 +90,13 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
+    ],
+  },
+  {
+    title: 'Cult',
+    items: [
+      { icon: Flame, label: 'NakaCult', path: '/naka-cult' },
+      { icon: Gem,  label: 'The Vault', path: '/vault' },
     ],
   },
   {
