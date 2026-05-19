@@ -10,7 +10,7 @@ import {
 import {
   Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import SidebarMenu from '@/components/SidebarMenu';
 import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
