@@ -11,6 +11,7 @@ import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { MetaMaskLogo, PhantomLogo, NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
+import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSecurityWarnings';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
@@ -318,6 +319,21 @@ export default function SwapPage() {
   const [showTokenSelect, setShowTokenSelect] = useState<'from' | 'to' | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  // Industry-standard pre-confirm security gating — when the review
+  // modal opens we fire GoPlus on the destination token and read back a
+  // structured safety summary. Block on honeypot / tax >= 30% /
+  // pausable / blacklist; warn on tax 10-30% / cannot-sell-all /
+  // slippage outside the 0.1-10% safe band. Mirrors Trojan/Maestro.
+  const [tokenSecurity, setTokenSecurity] = useState<null | {
+    isHoneypot: boolean;
+    buyTax: number;
+    sellTax: number;
+    safetyLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+    cannotSellAll?: boolean;
+    transferPausable?: boolean;
+    isBlacklisted?: boolean;
+  }>(null);
+  const [tokenSecurityLoading, setTokenSecurityLoading] = useState(false);
   // Audit B4 / P1 #8 — Naka built-in wallet unlock. setWalletSessionKey
   // was previously orphaned (defined but never invoked anywhere), so
   // every Naka-wallet swap reached the signing path with no cached
@@ -686,6 +702,48 @@ export default function SwapPage() {
     const tick = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(tick);
   }, [showReview]);
+
+  // Industry-standard pre-sign security probe — fire GoPlus the moment
+  // the review modal opens. Fall back to null (no panel shown) on any
+  // error so a security-service outage never blocks a legitimate swap.
+  useEffect(() => {
+    if (!showReview) return;
+    let cancelled = false;
+    setTokenSecurity(null);
+    setTokenSecurityLoading(true);
+    (async () => {
+      try {
+        const { buyToken } = getTokenAddresses(fromToken, toToken, chain);
+        if (!buyToken || buyToken.toLowerCase() === 'native' || /^[a-z]{2,6}$/i.test(buyToken)) {
+          return;
+        }
+        const res = await fetch('/api/security/scan', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ scan_type: 'token', target: buyToken, chain }),
+        });
+        if (!res.ok) return;
+        const body = await res.json();
+        const raw = (body?.raw ?? body) as Record<string, unknown> | null;
+        if (!raw || cancelled) return;
+        const safety = (raw as { safetyLevel?: string }).safetyLevel;
+        setTokenSecurity({
+          isHoneypot: !!(raw as { isHoneypot?: boolean }).isHoneypot,
+          buyTax: typeof (raw as { buyTax?: number }).buyTax === 'number' ? (raw as { buyTax: number }).buyTax : 0,
+          sellTax: typeof (raw as { sellTax?: number }).sellTax === 'number' ? (raw as { sellTax: number }).sellTax : 0,
+          safetyLevel: (safety === 'SAFE' || safety === 'CAUTION' || safety === 'WARNING' || safety === 'DANGER') ? safety : 'CAUTION',
+          cannotSellAll: !!(raw as { cannotSellAll?: boolean }).cannotSellAll,
+          transferPausable: !!(raw as { transferPausable?: boolean }).transferPausable,
+          isBlacklisted: !!(raw as { isBlacklisted?: boolean }).isBlacklisted,
+        });
+      } catch {
+        /* security service unavailable — leave panel hidden, never block on outage */
+      } finally {
+        if (!cancelled) setTokenSecurityLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showReview, fromToken, toToken, chain]);
 
   useEffect(() => {
     if (!showReview) return;
@@ -1484,6 +1542,15 @@ export default function SwapPage() {
           pi < 15 ? 'text-orange-400' :
           'text-red-400';
         const piLabel = pi < 1 ? 'Low' : pi < 5 ? 'Moderate' : pi < 15 ? 'High' : 'Severe';
+        // Industry-standard sign-blocker — single source of truth shared
+        // with SwapSecurityWarnings so the warning copy and the Confirm
+        // button's disabled state never disagree.
+        const securityCheck = shouldBlockSwap({
+          data: tokenSecurity,
+          priceImpact: pi,
+          slippagePct: parseFloat(slippage) || 0,
+        });
+        const securityBlocking = securityCheck.blocking;
         // Audit P0 #4 — Uniswap blocks at 15%, we previously allowed
         // anything under 30%. A 15-30% impact almost always indicates a
         // honeypot, drained liquidity pool, or a routing pathology — the
@@ -1609,6 +1676,17 @@ export default function SwapPage() {
                 </div>
               )}
 
+              {/* Industry-standard security panel — Trojan / Maestro parity.
+                  Blocks on honeypot / tax >= 30% / pausable / blacklist;
+                  warns on tax 10-30% / cannot-sell-all / slippage outside
+                  0.1-10% safe band. */}
+              <SwapSecurityWarnings
+                data={tokenSecurity}
+                loading={tokenSecurityLoading}
+                priceImpact={pi}
+                slippagePct={parseFloat(slippage) || 0}
+              />
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowReview(false)}
@@ -1618,14 +1696,14 @@ export default function SwapPage() {
                 </button>
                 <button
                   onClick={() => { setShowReview(false); handleSwap(); }}
-                  disabled={piBlocked || swapping}
+                  disabled={piBlocked || swapping || securityBlocking}
                   className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${
-                    piBlocked
+                    piBlocked || securityBlocking
                       ? 'bg-red-500/20 text-red-400 cursor-not-allowed'
                       : 'bg-[#0A1EFF] hover:bg-[#0918CC] text-white active:scale-[0.98]'
                   }`}
                 >
-                  {piBlocked ? 'Blocked' : 'Confirm swap'}
+                  {piBlocked || securityBlocking ? 'Blocked' : 'Confirm swap'}
                 </button>
               </div>
             </div>
