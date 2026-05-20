@@ -762,13 +762,13 @@ export default function ContextFeed() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
-                {/* Trust Score naming unification — this bar represents
-                    SIGNAL confidence (how reliable this Context-Feed event
-                    is), not the token-level Naka Trust Score. Relabel to
-                    "Signal" with STRONG/MEDIUM/WEAK so users don't conflate
-                    it with the TrustScoreBadge on token detail pages. */}
-                <div className="flex items-center gap-2" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
+              {/* §View-Proof-clip — owner reported the View Proof button
+                  clipped on the right edge on mobile because the row was
+                  flex-nowrap and the signal bar pushed it off-screen.
+                  Add flex-wrap + gap-2 so on narrow viewports the button
+                  wraps under the signal bar instead of getting cut off. */}
+              <div className="flex flex-wrap items-center justify-between gap-y-2">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
                   <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                     <div
@@ -805,7 +805,10 @@ export default function ContextFeed() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
+              {/* §card-polish — removed the border-t and the extra pt-4
+                  spacer above the social row. Owner reported it read as a
+                  rectangle line cutting through the card. */}
+              <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" /> {eng.views.toLocaleString()}
                 </span>

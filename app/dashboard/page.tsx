@@ -18,6 +18,8 @@ import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import GlobalControls from '@/components/GlobalControls';
+import NotificationBell from '@/components/NotificationBell';
 // CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
@@ -426,10 +428,19 @@ export default function Dashboard() {
               <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
             </div>
           </div>
-          {/* Header is intentionally minimal — logo + LIVE pill only. The
-              search box is on the Market page; the language switcher lives
-              under Profile → Preferences (not next to the bell). */}
+          {/* §header-scope — the QuickTranslate / LanguageSwitcher /
+              ThemeToggle / NotificationBell cluster only renders on the
+              Home tab. Previously the cluster floated on top of every
+              /dashboard sub-tab (Profile / Wallet / VTX), overlapped
+              their own UI, and the items were jammed together. Inline
+              here so we can scope by activeNav and breathe with gap-3. */}
           <div className="flex-1" />
+          {activeNav === 'home' && (
+            <div className="flex items-center gap-3" data-no-translate>
+              <GlobalControls />
+              <NotificationBell />
+            </div>
+          )}
         </div>
       </div>
 
