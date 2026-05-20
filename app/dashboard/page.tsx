@@ -365,7 +365,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen text-white pb-20">
+    <div className="min-h-screen text-white pb-28 sm:pb-24">
       <FirstRunTour />
       <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center justify-between px-4 h-14">
