@@ -83,10 +83,34 @@ export async function scoreWhalePickAccuracy(userId: string): Promise<number | n
   const sb = getSupabaseAdmin();
   const { data: follows } = await sb
     .from('user_whale_follows')
-    .select('whale_id')
+    .select('whale_id, whale_address, chain')
     .eq('user_id', userId);
-  const whaleIds = (follows ?? []).map((f) => f.whale_id);
+  if (!follows || follows.length === 0) return null;
+
+  // §S1-DATA — whale_id is NULL for follows added before the address-join
+  // backfill. Resolve those by (LOWER(whale_address), chain) → whales.id
+  // so accuracy scoring still works during the transition.
+  const idsFromColumn = follows
+    .map((f) => f.whale_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  const missing = follows.filter((f) => !f.whale_id && f.whale_address && f.chain);
+  let resolvedIds: string[] = [];
+  if (missing.length > 0) {
+    const { data: matches } = await sb
+      .from('whales')
+      .select('id, address, chain')
+      .in('chain', Array.from(new Set(missing.map((m) => m.chain).filter(Boolean) as string[])));
+    const byKey = new Map<string, string>();
+    for (const w of matches ?? []) {
+      byKey.set(`${w.chain}:${(w.address ?? '').toLowerCase()}`, w.id);
+    }
+    resolvedIds = missing
+      .map((m) => byKey.get(`${m.chain}:${(m.whale_address ?? '').toLowerCase()}`))
+      .filter((id): id is string => Boolean(id));
+  }
+  const whaleIds = Array.from(new Set([...idsFromColumn, ...resolvedIds]));
   if (whaleIds.length === 0) return null;
+
   const { data: whales } = await sb
     .from('whales')
     .select('id, pnl_30d_usd')
