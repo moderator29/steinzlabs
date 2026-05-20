@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 // Naka Labs brand icons — broad swap of available glowing-geometric versions.
 // Icons not yet in the brand library stay on lucide for now.
 import {
@@ -232,6 +233,7 @@ function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
 const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_CHAINS[0];
 
 export default function WalletPage() {
+  useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');

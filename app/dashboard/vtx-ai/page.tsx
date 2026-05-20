@@ -12,6 +12,7 @@ import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type Side
 import { VtxSettingsDrawer } from '@/components/vtx/VtxSettingsDrawer';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
+import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 // TokenCardData accepts both legacy string fields (parsed from reply text)
 // and the richer server shape (numbers + contractAddress + chain) so the
@@ -433,6 +434,7 @@ const TOOLS = [
 ];
 
 function VtxAiPageInner() {
+  useFeatureUsageLog('vtx_ai');
   const router = useRouter();
   const searchParams = useSearchParams();
   const naka = useNakaWallet();
