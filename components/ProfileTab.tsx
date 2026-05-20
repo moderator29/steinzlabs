@@ -735,7 +735,7 @@ export default function ProfileTab() {
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteModal(false)} />
-            <div className="relative w-full max-w-[340px] mx-4 bg-[#111827] border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <div className="relative w-full max-w-[calc(100vw-32px)] sm:max-w-[340px] mx-4 bg-[#111827] border border-white/10 rounded-2xl p-5 shadow-2xl">
               <button onClick={() => setShowDeleteModal(false)} className="absolute top-3 right-3 p-1 hover:bg-white/10 rounded-lg">
                 <X className="w-4 h-4 text-gray-400" />
               </button>

@@ -192,7 +192,14 @@ const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price:
 const VTX_CHART_TTL_MS = 5 * 60 * 1000;
 
 function chartCacheKey(token: TokenCardData): string {
-  return `${(token.address || token.symbol).toLowerCase()}:${(token.chain || '').toLowerCase()}`;
+  // Crash fix — when both token.address and token.symbol were undefined
+  // (server-shape tokenCard from /api/vtx-ai missing fields), this threw
+  // 'Cannot read properties of undefined (reading toLowerCase)' which
+  // crashed the entire messages.map() render. That's the source of the
+  // 'empty middle column' bug — every TokenCard inside any prior message
+  // would explode and React would bail on the whole map.
+  const key = String(token.address ?? token.symbol ?? 'unknown');
+  return `${key.toLowerCase()}:${String(token.chain ?? '').toLowerCase()}`;
 }
 
 function TokenCard({ token }: { token: TokenCardData }) {
@@ -300,7 +307,7 @@ function TokenCard({ token }: { token: TokenCardData }) {
               every other price surface. */}
           <div className="text-lg font-bold text-white font-mono tabular-nums leading-none">{displayPrice}</div>
           <div className={`text-[11px] font-semibold mt-1 tabular-nums ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '↗ +' : '↘ '}{displayChange.toFixed(2)}%
+            {isPositive ? '↗ +' : '↘ '}{(displayChange ?? 0).toFixed(2)}%
             <span className="text-gray-500 font-normal ms-1">24h</span>
           </div>
         </div>
@@ -536,7 +543,7 @@ function VtxAiPageInner() {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       messages,
-      preview: userMsgs[0].content.slice(0, 40),
+      preview: (userMsgs[0]?.content ?? 'VTX Conversation').slice(0, 40),
     };
     try {
       const updated = [session, ...chatSessions].slice(0, 30);
@@ -755,7 +762,7 @@ function VtxAiPageInner() {
           symbol: t.symbol,
           name: t.name,
           price: t.price,
-          change: `${t.change24h >= 0 ? '+' : ''}${t.change24h.toFixed(2)}%`,
+          change: `${(t.change24h ?? 0) >= 0 ? '+' : ''}${(t.change24h ?? 0).toFixed(2)}%`,
           isPositive: t.change24h >= 0,
           marketCap: t.marketCap,
           volume: t.volume,
@@ -779,7 +786,7 @@ function VtxAiPageInner() {
           id: `tk-${ts}`,
           name: 'token_market_data',
           timestamp: ts,
-          summary: m.tokenCards.map(t => t.symbol).join(', '),
+          summary: (m.tokenCards ?? []).map(t => t?.symbol ?? 'UNKNOWN').join(', '),
         });
       }
     }

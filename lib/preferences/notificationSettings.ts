@@ -87,6 +87,11 @@ export function useNotificationSettings(userId: string | null | undefined): Hook
 
   const load = useCallback(async () => {
     if (!userId || !supabase) {
+      // Profile-spinner crash fix — without seeding `settings` here, the
+      // consumer (NotificationSettingsPanel) renders Loading… forever
+      // because its guard is `if (loading || !settings)`. Seed defaults
+      // so even an unauthenticated/no-supabase environment shows the UI.
+      setSettings({ ...DEFAULTS, user_id: userId ?? '' });
       setLoading(false);
       return;
     }
