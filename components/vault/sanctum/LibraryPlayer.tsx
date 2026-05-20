@@ -66,15 +66,10 @@ export function LibraryPlayer() {
       </header>
 
       {playlistId ? (
-        <div className="sanctum-library__embed">
-          <iframe
-            src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=naka-cult&theme=0`}
-            width="100%"
-            height="380"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            title="Ddergo Sanctuary — Spotify Playlist"
-          />
+        <div className="sanctum-library__embed sanctum-library__embed--hosted">
+          <p className="sanctum-library__hosted-note">
+            The Library plays everywhere in the Vault. Tap the floating bar in the lower right to begin or expand. Track list below stays in sync.
+          </p>
         </div>
       ) : (
         <ul className="sanctum-library__list">
