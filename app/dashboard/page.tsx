@@ -41,30 +41,69 @@ function TabSpinner() {
   );
 }
 
-class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; retries: number; lastError: string | null }> {
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, retries: 0, lastError: null };
   }
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(err: unknown) {
+    return { hasError: true, lastError: err instanceof Error ? err.message : String(err) };
   }
-  componentDidUpdate(_: any, prev: { hasError: boolean }) {
-    // Auto-reset after 800ms so user never sees the error state flash
+  componentDidCatch(error: Error, info: { componentStack: string }) {
+    // Surface in production: previous version silenced every tab throw and
+    // auto-retried every 800ms, which produced an infinite spinner whenever
+    // a tab (most often ProfileTab) threw deterministically on mount.
+    console.error('[TabErrorBoundary] tab render threw:', error, info.componentStack);
+  }
+  componentDidUpdate(_: { children: ReactNode }, prev: { hasError: boolean; retries: number; lastError: string | null }) {
     if (!prev.hasError && this.state.hasError) {
-      this.resetTimer = setTimeout(() => this.setState({ hasError: false }), 800);
+      // First throw: try ONCE more after a brief delay (covers a transient
+      // hydration race). If it throws again, render a visible retry surface
+      // so the user isn't trapped in a forever-spinner.
+      if (this.state.retries < 1) {
+        this.resetTimer = setTimeout(
+          () => this.setState((s) => ({ hasError: false, retries: s.retries + 1, lastError: s.lastError })),
+          400,
+        );
+      }
     }
   }
   componentWillUnmount() {
     if (this.resetTimer) clearTimeout(this.resetTimer);
   }
+  private handleManualRetry = () => {
+    this.setState({ hasError: false, retries: 0, lastError: null });
+  };
   render() {
     if (this.state.hasError) {
-      // Show spinner instead of error - auto-resets in 800ms
+      if (this.state.retries < 1) {
+        return (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          </div>
+        );
+      }
       return (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+        <div className="flex flex-col items-center justify-center py-20 px-6 gap-3 text-center">
+          <div className="text-sm text-slate-300 font-semibold">This tab hit an error while loading.</div>
+          {this.state.lastError && (
+            <div className="text-[11px] text-slate-500 font-mono max-w-md break-words">{this.state.lastError}</div>
+          )}
+          <button
+            type="button"
+            onClick={this.handleManualRetry}
+            className="mt-2 px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs font-semibold transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }}
+            className="text-[11px] text-slate-500 hover:text-slate-300 underline"
+          >
+            or reload the page
+          </button>
         </div>
       );
     }
