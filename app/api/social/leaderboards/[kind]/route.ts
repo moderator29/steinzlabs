@@ -156,16 +156,53 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
       metric_value: 'MAX',
       metric_label: METRIC_LABEL['max-tier'],
     }));
+  } else if (kind === 'whale-watchers') {
+    // §S1-DATA — was reading user_reputation.whale_pick_accuracy, which is
+    // empty until the nightly cron runs. Owners with active whale follows
+    // were missing from the board even when user_whale_follows had rows.
+    // Aggregate the live follow edges so the board reflects current state.
+    const { data: edges } = await sb
+      .from('user_whale_follows')
+      .select('user_id');
+    const counts = new Map<string, number>();
+    for (const e of edges ?? []) {
+      const uid = (e as { user_id: string | null }).user_id;
+      if (uid) counts.set(uid, (counts.get(uid) ?? 0) + 1);
+    }
+    const top = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(offset, offset + limit);
+    const ids = top.map(([id]) => id);
+    const { data: profiles } = await sb
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, tier, verified_badge, is_chosen')
+      .in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+    type ProfileLite = { id: string; username: string | null; display_name: string | null; avatar_url: string | null; tier: string | null; verified_badge: string | null; is_chosen: boolean | null };
+    const byId = new Map(((profiles ?? []) as ProfileLite[]).map((p) => [p.id, p]));
+    rows = top.flatMap(([id, count]) => {
+      const p = byId.get(id);
+      if (!p) return [];
+      return [{
+        id,
+        username: p.username,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+        tier: p.tier,
+        verified_badge: p.verified_badge,
+        is_chosen: p.is_chosen,
+        metric_value: count,
+        metric_label: METRIC_LABEL['whale-watchers'],
+      }];
+    });
   } else {
     // Reputation-backed leaderboards
-    const orderCol: Record<Exclude<Kind, 'followers' | 'new-users' | 'max-tier'>, string> = {
+    const orderCol: Record<Exclude<Kind, 'followers' | 'new-users' | 'max-tier' | 'whale-watchers'>, string> = {
       'success-rate':   'success_rate',
       'top-traders':    'portfolio_perf_pct',
       'copy-traders':   'copy_trade_winrate',
-      'whale-watchers': 'whale_pick_accuracy',
       'most-active':    'activity_score',
     };
-    const col = orderCol[kind as Exclude<Kind, 'followers' | 'new-users' | 'max-tier'>];
+    const col = orderCol[kind as Exclude<Kind, 'followers' | 'new-users' | 'max-tier' | 'whale-watchers'>];
     // Dynamic select string defeats Supabase's typed inference; cast
     // through unknown to the shape we actually return.
     const repRes = await sb
