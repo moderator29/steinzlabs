@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check } from 'lucide-react';
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
+import { useExpertMode } from '@/lib/hooks/useExpertMode';
 
 export interface SwapCardData {
   fromToken: string;
@@ -76,6 +77,7 @@ function TokenGlyph({ symbol }: { symbol: string }) {
 }
 
 export function SwapCard({ swap, walletAddress, onCancel }: Props) {
+  const expertMode = useExpertMode();
   const [stage, setStage] = useState<Stage>('quoting');
   const [quote, setQuote] = useState<SwapCardData>(swap);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -168,15 +170,18 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
     quote.priceImpact < 1 ? 'text-emerald-400' :
     quote.priceImpact < 5 ? 'text-amber-400' :
     'text-red-400';
-  const isHighImpact = quote.priceImpact > 30;
+  // §S2.5 — Expert mode lets pro traders push past the >30% price-impact
+  // guard. The warning UI still shows; we just stop blocking the signature.
+  const highImpactRaw = quote.priceImpact > 30;
+  const isHighImpact = highImpactRaw && !expertMode;
 
   const handleSign = async () => {
     if (!walletAddress) {
       setError('Connect a wallet to execute this swap. Deposit first if your balance is insufficient.');
       return;
     }
-    if (isHighImpact) {
-      setError('Price impact too high (>30%). Swap blocked for your protection.');
+    if (highImpactRaw && !expertMode) {
+      setError('Price impact too high (>30%). Swap blocked for your protection. Enable Expert Mode in Settings to override.');
       return;
     }
     setStage('signing');
