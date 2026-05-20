@@ -59,6 +59,8 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const [chartPoints, setChartPoints] = useState<number[]>([]);
   const [chartCandles, setChartCandles] = useState<Array<{ time: number; open: number; high: number; low: number; close: number }>>([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(false);
+  const [chartReloadKey, setChartReloadKey] = useState(0);
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -89,8 +91,12 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
       : 'max';
     let cancelled = false;
     setChartLoading(true);
+    setChartError(false);
     fetch(`/api/market/token/${address}/chart?days=${days}&chain=${chain}`)
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: { candles?: Array<{ time: number; open: number; high: number; low: number; close: number }> } | null) => {
         if (cancelled) return;
         if (data?.candles?.length) {
@@ -102,11 +108,11 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         }
       })
       .catch(() => {
-        if (!cancelled) { setChartPoints([]); setChartCandles([]); }
+        if (!cancelled) { setChartPoints([]); setChartCandles([]); setChartError(true); }
       })
       .finally(() => { if (!cancelled) setChartLoading(false); });
     return () => { cancelled = true; };
-  }, [address, chain, timeframe]);
+  }, [address, chain, timeframe, chartReloadKey]);
 
   const chartData = chartPoints.length > 1 ? chartPoints : sparklineData;
 
@@ -151,9 +157,22 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           GeckoTerminal/CoinGecko fallback returns OHLCV (Naka Go,
           Pleasure, any DEX-indexed token). Falls back to a stride
           line when only closes are available. No third-party iframe. */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 min-h-[12rem]">
         {chartCandles.length > 1 ? (
           <CandlestickChart candles={chartCandles} />
+        ) : chartError && chartData.length === 0 ? (
+          // §S6.12 — explicit error + retry state. Previously the row collapsed
+          // silently on a 5xx, so users saw a half-rendered page with no chart.
+          <div className="h-48 rounded-lg bg-slate-900/40 flex flex-col items-center justify-center gap-2 text-xs text-slate-500">
+            <span>Couldn&apos;t load chart.</span>
+            <button
+              type="button"
+              onClick={() => setChartReloadKey((n) => n + 1)}
+              className="px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <Sparkline data={chartData} negative={isNegative} loading={chartLoading && chartData.length === 0} />
         )}
