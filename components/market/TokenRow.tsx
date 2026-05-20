@@ -14,9 +14,13 @@ interface TokenRowProps {
   onToggleWatch: (id: string) => void;
   onClick: (id: string) => void;
   variant?: 'table' | 'list';
+  // §S6.9 — show the token's NATIVE chain next to the symbol (Zcash on
+  // Zcash, SOL on Solana, BTC on Bitcoin) so list pages stop implying
+  // every coin lives on Ethereum. Pass omit/empty to hide.
+  chainLabel?: string | null;
 }
 
-export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, variant = 'table' }: TokenRowProps) {
+export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, variant = 'table', chainLabel }: TokenRowProps) {
   const sparkData = token.sparkline_in_7d?.price ?? [];
   const isPositive = (token.price_change_percentage_7d_in_currency ?? 0) >= 0;
 
@@ -29,7 +33,14 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
         <span className="text-gray-500 text-xs w-6 text-end flex-shrink-0">{rank}</span>
         <TokenLogo src={token.image} symbol={token.symbol} size={36} />
         <div className="flex-1 min-w-0">
-          <div className="text-white font-medium text-sm truncate">{token.name}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-white font-medium text-sm truncate">{token.name}</span>
+            {chainLabel && (
+              <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0A1EFF]/15 text-[#8FA3FF] rounded font-semibold uppercase tracking-wide">
+                {chainLabel}
+              </span>
+            )}
+          </div>
           <div className="text-gray-500 text-xs uppercase">{token.symbol}</div>
         </div>
         <div className="text-end">

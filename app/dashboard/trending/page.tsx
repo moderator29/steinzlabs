@@ -14,6 +14,20 @@ interface TrendingCoin extends CoinGeckoMarket {
   thumb?: string;
 }
 
+// §S6.9 — pretty chain labels for the row chip. Ethereum omitted (default).
+const CHAIN_DISPLAY: Record<string, string> = {
+  bitcoin: 'BTC', solana: 'SOL', bsc: 'BSC', xrp: 'XRP', cardano: 'ADA',
+  avalanche: 'AVAX', polkadot: 'DOT', dogecoin: 'DOGE', litecoin: 'LTC',
+  polygon: 'MATIC', arbitrum: 'ARB', optimism: 'OP', base: 'BASE',
+  fantom: 'FTM', cronos: 'CRO', sui: 'SUI', near: 'NEAR', cosmos: 'ATOM',
+  tron: 'TRX', zcash: 'ZEC', monero: 'XMR',
+};
+function chainChipFor(id: string, symbol: string): string | null {
+  const chain = resolveTokenChain({ id, symbol }).chain;
+  if (!chain || chain === 'ethereum') return null;
+  return CHAIN_DISPLAY[chain] ?? chain.toUpperCase();
+}
+
 export default function TrendingPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -87,6 +101,7 @@ export default function TrendingPage() {
               onToggleWatch={toggleWatchlist}
               onClick={onCoinClick}
               variant="list"
+              chainLabel={chainChipFor(c.id, c.symbol)}
             />
           ))
         )}
