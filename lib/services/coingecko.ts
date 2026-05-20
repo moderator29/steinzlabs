@@ -213,16 +213,28 @@ export async function getTopTokens(
   });
 }
 
-/** Top N gainers by 24h % change. Uses /coins/markets ordered by price_change_percentage_24h desc. */
-export async function getTopGainers(limit = 10): Promise<CoinGeckoMarketToken[]> {
-  const key = cacheKey('coingecko', 'gainers', { limit: String(limit) });
+/** Top N gainers, ordered by the requested timeframe (1h / 24h / 7d). */
+export type GainerTimeframe = '1h' | '24h' | '7d';
+
+export async function getTopGainers(
+  limit = 10,
+  timeframe: GainerTimeframe = '24h',
+): Promise<CoinGeckoMarketToken[]> {
+  // §S6/upstream — was hard-coded to price_change_percentage_24h_desc, so 1h
+  // and 7d filters were re-sorting an already-24h slice client-side and
+  // returning the wrong tokens. CoinGecko /coins/markets accepts any of
+  // 1h/24h/7d in the order= parameter; pick the one matching the user
+  // pill so the upstream slice itself is sorted correctly.
+  const orderBy: Record<GainerTimeframe, string> = {
+    '1h':  'price_change_percentage_1h_in_currency_desc',
+    '24h': 'price_change_percentage_24h_desc',
+    '7d':  'price_change_percentage_7d_in_currency_desc',
+  };
+  const key = cacheKey('coingecko', 'gainers', { limit: String(limit), tf: timeframe });
   return withCache(key, TTL.MARKET_CAP, async () => {
-    // Audit M6 #3 — also request 1h so the top-gainers route can sort
-    // by 1h timeframe without a second round-trip to CoinGecko. Free
-    // tier supports the 1h tier on /coins/markets.
     const data = await cgFetch('/coins/markets', {
       vs_currency: 'usd',
-      order: 'price_change_percentage_24h_desc',
+      order: orderBy[timeframe],
       per_page: String(limit),
       page: '1',
       sparkline: 'true',

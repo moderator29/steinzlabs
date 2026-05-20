@@ -52,7 +52,10 @@ export async function GET(req: Request) {
     // sub-$1M market cap, then slice to the requested limit. This produces
     // a stable "real gainers" list across CoinGecko response variations.
     const overFetch = Math.min(50, limit * 3 + 10);
-    const raw = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(overFetch), 8000, []);
+    // §upstream — pass timeframe so /coins/markets is sorted by the same
+    // dimension we then filter on; previously upstream was always 24h and
+    // we re-sorted client-side, producing the wrong slice for 1h / 7d.
+    const raw = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(overFetch, tf), 8000, []);
     const gainers = raw
       .filter(t => typeof t.price_change_percentage_24h === 'number' && t.price_change_percentage_24h > 0)
       .filter(t => typeof t.market_cap === 'number' && t.market_cap >= MIN_MARKET_CAP)
