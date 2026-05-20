@@ -67,12 +67,18 @@ export function combineComponents(c: ScoreComponents): number {
 
 export async function scoreCopyTradeWinRate(userId: string): Promise<number | null> {
   const sb = getSupabaseAdmin();
+  // §user_copy_trades scorer was joining a non-existent `closed_at` column,
+  // so even when trades reconciled with a real pnl_usd the win-rate query
+  // returned nothing and Top Copy Traders stayed empty. Use the actual
+  // `receipt_reconciled_at` column the execute pipeline writes when the
+  // tx receipt lands. pnl_usd is only meaningful after reconciliation.
   const { data } = await sb
     .from('user_copy_trades')
-    .select('pnl_usd, closed_at')
+    .select('pnl_usd, receipt_reconciled_at')
     .eq('user_id', userId)
-    .not('closed_at', 'is', null)
-    .gte('closed_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
+    .not('receipt_reconciled_at', 'is', null)
+    .not('pnl_usd', 'is', null)
+    .gte('receipt_reconciled_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
   const trades = data ?? [];
   if (trades.length < 3) return null;
   const wins = trades.filter((t) => Number(t.pnl_usd ?? 0) > 0).length;
