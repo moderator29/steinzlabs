@@ -640,3 +640,58 @@
   .nakacult-pillar:hover,
   .nakacult-cta:hover { transform: none !important; }
 }
+
+/* ─── Round 2 polish ─────────────────────────────────────────────────────
+   Phase: fix/nakacult-polish-round-2. The first pass swapped HeroSigil
+   for a downloaded Naka Go JPG. Round 2 round-corners the asset, gives
+   it a subtle ring, tightens hero padding on phones, makes CTAs full-
+   width on small screens, and adds a hairline divider between sections
+   so they don't feel like a single endless scroll. */
+
+/* Hero JPG asset — circular crop + crimson/blue glow ring. */
+.nakacult-hero__logo {
+  width: 320px;
+  height: 320px;
+  border-radius: 24px;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 0 60px rgba(220, 20, 60, 0.45),
+    0 0 120px rgba(0, 102, 255, 0.35);
+}
+
+/* Hairline divider between adjacent sections. */
+.nakacult-section + .nakacult-section {
+  position: relative;
+}
+.nakacult-section + .nakacult-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(180px, 30%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 200, 255, 0.25) 50%, transparent 100%);
+}
+
+/* Mobile: tighter hero + full-width CTAs so the page reads premium on
+   phones instead of cropping or wrapping awkwardly. */
+@media (max-width: 640px) {
+  .nakacult-hero {
+    padding: 40px 20px 72px;
+    min-height: auto;
+  }
+  .nakacult-hero__sigil { margin-bottom: 20px; }
+  .nakacult-hero__logo { width: 220px; height: 220px; border-radius: 18px; }
+  .nakacult-hero__title { max-width: 14ch; }
+  .nakacult-hero__tagline { margin-bottom: 28px; }
+  .nakacult-hero__ctas {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 360px;
+  }
+  .nakacult-cta { justify-content: center; }
+  .nakacult-section { padding: 56px 20px; }
+}
