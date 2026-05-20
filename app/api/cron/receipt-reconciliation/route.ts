@@ -52,7 +52,11 @@ interface StopLossRow {
 
 interface CopyTradeRow {
   id: string;
+  user_id: string;
   token_address: string;
+  chain: string | null;
+  action: 'buy' | 'sell';
+  amount_usd: number | null;
   copied_tx_hash: string;
 }
 
@@ -268,15 +272,15 @@ export async function GET(request: NextRequest) {
   try {
     const { data } = await admin
       .from("user_copy_trades")
-      .select("id,token_address,copied_tx_hash")
+      .select("id,user_id,token_address,chain,action,amount_usd,copied_tx_hash")
       .eq("status", "success")
       .not("copied_tx_hash", "is", null)
       .is("receipt_reconciled_at", null)
       .limit(MAX_PER_TABLE)
       .returns<CopyTradeRow[]>();
-    // copy_trades doesn't carry chain directly; infer from token_address prefix.
     for (const row of data ?? []) {
-      const chain = row.token_address.startsWith("0x") ? "ethereum" : "solana";
+      // Schema doesn't always have `chain` populated; fall back to address shape.
+      const chain = row.chain || (row.token_address.startsWith("0x") ? "ethereum" : "solana");
       try {
         const r = await parseByChain({
           chain,
@@ -285,6 +289,37 @@ export async function GET(request: NextRequest) {
           nativeCache,
         });
         await applyUpdate("user_copy_trades", row.id, r, null);
+
+        // §S1-DATA / realized-pnl writer. On a SELL reconciliation the
+        // relayer routes to a stable (USDC), so actual_amount_out ≈ USD
+        // received. Find the most recent unmatched BUY for the same
+        // (user, chain, token) and compute realized pnl on the sell row.
+        // Skip if the tx reverted or we don't have actuals.
+        if (row.action === "sell" && !r.reverted && r.actualAmountOut) {
+          const proceedsUsd = parseFloat(r.actualAmountOut);
+          if (Number.isFinite(proceedsUsd) && proceedsUsd > 0) {
+            const { data: matchedBuy } = await admin
+              .from("user_copy_trades")
+              .select("id,amount_usd")
+              .eq("user_id", row.user_id)
+              .eq("chain", chain)
+              .eq("token_address", row.token_address)
+              .eq("action", "buy")
+              .eq("status", "success")
+              .is("pnl_usd", null)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const buyCostUsd = matchedBuy?.amount_usd ? Number(matchedBuy.amount_usd) : 0;
+            if (buyCostUsd > 0) {
+              const pnlUsd = proceedsUsd - buyCostUsd;
+              await admin.from("user_copy_trades").update({ pnl_usd: pnlUsd }).eq("id", row.id);
+              // Mark the matched buy with the same pnl so we don't double-count
+              // it against another future sell.
+              await admin.from("user_copy_trades").update({ pnl_usd: pnlUsd }).eq("id", matchedBuy!.id);
+            }
+          }
+        }
       } catch (e) {
         errors++;
         Sentry.captureException(e, {
