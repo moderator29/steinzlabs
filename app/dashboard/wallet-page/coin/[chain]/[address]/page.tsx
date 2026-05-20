@@ -173,8 +173,16 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
               Retry
             </button>
           </div>
-        ) : (
+        ) : chartLoading || chartData.length > 0 ? (
           <Sparkline data={chartData} negative={isNegative} loading={chartLoading && chartData.length === 0} />
+        ) : (
+          // Bug §5.6 — when both the OHLC endpoint returns no candles AND the
+          // 7d sparkline fallback is empty (e.g. CoinGecko has no chart for
+          // a freshly listed token), keep showing the chart container with a
+          // clear empty state instead of rendering a blank Sparkline.
+          <div className="h-48 rounded-xl bg-slate-900/40 border border-slate-800/50 flex items-center justify-center text-sm text-slate-500">
+            Chart data unavailable for this timeframe.
+          </div>
         )}
       </div>
 

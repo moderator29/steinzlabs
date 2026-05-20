@@ -112,8 +112,8 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
   { id: 'avalanche', name: 'Avalanche', symbol: 'AVAX', color: '#E84142', explorerUrl: 'https://snowtrace.io', explorerName: 'SnowTrace', apiChain: 'avalanche', logoUrl: COIN_LOGOS.AVAX, coinGeckoId: 'avalanche-2' },
   { id: 'solana', name: 'Solana', symbol: 'SOL', color: '#9945FF', explorerUrl: 'https://solscan.io', explorerName: 'SolScan', apiChain: 'solana', logoUrl: COIN_LOGOS.SOL, coinGeckoId: 'solana' },
   { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin', logoUrl: COIN_LOGOS.BTC, coinGeckoId: 'bitcoin' },
-  { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum', logoUrl: 'https://assets.coingecko.com/coins/images/16547/small/arb.jpg', coinGeckoId: 'ethereum' },
-  { id: 'optimism', name: 'Optimism', symbol: 'ETH', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism', logoUrl: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png', coinGeckoId: 'ethereum' },
+  { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/arbitrum.png', coinGeckoId: 'ethereum' },
+  { id: 'optimism', name: 'Optimism', symbol: 'ETH', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/optimism.png', coinGeckoId: 'ethereum' },
   // FIX 5A.1 / Phase 4: apiChain was 'bnb' but server (EVM_CHAIN_CONFIG) keys it as 'bsc' — the mismatch
   // meant BSC pill fetched nothing and the UI showed stale prior-chain data (e.g. Solana after clicking BSC).
   { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bsc', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
@@ -238,6 +238,11 @@ export default function WalletPage() {
   const searchParams = useSearchParams();
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
+  // Bug §5.1 — without this flag the empty-state "Create Wallet" CTA renders
+  // on first paint for ~500ms even when localStorage has wallets, because the
+  // initial `wallets=[]` state lands before the hydrate() effect reads local.
+  // Render a skeleton instead until hydrate has touched local + cloud once.
+  const [hydrated, setHydrated] = useState(false);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -328,6 +333,8 @@ export default function WalletPage() {
         }
       } catch (err) {
         console.warn('[wallet-page] cloud sync unavailable:', err);
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
     };
 
@@ -841,7 +848,17 @@ export default function WalletPage() {
 
       <div className="relative z-10 max-w-lg mx-auto px-4">
 
-        {wallets.length === 0 ? (
+        {!hydrated ? (
+          /* Bug §5.1 — skeleton until hydrate finishes, so we never flash
+             the Create-Wallet CTA at a user who already has wallets. */
+          <div className="pt-12 space-y-4">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-slate-900/40 animate-pulse" />
+            <div className="h-6 w-40 mx-auto rounded bg-slate-900/40 animate-pulse" />
+            <div className="h-4 w-56 mx-auto rounded bg-slate-900/40 animate-pulse" />
+            <div className="h-14 w-full rounded-2xl bg-slate-900/40 animate-pulse mt-8" />
+            <div className="h-14 w-full rounded-2xl bg-slate-900/40 animate-pulse" />
+          </div>
+        ) : wallets.length === 0 ? (
           /* ── EMPTY STATE ────────────────────────────────── */
           <div className="pt-12 text-center">
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-600/20 to-violet-600/20 rounded-3xl flex items-center justify-center shadow-2xl border border-blue-500/20">
