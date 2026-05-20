@@ -5,8 +5,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 10;
 
-const MIN_MARKET_CAP = 1_000_000; // $1M floor — avoid micro-caps masquerading as "gainers"
-
 async function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const t = new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); });
@@ -52,16 +50,20 @@ export async function GET(req: Request) {
     // sub-$1M market cap, then slice to the requested limit. This produces
     // a stable "real gainers" list across CoinGecko response variations.
     const overFetch = Math.min(50, limit * 3 + 10);
-    // §upstream — pass timeframe so /coins/markets is sorted by the same
-    // dimension we then filter on; previously upstream was always 24h and
-    // we re-sorted client-side, producing the wrong slice for 1h / 7d.
+    // §upstream + §S6.1 — pass timeframe to /coins/markets so the slice is
+    // sorted by the dimension the user picked, then filter+sort locally
+    // by direction (gainers > 0 / losers < 0) on the same timeframe.
     const raw = await withDeadline<CoinGeckoMarketToken[]>(getTopGainers(overFetch, tf), 8000, []);
-    const gainers = raw
-      .filter(t => typeof t.price_change_percentage_24h === 'number' && t.price_change_percentage_24h > 0)
-      .filter(t => typeof t.market_cap === 'number' && t.market_cap >= MIN_MARKET_CAP)
-      .sort((a, b) => (b.price_change_percentage_24h ?? 0) - (a.price_change_percentage_24h ?? 0))
+    const wantPositive = direction === 'gainers';
+    const tokens = raw
+      .filter(t => typeof t.market_cap === 'number' && t.market_cap >= MIN_MARKET_CAP_USD)
+      .filter(t => {
+        const p = pctFor(t, tf);
+        return wantPositive ? p > 0 : p < 0;
+      })
+      .sort((a, b) => wantPositive ? pctFor(b, tf) - pctFor(a, tf) : pctFor(a, tf) - pctFor(b, tf))
       .slice(0, limit);
-    return NextResponse.json({ tokens: gainers }, {
+    return NextResponse.json({ tokens, direction, timeframe: tf }, {
       headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' },
     });
   } catch (err) {
