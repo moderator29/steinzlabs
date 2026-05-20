@@ -68,7 +68,9 @@ export type ChainFilter = 'all' | 'solana' | 'ethereum' | 'bsc' | 'polygon' | 'a
 const POLL_INTERVAL = 20000;
 const POLL_INTERVAL_HIDDEN = 60000;
 
-export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') {
+export type ContextEventFilter = 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+
+export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all', filter: ContextEventFilter = 'all') {
   const [events, setEvents] = useState<ContextEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasArchive, setHasArchive] = useState(false);
@@ -86,7 +88,7 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
     try {
       // Always fetch all chains from the server to maximise event coverage,
       // then filter client-side by the selected chain for display.
-      const response = await fetch(`/api/context-feed?limit=200&chain=all`, {
+      const response = await fetch(`/api/context-feed?limit=200&chain=all&filter=${encodeURIComponent(filter)}`, {
         signal: controller.signal,
         cache: 'no-store',
       });
@@ -136,7 +138,8 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all') 
     setEvents([]);
     currentChain.current = chain;
     fetchEvents();
-  }, [chain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chain, filter]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;

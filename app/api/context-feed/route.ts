@@ -796,16 +796,40 @@ function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
   });
 }
 
+// §S2.2 — server-side event-type filter. Was applied client-side after a
+// 200-row fetch; pushing it into the query keeps the same UX but lets the
+// server hand back only the rows the user asked for.
+type FilterKind = 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+const VALID_FILTERS: ReadonlySet<FilterKind> = new Set(['all', 'news', 'coins', 'new_coins', 'volume', 'trending']);
+
+function applyTypeFilter(events: WhaleEvent[], filter: FilterKind): WhaleEvent[] {
+  if (filter === 'all') return events;
+  // Event.type values produced by the source fetchers (whale, new-listing,
+  // large-transfer, news, trending, volume-spike, coingecko-*). Map the UI
+  // pills to the underlying type predicates.
+  return events.filter((e) => {
+    const t = (e.type || '').toLowerCase();
+    if (filter === 'news') return t.includes('news') || t.startsWith('coingecko');
+    if (filter === 'coins') return t.includes('coin') || t.includes('listing') || t.includes('trending');
+    if (filter === 'new_coins') return t.includes('new-listing') || t.includes('new_coin') || t.includes('new-coin');
+    if (filter === 'volume') return t.includes('volume') || t.includes('large-transfer') || t.includes('whale');
+    if (filter === 'trending') return t.includes('trending');
+    return true;
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const rawLimit = parseInt(searchParams.get('limit') || '150');
     const limit = Math.min(Math.max(rawLimit, 1), 200);
     const chain = searchParams.get('chain') || 'all';
+    const rawFilter = (searchParams.get('filter') || 'all').toLowerCase();
+    const filter: FilterKind = VALID_FILTERS.has(rawFilter as FilterKind) ? (rawFilter as FilterKind) : 'all';
     const archived = searchParams.get('archived') === 'true';
 
     if (archived) {
-      const archivedEvents = getArchivedEvents(chain);
+      const archivedEvents = applyTypeFilter(getArchivedEvents(chain), filter);
       return NextResponse.json({
         events: archivedEvents.slice(0, limit),
         total: archivedEvents.length,
@@ -827,6 +851,7 @@ export async function GET(request: Request) {
       if (cachedFiltered.length < 5) {
         cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 0, personal: personalCached });
       }
+      cachedFiltered = applyTypeFilter(cachedFiltered, filter);
       return NextResponse.json({
         events: cachedFiltered.slice(0, limit),
         total: cachedFiltered.length,
@@ -952,6 +977,7 @@ export async function GET(request: Request) {
     if (filtered.length < 5) {
       filtered = applyContextFilter(liveEvents, { minMarketCap: 0, personal });
     }
+    filtered = applyTypeFilter(filtered, filter);
 
     return NextResponse.json({
       events: filtered.slice(0, limit),

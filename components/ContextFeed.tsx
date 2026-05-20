@@ -249,14 +249,18 @@ export default function ContextFeed() {
   const isArchive = activeMode === 'archive';
   const activeChain: ChainFilter = isArchive ? 'all' : activeMode as ChainFilter;
   const feedChain = activeChain === 'bookmarks' ? 'all' : activeChain;
-  const { events, loading, refresh, hasArchive } = useContextFeed(200, feedChain);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info'>(persisted?.activeFilter ?? 'all');
+  // §S2.2 — forward the event-type filter to the server so we stop pulling
+  // 200 rows and discarding most of them on the client. 'info' isn't a
+  // server-supported filter (it's a pure UI sub-mode), so pass 'all' for it.
+  const serverFilter = (activeFilter === 'info' ? 'all' : activeFilter) as 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+  const { events, loading, refresh, hasArchive } = useContextFeed(200, feedChain, serverFilter);
   const { events: archivedEvents, loading: archiveLoading, refresh: refreshArchive } = useArchivedFeed(feedChain);
   const [engagement, setEngagement] = useState<Record<string, EngagementData>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [shareEvent, setShareEvent] = useState<any>(null);
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-  const [activeFilter, setActiveFilter] = useState<'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending' | 'info'>(persisted?.activeFilter ?? 'all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   // Restore scroll on mount once the first batch of events has rendered.
