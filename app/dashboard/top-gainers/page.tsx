@@ -1,25 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { TrendingUp, TrendingDown, Star } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { MiniSpark } from '@/components/dashboard/TopGainersCard';
+import { TokenRow } from '@/components/market/TokenRow';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useWatchlist } from '@/hooks/market/useWatchlist';
 import { buildDetailHref } from '@/lib/market/tokenChainResolver';
 import { useNavState } from '@/lib/nav/useNavState';
+import type { CoinGeckoMarket } from '@/lib/market/types';
 
-interface Gainer {
-  id: string;
-  symbol: string;
-  name: string;
-  image: string;
-  current_price: number;
-  market_cap: number;
-  total_volume: number;
+interface Gainer extends CoinGeckoMarket {
   price_change_percentage_1h_in_currency?: number;
-  price_change_percentage_24h: number;
   price_change_percentage_7d_in_currency?: number;
-  sparkline_in_7d?: { price: number[] };
 }
 
 type Direction = 'gainers' | 'losers';
@@ -28,35 +22,19 @@ type Timeframe = '1h' | '24h' | '7d';
 function pctFor(g: Gainer, tf: Timeframe): number {
   if (tf === '1h') return g.price_change_percentage_1h_in_currency ?? 0;
   if (tf === '7d') return g.price_change_percentage_7d_in_currency ?? 0;
-  return g.price_change_percentage_24h;
-}
-
-function fmtPrice(p: number): string {
-  if (!p) return '—';
-  if (p >= 1000) return `$${p.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (p >= 1) return `$${p.toFixed(2)}`;
-  if (p >= 0.01) return `$${p.toFixed(4)}`;
-  if (p >= 0.0001) return `$${p.toFixed(6)}`;
-  return `$${p.toExponential(2)}`;
-}
-
-function fmtCompact(m: number): string {
-  if (!m) return '—';
-  if (m >= 1e12) return `$${(m / 1e12).toFixed(2)}T`;
-  if (m >= 1e9) return `$${(m / 1e9).toFixed(2)}B`;
-  if (m >= 1e6) return `$${(m / 1e6).toFixed(2)}M`;
-  if (m >= 1e3) return `$${(m / 1e3).toFixed(1)}K`;
-  return `$${m.toFixed(0)}`;
+  return g.price_change_percentage_24h ?? 0;
 }
 
 export default function TopGainersPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
+
   const [rows, setRows] = useState<Gainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<Direction>('gainers');
   const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 
-  // PDF S3 — preserve direction (gainers/losers) + timeframe across
-  // top-gainers → token detail → back.
   useNavState(
     'top-gainers',
     () => ({ direction, timeframe }),
@@ -76,7 +54,7 @@ export default function TopGainersPage() {
           cache: 'no-store',
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json() as { tokens: Gainer[] };
+        const json = (await res.json()) as { tokens: Gainer[] };
         if (!cancelled) setRows(json.tokens ?? []);
       } catch {
         if (!cancelled) setRows([]);
@@ -84,41 +62,62 @@ export default function TopGainersPage() {
         if (!cancelled) setLoading(false);
       }
     };
+    setLoading(true);
     void load();
     const t = setInterval(load, 120_000);
-    return () => { cancelled = true; clearInterval(t); };
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
   }, [direction, timeframe]);
 
+  // TokenRow's list variant displays price_change_percentage_24h. To honour
+  // the user-selected timeframe pill we project the chosen timeframe's pct
+  // into that slot before render. Keeps pixel parity with the Market page
+  // without forking TokenRow.
+  const displayRows = useMemo<Gainer[]>(
+    () => rows.map((g) => ({ ...g, price_change_percentage_24h: pctFor(g, timeframe) })),
+    [rows, timeframe],
+  );
+
+  const onCoinClick = (id: string) => {
+    const token = rows.find((r) => r.id === id);
+    router.push(buildDetailHref({ id, symbol: token?.symbol ?? id }));
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-6 pb-24">
+      <div className="flex items-center gap-3 mb-4">
         <BackButton href="/dashboard" />
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-          direction === 'gainers' ? 'bg-emerald-500/10' : 'bg-red-500/10'
-        }`}>
-          {direction === 'gainers'
-            ? <TrendingUp className="w-5 h-5 text-emerald-400" />
-            : <TrendingDown className="w-5 h-5 text-red-400" />}
+        <div
+          className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+            direction === 'gainers' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+          }`}
+        >
+          {direction === 'gainers' ? (
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <TrendingDown className="w-5 h-5 text-red-400" />
+          )}
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">Top {direction === 'gainers' ? 'Gainers' : 'Losers'}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-white">
+            Top {direction === 'gainers' ? 'Gainers' : 'Losers'}
+          </h1>
           <p className="text-xs text-gray-500">
-            Biggest {timeframe} movers · $1M+ market cap · click a row to open the trading terminal.
+            Biggest {timeframe} movers, $1M+ market cap. Tap a row to open the trading terminal.
           </p>
         </div>
       </div>
 
-      {/* Audit M6 #4 + #3 — direction tab + timeframe pills. CMC /
-          CoinGecko / Birdeye all expose gainers + losers as a paired
-          view with multi-timeframe toggles; matches that. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800/50">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-[#111827] border border-white/[0.06]">
           {(['gainers', 'losers'] as Direction[]).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setDirection(d)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 direction === d
                   ? d === 'gainers'
                     ? 'bg-emerald-500/15 text-emerald-300'
@@ -130,15 +129,15 @@ export default function TopGainersPage() {
             </button>
           ))}
         </div>
-        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800/50">
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-[#111827] border border-white/[0.06]">
           {(['1h', '24h', '7d'] as Timeframe[]).map((tf) => (
             <button
               key={tf}
               type="button"
               onClick={() => setTimeframe(tf)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 timeframe === tf
-                  ? 'bg-[#0A1EFF]/20 text-[#8FA3FF]'
+                  ? 'bg-[#0A1EFF] text-white shadow-[0_0_10px_rgba(10,30,255,0.35)]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -148,58 +147,28 @@ export default function TopGainersPage() {
         </div>
       </div>
 
-      <div className="bg-[#111827] border border-white/[0.06] rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[32px_minmax(140px,1.3fr)_minmax(80px,0.8fr)_minmax(70px,0.7fr)_minmax(90px,0.9fr)_minmax(90px,0.9fr)_28px] gap-2 px-4 py-2.5 text-[10px] uppercase tracking-wide text-gray-500 border-b border-white/[0.05] hidden md:grid">
-          <div>#</div>
-          <div>Coin</div>
-          <div className="text-end">Price</div>
-          <div className="text-end">{timeframe}</div>
-          <div className="text-end">7d Chart</div>
-          <div className="text-end">Market Cap</div>
-          <div></div>
-        </div>
-        <div className="divide-y divide-white/[0.03]">
-          {loading && rows.length === 0 ? (
-            Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-14 mx-3 my-2 rounded bg-white/[0.02] animate-pulse" />
-            ))
-          ) : rows.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-gray-500">
-              No {direction} data available for {timeframe} right now.
-            </div>
-          ) : rows.map((g, i) => {
-            const pct = pctFor(g, timeframe);
-            return (
-            <Link
+      <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06] bg-[#111827]">
+        {loading && displayRows.length === 0 ? (
+          Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="h-16 bg-white/[0.02] animate-pulse border-b border-white/[0.04] last:border-b-0" />
+          ))
+        ) : displayRows.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm text-gray-500">
+            No {direction} data available for {timeframe} right now.
+          </div>
+        ) : (
+          displayRows.map((g, i) => (
+            <TokenRow
               key={g.id}
-              href={buildDetailHref({ id: g.id, symbol: g.symbol })}
-              className="grid grid-cols-[32px_minmax(140px,1.3fr)_minmax(80px,0.8fr)_minmax(70px,0.7fr)_minmax(90px,0.9fr)_minmax(90px,0.9fr)_28px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors"
-            >
-              <span className="text-xs font-mono text-gray-600">{i + 1}</span>
-              <div className="flex items-center gap-2.5 min-w-0">
-                {g.image && (
-                  <img src={g.image} alt={g.symbol} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                )}
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-white truncate">{g.name}</div>
-                  <div className="text-[10px] text-gray-500 uppercase">{g.symbol}</div>
-                </div>
-              </div>
-              <div className="text-end text-sm text-white font-mono">{fmtPrice(g.current_price)}</div>
-              <div className={`text-end text-sm font-semibold ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
-              </div>
-              <div className="flex justify-end">
-                <MiniSpark prices={g.sparkline_in_7d?.price ?? []} width={90} height={28} />
-              </div>
-              <div className="text-end text-xs text-gray-400 font-mono">{fmtCompact(g.market_cap)}</div>
-              <div className="text-end">
-                <Star className="w-4 h-4 text-gray-600 hover:text-yellow-400 inline" />
-              </div>
-            </Link>
-            );
-          })}
-        </div>
+              token={g}
+              rank={i + 1}
+              isWatched={isWatched(g.id)}
+              onToggleWatch={toggleWatchlist}
+              onClick={onCoinClick}
+              variant="list"
+            />
+          ))
+        )}
       </div>
     </div>
   );
