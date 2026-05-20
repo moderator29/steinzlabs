@@ -8,6 +8,7 @@ import { RecommendationsStrip } from '@/components/social/RecommendationsStrip';
 import { SearchBox } from '@/components/social/SearchBox';
 import { UserListRow } from '@/components/social/UserListRow';
 import BackButton from '@/components/ui/BackButton';
+import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 /**
  * /discover — the hub: search box, recommendations strip, 5 visible
@@ -20,6 +21,7 @@ import BackButton from '@/components/ui/BackButton';
  */
 
 function DiscoverInner() {
+  useFeatureUsageLog('discover');
   const sp = useSearchParams();
   const q = sp.get('q')?.trim() ?? '';
 

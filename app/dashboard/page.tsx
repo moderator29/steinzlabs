@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 import SidebarMenu from '@/components/SidebarMenu';
 import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
@@ -214,6 +215,7 @@ function DashboardAuthLoadingGate() {
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  useFeatureUsageLog('dashboard');
   const router = useRouter();
   const searchParams = useSearchParams();
   // ?tab=profile / ?tab=wallet / ?tab=vtxai routes external links (notably

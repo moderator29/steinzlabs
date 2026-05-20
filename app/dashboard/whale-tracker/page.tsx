@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useFeatureUsageLog } from "@/lib/hooks/useFeatureUsageLog";
 import { LABEL_META, type WhaleLabel } from "@/lib/whales/labels";
 // Naka Labs brand icons — swap what's in the library, lucide-fallback
 // for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
@@ -95,6 +96,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function WhaleTrackerPage() {
+  useFeatureUsageLog('whale_tracker');
   const router = useRouter();
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
   const [size, setSize] = useState<Size>("100k");
