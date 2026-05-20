@@ -65,13 +65,13 @@ async function loadStats(): Promise<Stat[]> {
   return [
     {
       label: 'Cultists',
-      value: memberCount === null ? '—' : memberCount.toLocaleString(),
+      value: memberCount === null ? '…' : memberCount.toLocaleString(),
       sub: 'Verified on-chain',
     },
     {
       label: 'Treasury',
       value: treasuryUsd === null || treasuryUsd === 0
-        ? '—'
+        ? '…'
         : `$${treasuryUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
       sub: 'Live snapshot',
     },
@@ -82,7 +82,7 @@ async function loadStats(): Promise<Stat[]> {
     },
     {
       label: 'Soundtrack',
-      value: trackCount === null ? '—' : `${trackCount} tracks`,
+      value: trackCount === null ? '…' : `${trackCount} tracks`,
       sub: 'Curated by Ddergo',
     },
   ];
