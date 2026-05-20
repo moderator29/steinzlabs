@@ -45,9 +45,18 @@ function LoginPageInner() {
   const [resending, setResending] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaReady, setCaptchaReady] = useState(false);
+  // §Turnstile-watchdog — if the Cloudflare script never loads or the
+  // widget gets stuck on its 'verifying' spinner (regional Cloudflare
+  // routing issues, blocked by privacy extension, intermittent CDN
+  // failure), we surface a clear actionable error after 15s instead of
+  // leaving the user staring at the spinner forever.
+  const [captchaUnreachable, setCaptchaUnreachable] = useState(false);
   const submitting = useRef(false);
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  // Mirror captchaToken into a ref so the 15s watchdog closure (created
+  // once on mount) reads the latest value when it fires.
+  const captchaTokenRef = useRef('');
 
   // Wipe stale sb-* cookie chunks on every /login visit so old session
   // shards from previous logins never pile up toward Vercel's 32KB limit.
@@ -97,9 +106,21 @@ function LoginPageInner() {
       }, 200);
     }
 
+    // §Turnstile-watchdog — 15s. If `captchaReady` is still false (script
+    // never loaded) or `captchaToken` is still empty (widget rendered but
+    // stuck on its 'verifying' spinner), surface a clear error so the user
+    // can refresh the check or fall back via the Refresh button below.
+    const watchdog = setTimeout(() => {
+      if (cancelled) return;
+      if (!widgetIdRef.current || !captchaTokenRef.current) {
+        setCaptchaUnreachable(true);
+      }
+    }, 15000);
+
     return () => {
       cancelled = true;
       if (pollTimer) clearInterval(pollTimer);
+      clearTimeout(watchdog);
       const ts = (window as any).turnstile;
       if (ts && widgetIdRef.current) {
         try { ts.remove(widgetIdRef.current); } catch { /* widget already gone */ }
@@ -107,6 +128,9 @@ function LoginPageInner() {
       }
     };
   }, []);
+
+  // Keep the watchdog's captcha-token ref in sync with state.
+  useEffect(() => { captchaTokenRef.current = captchaToken; }, [captchaToken]);
 
   useEffect(() => {
     // FIX 5A.1: was router.replace (SPA nav preserves prior user's module state & caches),
@@ -476,6 +500,7 @@ function LoginPageInner() {
                   <button
                     type="button"
                     onClick={() => {
+                      setCaptchaUnreachable(false);
                       const ts = (window as unknown as { turnstile?: { reset: (id: string) => void } }).turnstile;
                       if (ts && widgetIdRef.current) {
                         try {
@@ -493,6 +518,11 @@ function LoginPageInner() {
                   </button>
                   {errors.captcha && <span role="alert" aria-live="polite" className="text-red-300 text-[12px] font-medium">{errors.captcha}</span>}
                 </div>
+                {captchaUnreachable && !captchaToken && (
+                  <div className="mt-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-[12px]" role="alert" aria-live="polite">
+                    Security check unreachable. Cloudflare may be blocked on your network or experiencing an outage. Try Refresh security check, switch network (mobile data vs Wi-Fi), or disable privacy extensions on this site.
+                  </div>
+                )}
               </div>
             )}
 
