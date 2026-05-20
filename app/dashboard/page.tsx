@@ -386,7 +386,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
+      {/* Mobile responsive — the fixed header above is h-14 (56px), not
+          80px. Hardcoded 80px on mobile created a 24px dead zone above
+          the first content row. Use h-14 worth of padding on mobile,
+          the original 80px on lg+ where the header has more chrome. */}
+      <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">

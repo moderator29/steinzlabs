@@ -121,7 +121,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
       <div className="fixed inset-0 z-[var(--z-modal)] bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="fixed top-0 left-0 h-full w-[260px] bg-[#0A0E27] border-r border-white/[0.06] z-[calc(var(--z-modal)+1)] flex flex-col overflow-hidden animate-slide-in-left"
+        className="fixed top-0 left-0 h-full w-[260px] max-w-[80vw] bg-[#0A0E27] border-r border-white/[0.06] z-[calc(var(--z-modal)+1)] flex flex-col overflow-hidden animate-slide-in-left"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
