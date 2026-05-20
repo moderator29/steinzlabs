@@ -394,7 +394,13 @@ function loadSettings(): AgentSettings {
     const s = localStorage.getItem(SETTINGS_KEY);
     if (s) {
       const parsed = JSON.parse(s);
-      return { ...DEFAULT_PAGE_SETTINGS, ...parsed };
+      // §focusMode-scrub — a prior build applied style={{ minHeight: '80vh' }}
+      // when focusMode was on, which broke the chat layout. The code is gone
+      // but users who toggled it once still have focusMode:true persisted and
+      // showed a "half-screen" chat until they cleared storage. Force-off on
+      // load so the bad state self-heals on next visit.
+      const merged = { ...DEFAULT_PAGE_SETTINGS, ...parsed, focusMode: false };
+      return merged;
     }
   } catch { /* Malformed JSON — return default */ }
   return { ...DEFAULT_PAGE_SETTINGS };

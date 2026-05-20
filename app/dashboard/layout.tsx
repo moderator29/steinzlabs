@@ -3,7 +3,10 @@ import type { Metadata } from 'next';
 import AlertMonitorProvider from '@/components/AlertMonitorProvider';
 import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
-import FloatingNotificationBell from '@/components/FloatingNotificationBell';
+// §header-scope — FloatingNotificationBell removed from the dashboard
+// layout. The bell + GlobalControls now live INSIDE the dashboard page
+// header so they only render on the home tab (and not on the Profile /
+// Wallet / VTX tabs which all share the /dashboard pathname).
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -28,7 +31,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <SessionGuardProvider />
         <AlertMonitorProvider />
         <PlatformEventMonitor />
-        <FloatingNotificationBell />
         <PendingSignerProvider />
         <PendingTradesBanner />
         {children}
