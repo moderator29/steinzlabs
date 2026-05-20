@@ -120,7 +120,10 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
     // Sits 16px off the bottom with rounded-3xl corners, deep navy gradient,
     // backdrop blur with saturation pop, and a subtle blue inner-border so
     // the capsule reads as a premium nav surface against the aurora canvas.
-    <div className="fixed bottom-4 left-4 right-4 z-[var(--z-sidebar)] flex justify-center pointer-events-none">
+    // iOS safe-area — naka-safe-bottom adds env(safe-area-inset-bottom)
+    // so the floating capsule clears the iPhone home indicator instead of
+    // sitting underneath it. No-op on Android / web.
+    <div className="fixed bottom-4 left-4 right-4 z-[var(--z-sidebar)] flex justify-center pointer-events-none naka-safe-bottom">
       <div
         className="pointer-events-auto w-full max-w-lg rounded-3xl px-2.5 py-3 backdrop-blur-2xl border border-[#0066FF]/20 shadow-[0_10px_40px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]"
         style={{
@@ -369,7 +372,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen text-white pb-28 sm:pb-24">
       <FirstRunTour />
-      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06]">
+      {/* iOS safe-area — naka-safe-top adds env(safe-area-inset-top) so
+          the header clears the iPhone 14+ dynamic island / notch instead
+          of being overlapped by it. No-op on Android / web. */}
+      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
@@ -388,7 +394,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
+      {/* Mobile responsive — the fixed header above is h-14 (56px), not
+          80px. Hardcoded 80px on mobile created a 24px dead zone above
+          the first content row. Use h-14 worth of padding on mobile,
+          the original 80px on lg+ where the header has more chrome. */}
+      <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
