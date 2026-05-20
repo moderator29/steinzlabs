@@ -1,6 +1,6 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { getCultAccess } from '@/lib/cult/access';
-import { HeroSigil } from '@/components/naka-cult/HeroSigil';
 import { ConclaveSigil } from '@/components/vault/sigils/ConclaveSigil';
 import { OracleSigil } from '@/components/vault/sigils/OracleSigil';
 import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
@@ -36,7 +36,14 @@ export default async function NakaCultLanding() {
       <section className="nakacult-hero">
         <div className="nakacult-hero__sigil">
           <span className="nakacult-hero__aura" aria-hidden />
-          <HeroSigil size={210} />
+          <Image
+            src="/branding/naka-go-hero.jpg"
+            alt="Naka Go"
+            width={420}
+            height={420}
+            priority
+            className="nakacult-hero__logo"
+          />
         </div>
         {isMember && <span className="nakacult-status">◈ You are of the Cult</span>}
         <p className="nakacult-hero__eyebrow">The Naka Cult</p>
