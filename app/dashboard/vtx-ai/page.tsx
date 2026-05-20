@@ -796,7 +796,9 @@ function VtxAiPageInner() {
   const sidecarPendingSwap: SidecarPendingSwap | null = null; // wired in by API once prepare_swap streams
 
   return (
-    <div className="h-screen max-h-screen bg-[#060A12] text-white flex flex-col lg:flex-row overflow-hidden">
+    /* §VTX-layout — h-[100dvh] (dynamic viewport height) so iOS Safari and
+       Chrome mobile chrome bars don't push 100vh past the visible area. */
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#060A12] text-white flex flex-col lg:flex-row overflow-hidden">
       {/* Desktop only: persistent left rail with chat history */}
       <VtxConversationsRail
         sessions={chatSessions.map(s => ({ id: s.id, date: s.date, preview: s.preview }))}
@@ -1048,7 +1050,12 @@ function VtxAiPageInner() {
           render). Derive `hasConversation` from whether ANY user
           message exists; the welcome carries us until the first real
           user prompt. */}
-      <div className="flex-1 overflow-y-auto min-h-0" style={settings.focusMode ? { minHeight: '80vh' } : undefined}>
+      {/* §VTX-layout — removed `style={{ minHeight: '80vh' }}` when focusMode
+          was on. It forced the messages container to 80vh inside an h-[100dvh]
+          parent with overflow-hidden, which pushed the sticky input box past
+          the visible bottom (mobile) or compressed it to mid-screen (desktop).
+          flex-1 + min-h-0 already gives the correct fillable scrollable area. */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {!messages.some(m => m.role === 'user') && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
@@ -1296,7 +1303,14 @@ function VtxAiPageInner() {
 
 export default function VtxAiPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen" />}>
+    <Suspense
+      fallback={
+        <div className="h-[100dvh] flex items-center justify-center bg-[#060A12] text-slate-500 text-sm gap-3">
+          <div className="w-5 h-5 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <span>Loading VTX Agent…</span>
+        </div>
+      }
+    >
       <VtxAiPageInner />
     </Suspense>
   );
