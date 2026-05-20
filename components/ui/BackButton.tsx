@@ -17,9 +17,25 @@ export function BackButton({ href, label, className = "" }: BackButtonProps) {
       router.push(href);
       return;
     }
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
+    if (typeof window !== "undefined") {
+      const referrer = document.referrer;
+      let internalReferrer = false;
+      if (referrer) {
+        try {
+          const url = new URL(referrer);
+          internalReferrer =
+            url.hostname === window.location.hostname &&
+            !url.pathname.startsWith("/login") &&
+            !url.pathname.startsWith("/signup") &&
+            !url.pathname.startsWith("/auth");
+        } catch {
+          internalReferrer = false;
+        }
+      }
+      if (internalReferrer && window.history.length > 1) {
+        router.back();
+        return;
+      }
     }
     router.push("/dashboard");
   };
