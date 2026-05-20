@@ -587,6 +587,7 @@ function VtxAiPageInner() {
           history: messages.slice(-10),
           tier,
           responseStyle: settings.responseStyle,
+          defaultChain: settings.defaultChain,
           autoContext: settings.autoContext,
           personality: settings.personality,
           language: settings.language,
