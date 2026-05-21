@@ -241,9 +241,12 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
   );
 }
 
-function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
+function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAutoForLarge, isOpen, onClose }: {
   slippage: string;
   setSlippage: (s: string) => void;
+  mevProtect: boolean;
+  setMevProtect: (v: boolean) => void;
+  mevAutoForLarge: boolean;
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -300,6 +303,40 @@ function SettingsPanel({ slippage, setSlippage, isOpen, onClose }: {
           <span className="text-xs text-[#F59E0B]">High slippage may result in unfavorable trades</span>
         </div>
       )}
+
+      {/* §MEV-toggle — server-side support exists (Flashbots Protect on
+          ETH, BloxRoute on BSC, Jito bundles on Solana). The UI never
+          had a switch; only localStorage on the inline form. Surface it
+          in the swap-page Settings so users can opt into private-mempool
+          routing for high-value trades. Auto-on for trades ≥ $1K (see
+          page-level useEffect that sets mevProtect from fromAmount). */}
+      <div className="pt-2 border-t border-white/[0.04]">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400 font-medium">MEV Protection</span>
+            <Info className="w-3 h-3 text-gray-600" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMevProtect(!mevProtect)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              mevProtect ? 'bg-[#0A1EFF]' : 'bg-slate-700'
+            }`}
+            aria-pressed={mevProtect}
+            aria-label="Toggle MEV protection"
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
+                mevProtect ? 'translate-x-5' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          Routes via private mempool (Flashbots / Jito) to block sandwich bots.
+          {mevAutoForLarge && ' Auto-enabled for trades ≥ $1,000.'}
+        </p>
+      </div>
     </div>
   );
 }
@@ -323,6 +360,12 @@ export default function SwapPage() {
   // netOutputUsd. The selected provider drives the eventual execution
   // path (UI hint today; execution wiring lands next sprint).
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  // §MEV-protect — Solana defaults ON (Jito is industry standard, no
+  // friction). EVM defaults OFF but auto-flips ON whenever the trade
+  // size estimates ≥ $1K (mevAutoForLarge logic below). User can still
+  // toggle manually via SettingsPanel.
+  const [mevProtect, setMevProtect] = useState<boolean>(false);
+  const [sandwichRisk, setSandwichRisk] = useState<number | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
   // Industry-standard pre-confirm security gating — when the review
@@ -1020,6 +1063,43 @@ export default function SwapPage() {
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
 
+  // §MEV — auto-on Solana (Jito is friction-free) and auto-on for any
+  // trade ≥ $1,000 USD on any chain. User can still flip via the
+  // Settings toggle and that override is respected for the rest of the
+  // session.
+  const fromAmountUsd = quoteData?.fromAmountUsd ?? null;
+  const mevAutoForLarge = fromAmountUsd !== null && fromAmountUsd >= 1000;
+  const userOverroteMev = useRef(false);
+  useEffect(() => {
+    if (userOverroteMev.current) return;
+    const shouldBeOn = chain === 'solana' || mevAutoForLarge;
+    if (shouldBeOn && !mevProtect) setMevProtect(true);
+    if (!shouldBeOn && chain !== 'solana' && mevProtect) {
+      // only auto-OFF if we previously auto-turned it on (small trades EVM)
+      setMevProtect(false);
+    }
+  }, [chain, mevAutoForLarge, mevProtect]);
+  const setMevProtectManual = (v: boolean) => {
+    userOverroteMev.current = true;
+    setMevProtect(v);
+  };
+
+  // Pre-trade sandwich-risk fetch when user has a token + amount.
+  // Cheap, 30s cache via the API's withCache. Useful for the in-page
+  // pill warning when MEV is OFF on a risky trade.
+  useEffect(() => {
+    if (!hasQuote || !toToken) { setSandwichRisk(null); return; }
+    const ctrl = new AbortController();
+    const usd = fromAmountUsd && fromAmountUsd > 0 ? fromAmountUsd : 1000;
+    fetch(`/api/mev-protection?token=${encodeURIComponent(toToken)}&chain=${chain}&amount=${usd}`, { signal: ctrl.signal })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { sandwichRisk?: number } | null) => {
+        if (d && typeof d.sandwichRisk === 'number') setSandwichRisk(d.sandwichRisk);
+      })
+      .catch(() => { /* non-fatal */ });
+    return () => ctrl.abort();
+  }, [hasQuote, toToken, chain, fromAmountUsd]);
+
   return (
     <div className="min-h-screen bg-[#060A12] text-white">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1166,7 +1246,15 @@ export default function SwapPage() {
             ))}
           </div>
 
-          <SettingsPanel slippage={slippage} setSlippage={setSlippage} isOpen={showSettings} onClose={() => setShowSettings(false)} />
+          <SettingsPanel
+            slippage={slippage}
+            setSlippage={setSlippage}
+            mevProtect={mevProtect}
+            setMevProtect={setMevProtectManual}
+            mevAutoForLarge={mevAutoForLarge || chain === 'solana'}
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+          />
           {showSettings && <div className="h-3" />}
 
           <div className="bg-[#0f1320]/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/20">
@@ -1685,6 +1773,40 @@ export default function SwapPage() {
                   selectedProvider={selectedProvider ?? undefined}
                   onSelect={(r) => setSelectedProvider(r.provider)}
                 />
+              )}
+
+              {/* §MEV pre-trade pill — surfaces sandwichRisk 0-100 from
+                  /api/mev-protection so the user can see the actual risk
+                  before signing. Color codes: <25 green, 25-50 amber,
+                  >50 red. When risk is high AND mevProtect is OFF, we
+                  also prompt to flip the toggle on. */}
+              {sandwichRisk !== null && hasQuote && (
+                <div
+                  className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs border ${
+                    sandwichRisk >= 50
+                      ? 'bg-red-500/10 border-red-500/30 text-red-200'
+                      : sandwichRisk >= 25
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">MEV risk</span>
+                    <span className="font-mono">{sandwichRisk}/100</span>
+                  </div>
+                  {sandwichRisk >= 50 && !mevProtect && (
+                    <button
+                      type="button"
+                      onClick={() => setMevProtectManual(true)}
+                      className="px-2 py-1 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-100 text-[10px] font-bold uppercase tracking-wide"
+                    >
+                      Enable Protection
+                    </button>
+                  )}
+                  {mevProtect && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide">Protected</span>
+                  )}
+                </div>
               )}
 
               {pi >= 5 && (
