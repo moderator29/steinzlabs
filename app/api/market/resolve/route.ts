@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { searchTokens, getContractPrice } from '@/lib/services/coingecko';
+import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -108,12 +109,19 @@ export async function GET(req: Request) {
     // a price pill on first paint and the detail page (which the user
     // is about to click anyway) hydrates the price. Drops search
     // latency by ~half for popular tickers (BTC / ETH / SOL).
+    // §market-resolve-chain-leak — was hardcoded chain: 'ethereum' with a
+    // comment claiming "router will pick the right chain on click". The
+    // router doesn't re-resolve; whatever chain we return goes literally
+    // into the URL, so SOL landed at /dashboard/market/ethereum/solana
+    // and XRP at /dashboard/market/ethereum/ripple. Resolve per match
+    // via the same tokenChainResolver the rest of the platform uses, so
+    // native L1s + L2-native tokens route to their real chain.
     const matches: ResolvedMatch[] = topMatches.map((c) => ({
       id: c.id,
       name: c.name,
       symbol: c.symbol.toUpperCase(),
       image: c.thumb,
-      chain: 'ethereum', // router will pick the right chain on click
+      chain: resolveTokenChain({ id: c.id, symbol: c.symbol }).chain,
       address: null,
       priceUsd: 0,
     }));
