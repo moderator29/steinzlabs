@@ -262,6 +262,25 @@ export default function ContextFeed() {
   const [likeAnimations, setLikeAnimations] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  // §whale-tracker-grade — convergence map keyed by uppercase token
+  // symbol. The /api/intelligence/convergence endpoint reads
+  // smart_money_convergence (populated by an hourly cron); we batch
+  // the lookup for every visible event in one round-trip.
+  const [convergence, setConvergence] = useState<Record<string, { wallet_count: number; total_value_usd: number; detected_at: string }>>({});
+
+  // Refresh convergence whenever the set of visible token symbols changes.
+  useEffect(() => {
+    const symbols = Array.from(new Set(
+      events.map((e) => (e.tokenSymbol ?? '').toUpperCase()).filter(Boolean),
+    )).slice(0, 50);
+    if (symbols.length === 0) { setConvergence({}); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/intelligence/convergence?tokens=${encodeURIComponent(symbols.join(','))}`, { signal: ctrl.signal })
+      .then((r) => r.ok ? r.json() : {})
+      .then((map: Record<string, { wallet_count: number; total_value_usd: number; detected_at: string }>) => setConvergence(map))
+      .catch(() => { /* non-fatal — no badge */ });
+    return () => ctrl.abort();
+  }, [events]);
 
   // Restore scroll on mount once the first batch of events has rendered.
   // We wait for events.length>0 (or 250ms whichever comes first) so the
@@ -717,6 +736,21 @@ export default function ContextFeed() {
               </div>
 
               <h3 className="text-base font-bold mb-2 break-words line-clamp-2">{event.title}</h3>
+
+              {/* §smart-money-convergence — surface "N whales entered $X in 24h"
+                  from smart_money_convergence (populated hourly by cron).
+                  Was being computed but never rendered. */}
+              {(() => {
+                const sym = (event.tokenSymbol ?? '').toUpperCase();
+                const c = sym ? convergence[sym] : undefined;
+                if (!c || c.wallet_count < 2) return null;
+                return (
+                  <div className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF]">
+                    <span aria-hidden>◈</span>
+                    <span>{c.wallet_count} smart wallets bought ${sym} (24h)</span>
+                  </div>
+                );
+              })()}
 
               <p className="text-gray-300 text-sm mb-4 leading-relaxed break-words line-clamp-3">
                 {event.summary}
