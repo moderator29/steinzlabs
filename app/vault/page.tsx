@@ -29,12 +29,12 @@ async function loadCultStats(): Promise<CultStatsRow | null> {
   }
 }
 
-const compactNumber = (n: number) => {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)         return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString();
-};
+// §vault-server-client-function-prop — `compactNumber` used to be passed
+// as a `format` prop to <CultStatsCounter />. That triggered the App
+// Router error "Functions cannot be passed directly to Client
+// Components" (Sentry-captured as the real cause of the /vault retry
+// loop). Formatter moved into the client component; the page passes a
+// serialisable `formatKind: 'compact'` enum instead.
 
 export default async function VaultPage() {
   const stats = await loadCultStats();
@@ -88,7 +88,7 @@ export default async function VaultPage() {
         <CultStatsCounter
           stats={[
             { label: 'Active Cultists', value: stats?.active_members ?? null },
-            { label: '$NAKA Held',      value: totalNaka, format: compactNumber },
+            { label: '$NAKA Held',      value: totalNaka, formatKind: 'compact' },
             { label: 'Decrees Passed',  value: stats?.decrees_passed ?? null },
             { label: 'Chosen Seals',    value: stats?.chosen_count ?? null },
           ]}

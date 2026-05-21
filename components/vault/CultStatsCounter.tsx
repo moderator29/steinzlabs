@@ -1,14 +1,33 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
+/**
+ * §vault-server-client-function-prop — was `format?: (n: number) => string`.
+ * /vault page is an async Server Component, and passing a function reference
+ * across the server↔client boundary triggers the App Router error
+ * "Functions cannot be passed directly to Client Components unless you
+ * explicitly expose it by marking it with 'use server'." (Sentry caught
+ * it as the actual cause of the /vault retry loop owners reported.) Switched
+ * to a serialisable string enum and embedded the formatters in the client
+ * module so the count-up animation can still format each frame.
+ */
+type FormatKind = 'plain' | 'compact';
+
 interface Stat {
   label: string;
   value: number | null;
-  format?: (n: number) => string;
+  formatKind?: FormatKind;
 }
 
 interface Props {
   stats: Stat[];
+}
+
+function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)         return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
 }
 
 /**
@@ -18,7 +37,7 @@ interface Props {
  *
  *   <CultStatsCounter stats={[
  *     { label: 'Active Cultists', value: 247 },
- *     { label: '$NAKA Held',      value: 184_000_000, format: compact },
+ *     { label: '$NAKA Held',      value: 184_000_000, formatKind: 'compact' },
  *     { label: 'Decrees Passed',  value: 47 },
  *   ]} />
  */
@@ -65,8 +84,8 @@ function StatCell({ stat }: { stat: Stat }) {
 
   const display = stat.value == null
     ? '—'
-    : stat.format
-    ? stat.format(shown)
+    : stat.formatKind === 'compact'
+    ? formatCompact(shown)
     : shown.toLocaleString();
 
   return (
