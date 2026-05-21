@@ -1,13 +1,13 @@
 {
   "crons": [
-    { "path": "/api/cron/whale-activity-poll",        "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/whale-activity-poll",        "schedule": "* * * * *" },
     { "path": "/api/cron/cluster-analysis",           "schedule": "0 */6 * * *" },
     { "path": "/api/cron/market-stats-snapshot",      "schedule": "0 * * * *" },
     { "path": "/api/cron/daily-digest",               "schedule": "0 9 * * *" },
     { "path": "/api/cron/limit-order-monitor",        "schedule": "*/5 * * * *" },
     { "path": "/api/cron/dca-executor",               "schedule": "*/30 * * * *" },
     { "path": "/api/cron/stop-loss-monitor",          "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/copy-trade-monitor",         "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/copy-trade-monitor",         "schedule": "* * * * *" },
     { "path": "/api/cron/pending-trades-cleanup",     "schedule": "*/30 * * * *" },
     { "path": "/api/cron/receipt-reconciliation",     "schedule": "*/15 * * * *" },
     { "path": "/api/cron/security-monitor",           "schedule": "0 */6 * * *" },

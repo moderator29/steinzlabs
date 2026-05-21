@@ -21,10 +21,17 @@
  * /api/whale-activity/stream pick up the row and push to connected clients.
  */
 import 'server-only';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
+import { mapWithConcurrency } from '@/lib/utils/concurrency';
+
+// Per-webhook matcher fan-out concurrency. One slow GoPlus / aggregator
+// quote inside matchCopyEvent must not stall siblings; 8 keeps the GoPlus
+// + aggregator rate-limits comfortable while saturating typical 10-30-row
+// Alchemy batches in a single wave.
+const MATCHER_CONCURRENCY = 8;
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -191,14 +198,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // §3 Copy-trade matcher fan-out. Awaited so retries on 5xx don't lose the
-  // event before user_copy_trades / pending_trades rows land. Each row's
-  // matcher call is independent — if one rule fails, the rest still process,
-  // but if EVERY row fails we return 500 so Alchemy retries the webhook.
-  let matched = 0;
-  let failed = 0;
-  for (const r of rows) {
-    try {
+  // §3 Copy-trade matcher fan-out — deferred via next/server `after` so the
+  // webhook returns immediately once the durable whale_activity insert lands.
+  // The copy-trade-monitor cron (P1-A.3) is the catch-up safety net if the
+  // serverless instance dies mid-fan-out, so we don't need to keep Alchemy's
+  // delivery open while quotes/security checks run.
+  after(async () => {
+    const settled = await mapWithConcurrency(rows, MATCHER_CONCURRENCY, async (r) => {
       await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),
         chain: String(r.chain ?? ''),
@@ -211,20 +217,15 @@ export async function POST(req: NextRequest) {
         value_usd: (r.value_usd as number | null) ?? null,
         timestamp: String(r.timestamp ?? new Date().toISOString()),
       });
-      matched++;
-    } catch (e) {
-      failed++;
-      console.error('[webhook.alchemy-whale] copy matcher failed:', e);
+    });
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        console.error('[webhook.alchemy-whale] copy matcher failed:', s.reason);
+      }
     }
-  }
+  });
 
-  if (failed > 0 && matched === 0) {
-    return NextResponse.json(
-      { error: 'matcher_failed', inserted: rows.length },
-      { status: 500 },
-    );
-  }
-  return NextResponse.json({ ok: true, inserted: rows.length, matched, failed });
+  return NextResponse.json({ ok: true, inserted: rows.length, queued: rows.length });
 }
 
 /**

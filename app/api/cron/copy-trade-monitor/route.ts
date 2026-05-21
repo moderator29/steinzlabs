@@ -4,6 +4,13 @@ import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
+import { mapWithConcurrency } from "@/lib/utils/concurrency";
+
+// Fan-out concurrency: each match issues GoPlus + multi-aggregator quote +
+// pending_trades insert + notification. 10 is the empirical sweet spot — high
+// enough to keep cron under maxDuration with hundreds of matches, low enough
+// to not saturate the 0x / Kyber / OpenOcean rate limits.
+const MATCH_CONCURRENCY = 10;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,7 +142,19 @@ export async function GET(request: NextRequest) {
     ),
   );
 
-  // 6) Fan out: for each activity × follower, evaluate rules and trigger.
+  // 6) Plan phase — fully synchronous (no awaits). Build the work list and
+  // pessimistically claim daily-cap budget against spentMap so the parallel
+  // dispatch in step 7 can't double-spend a user's cap.
+  interface MatchPlan {
+    follower: FollowRow;
+    act: WhaleActivityRow;
+    rule: CopyRuleRow;
+    isSell: boolean;
+    sizeUsd: number;
+    usdcAddr: string;
+  }
+  const plans: MatchPlan[] = [];
+
   for (const act of acts) {
     const whaleKey = `${act.chain}:${act.whale_address.toLowerCase()}`;
     if (!whaleKeys.includes(whaleKey)) continue;
@@ -151,134 +170,136 @@ export async function GET(request: NextRequest) {
       if (alreadyKey.has(dedupeKey)) continue;
 
       const rule = ruleMap.get(`${follower.user_id}:${act.chain}:${act.whale_address.toLowerCase()}`);
-      if (!rule) {
-        ruleBlocked++;
-        continue;
-      }
-      // Mode gate (user_copy_rules.mode is the source of truth — UI mode
-      // switcher writes here). 'off' / 'manual' / paused skip the cron;
-      // 'auto' / 'oneclick' / 'auto_copy' proceed and queue the trade.
+      if (!rule) { ruleBlocked++; continue; }
+
       const mode = (rule.mode ?? "off").toLowerCase();
-      if (rule.paused === true || mode === "off" || mode === "manual") {
-        ruleBlocked++;
-        continue;
-      }
+      if (rule.paused === true || mode === "off" || mode === "manual") { ruleBlocked++; continue; }
       if (rule.chains_allowed && rule.chains_allowed.length > 0 && !rule.chains_allowed.includes(act.chain)) {
-        ruleBlocked++;
-        continue;
+        ruleBlocked++; continue;
       }
       if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => t.toLowerCase()).includes(act.token_address.toLowerCase())) {
-        ruleBlocked++;
-        continue;
+        ruleBlocked++; continue;
       }
+
       const spentToday = spentMap.get(follower.user_id) ?? 0;
       const sizeUsd = Math.min(
         Number(rule.max_per_trade_usd),
         Math.max(0, Number(rule.daily_cap_usd) - spentToday),
       );
-      // Daily-cap gate only applies to buys (sell exits are independent of
-      // the user's USD buy budget).
-      if (act.action !== "sell" && sizeUsd <= 0) {
-        ruleBlocked++;
-        continue;
-      }
-
-      // We need wallet_source from user's preference. Default external_evm for
-      // EVM chains and external_solana for solana — users on builtin can set
-      // explicitly via user_trading_preferences.
-      const walletSource: "external_evm" | "external_solana" =
-        act.chain.toLowerCase() === "solana" ? "external_solana" : "external_evm";
-
-      // Quote stablecoin input for the copy (USDC). We use USDC on each chain
-      // as the funding source for copy trades unless rule specifies otherwise.
-      const usdcAddr = usdcForChain(act.chain);
-      if (!usdcAddr) {
-        ruleBlocked++;
-        continue;
-      }
-
-      // Direction branch: buy copies the whale; sell exits the user's
-      // position entirely (v1 policy: full exit on whale sell). Sell path
-      // skips when user doesn't hold the token or has no wallet on chain.
       const isSell = act.action === "sell";
-      let fromTokenAddress: string;
-      let fromTokenSymbol: string | null;
-      let toTokenAddress: string;
-      let toTokenSymbol: string | null;
-      let amountIn: string;
+      if (!isSell && sizeUsd <= 0) { ruleBlocked++; continue; }
 
-      if (isSell) {
-        const sizing = await sizeCopySell({
-          userId: follower.user_id,
-          chain: act.chain,
-          tokenAddress: act.token_address,
-        });
-        if (!sizing) {
-          ruleBlocked++;
-          continue;
-        }
-        fromTokenAddress = act.token_address;
-        fromTokenSymbol = act.token_symbol;
-        toTokenAddress = usdcAddr;
-        toTokenSymbol = "USDC";
-        amountIn = sizing.amountInRaw;
-      } else {
-        fromTokenAddress = usdcAddr;
-        fromTokenSymbol = "USDC";
-        toTokenAddress = act.token_address;
-        toTokenSymbol = act.token_symbol;
-        amountIn = String(sizeUsd);
-      }
+      const usdcAddr = usdcForChain(act.chain);
+      if (!usdcAddr) { ruleBlocked++; continue; }
 
-      const { data: inserted } = await admin
-        .from("user_copy_trades")
-        .insert({
-          user_id: follower.user_id,
-          source_whale: act.whale_address,
-          source_tx_hash: act.tx_hash,
-          token_address: act.token_address,
-          token_symbol: act.token_symbol,
-          action: isSell ? "sell" : "buy",
-          amount_usd: isSell ? null : sizeUsd,
-          status: "pending",
-        })
-        .select("id")
-        .single();
+      // Claim budget pessimistically against spentMap so siblings planned in
+      // this same loop see the reduced cap. We unclaim later only on hard
+      // failure paths (parallel section).
+      if (!isSell) spentMap.set(follower.user_id, spentToday + sizeUsd);
 
-      const result = await executeTrade({
+      plans.push({ follower, act, rule, isSell, sizeUsd, usdcAddr });
+    }
+  }
+
+  // 7) Dispatch phase — bounded-parallel. Each plan resolves the sell-size
+  // (Supabase read) then issues executeTrade. Failures don't block siblings.
+  type DispatchOutcome =
+    | { outcome: "triggered"; isSell: boolean; userId: string; sizeUsd: number }
+    | { outcome: "blocked"; isSell: boolean; userId: string; sizeUsd: number }
+    | { outcome: "failed"; isSell: boolean; userId: string; sizeUsd: number; reason: string };
+  const settled = await mapWithConcurrency<MatchPlan, DispatchOutcome>(plans, MATCH_CONCURRENCY, async (plan) => {
+    const { follower, act, rule, isSell, sizeUsd, usdcAddr } = plan;
+
+    const walletSource: "external_evm" | "external_solana" =
+      act.chain.toLowerCase() === "solana" ? "external_solana" : "external_evm";
+
+    let fromTokenAddress: string;
+    let fromTokenSymbol: string | null;
+    let toTokenAddress: string;
+    let toTokenSymbol: string | null;
+    let amountIn: string;
+
+    if (isSell) {
+      const sizing = await sizeCopySell({
         userId: follower.user_id,
         chain: act.chain,
-        walletSource,
-        fromTokenAddress,
-        fromTokenSymbol,
-        toTokenAddress,
-        toTokenSymbol,
-        amountIn,
-        slippageBps: rule.max_slippage_bps ?? 200,
-        reason: "copy_trade",
-        sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
-        sourceOrderTable: "user_copy_trades",
+        tokenAddress: act.token_address!,
       });
+      if (!sizing) return { outcome: "blocked" as const, isSell, userId: follower.user_id, sizeUsd };
+      fromTokenAddress = act.token_address!;
+      fromTokenSymbol = act.token_symbol;
+      toTokenAddress = usdcAddr;
+      toTokenSymbol = "USDC";
+      amountIn = sizing.amountInRaw;
+    } else {
+      fromTokenAddress = usdcAddr;
+      fromTokenSymbol = "USDC";
+      toTokenAddress = act.token_address!;
+      toTokenSymbol = act.token_symbol;
+      amountIn = String(sizeUsd);
+    }
 
-      if (result.awaitingUserConfirmation) {
-        if (!isSell) {
-          spentMap.set(follower.user_id, spentToday + sizeUsd);
-        }
-        triggered++;
-      } else if (result.securityBlocked) {
-        if (inserted) {
-          await admin
-            .from("user_copy_trades")
-            .update({ status: "failed", failure_reason: result.failureReason })
-            .eq("id", (inserted as { id: string }).id);
-        }
-        failed++;
-      } else {
-        failed++;
-        Sentry.captureMessage(`copy-trade failed: ${result.failureReason}`, {
-          tags: { user_id: follower.user_id, whale: act.whale_address },
-        });
+    const { data: inserted } = await admin
+      .from("user_copy_trades")
+      .insert({
+        user_id: follower.user_id,
+        source_whale: act.whale_address,
+        source_tx_hash: act.tx_hash,
+        token_address: act.token_address,
+        token_symbol: act.token_symbol,
+        action: isSell ? "sell" : "buy",
+        amount_usd: isSell ? null : sizeUsd,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    const result = await executeTrade({
+      userId: follower.user_id,
+      chain: act.chain,
+      walletSource,
+      fromTokenAddress,
+      fromTokenSymbol,
+      toTokenAddress,
+      toTokenSymbol,
+      amountIn,
+      slippageBps: rule.max_slippage_bps ?? 200,
+      reason: "copy_trade",
+      sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
+      sourceOrderTable: "user_copy_trades",
+    });
+
+    if (result.awaitingUserConfirmation) {
+      return { outcome: "triggered" as const, isSell, userId: follower.user_id, sizeUsd };
+    }
+    if (result.securityBlocked) {
+      if (inserted) {
+        await admin
+          .from("user_copy_trades")
+          .update({ status: "failed", failure_reason: result.failureReason })
+          .eq("id", (inserted as { id: string }).id);
       }
+      return { outcome: "failed" as const, isSell, userId: follower.user_id, sizeUsd, reason: result.failureReason ?? "securityBlocked" };
+    }
+    Sentry.captureMessage(`copy-trade failed: ${result.failureReason}`, {
+      tags: { user_id: follower.user_id, whale: act.whale_address },
+    });
+    return { outcome: "failed" as const, isSell, userId: follower.user_id, sizeUsd, reason: result.failureReason ?? "unknown" };
+  });
+
+  // 8) Tally + unclaim budget for failed/blocked buys so a later cron tick can
+  // retry within the user's cap.
+  for (const r of settled) {
+    if (r.status !== "fulfilled") { failed++; continue; }
+    const v = r.value;
+    if (v.outcome === "triggered") {
+      triggered++;
+    } else if (v.outcome === "blocked") {
+      ruleBlocked++;
+      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? v.sizeUsd) - v.sizeUsd);
+    } else {
+      failed++;
+      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? v.sizeUsd) - v.sizeUsd);
     }
   }
 

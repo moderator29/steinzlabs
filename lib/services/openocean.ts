@@ -27,7 +27,7 @@ export async function getOpenOceanQuote(params: {
   if (!slug) return null;
   try {
     const url = `https://open-api.openocean.finance/v4/${slug}/quote?inTokenAddress=${params.fromToken}&outTokenAddress=${params.toToken}&amount=${params.amount}&gasPrice=5`;
-    const res = await fetchWithRetry(url, { source: "openocean-quote", timeoutMs: 5000, retries: 2 });
+    const res = await fetchWithRetry(url, { source: "openocean-quote", timeoutMs: 3000, retries: 1 });
     if (!res.ok) return null;
     const json = (await res.json()) as { code?: number; data?: OpenOceanQuote };
     if (json.code !== 200) return null;

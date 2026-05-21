@@ -20,10 +20,15 @@
  *   Account Addresses: paste addresses from GET /api/webhooks/helius-whale
  */
 import 'server-only';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
+import { mapWithConcurrency } from '@/lib/utils/concurrency';
+
+// See alchemy-whale/route.ts MATCHER_CONCURRENCY rationale — same trade-off
+// on the Solana side (Jupiter quote + GoPlus + pending_trades insert per row).
+const MATCHER_CONCURRENCY = 8;
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -199,12 +204,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // §3 Copy-trade matcher fan-out (Solana side). Returns 500 if every row
-  // fails so Helius retries the webhook.
-  let matched = 0;
-  let failed = 0;
-  for (const r of rows) {
-    try {
+  // §3 Copy-trade matcher fan-out (Solana side) — deferred via next/server
+  // `after` so Helius gets a fast ack once whale_activity is durable. The
+  // copy-trade-monitor cron is the catch-up safety net.
+  after(async () => {
+    const settled = await mapWithConcurrency(rows, MATCHER_CONCURRENCY, async (r) => {
       await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),
         chain: String(r.chain ?? 'solana'),
@@ -217,19 +221,15 @@ export async function POST(req: NextRequest) {
         value_usd: (r.value_usd as number | null) ?? null,
         timestamp: String(r.timestamp ?? new Date().toISOString()),
       });
-      matched++;
-    } catch (e) {
-      failed++;
-      console.error('[webhook.helius-whale] copy matcher failed:', e);
+    });
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        console.error('[webhook.helius-whale] copy matcher failed:', s.reason);
+      }
     }
-  }
-  if (failed > 0 && matched === 0) {
-    return NextResponse.json(
-      { error: 'matcher_failed', inserted: rows.length },
-      { status: 500 },
-    );
-  }
-  return NextResponse.json({ ok: true, inserted: rows.length, matched, failed });
+  });
+
+  return NextResponse.json({ ok: true, inserted: rows.length, queued: rows.length });
 }
 
 export async function GET() {

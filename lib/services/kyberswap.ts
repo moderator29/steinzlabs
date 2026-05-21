@@ -29,7 +29,7 @@ export async function getKyberswapQuote(params: {
   if (!slug) return null;
   try {
     const url = `https://aggregator-api.kyberswap.com/${slug}/api/v1/routes?tokenIn=${params.fromToken}&tokenOut=${params.toToken}&amountIn=${params.amount}`;
-    const res = await fetchWithRetry(url, { source: "kyberswap-quote", timeoutMs: 5000, retries: 2 });
+    const res = await fetchWithRetry(url, { source: "kyberswap-quote", timeoutMs: 3000, retries: 1 });
     if (!res.ok) return null;
     const json = (await res.json()) as { data?: { routeSummary?: KyberswapQuote } };
     return json.data?.routeSummary ?? null;
