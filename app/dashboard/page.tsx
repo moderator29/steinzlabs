@@ -57,6 +57,27 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
     // auto-retried every 800ms, which produced an infinite spinner whenever
     // a tab (most often ProfileTab) threw deterministically on mount.
     console.error('[TabErrorBoundary] tab render threw:', error, info.componentStack);
+    // §profile-retry-old-users — ship the throw to the server so we can
+    // see the exact failure mode for existing-account-only bugs without
+    // asking the owner to copy/paste devtools. Fire-and-forget; never
+    // blocks the boundary's retry/render path.
+    try {
+      if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+        void fetch('/api/_log/client-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: error.message,
+            componentStack: info.componentStack,
+            path: window.location.pathname + window.location.search,
+            source: 'TabErrorBoundary',
+          }),
+          keepalive: true,
+        }).catch(() => { /* logging is best-effort */ });
+      }
+    } catch {
+      // ignore reporter failure
+    }
   }
   componentDidUpdate(_: { children: ReactNode }, prev: { hasError: boolean; retries: number; lastError: string | null }) {
     if (!prev.hasError && this.state.hasError) {

@@ -85,7 +85,12 @@ function FollowersTile() {
 export default function ProfileTab() {
   const { user, signOut, refreshProfile } = useAuth();
   const { tier, isPaid, verifiedBadge } = useTier();
-  const { isChosen } = useChosenStatus();
+  // §verified-badge-race — was destructuring only `{ isChosen }`. While
+  // /api/cult/me is in flight, isChosen defaults to false, so a Chosen
+  // user's badge briefly rendered as plain Max (gold) and flipped to
+  // Chosen ~300ms later. Hold the badge in a skeleton until the chosen
+  // status resolves so there's no visible mid-state flip.
+  const { isChosen, loading: chosenLoading } = useChosenStatus();
   // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
   const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
   const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
@@ -1412,7 +1417,13 @@ export default function ProfileTab() {
                 is still shown for accounts manually flagged is_verified=true
                 without any paid tier (admin/celeb verifications). */}
             {(user?.tier && user.tier !== 'free') ? (
-              <TierBadge tier={user.tier} size={16} isChosen={isChosen} />
+              chosenLoading ? (
+                // Reserve the badge slot until isChosen resolves so the
+                // gold-then-Chosen flip never happens visibly.
+                <span className="inline-block w-4 h-4 rounded-full bg-white/[0.06] animate-pulse" aria-hidden />
+              ) : (
+                <TierBadge tier={user.tier} size={16} isChosen={isChosen} />
+              )
             ) : user?.is_verified ? (
               <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />
             ) : null}

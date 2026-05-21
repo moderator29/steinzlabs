@@ -528,7 +528,30 @@ function VtxAiPageInner() {
       syncHistoryToSupabase(messages);
     }
   }, [messages]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // §vtx-scroll-race — was scrollIntoView({ behavior: 'smooth' }) on every
+  // messages change, INCLUDING the initial mount when loadHistory() hydrates
+  // 50+ cached messages from localStorage / Supabase for existing accounts.
+  // The smooth-scroll starts before layout completes, lands mid-chat, and
+  // owners with long history saw a partial VTX page until they scrolled.
+  // Fix: first paint = instant jump to bottom (no animation, layout-stable).
+  // Subsequent appends = smooth-scroll as before. Track prev count via ref.
+  const prevMsgCountRef = useRef<number>(0);
+  useEffect(() => {
+    const node = messagesEndRef.current;
+    if (!node) return;
+    const isFirstPaint = prevMsgCountRef.current === 0 && messages.length > 0;
+    const grew = messages.length > prevMsgCountRef.current;
+    prevMsgCountRef.current = messages.length;
+    if (isFirstPaint) {
+      // 'auto' = instant; double-RAF lets the messages container measure
+      // its full height before we jump so the bottom is actually reachable.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        node.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }));
+    } else if (grew) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [messages]);
 
   const isPro = tier === 'pro';
 
