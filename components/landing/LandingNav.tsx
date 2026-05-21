@@ -30,10 +30,14 @@ export function LandingNav() {
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10' : ''}`}
         style={{ background: scrolled ? 'rgba(7,9,15,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none' }}
       >
-        <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <SteinzLogo size={28} animated={false} />
-            <span className="font-bold text-[14px] tracking-[3px] text-white/90" style={{ letterSpacing: 3 }}>NAKA LABS</span>
+            {/* §nav-polish — wordmark tracking dropped from 3px to 2px and
+                font-size scales up at sm+. Owner reported the 3px letter-
+                spacing on a 14px line pushed the wordmark wide enough that
+                the adjacent CULT pill touched it on mobile. */}
+            <span className="font-bold text-[13px] sm:text-[14px] text-white/90 whitespace-nowrap" style={{ letterSpacing: 2 }}>NAKA LABS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7">
@@ -43,7 +47,7 @@ export function LandingNav() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <GlobalControls className="hidden sm:flex" />
             {/* NakaCult landing toggle — flips the user to the token-gated
                 cult marketing surface (/naka-cult) so they can read the
@@ -68,9 +72,15 @@ export function LandingNav() {
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>
+            {/* §nav-polish — Get Started was wrapping to two lines on
+                mobile because the parent flex row had no room and the
+                button had no whitespace-nowrap. Made the button a clean
+                square-cornered rounded-xl pill, single line, with a
+                tighter font on phones. text-[13px] on mobile keeps the
+                button compact next to the CULT pill + hamburger. */}
             <Link href="/signup"
-              className="h-11 px-5 rounded-full text-sm font-bold text-white flex items-center transition-all hover:scale-105"
-              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 20px rgba(10,30,255,.35)' }}>
+              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-[13px] sm:text-sm font-bold text-white flex items-center whitespace-nowrap transition-all hover:scale-[1.03]"
+              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 20px rgba(10,30,255,.35)', letterSpacing: '0.01em' }}>
               Get Started
             </Link>
             <button className="md:hidden text-white/60 hover:text-white" onClick={() => setOpen(true)}>
