@@ -441,7 +441,12 @@ export default function Dashboard() {
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-gray-400" />}
+              {/* §hamburger-visibility — Menu icon was text-gray-400 on
+                  a near-black header background which left it nearly
+                  invisible while the button's click area still worked.
+                  X has no color override and inherits white; matching
+                  that for the hamburger keeps both states legible. */}
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
             </button>
             <SteinzLogo size={28} animated={false} />
             <div className="flex items-center gap-1.5">
