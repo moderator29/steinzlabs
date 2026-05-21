@@ -141,11 +141,19 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
         }
         const data = await res.json();
         if (cancelled) return;
+        // §swap-price-solana — accept `priceImpact` (legacy numeric)
+        // OR the new normalised `priceImpactPct` (string from Jupiter
+        // and from 0x's estimatedPriceImpact). Parse to a number.
+        const priceImpactFromResp = typeof data?.priceImpact === 'number'
+          ? data.priceImpact
+          : (typeof data?.priceImpactPct === 'string'
+            ? parseFloat(data.priceImpactPct) || 0
+            : swap.priceImpact);
         const next: SwapCardData = {
           ...swap,
-          toAmount: data?.toAmount ? String(data.toAmount) : swap.toAmount,
+          toAmount: data?.toAmount ?? data?.buyAmount ? String(data.toAmount ?? data.buyAmount) : swap.toAmount,
           rate: data?.rate ? String(data.rate) : swap.rate,
-          priceImpact: typeof data?.priceImpact === 'number' ? data.priceImpact : swap.priceImpact,
+          priceImpact: priceImpactFromResp,
           platformFee: data?.platformFee ? String(data.platformFee) : swap.platformFee,
           quoteData: data?.quoteData || swap.quoteData,
         };
