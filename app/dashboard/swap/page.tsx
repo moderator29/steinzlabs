@@ -18,6 +18,7 @@ import { HAS_APPKIT } from '@/lib/wallet/appkit';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
+import { OrderForm } from '@/components/trading/OrderForm';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -366,6 +367,10 @@ export default function SwapPage() {
   // toggle manually via SettingsPanel.
   const [mevProtect, setMevProtect] = useState<boolean>(false);
   const [sandwichRisk, setSandwichRisk] = useState<number | null>(null);
+  // §advanced-orders — Limit / DCA / Stop-loss orderform is purpose-built
+  // at components/trading/OrderForm.tsx (4 tabs). Collapsed by default
+  // so the market-swap UX stays the lead surface.
+  const [showAdvancedOrders, setShowAdvancedOrders] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
   // Industry-standard pre-confirm security gating — when the review
@@ -1568,6 +1573,40 @@ export default function SwapPage() {
                 </span>
               </div>
             )}
+
+            {/* §advanced-orders — Limit / DCA / Stop+TP order types are
+                implemented as full API + cron monitor stacks (/api/trading/
+                limit-orders, dca-bots, stop-loss). The UI module
+                (components/trading/OrderForm) was already built with 4
+                tabs but had no entry point. Surface it here as a
+                collapsible block so the user can place advanced orders
+                without leaving the swap page. */}
+            <div className="mt-3 bg-[#0f1320]/60 rounded-2xl border border-white/[0.04] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedOrders((v) => !v)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                aria-expanded={showAdvancedOrders}
+              >
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                  <span className="text-xs text-gray-300 font-semibold">Advanced orders</span>
+                  <span className="text-[10px] text-gray-500">Limit · DCA · Stop · Take-profit</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-gray-500 transition-transform ${showAdvancedOrders ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {showAdvancedOrders && (
+                <div className="border-t border-white/[0.04] max-h-[600px] overflow-y-auto">
+                  <OrderForm
+                    chain={chain}
+                    tokenAddress={getTokenAddresses(fromToken, toToken, chain).buyToken}
+                    tokenSymbol={toToken}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {hasQuote && (
