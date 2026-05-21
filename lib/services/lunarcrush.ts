@@ -171,6 +171,50 @@ export async function getSocialTimeline(
   });
 }
 
+export interface SocialVelocity {
+  symbol: string;
+  tweets_6h: number;
+  tweets_24h: number;
+  // Rate-normalized: how much faster the last 6h is running vs the 24h
+  // average. +400 means 5x the average hourly rate; 0 means on pace.
+  velocity_pct: number;
+  // Galaxy-score delta over the same 6h window vs the prior 6h. Positive
+  // = sentiment improving, negative = deteriorating. Range typically -50..+50.
+  sentiment_shift: number;
+}
+
+export async function getSocialVelocity(symbol: string): Promise<SocialVelocity | null> {
+  const key = cacheKey('lunarcrush', 'velocity_6h', { symbol: symbol.toUpperCase() });
+  return withCache(key, TTL.SOCIAL_SENTIMENT, async () => {
+    const series = await getSocialTimeline(symbol, '1h');
+    // Need at least 12 buckets (last-6h + prior-6h) to compute sentiment_shift.
+    if (series.length < 12) return null;
+
+    // Series comes oldest-first from LunarCrush; take the tail for the most
+    // recent windows.
+    const last6 = series.slice(-6);
+    const prior6 = series.slice(-12, -6);
+    const last24 = series.slice(-24);
+
+    const sum = (rows: SocialDataPoint[], key: keyof SocialDataPoint) =>
+      rows.reduce((acc, r) => acc + (Number(r[key]) || 0), 0);
+    const avg = (rows: SocialDataPoint[], key: keyof SocialDataPoint) =>
+      rows.length ? sum(rows, key) / rows.length : 0;
+
+    const tweets_6h = sum(last6, 'socialVolume');
+    const tweets_24h = sum(last24, 'socialVolume');
+
+    // Hourly rate over the 6h window vs the 24h baseline hourly rate.
+    const last6Rate = tweets_6h / 6;
+    const base24Rate = tweets_24h / 24;
+    const velocity_pct = base24Rate > 0 ? Math.round(((last6Rate / base24Rate) - 1) * 100) : 0;
+
+    const sentiment_shift = Math.round(avg(last6, 'socialScore') - avg(prior6, 'socialScore'));
+
+    return { symbol: symbol.toUpperCase(), tweets_6h, tweets_24h, velocity_pct, sentiment_shift };
+  });
+}
+
 export async function getInfluencerActivity(symbol: string): Promise<InfluencerPost[]> {
   const key = cacheKey('lunarcrush', 'influencers', { symbol: symbol.toUpperCase() });
   return withCache(key, TTL.SOCIAL_SENTIMENT, async () => {

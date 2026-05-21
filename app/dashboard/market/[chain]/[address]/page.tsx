@@ -26,6 +26,7 @@
 import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2 } from "lucide-react";
+import SocialVelocityPill from "@/components/market/SocialVelocityPill";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from "@/components/TradingViewChart";
 import { AdvancedChart } from "@/components/trading/AdvancedChart";
@@ -203,6 +204,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               <span className="text-sm font-bold truncate">{name}</span>
               <span className="text-[10px] uppercase text-slate-500">{symbol}</span>
               <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400">{chain}</span>
+              <SocialVelocityPill symbol={symbol} />
             </div>
             {/* Audit B4 / P0 — wrapped-asset honesty label. When the
                 canonical asset (BTC, ETH on L2, etc) is not native to
