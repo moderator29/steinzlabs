@@ -31,6 +31,42 @@ roadmap and serve them**. Otherwise, work the §3 P1 backlog top-down.
 
 ---
 
+## §0.5 API decisions LOCKED — do not re-evaluate
+
+The owner has already chosen these. Future sessions must NOT propose
+alternatives unless explicitly asked.
+
+| Capability | Provider | Env var | Status |
+|---|---|---|---|
+| **Cross-chain bridge + cross-chain swap** | **LiFi** | `LIFI_API_KEY` | ✅ Set in Vercel |
+| EVM aggregated swap | 0x | `ZEROX_API_KEY` | ✅ Live |
+| EVM multi-aggregator routing (best-of-3) | 1inch + KyberSwap + OpenOcean | their respective keys | ✅ Live (`/api/swap/routes`) |
+| Solana swap | Jupiter | `JUPITER_*` | ✅ Live |
+| EVM private mempool (sandwich protection) | Flashbots Protect RPC | `FLASHBOTS_PROTECT_RPC` | ✅ Live |
+| BSC private mempool | BloxRoute | `BLOXROUTE_BSC_URL` + `BLOXROUTE_AUTH` | ✅ Live |
+| Solana private mempool | Jito bundles | `JITO_BLOCK_ENGINE_URL` | ✅ Live |
+| EVM RPC + indexing | Alchemy | `ALCHEMY_API_KEY` | ✅ Live |
+| Solana RPC + indexing | Helius | `HELIUS_API_KEY` | ✅ Live |
+| Market data | CoinGecko (primary), DexScreener (DEX), GeckoTerminal (fallback) | `COINGECKO_API_KEY` | ✅ Live |
+| Token security scan | GoPlus (primary), Honeypot.is + De.Fi + RugCheck triangulation | `GOPLUS_API_KEY` | ✅ Live |
+| Social signals (Galaxy / Alt-rank / sentiment) | LunarCrush | `LUNARCRUSH_API_KEY` | ✅ Live |
+| Bot protection | Cloudflare Turnstile | `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | ✅ Live |
+| **Onchain SQL + materialized queries** | **Dune Analytics (Analyst plan when shipping)** | `DUNE_API_KEY` | ⏳ Owner upgrades when wiring lands |
+| **Realtime wallet API** | **Sim by Dune** | `SIM_API_KEY` | ⏳ Add when wallet pages need sub-block freshness |
+| LLM (VTX agent) | Anthropic Claude (Sonnet 4.6 executor + Opus 4.6 advisor) | `ANTHROPIC_API_KEY` | ✅ Live |
+| Database + auth | Supabase | standard env | ✅ Live |
+| Push notifications | VAPID Web Push | `VAPID_*` | ✅ Live |
+| Telegram delivery | Telegram Bot API | `TELEGRAM_BOT_TOKEN` | ✅ Live |
+| Email | TBD (Resend / Postmark) | — | ⏳ Wire when alert digests ship |
+| Hosting | Vercel | — | ✅ Live |
+
+**Translation for next session**: when the roadmap says "bridge",
+"cross-chain swap", "LiFi", or "auto-bridge a token from chain A to
+chain B before swap" → you reach for `LIFI_API_KEY` and the LiFi
+TypeScript SDK. No other bridge aggregator on this platform.
+
+---
+
 ## §1 Locked rules — non-negotiable
 
 These are the owner's rules; they apply on every action.
@@ -227,7 +263,13 @@ quotes serially via `fetchWithRetry(timeoutMs=8000)`. Three sub-fixes:
 
 **Branch**: `feat/lifi-bridge-and-social-discovery`
 
-`LIFI_API_KEY` is already in env per the owner.
+**API DECISION LOCKED**: LiFi is the chosen bridge + cross-chain swap
+aggregator for the entire platform. `LIFI_API_KEY` is already set in
+Vercel env. Do not evaluate Squid / Across / Stargate / Wormhole
+directly — LiFi already aggregates all of them under one SDK, one
+quote, one execute. Every bridge / cross-chain surface in the roadmap
+(P1-C below, P2-D Account Abstraction, anywhere cross-chain shows
+up) routes through LiFi.
 
 1. **LiFi bridge integration** — single aggregator covers Stargate +
    Across + Hop + deBridge + Wormhole. Three pieces:
