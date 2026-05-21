@@ -163,6 +163,11 @@ export async function getSwapQuote(params: {
   buyToken: string;
   sellAmount: string;
   taker: string;
+  // §3 P1-D.3 — opt into 0x's Permit2 endpoint so first-time swappers
+  // don't need a separate approval tx (the permit signature + swap go in
+  // one click). Callers set this when the from-token has no pre-existing
+  // allowance against the 0x AllowanceHolder.
+  permit2?: boolean;
 }): Promise<ZxQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
   const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.004';
@@ -179,7 +184,8 @@ export async function getSwapQuote(params: {
     qs.set('buyTokenPercentageFee', feePct);
   }
 
-  const res = await fetchWithRetry(`${BASE_URL}/swap/allowance-holder/quote?${qs}`, {
+  const path = params.permit2 ? '/swap/permit2/quote' : '/swap/allowance-holder/quote';
+  const res = await fetchWithRetry(`${BASE_URL}${path}?${qs}`, {
     headers: getHeaders(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -189,6 +195,64 @@ export async function getSwapQuote(params: {
     throw new Error(`0x Swap quote error (${res.status}): ${text}`);
   }
   return res.json();
+}
+
+/**
+ * §3 P1-D.3 — light allowance probe. Calls the ERC20 `allowance(owner,
+ * spender)` view via the chain's public RPC and returns `true` when the
+ * existing allowance is below the requested sellAmount (so the caller
+ * should switch to the Permit2 endpoint above). Falls open (returns
+ * false) on RPC errors — better to do the legacy 2-tx flow than to
+ * block the swap on a transient RPC blip.
+ *
+ * 0x's universal Permit2 spender is the same across all EVM chains it
+ * supports: 0x000000000022D473030F116dDEE9F6B43aC78BA3.
+ */
+const PERMIT2_SPENDER = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
+const RPC_BY_CHAIN_ID: Record<number, string | undefined> = {
+  1:     process.env.ETHEREUM_RPC_URL ?? (process.env.ALCHEMY_API_KEY ? `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
+  8453:  process.env.BASE_RPC_URL     ?? (process.env.ALCHEMY_API_KEY ? `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
+  42161: process.env.ARBITRUM_RPC_URL ?? (process.env.ALCHEMY_API_KEY ? `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
+  137:   process.env.POLYGON_RPC_URL  ?? (process.env.ALCHEMY_API_KEY ? `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
+  10:    process.env.OPTIMISM_RPC_URL ?? (process.env.ALCHEMY_API_KEY ? `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
+  56:    process.env.BSC_RPC_URL      ?? 'https://bsc-dataseed.binance.org',
+};
+
+export async function needsPermit2(params: {
+  chainId: number;
+  sellToken: string;
+  owner: string;
+  sellAmount: string;
+}): Promise<boolean> {
+  const rpc = RPC_BY_CHAIN_ID[params.chainId];
+  if (!rpc) return false;
+  // Native asset (no allowance concept) — never needs Permit2.
+  if (params.sellToken.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') return false;
+
+  // allowance(owner, spender) selector = 0xdd62ed3e
+  const owner = params.owner.toLowerCase().replace(/^0x/, '').padStart(64, '0');
+  const spender = PERMIT2_SPENDER.toLowerCase().replace(/^0x/, '').padStart(64, '0');
+  const data = `0xdd62ed3e${owner}${spender}`;
+
+  try {
+    const res = await fetch(rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'eth_call',
+        params: [{ to: params.sellToken, data }, 'latest'],
+      }),
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) return false;
+    const json = (await res.json()) as { result?: string };
+    if (!json.result || json.result === '0x') return false;
+    const allowance = BigInt(json.result);
+    const requested = BigInt(params.sellAmount);
+    return allowance < requested;
+  } catch {
+    return false;
+  }
 }
 
 // ─── GASLESS API ─────────────────────────────────────────────────────────────

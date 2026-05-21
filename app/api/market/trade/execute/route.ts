@@ -1,7 +1,8 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getSwapQuote, getChainId } from '@/lib/services/zerox';
+import { getSwapQuote, getChainId, needsPermit2 } from '@/lib/services/zerox';
+import { checkOfac } from '@/lib/security/ofac';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
 import { resolveTokenAddress } from '@/lib/market/tokenResolver';
@@ -58,11 +59,31 @@ export async function POST(req: NextRequest) {
       }, { status: 200 });
     }
 
+    // §3 P1-D.4 — OFAC blocklist gate. Refuse to quote a swap when the
+    // taker is sanctioned. Falls open if Chainalysis is unreachable.
+    const ofac = await checkOfac(walletAddress);
+    if (ofac.sanctioned) {
+      return NextResponse.json({
+        blocked: true,
+        blockReason: 'Wallet appears on the OFAC SDN list',
+        ofac,
+      }, { status: 403 });
+    }
+
     // Step 2: Get 0x swap quote
     const chainId = getChainId(chain);
     if (!chainId) {
       return NextResponse.json({ error: `Unsupported chain: ${chain}` }, { status: 400 });
     }
+
+    // §3 P1-D.3 — auto-select Permit2 endpoint when the user has no
+    // existing allowance, so the swap is 1 tx instead of 2.
+    const permit2 = await needsPermit2({
+      chainId,
+      sellToken: resolvedIn,
+      owner: walletAddress,
+      sellAmount: amountIn,
+    });
 
     const quote = await getSwapQuote({
       chainId,
@@ -70,6 +91,7 @@ export async function POST(req: NextRequest) {
       buyToken: resolvedOut,
       sellAmount: amountIn,
       taker: walletAddress,
+      permit2,
     });
 
     // Platform fee is included via feeRecipient in zerox.ts
