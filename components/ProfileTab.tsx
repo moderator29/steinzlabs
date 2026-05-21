@@ -1542,13 +1542,23 @@ export default function ProfileTab() {
       <SectionLabel>Plan</SectionLabel>
       {(() => {
         const tier = user?.tier ?? 'free';
+        // §profile-naka_cult-crash — planDetails was hardcoded for the
+        // four Stripe tiers (free/mini/pro/max) but the apex 'naka_cult'
+        // tier wasn't in the map. ProfileTab read `d.name` on the next
+        // line, so any NakaCult member (Chosen included) crashed the
+        // entire Profile tab with TypeError: Cannot read properties of
+        // undefined (reading 'name'). Owner's Sentry-silent Retry loop
+        // was caused by this + the reporter route 404 (separately fixed).
+        // Added a naka_cult entry plus a defensive fallback to free
+        // so any future tier additions never crash the tab.
         const planDetails: Record<string, { name: string; summary: string; features: string[] }> = {
           free: { name: 'Free Tier', summary: '25 VTX messages/day · basic intelligence', features: ['Unlimited VTX AI messages', 'Priority market data', 'Advanced DNA analysis', 'Early feature access'] },
           mini: { name: 'Mini Plan', summary: '100 VTX messages/day · full intelligence', features: ['100 VTX messages/day', 'Full intelligence suite', '10 price alerts', 'Access to Whale Tracker'] },
           pro:  { name: 'Pro Plan',  summary: 'Unlimited VTX · all features · gasless swaps', features: ['Unlimited VTX AI messages', 'Gasless swaps', '50 price alerts', 'Copy trading', 'Priority support'] },
           max:  { name: 'Max Plan',  summary: 'Everything in Pro · Sniper Bot · early access', features: ['Everything in Pro', 'Sniper Bot (Max exclusive)', 'Unlimited alerts', 'Priority support', 'Early feature access'] },
+          naka_cult: { name: 'NakaCult', summary: 'Held by sigil, not subscription · all Max benefits + Vault access', features: ['Everything in Max', 'The Vault (Conclave / Oracle / Sanctum)', 'Daily Seal briefings', 'Whisper Network (E2E DMs)', 'Chosen Seal trim (Dev NFT)', 'Membership held on-chain by NAKA / NFT'] },
         };
-        const d = planDetails[tier];
+        const d = planDetails[tier] ?? planDetails.free;
         return (
           <div className="glass rounded-lg border border-white/10 mb-4 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
