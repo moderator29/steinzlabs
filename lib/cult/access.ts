@@ -18,7 +18,25 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import * as Sentry from "@sentry/nextjs";
 import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
+
+/**
+ * Surface a denial both to the Vercel runtime log (instant grep) AND
+ * to Sentry (daily digest, owner-visible). console.warn alone wasn't
+ * reaching the owner's Sentry feed which is where they actually
+ * monitor — they got zero events for the Vault "try again" loop and
+ * thought the diagnostic was broken. captureMessage with structured
+ * tags makes the denial filterable in Sentry by reason.
+ */
+function reportDenial(reason: string, context: Record<string, unknown>) {
+  console.warn(`[cult/access] DENIED ${reason}`, context);
+  Sentry.captureMessage(`cult-access-denied: ${reason}`, {
+    level: 'warning',
+    tags: { area: 'cult-access', reason },
+    contexts: { 'cult-access': context as Record<string, unknown> },
+  });
+}
 
 export interface CultAccess {
   allowed: boolean;
@@ -45,12 +63,10 @@ export async function getCultAccess(): Promise<CultAccess> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) {
-    // §vault-entry-retry-loop — owner reports a "try again" loop on
-    // /vault even though their DB row has tier=naka_cult, is_chosen=true,
-    // tier_expires_at=null. Diagnostic logging surfaces the exact denial
-    // reason on the next prod hit. Once the loop is reproduced server-
-    // side and root-caused, this logging can be reduced or removed.
-    console.warn('[cult/access] DENIED env: supabaseUrl or anonKey missing');
+    reportDenial('env-missing', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasAnonKey: !!anonKey,
+    });
     return DENIED;
   }
 
@@ -65,9 +81,10 @@ export async function getCultAccess(): Promise<CultAccess> {
   const { data: auth, error: authErr } = await supabase.auth.getUser();
   const user = auth?.user;
   if (!user) {
-    console.warn('[cult/access] DENIED no-user', {
+    reportDenial('no-user', {
       cookieCount: allCookies.length,
       hasSbCookie: allCookies.some((c) => c.name.startsWith('sb-')),
+      sbCookieNames: allCookies.filter((c) => c.name.startsWith('sb-')).map((c) => c.name),
       authError: authErr?.message ?? null,
     });
     return DENIED;
@@ -88,7 +105,7 @@ export async function getCultAccess(): Promise<CultAccess> {
   const result = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "naka_cult");
 
   if (!result.allowed) {
-    console.warn('[cult/access] DENIED tier-check', {
+    reportDenial('tier-check', {
       userId: user.id,
       rawTier: profile?.tier ?? null,
       currentTier: result.currentTier,
