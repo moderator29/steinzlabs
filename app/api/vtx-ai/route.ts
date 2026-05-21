@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
 import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
+import { dispatchP2BTool } from '@/lib/ai/vtxToolsP2B';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
@@ -767,7 +768,13 @@ async function executeVTXTool(
     case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
     case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
     case 'coingecko_market_data': return executeCoingeckoMarketData(toolInput);
-    default:                     return `Unknown tool: ${toolName}`;
+    default: {
+      // §3 P2-B — 10 new tools live in lib/ai/vtxToolsP2B and dispatch via
+      // a shared helper so this main dispatcher stays readable.
+      const p2b = await dispatchP2BTool(toolName, toolInput, userId);
+      if (p2b !== null) return p2b;
+      return `Unknown tool: ${toolName}`;
+    }
   }
 }
 
