@@ -287,7 +287,8 @@ provider's `quoteData` blob.
 
 ## §4 P2 backlog — polish + differentiation
 
-Group into 3 branches when work begins. Not yet sequenced.
+Verbatim from the owner's roadmap. Every line is an explicit deliverable.
+Group into 7 branches (P2-A → P2-G) when work begins.
 
 ### P2-A: Charting depth
 
@@ -301,7 +302,8 @@ Group into 3 branches when work begins. Not yet sequenced.
 
 ### P2-B: VTX tool depth
 
-P1 of the audit listed **21 missing VTX tools**. Top-priority adds:
+Per the agent audit there are **21 missing VTX tools**. Add these in
+this priority order:
 
 - `whale_tracker_specific(address)` — recent moves + sentiment for one whale
 - `realized_pnl_30d(address)` — wallet PnL over exactly 30 days
@@ -323,37 +325,66 @@ P1 of the audit listed **21 missing VTX tools**. Top-priority adds:
 - Color-coding by entity type (exchange / MM / smart money / new)
 - Path-finding between two addresses (BFS on edges graph)
 - OFAC / Tornado.Cash adjacency flags
+- Time-range scrub (animate graph over time)
 - Export PNG / share-link
 
-### P2-D: Wallet + send/receive hardening
+### P2-D: Trading + signing UX
 
+- **Session-key signing for `auto_copy` mode** — true async copy
+  execution (no browser prompt). Issue ephemeral session keys for
+  copy-trade scope; `auto_copy` users pre-sign with session-key
+  scope, no per-trade confirm needed. Drops 5s wallet signing delay
+  to 0 on every copied trade.
+- **Bubblemap in-page on token detail** — embed
+  `/api/intelligence/bubblemaps/[token]` visualization directly on
+  the token detail page (holder cluster graph, linked by transfer
+  amounts, sized by holding %). Currently only available via the
+  separate bubble-map page; needs to be a panel on every token.
 - Cancel / replace EVM tx (0-eth tx with same nonce)
-- Account abstraction (ERC-4337) for EVM
+- **Account abstraction (ERC-4337)** for EVM swaps — smart-wallet
+  support, sponsored gas, batched approvals
 - Hardware wallet support (Ledger, Trezor) via WalletConnect
 - NFT send flow
-- Approval audit panel (extend the approval_audit VTX tool)
+- Approval audit panel (extend the `approval_audit` VTX tool)
 
 ### P2-E: Reputation feedback loop
 
 Today the security system has no learning loop — when a user buys a
 token via the platform and it later rugs, the deployer score doesn't
-update. Build a `rug_event_reports` table + a cron that re-scores
-deployers when reports accumulate. Wire into VTX context.
+update. Build:
 
-### P2-F: SMS / Discord delivery + alert templates
+- `rug_event_reports` table (user_id, token_address, deployer_address,
+  buy_tx_hash, buy_price, current_price, reported_at, confidence)
+- Cron `/api/cron/reputation-feedback` that:
+  - Polls user_copy_trades + swap_logs for executed buys
+  - Compares current price to buy price for tokens last seen >7d ago
+  - Auto-files a `rug_event_report` when current_price < 5% of buy_price
+- Updates `deployer_history_cache.band` when ≥2 rug reports against
+  a deployer accumulate (band drops by one tier per pair of reports)
+- Surfaces in VTX context: "this deployer has 3 rugged tokens
+  reported by your platform" alongside the existing Etherscan band
 
-- Twilio SMS for tier ≥ Pro
-- Discord webhook channels per user
-- Alert templates ("Smart-money X bought a microcap in last 5min")
-- Cool-down windows (don't spam same alert in 60s)
-- Alert digests (daily summary)
-- User-defined queries ("alert when ANY whale I follow buys a microcap")
+### P2-F: Notifications depth
+
+- **Conditional alerts (X AND Y)** — composite predicates, not just
+  single thresholds. Example: "ETH < $2500 AND BTC > $80K"
+- **Tier-gated alert limits** — Free: 5 alerts, Pro: 50, Max: unlimited
+- **Cool-down windows** — don't spam same alert within 60s
+- **Alert digests** (daily summary) — `notification-digest` cron
+  exists; extend to include daily roll-up
+- **User-defined queries** — "alert when ANY whale I follow buys a
+  microcap" via a DSL or query-builder UI
+- **Discord webhook channels** per user
+- **Twilio SMS** for tier ≥ Pro
+- **Alert templates** — pre-built ("Smart-money X bought a microcap
+  in last 5 min", "Whale Y just dumped >$100K of $Z")
 
 ### P2-G: Tax + portfolio depth
 
-- Tax-loss harvesting suggestions (US users)
-- CSV export (transactions + holdings + PnL summary)
-- Wash-trade detection (same symbol within 30d)
+- **Tax-loss harvesting suggestions** (US users) — identify positions
+  with realized losses available for harvest
+- **CSV export** (transactions + holdings + PnL summary) per chain
+- **Wash-trade detection** — same symbol within 30d window flag
 
 ---
 
@@ -421,19 +452,67 @@ CREATE TABLE dune_budget (
 CREATE INDEX ON dune_budget(occurred_at DESC);
 CREATE INDEX ON dune_budget(user_id, occurred_at DESC);
 
--- Materialized snapshots (one table per long-lived query)
+-- Materialized snapshots — one table per long-lived query
 CREATE TABLE dune_holder_concentration (
   chain text, token_address text, token_symbol text,
   top10_pct numeric, top100_pct numeric, gini numeric,
   nakamoto_coefficient int, updated_at timestamptz,
   PRIMARY KEY (chain, token_address)
 );
+
 CREATE TABLE dune_smart_money_score (
-  wallet text, score int, tier text,
+  wallet text PRIMARY KEY,
+  score int, tier text,                -- S / A / B
   pnl_90d numeric, win_rate numeric,
-  updated_at timestamptz, PRIMARY KEY (wallet)
+  total_trades int, updated_at timestamptz
 );
--- ...similar for cluster_aggregates, bridge_flows, etc.
+
+CREATE TABLE dune_cluster_aggregates (
+  cluster_id uuid PRIMARY KEY,
+  member_count int, total_aum_usd numeric,
+  dominant_label text, dominant_token_pct numeric,
+  updated_at timestamptz
+);
+
+CREATE TABLE dune_bridge_flows (
+  source_chain text, dest_chain text,
+  window_hours int,
+  net_usd numeric, top_token text,
+  updated_at timestamptz,
+  PRIMARY KEY (source_chain, dest_chain, window_hours)
+);
+
+CREATE TABLE dune_wash_trade_score (
+  chain text, token_address text,
+  wash_pct_24h numeric, updated_at timestamptz,
+  PRIMARY KEY (chain, token_address)
+);
+
+CREATE TABLE dune_deployer_history (
+  chain text, deployer_address text,
+  tokens_deployed int, rugs_detected int,
+  abandoned int, active int,
+  trust_score int, band text,
+  updated_at timestamptz,
+  PRIMARY KEY (chain, deployer_address)
+);
+
+-- Extend existing wallet_edges with Dune-sourced edge types
+ALTER TABLE wallet_edges
+  ADD COLUMN IF NOT EXISTS source text,  -- 'whale_activity' | 'dune_funding' | 'dune_cex_codeposit' | 'dune_tc_probable' | 'dune_behavioral'
+  ADD COLUMN IF NOT EXISTS weight numeric,
+  ADD COLUMN IF NOT EXISTS dune_query_id text;
+
+-- VTX alert subscriptions backed by Dune queries
+CREATE TABLE dune_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id),
+  condition_json jsonb NOT NULL,        -- { query_id, params, threshold }
+  channel text CHECK (channel IN ('push','telegram','email','discord')),
+  last_fired_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX ON dune_alerts(user_id);
 ```
 
 ### 5.4 First 7 materialized queries (Analyst plan, ~2,400 cr/mo)
@@ -448,18 +527,161 @@ CREATE TABLE dune_smart_money_score (
 | Smart-money inflow (top 200 tokens) | 6h | ~40 | Context feed cards + VTX |
 | Bridge flows (last 24h, per chain pair) | 12h | ~20 | Context feed bridge cards |
 
-### 5.5 VTX agent additions (highest leverage)
+### 5.5 VTX agent — all 17 Dune-powered tools
 
-Top 5 to wire first (in this order):
+**Ship in priority order.** Top 5 first (single-month sprint), the rest
+P2 to P3 as Analyst plan credits allow.
+
+**Tier 1 (must-have, ship first):**
 
 1. `dune_smart_money_inflow(token, hours)` → "27 smart-money wallets
-   bought $X in 24h, net +$340K, top wallet 0xabc ($48K)"
-2. `dune_holder_concentration(token)` → top10 %, gini, Nakamoto
-3. `dune_whale_pnl(address, days)` → realized + unrealized PnL
-4. `dune_compare_tokens([syms])` → side-by-side
-5. `dune_sandwich_risk(token, size)` → pre-trade warning
+   bought $X in 24h, net +$340K, top wallet 0xabc ($48K)" —
+   single highest-leverage tool
+2. `dune_holder_concentration(token)` → top-10 / top-100 %, Gini,
+   Nakamoto coefficient
+3. `dune_whale_pnl(address, 30d)` → FIFO realized + unrealized,
+   win rate, total trades, best/worst
+4. `dune_token_age_buyers(token)` → first 100 buyers still holding %,
+   diamond-hand identification
+5. `dune_sandwich_risk(token, size)` → pre-trade warning using
+   historical sandwich rate on this pool
 
-The other 15 from §III.6 of the audit report are P2.
+**Tier 2 (ship as Analyst budget allows):**
+
+6. `dune_compare_tokens([...])` → multi-token side-by-side (volume,
+   holders, smart-money flow, performance, concentration)
+7. `dune_bridge_flows(chain, 24h)` → cross-chain capital movement
+   (net inflow / outflow, top origin chains, top tokens bridged)
+8. `dune_cex_flow(token, 24h)` → net CEX inflow / outflow per
+   exchange (Binance / Coinbase / OKX)
+9. `dune_label_address(addr)` → Dune label propagation
+   (Wintermute, Jump, etc., with confidence + related addresses)
+10. `dune_find_wallets_like(ref)` → behavioral similarity score
+    (cluster-mates, copy-traders, sybils)
+11. `dune_cluster_of(addr)` → reads our `wallet_edges` + Dune labels
+    to return cluster_id, member_count, total_aum, dominant_label
+12. `dune_top_traders(token, by=pnl|volume, lookback=30d)` →
+    token-specific leaderboard
+13. `dune_new_token_scanner(min_smart_buys=3, max_age_hours=24)` →
+    discovery feed of new tokens with smart-money buys
+14. `dune_mev_loss_report(addr, 30d)` → "you lost $X to sandwiches"
+    per-user retrospective
+15. `dune_stablecoin_pulse(USDT|USDC|all, hours)` → mint/burn velocity
+16. `dune_insider_check(token)` → deployer + first-funded wallets
+    pattern check
+17. `dune_alert_subscribe(condition)` → VTX-initiated alerts on Dune
+    thresholds (cron-scheduled recurring check)
+
+### 5.6 Dune use surfaces — every feature, every enhancement
+
+**Verbatim from the audit. Every bullet ships its own panel / card /
+widget.**
+
+#### On Whale Tracker (6 enhancements)
+
+- Accumulator vs Distributor classification (30d net flow from
+  `dex.trades` + `erc20.transfers`)
+- Whale PnL leaderboards with cohort tiers (S / A / B)
+- Cross-chain whale identity (bridge sender → receiver matching
+  via `bridges.transfers`)
+- First-mover detection (first 100 buyers of any token, ordered by
+  `block_time` ASC)
+- Whale → whale funding graph (direct sends between tracked whales)
+- Position-size-of-portfolio % (conviction: what % of wallet's
+  deployed capital sits in this single position)
+
+#### On Trading Terminal (7 enhancements)
+
+- Holder concentration panel (Dune-computed top-10/top-100, gini,
+  Nakamoto — replaces GoPlus snapshot which is point-in-time only)
+- Smart-money net flow per token (15-min refresh, mini-chart overlay
+  on price chart as green/red histogram)
+- Holder cohort bands (diamond-hand %: <1d, 1-7d, 7-30d, 30d+, 1y+)
+- Wash trading score (% of 24h volume flagged as wash via circular
+  A→B→A patterns + same-wallet self-trades + MEV-adjacent)
+- LP provider health (LP add/remove flow last 7d, IL exposure)
+- First-buyer performance ("72/100 first buyers still hold,
+  avg +840%")
+- Whales-holding-this-token list (mini-list of platform-tracked
+  whales with positions)
+
+#### On Context Feed (8 card types)
+
+- Bridge flow alerts (ETH → Base / Arbitrum surges)
+- Smart-money rotation cards (tokens ≥10 smart wallets bought in
+  last 4h that they didn't own in prior 7d)
+- Stablecoin mint/burn pulse (largest hourly mint bursts)
+- CEX reserve drains (net token outflow from CEX clusters)
+- New-launch + smart-money-buy intersection (tokens <24h old where
+  ≥3 smart-money wallets bought >$5K)
+- MEV / sandwich alerts (top-sandwiched tokens by victim count)
+- Insider wallet activity (project treasury / team wallet moves)
+- Funding-rate divergence (perp OI vs spot volume >3σ apart)
+
+#### On Network Graph / Wallet Cluster (7 enhancements)
+
+- Funding-graph edges (currently empty `wallet_clusters` — fix
+  the cron persistence in P0 #2, then enrich via Dune backfill)
+- Common-deposit heuristic (CEX co-clustering: wallets depositing
+  to the same CEX address share an owner)
+- Multi-sig / Safe linkage (Safe owners → their EOAs)
+- Behavioral clustering (k-means on activity vectors: hour-of-day
+  distribution, gas tip pattern, slippage tolerance, DEX preference)
+- Tornado Cash demixing adjacency (same-amount, time-windowed
+  pairs flagged with probability)
+- Sybil detection for airdrop farmers (wallets with >0.85
+  behavioral similarity within 7-day windows)
+- Cross-cluster Sankey flows (cluster-to-cluster USD aggregated
+  over 7d)
+
+#### On Swap UI (8 enhancements)
+
+- Pre-trade sandwich risk score (live, scored 0-100 with action
+  recommendation)
+- Honeypot pre-check (sell-success ratio on this pool from
+  `dex.trades` — block if < 2%)
+- Optimal route comparison vs historical `dex_aggregator.trades`
+  ("1inch beat Jupiter on this pair 73% of last 1000 trades")
+- Smart-money last-hour direction (pre-confirm banner: "Smart
+  money net SELLING this hour (-$420K). Reconsider?")
+- Slippage recommendation from pool history (P50/P90 historical
+  slippage for this pool size at this hour)
+- Liquidity cliff warning (top LP holds X% of pool — rug risk
+  if they exit)
+- Observed buy/sell tax from on-chain trades (vs metadata claims
+  — catches deceptive contracts)
+- Post-trade "you bought alongside X smart-money wallets" via
+  Sim API (live, ±5 block window)
+
+### 5.7 Caching strategy (the only viable path on Analyst plan)
+
+| Refresh cadence | Use for | Daily credit cost |
+|---|---|---|
+| Daily 1× (materialized) | Holder concentration, token-age buyers, whale stats, cluster aggregates, deployer history, protocol revenue, wash-trade score, wallet age | ~80 cr/day × 30d = **2,400 / mo** |
+| Hourly | Smart-money inflow, CEX flows, bridge flows, liquidity depth, sandwich risk, stablecoin pulse | ~240 cr/day × 30d = **7,200 / mo** |
+| On-demand (VTX user calls) | Per-wallet PnL, transaction history, ad-hoc queries | Budget **4,000 cr/mo**, hard-cap 3/user/day |
+| Sim API (separate budget) | Live wallet feeds, balances, recent activity, watchlist webhooks | Separate key + pricing, ~10K compute units/day estimate |
+
+**Analyst budget total**: ~13,600 / 25,000 = **54% utilization**.
+Headroom 46% for development + spikes. Hard upgrade trigger to
+Plus ($799/mo, 250k credits): sustained >20k credits/mo or DAU
+>500.
+
+### 5.8 Failure handling
+
+Tier ladder:
+
+1. **Stale cache** — serve last `dune_cache` row even if `expires_at`
+   passed. Response header `X-Data-Freshness: stale-{age_minutes}m`
+   + UI badge "Last updated Xh ago"
+2. **Switch upstream** — DEX/price → CoinGecko or Birdeye; holders →
+   Alchemy `getTokenBalances` / Helius; smart-money → Birdeye
+   `wallet/trade_history`; bridge flows → deBridge / LI.FI API
+3. **Hide widget** — conditionally render `<DataUnavailable
+   reason="rate-limited" eta="resets in Nd Nh" />` — never zero
+   numbers, never mock data
+4. **Alert ops** — Slack/Discord webhook + write `system_alerts`
+   row when degradation tier ≥ 2
 
 ### 5.6 Failure handling
 
@@ -468,7 +690,33 @@ alert ops. **Never return mock data** (owner rule). Add a
 `X-Data-Freshness: stale-{age_minutes}m` response header when
 serving expired cache.
 
-### 5.7 Sim by Dune (separate product, separate API key)
+### 5.9 The single biggest latency bottleneck (per copy-trade audit)
+
+`getAllRoutes()` in `lib/services/swap-aggregator.ts:87-112` fires three
+aggregator HTTP calls with `fetchWithRetry(timeoutMs=8000, retries=2)`.
+
+- **One slow aggregator** = 16s timeout × 3 = **~24s worst case**
+- **Happy path** = ~6-8s
+- This is on the critical path of **EVERY copy-trade execution**
+
+**Fix sequence (this IS the P1-A branch above, restated explicitly):**
+
+1. **Pre-warm quotes on whale-tx detection** → Redis cache with 15-30s
+   TTL keyed by `(token, chain, usd_amount)`. Cache populated from the
+   `alchemy-whale` / `helius-whale` webhooks the moment whale activity
+   is detected, before any user looks at the copy.
+2. **Reduce per-aggregator timeout**: 8s → **3s**
+3. **Fire all 3 in parallel, return first successful** (not
+   `allSettled + sort`). Fallback: cached / indicative quote from
+   static pool TVL estimate when all three time out.
+4. **Quote re-validation at user-confirm time, not execution path**
+   — relayer inserts `pending_trades` with cached quote immediately;
+   browser refetches a fresh quote in the ~2-5s the user spends
+   reading the confirm screen.
+
+**Result**: worst case **~24s → ~3s**, average **~8s → ~500ms**.
+
+### 5.10 Sim by Dune (separate product, separate API key)
 
 `api.sim.dune.com` — realtime wallet APIs (balances, txs, activity,
 positions) across 60+ chains, ~200ms post-block latency. Use for:
