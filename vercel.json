@@ -37,6 +37,7 @@
     { "path": "/api/cron/recompute-reputation",       "schedule": "0 5 * * *" },
     { "path": "/api/cron/alert-monitor",              "schedule": "*/5 * * * *" },
     { "path": "/api/cron/pumpfun-velocity-poll",      "schedule": "*/2 * * * *" },
-    { "path": "/api/cron/biz-mention-scrape",         "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/biz-mention-scrape",         "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/dune-refresh",                "schedule": "0 6 * * *" }
   ]
 }

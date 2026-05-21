@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
 import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
+import { dispatchDuneTool } from '@/lib/ai/vtxToolsDune';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
@@ -767,7 +768,14 @@ async function executeVTXTool(
     case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
     case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
     case 'coingecko_market_data': return executeCoingeckoMarketData(toolInput);
-    default:                     return `Unknown tool: ${toolName}`;
+    default: {
+      // §5 Dune tools (tier-1 + tier-2, 17 total) dispatch via a shared
+      // helper. Falls through to "Unknown tool" only when neither this
+      // dispatcher nor the Dune one recognizes the name.
+      const dune = await dispatchDuneTool(toolName, toolInput, userId);
+      if (dune !== null) return dune;
+      return `Unknown tool: ${toolName}`;
+    }
   }
 }
 
