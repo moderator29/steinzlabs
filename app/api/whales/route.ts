@@ -20,7 +20,10 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
       const supabase = getSupabaseAdmin();
       let query = supabase
         .from("whales")
-        .select("id, address, chain, label, entity_type, portfolio_value_usd, pnl_30d_usd, win_rate, whale_score, follower_count, x_handle, verified, last_active_at", { count: "exact" })
+        // §whale-tracker-grade — added avg_hold_hours so the PnL leaderboard
+        // can derive Accumulator / Distributor / Sniper badges from
+        // existing columns the backfill cron already populates.
+        .select("id, address, chain, label, entity_type, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, follower_count, x_handle, verified, last_active_at", { count: "exact" })
         .eq("is_active", true)
         .order("whale_score", { ascending: false })
         .range(offset, offset + limit - 1);
