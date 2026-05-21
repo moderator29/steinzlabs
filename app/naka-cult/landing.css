@@ -648,16 +648,25 @@
    width on small screens, and adds a hairline divider between sections
    so they don't feel like a single endless scroll. */
 
-/* Hero JPG asset — circular crop + crimson/blue glow ring. */
+/* Hero Naka Go mascot — background-removal pass.
+   The source asset is a JPG (no alpha), so we approximate transparency
+   via mix-blend-mode + a radial fade mask. mix-blend-mode: screen lifts
+   the JPG's near-black background out against the page's deep navy +
+   aurora canvas, leaving the cyan-glowing mascot intact. The radial
+   mask softens the square edge so the asset reads as a free-floating
+   sigil rather than a cropped photo. When the owner ships a true
+   transparent PNG at /branding/naka-go-hero.png, swap the src in
+   app/naka-cult/page.tsx and drop the blend-mode/mask. */
 .nakacult-hero__logo {
   width: 320px;
   height: 320px;
-  border-radius: 24px;
-  object-fit: cover;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.08),
-    0 0 60px rgba(220, 20, 60, 0.45),
-    0 0 120px rgba(0, 102, 255, 0.35);
+  object-fit: contain;
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(circle at center, #000 58%, rgba(0,0,0,0.7) 72%, transparent 92%);
+          mask-image: radial-gradient(circle at center, #000 58%, rgba(0,0,0,0.7) 72%, transparent 92%);
+  filter:
+    drop-shadow(0 0 60px rgba(220, 20, 60, 0.45))
+    drop-shadow(0 0 120px rgba(0, 102, 255, 0.35));
 }
 
 /* Hairline divider between adjacent sections. */

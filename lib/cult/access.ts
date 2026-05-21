@@ -44,20 +44,36 @@ export async function getCultAccess(): Promise<CultAccess> {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !anonKey) return DENIED;
+  if (!supabaseUrl || !anonKey) {
+    // §vault-entry-retry-loop — owner reports a "try again" loop on
+    // /vault even though their DB row has tier=naka_cult, is_chosen=true,
+    // tier_expires_at=null. Diagnostic logging surfaces the exact denial
+    // reason on the next prod hit. Once the loop is reproduced server-
+    // side and root-caused, this logging can be reduced or removed.
+    console.warn('[cult/access] DENIED env: supabaseUrl or anonKey missing');
+    return DENIED;
+  }
 
+  const allCookies = cookieStore.getAll();
   const supabase = createServerClient(supabaseUrl, anonKey, {
     cookies: {
-      getAll: () => cookieStore.getAll(),
+      getAll: () => allCookies,
       setAll: () => { /* read-only path; no-op to avoid Next.js cookie writes outside Server Actions */ },
     },
   });
 
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth, error: authErr } = await supabase.auth.getUser();
   const user = auth?.user;
-  if (!user) return DENIED;
+  if (!user) {
+    console.warn('[cult/access] DENIED no-user', {
+      cookieCount: allCookies.length,
+      hasSbCookie: allCookies.some((c) => c.name.startsWith('sb-')),
+      authError: authErr?.message ?? null,
+    });
+    return DENIED;
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from("profiles")
     .select("tier, tier_expires_at, username, display_name, is_chosen")
     .eq("id", user.id)
@@ -70,6 +86,17 @@ export async function getCultAccess(): Promise<CultAccess> {
     }>();
 
   const result = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "naka_cult");
+
+  if (!result.allowed) {
+    console.warn('[cult/access] DENIED tier-check', {
+      userId: user.id,
+      rawTier: profile?.tier ?? null,
+      currentTier: result.currentTier,
+      expired: result.expired,
+      tierExpiresAt: profile?.tier_expires_at ?? null,
+      profileError: profileErr?.message ?? null,
+    });
+  }
 
   return {
     allowed: result.allowed,
