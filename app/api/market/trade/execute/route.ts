@@ -18,12 +18,25 @@ interface ExecuteBody {
   slippage: number;
   walletAddress: string;
   userId?: string;
+  // §3 P1-E (carry-over from P0 #1) — multi-aggregator wiring. When the
+  // user picks KyberSwap / OpenOcean / 1inch in RouteComparison, the
+  // frontend sends `selectedProvider` plus the provider's own quoteData
+  // blob. We return that blob unchanged for the client to broadcast,
+  // and tag swap_logs.dex accordingly so prod can confirm via
+  // SELECT dex, COUNT(*) FROM swap_logs.
+  selectedProvider?: '0x' | '1inch' | 'kyberswap' | 'openocean' | 'jupiter';
+  routeQuoteData?: {
+    transaction?: { to?: string; data?: string; value?: string; gas?: string };
+    allowanceTarget?: string;
+    buyAmount?: string;
+    raw?: unknown;
+  };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as ExecuteBody;
-    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, walletAddress, userId } = body;
+    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, walletAddress, userId, selectedProvider, routeQuoteData } = body;
 
     if (!chain || !tokenIn || !tokenOut || !amountIn || !walletAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -70,7 +83,40 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Step 2: Get 0x swap quote
+    // §3 P1-E — Step 2: Resolve the executable quote. If the user picked
+    // a non-0x provider in RouteComparison, honor that selection by
+    // returning the provider's own quoteData blob verbatim; otherwise
+    // fall back to 0x (the historical default) and run the P1-D.3
+    // Permit2 detection below.
+    const provider = selectedProvider ?? '0x';
+    const feePercent = 0.4;
+    const feeUSD = amountInUSD * 0.004;
+    const db = getSupabaseAdmin();
+
+    if (provider !== '0x' && routeQuoteData?.transaction?.data) {
+      await db.from('swap_logs').insert({
+        user_id: userId ?? null,
+        chain,
+        input_token: resolvedIn,
+        output_token: resolvedOut,
+        input_amount: parseFloat(amountIn),
+        status: 'pending',
+        dex: provider,
+      });
+      return NextResponse.json({
+        success: true,
+        riskScore,
+        feeUSD,
+        feePercent,
+        provider,
+        transaction: routeQuoteData.transaction,
+        allowanceTarget: routeQuoteData.allowanceTarget ?? null,
+        buyAmount: routeQuoteData.buyAmount ?? null,
+        slippage,
+        walletAddress,
+      });
+    }
+
     const chainId = getChainId(chain);
     if (!chainId) {
       return NextResponse.json({ error: `Unsupported chain: ${chain}` }, { status: 400 });
@@ -94,12 +140,6 @@ export async function POST(req: NextRequest) {
       permit2,
     });
 
-    // Platform fee is included via feeRecipient in zerox.ts
-    const feePercent = 0.4;
-    const feeUSD = amountInUSD * 0.004;
-
-    // Log swap attempt to Supabase
-    const db = getSupabaseAdmin();
     await db.from('swap_logs').insert({
       user_id: userId ?? null,
       chain,
@@ -107,13 +147,15 @@ export async function POST(req: NextRequest) {
       output_token: resolvedOut,
       input_amount: parseFloat(amountIn),
       status: 'pending',
-    });  // fire-and-forget insert
+      dex: '0x',
+    });
 
     return NextResponse.json({
       success: true,
       riskScore,
       feeUSD,
       feePercent,
+      provider: '0x',
       transaction: quote.transaction,
       allowanceTarget: quote.allowanceTarget,
       buyAmount: quote.buyAmount,
