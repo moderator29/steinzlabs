@@ -505,6 +505,67 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
         </div>
       )}
 
+      {/* §holder-distribution-panel — GoPlus already returns a holders[]
+          array with address + percent + is_contract + is_locked + tag.
+          The panel used to show only a single top-10 % number; this
+          renders the full top-10 breakdown with horizontal bars,
+          contract / locked / tagged badges, and short-form addresses
+          linked to the chain explorer. Matches Birdeye / DexScreener. */}
+      {data && (() => {
+        type RawHolder = {
+          address?: string;
+          percent?: string | number;
+          is_contract?: number | string;
+          is_locked?: number | string;
+          tag?: string;
+        };
+        const raw = (data.raw as Record<string, unknown>) ?? {};
+        const holders = (Array.isArray(raw.holders) ? raw.holders as RawHolder[] : []).slice(0, 10);
+        if (holders.length === 0) return null;
+        return (
+          <div className="mb-3 rounded-2xl border border-slate-800/50 bg-slate-950/40 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Top 10 Holders</span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {holders.reduce((s, h) => s + Number(h.percent ?? 0) * 100, 0).toFixed(1)}% combined
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {holders.map((h, i) => {
+                const pct = Math.max(0, Math.min(100, Number(h.percent ?? 0) * 100));
+                const isContract = Number(h.is_contract ?? 0) === 1;
+                const isLocked = Number(h.is_locked ?? 0) === 1;
+                const addr = h.address ?? '';
+                const shortAddr = addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
+                return (
+                  <li key={`${addr}:${i}`} className="text-[11px]">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-mono text-slate-600 w-4 text-end">#{i + 1}</span>
+                        <span className="font-mono text-slate-300 truncate">{h.tag || shortAddr}</span>
+                        {isLocked && (
+                          <span className="flex-shrink-0 text-[8px] px-1 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold uppercase tracking-wider">Locked</span>
+                        )}
+                        {isContract && !isLocked && (
+                          <span className="flex-shrink-0 text-[8px] px-1 py-0.5 rounded bg-slate-700/40 text-slate-300 border border-slate-600/30 font-bold uppercase tracking-wider">Contract</span>
+                        )}
+                      </div>
+                      <span className="font-mono font-bold text-slate-200 tabular-nums">{pct.toFixed(2)}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-slate-900 overflow-hidden">
+                      <div
+                        className="h-1 rounded-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED]"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })()}
+
       {data.reasons.length > 0 && (
         <div className="rounded-lg bg-slate-950/40 border border-slate-800/60 px-3 py-2 mb-3">
           <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Findings</div>
