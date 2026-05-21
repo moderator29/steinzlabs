@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { UserPlus, Check, Clock, X } from 'lucide-react';
+import { getCachedFollowState, setCachedFollowState, onFollowChange } from '@/lib/social/follow-cache';
 
 /**
  * FollowButton — drives all four states from a single piece of UI:
@@ -25,10 +26,23 @@ export interface FollowButtonProps {
 }
 
 export function FollowButton({ targetId, initialState, mutual, onChange, size = 'md', className }: FollowButtonProps) {
-  const [state, setState] = useState(initialState);
+  // §social-follow-cache — prefer the cross-surface cache (set by any
+  // FollowButton instance on success) so when the user follows someone
+  // in the Top Success Rate leaderboard and then navigates to Top
+  // Followers, the same row already reads as "Following" without
+  // waiting for a fresh API roundtrip.
+  const [state, setState] = useState(() => getCachedFollowState(targetId) ?? initialState);
   const [hover, setHover] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // Subscribe to cross-surface changes so siblings update in real time.
+  useEffect(() => {
+    const cached = getCachedFollowState(targetId);
+    if (cached && cached !== state) setState(cached);
+    return onFollowChange((id, next) => { if (id === targetId) setState(next); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetId]);
 
   const send = async () => {
     setError(null);
@@ -44,11 +58,13 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
         const json = await res.json();
         const next = json.follow?.status === 'pending' ? 'pending' : 'accepted';
         setState(next);
+        setCachedFollowState(targetId, next);
         onChange?.(next);
       } else {
         const res = await fetch(`/api/social/follow?target_id=${targetId}`, { method: 'DELETE' });
         if (!res.ok) { setError('Could not unfollow'); return; }
         setState('not_following');
+        setCachedFollowState(targetId, 'not_following');
         onChange?.('not_following');
       }
     } catch {

@@ -17,10 +17,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   const caller = await getAuthenticatedUser(req);
   const sb = getSupabaseAdmin();
 
+  // §social-discovery (Bug 6) — was `.eq('username', username)` which
+  // is case-sensitive. Leaderboard rows carry whatever casing the DB
+  // stored at signup ("Seyifunmi"), but clicks from elsewhere on the
+  // platform sometimes lowercase the segment, producing "user not
+  // found" 404s for users that clearly exist. ilike with no wildcards
+  // is case-insensitive exact match, hits the same btree index.
   const { data: profile } = await sb
     .from('profiles')
     .select('id, username, display_name, avatar_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at')
-    .eq('username', username)
+    .ilike('username', username)
     .maybeSingle();
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

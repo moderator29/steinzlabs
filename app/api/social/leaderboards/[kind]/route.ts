@@ -45,6 +45,15 @@ interface LeaderboardRow {
   is_chosen: boolean | null;
   metric_value: number | string | null;
   metric_label: string;
+  // §social-discovery — per-caller follow state so leaderboard rows
+  // already show "Following" instead of flipping back to "Follow"
+  // when the user navigates between panels. Client-side follow-cache
+  // keeps it fresh after follow actions.
+  i_follow?: 'not_following' | 'pending' | 'accepted' | null;
+  // §social-discovery (whale-watchers) — actual count of whales the
+  // user is watching. UI surfaces "Watching N whales" plus a small
+  // drill-down button instead of a meaningless percentage.
+  following_count?: number | null;
 }
 
 const METRIC_LABEL: Record<Kind, string> = {
@@ -139,10 +148,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
       metric_label: METRIC_LABEL['new-users'],
     }));
   } else if (kind === 'max-tier') {
+    // §social-discovery — was `.eq('tier','max')` which excluded
+    // naka_cult tier holders. naka_cult is the apex tier above max
+    // (gated by holding 1.227M $NAKA or the Dev NFT); Chosen members
+    // ARE Max-tier members + more. Include both so the Max board
+    // actually represents every wallet that has Max-or-better access.
     const { data } = await sb
       .from('profiles')
       .select('id, username, display_name, avatar_url, tier, verified_badge, is_chosen, created_at')
-      .eq('tier', 'max')
+      .in('tier', ['max', 'naka_cult'])
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     rows = (data ?? []).map((p) => ({
@@ -190,7 +204,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
         tier: p.tier,
         verified_badge: p.verified_badge,
         is_chosen: p.is_chosen,
+        // metric_value carries the whale count for the UI's primary
+        // line; following_count duplicates it for the "Show whales"
+        // drill-down (clearer field name + future-proof if we add
+        // accuracy back as the metric).
         metric_value: count,
+        following_count: count,
         metric_label: METRIC_LABEL['whale-watchers'],
       }];
     });
@@ -253,6 +272,32 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
     const hidden = new Set((blocks ?? []).map((b) => (b.blocker_id === caller.id ? b.blocked_id : b.blocker_id)));
     rows = rows.filter((r) => !hidden.has(r.id));
   }
+
+  // §social-discovery — enrich rows with caller's follow state so the
+  // UI's FollowButton renders the correct initial label across all
+  // leaderboard panels. Without this every panel renders "Follow"
+  // until the user touches the button.
+  if (caller && rows.length > 0) {
+    const ids = rows.map((r) => r.id);
+    const { data: follows } = await sb
+      .from('social_follows')
+      .select('following_id, status')
+      .eq('follower_id', caller.id)
+      .in('following_id', ids);
+    const byId = new Map(
+      (follows ?? []).map((f) => [
+        (f as { following_id: string }).following_id,
+        ((f as { status: string }).status === 'pending' ? 'pending' : 'accepted') as 'pending' | 'accepted',
+      ]),
+    );
+    rows = rows.map((r) => ({ ...r, i_follow: byId.get(r.id) ?? 'not_following' }));
+  }
+
+  // §social-discovery — drop rows with a null username. Clicking those
+  // rows was landing the user on /u/null (Bug 6: "user not found"
+  // when clicking some real users). Old accounts that never set a
+  // username can re-appear once they pick one.
+  rows = rows.filter((r) => r.username !== null && r.username !== '');
 
   return NextResponse.json({ kind, rows, refreshed_at: new Date().toISOString() });
 }

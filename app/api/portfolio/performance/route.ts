@@ -47,6 +47,19 @@ interface PerformanceStats {
   totalGasUsd: number;
 }
 
+// §3 P1-D.1 — cost-basis chart entry markers. Each marker is a buy lot
+// that landed at `time` for the named (chain, symbol) at `pricePerUnit`
+// USD. The UI draws these as triangles on the per-token price chart so
+// the trader can see exactly where they entered relative to current price.
+interface EntryMarker {
+  chain: string;
+  symbol: string;
+  time: number;            // unix seconds (lightweight-charts shape)
+  amount: number;
+  costUsd: number;
+  pricePerUnit: number;
+}
+
 async function getSupabase() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -95,6 +108,11 @@ export async function GET(_request: NextRequest) {
   // FIFO cost basis: map per symbol → lot queue.
   const lots = new Map<string, Lot[]>();
   const realizedBySymbol = new Map<string, number>();
+  // §3 P1-D.2 — per-chain realized PnL slicing. Same FIFO numbers, just
+  // bucketed by `${chain}::realized` so the UI can render a segmented
+  // ETH/Solana/Base/Arb/BSC row beside the existing aggregate.
+  const realizedByChain = new Map<string, number>();
+  const entryMarkers: EntryMarker[] = [];
   const holdDurations: number[] = [];
   let closedTrades = 0;
   let winners = 0;
@@ -115,9 +133,20 @@ export async function GET(_request: NextRequest) {
     const ts = new Date(t.timestamp).getTime();
 
     if (buySym && !["USD", "USDC", "USDT", "DAI"].includes(buySym) && t.to_amount) {
+      const amount = Number(t.to_amount);
       const q = lots.get(buySym) ?? [];
-      q.push({ amount: Number(t.to_amount), costUsd: usd, timestampMs: ts });
+      q.push({ amount, costUsd: usd, timestampMs: ts });
       lots.set(buySym, q);
+      if (amount > 0 && t.to_token_symbol) {
+        entryMarkers.push({
+          chain: chainKey,
+          symbol: t.to_token_symbol.toUpperCase(),
+          time: Math.floor(ts / 1000),
+          amount,
+          costUsd: usd,
+          pricePerUnit: usd / amount,
+        });
+      }
     }
 
     if (sellSym && !["USD", "USDC", "USDT", "DAI"].includes(sellSym) && t.from_amount) {
@@ -143,6 +172,7 @@ export async function GET(_request: NextRequest) {
       lots.set(sellSym, q);
       const pnl = proceeds - costBasis;
       realizedBySymbol.set(sellSym, (realizedBySymbol.get(sellSym) ?? 0) + pnl);
+      realizedByChain.set(chainKey, (realizedByChain.get(chainKey) ?? 0) + pnl);
       closedTrades++;
       if (pnl > 0) winners++;
     }
@@ -203,7 +233,9 @@ export async function GET(_request: NextRequest) {
     realized: {
       totalUsd: totalRealizedUsd,
       bySymbol: Object.fromEntries(realizedBySymbol),
+      byChain: Object.fromEntries(realizedByChain),
     },
+    entryMarkers,
     stats,
   });
 }
