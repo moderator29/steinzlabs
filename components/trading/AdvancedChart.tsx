@@ -18,7 +18,7 @@ import {
   type HistogramData,
 } from "lightweight-charts";
 import type { Candle, Timeframe } from "@/lib/services/ohlcv";
-import { ema, sma, bollinger, vwap, rsi } from "@/lib/trading/indicators";
+import { ema, sma, bollinger, vwap, rsi, macd } from "@/lib/trading/indicators";
 import { Loader2 } from "lucide-react";
 
 export type ChartType = "candlestick" | "line" | "area" | "bars";
@@ -34,6 +34,7 @@ export interface IndicatorConfig {
   bollinger?: boolean;
   vwap?: boolean;
   rsi?: boolean;
+  macd?: boolean;
   volume?: boolean;
 }
 
@@ -198,7 +199,46 @@ export function AdvancedChart({
       addLineOverlay(bb.lower, "rgba(148,163,184,0.5)");
     }
     if (indicators.vwap) addLineOverlay(vwap(candles), "#a855f7");
-    if (indicators.rsi) addLineOverlay(rsi(candles, 14), "#eab308");
+
+    // §3 P2-A.1 — RSI + MACD render as dedicated panes below the price
+    // pane (lightweight-charts v5 panes API), not overlaid on the price
+    // scale. RSI gets a 0-100 scale with 30/70 reference lines; MACD
+    // gets a zero-centered scale with histogram + signal lines. Each pane
+    // shares the main chart's time scale so panning + zoom stay in sync.
+    if (indicators.rsi) {
+      const rsiPaneIndex = chart.panes().length;
+      const rsiSeries = chart.addSeries(LineSeries, {
+        color: "#eab308",
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: true,
+      }, rsiPaneIndex);
+      rsiSeries.setData(rsi(candles, 14).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
+      const rsiPane = chart.panes()[rsiPaneIndex];
+      if (rsiPane) rsiPane.setHeight(80);
+      rsiSeries.createPriceLine({ price: 70, color: "rgba(239,68,68,0.5)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70" });
+      rsiSeries.createPriceLine({ price: 30, color: "rgba(34,197,94,0.5)",  lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30" });
+    }
+    if (indicators.macd) {
+      const m = macd(candles, 12, 26, 9);
+      const macdPaneIndex = chart.panes().length;
+      const histSeries = chart.addSeries(HistogramSeries, {
+        priceFormat: { type: "price", precision: 6, minMove: 0.000001 },
+        priceLineVisible: false,
+        lastValueVisible: false,
+      }, macdPaneIndex);
+      histSeries.setData(m.histogram.map((p) => ({
+        time: p.time as UTCTimestamp,
+        value: p.value,
+        color: p.value >= 0 ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)",
+      })));
+      const macdLine = chart.addSeries(LineSeries, { color: "#4d80ff", lineWidth: 1, priceLineVisible: false, lastValueVisible: true }, macdPaneIndex);
+      macdLine.setData(m.macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
+      const signalLine = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 1, priceLineVisible: false, lastValueVisible: true }, macdPaneIndex);
+      signalLine.setData(m.signal.map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
+      const macdPane = chart.panes()[macdPaneIndex];
+      if (macdPane) macdPane.setHeight(100);
+    }
 
     if (onPriceClick) {
       chart.subscribeClick((param) => {
