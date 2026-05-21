@@ -113,20 +113,40 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
       if (rows.length === 0) return { rows: [], total: 0 };
 
       const uniqAddrs = Array.from(new Set(rows.map((r) => r.whale_address)));
+      // §whale-tracker-grade — surface pnl_30d_usd / win_rate /
+      // avg_hold_hours so the UI can render behavioral badges
+      // (Accumulator / Distributor / Sniper / High-win-rate) inline
+      // on every feed row, derived from columns the backfill cron
+      // already populates.
       const { data: whaleRows } = await admin
         .from("whales")
-        .select("address,chain,label,entity_type")
+        .select("address,chain,label,entity_type,pnl_30d_usd,win_rate,avg_hold_hours")
         .in("address", uniqAddrs);
-      const labels = new Map<string, { label: string | null; entity_type: string | null }>();
+      const labels = new Map<string, {
+        label: string | null;
+        entity_type: string | null;
+        pnl_30d_usd: number | null;
+        win_rate: number | null;
+        avg_hold_hours: number | null;
+      }>();
       for (const w of (whaleRows ?? []) as Array<{
         address: string;
         chain: string;
         label: string | null;
         entity_type: string | null;
+        pnl_30d_usd: number | null;
+        win_rate: number | null;
+        avg_hold_hours: number | null;
       }>) {
         labels.set(
           `${w.chain}:${w.address.toLowerCase()}`,
-          { label: w.label, entity_type: w.entity_type },
+          {
+            label: w.label,
+            entity_type: w.entity_type,
+            pnl_30d_usd: w.pnl_30d_usd,
+            win_rate: w.win_rate,
+            avg_hold_hours: w.avg_hold_hours,
+          },
         );
       }
 
@@ -142,7 +162,14 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
           entity_type = cls.labels[0] ?? null;
           if (!label && cls.name) label = cls.name;
         }
-        return { ...r, label, entity_type };
+        return {
+          ...r,
+          label,
+          entity_type,
+          pnl_30d_usd: meta?.pnl_30d_usd ?? null,
+          win_rate: meta?.win_rate ?? null,
+          avg_hold_hours: meta?.avg_hold_hours ?? null,
+        };
       });
 
       // Apply label filter after enrichment so registry-classified rows

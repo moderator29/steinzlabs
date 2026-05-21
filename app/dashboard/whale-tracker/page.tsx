@@ -43,6 +43,12 @@ interface FeedRow {
   timestamp: string;
   label: string | null;
   entity_type: string | null;
+  // §whale-tracker-grade — surfaced from whales table so feed cards
+  // can render Accumulator / Distributor / Sniper / High-win-rate
+  // badges without an extra round-trip.
+  pnl_30d_usd?: number | null;
+  win_rate?: number | null;
+  avg_hold_hours?: number | null;
 }
 
 interface WatchlistItem {
@@ -531,6 +537,19 @@ export default function WhaleTrackerPage() {
             isWatched={isWatched}
             onToggleWatch={toggleWatch}
           />
+          {/* §whale-tracker-grade — PnL leaderboard using whales.pnl_30d_usd,
+              win_rate, and whale_score (already populated by the nightly
+              whale-backfill-pnl cron). The Tracker had access to this
+              data via /api/whales but never surfaced it. Adds behavioral
+              badges so users can spot Accumulator / Distributor / Sniper
+              / High-win-rate at a glance, matching Nansen/Arkham. */}
+          <PnlLeaderboardPanel
+            onOpen={(addr, chain) =>
+              router.push(`/dashboard/whale-tracker/${addr}?chain=${chain}`)
+            }
+            isWatched={isWatched}
+            onToggleWatch={toggleWatch}
+          />
         </div>
       </div>
 
@@ -613,6 +632,9 @@ function FeedCard({
                 {row.label}
               </span>
             )}
+            {/* §whale-tracker-grade — behavioral badges inline on the feed
+                row so users can spot trader archetype at a glance. */}
+            <WhaleBadgeRow badges={deriveBadges(row)} />
           </div>
           {row.token_symbol && (
             <div className="mt-1 text-xs text-slate-400">
@@ -812,6 +834,162 @@ function TopTodayPanel({
               </button>
             </li>
           ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// §whale-tracker-grade — derive behavioral badges from existing columns.
+// pnl_30d_usd + win_rate + avg_hold_hours come from the nightly
+// whale-backfill-pnl cron. Tags surface at-a-glance trader archetypes
+// the way Nansen/Arkham do.
+type WhaleBadge = 'accumulator' | 'distributor' | 'sniper' | 'high-win-rate';
+
+function deriveBadges(w: { pnl_30d_usd?: number | null; win_rate?: number | null; avg_hold_hours?: number | null }): WhaleBadge[] {
+  const badges: WhaleBadge[] = [];
+  const pnl = Number(w.pnl_30d_usd ?? 0);
+  const wr = Number(w.win_rate ?? 0);
+  const hold = Number(w.avg_hold_hours ?? 0);
+  if (wr >= 70) badges.push('high-win-rate');
+  // Sniper: tight hold window AND positive win rate
+  if (hold > 0 && hold < 6 && wr >= 50) badges.push('sniper');
+  // Accumulator: positive 30d pnl AND long hold
+  if (pnl > 0 && hold >= 168) badges.push('accumulator'); // 7+ days
+  // Distributor: negative 30d pnl OR very long hold with mediocre win rate
+  if (pnl < 0 || (hold >= 720 && wr < 50)) badges.push('distributor'); // 30+ days low win
+  return badges;
+}
+
+const BADGE_STYLE: Record<WhaleBadge, { label: string; cls: string }> = {
+  'accumulator':   { label: 'ACCUM',     cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+  'distributor':   { label: 'DISTRIB',   cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
+  'sniper':        { label: 'SNIPER',    cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  'high-win-rate': { label: 'WIN ≥70%',  cls: 'bg-violet-500/15 text-violet-300 border-violet-500/30' },
+};
+
+function WhaleBadgeRow({ badges }: { badges: WhaleBadge[] }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {badges.map((b) => (
+        <span
+          key={b}
+          className={`text-[8px] px-1 py-0.5 rounded font-bold uppercase tracking-wider border ${BADGE_STYLE[b].cls}`}
+        >
+          {BADGE_STYLE[b].label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+interface PnlWhaleRow {
+  id: string;
+  address: string;
+  chain: string;
+  label: string | null;
+  pnl_30d_usd: number | null;
+  win_rate: number | null;
+  whale_score: number | null;
+  portfolio_value_usd: number | null;
+  avg_hold_hours: number | null;
+}
+
+function PnlLeaderboardPanel({
+  onOpen,
+  isWatched,
+  onToggleWatch,
+}: {
+  onOpen: (addr: string, chain: string) => void;
+  isWatched: (addr: string, chain: string) => boolean;
+  onToggleWatch: (addr: string, chain: string) => void;
+}) {
+  const [rows, setRows] = useState<PnlWhaleRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/whales?limit=10&offset=0')
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((data: { whales?: PnlWhaleRow[] }) => {
+        if (cancelled) return;
+        // Filter to whales with non-null pnl_30d_usd so the panel only
+        // shows rows the backfill cron has actually scored. Top-by-PnL
+        // ranking falls back to whale_score order returned by the API
+        // when ties exist.
+        const scored = (data.whales ?? []).filter((w) => w.pnl_30d_usd !== null);
+        scored.sort((a, b) => (Number(b.pnl_30d_usd) || 0) - (Number(a.pnl_30d_usd) || 0));
+        setRows(scored.slice(0, 10));
+      })
+      .catch((e: Error) => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-white">PnL Leaderboard</h3>
+        <span className="text-[10px] text-slate-500 uppercase">30d realized</span>
+      </div>
+      {loading && (
+        <p className="text-xs text-slate-500 py-4 text-center">Loading PnL data…</p>
+      )}
+      {error && (
+        <p className="text-xs text-red-400 py-4 text-center">Couldn&apos;t load PnL data.</p>
+      )}
+      {!loading && !error && rows.length === 0 && (
+        <p className="text-xs text-slate-500 py-4 text-center">No PnL-scored whales yet.</p>
+      )}
+      {!loading && !error && rows.length > 0 && (
+        <ul className="space-y-1.5">
+          {rows.map((w, i) => {
+            const pnl = Number(w.pnl_30d_usd ?? 0);
+            const pnlPositive = pnl >= 0;
+            const wr = Number(w.win_rate ?? 0);
+            const badges = deriveBadges(w);
+            return (
+              <li
+                key={`${w.chain}:${w.address}`}
+                className="flex items-center gap-2 rounded-lg p-2 hover:bg-slate-900/50 transition-colors"
+              >
+                <span className="text-xs font-mono text-slate-600 w-5 text-center">#{i + 1}</span>
+                <WhaleAvatar address={w.address} chain={w.chain} size={28} />
+                <button
+                  type="button"
+                  onClick={() => onOpen(w.address, w.chain)}
+                  className="flex-1 text-start min-w-0"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold text-white truncate">
+                      {w.label ?? short(w.address)}
+                    </span>
+                    <WhaleBadgeRow badges={badges} />
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500 uppercase flex items-center gap-2">
+                    <span>{w.chain}</span>
+                    {wr > 0 && <span>· {wr.toFixed(0)}% win</span>}
+                  </div>
+                </button>
+                <span className={`text-xs font-mono font-bold tabular-nums ${pnlPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {pnlPositive ? '+' : ''}{fmtUsd(Math.abs(pnl))}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onToggleWatch(w.address, w.chain)}
+                  className="p-1 rounded text-slate-500 hover:text-yellow-400 hover:bg-yellow-500/10 transition-colors"
+                  title={isWatched(w.address, w.chain) ? 'Unwatch' : 'Watch'}
+                >
+                  <Bell
+                    size={11}
+                    className={isWatched(w.address, w.chain) ? 'fill-yellow-400 text-yellow-400' : ''}
+                  />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
