@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Trophy } from 'lucide-react';
+import { Trophy, Eye } from 'lucide-react';
 
 /**
  * LeaderboardColumn — top-10 list rendered as a card. Auto-refreshes
@@ -25,6 +25,10 @@ interface Row {
   is_chosen: boolean | null;
   metric_value: number | string | null;
   metric_label: string;
+  /** §social-discovery (Bug 8) — actual count of whales for the
+   *  whale-watchers board so we surface "Watching 5 whales" + a
+   *  drill-down button instead of the meaningless % we used to render. */
+  following_count?: number | null;
 }
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -41,10 +45,18 @@ function formatMetric(v: number | string | null, kind: LeaderboardColumnProps['k
     if (!isFinite(n)) return '—';
     return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
   }
-  if (kind === 'copy-traders' || kind === 'whale-watchers') {
+  if (kind === 'copy-traders') {
     const n = Number(v);
     if (!isFinite(n)) return '—';
     return `${(n * 100).toFixed(0)}%`;
+  }
+  if (kind === 'whale-watchers') {
+    // §social-discovery (Bug 8) — was rendering count as a %, so a
+    // watcher with 5 whales showed "500%". The API now returns the
+    // raw count via metric_value; surface it honestly.
+    const n = Number(v);
+    if (!isFinite(n)) return '—';
+    return `${n} ${n === 1 ? 'whale' : 'whales'}`;
   }
   return String(v);
 }
@@ -95,29 +107,44 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
       ) : (
         <ol className="space-y-1.5">
           {rows.map((r, idx) => (
-            <li key={r.id}>
-              <Link
-                href={`/u/${r.username ?? r.id}`}
-                className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.04]"
-              >
-                <span className="w-6 text-[11px] tabular-nums text-slate-400 text-end">
-                  {idx < 3 ? MEDAL[idx] : `${idx + 1}.`}
-                </span>
-                {r.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
-                    {(r.display_name || r.username || '?').slice(0, 1).toUpperCase()}
-                  </div>
+            <li key={r.id} className="group/lb-row">
+              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.04]">
+                <Link href={`/u/${r.username ?? r.id}`} className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <span className="w-6 text-[11px] tabular-nums text-slate-400 text-end">
+                    {idx < 3 ? MEDAL[idx] : `${idx + 1}.`}
+                  </span>
+                  {r.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
+                      {(r.display_name || r.username || '?').slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-[12px] font-medium text-white truncate flex-1">
+                    {r.display_name || r.username}
+                  </span>
+                  <span className="text-[11px] tabular-nums text-slate-300">
+                    {formatMetric(r.metric_value, kind)}
+                  </span>
+                </Link>
+                {/* §social-discovery (Bug 8) — drill-down to the user's
+                    whale-follow list. Only on the whale-watchers
+                    leaderboard. /u/[username]/whales is the dedicated
+                    profile sub-route for following lists; if it 404s
+                    the user lands on the profile and we add the
+                    sub-route in a follow-up. */}
+                {kind === 'whale-watchers' && r.username && (
+                  <Link
+                    href={`/u/${r.username}/whales`}
+                    className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/[0.04] hover:bg-[var(--nl-blue,#0A1EFF)]/15 hover:text-[var(--nl-blue,#0A1EFF)] text-slate-400 transition-colors opacity-0 group-hover/lb-row:opacity-100 focus:opacity-100"
+                    aria-label={`See whales watched by ${r.display_name || r.username}`}
+                    title="See watched whales"
+                  >
+                    <Eye className="w-3 h-3" />
+                  </Link>
                 )}
-                <span className="text-[12px] font-medium text-white truncate flex-1">
-                  {r.display_name || r.username}
-                </span>
-                <span className="text-[11px] tabular-nums text-slate-300">
-                  {formatMetric(r.metric_value, kind)}
-                </span>
-              </Link>
+              </div>
             </li>
           ))}
         </ol>
