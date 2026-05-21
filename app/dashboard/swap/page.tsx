@@ -17,6 +17,7 @@ import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
+import { RouteComparison } from '@/components/swap/RouteComparison';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -317,6 +318,11 @@ export default function SwapPage() {
   const [chain, setChain] = useState('ethereum');
   const [showSettings, setShowSettings] = useState(false);
   const [showTokenSelect, setShowTokenSelect] = useState<'from' | 'to' | null>(null);
+  // §multi-aggregator — /api/swap/routes already fans out to 1inch +
+  // KyberSwap + OpenOcean in parallel and returns them sorted by
+  // netOutputUsd. The selected provider drives the eventual execution
+  // path (UI hint today; execution wiring lands next sprint).
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
   // Industry-standard pre-confirm security gating — when the review
@@ -1664,6 +1670,22 @@ export default function SwapPage() {
                 zeroExRoute={(quoteData?.route as { fills?: Array<{ source?: string; proportionBps?: number; from?: string; to?: string }>; tokens?: Array<{ address: string; symbol: string }> } | undefined) ?? undefined}
                 jupiterRoutePlan={(quoteData?.routePlan as Array<{ protocol?: string; inputMint?: string; outputMint?: string; percent?: number }> | undefined) ?? undefined}
               />
+
+              {/* §multi-aggregator best-of-3 — calls /api/swap/routes which
+                  fans out to 1inch + KyberSwap + OpenOcean in parallel.
+                  Shows the best provider by netOutputUsd with a toggle
+                  so the user can see the alternatives. The endpoint was
+                  built but the UI never called it (dead code until now). */}
+              {fromAmount && parseFloat(fromAmount) > 0 && (
+                <RouteComparison
+                  chain={chain}
+                  fromToken={fromToken}
+                  toToken={toToken}
+                  amountIn={fromAmount}
+                  selectedProvider={selectedProvider ?? undefined}
+                  onSelect={(r) => setSelectedProvider(r.provider)}
+                />
+              )}
 
               {pi >= 5 && (
                 <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border ${piBlocked ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
