@@ -92,6 +92,8 @@ RESPONSE DISCIPLINE:
 
 // ─── VTX Tool Definitions ─────────────────────────────────────────────────────
 
+import { P2B_TOOLS } from '@/lib/ai/vtxToolsP2B';
+
 export const VTX_TOOLS: Anthropic.Tool[] = [
   {
     name: 'token_security_scan',
@@ -295,6 +297,12 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
       required: ['action'],
     },
   },
+  // §3 P2-B — 10 new tools (whale_tracker_specific, realized_pnl_30d,
+  // cross_token_comparison, portfolio_performance,
+  // portfolio_rebalance_suggestion, alert_subscribe, copy_trade_create,
+  // explain_transaction, transaction_simulator, approval_audit) sourced
+  // from lib/ai/vtxToolsP2B.ts.
+  ...P2B_TOOLS,
 ];
 
 // ─── Core VTX Query Function ──────────────────────────────────────────────────
