@@ -31,8 +31,8 @@ export async function getOneInchQuote(params: {
     const url = `https://api.1inch.dev/swap/v6.0/${chainId}/quote?src=${params.fromToken}&dst=${params.toToken}&amount=${params.amount}&includeGas=true`;
     const res = await fetchWithRetry(url, {
       source: "1inch-quote",
-      timeoutMs: 5000,
-      retries: 2,
+      timeoutMs: 3000,
+      retries: 1,
       headers: key ? { Authorization: `Bearer ${key}` } : {},
     });
     if (!res.ok) return null;

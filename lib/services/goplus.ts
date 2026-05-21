@@ -1,5 +1,12 @@
 import 'server-only';
 import { cache, cacheKey, TTL } from '../api/cache-manager';
+import { cacheGet, cacheSet } from '../cache/redis';
+
+// Cross-invocation L2 TTL for token security on the hot copy-trade path.
+// Shorter than the in-memory 5-minute TTL because Redis is shared across all
+// serverless instances — staleness risk is higher than a single process's
+// memory and security data can flip when a token gets relisted.
+const TOKEN_SECURITY_REDIS_TTL_S = 60;
 import {
   scanTokenSecurity,
   scanAddress,
@@ -34,11 +41,23 @@ export async function getTokenSecurity(
   chain: string
 ): Promise<TokenSecurityResult> {
   const key = cacheKey('goplus', 'token_security', { contractAddress: contractAddress.toLowerCase(), chain });
-  const cached = cache.get<TokenSecurityResult>(key);
-  if (cached) return cached;
+
+  // L1 — in-memory (same-process, microsecond).
+  const memHit = cache.get<TokenSecurityResult>(key);
+  if (memHit) return memHit;
+
+  // L2 — Redis (cross-invocation, shared across serverless instances). Hot on
+  // the copy-trade cron when many followers track the same whale buying the
+  // same token within the cache window.
+  const redisHit = await cacheGet<TokenSecurityResult>(key);
+  if (redisHit) {
+    cache.set(key, redisHit, TTL.TOKEN_SECURITY);
+    return redisHit;
+  }
 
   const result = await scanTokenSecurity(contractAddress, chain);
   cache.set(key, result, TTL.TOKEN_SECURITY);
+  void cacheSet(key, result, TOKEN_SECURITY_REDIS_TTL_S);
   return result;
 }
 
