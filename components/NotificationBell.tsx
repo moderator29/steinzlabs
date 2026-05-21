@@ -8,6 +8,22 @@ import {
   markAllNotificationsRead,
   type LocalNotification,
 } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
+
+// Realtime row shape coming off the notifications table INSERT stream.
+interface NotificationRowPayload {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+}
+
+// Background poll cadence. Realtime carries the live signal; the poll is a
+// belt-and-braces refresh in case the websocket disconnects (laptop sleep,
+// tab backgrounded, network blip). 5 minutes is plenty given Realtime.
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 interface DisplayNotification {
   id: string;
@@ -105,14 +121,55 @@ export default function NotificationBell() {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 120000);
+    const interval = setInterval(loadNotifications, POLL_INTERVAL_MS);
 
     const handleLocal = () => loadNotifications();
     window.addEventListener('steinz_notification', handleLocal);
 
+    // Supabase Realtime — subscribe to INSERTs on `notifications` filtered to
+    // this user. New rows prepend to the dropdown live (no poll wait). Updates
+    // (server marking read) also flow through so the bell de-dots without a
+    // refetch. Realtime publication for `notifications` must be enabled on
+    // the Supabase side (see supabase/migrations/2026_05_21_enable_notifications_realtime).
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('steinz_user_id') || '' : '';
+    if (userId) {
+      channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const row = payload.new as NotificationRowPayload;
+            const readIds: string[] = (() => {
+              try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { return []; }
+            })();
+            const next: DisplayNotification = {
+              id: row.id,
+              type: row.type as DisplayNotification['type'],
+              title: row.title,
+              message: row.message,
+              time: 'Just now',
+              read: row.read || readIds.includes(row.id),
+            };
+            setNotifications((prev) => (prev.some((n) => n.id === next.id) ? prev : [next, ...prev]));
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const row = payload.new as NotificationRowPayload;
+            setNotifications((prev) => prev.map((n) => (n.id === row.id ? { ...n, read: n.read || row.read } : n)));
+          },
+        )
+        .subscribe();
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('steinz_notification', handleLocal);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [loadNotifications]);
 
