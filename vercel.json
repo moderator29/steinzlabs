@@ -35,6 +35,8 @@
     { "path": "/api/cron/smart-money-convergence",    "schedule": "*/15 * * * *" },
     { "path": "/api/cron/whale-score-populator",      "schedule": "0 */4 * * *" },
     { "path": "/api/cron/recompute-reputation",       "schedule": "0 5 * * *" },
-    { "path": "/api/cron/alert-monitor",              "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/alert-monitor",              "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/pumpfun-velocity-poll",      "schedule": "*/2 * * * *" },
+    { "path": "/api/cron/biz-mention-scrape",         "schedule": "*/15 * * * *" }
   ]
 }
