@@ -16,12 +16,20 @@ import type { NetworkNode, NetworkEdge, NetworkStats, NetworkGraphResponse } fro
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// §3 P2-C.3 — extended entity-type palette. The first five values are
+// the historic types; the next four are the new tiers (exchange,
+// market-maker, smart-money, new-wallet) so a single color lookup covers
+// every value of NetworkNode['type'].
 const NODE_COLORS: Record<NetworkNode['type'], string> = {
   'high-activity': '#10D9B0',
   'bridge':        '#7C3AED',
   'usdc':          '#4F8EF7',
   'usdt':          '#10B981',
   'regular':       '#4B5563',
+  'exchange':      '#F59E0B',
+  'market-maker':  '#A855F7',
+  'smart-money':   '#FBBF24',
+  'new-wallet':    '#94A3B8',
 };
 
 const LEGEND_ITEMS: { type: NetworkNode['type']; label: string }[] = [
@@ -29,6 +37,10 @@ const LEGEND_ITEMS: { type: NetworkNode['type']; label: string }[] = [
   { type: 'usdt',          label: 'USDT Transfer' },
   { type: 'high-activity', label: 'High-Activity Wallet' },
   { type: 'bridge',        label: 'Bridge / Protocol' },
+  { type: 'exchange',      label: 'Exchange' },
+  { type: 'market-maker',  label: 'Market Maker' },
+  { type: 'smart-money',   label: 'Smart Money' },
+  { type: 'new-wallet',    label: 'New Wallet' },
   { type: 'regular',       label: 'Regular Wallet' },
 ];
 

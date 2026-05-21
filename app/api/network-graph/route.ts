@@ -7,9 +7,30 @@ const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
 export interface NetworkNode {
   id: string;
   address: string;
-  type: 'high-activity' | 'bridge' | 'regular' | 'usdc' | 'usdt';
+  // §3 P2-C.3 extended entity-type coding. The existing values stay
+  // backwards-compatible; UI can render new tiers when present.
+  type:
+    | 'high-activity'
+    | 'bridge'
+    | 'regular'
+    | 'usdc'
+    | 'usdt'
+    | 'exchange'
+    | 'market-maker'
+    | 'smart-money'
+    | 'new-wallet';
   volume: number;
   txCount: number;
+  // §3 P2-C.2 — when present, lets the UI size the node by % holding of
+  // a specific token (caller passes ?holdingToken=mint, server computes
+  // holding_pct). Optional so existing consumers don't break.
+  holding_pct?: number;
+  // §3 P2-C.5 — adjacency flags. Server can pre-compute; UI can also
+  // overlay client-side via lib/security/ofac.ts + lib/security/tornado.ts.
+  flags?: {
+    ofac?: boolean;
+    tornado_adjacent?: boolean;
+  };
   x?: number;
   y?: number;
 }
@@ -19,6 +40,10 @@ export interface NetworkEdge {
   target: string;
   type: 'usdc' | 'usdt';
   amount: number;
+  // §3 P2-C.1 — alias surfacing the doc-spec field name. Same value as
+  // `amount` (which the existing UI uses for width). Emitting both keeps
+  // the UI working while letting new consumers grep the doc's column.
+  total_value_usd?: number;
   count: number;
 }
 
@@ -210,6 +235,7 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
         target: `node-${addrIndex.get(to)}`,
         type: val.type,
         amount: val.amount,
+        total_value_usd: val.amount,
         count: val.count,
       };
     });
