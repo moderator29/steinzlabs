@@ -63,7 +63,14 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
     // blocks the boundary's retry/render path.
     try {
       if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
-        void fetch('/api/_log/client-error', {
+        // §reporter-404 — was /api/_log/client-error. Next.js App Router
+        // treats underscore-prefixed segments as PRIVATE folders that
+        // never get routed, so the reporter silently 404'd on every
+        // prod throw. Owner's console (May 21) showed:
+        //   POST /api/_log/client-error 404 (Not Found)
+        // Renamed the folder to /api/log/client-error so the route
+        // actually exists.
+        void fetch('/api/log/client-error', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
