@@ -156,7 +156,13 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="relative p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
+        // §header-shape-parity — owner asked all four header controls
+        // (QuickTranslate / LanguageSwitcher / ThemeToggle / Bell) to share
+        // the same square rounded-lg container with a subtle filled
+        // background. The other three already use bg-white/[0.04] + border
+        // border-white/[0.08] (see GlobalControls). Match exactly so the
+        // cluster reads as a single visual row.
+        className="relative p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-gray-300" />

@@ -796,12 +796,16 @@ export default function ContextFeed() {
                 </div>
               )}
 
-              {/* §View-Proof-clip — owner reported the View Proof button
-                  clipped on the right edge on mobile because the row was
-                  flex-nowrap and the signal bar pushed it off-screen.
-                  Add flex-wrap + gap-2 so on narrow viewports the button
-                  wraps under the signal bar instead of getting cut off. */}
-              <div className="flex flex-wrap items-center justify-between gap-y-2">
+              {/* §View-Proof-position — round 2. Round 1 added flex-wrap
+                  so the button stopped being clipped on the right, but
+                  on narrow viewports the wrapped button landed on the
+                  LEFT under the signal bar (because justify-between
+                  with a single flex item left-aligns it). Owner asked
+                  for it back on the right. Switching the justification
+                  to space-between + adding ms-auto on the button keeps
+                  the desktop layout identical and parks the wrapped
+                  mobile button on the right edge of its row. */}
+              <div className="flex flex-wrap items-center gap-y-2">
                 <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
                   <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
@@ -831,7 +835,12 @@ export default function ContextFeed() {
                     sessionStorage.setItem('steinz_proof_event', JSON.stringify(event));
                     window.location.href = `/dashboard/proof?id=${event.id}`;
                   }}
-                  className="naka-button-primary flex-shrink-0 ms-2"
+                  // ms-auto pushes the button to the right edge of the
+                  // row whether the signal bar shares the same line or
+                  // the button has wrapped to its own line. Replaces
+                  // the old justify-between which left-aligned the
+                  // button when it wrapped alone.
+                  className="naka-button-primary flex-shrink-0 ms-auto"
                   aria-label="View proof for this event"
                 >
                   View Proof
