@@ -8,15 +8,19 @@ import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
-    // 5 signups per IP per hour — protects against mass-signup spam and the
-    // expensive admin listUsers + verification-email path that follows.
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rl = await rateLimit(`auth:signup:${ip}`, { interval: 3_600_000, maxRequests: 5 });
-    if (!rl.success) return rateLimitResponse(rl);
-
     const body = await request.json();
 
+    // Branch 1: username availability probe (signup form debounces a POST
+    // here on every keystroke). MUST be rate-limited on its own bucket and
+    // BEFORE consuming any signup-IP quota — otherwise a user typing their
+    // desired username eats their 5/hour budget before they click Submit,
+    // and CGNAT/mobile-carrier IPs share the budget across totally
+    // unrelated users (the rate-limit-false-positive bug).
     if (body.username && !body.email) {
+      const probeRl = await rateLimit(`auth:signup:probe:${ip}`, { interval: 60_000, maxRequests: 30 });
+      if (!probeRl.success) return rateLimitResponse(probeRl);
+
       const cleanUsername = body.username.trim().toLowerCase();
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         return NextResponse.json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' }, { status: 400 });
@@ -40,6 +44,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ available: null, error: 'service_unavailable' }, { status: 503 });
       }
     }
+
+    // Branch 2: real signup submission. Higher cap (20/hour) to tolerate
+    // CGNAT + shared office/home IPs where multiple legitimate users can
+    // sign up from the same egress. Still protects against mass-signup
+    // spam + the expensive admin listUsers + verification-email path.
+    const rl = await rateLimit(`auth:signup:${ip}`, { interval: 3_600_000, maxRequests: 20 });
+    if (!rl.success) return rateLimitResponse(rl);
 
     const { email, password, firstName, lastName, username } = body;
 
