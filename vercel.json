@@ -38,6 +38,11 @@
     { "path": "/api/cron/alert-monitor",              "schedule": "*/5 * * * *" },
     { "path": "/api/cron/pumpfun-velocity-poll",      "schedule": "*/2 * * * *" },
     { "path": "/api/cron/biz-mention-scrape",         "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/reputation-feedback",        "schedule": "0 */6 * * *" }
+    { "path": "/api/cron/reputation-feedback",        "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/dune-refresh",                "schedule": "0 6 * * *" },
+    { "path": "/api/cron/funding-rates-snapshot",     "schedule": "0 * * * *" },
+    { "path": "/api/cron/first-buyer-performance",    "schedule": "0 4 * * *" },
+    { "path": "/api/cron/insider-wallet-detector",    "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/sybil-clusters",             "schedule": "0 5 * * *" }
   ]
 }

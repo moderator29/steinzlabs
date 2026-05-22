@@ -27,6 +27,7 @@ import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2 } from "lucide-react";
 import SocialVelocityPill from "@/components/market/SocialVelocityPill";
+import DuneIntelligenceStrip from "@/components/market/DuneIntelligenceStrip";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from "@/components/TradingViewChart";
 import { AdvancedChart } from "@/components/trading/AdvancedChart";
@@ -206,6 +207,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400">{chain}</span>
               <SocialVelocityPill symbol={symbol} />
             </div>
+            {/* §5.6 Trading Terminal — Dune-derived intelligence strip
+                (holder concentration, wash-trade score, smart-money 24h
+                net flow). Auto-hides when Dune is unprovisioned. */}
+            <DuneIntelligenceStrip chain={chain} address={address} className="mt-2" />
             {/* Audit B4 / P0 — wrapped-asset honesty label. When the
                 canonical asset (BTC, ETH on L2, etc) is not native to
                 the page chain, surface the actual contract being

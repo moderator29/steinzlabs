@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { DUNE_TOOLS } from '@/lib/ai/vtxToolsDune';
 
 /**
  * VTX AI Engine — Advisor Strategy Architecture
@@ -303,6 +304,11 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   // explain_transaction, transaction_simulator, approval_audit) sourced
   // from lib/ai/vtxToolsP2B.ts.
   ...P2B_TOOLS,
+  // §5 Dune Analytics tier-1 + tier-2 tools (17 total) from
+  // lib/ai/vtxToolsDune. Handlers read materialized tables populated by
+  // the dune-refresh cron — VTX latency stays low even though Dune
+  // queries themselves take seconds-to-minutes.
+  ...DUNE_TOOLS,
 ];
 
 // ─── Core VTX Query Function ──────────────────────────────────────────────────

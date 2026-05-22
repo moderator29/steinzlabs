@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, SlidersHorizontal, Zap, TrendingUp, BarChart2, Info, Sparkles } from 'lucide-react';
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
+import DuneFeedCards from './context-feed/DuneFeedCards';
 // FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism added. No bespoke icon — the Ethereum icon
 // with a colored dot is readable enough as a lightweight placeholder until dedicated icons land.
 import { supabase } from '@/lib/supabase';
@@ -552,6 +553,11 @@ export default function ContextFeed() {
 
   return (
     <div className="space-y-4">
+      {/* §5.6 — Dune-derived Context Feed cards (bridge_flow,
+          smart_money_rotation, mev_sandwich, stablecoin_pulse,
+          cex_drain). Renders above the chain-tab feed. Auto-hides
+          when no Dune materialized data is present. */}
+      <DuneFeedCards limit={8} />
       <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
         {CHAIN_TABS.map(tab => {
           const isActive = activeMode === tab.id;
