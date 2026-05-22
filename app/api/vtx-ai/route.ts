@@ -8,6 +8,7 @@ import Anthropic from '@anthropic-ai/sdk';
 // Service layer — all external data comes through here
 import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
 import { dispatchP2BTool } from '@/lib/ai/vtxToolsP2B';
+import { dispatchDuneTool } from '@/lib/ai/vtxToolsDune';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
@@ -773,6 +774,11 @@ async function executeVTXTool(
       // a shared helper so this main dispatcher stays readable.
       const p2b = await dispatchP2BTool(toolName, toolInput, userId);
       if (p2b !== null) return p2b;
+      // §5 Dune tools (tier-1 + tier-2, 17 total) — same shared-helper
+      // pattern. Both are checked; first non-null wins. Falls through
+      // to "Unknown tool" only when neither recognizes the name.
+      const dune = await dispatchDuneTool(toolName, toolInput, userId);
+      if (dune !== null) return dune;
       return `Unknown tool: ${toolName}`;
     }
   }
