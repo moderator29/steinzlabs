@@ -41,12 +41,13 @@ export interface TokenIntelligenceStrip {
  */
 export async function getTokenIntelligenceStrip(token: string, chain: string): Promise<TokenIntelligenceStrip> {
   const admin = getSupabaseAdmin();
-  const [hc, ws, cohorts, flow, lp] = await Promise.all([
+  const [hc, ws, cohorts, flow, lp, fbp] = await Promise.all([
     admin.from('dune_holder_concentration').select('top10_pct, gini, nakamoto').eq('token_address', token).eq('chain', chain).maybeSingle(),
     admin.from('dune_wash_trade_score').select('score').eq('token_address', token).eq('chain', chain).maybeSingle<{ score: number }>(),
     admin.from('dune_token_age_buyers').select('age_under_7d_pct, age_7_30d_pct, age_30_90d_pct, age_over_90d_pct').eq('token_address', token).eq('chain', chain).maybeSingle(),
     computeSmartMoneyInflowForToken(token, chain, 24),
     getLpHealth(token, chain),
+    admin.from('dune_first_buyer_performance').select('avg_pnl_pct_30d, sample_size').eq('token_address', token).eq('chain', chain).maybeSingle<{ avg_pnl_pct_30d: number; sample_size: number }>(),
   ]);
 
   // Whales holding — derive from whale_activity: whales whose most recent
@@ -78,7 +79,9 @@ export async function getTokenIntelligenceStrip(token: string, chain: string): P
     wash_trade_score: ws.data?.score ?? null,
     holder_cohort_bands: cohorts.data as TokenIntelligenceStrip['holder_cohort_bands'] ?? null,
     lp_health: lp,
-    first_buyer_performance: null,                  // requires first-buyer Dune query
+    first_buyer_performance: fbp.data
+      ? { avg_pnl_pct_30d: fbp.data.avg_pnl_pct_30d, sample_size: fbp.data.sample_size }
+      : null,
     whales_holding: whales_holding.slice(0, 10),
   };
 }
@@ -314,10 +317,52 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
     });
   }
 
-  // funding_rate_divergence + insider_wallet still require their Dune
-  // queries to be published — emit nothing until those tables populate.
-  // The card-type union stays locked so future plug-ins don't touch
-  // consumers.
+  // insider_wallet — wallets that bought a token before its public
+  // listing (negative lead_time_hours from dune_insider_wallets).
+  // Populated by /api/cron/insider-wallet-detector.
+  const { data: insiders } = await admin
+    .from('dune_insider_wallets')
+    .select('wallet_address, token_address, chain, lead_time_hours, buy_usd, detected_at')
+    .gte('detected_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+    .lt('lead_time_hours', -1)                                  // strict: bought ≥1h before listing
+    .order('lead_time_hours', { ascending: true })
+    .limit(3);
+  for (const i of (insiders ?? []) as Array<{ wallet_address: string; token_address: string; chain: string; lead_time_hours: number; buy_usd: number; detected_at: string }>) {
+    const hours = Math.abs(i.lead_time_hours);
+    cards.push({
+      type: 'insider_wallet',
+      title: `Insider wallet detected on ${i.chain}`,
+      body: `${i.wallet_address.slice(0, 8)}… bought ${hours.toFixed(1)}h before public listing ($${Math.round(i.buy_usd ?? 0).toLocaleString()}).`,
+      metric: hours,
+      href: `/dashboard/market/${i.chain}/${i.token_address}`,
+      fetched_at: i.detected_at,
+    });
+  }
+
+  // funding_rate_divergence — perps trading at a meaningfully different
+  // price than spot (>1% gap or extreme funding). Populated by
+  // /api/cron/funding-rates-snapshot from Hyperliquid + CoinGecko spot.
+  const { data: funding } = await admin
+    .from('funding_rate_snapshots')
+    .select('exchange, symbol, funding_rate_hr, divergence_pct, fetched_at')
+    .gte('fetched_at', new Date(Date.now() - 2 * 3600 * 1000).toISOString())
+    .or('divergence_pct.gte.1,divergence_pct.lte.-1,funding_rate_hr.gte.0.001,funding_rate_hr.lte.-0.001')
+    .order('fetched_at', { ascending: false })
+    .limit(3);
+  for (const f of (funding ?? []) as Array<{ exchange: string; symbol: string; funding_rate_hr: number; divergence_pct: number | null; fetched_at: string }>) {
+    const divPct = f.divergence_pct;
+    const fundPctAnnual = f.funding_rate_hr * 24 * 365 * 100;     // annualized %
+    const divText = divPct !== null && Math.abs(divPct) >= 1
+      ? `Perp ${divPct >= 0 ? '+' : ''}${divPct.toFixed(2)}% vs spot`
+      : `Funding ${fundPctAnnual >= 0 ? '+' : ''}${fundPctAnnual.toFixed(1)}% APR`;
+    cards.push({
+      type: 'funding_rate_divergence',
+      title: `${f.symbol} ${f.exchange} divergence`,
+      body: `${divText}. Positive = longs paying shorts; negative = shorts paying longs.`,
+      metric: divPct ?? fundPctAnnual,
+      fetched_at: f.fetched_at,
+    });
+  }
 
   return cards
     .sort((a, b) => new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime())
