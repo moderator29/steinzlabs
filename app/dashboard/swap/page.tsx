@@ -18,6 +18,7 @@ import { HAS_APPKIT } from '@/lib/wallet/appkit';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
+import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
 import { OrderForm } from '@/components/trading/OrderForm';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
@@ -1811,6 +1812,21 @@ export default function SwapPage() {
                   amountIn={fromAmount}
                   selectedProvider={selectedProvider ?? undefined}
                   onSelect={(r) => setSelectedProvider(r.provider)}
+                />
+              )}
+
+              {/* §5.6 Swap UI Dune intelligence — sandwich risk (real,
+                  not wash-trade proxy), honeypot flag (GoPlus cache),
+                  smart-money last-hour direction, observed buy/sell tax,
+                  liquidity cliff, recommended slippage. Quietly hides
+                  when none of the signals have data yet. */}
+              {fromAmount && parseFloat(fromAmount) > 0 && (
+                <SwapDuneStrip
+                  chain={chain}
+                  token_in={fromToken}
+                  token_out={toToken}
+                  size_usd={parseFloat(fromAmount)}
+                  className="mt-2"
                 />
               )}
 

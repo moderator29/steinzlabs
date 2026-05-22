@@ -122,6 +122,80 @@ function mapClusterAggregates(rows: unknown[]): Array<Record<string, unknown>> {
   }).filter((r) => r.cluster_id);
 }
 
+// ─── §5 audit-gap mappers (5 new tables) ─────────────────────────────────
+
+function mapTokenAgeBuyers(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return {
+      token_address: String(x.token_address ?? ''),
+      chain: String(x.chain ?? 'ethereum'),
+      age_under_7d_pct: x.age_under_7d_pct ?? null,
+      age_7_30d_pct: x.age_7_30d_pct ?? null,
+      age_30_90d_pct: x.age_30_90d_pct ?? null,
+      age_over_90d_pct: x.age_over_90d_pct ?? null,
+      total_buyers: x.total_buyers ?? null,
+      fetched_at: new Date().toISOString(),
+    };
+  }).filter((r) => r.token_address);
+}
+
+function mapSmartMoneyTokenFlow(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return {
+      token_address: String(x.token_address ?? ''),
+      chain: String(x.chain ?? 'ethereum'),
+      net_inflow_usd_24h: Number(x.net_inflow_usd_24h ?? 0),
+      buyers_24h: Number(x.buyers_24h ?? 0),
+      sellers_24h: Number(x.sellers_24h ?? 0),
+      unique_wallets_24h: Number(x.unique_wallets_24h ?? 0),
+      fetched_at: new Date().toISOString(),
+    };
+  }).filter((r) => r.token_address);
+}
+
+function mapStablecoinPulse(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return {
+      chain: String(x.chain ?? 'ethereum'),
+      hour_bucket: x.hour_bucket ?? new Date().toISOString(),
+      usdc_net_flow_usd: Number(x.usdc_net_flow_usd ?? 0),
+      usdt_net_flow_usd: Number(x.usdt_net_flow_usd ?? 0),
+      dai_net_flow_usd: Number(x.dai_net_flow_usd ?? 0),
+      fetched_at: new Date().toISOString(),
+    };
+  }).filter((r) => r.chain);
+}
+
+function mapCexFlow(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return {
+      chain: String(x.chain ?? 'ethereum'),
+      exchange: String(x.exchange ?? ''),
+      hour_bucket: x.hour_bucket ?? new Date().toISOString(),
+      net_inflow_usd: Number(x.net_inflow_usd ?? 0),
+      fetched_at: new Date().toISOString(),
+    };
+  }).filter((r) => r.exchange);
+}
+
+function mapMevLossAggregate(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return {
+      wallet_address: String(x.wallet_address ?? ''),
+      chain: String(x.chain ?? 'ethereum'),
+      total_loss_usd_30d: Number(x.total_loss_usd_30d ?? 0),
+      sandwich_count: Number(x.sandwich_count ?? 0),
+      frontrun_count: Number(x.frontrun_count ?? 0),
+      fetched_at: new Date().toISOString(),
+    };
+  }).filter((r) => r.wallet_address);
+}
+
 const TARGETS: RefreshTarget[] = [
   { table: 'dune_holder_concentration', query_env: 'DUNE_QUERY_HOLDER_CONCENTRATION', ttl_seconds: 86_400, cost_credits: 30, mapper: mapHolderConcentration, primary_key: ['token_address', 'chain'] },
   { table: 'dune_smart_money_score',     query_env: 'DUNE_QUERY_SMART_MONEY',         ttl_seconds: 86_400, cost_credits: 50, mapper: mapSmartMoneyScore,    primary_key: ['wallet_address', 'chain'] },
@@ -129,6 +203,17 @@ const TARGETS: RefreshTarget[] = [
   { table: 'dune_wash_trade_score',      query_env: 'DUNE_QUERY_WASH_TRADE',          ttl_seconds: 86_400, cost_credits: 30, mapper: mapWashTradeScore,     primary_key: ['token_address', 'chain'] },
   { table: 'dune_deployer_history',      query_env: 'DUNE_QUERY_DEPLOYER_HISTORY',    ttl_seconds: 86_400, cost_credits: 30, mapper: mapDeployerHistory,    primary_key: ['deployer_address', 'chain'] },
   { table: 'dune_cluster_aggregates',    query_env: 'DUNE_QUERY_CLUSTER_AGGREGATES',  ttl_seconds: 86_400, cost_credits: 40, mapper: mapClusterAggregates,  primary_key: ['cluster_id', 'chain'] },
+  // §5 audit-gap rollups (2026_05_22 migration adds the underlying tables).
+  // Each maps from a separate Dune query — DUNE_QUERY_TOKEN_AGE_BUYERS,
+  // DUNE_QUERY_SMART_MONEY_FLOW, DUNE_QUERY_STABLECOIN_PULSE,
+  // DUNE_QUERY_CEX_FLOW, DUNE_QUERY_MEV_LOSS — owner publishes each on
+  // dune.com then pastes the IDs into Vercel envs. Missing IDs are
+  // skipped with reason=no_query_id (no behavior change).
+  { table: 'dune_token_age_buyers',       query_env: 'DUNE_QUERY_TOKEN_AGE_BUYERS',    ttl_seconds: 86_400, cost_credits: 25, mapper: mapTokenAgeBuyers,     primary_key: ['token_address', 'chain'] },
+  { table: 'dune_smart_money_token_flow', query_env: 'DUNE_QUERY_SMART_MONEY_FLOW',    ttl_seconds: 21_600, cost_credits: 50, mapper: mapSmartMoneyTokenFlow, primary_key: ['token_address', 'chain'] },
+  { table: 'dune_stablecoin_pulse',       query_env: 'DUNE_QUERY_STABLECOIN_PULSE',    ttl_seconds: 3_600,  cost_credits: 20, mapper: mapStablecoinPulse,     primary_key: ['chain', 'hour_bucket'] },
+  { table: 'dune_cex_flow',               query_env: 'DUNE_QUERY_CEX_FLOW',            ttl_seconds: 3_600,  cost_credits: 20, mapper: mapCexFlow,             primary_key: ['chain', 'exchange', 'hour_bucket'] },
+  { table: 'dune_mev_loss_aggregate',     query_env: 'DUNE_QUERY_MEV_LOSS',            ttl_seconds: 86_400, cost_credits: 30, mapper: mapMevLossAggregate,    primary_key: ['wallet_address', 'chain'] },
 ];
 
 export async function GET(req: NextRequest) {

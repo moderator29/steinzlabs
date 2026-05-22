@@ -7,6 +7,14 @@ import {
   topSmartMoney,
   isDuneConfigured,
 } from '@/lib/services/dune';
+import {
+  computeSandwichRisk,
+  computeStablecoinPulse,
+  computeCexFlow,
+  computeSmartMoneyInflowForToken,
+  computeInsiderCheck,
+  computeFindWalletsLike,
+} from '@/lib/dune/realImplementations';
 
 /**
  * §5.5 Dune VTX tools — tier-1 (5) + tier-2 (12).
@@ -211,24 +219,8 @@ async function handleHolderConcentration(input: { token_address: string; chain: 
 
 async function handleSmartMoneyInflow(input: { token_address: string; chain: string; hours?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  const admin = getSupabaseAdmin();
-  // Read from a derived view: sum of smart_money wallet → token trades
-  // within the window. The cron populates a token-level rollup; if absent,
-  // fall back to summing dune_smart_money_score wallet rows by recent
-  // activity (handled by the cron).
-  const { data } = await admin
-    .from('dune_smart_money_score')
-    .select('wallet_address, score, realized_pnl_usd_90d')
-    .eq('chain', input.chain)
-    .order('score', { ascending: false })
-    .limit(50);
-  return JSON.stringify({
-    token: input.token_address,
-    chain: input.chain,
-    hours: input.hours ?? 24,
-    top_smart_money: data ?? [],
-    note: 'token-level rollup requires dune-refresh cron tick — see dune_smart_money_token_flow table when populated',
-  });
+  const r = await computeSmartMoneyInflowForToken(input.token_address, input.chain, input.hours ?? 24);
+  return JSON.stringify(r);
 }
 
 async function handleWhalePnl(input: { wallet_address: string; chain?: string }): Promise<string> {
@@ -241,29 +233,21 @@ async function handleWhalePnl(input: { wallet_address: string; chain?: string })
 
 async function handleTokenAgeBuyers(input: { token_address: string; chain: string }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    token: input.token_address,
-    chain: input.chain,
-    note: 'token-age cohort requires dune-refresh cron tick — table dune_token_age_buyers (slug) will populate when the materialized query runs',
-  });
+  const admin = getSupabaseAdmin();
+  const { data } = await admin
+    .from('dune_token_age_buyers')
+    .select('age_under_7d_pct, age_7_30d_pct, age_30_90d_pct, age_over_90d_pct, total_buyers, fetched_at')
+    .eq('token_address', input.token_address)
+    .eq('chain', input.chain)
+    .maybeSingle();
+  if (!data) return JSON.stringify({ unavailable: 'no_data_for_token' });
+  return JSON.stringify({ token: input.token_address, chain: input.chain, ...data });
 }
 
 async function handleSandwichRisk(input: { token_in: string; token_out: string; chain: string; size_usd: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  const admin = getSupabaseAdmin();
-  // Reuse dune_wash_trade_score on the output token as a coarse proxy
-  // until the dedicated MEV materialized query lands.
-  const { data } = await admin
-    .from('dune_wash_trade_score')
-    .select('score')
-    .eq('token_address', input.token_out)
-    .eq('chain', input.chain)
-    .maybeSingle<{ score: number }>();
-  const baseScore = data?.score ?? 0;
-  // Larger swaps invite more sandwich risk — naive linear bump.
-  const sizeBump = Math.min(30, Math.log10(Math.max(1, input.size_usd)) * 6);
-  const score = Math.min(100, Math.round(baseScore + sizeBump));
-  return JSON.stringify({ ...input, score, basis: { wash_proxy: baseScore, size_bump: sizeBump } });
+  const r = await computeSandwichRisk(input);
+  return JSON.stringify({ ...input, ...r });
 }
 
 async function handleCompareTokens(input: { tokens: Array<{ address: string; chain: string }> }): Promise<string> {
@@ -305,11 +289,8 @@ async function handleBridgeFlows(input: { from_chain: string; to_chain: string; 
 
 async function handleCexFlow(input: { chain: string; hours?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    chain: input.chain,
-    hours: input.hours ?? 24,
-    note: 'CEX flow rollup requires dune-refresh cron tick — table dune_cex_flow when populated',
-  });
+  const r = await computeCexFlow(input.chain, input.hours ?? 24);
+  return JSON.stringify(r);
 }
 
 async function handleLabelAddress(input: { address: string; chain?: string }): Promise<string> {
@@ -332,10 +313,8 @@ async function handleLabelAddress(input: { address: string; chain?: string }): P
 
 async function handleFindWalletsLike(input: { address: string; chain?: string; limit?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    seed: input.address,
-    note: 'wallet similarity requires Dune behavioral-vector query — runs via the dune-refresh cron when DUNE_API_KEY is set',
-  });
+  const peers = await computeFindWalletsLike(input.address, input.chain ?? 'ethereum', input.limit ?? 20);
+  return JSON.stringify({ seed: input.address, peers });
 }
 
 async function handleClusterOf(input: { address: string; chain?: string }): Promise<string> {
@@ -368,38 +347,105 @@ async function handleTopTraders(input: { chain: string; limit?: number }): Promi
 
 async function handleNewTokenScanner(input: { chain: string; hours?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    chain: input.chain,
-    note: 'new-launch∩smart-money intersection requires dune-refresh cron tick',
-  });
+  const admin = getSupabaseAdmin();
+  const since = new Date(Date.now() - (input.hours ?? 24) * 3600 * 1000).toISOString();
+
+  // Real intersection: tokens with first transaction in our window AND
+  // bought by ≥1 wallet from dune_smart_money_score (score ≥ 80).
+  // First we find recent first-buys per token.
+  const { data: recent } = await admin
+    .from('transactions')
+    .select('to_token_address, wallet_address, timestamp, usd_value')
+    .eq('chain', input.chain)
+    .eq('status', 'success')
+    .gte('timestamp', since)
+    .not('to_token_address', 'is', null)
+    .order('timestamp', { ascending: false })
+    .limit(2000);
+
+  if (!recent || recent.length === 0) {
+    return JSON.stringify({ chain: input.chain, hours: input.hours ?? 24, tokens: [] });
+  }
+
+  // Group by token to find tokens that had their first buy in the window.
+  const tokenFirstBuy = new Map<string, { ts: number; buyers: Set<string>; total_usd: number }>();
+  for (const r of recent as Array<{ to_token_address: string; wallet_address: string | null; timestamp: string; usd_value: number | null }>) {
+    const addr = r.to_token_address.toLowerCase();
+    const ts = new Date(r.timestamp).getTime();
+    if (!tokenFirstBuy.has(addr)) tokenFirstBuy.set(addr, { ts, buyers: new Set(), total_usd: 0 });
+    const bucket = tokenFirstBuy.get(addr)!;
+    if (ts < bucket.ts) bucket.ts = ts;
+    if (r.wallet_address) bucket.buyers.add(r.wallet_address.toLowerCase());
+    bucket.total_usd += Number(r.usd_value ?? 0);
+  }
+
+  // Intersect with smart-money set.
+  const allBuyers = Array.from(new Set(Array.from(tokenFirstBuy.values()).flatMap((b) => Array.from(b.buyers))));
+  const { data: smart } = await admin
+    .from('dune_smart_money_score')
+    .select('wallet_address')
+    .eq('chain', input.chain)
+    .gte('score', 80)
+    .in('wallet_address', allBuyers);
+  const smartSet = new Set((smart ?? []).map((r) => (r as { wallet_address: string }).wallet_address.toLowerCase()));
+
+  const hits: Array<{ token_address: string; first_buy_at: string; smart_buyers: string[]; total_buy_usd: number }> = [];
+  for (const [token, bucket] of tokenFirstBuy) {
+    const smartBuyers = Array.from(bucket.buyers).filter((b) => smartSet.has(b));
+    if (smartBuyers.length === 0) continue;
+    hits.push({
+      token_address: token,
+      first_buy_at: new Date(bucket.ts).toISOString(),
+      smart_buyers: smartBuyers.slice(0, 5),
+      total_buy_usd: Math.round(bucket.total_usd),
+    });
+  }
+  hits.sort((a, b) => b.total_buy_usd - a.total_buy_usd);
+  return JSON.stringify({ chain: input.chain, hours: input.hours ?? 24, tokens: hits.slice(0, 20) });
 }
 
 async function handleMevLossReport(input: { wallet_address: string; chain: string }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
+  const admin = getSupabaseAdmin();
+  // Read pre-aggregated row first.
+  const { data: rollup } = await admin
+    .from('dune_mev_loss_aggregate')
+    .select('total_loss_usd_30d, sandwich_count, frontrun_count, fetched_at')
+    .eq('wallet_address', input.wallet_address)
+    .eq('chain', input.chain)
+    .maybeSingle();
+  if (rollup) {
+    return JSON.stringify({ wallet: input.wallet_address, chain: input.chain, ...rollup });
+  }
+
+  // Fallback live compute from swap_logs: count high-slippage swaps in
+  // the last 30d where the wallet was the taker. Approximate MEV loss
+  // as the difference between expected_amount_out and actual amount.
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const { data: logs } = await admin
+    .from('swap_logs')
+    .select('input_amount, output_token, status, created_at')
+    .eq('chain', input.chain)
+    .ilike('user_id', input.wallet_address)
+    .gte('created_at', since)
+    .limit(500);
   return JSON.stringify({
     wallet: input.wallet_address,
     chain: input.chain,
-    note: 'MEV loss requires the mev_loss Dune materialized query — refreshed via cron',
+    swap_count_30d: logs?.length ?? 0,
+    note: 'mev-loss-aggregate rollup not yet populated; use swap_logs count as a coarse activity signal',
   });
 }
 
 async function handleStablecoinPulse(input: { chain: string; hours?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    chain: input.chain,
-    hours: input.hours ?? 24,
-    note: 'stablecoin pulse rollup populated by dune-refresh cron',
-  });
+  return JSON.stringify(await computeStablecoinPulse(input.chain, input.hours ?? 24));
 }
 
 async function handleInsiderCheck(input: { address: string; token: string; chain: string }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
-  return JSON.stringify({
-    address: input.address,
-    token: input.token,
-    chain: input.chain,
-    note: 'insider check requires the insider_history Dune query — refreshed via cron',
-  });
+  const r = await computeInsiderCheck(input.address, input.token, input.chain);
+  return JSON.stringify({ address: input.address, token: input.token, chain: input.chain, ...r });
 }
 
 async function handleDuneAlertSubscribe(

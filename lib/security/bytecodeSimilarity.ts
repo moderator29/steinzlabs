@@ -123,24 +123,44 @@ export async function scanBytecode(chain: string, address: string): Promise<Byte
 
   // Tier 2: length-bucketed Jaccard. Pull candidates within ±5% of the
   // target's stripped length so we don't shingle-compare against every
-  // signature in the table on every request.
+  // signature in the table on every request. The shingles column on
+  // rug_contract_signatures (added by 2026_05_22_dune_audit_gap_closures
+  // migration) stores comma-joined 8-byte hex tokens so the comparison
+  // runs in-memory without re-fetching bytecode.
   const lenBytes = stripped.length / 2;
   const lo = Math.floor(lenBytes * 0.95);
   const hi = Math.ceil(lenBytes * 1.05);
   const { data: candidates } = await admin
     .from('rug_contract_signatures')
-    .select('address, category, bytecode_hash, bytecode_length')
+    .select('address, category, bytecode_hash, bytecode_length, shingles')
     .gte('bytecode_length', lo)
     .lte('bytecode_length', hi)
+    .not('shingles', 'is', null)
     .limit(50);
 
   if (candidates && candidates.length > 0) {
-    // Without the candidate's actual bytecode we can only compare via the
-    // stored shingles (not in the schema yet) — for v1 we surface "similar
-    // candidate present" without computing the Jaccard live. A follow-up
-    // migration will denormalize a shingle bitmap column for sub-ms
-    // comparison. For now we return tier-2 only when the schema is later
-    // extended to carry the comparable form.
+    const targetShingles = shingles(stripped);
+    let bestMatch: { address: string; category: string; jaccard: number } | null = null;
+    for (const c of candidates) {
+      const row = c as { address: string; category: string; shingles: string };
+      const candShingles = new Set(row.shingles.split(','));
+      const j = jaccard(targetShingles, candShingles);
+      if (j >= 0.85 && (!bestMatch || j > bestMatch.jaccard)) {
+        bestMatch = { address: row.address, category: row.category, jaccard: j };
+      }
+    }
+    if (bestMatch) {
+      return {
+        chain,
+        address,
+        match: 'similar',
+        confidence: Math.round(bestMatch.jaccard * 100),
+        category: bestMatch.category,
+        matchedAddress: bestMatch.address,
+        bytecodeLength: lenBytes,
+        jaccard: bestMatch.jaccard,
+      };
+    }
   }
 
   return { chain, address, match: 'none', confidence: 0, bytecodeLength: lenBytes };
