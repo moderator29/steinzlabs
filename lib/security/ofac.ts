@@ -9,9 +9,10 @@ import { cacheGet, cacheSet } from '@/lib/cache/redis';
  * for reasonable use. We cache responses in Redis for 24h since the list
  * changes at most a few times per week.
  *
- * Falls open on upstream failure (returns sanctioned=false) — never block
- * trades on a transient public-API blip — but logs the failure so ops
- * sees if the source has gone dark.
+ * Default mode falls open on upstream failure (returns sanctioned=false) so
+ * display surfaces (badge on a profile, sidebar warning) don't break on a
+ * transient public-API blip. The swap / fund-movement path MUST use
+ * `checkOfacStrict()` which treats 'unavailable' as a hard fail.
  */
 
 const CHAINALYSIS_URL = 'https://public.chainalysis.com/api/v1/address';
@@ -51,4 +52,20 @@ export async function checkOfac(address: string): Promise<OfacCheckResult> {
   } catch {
     return { address, sanctioned: false, identifications: [], source: 'unavailable' };
   }
+}
+
+/**
+ * Strict OFAC check for fund-movement / swap-execute / withdrawal paths.
+ *
+ * Treats `source === 'unavailable'` as sanctioned=true so that an upstream
+ * outage CANNOT silently let a sanctioned-wallet trade through. Callers
+ * should display a clear "compliance check unavailable, try again later"
+ * message to the user instead of executing.
+ */
+export async function checkOfacStrict(address: string): Promise<OfacCheckResult> {
+  const result = await checkOfac(address);
+  if (result.source === 'unavailable') {
+    return { ...result, sanctioned: true };
+  }
+  return result;
 }
