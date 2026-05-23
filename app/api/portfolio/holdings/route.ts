@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getEthBalance, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
+import { getTokenPairs } from '@/lib/services/dexscreener';
 
 interface Holding {
   address: string;
@@ -9,6 +10,31 @@ interface Holding {
   name: string;
   balance: number;
   decimals: number;
+}
+
+/**
+ * §port-1: resolve real SPL token symbol from DexScreener.
+ *
+ * The old path used `mint.slice(0, 6)` which rendered as garbage
+ * ("7gUa4U") in the holdings table for every custom SPL token. We
+ * concurrently look each mint up on DexScreener (cached 60s) and fall
+ * back to the mint-prefix only if DexScreener has no pair (truly
+ * obscure / brand-new token).
+ */
+async function resolveSplMeta(mint: string): Promise<{ symbol: string; name: string }> {
+  try {
+    const pairs = await getTokenPairs(mint);
+    const best = pairs.find((p) => p.baseToken?.address?.toLowerCase() === mint.toLowerCase()) ?? pairs[0];
+    if (best?.baseToken?.symbol) {
+      return {
+        symbol: best.baseToken.symbol,
+        name: best.baseToken.name ?? best.baseToken.symbol,
+      };
+    }
+  } catch {
+    /* fall through to placeholder */
+  }
+  return { symbol: `${mint.slice(0, 4)}…${mint.slice(-3)}`, name: 'SPL Token' };
 }
 
 async function getSolanaHoldings(wallet: string): Promise<Holding[]> {
@@ -21,17 +47,19 @@ async function getSolanaHoldings(wallet: string): Promise<Holding[]> {
     { address: 'native', symbol: 'SOL', name: 'Solana', balance: solBalance, decimals: 9 },
   ];
 
-  for (const t of tokens) {
-    if ((t.uiAmount ?? 0) > 0) {
-      result.push({
-        address: t.mint,
-        symbol: t.mint.slice(0, 6),
-        name: 'SPL Token',
-        balance: t.uiAmount ?? 0,
-        decimals: t.decimals ?? 0,
-      });
-    }
-  }
+  // Resolve metadata in parallel; cap concurrency implicitly via the
+  // DexScreener call's own dedupe + Promise.all.
+  const heldTokens = tokens.filter((t) => (t.uiAmount ?? 0) > 0);
+  const metas = await Promise.all(heldTokens.map((t) => resolveSplMeta(t.mint)));
+  heldTokens.forEach((t, i) => {
+    result.push({
+      address: t.mint,
+      symbol: metas[i].symbol,
+      name: metas[i].name,
+      balance: t.uiAmount ?? 0,
+      decimals: t.decimals ?? 0,
+    });
+  });
 
   return result;
 }
