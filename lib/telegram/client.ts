@@ -65,11 +65,11 @@ export async function sendTelegramMessage(
     disable_web_page_preview?: boolean;
     reply_markup?: { inline_keyboard: Array<Array<{ text: string; url?: string; callback_data?: string }>> };
   } = {},
-): Promise<void> {
+): Promise<boolean> {
   const t = token();
   if (!t) {
     console.warn("[telegram] TELEGRAM_BOT_TOKEN not set; skipping send");
-    return;
+    return false;
   }
   try {
     const res = await fetchWithRetry(`${API_BASE}/bot${t}/sendMessage`, {
@@ -89,9 +89,12 @@ export async function sendTelegramMessage(
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       console.error(`[telegram.send] HTTP ${res.status}: ${body.slice(0, 200)}`);
+      return false;
     }
+    return true;
   } catch (err) {
     console.error("[telegram.send] failed:", err);
+    return false;
   }
 }
 

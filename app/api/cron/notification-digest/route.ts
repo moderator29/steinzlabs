@@ -127,11 +127,23 @@ export async function GET(request: NextRequest) {
           return `• *${a.name ?? "Alert"}* (${a.type ?? "generic"}) — ${when}`;
         });
         const extra = userAlerts.length > 10 ? `\n…and ${userAlerts.length - 10} more.` : "";
-        await sendTelegramMessage(
-          chatId,
-          `*Naka Labs digest*\n${userAlerts.length} alert${userAlerts.length === 1 ? "" : "s"} in the last 4 hours:\n\n${lines.join("\n")}${extra}`,
-        );
-        sent++;
+        const body = `*Naka Labs digest*\n${userAlerts.length} alert${userAlerts.length === 1 ? "" : "s"} in the last 4 hours:\n\n${lines.join("\n")}${extra}`;
+        try {
+          const okTg = await sendTelegramMessage(chatId, body);
+          if (okTg) sent++;
+          else throw new Error('sendTelegramMessage returned falsy');
+        } catch (tgErr) {
+          // ALERT4: durable retry — write to pending_telegram_messages
+          // so the notification-retry cron re-attempts with exponential
+          // backoff (1h → 24h → 7d).
+          await supabase.from('pending_telegram_messages').insert({
+            chat_id: chatId,
+            body,
+            attempts: 1,
+            next_retry_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            last_error: tgErr instanceof Error ? tgErr.message : String(tgErr),
+          });
+        }
       }
 
       // Email (new path)
