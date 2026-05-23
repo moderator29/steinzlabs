@@ -250,7 +250,15 @@ export async function POST(request: NextRequest) {
     fromTokenSymbol = "USDC";
     toTokenAddress = body.token_address;
     toTokenSymbol = body.token_symbol ?? null;
-    amountIn = String(body.amount_usd);
+    // §copy-1 — `String(body.amount_usd)` lost decimal precision because
+    // JS Number → String can drop trailing zeros (e.g. 10.50 → "10.5").
+    // Pin to 6 decimals which matches USDC's on-chain unit and preserves
+    // the user's intended sizing through the aggregator.
+    const usd = Number(body.amount_usd);
+    if (!Number.isFinite(usd) || usd <= 0) {
+      return NextResponse.json({ error: "Invalid amount_usd" }, { status: 400 });
+    }
+    amountIn = usd.toFixed(6);
   }
 
   // 6. Hand off to the non-custodial relayer. Creates pending_trades row +
