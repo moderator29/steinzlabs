@@ -49,6 +49,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(true);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   // Bootstrap
@@ -89,31 +91,64 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     return () => { cancelled = true; };
   }, [peerId]);
 
-  // History fetch + decrypt
+  const decryptBatch = useCallback(async (rows: ServerMessage[], key: Uint8Array): Promise<UiMessage[]> => {
+    const out: UiMessage[] = [];
+    for (const m of rows) {
+      try {
+        const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, key);
+        out.push({ id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at });
+      } catch {
+        out.push({ id: m.id, sender_id: m.sender_id, body: '[unable to decrypt]', created_at: m.created_at, read_at: m.read_at });
+      }
+    }
+    return out;
+  }, []);
+
+  // Initial history fetch + decrypt (newest 100)
   const loadHistory = useCallback(async () => {
     if (!conversationId || !convKey) return;
     const res = await fetch(`/api/social/dm/messages?conversation_id=${conversationId}&limit=100`);
     if (!res.ok) return;
     const json = await res.json();
-    const decrypted: UiMessage[] = [];
-    for (const m of (json.messages ?? []) as ServerMessage[]) {
-      try {
-        const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, convKey);
-        decrypted.push({ id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at });
-      } catch {
-        decrypted.push({ id: m.id, sender_id: m.sender_id, body: '[unable to decrypt]', created_at: m.created_at, read_at: m.read_at });
-      }
-    }
-    decrypted.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const rows = (json.messages ?? []) as ServerMessage[];
+    const decrypted = await decryptBatch(rows, convKey);
+    decrypted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     setMessages(decrypted);
-  }, [conversationId, convKey]);
+    setHasMoreOlder(rows.length >= 100);
+  }, [conversationId, convKey, decryptBatch]);
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
-  // Supabase Realtime subscription for live deliveries
+  // DM7: paginate older messages by cursor (?before=<oldest.created_at>)
+  const loadOlder = useCallback(async () => {
+    if (!conversationId || !convKey || loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    try {
+      const oldest = messages[0].created_at;
+      const res = await fetch(`/api/social/dm/messages?conversation_id=${conversationId}&before=${encodeURIComponent(oldest)}&limit=50`);
+      if (!res.ok) return;
+      const json = await res.json();
+      const rows = (json.messages ?? []) as ServerMessage[];
+      if (rows.length === 0) { setHasMoreOlder(false); return; }
+      const older = await decryptBatch(rows, convKey);
+      setMessages((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const merged = [...older.filter((o) => !seen.has(o.id)), ...prev];
+        merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return merged;
+      });
+      if (rows.length < 50) setHasMoreOlder(false);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [conversationId, convKey, loadingOlder, messages, decryptBatch]);
+
+  // Supabase Realtime subscription for live deliveries. DM4: resubscribe
+  // on tab visibility change so backgrounded tabs reconnect cleanly when
+  // the user returns instead of silently missing deliveries.
   useEffect(() => {
     if (!conversationId || !convKey) return;
-    const channel = supabase
+    let channel = supabase
       .channel(`dm:${conversationId}`)
       .on(
         'postgres_changes',
@@ -127,10 +162,33 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         },
       )
       .subscribe();
+
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      void supabase.removeChannel(channel);
+      channel = supabase
+        .channel(`dm:${conversationId}:${Date.now()}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` },
+          async (payload) => {
+            const m = payload.new as ServerMessage;
+            try {
+              const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, convKey);
+              setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
+            } catch { /* decrypt failed */ }
+          },
+        )
+        .subscribe();
+      // Resync any messages that arrived while the tab was hidden.
+      void loadHistory();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
       void supabase.removeChannel(channel);
     };
-  }, [conversationId, convKey]);
+  }, [conversationId, convKey, loadHistory]);
 
   // Auto-scroll on new message
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
@@ -168,6 +226,18 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 mb-3 rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
+        {messages.length > 0 && hasMoreOlder && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => void loadOlder()}
+              disabled={loadingOlder}
+              className="text-[11px] text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-full px-3 py-1 disabled:opacity-50"
+            >
+              {loadingOlder ? 'Loading…' : 'Load older messages'}
+            </button>
+          </div>
+        )}
         {error ? (
           <div className="text-sm text-red-400">{error}</div>
         ) : messages.length === 0 ? (

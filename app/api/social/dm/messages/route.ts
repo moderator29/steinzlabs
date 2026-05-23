@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { canUserDM } from '@/lib/social/permissions';
 import { RATES, takeToken } from '@/lib/social/rateLimit';
+import { notifySocialEvent } from '@/lib/social/notify';
 
 /**
  * GET  /api/social/dm/messages?conversation_id=...&before=<iso>&limit=50
@@ -97,6 +98,15 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await sb.from('dm_conversations').update({ last_message_at: nowIso }).eq('id', parsed.data.conversation_id);
+
+  // Fire-and-forget social notification to peer. Honors recipient prefs
+  // and social_suspended_until inside notifySocialEvent.
+  notifySocialEvent({
+    recipient_id: peerId,
+    event: 'dm_received',
+    metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
+  }).catch(() => {});
+
   return NextResponse.json({ message: data });
 }
 
