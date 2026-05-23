@@ -5,6 +5,7 @@ import { ConclaveSigil } from '@/components/vault/sigils/ConclaveSigil';
 import { OracleSigil } from '@/components/vault/sigils/OracleSigil';
 import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
 import { CultStatsStrip } from '@/components/naka-cult/CultStatsStrip';
+import { PauseAnimationsOnHidden } from '@/components/perf/PauseAnimationsOnHidden';
 import './landing.css';
 
 export const metadata = {
@@ -30,6 +31,7 @@ export default async function NakaCultLanding() {
 
   return (
     <div className="nakacult-shell">
+      <PauseAnimationsOnHidden />
       <div className="nakacult-orb-layer" aria-hidden>
         <span className="nakacult-orb nakacult-orb--blue" />
         <span className="nakacult-orb nakacult-orb--crimson" />

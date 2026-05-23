@@ -38,7 +38,11 @@
     transparent 240deg,
     rgba(0, 200, 255, 0.14) 300deg,
     transparent 360deg);
+  /* §perf-6 — hint compositor to put this on a GPU layer so the 38s
+     conic-gradient rotation doesn't trigger main-thread paints every
+     frame. Was the #1 reason laptops fan-spun on /naka-cult per audit. */
   animation: nakacult-drift 38s linear infinite;
+  will-change: transform;
   opacity: 0.4;
 }
 .nakacult-shell > * { position: relative; z-index: 1; }
