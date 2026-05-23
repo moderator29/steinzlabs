@@ -77,22 +77,49 @@ Sentry.init({
         }
       }
     }
-    // Strip JWT-shaped strings from extra/contexts (eyJ… long base64)
+    // Strip JWT, wallet, tx-hash, and email patterns from extra/contexts/url
     const JWT_RE = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g;
-    const REDACT_KEYS = new Set(['email', 'access_token', 'jwt', 'token', 'private_key', 'encrypted_private_key', 'seed', 'mnemonic']);
+    const EVM_ADDR_RE = /0x[a-fA-F0-9]{40}\b/g;
+    const TX_HASH_RE = /0x[a-fA-F0-9]{64}\b/g;
+    const SOL_ADDR_RE = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
+    const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const REDACT_KEYS = new Set([
+      'email', 'access_token', 'refresh_token', 'jwt', 'token', 'session_token',
+      'private_key', 'encrypted_private_key', 'seed', 'mnemonic',
+      'address', 'wallet_address', 'tx', 'tx_hash', 'transaction_hash',
+    ]);
+    const scrubString = (s: string): string =>
+      s
+        .replace(JWT_RE, '[redacted-jwt]')
+        .replace(TX_HASH_RE, '[redacted-tx]')
+        .replace(EVM_ADDR_RE, '[redacted-addr]')
+        .replace(EMAIL_RE, '[redacted-email]')
+        .replace(SOL_ADDR_RE, (m) =>
+          // Solana addrs collide with random base58 — only redact when
+          // the surrounding length looks address-shaped (32-44 chars).
+          m.length >= 32 && m.length <= 44 ? '[redacted-addr]' : m,
+        );
     const scrub = (obj: unknown): unknown => {
       if (!obj || typeof obj !== 'object') return obj;
       if (Array.isArray(obj)) return obj.map(scrub);
       const out: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
         if (REDACT_KEYS.has(k.toLowerCase())) { out[k] = '[redacted]'; continue; }
-        if (typeof v === 'string') { out[k] = v.replace(JWT_RE, '[redacted-jwt]'); continue; }
+        if (typeof v === 'string') { out[k] = scrubString(v); continue; }
         out[k] = scrub(v);
       }
       return out;
     };
     if (event.extra) event.extra = scrub(event.extra) as typeof event.extra;
     if (event.contexts) event.contexts = scrub(event.contexts) as typeof event.contexts;
+    if (event.request?.url) event.request.url = scrubString(event.request.url);
+    if (event.message) event.message = scrubString(event.message);
+    if (event.breadcrumbs) {
+      for (const b of event.breadcrumbs) {
+        if (b.message) b.message = scrubString(b.message);
+        if (b.data) b.data = scrub(b.data) as typeof b.data;
+      }
+    }
     if (event.user) {
       // Keep id for correlation; drop email + ip_address.
       event.user = { id: event.user.id };
