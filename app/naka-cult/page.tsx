@@ -13,6 +13,10 @@ export const metadata = {
     'The Naka Cult is the inner ring of Naka Labs. Three chambers. One sigil. For those who hold.',
 };
 
+// Keep dynamic — per-user CTA (isMember) depends on session cookies via
+// getCultAccess(). ISR would cache one user's state to all viewers.
+// Stats-strip query cost is mitigated by moving CultStatsStrip data
+// fetch behind unstable_cache(60s) instead (see CultStatsStrip.tsx).
 export const dynamic = 'force-dynamic';
 
 /**
