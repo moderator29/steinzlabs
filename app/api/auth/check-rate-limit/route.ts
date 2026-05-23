@@ -106,8 +106,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       attemptsRemaining: MAX_ATTEMPTS - attempts - 1,
     });
   } catch (err) {
-    // Fail open — don't block users if rate limit DB is unavailable
+    // Fail-CLOSED in production: a DB outage must not silently open the
+    // auth rate limiter to brute-force. In dev, stay fail-open so iteration
+    // isn't blocked by transient Supabase issues.
     console.error('[check-rate-limit] Error:', err);
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { allowed: false, error: 'Rate limit service unavailable' },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ allowed: true, failOpen: true });
   }
 }
