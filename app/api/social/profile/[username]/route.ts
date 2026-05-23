@@ -23,11 +23,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   // platform sometimes lowercase the segment, producing "user not
   // found" 404s for users that clearly exist. ilike with no wildcards
   // is case-insensitive exact match, hits the same btree index.
-  const { data: profile } = await sb
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at')
-    .ilike('username', username)
-    .maybeSingle();
+  //
+  // /u/Puffnutz fix: leaderboard rows fall back to `r.id` (UUID) when
+  // username is null. If the slug looks like a UUID, look up by id too.
+  const cols = 'id, username, display_name, avatar_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at';
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const initial = await sb.from('profiles').select(cols).ilike('username', username).maybeSingle();
+  let profile = initial.data;
+  if (!profile && UUID_RE.test(username)) {
+    const byId = await sb.from('profiles').select(cols).eq('id', username).maybeSingle();
+    profile = byId.data;
+  }
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   if (caller && (await isBlockedBetween(caller.id, profile.id))) {
