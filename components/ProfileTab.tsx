@@ -106,15 +106,18 @@ export default function ProfileTab() {
   // changes so it's accurate right after login.
   const [followingCount, setFollowingCount] = useState<number | null>(null);
 
+  const mountedRef = useRef(true);
   useEffect(() => {
+    mountedRef.current = true;
     let cancelled = false;
     async function loadNotifications() {
+      if (!mountedRef.current) return;
       try {
         setNotifLoading(true);
         const res = await fetch('/api/notifications');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        if (!cancelled && Array.isArray(data.notifications)) {
+        if (!cancelled && mountedRef.current && Array.isArray(data.notifications)) {
           const readIds = JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]');
           const mapped = data.notifications.map((n: Notification) => ({
             ...n,
@@ -152,7 +155,12 @@ export default function ProfileTab() {
     const handleLocalNotif = () => loadNotifications();
     window.addEventListener('steinz_notification', handleLocalNotif);
 
-    return () => { cancelled = true; clearInterval(interval); window.removeEventListener('steinz_notification', handleLocalNotif); };
+    return () => {
+      cancelled = true;
+      mountedRef.current = false;
+      clearInterval(interval);
+      window.removeEventListener('steinz_notification', handleLocalNotif);
+    };
   }, []);
 
   const unreadCount = notifList.filter(n => !n.read).length;

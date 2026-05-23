@@ -66,6 +66,12 @@ export function ParticleField({ variant = 'stars', count, className }: Props) {
 
     let raf = 0;
     let running = true;
+    // PERF9: 30fps cap on mobile; full 60fps on desktop. Cuts paint work
+    // in half on touch devices where the canvas is decorative anyway.
+    const isMobileViewport = typeof window !== 'undefined'
+      && (window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(pointer: coarse)').matches);
+    const frameInterval = isMobileViewport ? 33 : 16;
+    let lastFrame = 0;
 
     const onVis = () => { running = !document.hidden; if (running) raf = requestAnimationFrame(loop); };
     document.addEventListener('visibilitychange', onVis);
@@ -77,8 +83,14 @@ export function ParticleField({ variant = 'stars', count, className }: Props) {
       return `rgba(180, 200, 255, ${a})`;
     };
 
-    function loop() {
+    function loop(now?: number) {
       if (!ctx || !running) return;
+      const t = now ?? performance.now();
+      if (t - lastFrame < frameInterval) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      lastFrame = t;
       ctx.clearRect(0, 0, w, h);
       for (const p of particles) {
         p.x += p.vx; p.y += p.vy;
