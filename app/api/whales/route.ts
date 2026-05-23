@@ -12,8 +12,16 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
   const q = sp.get("q")?.trim();
   const offset = Math.max(0, parseInt(sp.get("offset") ?? "0", 10) || 0);
   const limit = Math.max(1, Math.min(100, parseInt(sp.get("limit") ?? "30", 10) || 30));
+  // §whale-tracker-grade audit — PnL leaderboard widget on the tracker
+  // home was hitting this endpoint with no ordering control, which meant
+  // it surfaced top-whale-SCORE whales instead of top-PnL. Add explicit
+  // sort + min_pnl filter so the leaderboard can rank by realised 30d
+  // PnL like the panel name promises.
+  const sortBy = (sp.get("sort") ?? "score").toLowerCase();
+  const minPnl = Math.max(0, parseInt(sp.get("min_pnl") ?? "0", 10) || 0);
+  const orderColumn = sortBy === "pnl" ? "pnl_30d_usd" : "whale_score";
 
-  const cacheKey = `whales:list:${chain ?? "all"}:${entityType ?? "all"}:${q ?? ""}:${offset}:${limit}`;
+  const cacheKey = `whales:list:${chain ?? "all"}:${entityType ?? "all"}:${q ?? ""}:${sortBy}:${minPnl}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback(cacheKey, 30, async () => {
@@ -25,8 +33,10 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
         // existing columns the backfill cron already populates.
         .select("id, address, chain, label, entity_type, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, follower_count, x_handle, verified, last_active_at", { count: "exact" })
         .eq("is_active", true)
-        .order("whale_score", { ascending: false })
+        .order(orderColumn, { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
+
+      if (minPnl > 0) query = query.gte("pnl_30d_usd", minPnl);
 
       if (chain) query = query.eq("chain", chain);
       if (entityType) query = query.eq("entity_type", entityType);
