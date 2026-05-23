@@ -121,7 +121,47 @@ export default function NotificationBell() {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, POLL_INTERVAL_MS);
+
+    // §perf-2 — Inter-tab coordination via BroadcastChannel so only one
+    // tab actually polls /api/notifications. Other tabs listen and
+    // hydrate from the broadcast, saving N tabs × 1 fetch every 5min.
+    // Falls back to per-tab polling if BroadcastChannel isn't supported.
+    let interval: ReturnType<typeof setInterval>;
+    let bcast: BroadcastChannel | null = null;
+    let isLeader = false;
+
+    if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+      bcast = new BroadcastChannel('naka:notifications');
+      const leadershipKey = 'naka:notifications:leader';
+      const myId = Math.random().toString(36).slice(2);
+      const claimLeadership = () => {
+        try {
+          localStorage.setItem(leadershipKey, JSON.stringify({ id: myId, ts: Date.now() }));
+          isLeader = true;
+        } catch { isLeader = true; }
+      };
+      try {
+        const raw = localStorage.getItem(leadershipKey);
+        const cur = raw ? JSON.parse(raw) : null;
+        if (!cur || Date.now() - (cur.ts ?? 0) > POLL_INTERVAL_MS * 2) claimLeadership();
+      } catch { claimLeadership(); }
+
+      bcast.onmessage = (ev) => {
+        if (ev.data?.type === 'notifications:refresh') loadNotifications();
+      };
+
+      interval = setInterval(() => {
+        if (isLeader) {
+          loadNotifications();
+          try {
+            localStorage.setItem(leadershipKey, JSON.stringify({ id: myId, ts: Date.now() }));
+          } catch { /* ignore */ }
+          bcast?.postMessage({ type: 'notifications:refresh' });
+        }
+      }, POLL_INTERVAL_MS);
+    } else {
+      interval = setInterval(loadNotifications, POLL_INTERVAL_MS);
+    }
 
     const handleLocal = () => loadNotifications();
     window.addEventListener('steinz_notification', handleLocal);
@@ -168,6 +208,7 @@ export default function NotificationBell() {
 
     return () => {
       clearInterval(interval);
+      bcast?.close();
       window.removeEventListener('steinz_notification', handleLocal);
       if (channel) supabase.removeChannel(channel);
     };
