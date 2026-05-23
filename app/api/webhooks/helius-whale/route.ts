@@ -25,6 +25,7 @@ import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
 import { mapWithConcurrency } from '@/lib/utils/concurrency';
+import { checkWebhookRateLimit, getWebhookClientIp } from '@/lib/security/webhookRateLimit';
 
 // See alchemy-whale/route.ts MATCHER_CONCURRENCY rationale — same trade-off
 // on the Solana side (Jupiter quote + GoPlus + pending_trades insert per row).
@@ -97,6 +98,17 @@ function classifyAction(tx: HeliusTx, whaleAddress: string): 'buy' | 'sell' | 't
 }
 
 export async function POST(req: NextRequest) {
+  // Defense-in-depth: cap webhook throughput per source IP — a stolen Helius
+  // signing secret can't be used to flood the matcher / Supabase.
+  const ip = getWebhookClientIp(req.headers);
+  const limit = await checkWebhookRateLimit('helius-whale', ip, { limit: 120, windowSeconds: 60 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter ?? 60) } },
+    );
+  }
+
   if (!authOk(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
