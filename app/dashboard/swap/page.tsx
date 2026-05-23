@@ -362,6 +362,9 @@ export default function SwapPage() {
   // netOutputUsd. The selected provider drives the eventual execution
   // path (UI hint today; execution wiring lands next sprint).
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  // §swap-1: capture full route quote (raw blob included) so execute path
+  // can submit the provider-specific tx without re-quoting.
+  const [selectedRoute, setSelectedRoute] = useState<import('@/lib/services/swap-aggregator').RouteQuote | null>(null);
   // §MEV-protect — Solana defaults ON (Jito is industry standard, no
   // friction). EVM defaults OFF but auto-flips ON whenever the trade
   // size estimates ≥ $1K (mevAutoForLarge logic below). User can still
@@ -844,6 +847,35 @@ export default function SwapPage() {
     setTxStatus('pending');
     try {
       if (!connectedAddress) throw new Error('Please connect a wallet to execute swaps.');
+
+      // §swap-1: Honor the route the user picked in RouteComparison.
+      // When they selected a non-0x aggregator (1inch / KyberSwap /
+      // OpenOcean), submit through /api/market/trade/execute which
+      // already knows how to settle the provider-specific quoteData.
+      // 0x stays on the original /api/swap/quote → wallet-sign path.
+      if (selectedProvider && selectedProvider !== '0x' && selectedRoute) {
+        const executeRes = await fetch('/api/market/trade/execute', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            selectedProvider,
+            routeQuoteData: selectedRoute,
+            taker: connectedAddress,
+            chain,
+            fromToken,
+            toToken,
+            mevProtect, // §swap-2 — server uses this to route to private mempool when set
+          }),
+        });
+        const out = await executeRes.json();
+        if (!executeRes.ok) throw new Error(out.error || `${selectedProvider} swap failed`);
+        if (out.txHash) {
+          setTxHash(out.txHash);
+          setTxStatus('confirmed');
+          setSwapSuccess(true);
+        }
+        return;
+      }
 
       // Step 1: Get firm swap quote from 0x API
       const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
@@ -1811,7 +1843,7 @@ export default function SwapPage() {
                   toToken={toToken}
                   amountIn={fromAmount}
                   selectedProvider={selectedProvider ?? undefined}
-                  onSelect={(r) => setSelectedProvider(r.provider)}
+                  onSelect={(r) => { setSelectedProvider(r.provider); setSelectedRoute(r); }}
                 />
               )}
 
