@@ -846,18 +846,23 @@ function TopTodayPanel({
 // the way Nansen/Arkham do.
 type WhaleBadge = 'accumulator' | 'distributor' | 'sniper' | 'high-win-rate';
 
-function deriveBadges(w: { pnl_30d_usd?: number | null; win_rate?: number | null; avg_hold_hours?: number | null }): WhaleBadge[] {
+function deriveBadges(w: { pnl_30d_usd?: number | null; win_rate?: number | null; avg_hold_hours?: number | null; archetype?: string | null }): WhaleBadge[] {
+  // WHALE6: prefer the stored archetype (computed authoritatively by the
+  // whale-backfill-pnl cron's FIFO match) when present; fall back to the
+  // pre-cron heuristic so rows that haven't been backfilled yet still
+  // surface a badge.
+  const stored = (w.archetype ?? null) as WhaleBadge | null;
+  if (stored && (stored === 'accumulator' || stored === 'distributor' || stored === 'sniper' || stored === 'high-win-rate')) {
+    return [stored];
+  }
   const badges: WhaleBadge[] = [];
   const pnl = Number(w.pnl_30d_usd ?? 0);
   const wr = Number(w.win_rate ?? 0);
   const hold = Number(w.avg_hold_hours ?? 0);
   if (wr >= 70) badges.push('high-win-rate');
-  // Sniper: tight hold window AND positive win rate
   if (hold > 0 && hold < 6 && wr >= 50) badges.push('sniper');
-  // Accumulator: positive 30d pnl AND long hold
-  if (pnl > 0 && hold >= 168) badges.push('accumulator'); // 7+ days
-  // Distributor: negative 30d pnl OR very long hold with mediocre win rate
-  if (pnl < 0 || (hold >= 720 && wr < 50)) badges.push('distributor'); // 30+ days low win
+  if (pnl > 0 && hold >= 168) badges.push('accumulator');
+  if (pnl < 0 || (hold >= 720 && wr < 50)) badges.push('distributor');
   return badges;
 }
 
