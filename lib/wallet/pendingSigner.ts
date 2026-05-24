@@ -201,12 +201,50 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
   if (!wallet.address) throw new Error("Built-in wallet missing address");
 
   const pk = await decryptBuiltinKey(pwd, wallet);
+  const chain = trade.chain.toLowerCase();
+
+  // NW1: Solana branch. The relayer's prepare response for Solana
+  // returns a base64-encoded Jupiter swap transaction the client signs
+  // with the user's keypair before broadcasting via Helius RPC. We
+  // never touch private keys server-side — the decrypted key stays in
+  // this function's closure and is GC'd as soon as we return.
+  if (chain === 'solana') {
+    const prep = (await prepare(trade.id, wallet.address)) as { quote: { transactionBase64?: string; buyAmount?: string; price?: string | number } };
+    const txB64 = prep.quote.transactionBase64;
+    if (!txB64) throw new Error("Solana prepare returned no transactionBase64");
+
+    const [{ Connection, VersionedTransaction, Keypair }, bs58] = await Promise.all([
+      import('@solana/web3.js'),
+      import('bs58'),
+    ]);
+
+    // Naka keypairs are stored as base58 secret-key strings; pk is the
+    // decrypted form. Keypair.fromSecretKey expects raw 64-byte bytes.
+    const secretKey = bs58.default.decode(pk);
+    const keypair = Keypair.fromSecretKey(secretKey);
+    if (keypair.publicKey.toBase58() !== wallet.address) {
+      throw new Error("Decrypted Solana key does not match active wallet address");
+    }
+
+    const conn = new Connection(
+      process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com',
+      'confirmed',
+    );
+    const tx = VersionedTransaction.deserialize(Buffer.from(txB64, 'base64'));
+    tx.sign([keypair]);
+    const txHash = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 2 });
+    return {
+      txHash,
+      clientReportedAmountOut: prep.quote.buyAmount,
+      clientReportedPrice: prep.quote.price ? Number(prep.quote.price) : undefined,
+    };
+  }
 
   const prep = (await prepare(trade.id, wallet.address)) as PrepareResponseEvm;
   const tx = prep.quote.transaction;
   if (!tx) throw new Error("Prepare returned no transaction");
 
-  const rpcUrl = BUILTIN_RPC[trade.chain.toLowerCase()] ?? BUILTIN_RPC.ethereum;
+  const rpcUrl = BUILTIN_RPC[chain] ?? BUILTIN_RPC.ethereum;
   const { ethers } = await import("ethers");
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const signer = new ethers.Wallet(pk, provider);
