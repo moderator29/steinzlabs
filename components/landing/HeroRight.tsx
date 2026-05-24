@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { TrendingUp, ShieldX, Check } from 'lucide-react';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // The real 3D crypto logos already exist on the landing page (see FloatingCoins).
 // Text-in-circle chips (BTC, BNB, ETH, SOL) were removed per user feedback so they
@@ -11,16 +12,22 @@ const COINS: Array<{ label: string; color: string; style: React.CSSProperties }>
 const ROWS: [string, string][] = [['Liquidity', '$8.4M'], ['Holders', '12,847'], ['Rug Risk', 'Low']];
 
 export function HeroRight() {
+  // A11Y3: when prefers-reduced-motion is set, freeze every animation
+  // to its final state. The card content stays visible — we just don't
+  // float, slide, or pulse anything.
+  const reduced = useReducedMotion();
   return (
     <motion.div className="hidden md:block relative"
-      initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
+      initial={reduced ? false : { opacity: 0, x: 30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={reduced ? { duration: 0 } : { duration: 0.7, delay: 0.2 }}
       style={{ height: 480 }}>
 
       {/* Coin chips */}
       {COINS.map((c, i) => (
         <motion.div key={c.label}
-          animate={{ y: [0, -(8 + i * 2), 0] }}
-          transition={{ duration: 3.5 + i * 0.4, delay: i * 0.5, repeat: Infinity, ease: 'easeInOut' }}
+          animate={reduced ? undefined : { y: [0, -(8 + i * 2), 0] }}
+          transition={reduced ? undefined : { duration: 3.5 + i * 0.4, delay: i * 0.5, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute z-10 w-14 h-14 rounded-full flex items-center justify-center text-xs font-bold text-white border border-white/15"
           style={{ ...c.style, background: `${c.color}22`, backdropFilter: 'blur(8px)', boxShadow: `0 0 20px ${c.color}44` }}>
           {c.label}
@@ -29,7 +36,10 @@ export function HeroRight() {
 
       {/* Main VTX card — float wrapper then 3D tilt wrapper */}
       <div className="absolute" style={{ top: 48, left: '50%', transform: 'translateX(-50%)' }}>
-        <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
+        <motion.div
+          animate={reduced ? undefined : { y: [0, -12, 0] }}
+          transition={reduced ? undefined : { duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        >
           <div style={{ transform: 'perspective(1200px) rotateY(-8deg) rotateX(4deg)', width: 288,
             boxShadow: '0 30px 80px rgba(59,130,246,.2)' }}>
             <div className="rounded-2xl p-5"
@@ -65,8 +75,10 @@ export function HeroRight() {
       </div>
 
       {/* Whale Alert badge */}
-      <motion.div initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1, y: [0, -8, 0] }}
-        transition={{ delay: 0.8, duration: 0.5, y: { duration: 4, delay: 1, repeat: Infinity, ease: 'easeInOut' } }}
+      <motion.div
+        initial={reduced ? false : { x: 40, opacity: 0 }}
+        animate={reduced ? { opacity: 1 } : { x: 0, opacity: 1, y: [0, -8, 0] }}
+        transition={reduced ? { duration: 0 } : { delay: 0.8, duration: 0.5, y: { duration: 4, delay: 1, repeat: Infinity, ease: 'easeInOut' } }}
         className="absolute z-30 w-48 rounded-xl p-3" style={{ top: 8, right: 0, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
@@ -76,8 +88,10 @@ export function HeroRight() {
       </motion.div>
 
       {/* Rug Blocked badge */}
-      <motion.div initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1, y: [0, -10, 0] }}
-        transition={{ delay: 1.2, duration: 0.5, y: { duration: 4.5, delay: 1.5, repeat: Infinity, ease: 'easeInOut' } }}
+      <motion.div
+        initial={reduced ? false : { x: -40, opacity: 0 }}
+        animate={reduced ? { opacity: 1 } : { x: 0, opacity: 1, y: [0, -10, 0] }}
+        transition={reduced ? { duration: 0 } : { delay: 1.2, duration: 0.5, y: { duration: 4.5, delay: 1.5, repeat: Infinity, ease: 'easeInOut' } }}
         className="absolute z-30 w-44 rounded-xl p-3" style={{ bottom: 32, left: 0, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-2 mb-1">
           <ShieldX className="w-4 h-4 text-red-400" />

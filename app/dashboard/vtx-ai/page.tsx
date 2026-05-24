@@ -900,7 +900,7 @@ function VtxAiPageInner() {
                 >
                   + New Chat
                 </button>
-                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/[0.06] rounded ms-1"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+                <button onClick={() => setShowHistory(false)} aria-label="Close chat history" className="p-1 hover:bg-white/[0.06] rounded ms-1"><X className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /></button>
               </div>
             </div>
             {chatSessions.length === 0 ? (
@@ -932,7 +932,7 @@ function VtxAiPageInner() {
           <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-300">Agent Settings</span>
-              <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" /></button>
+              <button onClick={() => setShowSettings(false)} aria-label="Close agent settings" className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /></button>
             </div>
 
             {/* Section: Response Style */}

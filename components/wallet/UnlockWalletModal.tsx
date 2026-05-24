@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Lock, X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { verifyWalletPassword } from '@/lib/wallet/encryption';
 import { setWalletSessionKey } from '@/lib/wallet/walletSession';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 interface Props {
   /** AES-GCM JSON payload from StoredWallet.encryptedKey. */
@@ -48,20 +49,15 @@ export default function UnlockWalletModal({
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // A11Y4: focus trap + restore prior focus on close. Escape handled
+  // by the hook so the manual listener below is now redundant.
+  const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   useEffect(() => {
     // Auto-focus the password field — users open this modal expecting
     // to immediately type, no extra click required.
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const submit = async () => {
     if (!password) {
@@ -94,6 +90,7 @@ export default function UnlockWalletModal({
       aria-label="Unlock wallet"
     >
       <div
+        ref={trapRef}
         className="w-full max-w-[420px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >

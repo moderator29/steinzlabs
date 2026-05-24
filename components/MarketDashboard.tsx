@@ -297,7 +297,7 @@ export default function MarketDashboard() {
       <div className="relative w-full bg-[#111827] rounded-t-2xl p-6 z-10 border-t border-white/[0.06] max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white">Filters</h3>
-          <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={() => setShowFilters(false)} aria-label="Close filters" className="text-gray-400 hover:text-white"><X className="w-5 h-5" aria-hidden="true" /></button>
         </div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort By</p>
         <div className="flex flex-wrap gap-2 mb-5">

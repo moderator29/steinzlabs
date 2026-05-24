@@ -249,10 +249,10 @@ export default function FeaturedTokensPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => toggleActive(t.id)} className="text-gray-500 hover:text-white transition-colors">
-                        {t.active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <button onClick={() => toggleActive(t.id)} aria-label={t.active ? 'Deactivate featured token' : 'Activate featured token'} className="text-gray-500 hover:text-white transition-colors">
+                        {t.active ? <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> : <Eye className="w-3.5 h-3.5" aria-hidden="true" />}
                       </button>
-                      <button onClick={() => remove(t.id)} className="text-red-500/50 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => remove(t.id)} aria-label="Remove featured token" className="text-red-500/50 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" aria-hidden="true" /></button>
                     </div>
                   </td>
                 </tr>

@@ -79,7 +79,7 @@ export default function FollowWhaleModal({
         <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
           <h2 className="font-bold">Follow {whale.label || whale.address.slice(0, 8)}</h2>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{whale.chain}</span>
-          <button onClick={onClose} className="ms-auto p-1.5 rounded-lg hover:bg-white/5"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} aria-label="Close follow whale modal" className="ms-auto p-1.5 rounded-lg hover:bg-white/5"><X className="w-4 h-4" aria-hidden="true" /></button>
         </div>
 
         <div className="p-5 space-y-4">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 export interface MarketFilters {
   category: string;
@@ -53,13 +54,8 @@ function formatCapLabel(n: number): string {
 
 export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
+  // A11Y4: focus trap + Escape + restore prior focus on close.
+  const trapRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -81,10 +77,14 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Market filters"
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:justify-end bg-black/60 backdrop-blur-sm"
     >
       {/* Panel */}
       <div
+        ref={trapRef}
         className="
           w-full sm:w-80 sm:h-full sm:max-h-none max-h-[90vh]
           bg-[#111827] border-t border-[#1E2433] sm:border-t-0 sm:border-l

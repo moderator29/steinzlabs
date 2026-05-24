@@ -226,7 +226,7 @@ export default function BuilderNetworkPage() {
           <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Apply as Builder</h2>
-              <button onClick={() => setShowApply(false)} className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowApply(false)} aria-label="Close builder application" className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
             <div className="p-4 space-y-3">
               <div>
@@ -295,7 +295,7 @@ export default function BuilderNetworkPage() {
           <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Builder Profile</h2>
-              <button onClick={() => setSelectedBuilder(null)} className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+              <button onClick={() => setSelectedBuilder(null)} aria-label="Close builder profile" className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-4">

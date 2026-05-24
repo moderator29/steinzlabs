@@ -55,8 +55,18 @@ export function NotificationCenter({ items, onMarkAllRead, onItemClick }: Notifi
     const onClick = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
+    // A11Y4: Escape closes the dropdown. Dropdowns intentionally don't
+    // focus-trap (Tab should flow to the next header element) but the
+    // Escape key is the universal keyboard-dismiss contract.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
   const unread = items.filter((i) => !i.read).length;

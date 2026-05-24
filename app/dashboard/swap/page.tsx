@@ -187,7 +187,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
       <div className="relative w-full max-w-[420px] bg-[#0f1320] border border-[#1a1f2e] rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <h3 className="font-bold text-sm text-white">Select a token</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-400" /></button>
+          <button onClick={onClose} aria-label="Close token picker" className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-400" aria-hidden="true" /></button>
         </div>
 
         <div className="p-4 space-y-3 border-b border-white/[0.06]">
@@ -263,7 +263,7 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
           <Settings className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-semibold text-white">Transaction Settings</span>
         </div>
-        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X className="w-3.5 h-3.5 text-gray-400" /></button>
+        <button onClick={onClose} aria-label="Close transaction settings" className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X className="w-3.5 h-3.5 text-gray-400" aria-hidden="true" /></button>
       </div>
       <div>
         <div className="flex items-center gap-1.5 mb-2">
@@ -1190,7 +1190,7 @@ export default function SwapPage() {
               >
                 Install
               </a>
-              <button onClick={() => setWalletConnectError('')} className="text-amber-300 hover:text-amber-100"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet warning" className="text-amber-300 hover:text-amber-100"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
             </div>
           )}
           {walletConnectError === 'phantom-not-installed' && (
@@ -1205,14 +1205,14 @@ export default function SwapPage() {
               >
                 Install
               </a>
-              <button onClick={() => setWalletConnectError('')} className="text-[#c9c2ff] hover:text-white"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet warning" className="text-[#c9c2ff] hover:text-white"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
             </div>
           )}
           {walletConnectError && walletConnectError !== 'metamask-not-installed' && walletConnectError !== 'phantom-not-installed' && (
             <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span className="text-xs text-red-400">{walletConnectError}</span>
-              <button onClick={() => setWalletConnectError('')} className="ms-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet error" className="ms-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
             </div>
           )}
           <div className="flex items-center gap-2 mb-4 flex-wrap">

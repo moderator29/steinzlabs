@@ -10,6 +10,9 @@ import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 import NewCopyRuleModal from "@/app/dashboard/copy-trading/NewCopyRuleModal";
 import { toast } from "sonner";
+import { useTabListKeys } from "@/hooks/useTabListKeys";
+
+const WHALE_TABS = ["overview", "activity", "tokens", "counterparties", "copy"] as const;
 
 // §11 — lazy-load the chart so the lightweight-charts bundle (~50KB)
 // only ships when a user opens the Activity tab.
@@ -320,23 +323,45 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
             </button>
           </div>
 
-          <div className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto">
-            {(["overview", "activity", "tokens", "counterparties", "copy"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
-                  tab === t ? "text-blue-300 border-b-2 border-blue-500/60" : "text-slate-500 hover:text-white"
-                }`}
-              >
-                {t === "copy" ? "Copy rules" : t}
-              </button>
-            ))}
+          {/* A11Y5: WAI-ARIA tablist pattern. Arrow keys + Home/End nav,
+              aria-selected + tabIndex roving so screen readers and
+              keyboard users get the same affordances as a mouse user. */}
+          <div
+            role="tablist"
+            aria-label="Whale detail sections"
+            onKeyDown={useTabListKeys(WHALE_TABS, WHALE_TABS.indexOf(tab), (t) => setTab(t))}
+            className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto"
+          >
+            {WHALE_TABS.map((t) => {
+              const selected = tab === t;
+              return (
+                <button
+                  key={t}
+                  role="tab"
+                  type="button"
+                  id={`whale-tab-${t}`}
+                  aria-selected={selected}
+                  aria-controls={`whale-panel-${t}`}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => setTab(t)}
+                  className={`px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
+                    selected ? "text-blue-300 border-b-2 border-blue-500/60" : "text-slate-500 hover:text-white"
+                  }`}
+                >
+                  {t === "copy" ? "Copy rules" : t}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div
+        role="tabpanel"
+        id={`whale-panel-${tab}`}
+        aria-labelledby={`whale-tab-${tab}`}
+        className="max-w-5xl mx-auto px-4 py-6"
+      >
         {tab === "overview" && (
           <>
             {/* WHALE5: Arkham entity intel — only renders when Arkham has
