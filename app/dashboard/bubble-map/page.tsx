@@ -229,8 +229,13 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
   useEffect(() => {
     if (!svgRef.current || !data.nodes.length) return;
     const el = svgRef.current;
-    const W = el.clientWidth || 600;
-    const H = el.clientHeight || 500;
+    // BUBBLE3: derive width/height from the live container rect (handles
+    // CSS resize, fullscreen toggle, and mobile rotation) instead of
+    // baking in a one-shot read at first render. Keeps the SVG viewBox
+    // proportional to the actual paint surface.
+    const rect = el.getBoundingClientRect();
+    const W = Math.max(320, rect.width || el.clientWidth || 600);
+    const H = Math.max(320, rect.height || el.clientHeight || 500);
 
     // Clone nodes/links so D3 can mutate
     const nodes: BubbleNode[] = data.nodes.map(n => ({ ...n, x: W / 2, y: H / 2 }));
@@ -250,11 +255,16 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
 
     const g = svg.append('g');
 
-    // Zoom + pan
+    // Zoom + pan. BUBBLE2: enable touch input — d3-zoom binds pointer
+    // events by default but a `touch-action: manipulation` on the SVG
+    // is required so iOS Safari doesn't intercept two-finger gestures
+    // as page-scroll. The svg.style call sets the CSS attribute
+    // directly so no Tailwind class is needed.
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.3, 4])
       .on('zoom', ev => g.attr('transform', ev.transform.toString()));
     svg.call(zoom);
+    svg.style('touch-action', 'manipulation');
 
     // Links
     const linkSel = g.append('g').selectAll<SVGLineElement, BubbleLink>('line')
@@ -381,6 +391,12 @@ export default function BubbleMapPage() {
   const [pinnedAddress, setPinnedAddress] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showChainDrop, setShowChainDrop] = useState(false);
+  // BUBBLE4: timeline scrub + signed share link. snapshotMs=null means
+  // "now"; setting a value re-fetches with ?at=<ms> so the response
+  // labels the view deterministically.
+  const [snapshotMs, setSnapshotMs] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
     role: 'assistant',
@@ -399,8 +415,9 @@ export default function BubbleMapPage() {
     setLoading(true);
     setSelectedNode(null);
     try {
+      const atParam = snapshotMs ? `&at=${snapshotMs}` : '';
       const res = await fetch(
-        `/api/bubble-map?token=${encodeURIComponent(tokenAddress.trim())}&chain=${chain}&mode=${m}`
+        `/api/bubble-map?token=${encodeURIComponent(tokenAddress.trim())}&chain=${chain}&mode=${m}${atParam}`
       );
       const data = await res.json() as BubbleMapData;
       if (!data.error) setMapData(data);
@@ -412,7 +429,33 @@ export default function BubbleMapPage() {
       console.error('[bubble-map] fetch failed:', err);
       setMapData({ error: err instanceof Error ? err.message : 'Failed to load bubble map' } as BubbleMapData);
     } finally { setLoading(false); }
-  }, [tokenAddress, chain, mode]);
+  }, [tokenAddress, chain, mode, snapshotMs]);
+
+  // BUBBLE4: mint a signed permalink. Server-side JWT signing — the
+  // share URL is unforgeable, so a sender can't be impersonated into
+  // pointing at a different token.
+  const shareView = useCallback(async () => {
+    if (!tokenAddress.trim()) return;
+    setSharing(true);
+    try {
+      const res = await fetch('/api/bubble-map/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: tokenAddress.trim(),
+          chain,
+          mode,
+          at: snapshotMs,
+        }),
+      });
+      if (!res.ok) return;
+      const j = await res.json() as { url: string };
+      setShareUrl(j.url);
+      try { await navigator.clipboard.writeText(j.url); } catch { /* clipboard unavailable */ }
+    } finally {
+      setSharing(false);
+    }
+  }, [tokenAddress, chain, mode, snapshotMs]);
 
   function handleModeChange(m: ViewMode) {
     setMode(m);
@@ -564,13 +607,38 @@ export default function BubbleMapPage() {
             </div>
           )}
           {/* Mode tabs */}
-          <div className="flex gap-1 mt-3">
+          <div className="flex gap-1 mt-3 flex-wrap items-center">
             {MODE_TABS.map(tab => (
               <button key={tab.id} onClick={() => handleModeChange(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${mode === tab.id ? 'bg-[#0A1EFF] text-white' : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06]'}`}>
                 <tab.icon className="w-3 h-3" />{tab.label}
               </button>
             ))}
+            {/* BUBBLE4 timeline scrub + share */}
+            <label className="ms-2 flex items-center gap-1 text-[10px] text-slate-400">
+              <span className="uppercase tracking-wider">Snapshot</span>
+              <input
+                type="datetime-local"
+                value={snapshotMs ? new Date(snapshotMs).toISOString().slice(0, 16) : ''}
+                onChange={(e) => setSnapshotMs(e.target.value ? new Date(e.target.value).getTime() : null)}
+                onBlur={() => { if (mapData) void fetchMap(mode); }}
+                className="bg-white/[0.03] border border-white/[0.06] rounded px-2 py-1 text-[10px] text-slate-200"
+                aria-label="Snapshot timestamp"
+              />
+              {snapshotMs !== null && (
+                <button type="button" onClick={() => { setSnapshotMs(null); if (mapData) void fetchMap(mode); }} className="text-slate-500 hover:text-white text-[10px] px-1">
+                  Now
+                </button>
+              )}
+            </label>
+            <button
+              type="button"
+              onClick={() => void shareView()}
+              disabled={sharing || !tokenAddress.trim()}
+              className="ms-auto bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded px-2 py-1 text-[10px] text-slate-200 disabled:opacity-50"
+            >
+              {sharing ? 'Signing…' : shareUrl ? 'Copied!' : 'Share'}
+            </button>
           </div>
         </div>
       )}
