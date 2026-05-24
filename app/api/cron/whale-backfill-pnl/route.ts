@@ -52,7 +52,11 @@ interface PnlMetrics {
   last_active_at: string | null;
   total_volume_30d_usd: number;
   closed_positions: number;
+  avg_hold_hours: number | null; // WHALE2: mean buy→sell delta across FIFO-matched lots, null when <3 closed
+  archetype: WhaleArchetype | null; // WHALE3: derived from pnl/win_rate/hold
 }
+
+type WhaleArchetype = 'accumulator' | 'distributor' | 'sniper' | 'high-win-rate';
 
 /**
  * FIFO per-token cost-basis PnL calculation.
@@ -72,7 +76,7 @@ interface PnlMetrics {
  *   - Self-transfers (addr → addr on same wallet) are skipped.
  *   - Transfers without historicalUSD are skipped — can't price them.
  */
-function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs: number, now: number): { pnl: number; sells: number; profitableSells: number } {
+function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs: number, now: number): { pnl: number; sells: number; profitableSells: number; holdHoursSum: number; holdHoursCount: number } {
   const addr = whaleAddress.toLowerCase();
   const cutoff = now - windowMs;
   const windowTx = transfers.filter((t) => t.timestampMs >= cutoff && t.valueUSD > 0);
@@ -89,17 +93,23 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
   let totalPnl = 0;
   let sells = 0;
   let profitableSells = 0;
+  // WHALE2: track hold-time deltas weighted by lot amount. For each FIFO
+  // match we record (sell_time − lot_acquired_time), so a sell that
+  // closes three buy lots produces three samples weighted by covered
+  // amount. avg_hold_hours = weighted mean across all closed lots.
+  let holdHoursWeightedSum = 0;
+  let holdAmountTotal = 0;
 
   for (const tokenTx of byToken.values()) {
     tokenTx.sort((a, b) => a.timestampMs - b.timestampMs);
-    const lots: Array<{ amount: number; pricePerUnit: number }> = [];
+    const lots: Array<{ amount: number; pricePerUnit: number; acquiredAt: number }> = [];
     for (const t of tokenTx) {
       const isBuy = t.to.toLowerCase() === addr;
       const unitPrice = t.tokenAmount > 0 ? t.valueUSD / t.tokenAmount : 0;
       if (unitPrice <= 0) continue;
 
       if (isBuy) {
-        lots.push({ amount: t.tokenAmount, pricePerUnit: unitPrice });
+        lots.push({ amount: t.tokenAmount, pricePerUnit: unitPrice, acquiredAt: t.timestampMs });
       } else {
         // Sell — dequeue FIFO
         let toCover = t.tokenAmount;
@@ -108,13 +118,13 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
           const lot = lots[0];
           const covered = Math.min(toCover, lot.amount);
           realizedOnThisSell += (unitPrice - lot.pricePerUnit) * covered;
+          const holdHours = Math.max(0, (t.timestampMs - lot.acquiredAt) / (1000 * 60 * 60));
+          holdHoursWeightedSum += holdHours * covered;
+          holdAmountTotal += covered;
           lot.amount -= covered;
           toCover -= covered;
           if (lot.amount <= 0) lots.shift();
         }
-        // If we exit the loop with toCover > 0, the whale sold tokens we
-        // don't have a buy record for (window is smaller than their
-        // history). Skip uncovered portion rather than inventing a basis.
         if (toCover < t.tokenAmount) {
           totalPnl += realizedOnThisSell;
           sells++;
@@ -124,7 +134,23 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
     }
   }
 
-  return { pnl: totalPnl, sells, profitableSells };
+  return {
+    pnl: totalPnl,
+    sells,
+    profitableSells,
+    holdHoursSum: holdHoursWeightedSum,
+    holdHoursCount: holdAmountTotal,
+  };
+}
+
+function deriveArchetype(pnl: number, winRate: number | null, holdHours: number | null): WhaleArchetype | null {
+  const wr = winRate ?? 0;
+  const hold = holdHours ?? 0;
+  if (wr >= 70) return 'high-win-rate';
+  if (hold > 0 && hold < 6 && wr >= 50) return 'sniper';
+  if (pnl > 0 && hold >= 168) return 'accumulator';
+  if (pnl < 0 || (hold >= 720 && wr < 50)) return 'distributor';
+  return null;
 }
 
 async function fetchTransfers(address: string, chain: string): Promise<TransferLite[]> {
@@ -169,6 +195,13 @@ async function computeMetrics(address: string, chain: string): Promise<PnlMetric
 
   const winRate = p30.sells >= 3 ? Math.round((p30.profitableSells / p30.sells) * 100) : null;
   const lastActiveMs = transfers.length > 0 ? Math.max(...transfers.map((t) => t.timestampMs)) : 0;
+  // WHALE2: avg_hold_hours from FIFO-matched lots in the 30d window.
+  // Null when fewer than 3 closed positions so the archetype derivation
+  // (which depends on this) doesn't fire on thin data.
+  const avgHoldHours = (p30.sells >= 3 && p30.holdHoursCount > 0)
+    ? Math.round((p30.holdHoursSum / p30.holdHoursCount) * 10) / 10
+    : null;
+  const archetype = deriveArchetype(p30.pnl, winRate, avgHoldHours);
 
   return {
     pnl_30d_usd: Math.round(p30.pnl),
@@ -179,6 +212,8 @@ async function computeMetrics(address: string, chain: string): Promise<PnlMetric
     last_active_at: lastActiveMs > 0 ? new Date(lastActiveMs).toISOString() : null,
     total_volume_30d_usd: Math.round(windowTx30.reduce((a, b) => a + b.valueUSD, 0)),
     closed_positions: p30.sells,
+    avg_hold_hours: avgHoldHours,
+    archetype,
   };
 }
 
@@ -248,6 +283,8 @@ export async function GET(request: NextRequest) {
           win_rate: metrics.win_rate,
           trade_count_30d: metrics.trade_count_30d,
           last_active_at: metrics.last_active_at,
+          avg_hold_hours: metrics.avg_hold_hours,
+          archetype: metrics.archetype,
           // Only overwrite portfolio_value_usd if Arkham returned something;
           // otherwise leave existing value alone.
           ...(portfolio !== null ? { portfolio_value_usd: portfolio } : {}),

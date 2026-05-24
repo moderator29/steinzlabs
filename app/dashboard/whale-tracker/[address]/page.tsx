@@ -339,6 +339,55 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
       <div className="max-w-5xl mx-auto px-4 py-6">
         {tab === "overview" && (
           <>
+            {/* WHALE5: Arkham entity intel — only renders when Arkham has
+                actually resolved this address to a labelled entity, so an
+                un-labelled wallet doesn't show an empty card. */}
+            {data.arkham && (data.arkham.entity || data.arkham.website || data.arkham.twitter || (data.arkham.labels && data.arkham.labels.length > 0)) && (
+              <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
+                <div className="flex items-start gap-3">
+                  {data.arkham.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={data.arkham.logo} alt="" className="w-10 h-10 rounded-lg object-cover bg-slate-800" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs uppercase tracking-wider text-blue-300 font-semibold">Arkham Intel</span>
+                      {data.arkham.verified && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                          <CheckCircle2 size={9} /> Verified
+                        </span>
+                      )}
+                      {data.arkham.type && (
+                        <span className="text-[10px] uppercase text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">{data.arkham.type}</span>
+                      )}
+                    </div>
+                    {data.arkham.entity && (
+                      <p className="text-sm font-semibold text-white mt-1">{data.arkham.entity}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs">
+                      {data.arkham.website && (
+                        <a href={data.arkham.website} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">
+                          Website <ExternalLink size={9} />
+                        </a>
+                      )}
+                      {data.arkham.twitter && (
+                        <a href={`https://x.com/${data.arkham.twitter.replace(/^@/, '')}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">
+                          @{data.arkham.twitter.replace(/^@/, '')} <ExternalLink size={9} />
+                        </a>
+                      )}
+                    </div>
+                    {data.arkham.labels && data.arkham.labels.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2 flex-wrap">
+                        {data.arkham.labels.slice(0, 8).map((l) => (
+                          <span key={l} className="text-[10px] text-slate-300 bg-slate-800/60 border border-slate-700 px-1.5 py-0.5 rounded">{l}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <StatCard label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} />
               {/* Bug 5c — when the server-side PnL backfill hasn't run yet
