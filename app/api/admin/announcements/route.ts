@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'announcement_create', details: { id: data?.id, title: body.title, target_audience: body.target_audience ?? 'All' } });
     return NextResponse.json({ announcement: data });
   } catch (err) {
     console.error('[admin/announcements POST] Failed:', err);
@@ -80,6 +82,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'announcement_update', details: { id, patch: body } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/announcements PATCH] Failed:', err);
@@ -104,6 +107,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'announcement_delete', details: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/announcements DELETE] Failed:', err);

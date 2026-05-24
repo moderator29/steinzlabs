@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'featured_token_set', details: { id: data?.id, symbol: body.symbol, chain: body.chain, address: body.address } });
     return NextResponse.json({ token: data });
   } catch (err) {
     console.error('[admin/featured-tokens POST] Failed:', err);
@@ -96,6 +98,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'featured_token_set', details: { id, fields: Object.keys(updates) } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/featured-tokens PATCH] Failed:', err);
@@ -120,6 +123,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'featured_token_remove', details: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/featured-tokens DELETE] Failed:', err);

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest as verifyAdmin } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-async function isAdmin(request: NextRequest): Promise<boolean> {
-  return !!(await verifyAdmin(request));
-}
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!(await isAdmin(request))) {
+  const adminId = await verifyAdmin(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -33,11 +31,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Non-fatal — return ok so the UI doesn't show a failure
   }
 
+  void logAdminAction({
+    adminId,
+    action: 'settings_update',
+    details: { flagKeys: Object.keys(flags), flagCount: Object.keys(flags).length },
+  });
   return NextResponse.json({ ok: true, savedAt: new Date().toISOString() });
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!(await isAdmin(request))) {
+  const adminId = await verifyAdmin(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

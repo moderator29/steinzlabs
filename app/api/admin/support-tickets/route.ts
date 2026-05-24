@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 // Admin-side ticket CRUD. Reads/writes the canonical support_tickets table
 // (migration 20260420_support_tickets.sql). Can post admin replies including
@@ -79,6 +80,11 @@ export async function PATCH(request: Request) {
       console.error('[admin/support-tickets PATCH]', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    void logAdminAction({
+      adminId,
+      action: 'support_status_change',
+      details: { ticketId: id, fields: Object.keys(updates), status: updates.status, priority: updates.priority },
+    });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/support-tickets PATCH]', err);
@@ -148,6 +154,11 @@ export async function POST(request: Request) {
       }
     }
 
+    void logAdminAction({
+      adminId,
+      action: 'support_reply',
+      details: { ticketId: body.ticket_id, internal: body.internal === true, replyId: (reply as { id?: string })?.id },
+    });
     return NextResponse.json({ reply });
   } catch (err) {
     console.error('[admin/support-tickets POST]', err);

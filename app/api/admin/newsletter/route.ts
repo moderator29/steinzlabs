@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs';
 import { Resend } from 'resend';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 const FROM_ADDRESS = 'Naka Labs <hello@nakalabs.com>';
 const BATCH_SIZE = 50;
@@ -91,6 +92,11 @@ export async function POST(request: Request) {
       }
     }
 
+    void logAdminAction({
+      adminId,
+      action: 'newsletter_send',
+      details: { subject, audience: audience ?? 'all', recipients: recipients.length, sent, failed },
+    });
     return NextResponse.json({ sent, failed });
   } catch (err) {
     console.error('[admin/newsletter] failed:', err);

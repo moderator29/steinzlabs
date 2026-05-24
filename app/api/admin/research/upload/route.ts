@@ -1,20 +1,19 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 const BUCKET = 'research-images';
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
-function verifyAdmin(request: Request): boolean {
-  const auth = request.headers.get('authorization') ?? '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const expected = process.env.ADMIN_BEARER_TOKEN;
-  return !!(expected && token && token === expected);
-}
-
 export async function POST(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  // Standardized admin auth — accepts both ADMIN_BEARER_TOKEN and
+  // Supabase JWT (profiles.role='admin'). Previously the route locked
+  // out JWT-authenticated admins by checking only the env bearer.
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -62,12 +61,14 @@ export async function POST(request: NextRequest) {
         });
         if (retry.error) throw new Error(retry.error.message);
         const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(retry.data.path);
+        void logAdminAction({ adminId, action: 'research_upload', details: { path: retry.data.path, bytes: buffer.byteLength, contentType: file.type } });
         return NextResponse.json({ url: urlData.publicUrl });
       }
       throw new Error(error.message);
     }
 
     const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+    void logAdminAction({ adminId, action: 'research_upload', details: { path: data.path, bytes: buffer.byteLength, contentType: file.type } });
     return NextResponse.json({ url: urlData.publicUrl });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Upload failed';

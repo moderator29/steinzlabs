@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function POST(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -93,6 +94,11 @@ export async function POST(request: Request) {
       await Promise.all(promises);
     }
 
+    void logAdminAction({
+      adminId,
+      action: 'broadcast_send',
+      details: { subject, targetTier: targetTier ?? 'all', sent, failed, total: emails.length },
+    });
     return NextResponse.json({
       success: true,
       sent,
