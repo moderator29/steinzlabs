@@ -219,6 +219,7 @@ export async function handleSecurity(ctx: CmdContext): Promise<void> {
 
 // ─── /whales ────────────────────────────────────────────────────────────────
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { answerCallbackQuery } from "@/lib/telegram/client";
 
 export async function handleWhalesTop(ctx: CmdContext): Promise<void> {
   const supabase = getSupabaseAdmin();
@@ -457,5 +458,191 @@ export async function handleGainers(ctx: CmdContext): Promise<void> {
   } catch (err) {
     console.error("[telegram.gainers]", err);
     await sendTelegramMessage(ctx.chatId, "❌ Gainers unavailable. Try again shortly.");
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TG5: /myholdings, /pnl, /trades — read from the existing portfolio +
+// whale_activity tables. Resolves the calling chat to a linked user_id
+// first; if not linked, prompts the user to /link.
+// ───────────────────────────────────────────────────────────────────────────
+
+async function resolveUserId(chatId: number): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("user_telegram_links")
+    .select("user_id")
+    .eq("telegram_chat_id", chatId)
+    .maybeSingle<{ user_id: string }>();
+  return data?.user_id ?? null;
+}
+
+export async function handleMyHoldings(ctx: CmdContext): Promise<void> {
+  await sendTelegramTyping(ctx.chatId);
+  const userId = await resolveUserId(ctx.chatId);
+  if (!userId) {
+    await sendTelegramMessage(ctx.chatId, "🔗 Link your account first with `/link <code>` (generate one in app → Settings → Telegram).");
+    return;
+  }
+  const supabase = getSupabaseAdmin();
+  const { data: wallets } = await supabase
+    .from("user_wallets_v2")
+    .select("wallets, default_address")
+    .eq("user_id", userId)
+    .maybeSingle<{ wallets: Array<{ address: string; chain: string }>; default_address: string | null }>();
+
+  const list = wallets?.wallets ?? [];
+  if (list.length === 0) {
+    await sendTelegramMessage(ctx.chatId, "📭 No wallets connected yet. Open the app and connect a wallet first.");
+    return;
+  }
+  const lines = list.slice(0, 10).map((w) => `• \`${escapeMd(w.address)}\` (${escapeMd(w.chain ?? "—")})`);
+  const text = `*👛 Your wallets*\n\n${lines.join("\n")}\n\nOpen the app for live balances + PnL.`;
+  await sendTelegramMessage(ctx.chatId, text, {
+    reply_markup: { inline_keyboard: [[{ text: "💼 Open portfolio", url: `${APP_URL}/dashboard/portfolio` }]] },
+  });
+}
+
+function parseWindowDays(raw: string | undefined): number {
+  if (!raw) return 30;
+  const m = raw.toLowerCase().match(/^(\d+)([dhw]?)$/);
+  if (!m) return 30;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return 30;
+  if (m[2] === "h") return Math.max(1, Math.round(n / 24));
+  if (m[2] === "w") return Math.min(365, n * 7);
+  return Math.min(365, n);
+}
+
+export async function handlePnl(ctx: CmdContext): Promise<void> {
+  await sendTelegramTyping(ctx.chatId);
+  const userId = await resolveUserId(ctx.chatId);
+  if (!userId) {
+    await sendTelegramMessage(ctx.chatId, "🔗 Link your account first with `/link <code>`.");
+    return;
+  }
+  const days = parseWindowDays(ctx.args[0]);
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const supabase = getSupabaseAdmin();
+  const { data: trades } = await supabase
+    .from("swap_logs")
+    .select("realized_pnl_usd, value_usd, created_at")
+    .eq("user_id", userId)
+    .gt("created_at", since);
+  const rows = trades ?? [];
+  const realized = rows.reduce((s, r) => s + Number(r.realized_pnl_usd ?? 0), 0);
+  const volume = rows.reduce((s, r) => s + Number(r.value_usd ?? 0), 0);
+  await sendTelegramMessage(
+    ctx.chatId,
+    `*📊 PnL · last ${days}d*\n\n` +
+      `Realized: *${fmtUSD(realized)}*\n` +
+      `Trades: *${fmtNum(rows.length)}*\n` +
+      `Volume: *${fmtUSD(volume)}*\n\n` +
+      `_Realized PnL is FIFO from swap_logs. Use the app for unrealized + cost basis._`,
+    {
+      reply_markup: { inline_keyboard: [[{ text: "📈 Full breakdown", url: `${APP_URL}/dashboard/portfolio` }]] },
+    },
+  );
+}
+
+export async function handleTrades(ctx: CmdContext): Promise<void> {
+  await sendTelegramTyping(ctx.chatId);
+  const userId = await resolveUserId(ctx.chatId);
+  if (!userId) {
+    await sendTelegramMessage(ctx.chatId, "🔗 Link your account first with `/link <code>`.");
+    return;
+  }
+  const days = parseWindowDays(ctx.args[0]);
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const supabase = getSupabaseAdmin();
+  const { data: trades } = await supabase
+    .from("swap_logs")
+    .select("from_symbol, to_symbol, value_usd, created_at, provider, chain")
+    .eq("user_id", userId)
+    .gt("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(15);
+  const rows = trades ?? [];
+  if (rows.length === 0) {
+    await sendTelegramMessage(ctx.chatId, `📭 No trades in the last ${days}d.`);
+    return;
+  }
+  const lines = rows.map((t) => {
+    const when = new Date(t.created_at).toLocaleString();
+    return `• ${escapeMd(t.from_symbol ?? "—")} → ${escapeMd(t.to_symbol ?? "—")} · ${fmtUSD(Number(t.value_usd ?? 0))} · ${escapeMd(t.chain ?? "—")} · ${escapeMd(when)}`;
+  });
+  await sendTelegramMessage(
+    ctx.chatId,
+    `*🔁 Recent trades · last ${days}d*\n\n${lines.join("\n")}`,
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TG2: callback router. Returns true when the action was handled so the
+// webhook can skip the generic ack.
+// ───────────────────────────────────────────────────────────────────────────
+
+export async function handleCallbackAction(
+  chatId: number,
+  action: string,
+  args: string[],
+  callbackQueryId: string,
+): Promise<boolean> {
+  switch (action) {
+    case "chart": {
+      const sym = args[0];
+      const days = parseInt(args[1] ?? "7", 10);
+      await answerCallbackQuery(callbackQueryId);
+      if (!sym) return true;
+      const resolved = await resolveCoinId(sym);
+      if (!resolved) {
+        await sendTelegramMessage(chatId, `❌ No token found for *${escapeMd(sym)}*.`);
+        return true;
+      }
+      const url = await buildPriceChartUrl(resolved.id, Number.isFinite(days) ? days : 7);
+      if (url) {
+        await sendTelegramPhoto(chatId, url, { caption: `📈 *${escapeMd(resolved.symbol.toUpperCase())}* · ${days}d` });
+      } else {
+        await sendTelegramMessage(chatId, "❌ Chart unavailable.");
+      }
+      return true;
+    }
+    case "holders": {
+      const token = args[0];
+      const chain = args[1] ?? "ethereum";
+      await answerCallbackQuery(callbackQueryId);
+      if (!token) return true;
+      await sendTelegramMessage(
+        chatId,
+        `🐳 Top holders for *${escapeMd(token)}* on *${escapeMd(chain)}*\n\nOpen the bubble map for the full view.`,
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: "🫧 Open bubble map", url: `${APP_URL}/dashboard/bubble-map?token=${encodeURIComponent(token)}&chain=${encodeURIComponent(chain)}` }]],
+          },
+        },
+      );
+      return true;
+    }
+    case "unsub": {
+      const alertId = args[0];
+      await answerCallbackQuery(callbackQueryId, { text: "Unsubscribing…", show_alert: false });
+      if (!alertId) return true;
+      const supabase = getSupabaseAdmin();
+      await supabase.from("alerts").update({ active: false }).eq("id", alertId);
+      await sendTelegramMessage(chatId, "🔕 Alert disabled.");
+      return true;
+    }
+    case "refresh": {
+      await answerCallbackQuery(callbackQueryId, { text: "Refreshing…", show_alert: false });
+      const cmd = args[0];
+      if (!cmd) return true;
+      const cmdArgs = args.slice(1);
+      const ctx: CmdContext = { chatId, args: cmdArgs, rawText: `/${cmd} ${cmdArgs.join(" ")}` };
+      if (cmd === "price") await handlePrice(ctx);
+      else if (cmd === "gainers") await handleGainers(ctx);
+      return true;
+    }
+    default:
+      return false;
   }
 }

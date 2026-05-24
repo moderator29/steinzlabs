@@ -43,6 +43,9 @@ import {
   handlePortfolio,
   handleTrending,
   handleGainers,
+  handleMyHoldings,
+  handlePnl,
+  handleTrades,
 } from "@/lib/telegram/commands/handlers";
 
 export const runtime = "nodejs";
@@ -54,8 +57,38 @@ const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME ?? "Nakalabsbot";
 
 function verifyWebhook(request: NextRequest): boolean {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!expected) return true; // dev mode
+  // TG1: fail closed in production. The prior `if (!expected) return true`
+  // meant a misconfigured prod deployment would accept ANY POST claiming
+  // to be Telegram — an unauthenticated public endpoint that could fan
+  // out messages to every linked chat. We only allow the bypass in
+  // explicit non-production environments.
+  if (!expected) {
+    const env = process.env.NODE_ENV ?? 'production';
+    if (env === 'production') return false;
+    return true;
+  }
   return request.headers.get(WEBHOOK_SECRET_HEADER) === expected;
+}
+
+// TG4: check the platform_settings.telegram_paused kill switch. Cached
+// in-process for 30s so we don't issue a Supabase round-trip on every
+// webhook tick during an active conversation.
+let pausedCache: { value: boolean; expiresAt: number } | null = null;
+async function isTelegramPaused(): Promise<boolean> {
+  if (pausedCache && pausedCache.expiresAt > Date.now()) return pausedCache.value;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from('platform_settings')
+      .select('telegram_paused')
+      .limit(1)
+      .maybeSingle<{ telegram_paused: boolean | null }>();
+    const value = Boolean(data?.telegram_paused);
+    pausedCache = { value, expiresAt: Date.now() + 30_000 };
+    return value;
+  } catch {
+    return false;
+  }
 }
 
 const PRICING_URL = `${APP_URL}/dashboard/pricing`;
@@ -147,6 +180,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // TG4: kill switch. Short-circuit before doing any work so the bot
+  // goes truly quiet (no DB lookups, no outbound replies) during a
+  // deliberate outage. Telegram retries the webhook for an hour by
+  // default, after which they drop — that's the intended behaviour
+  // while the switch is on.
+  if (await isTelegramPaused()) {
+    return NextResponse.json({ ok: true, paused: true });
+  }
+
   let update: TelegramUpdate;
   try {
     update = (await request.json()) as TelegramUpdate;
@@ -171,14 +213,26 @@ export async function POST(request: NextRequest) {
       await answerCallbackQuery(cq.id, { text: "Slow down — try again in a moment.", show_alert: false });
       return NextResponse.json({ ok: true });
     }
+    // TG2: callback router. Buttons send a callback_data string; we
+    // dispatch on the prefix before the colon so handlers for related
+    // actions stay grouped. Known prefixes: chart:<symbol>:<days>,
+    // holders:<token>:<chain>, unsub:<alert_id>, alert:<dir>:<sym>:<px>,
+    // refresh:<command>:<args…>. Any unknown action acks the spinner
+    // and noops so old buttons still degrade gracefully.
     const data = cq.data ?? "";
     if (data === "help") {
       const linked = await getLinkedUser(cbChatId);
       await answerCallbackQuery(cq.id);
       await sendHelp(cbChatId, linked);
-    } else {
-      // Unknown payload — still ack so the spinner clears, then noop.
-      await answerCallbackQuery(cq.id);
+      return NextResponse.json({ ok: true });
+    }
+    const [action, ...rest] = data.split(":");
+    try {
+      const { handleCallbackAction } = await import('@/lib/telegram/commands/handlers');
+      const handled = await handleCallbackAction(cbChatId, action, rest, cq.id);
+      if (!handled) await answerCallbackQuery(cq.id);
+    } catch {
+      await answerCallbackQuery(cq.id, { text: "Something went wrong. Try the command again.", show_alert: false });
     }
     return NextResponse.json({ ok: true });
   }
@@ -333,6 +387,10 @@ export async function POST(request: NextRequest) {
     case "whales":    await handleWhalesTop(ctx); return NextResponse.json({ ok: true });
     case "trending":  await handleTrending(ctx); return NextResponse.json({ ok: true });
     case "gainers":   await handleGainers(ctx); return NextResponse.json({ ok: true });
+    case "myholdings": await handleMyHoldings(ctx); return NextResponse.json({ ok: true });
+    case "holdings":   await handleMyHoldings(ctx); return NextResponse.json({ ok: true });
+    case "pnl":        await handlePnl(ctx); return NextResponse.json({ ok: true });
+    case "trades":     await handleTrades(ctx); return NextResponse.json({ ok: true });
   }
 
   // ─── Linked-required commands ────────────────────────────────────────
