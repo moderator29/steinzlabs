@@ -26,6 +26,7 @@ import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
 import { mapWithConcurrency } from '@/lib/utils/concurrency';
+import { checkWebhookRateLimit, getWebhookClientIp } from '@/lib/security/webhookRateLimit';
 
 // Per-webhook matcher fan-out concurrency. One slow GoPlus / aggregator
 // quote inside matchCopyEvent must not stall siblings; 8 keeps the GoPlus
@@ -115,6 +116,19 @@ function classifyAction(event: AlchemyActivityEvent, whaleAddress: string): 'buy
 }
 
 export async function POST(req: NextRequest) {
+  // Defense-in-depth: cap webhook throughput per source IP so a stolen
+  // signing key can't be used to flood the matcher / Supabase / copy-trade
+  // pipeline. 120 calls / 60s per IP — Alchemy's normal cadence is well
+  // under this even for high-activity chains.
+  const ip = getWebhookClientIp(req.headers);
+  const limit = await checkWebhookRateLimit('alchemy-whale', ip, { limit: 120, windowSeconds: 60 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter ?? 60) } },
+    );
+  }
+
   const rawBody = await req.text();
   if (!verifySignature(rawBody, req.headers.get('x-alchemy-signature'))) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });

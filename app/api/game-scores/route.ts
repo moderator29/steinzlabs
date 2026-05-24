@@ -77,11 +77,19 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const password = searchParams.get('password');
-  if (password !== '195656') {
+  // Admin-only — requires Authorization: Bearer <ADMIN_BEARER_TOKEN>.
+  // Previously this accepted ?password=<hardcoded plaintext> as a query
+  // param, which leaked the secret in URLs, logs, browser history, and
+  // referer headers. Removed entirely in favour of header-based auth.
+  const expected = process.env.ADMIN_BEARER_TOKEN;
+  if (!expected) {
+    return NextResponse.json({ error: 'Admin auth not configured' }, { status: 503 });
+  }
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (id) {
     scores.delete(id);

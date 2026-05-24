@@ -1,11 +1,11 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
 import { createServerClient } from '@supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -23,6 +23,22 @@ export async function POST() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Irreversible-action gate: require the user to type their email
+    // (GitHub / Supabase / Stripe pattern) so a stolen session cookie can't
+    // silently wipe an account via a CSRF-style POST to this route.
+    let body: { confirm?: string } = {};
+    try {
+      body = (await request.json()) as { confirm?: string };
+    } catch {
+      // empty body
+    }
+    if (!body.confirm || !user.email || body.confirm.trim().toLowerCase() !== user.email.toLowerCase()) {
+      return NextResponse.json(
+        { error: 'Confirmation mismatch — type your email exactly to delete this account.' },
+        { status: 400 },
+      );
     }
 
     const admin = getSupabaseAdmin();

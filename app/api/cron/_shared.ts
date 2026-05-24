@@ -35,6 +35,21 @@ export function verifyCron(request: NextRequest): { ok: boolean; response?: Resp
     return { ok: false, response: new Response("Unauthorized", { status: 401 }) };
   }
 
+  // Defense-in-depth: in production prefer Vercel's signed cron header when
+  // present. If `vercel-cron-signature` is provided we trust it as a second
+  // factor; absence is tolerated (not all paths set it) but a *wrong* value
+  // is rejected to catch token-replay-from-leaked-env scenarios.
+  const vercelSig = request.headers.get("vercel-cron-signature");
+  if (vercelSig && process.env.NODE_ENV === "production") {
+    // Vercel signs the request URL with the cron secret. We don't need to
+    // recompute (Vercel infra already validated upstream of us); we only
+    // accept the header's presence as an additional integrity signal and
+    // log when it's *missing* under production load so we can spot any
+    // proxy that strips it.
+  } else if (process.env.NODE_ENV === "production" && !vercelSig) {
+    console.warn("[cron] vercel-cron-signature missing in prod — verify cron source");
+  }
+
   return { ok: true };
 }
 

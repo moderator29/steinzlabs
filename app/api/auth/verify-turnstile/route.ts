@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: Request) {
   const { token } = await request.json();
@@ -16,6 +17,16 @@ export async function POST(request: Request) {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
 
   if (!secretKey) {
+    // Fail-CLOSED in production: missing secret = misconfigured deploy, do NOT
+    // silently auth past Cloudflare Turnstile. Surface to Sentry so on-call
+    // sees the misconfiguration. Dev/preview honour emergency bypass.
+    if (process.env.NODE_ENV === 'production' && !emergencyBypass) {
+      Sentry.captureException(new Error('TURNSTILE_SECRET_KEY missing in production'));
+      return NextResponse.json(
+        { success: false, error: 'Bot protection misconfigured' },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ success: true, bypass: true });
   }
 
