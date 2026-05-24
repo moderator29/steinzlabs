@@ -26,6 +26,8 @@ import NotificationBell from '@/components/NotificationBell';
 // Dominance / Chains Tracked.
 import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
 import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
+import { PortfolioHeroCard } from '@/components/dashboard/PortfolioHeroCard';
+import { SinceLastLoginDigest } from '@/components/dashboard/SinceLastLoginDigest';
 import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
@@ -418,7 +420,16 @@ export default function Dashboard() {
     if (activeNav === 'home') {
       if (activeTab === 'markets') return <MarketDashboard />;
       if (activeTab === 'context') return <ContextFeed />;
-      return <PersonalizedHome />;
+      return (
+        <>
+          {/* OV1 + OV2: above-fold portfolio hero + since-last-login digest.
+              Both self-hide when there's nothing to show (no wallets / no
+              prior login / no diff), so existing users get the same dashboard. */}
+          <PortfolioHeroCard />
+          <SinceLastLoginDigest />
+          <PersonalizedHome />
+        </>
+      );
     }
     if (activeNav === 'vtxai') return <VtxAiTab />;
     if (activeNav === 'wallet') return <WalletTab />;
