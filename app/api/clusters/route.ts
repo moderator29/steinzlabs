@@ -52,8 +52,8 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
       supabase.from('wallet_cluster_members').select('cluster_id, address, role').in('cluster_id', ids),
       supabase
         .from('cluster_labels')
-        .select('cluster_key, label, upvotes, downvotes, status')
-        .in('cluster_key', ids)
+        .select('cluster_id, label, upvotes, downvotes, status')
+        .in('cluster_id', ids)
         .eq('status', 'approved'),
     ]);
 
@@ -67,10 +67,10 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
 
     const labelByCluster = new Map<string, string>();
     (labelRows ?? []).forEach((l) => {
-      const prev = labelByCluster.get(l.cluster_key);
+      const prev = labelByCluster.get(l.cluster_id);
       // Prefer highest net-vote label.
       const net = (l.upvotes || 0) - (l.downvotes || 0);
-      if (!prev) labelByCluster.set(l.cluster_key, l.label);
+      if (!prev) labelByCluster.set(l.cluster_id, l.label);
       // (Slight simplification — we'd want to compare nets if we kept votes here.)
       void net;
     });

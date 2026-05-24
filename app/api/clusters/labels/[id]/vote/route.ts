@@ -47,16 +47,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   );
   if (voteErr) return NextResponse.json({ error: voteErr.message }, { status: 500 });
 
-  // Recompute totals
-  const { data: up } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", id).eq("vote", 1);
-  const { data: down } = await admin.from("cluster_label_votes").select("label_id", { count: "exact", head: true }).eq("label_id", id).eq("vote", -1);
-  const upvotes = (up as unknown as { count: number })?.count ?? 0;
-  const downvotes = (down as unknown as { count: number })?.count ?? 0;
+  // CLUSTER5: recompute under a row lock via Postgres RPC so two concurrent
+  // votes can't read stale counts and overwrite each other's update.
+  const { data: rpcRows, error: rpcErr } = await admin
+    .rpc('recompute_cluster_label_votes', { p_label_id: id });
+  if (rpcErr) return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+  const counts = Array.isArray(rpcRows) && rpcRows.length > 0
+    ? rpcRows[0] as { upvotes: number; downvotes: number }
+    : { upvotes: 0, downvotes: 0 };
+  const upvotes = counts.upvotes;
+  const downvotes = counts.downvotes;
 
+  // Status transition runs on the now-authoritative counts. RPC has already
+  // written upvotes/downvotes; this update only sets status + reads back
+  // submitted_by for the reputation award path.
   const status = upvotes >= 5 && upvotes - downvotes >= 3 ? "approved" : upvotes - downvotes <= -3 ? "rejected" : "pending";
   const { data: label } = await admin
     .from("cluster_labels")
-    .update({ upvotes, downvotes, status })
+    .update({ status })
     .eq("id", id)
     .select("submitted_by, status")
     .single();

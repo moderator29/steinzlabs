@@ -166,9 +166,24 @@ async function generateNarrative(
   chainEdges: DetectedEdge[],
   tokenFocus: string | null,
   chain: string,
+  clusterId?: string,
 ): Promise<{ name: string; narrative: string }> {
   const fallback = ARCHETYPE_FALLBACK_NAMES[archetype];
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
+
+  // CLUSTER4: per-cluster daily rate limit via Upstash. Bounds the
+  // cluster_orchestrator's Claude spend so a runaway re-detection loop
+  // can't repeatedly re-narrate the same cluster.
+  if (clusterId) {
+    try {
+      const { takeToken: rateTake } = await import('@/lib/cache/upstash-rate-limit');
+      const allowed = await rateTake(`claude:cluster:${clusterId}`, { capacity: 1, refillSec: 24 * 60 * 60 });
+      if (!allowed) return fallback;
+    } catch {
+      // Upstash unreachable → fail open (still bounded by Claude per-key
+      // platform limits); never block a narrative on cache outage.
+    }
+  }
 
   const edgeSummary = Array.from(
     chainEdges.reduce((m, e) => m.set(e.edge_type, (m.get(e.edge_type) || 0) + 1), new Map<string, number>()),
@@ -188,6 +203,30 @@ Return JSON only: { "name": "<2-4 words, vivid, evocative>", "narrative": "<1-2 
 
 Example: { "name": "Meme Flipper Collective", "narrative": "A dozen wallets that co-fund from a single source and rotate into the same memecoins within 60 seconds of each other. Historical hit-rate 60%+ on 10x moves." }`;
 
+  const callStart = Date.now();
+  const model = 'claude-haiku-4-5-20251001';
+  // Haiku 4.5 pricing (Anthropic public list at time of writing):
+  // $1.00 / 1M input tokens, $5.00 / 1M output tokens.
+  const COST_IN_PER_TOKEN  = 1.00 / 1_000_000;
+  const COST_OUT_PER_TOKEN = 5.00 / 1_000_000;
+
+  const logUsage = async (input: number, output: number, ok: boolean, err?: string) => {
+    try {
+      const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin');
+      await getSupabaseAdmin().from('claude_api_usage').insert({
+        caller: 'cluster_orchestrator',
+        model,
+        prompt_tokens: input,
+        completion_tokens: output,
+        cost_usd: Number((input * COST_IN_PER_TOKEN + output * COST_OUT_PER_TOKEN).toFixed(6)),
+        cluster_id: clusterId ?? null,
+        duration_ms: Date.now() - callStart,
+        ok,
+        error: err ?? null,
+      });
+    } catch { /* never let usage logging fail the narrative */ }
+  };
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -197,14 +236,17 @@ Example: { "name": "Meme Flipper Collective", "narrative": "A dozen wallets that
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model,
         max_tokens: 300,
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return fallback;
+    if (!res.ok) { void logUsage(0, 0, false, `HTTP ${res.status}`); return fallback; }
     const data = await res.json();
+    const inTok  = Number(data?.usage?.input_tokens ?? 0);
+    const outTok = Number(data?.usage?.output_tokens ?? 0);
+    void logUsage(inTok, outTok, true);
     const text = data?.content?.[0]?.text || '';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return fallback;
@@ -272,7 +314,8 @@ export async function buildClustersFromActivity(
 
     const { archetype, whale_score, risk_score } = inferArchetype(members, chainEdges, memberActivity);
 
-    const { name, narrative } = await generateNarrative(archetype, members, chainEdges, tokenFocus, chain);
+    const clusterId = hashClusterId(members, chain);
+    const { name, narrative } = await generateNarrative(archetype, members, chainEdges, tokenFocus, chain, clusterId);
 
     const totalValue = chainEdges.reduce((s, e) => s + (e.total_value_usd || 0), 0);
     const confidence =
@@ -285,7 +328,7 @@ export async function buildClustersFromActivity(
 
     const edgeTypes = Array.from(new Set(chainEdges.map((e) => e.edge_type)));
     const summary: ClusterSummary = {
-      cluster_id: hashClusterId(members, chain),
+      cluster_id: clusterId,
       chain,
       member_count: members.length,
       edge_count: chainEdges.length,
