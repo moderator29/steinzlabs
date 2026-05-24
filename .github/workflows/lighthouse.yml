@@ -49,7 +49,7 @@ jobs:
           NAKA_LIGHTHOUSE_BASE_URL: http://localhost:5000
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-report
           path: |
