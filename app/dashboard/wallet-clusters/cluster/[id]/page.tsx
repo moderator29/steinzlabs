@@ -217,27 +217,9 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* Members */}
-      <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Users className="w-4 h-4 text-[#8FA3FF]" />
-          <h2 className="text-sm font-bold">Members <span className="text-slate-500 text-xs">({members.length})</span></h2>
-        </div>
-        <div className="bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden">
-          <div className="max-h-[400px] overflow-y-auto">
-            {members.map((m) => (
-              <div key={m.address} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
-                <div className={`w-2 h-2 rounded-full ${m.role === 'hub' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                <code className="flex-1 text-xs font-mono text-slate-300 truncate">{m.address}</code>
-                <span className="text-[10px] text-slate-500 uppercase">{m.role || 'member'}</span>
-                <a href={`https://etherscan.io/address/${m.address}`} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-white">
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Members — CLUSTER3: paginate 100/page with Show more so a
+          5000-member cluster doesn't blow up the DOM. */}
+      <MembersList members={members} />
 
       {/* Community labels */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
@@ -308,6 +290,55 @@ function Metric({ label, value, color = 'text-white' }: { label: string; value: 
     <div className="bg-black/20 rounded-lg p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className={`text-base font-bold font-mono mt-0.5 ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+const MEMBER_PAGE_SIZE = 100;
+
+function MembersList({ members }: { members: Member[] }) {
+  const [visible, setVisible] = useState(MEMBER_PAGE_SIZE);
+  const slice = members.slice(0, visible);
+  const remaining = members.length - visible;
+  return (
+    <div className="max-w-7xl mx-auto px-4 mt-6">
+      <div className="flex items-center gap-2 mb-2">
+        <Users className="w-4 h-4 text-[#8FA3FF]" />
+        <h2 className="text-sm font-bold">
+          Members <span className="text-slate-500 text-xs">({members.length})</span>
+        </h2>
+      </div>
+      <div className="bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden">
+        <div className="max-h-[400px] overflow-y-auto">
+          {slice.map((m) => (
+            <div key={m.address} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
+              <div className={`w-2 h-2 rounded-full ${m.role === 'hub' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+              <code className="flex-1 text-xs font-mono text-slate-300 truncate">{m.address}</code>
+              <span className="text-[10px] text-slate-500 uppercase">{m.role || 'member'}</span>
+              <a
+                href={`https://etherscan.io/address/${m.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-white"
+                aria-label="Open address on Etherscan"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ))}
+        </div>
+        {remaining > 0 && (
+          <div className="border-t border-white/10 p-2 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setVisible((v) => v + MEMBER_PAGE_SIZE)}
+              className="text-[11px] text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-full px-3 py-1"
+            >
+              Show {Math.min(MEMBER_PAGE_SIZE, remaining)} more
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

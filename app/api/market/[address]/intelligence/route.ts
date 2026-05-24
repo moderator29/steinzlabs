@@ -193,14 +193,14 @@ export async function GET(
         supabase.from('wallet_cluster_members').select('cluster_id').in('cluster_id', ids),
         supabase
           .from('cluster_labels')
-          .select('cluster_key, label')
-          .in('cluster_key', ids)
+          .select('cluster_id, label')
+          .in('cluster_id', ids)
           .eq('status', 'approved'),
       ]);
       const memberCount = new Map<string, number>();
       (memberRows ?? []).forEach((m) => memberCount.set(m.cluster_id, (memberCount.get(m.cluster_id) || 0) + 1));
       const labelByCluster = new Map<string, string>();
-      (labelRows ?? []).forEach((l) => labelByCluster.set(l.cluster_key, l.label));
+      (labelRows ?? []).forEach((l) => labelByCluster.set(l.cluster_id, l.label));
       clusters_touching = clusters.map((c) => ({
         cluster_id: c.cluster_id,
         behavior_type: c.behavior_type,

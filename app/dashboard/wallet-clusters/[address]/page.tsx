@@ -73,7 +73,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
       const res = await fetch(`/api/clusters/by-address/${address}/labels`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cluster_key: data.clusterKey, ...labelForm }),
+        body: JSON.stringify({ cluster_id: data.clusterKey, ...labelForm }),
       });
       if (res.ok) {
         toast.success("Label submitted");

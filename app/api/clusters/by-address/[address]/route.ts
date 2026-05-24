@@ -68,7 +68,7 @@ export const GET = withTierGate("pro", async (
     const { data: labels } = await supabase
       .from("cluster_labels")
       .select("*")
-      .eq("cluster_key", clusterKey)
+      .eq("cluster_id", clusterKey)
       .order("upvotes", { ascending: false })
       .limit(10);
 

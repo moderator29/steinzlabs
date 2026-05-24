@@ -45,7 +45,7 @@ export async function POST(
 
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.from('cluster_labels').insert({
-    cluster_key: id,
+    cluster_id: id,
     label,
     description: (body.description || '').slice(0, 500),
     submitted_by: user.id,
