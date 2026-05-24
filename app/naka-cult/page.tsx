@@ -5,6 +5,7 @@ import { ConclaveSigil } from '@/components/vault/sigils/ConclaveSigil';
 import { OracleSigil } from '@/components/vault/sigils/OracleSigil';
 import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
 import { CultStatsStrip } from '@/components/naka-cult/CultStatsStrip';
+import { PauseAnimationsOnHidden } from '@/components/perf/PauseAnimationsOnHidden';
 import './landing.css';
 
 export const metadata = {
@@ -13,6 +14,10 @@ export const metadata = {
     'The Naka Cult is the inner ring of Naka Labs. Three chambers. One sigil. For those who hold.',
 };
 
+// Keep dynamic — per-user CTA (isMember) depends on session cookies via
+// getCultAccess(). ISR would cache one user's state to all viewers.
+// Stats-strip query cost is mitigated by moving CultStatsStrip data
+// fetch behind unstable_cache(60s) instead (see CultStatsStrip.tsx).
 export const dynamic = 'force-dynamic';
 
 /**
@@ -26,6 +31,7 @@ export default async function NakaCultLanding() {
 
   return (
     <div className="nakacult-shell">
+      <PauseAnimationsOnHidden />
       <div className="nakacult-orb-layer" aria-hidden>
         <span className="nakacult-orb nakacult-orb--blue" />
         <span className="nakacult-orb nakacult-orb--crimson" />

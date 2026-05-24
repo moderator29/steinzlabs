@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 interface Stat {
@@ -16,8 +17,18 @@ const NAKA_THRESHOLD = 1_227_000;
  * from Supabase or the on-chain config; absent data renders an em-dash,
  * never fabricated.
  */
+// §perf-5: parent page is force-dynamic for per-user CTA but the public
+// stats below are identical for every viewer. Cache the loadStats() call
+// itself (Next data cache) so it executes at most once per minute even
+// when the page re-renders on every request. ~99% query-cost reduction
+// on crawler / cold-visitor traffic.
+const loadStatsCached = unstable_cache(loadStats, ['naka-cult:stats'], {
+  revalidate: 60,
+  tags: ['naka-cult:stats'],
+});
+
 export async function CultStatsStrip() {
-  const stats = await loadStats();
+  const stats = await loadStatsCached();
   return (
     <section className="nakacult-stats" aria-label="Naka Cult live stats">
       {stats.map((s) => (
