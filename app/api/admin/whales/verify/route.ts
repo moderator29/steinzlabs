@@ -27,6 +27,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,16 +51,17 @@ interface VerificationResult {
   reason: string;
 }
 
-async function authorized(req: NextRequest): Promise<boolean> {
+async function authorized(req: NextRequest): Promise<{ ok: boolean; userId?: string }> {
   const headerSecret = req.headers.get('x-migration-secret');
   if (headerSecret && process.env.ADMIN_MIGRATION_SECRET && headerSecret === process.env.ADMIN_MIGRATION_SECRET) {
-    return true;
+    return { ok: true };
   }
   const user = await getAuthenticatedUser(req);
-  if (!user) return false;
+  if (!user) return { ok: false };
   const supabase = getSupabaseAdmin();
   const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  return data?.role === 'admin';
+  if (data?.role !== 'admin') return { ok: false };
+  return { ok: true, userId: user.id };
 }
 
 // ─── EVM check ─────────────────────────────────────────────────────────────
@@ -139,7 +141,8 @@ async function verifyOne(row: WhaleRow): Promise<VerificationResult> {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await authorized(req))) {
+  const auth = await authorized(req);
+  if (!auth.ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -182,6 +185,13 @@ export async function POST(req: NextRequest) {
       .in('id', deadIds);
     if (updErr) {
       return NextResponse.json({ error: `update failed: ${updErr.message}`, results }, { status: 500 });
+    }
+    if (auth.userId) {
+      void logAdminAction({
+        adminId: auth.userId,
+        action: 'whale_verify',
+        details: { checked: results.length, deactivated: deadIds.length, chainFilter: chainFilter ?? 'all' },
+      });
     }
   }
 

@@ -22,6 +22,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,16 +33,17 @@ const JUPITER_PROGRAMS: Record<string, string> = {
   jupiter_v4: 'JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB',
 };
 
-async function authorized(req: NextRequest): Promise<boolean> {
+async function authorized(req: NextRequest): Promise<{ ok: boolean; userId?: string }> {
   const headerSecret = req.headers.get('x-migration-secret');
   if (headerSecret && process.env.ADMIN_MIGRATION_SECRET && headerSecret === process.env.ADMIN_MIGRATION_SECRET) {
-    return true;
+    return { ok: true };
   }
   const user = await getAuthenticatedUser(req);
-  if (!user) return false;
+  if (!user) return { ok: false };
   const supabase = getSupabaseAdmin();
   const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  return data?.role === 'admin';
+  if (data?.role !== 'admin') return { ok: false };
+  return { ok: true, userId: user.id };
 }
 
 function getRpc(): string {
@@ -93,7 +95,8 @@ async function fetchJupiterSwappers(program: string, limit: number): Promise<Arr
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await authorized(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await authorized(req);
+  if (!auth.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const rpc = getRpc();
   if (!rpc) return NextResponse.json({ error: 'No Solana RPC configured (HELIUS_API_KEY preferred)' }, { status: 500 });
   if (!process.env.HELIUS_API_KEY) {
@@ -163,6 +166,13 @@ export async function POST(req: NextRequest) {
     inserted = newRows.length;
   }
 
+  if (!dryRun && auth.userId && inserted > 0) {
+    void logAdminAction({
+      adminId: auth.userId,
+      action: 'whale_discover',
+      details: { chain: 'solana', program: programAddress, inserted, scannedTxs: txs.length },
+    });
+  }
   return NextResponse.json({
     dryRun,
     program: programAddress,

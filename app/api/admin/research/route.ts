@@ -2,19 +2,18 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 // §13 audit fix: was using a custom verifyAdmin() that ONLY accepted
 // the env bearer token, locking out admins who authenticate via Supabase
 // JWT. Switched to the canonical verifyAdminRequest helper used by
 // every other /api/admin/** route — accepts both auth modes.
-async function verifyAdmin(request: Request): Promise<boolean> {
-  return Boolean(await verifyAdminRequest(request));
-}
 
 // ─── GET: list all posts (including unpublished) ──────────────────────────────
 
 export async function GET(request: NextRequest) {
-  if (!(await verifyAdmin(request))) {
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -36,7 +35,8 @@ export async function GET(request: NextRequest) {
 // ─── POST: create a new post ──────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  if (!(await verifyAdmin(request))) {
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -77,6 +77,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+    void logAdminAction({
+      adminId,
+      action: body.published ? 'research_publish' : 'research_upload',
+      details: { id: (data as { id?: string })?.id, slug, title: body.title.trim(), category: body.category ?? 'General', published: Boolean(body.published) },
+    });
     return NextResponse.json({ post: data }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Failed to create post' }, { status: 500 });
@@ -86,7 +91,8 @@ export async function POST(request: NextRequest) {
 // ─── PATCH: update a post ─────────────────────────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  if (!(await verifyAdmin(request))) {
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -129,6 +135,10 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
+    let action: 'research_publish' | 'research_unpublish' | 'research_upload' = 'research_upload';
+    if (body.published === true) action = 'research_publish';
+    else if (body.published === false) action = 'research_unpublish';
+    void logAdminAction({ adminId, action, details: { id: body.id, fields: Object.keys(updates) } });
     return NextResponse.json({ post: data });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Failed to update post' }, { status: 500 });
@@ -138,7 +148,8 @@ export async function PATCH(request: NextRequest) {
 // ─── DELETE: delete a post ────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  if (!(await verifyAdmin(request))) {
+  const adminId = await verifyAdminRequest(request);
+  if (!adminId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -156,6 +167,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id);
 
     if (error) throw error;
+    void logAdminAction({ adminId, action: 'research_delete', details: { id } });
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Failed to delete post' }, { status: 500 });

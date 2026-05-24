@@ -26,6 +26,37 @@ export type AdminAuditAction =
   | 'copy_rule_update'
   | 'copy_rule_delete'
   | 'copy_trade_execute'
+  // HIGH-6: extend the action vocabulary so every admin mutation route
+  // can stamp a precise verb. The audit log's `details` jsonb carries
+  // the per-action payload (target id, before/after, etc).
+  | 'announcement_create'
+  | 'announcement_update'
+  | 'announcement_delete'
+  | 'broadcast_send'
+  | 'broadcast_create'
+  | 'email_template_create'
+  | 'email_template_update'
+  | 'email_template_delete'
+  | 'featured_token_set'
+  | 'featured_token_remove'
+  | 'flagged_token_set'
+  | 'flagged_token_clear'
+  | 'newsletter_send'
+  | 'research_publish'
+  | 'research_unpublish'
+  | 'research_delete'
+  | 'research_upload'
+  | 'settings_update'
+  | 'support_reply'
+  | 'support_status_change'
+  | 'social_moderation'
+  | 'social_report_resolve'
+  | 'wallet_label_set'
+  | 'wallet_label_clear'
+  | 'whale_submission_approve'
+  | 'whale_submission_reject'
+  | 'whale_discover'
+  | 'whale_verify'
   | 'other';
 
 export interface AdminAuditEntry {

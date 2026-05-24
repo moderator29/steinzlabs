@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'email_template_create', details: { id: data?.id, name: body.name, type: body.type } });
     return NextResponse.json({ template: data });
   } catch (err) {
     console.error('[admin/email-templates POST] Failed:', err);
@@ -89,6 +91,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'email_template_update', details: { id, fields: Object.keys(update) } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/email-templates PATCH] Failed:', err);
@@ -113,6 +116,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    void logAdminAction({ adminId, action: 'email_template_delete', details: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/email-templates DELETE] Failed:', err);

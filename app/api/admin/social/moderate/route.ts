@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 /**
  * POST /api/admin/social/moderate
@@ -60,13 +61,12 @@ export async function POST(req: NextRequest) {
     targetType = 'dm_message'; targetId = parsed.data.message_id;
   }
 
-  await sb.from('admin_audit_log').insert({
-    actor_id: adminId === 'admin-bearer' ? null : adminId,
-    action: `social.moderate.${action}`,
-    target_type: targetType,
-    target_id: targetId,
-    metadata,
-  }).select().single().then(() => null, () => null);
+  void logAdminAction({
+    adminId,
+    targetUserId: targetType === 'profile' ? targetId : null,
+    action: 'social_moderation',
+    details: { sub_action: action, target_type: targetType, target_id: targetId, ...metadata },
+  });
 
   return NextResponse.json({ ok: true });
 }

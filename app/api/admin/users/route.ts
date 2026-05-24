@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction, type AdminAuditAction } from '@/lib/admin/auditLog';
 
 const MAX_LIMIT = 200;
 const AUTH_PAGE_SIZE = 1000; // Supabase admin listUsers max
@@ -205,18 +206,11 @@ export async function POST(request: Request) {
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
     const supabase = getSupabaseAdmin();
 
-    // §13b — every admin write goes into admin_audit_log. Best-effort
-    // (never fails the user-visible action), append-only, queryable
-    // by target_user_id or admin_id.
-    const audit = (action: string, details: Record<string, unknown> = {}) => {
-      supabase.from('admin_audit_log').insert({
-        admin_id: adminId,
-        target_user_id: userId,
-        action,
-        details,
-      }).then(({ error }) => {
-        if (error) console.error('[admin/users] audit insert failed', error.message);
-      });
+    // §13b — every admin write goes into admin_audit_log via the
+    // standardized helper. Best-effort, never fails the user-visible
+    // action; Sentry captures any insert error.
+    const audit = (action: AdminAuditAction, details: Record<string, unknown> = {}) => {
+      void logAdminAction({ adminId, targetUserId: userId, action, details });
     };
 
     if (action === 'delete') {

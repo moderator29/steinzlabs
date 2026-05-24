@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 /**
  * GET  /api/admin/social/reports?status=&category=&limit=
@@ -58,13 +59,10 @@ export async function PATCH(req: NextRequest) {
     admin_notes: parsed.data.admin_notes ?? null,
     resolved_at: new Date().toISOString(),
   }).eq('id', parsed.data.id);
-  // Audit log
-  await sb.from('admin_audit_log').insert({
-    actor_id: adminId === 'admin-bearer' ? null : adminId,
-    action: 'social.report.resolve',
-    target_type: 'user_report',
-    target_id: parsed.data.id,
-    metadata: { status: parsed.data.status, notes: parsed.data.admin_notes ?? null },
-  }).select().single().then(() => null, () => null);
+  void logAdminAction({
+    adminId,
+    action: 'social_report_resolve',
+    details: { reportId: parsed.data.id, status: parsed.data.status, notes: parsed.data.admin_notes ?? null },
+  });
   return NextResponse.json({ ok: true });
 }

@@ -17,6 +17,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,9 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (auth.userId) {
+      void logAdminAction({ adminId: auth.userId, action: 'whale_submission_reject', details: { submissionId: id, address: submission.address, chain: submission.chain, notes: notes ?? null } });
+    }
     return NextResponse.json({ ok: true, action: 'rejected', id });
   }
 
@@ -159,5 +163,8 @@ export async function POST(req: NextRequest) {
     .eq('id', id);
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
+  if (auth.userId) {
+    void logAdminAction({ adminId: auth.userId, action: 'whale_submission_approve', details: { submissionId: id, whaleId, address: submission.address, chain: submission.chain, reactivated: Boolean(existing?.id) } });
+  }
   return NextResponse.json({ ok: true, action: 'approved', whaleId, submissionId: id });
 }

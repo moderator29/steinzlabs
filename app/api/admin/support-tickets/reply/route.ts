@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { logAdminAction } from '@/lib/admin/auditLog';
 
 export async function POST(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    void logAdminAction({
+      adminId,
+      action: 'support_reply',
+      details: { ticketId, conversation: true, replyCount: updatedReplies.length },
+    });
     return NextResponse.json({ success: true, reply: newReply });
   } catch (err) {
     console.error('[admin/support-tickets/reply POST] Failed:', err);
