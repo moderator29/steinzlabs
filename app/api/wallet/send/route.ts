@@ -109,6 +109,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'chain and signed tx required' }, { status: 400 });
   }
 
+  // NW2: pre-broadcast sender verification. A non-custodial relayer
+  // must never broadcast a signed transaction whose sender doesn't
+  // match the authenticated user's wallet — otherwise a stolen signed
+  // payload (e.g. from a swapped React state attack) could be relayed
+  // from a different user's session. We decode the signed payload
+  // enough to extract the from-address and compare against the
+  // authenticated user's known wallet.
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('wallet_address')
+      .eq('id', user.id)
+      .maybeSingle<{ wallet_address: string | null }>();
+    const userWallet = (profile?.wallet_address ?? '').toLowerCase();
+
+    if (chain === 'solana') {
+      // Best-effort decode: VersionedTransaction.deserialize is the
+      // safest path but ships ~200KB if statically imported here. We
+      // dynamic-import behind try/catch so a parse failure logs the
+      // attempt without blocking the broadcast (which the RPC will
+      // reject anyway if the tx is malformed).
+      try {
+        const { VersionedTransaction } = await import('@solana/web3.js');
+        const tx = VersionedTransaction.deserialize(Buffer.from(signed, 'base64'));
+        const sender = tx.message.staticAccountKeys[0]?.toBase58();
+        if (userWallet && sender && sender !== profile?.wallet_address) {
+          return NextResponse.json({ error: 'Signed sender does not match authenticated wallet' }, { status: 403 });
+        }
+      } catch { /* parse failure → let the RPC reject */ }
+    } else {
+      try {
+        const { Transaction } = await import('ethers');
+        const tx = Transaction.from(signed);
+        const sender = (tx.from ?? '').toLowerCase();
+        if (userWallet && sender && sender !== userWallet) {
+          return NextResponse.json({ error: 'Signed sender does not match authenticated wallet' }, { status: 403 });
+        }
+      } catch { /* parse failure → let the RPC reject */ }
+    }
+  } catch { /* profile lookup failure → fall through (RLS errors shouldn't gate the user's own send) */ }
+
   let result: { ok: boolean; txHash?: string; error?: string };
   if (chain === 'solana') {
     result = await broadcastSolana(signed);
