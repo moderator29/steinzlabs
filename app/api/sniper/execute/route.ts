@@ -61,6 +61,14 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
+  // C.7: Idempotency-Key replay protection. Clients that retry a failed
+  // execute call (network blip, browser refresh, etc) can attach the
+  // same key and the route returns the cached response instead of
+  // double-executing the snipe.
+  const { checkIdempotency, saveIdempotency } = await import('@/lib/api/idempotency');
+  const cached = await checkIdempotency(req, user.id, '/api/sniper/execute', parsed.data);
+  if (cached) return cached;
+
   const { address, chain, amount, slippage } = parsed.data;
   const steps: { step: number; label: string; passed: boolean; detail: string }[] = [];
 
@@ -142,7 +150,7 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
     });
   }
 
-  return NextResponse.json({
+  const successPayload = {
     blocked: false,
     approved: true,
     steps,
@@ -151,5 +159,10 @@ export const POST = withTierGate('pro', async (req: NextRequest) => {
     pair: pairs[0]?.pairAddress ?? null,
     price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null,
     execution_time_ms: executionTimeMs,
-  });
+  };
+  // C.7: cache the success response so a retry with the same
+  // Idempotency-Key replays this exact payload instead of double-queueing
+  // the snipe.
+  await saveIdempotency(req, user.id, '/api/sniper/execute', parsed.data, 200, successPayload);
+  return NextResponse.json(successPayload);
 });

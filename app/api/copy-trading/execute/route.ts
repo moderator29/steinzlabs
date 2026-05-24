@@ -84,6 +84,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
+  // C.7: Idempotency-Key replay protection. Retries collapse into the
+  // cached response so a double-tap or network blip doesn't queue
+  // duplicate copy-trade executions.
+  const { checkIdempotency, saveIdempotency } = await import("@/lib/api/idempotency");
+  const idemp = await checkIdempotency(request, user.id, "/api/copy-trading/execute", body);
+  if (idemp) return idemp;
+
   // Helper: insert a blocked-or-failed user_copy_trades row with consistent shape.
   const recordBlocked = async (
     status: "blocked_rule" | "blocked_security" | "failed",
@@ -289,14 +296,16 @@ export async function POST(request: NextRequest) {
         route_provider: result.route?.provider ?? null,
       },
     });
-    return NextResponse.json({
-      ok: true,
+    const successPayload = {
+      ok: true as const,
       trade_id: inserted.id,
       pending_trade_id: result.pendingTradeId,
       security_score: score,
       route_provider: result.route?.provider ?? null,
       expected_amount_out: result.route?.amountOut ?? null,
-    });
+    };
+    await saveIdempotency(request, user.id, "/api/copy-trading/execute", body, 200, successPayload);
+    return NextResponse.json(successPayload);
   }
 
   // Relayer rejected (security or no route). Mirror its failure_reason onto
