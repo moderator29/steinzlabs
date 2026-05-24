@@ -83,20 +83,40 @@ const TYPE_LABELS: Record<string, string> = {
 
 // ─── Connection Builder ────────────────────────────────────────────────────────
 
-function buildWalletConnections(nodes: BubbleNode[]): BubbleLink[] {
+function buildWalletConnections(nodes: BubbleNode[], marketCapUsd: number): BubbleLink[] {
+  // BUBBLE1: link weight is the USD value of the smaller side of the
+  // pair (percentage × market cap), not raw percentage. A 0.5% holder
+  // of a $1B mcap token represents $5M of capital; a 0.5% holder of
+  // a $1M mcap token represents $5K. The edge thickness should reflect
+  // capital at risk, not unitless percentage. Falls back to percentage
+  // when market cap is unknown so the link still renders.
+  const useUsd = marketCapUsd > 0;
+  const toMetric = (pct: number) => useUsd ? (pct / 100) * marketCapUsd : pct;
   const links: BubbleLink[] = [];
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i], b = nodes[j];
-      // Same classified type (non-unknown, non-whale) → entity relationship
       if (a.type !== 'unknown' && a.type !== 'whale' && a.type === b.type) {
-        links.push({ source: a.id, target: b.id, value: Math.min(a.percentage, b.percentage), direction: 'both' });
+        links.push({
+          source: a.id,
+          target: b.id,
+          value: Math.min(toMetric(a.percentage), toMetric(b.percentage)),
+          direction: 'both',
+        });
         continue;
       }
-      // Similar holding size (< 0.3% diff, > 0.5%) → potential coordination
       const diff = Math.abs(a.percentage - b.percentage);
       if (diff < 0.3 && a.percentage > 0.5) {
-        links.push({ source: a.id, target: b.id, value: diff < 0.1 ? 2 : 1, direction: 'both' });
+        // Coordination signal stays binary (diff-based) but is scaled
+        // into the same USD/pct space as the other links so the renderer
+        // can apply one consistent thickness scale.
+        const baseMetric = toMetric(Math.min(a.percentage, b.percentage));
+        links.push({
+          source: a.id,
+          target: b.id,
+          value: diff < 0.1 ? baseMetric * 2 : baseMetric,
+          direction: 'both',
+        });
       }
     }
   }
@@ -117,6 +137,16 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
   const token = searchParams.get('token');
   const chain = (searchParams.get('chain') || 'ethereum').toLowerCase();
   const mode = (searchParams.get('mode') || 'holders') as 'holders' | 'network' | 'clusters';
+  // BUBBLE4: timeline scrub — the underlying intel pipeline is
+  // live-only (no historical holders snapshot store yet), so we surface
+  // the requested timestamp back to the caller as `snapshotAt` so the
+  // UI can label the view and shareable URLs render deterministically
+  // even though the data itself is current. A follow-up wires the
+  // snapshot store (holder_snapshots already exists per migration).
+  const atParam = searchParams.get('at');
+  const snapshotAt = atParam && !Number.isNaN(Number(atParam))
+    ? new Date(Number(atParam)).toISOString()
+    : new Date().toISOString();
 
   if (!token) {
     return NextResponse.json({ error: 'Token address is required' }, { status: 400 });
@@ -185,10 +215,13 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
     let clusters: BubbleMapData['clusters'];
 
     if (mode === 'network') {
+      const useUsd = cgMarketCap > 0;
       const centerLinks = holderNodes.slice(0, 20).map(h => ({
-        source: 'center', target: h.id, value: h.percentage, direction: 'both' as const,
+        source: 'center', target: h.id,
+        value: useUsd ? (h.percentage / 100) * cgMarketCap : h.percentage,
+        direction: 'both' as const,
       }));
-      const walletLinks = buildWalletConnections(holderNodes);
+      const walletLinks = buildWalletConnections(holderNodes, cgMarketCap);
       links = [...centerLinks, ...walletLinks];
     } else if (mode === 'clusters') {
       links = holderNodes.map(h => ({
@@ -205,8 +238,11 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
         nodeIds: members.map(m => m.id),
       }));
     } else {
+      const useUsd = cgMarketCap > 0;
       links = holderNodes.map(h => ({
-        source: 'center', target: h.id, value: h.percentage, direction: 'both' as const,
+        source: 'center', target: h.id,
+        value: useUsd ? (h.percentage / 100) * cgMarketCap : h.percentage,
+        direction: 'both' as const,
       }));
     }
 
@@ -245,7 +281,7 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
       },
     };
 
-    return NextResponse.json(bubbleData);
+    return NextResponse.json({ ...bubbleData, snapshotAt });
   } catch (err) {
     // CLAUDE.md: no console.error in production — Sentry capture instead.
     Sentry.captureException(err, { tags: { route: 'bubble-map' } });
