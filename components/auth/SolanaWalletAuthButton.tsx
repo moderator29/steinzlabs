@@ -39,6 +39,25 @@ function getPhantom(): PhantomProvider | null {
   return win.phantom?.solana ?? win.solana ?? null;
 }
 
+function isMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+/**
+ * Open the Phantom mobile-browser deep-link so Phantom takes over the
+ * page inside its own in-app browser (Phantom then injects window.solana
+ * and the user's next button-tap connects). Used as fallback on mobile
+ * when the page is opened in regular Safari / Chrome and Phantom isn't
+ * injected.
+ */
+function openPhantomMobileDeeplink() {
+  if (typeof window === 'undefined') return;
+  const url = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+  const deeplink = `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(window.location.origin)}`;
+  window.location.href = deeplink;
+}
+
 function bytesToBase58(bytes: Uint8Array): string {
   // Lightweight base58 encoder so we don't pull bs58 into the client
   // bundle just for one signature roundtrip. Server-side we already
@@ -71,10 +90,25 @@ export function SolanaWalletAuthButton({ mode, className }: Props) {
 
   const handleClick = async () => {
     if (busy) return;
-    const phantom = getPhantom();
+
+    // §W3 / §W4 — Mobile-first attempt: on mobile, do NOT pre-check
+    // window.solana.isPhantom before attempting connect, because mobile
+    // Safari only injects the provider after the page is opened *inside*
+    // the Phantom in-app browser. The old guard saw `isPhantom` false on
+    // first paint and incorrectly opened the download page even when
+    // Phantom was installed on the device. New flow: try to grab the
+    // provider, if missing AND mobile, deep-link into Phantom (which
+    // re-opens us inside Phantom's webview where window.solana exists).
+    let phantom = getPhantom();
     if (!phantom?.isPhantom) {
-      // Phantom isn't installed — open the install page in a new tab.
-      // Mobile deep-link is handled inside Phantom itself.
+      if (isMobile()) {
+        // Hand off to Phantom — when the user returns to our page through
+        // Phantom's in-app browser, window.solana is injected and their
+        // next click on the Sign-In button will connect normally.
+        openPhantomMobileDeeplink();
+        return;
+      }
+      // Desktop: provider truly absent → install page.
       showToast('Phantom wallet not detected. Install Phantom to continue.', 'error');
       window.open('https://phantom.app/download', '_blank', 'noopener,noreferrer');
       return;
