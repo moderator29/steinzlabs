@@ -24,9 +24,13 @@ async function buildPersonalContext(request: Request): Promise<PersonalContext |
       const user = await getAuthenticatedUser(request as unknown as import('next/server').NextRequest);
       if (!user) return undefined;
       const supabase = getSupabaseAdmin();
-      const [watchlistR, followsR] = await Promise.all([
+      const [watchlistR, followsR, prefsR] = await Promise.all([
         supabase.from('watchlist').select('token_id').eq('user_id', user.id).limit(200),
         supabase.from('user_whale_follows').select('whale_address').eq('user_id', user.id).limit(200),
+        // CF3: muted_feed_sources lives inside user_preferences.preferences
+        // (jsonb blob) as an array of source slugs. Single round-trip alongside
+        // the other personal context reads.
+        supabase.from('user_preferences').select('preferences').eq('user_id', user.id).maybeSingle(),
       ]);
       const watchlistSymbols = new Set<string>();
       (watchlistR.data ?? []).forEach((w: { token_id: string | null }) => {
@@ -36,7 +40,13 @@ async function buildPersonalContext(request: Request): Promise<PersonalContext |
       (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
         if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
       });
-      return { watchlistSymbols, followedAddresses };
+      const mutedSources = new Set<string>();
+      const muted = (prefsR.data as { preferences?: { muted_feed_sources?: unknown } } | null)
+        ?.preferences?.muted_feed_sources;
+      if (Array.isArray(muted)) {
+        for (const m of muted) if (typeof m === 'string') mutedSources.add(m.toLowerCase());
+      }
+      return { watchlistSymbols, followedAddresses, mutedSources };
     })();
     const timeout = new Promise<undefined>((resolve) => {
       timer = setTimeout(() => resolve(undefined), TIMEOUT_MS);
@@ -567,7 +577,9 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
     else if (chainId === 'avalanche') chain = 'avalanche';
 
     return {
-      id: `${source}-${chain}-${symbol}-${tokenAddress?.slice(0, 10) || pairAddress?.slice(0, 10)}`,
+      // CF5: id derived from the FULL token/pair address (not a 10-char
+      // prefix) so cards that share a prefix don't collide.
+      id: `${source}-${chain}-${symbol}-${(tokenAddress || pairAddress || '').toLowerCase()}`,
       type: 'trending',
       sentiment,
       title,
@@ -789,7 +801,11 @@ function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
     seenIds.add(e.id);
     const addr = e.pairAddress || e.txHash || '';
     const platform = e.platform || '';
-    const key = `${platform}-${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.slice(0, 10)}`;
+    // CF5: dedup on full address. Slicing to 10 chars caused false dedup
+    // collisions where two distinct contracts/txs happened to share a
+    // prefix, dropping legitimate events. The marginal memory cost of
+    // full strings in a Set is irrelevant at the row counts we serve.
+    const key = `${platform}-${(e.tokenSymbol || '').toLowerCase()}-${e.chain}-${addr.toLowerCase()}`;
     if (seenKeys.has(key)) return false;
     seenKeys.add(key);
     return true;
@@ -823,6 +839,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const rawLimit = parseInt(searchParams.get('limit') || '150');
     const limit = Math.min(Math.max(rawLimit, 1), 200);
+    // CF4: cursor pagination. Clients pass ?cursor=<lastId> from the
+    // previous response; we drop every event whose id appears in the
+    // dedup-resolved feed up to and including that cursor, then take the
+    // next `limit` items. Lightweight ordinal pagination — works because
+    // the score-sort is stable for a given snapshot.
+    const cursor = searchParams.get('cursor');
     const chain = searchParams.get('chain') || 'all';
     const rawFilter = (searchParams.get('filter') || 'all').toLowerCase();
     const filter: FilterKind = VALID_FILTERS.has(rawFilter as FilterKind) ? (rawFilter as FilterKind) : 'all';
@@ -979,9 +1001,21 @@ export async function GET(request: Request) {
     }
     filtered = applyTypeFilter(filtered, filter);
 
+    // CF4: apply cursor before slicing. When cursor is absent we serve the
+    // first page; when present we look it up in the post-filter order and
+    // hand back the next window.
+    let startIdx = 0;
+    if (cursor) {
+      const idx = filtered.findIndex((e) => e.id === cursor);
+      if (idx >= 0) startIdx = idx + 1;
+    }
+    const page = filtered.slice(startIdx, startIdx + limit);
+    const nextCursor = startIdx + limit < filtered.length ? page[page.length - 1]?.id ?? null : null;
+
     return NextResponse.json({
-      events: filtered.slice(0, limit),
+      events: page,
       total: filtered.length,
+      cursor: { current: cursor ?? null, next: nextCursor },
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,

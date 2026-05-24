@@ -26,6 +26,10 @@ export interface FilterableEvent {
 export interface PersonalContext {
   watchlistSymbols: Set<string>;
   followedAddresses: Set<string>;
+  // CF3: per-user muted feed sources. Values are matched case-insensitive
+  // against event.source / event.platform — e.g. {'biz', 'pumpfun',
+  // 'helius'} hides every card those pipelines generated.
+  mutedSources?: Set<string>;
 }
 
 export interface FilterOptions {
@@ -80,7 +84,15 @@ export function applyContextFilter<T extends FilterableEvent>(
   opts: FilterOptions = {},
 ): T[] {
   const minMcap = opts.minMarketCap ?? 500_000;
+  const muted = opts.personal?.mutedSources;
   const filtered = events.filter((e) => {
+    // CF3: drop events whose source/platform the user explicitly muted.
+    if (muted && muted.size > 0) {
+      const src = (e as { source?: string; platform?: string }).source
+        ?? (e as { platform?: string }).platform
+        ?? '';
+      if (src && muted.has(src.toLowerCase())) return false;
+    }
     if (typeof e.tokenMarketCap === "number" && e.tokenMarketCap > 0) {
       return e.tokenMarketCap >= minMcap;
     }
