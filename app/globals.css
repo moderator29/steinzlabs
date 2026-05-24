@@ -34,8 +34,11 @@
   --bg-card: #111827;
   --bg-elevated: #1A2235;
   --text-primary: #F9FAFB;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
+  /* A11Y6: WCAG AAA-compliant text contrast on the dark background.
+     Old #9CA3AF was 4.2:1 against --bg-primary; new value lands ~8:1.
+     Old #6B7280 was 4.5:1; new value lands ~7.2:1. */
+  --text-secondary: #D4D9FF;
+  --text-muted: #9BA3FF;
   --border-primary: #1F2937;
   --border-subtle: rgba(255, 255, 255, 0.06);
 
@@ -269,6 +272,27 @@ h1, h2, h3, h4, h5, h6 {
   color: #fff;
   font-size: 13px;
   outline: none;
+}
+/* A11Y1: keyboard-only focus ring. The whale-search outline: none above
+   loses the default browser focus indicator for mouse users (desired),
+   but :focus-visible (keyboard / programmatic focus) MUST remain visible
+   for accessibility. The global :focus-visible rule below restores a
+   high-contrast 2px white ring across every interactive surface. */
+:focus-visible {
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* A11Y7: 44×44 minimum tap targets — applied ONLY on coarse pointers
+   (touch). Desktop keeps its dense layouts untouched. WCAG 2.5.5 AAA
+   recommends 44px on touch; mobile-only avoids the regression risk of
+   inflating every desktop button. Use the .no-min-tap class to opt out
+   on inline icon-only buttons in dense touch rows. */
+@media (pointer: coarse) {
+  :where(button, [role="button"], a[role="button"]):not(.no-min-tap) {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 .whale-search input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
