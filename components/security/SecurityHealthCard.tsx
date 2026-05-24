@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ShieldCheck, ShieldAlert, AlertTriangle, KeyRound, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, KeyRound, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 /**
- * SC1 + SC2 + SC3 surface: top-of-Security-Center card. Reads the
- * composite health score from /api/security/health, the HIBP breach
- * count from /api/security/hibp, and includes a 2FA-enable CTA when
- * the user hasn't enrolled yet.
+ * SC1 + SC3 surface: top-of-Security-Center card. Reads the composite
+ * health score from /api/security/health and includes a 2FA-enable CTA
+ * when the user hasn't enrolled yet.
  */
 
 interface HealthResponse {
@@ -25,22 +24,14 @@ function ringColor(score: number): string {
 
 export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
   const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [breachCount, setBreachCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [hRes, bRes] = await Promise.all([
-          fetch('/api/security/health'),
-          fetch('/api/security/hibp'),
-        ]);
+        const hRes = await fetch('/api/security/health');
         if (!cancelled && hRes.ok) setHealth(await hRes.json() as HealthResponse);
-        if (!cancelled && bRes.ok) {
-          const j = await bRes.json() as { count: number };
-          setBreachCount(j.count ?? 0);
-        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -86,16 +77,6 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
           )}
         </div>
       </div>
-
-      {(breachCount !== null && breachCount > 0) && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/[0.05] p-3 text-sm">
-          <AlertTriangle className="w-4 h-4 text-red-300 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <div className="font-semibold text-red-200">Your email appeared in {breachCount} known breach{breachCount === 1 ? '' : 'es'}.</div>
-            <div className="text-xs text-red-300/80">Rotate any reused passwords. Pick a unique password for Naka Labs.</div>
-          </div>
-        </div>
-      )}
 
       {!has2fa && (
         <Link
