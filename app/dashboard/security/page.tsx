@@ -2,6 +2,7 @@
 
 import { Shield, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { SecurityHealthCard } from '@/components/security/SecurityHealthCard';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
@@ -144,6 +145,10 @@ export default function SecurityPage() {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* SC1 + SC2 + SC3: composite health score, HIBP breach banner,
+            and the 2FA-enable CTA, all live above the existing token
+            scanner. */}
+        <SecurityHealthCard />
         <div className="flex flex-wrap gap-2">
           {CHAINS.map((chain) => (
             <button
