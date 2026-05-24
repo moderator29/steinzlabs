@@ -34,6 +34,10 @@ export interface EntityLabel {
   verified: boolean;
   logo?: string;
   website?: string;
+  // WI4: which provider answered. 'arkham' when Arkham was authoritative,
+  // 'nansen' when we fell back to Nansen due to low Arkham confidence,
+  // 'fallback' when neither responded (Unknown).
+  source?: 'arkham' | 'nansen' | 'fallback';
 }
 
 const FALLBACK_LABEL: EntityLabel = {
@@ -41,7 +45,45 @@ const FALLBACK_LABEL: EntityLabel = {
   type: 'unknown',
   confidence: 0,
   verified: false,
+  source: 'fallback',
 };
+
+/**
+ * WI4: when Arkham confidence is below 70, query Nansen as a secondary
+ * label source. Nansen results are merged in via a `source: 'nansen'`
+ * tag so callers can downstream-display the provider. Fail-open: any
+ * Nansen failure returns the original Arkham label.
+ *
+ * Nansen API surface: GET https://api.nansen.ai/api/beta/profiler/address/{address}
+ * Auth: ?apiKey=$NANSEN_API_KEY in query string. We expose label
+ * fields {label, type, confidence} which their endpoint provides under
+ * a similar shape.
+ */
+async function fetchNansenLabel(address: string, chain?: string): Promise<Partial<EntityLabel> | null> {
+  const key = process.env.NANSEN_API_KEY;
+  if (!key) return null;
+  try {
+    const url = new URL(`https://api.nansen.ai/api/beta/profiler/address/${encodeURIComponent(address)}`);
+    if (chain) url.searchParams.set('chain', chain);
+    const res = await fetch(url.toString(), {
+      headers: { apiKey: key, accept: 'application/json' },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const j = await res.json() as { label?: string; entityType?: string; confidence?: number; verified?: boolean; logo?: string };
+    if (!j.label) return null;
+    return {
+      entity: j.label,
+      type: (j.entityType ?? 'unknown').toLowerCase(),
+      confidence: typeof j.confidence === 'number' ? j.confidence : 75,
+      verified: Boolean(j.verified),
+      logo: j.logo,
+      source: 'nansen',
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function getEntityLabel(
   address: string,
@@ -49,20 +91,41 @@ export async function getEntityLabel(
 ): Promise<EntityLabel> {
   const key = cacheKey('arkham', 'entity_label', { address: address.toLowerCase(), chain: chain ?? 'all' });
   return withCache(key, TTL.ENTITY_LABEL, async () => {
+    let arkhamLabel: EntityLabel | null = null;
     try {
       const intel = await arkhamAPI.getAddressIntel(address, chain);
-      if (!intel.arkhamEntity) return FALLBACK_LABEL;
-      return {
-        entity: intel.arkhamEntity.name,
-        type: intel.arkhamEntity.type,
-        confidence: intel.arkhamEntity.verified ? 95 : 60,
-        verified: intel.arkhamEntity.verified,
-        logo: intel.arkhamEntity.logo,
-        website: intel.arkhamEntity.website,
-      };
-    } catch {
-      return FALLBACK_LABEL;
+      if (intel.arkhamEntity) {
+        arkhamLabel = {
+          entity: intel.arkhamEntity.name,
+          type: intel.arkhamEntity.type,
+          confidence: intel.arkhamEntity.verified ? 95 : 60,
+          verified: intel.arkhamEntity.verified,
+          logo: intel.arkhamEntity.logo,
+          website: intel.arkhamEntity.website,
+          source: 'arkham',
+        };
+      }
+    } catch { /* fall through to Nansen */ }
+
+    // WI4: confidence below 70 → consult Nansen.
+    if (!arkhamLabel || arkhamLabel.confidence < 70) {
+      const nansen = await fetchNansenLabel(address, chain);
+      if (nansen && nansen.entity) {
+        // Take Nansen wholesale; preserve Arkham website/logo when Nansen
+        // didn't provide its own.
+        return {
+          entity: nansen.entity,
+          type: nansen.type ?? arkhamLabel?.type ?? 'unknown',
+          confidence: nansen.confidence ?? 75,
+          verified: nansen.verified ?? false,
+          logo: nansen.logo ?? arkhamLabel?.logo,
+          website: arkhamLabel?.website,
+          source: 'nansen',
+        };
+      }
     }
+
+    return arkhamLabel ?? FALLBACK_LABEL;
   });
 }
 

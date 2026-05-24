@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -52,7 +53,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const address = rawAddress.toLowerCase();
+  // WI2: normalizeAddress respects per-chain case rules. Lower-casing a
+  // Solana address loses bytes and the downstream queries return nothing.
+  const address = normalizeAddress(rawAddress);
   const admin = getSupabaseAdmin();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
