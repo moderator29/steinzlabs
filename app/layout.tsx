@@ -78,6 +78,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   userScalable: true,
+  // A11Y8: viewport-fit=cover lets the app paint into the iOS notch /
+  // home-indicator safe areas. Components that need to inset from the
+  // hardware should use the env(safe-area-inset-*) values.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
