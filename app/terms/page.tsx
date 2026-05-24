@@ -65,7 +65,7 @@ export default function TermsPage() {
 
         <H2 n="05">Trading, Swaps &amp; Fees</H2>
         <p>Trades executed through the platform are routed through third-party decentralized exchange aggregators (including but not limited to 0x Protocol and Jupiter). Naka Labs does not hold custody of assets at any point. Executions are subject to on-chain conditions including slippage, gas fees, and block-level reorg risk.</p>
-        <p>Naka Labs charges a platform fee on swaps, disclosed upfront in each quote and included in the displayed estimated receive amount. Subscription tier fees are published on the <Link href="/pricing" className="text-[#4D6BFF] hover:underline">pricing page</Link> and charged via crypto payment rails.</p>
+        <p>Naka Labs charges a platform fee on swaps, disclosed upfront in each quote and included in the displayed estimated receive amount. Subscription tier fees are published on the <Link href="/dashboard/pricing" className="text-[#4D6BFF] hover:underline">pricing page</Link> and charged via crypto payment rails.</p>
 
         <H2 n="5A">AI &amp; Swap Safety</H2>
         <p>VTX Agent is an intelligence layer, not a signer. When you ask VTX to swap, convert, or trade, the agent renders a Swap Card showing the proposed input token, output token, estimated receive amount, slippage tolerance, price impact, and platform fee. <strong>No transaction is broadcast, signed, or executed until you manually tap the "Sign &amp; Swap" (or "Execute Swap") button and your wallet approves the signature.</strong></p>
