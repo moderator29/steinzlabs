@@ -20,7 +20,10 @@
  */
 
 import { useState } from 'react';
-import { ethers } from 'ethers';
+// PERF8: ethers (~275KB minified) is dynamically imported inside the
+// quote/execute handlers so it stays out of the bridge page initial
+// chunk and only loads when the user actually clicks a button.
+import type { Eip1193Provider } from 'ethers';
 import { ArrowLeftRight, ChevronDown, Loader2, ExternalLink } from 'lucide-react';
 
 interface ChainOption {
@@ -100,7 +103,8 @@ export default function BridgePage() {
     try {
       const accounts = (await eth.request({ method: 'eth_requestAccounts' })) as string[];
       const fromAddress = accounts[0];
-      const fromAmountBaseUnits = ethers.parseUnits(amount, 18).toString();
+      const { parseUnits } = await import('ethers');
+      const fromAmountBaseUnits = parseUnits(amount, 18).toString();
 
       const res = await fetch('/api/bridge/quote', {
         method: 'POST',
@@ -144,7 +148,8 @@ export default function BridgePage() {
         });
       }
 
-      const provider = new ethers.BrowserProvider(eth as unknown as ethers.Eip1193Provider);
+      const { BrowserProvider } = await import('ethers');
+      const provider = new BrowserProvider(eth as unknown as Eip1193Provider);
       const signer = await provider.getSigner();
       const fromAddress = await signer.getAddress();
 
