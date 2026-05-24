@@ -26,9 +26,14 @@ interface Props {
 export function ChamberPortal({ href, name, tagline, description, sigil, comingSoon }: Props) {
   const inner = (
     <motion.div
+      // §nakacult-scroll-bug: was `whileInView` with `viewport={{ once: true }}`,
+      // which combined with the page's layout shifts caused the
+      // IntersectionObserver to re-fire after every reflow and yanked the
+      // page back to its previous scroll position. Swapped to a mount-time
+      // `initial → animate` (runs once when the card mounts; never re-fires
+      // on scroll), so the page no longer auto-scrolls while user is reading.
       initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -4 }}
       className="vault-portal group"

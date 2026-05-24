@@ -484,17 +484,26 @@ function VtxAiPageInner() {
           if (Array.isArray(parsed)) setChatSessions(parsed);
         }
       } catch { /* Malformed JSON — return default */ }
-      // Background: load conversation history from Supabase
+      // Background: load conversation history from Supabase.
+      // Dedupe by conversation id — the API can return one row per message
+      // tuple if the schema joins messages, which would stack 8 copies of
+      // "tell me about squidgrow" in the rail (reported bug).
       fetch('/api/vtx/conversations')
         .then(r => r.json())
         .then(({ conversations }) => {
           if (conversations && conversations.length > 0) {
-            const entries: ChatHistoryEntry[] = conversations.map((c: { id: string; title: string; messages: Message[]; updated_at: string }) => ({
-              id: c.id,
-              date: c.updated_at,
-              messages: c.messages || [],
-              preview: c.title || 'VTX Conversation',
-            }));
+            const seen = new Set<string>();
+            const entries: ChatHistoryEntry[] = [];
+            for (const c of conversations as { id: string; title: string; messages: Message[]; updated_at: string }[]) {
+              if (!c?.id || seen.has(c.id)) continue;
+              seen.add(c.id);
+              entries.push({
+                id: c.id,
+                date: c.updated_at,
+                messages: c.messages || [],
+                preview: c.title || 'VTX Conversation',
+              });
+            }
             setChatSessions(entries);
           }
         })

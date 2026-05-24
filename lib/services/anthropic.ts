@@ -413,10 +413,21 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
   return new ReadableStream({
     async start(controller) {
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      let firstDeltaAt: number | null = null;
+      let totalDeltas = 0;
+      const startedAt = Date.now();
 
       const resetIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
+          // §vtx-no-response observability: log the failure mode so we can
+          // tell idle-timeout from API-error from rate-limit in prod logs.
+          console.error('[vtxStream] idle timeout', {
+            elapsedMs: Date.now() - startedAt,
+            firstDeltaAt,
+            totalDeltas,
+            timeoutMs: STREAM_IDLE_TIMEOUT_MS,
+          });
           controller.error(new Error(`Stream idle timeout after ${STREAM_IDLE_TIMEOUT_MS}ms`));
         }, STREAM_IDLE_TIMEOUT_MS);
       };
@@ -428,10 +439,27 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
             chunk.type === 'content_block_delta' &&
             chunk.delta.type === 'text_delta'
           ) {
+            if (firstDeltaAt === null) firstDeltaAt = Date.now() - startedAt;
+            totalDeltas++;
             resetIdleTimer();
             controller.enqueue(chunk.delta.text);
           }
         }
+        // Empty completion (no text deltas at all) is the silent-no-reply
+        // failure mode the owner reported. Log so it's visible.
+        if (totalDeltas === 0) {
+          console.error('[vtxStream] completed with 0 text deltas', {
+            elapsedMs: Date.now() - startedAt,
+          });
+        }
+      } catch (err) {
+        console.error('[vtxStream] stream errored', {
+          elapsedMs: Date.now() - startedAt,
+          firstDeltaAt,
+          totalDeltas,
+          err: err instanceof Error ? err.message : String(err),
+        });
+        throw err;
       } finally {
         if (idleTimer) clearTimeout(idleTimer);
       }

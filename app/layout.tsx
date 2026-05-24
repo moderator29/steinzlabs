@@ -106,6 +106,17 @@ export default function RootLayout({
             __html: `(function(){try{var l=localStorage.getItem('naka_language');if(l&&l!=='en'){document.documentElement.classList.add('naka-translating');if(l==='ar'){document.documentElement.setAttribute('dir','rtl');}}}catch(e){}})();`,
           }}
         />
+        {/* §nakacult-scroll-bug — disable browser scroll restoration so the
+            naka-cult landing page doesn't yank back to a previous scroll
+            position after layout shifts (chamber portals + animated
+            stats strip re-mounting). Next's per-route scroll-to-top
+            still works because next/link's default `scroll={true}` calls
+            window.scrollTo(0,0). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if('scrollRestoration' in window.history){window.history.scrollRestoration='manual';}})();`,
+          }}
+        />
         {/* Organization schema.org JSON-LD. Google + Bing use this for
             the knowledge-panel sidelines + sitelinks search box; missing
             it costs us "Naka Labs" rich results. Site URL pulls from

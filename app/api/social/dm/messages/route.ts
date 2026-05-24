@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { canUserDM } from '@/lib/social/permissions';
+import { canUserDM, isBlockedBetween } from '@/lib/social/permissions';
 import { RATES, takeToken } from '@/lib/social/rateLimit';
 import { notifySocialEvent } from '@/lib/social/notify';
 
@@ -35,6 +35,14 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
   if (!conv || (conv.user_a_id !== user.id && conv.user_b_id !== user.id)) {
     return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+  }
+
+  // §dm-block-bypass — even if the conversation row exists from before
+  // a block, hide the history (including metadata: sender_id, timestamps,
+  // read_at) once either party has blocked the other.
+  const peerId = conv.user_a_id === user.id ? conv.user_b_id : conv.user_a_id;
+  if (await isBlockedBetween(user.id, peerId)) {
+    return NextResponse.json({ messages: [] });
   }
 
   let q = sb
