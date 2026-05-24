@@ -2,7 +2,20 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
 import { guardRoute } from '@/lib/api/guardRoute';
+
+/**
+ * Per-user alert CRUD backed by public.alerts. Column shape
+ * (20260413_full_schema.sql):
+ *   alert_type text, label text, condition jsonb, triggered boolean,
+ *   active boolean, created_at timestamptz.
+ *
+ * The alerts page POSTs a normalized payload; we store the user-provided
+ * token/threshold/direction inside the `condition` JSONB so the
+ * alert-monitor cron can evaluate it without schema migrations every
+ * time we add a new alert type.
+ */
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -15,9 +28,21 @@ async function getSupabase() {
         set() {},
         remove() {},
       },
-    }
+    },
   );
 }
+
+const ALERT_TYPES = ['PRICE', 'VOLUME', 'WHALE', 'ENTITY_MOVEMENT', 'SCAMMER'] as const;
+
+const PostBody = z.object({
+  alert_type: z.enum(ALERT_TYPES),
+  label: z.string().min(1).max(140).optional(),
+  condition: z.object({
+    token: z.string().min(1).max(120),
+    threshold: z.union([z.string(), z.number()]).optional(),
+    direction: z.enum(['above', 'below']).optional(),
+  }),
+});
 
 export async function GET() {
   const supabase = await getSupabase();
@@ -26,13 +51,13 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('alerts')
-    .select('*')
+    .select('id, alert_type, label, condition, triggered, triggered_at, active, created_at')
     .eq('user_id', user.id)
     .eq('active', true)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ alerts: data || [] });
+  return NextResponse.json({ alerts: data ?? [] });
 }
 
 export async function POST(request: NextRequest) {
@@ -42,26 +67,20 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const { token_address, chain, target_price, direction, token_symbol } = body;
+  const parsed = PostBody.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', details: parsed.error.issues }, { status: 400 });
 
-  if (!token_address || !chain || !target_price || !direction) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-
+  const label = parsed.data.label ?? `${parsed.data.alert_type} ${parsed.data.condition.token}`;
   const { data, error } = await supabase
     .from('alerts')
     .insert({
       user_id: user.id,
-      token_address,
-      chain,
-      target_price,
-      direction,
-      token_symbol: token_symbol || '',
+      alert_type: parsed.data.alert_type,
+      label,
+      condition: parsed.data.condition,
       active: true,
-      created_at: new Date().toISOString(),
     })
-    .select()
+    .select('id, alert_type, label, condition, triggered, triggered_at, active, created_at')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

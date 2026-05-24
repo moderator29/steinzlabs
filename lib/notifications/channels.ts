@@ -25,33 +25,39 @@ interface ChannelRow {
   discord_enabled: boolean;
 }
 
-async function sendDiscord(webhook: string, payload: FanOutPayload): Promise<boolean> {
+interface DiscordPayload { username: string; embeds: Array<Record<string, unknown>>; }
+
+function buildDiscordPayload(payload: FanOutPayload): DiscordPayload {
+  return {
+    username: 'NakaLabs',
+    embeds: [{
+      title: payload.title,
+      description: payload.message,
+      color: 0x0a1eff,
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+export async function sendDiscordWebhook(webhook: string, body: DiscordPayload): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'NakaLabs',
-        embeds: [{
-          title: payload.title,
-          description: payload.message,
-          color: 0x0a1eff,
-          timestamp: new Date().toISOString(),
-        }],
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(5_000),
     });
-    return res.ok;
-  } catch {
-    return false;
+    return res.ok ? { ok: true } : { ok: false, error: `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-async function sendTwilioSMS(phone: string, message: string): Promise<boolean> {
+export async function sendTwilioSMS(phone: string, message: string): Promise<{ ok: boolean; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM_NUMBER;
-  if (!sid || !token || !from) return false;
+  if (!sid || !token || !from) return { ok: false, error: 'twilio env missing' };
   try {
     const auth = Buffer.from(`${sid}:${token}`).toString('base64');
     const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
@@ -67,9 +73,9 @@ async function sendTwilioSMS(phone: string, message: string): Promise<boolean> {
       }).toString(),
       signal: AbortSignal.timeout(6_000),
     });
-    return res.ok;
-  } catch {
-    return false;
+    return res.ok ? { ok: true } : { ok: false, error: `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -113,24 +119,54 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
 
   const emailEnabled = profile?.email && (profile.settings as { email_alerts_enabled?: boolean } | null)?.email_alerts_enabled !== false;
 
-  // External fans-out in parallel — none blocks the others; results
-  // recorded so callers can surface per-channel status.
-  const [discordOk, smsOk, emailOk] = await Promise.all([
-    channels?.discord_enabled && channels.discord_webhook
-      ? sendDiscord(channels.discord_webhook, payload)
-      : Promise.resolve(null as boolean | null),
-    channels?.sms_enabled && channels.sms_phone
-      ? sendTwilioSMS(channels.sms_phone, `${payload.title}: ${payload.message}`)
-      : Promise.resolve(null as boolean | null),
-    emailEnabled && profile?.email
-      ? sendEmail({
-          to: profile.email,
-          from: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz',
-          subject: payload.title,
-          html: `<p>${payload.message}</p><p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
-        }).then((r) => r.ok)
-      : Promise.resolve(null as boolean | null),
-  ]);
+  // External fans-out in parallel — none blocks the others. On failure
+  // we enqueue into the durable pending_<channel>_messages queue so the
+  // notification-retry cron can re-deliver with exponential backoff
+  // instead of dropping the alert on the floor.
+  const discordTask = (async (): Promise<boolean | null> => {
+    if (!channels?.discord_enabled || !channels.discord_webhook) return null;
+    const body = buildDiscordPayload(payload);
+    const r = await sendDiscordWebhook(channels.discord_webhook, body);
+    if (!r.ok) {
+      await admin.from('pending_discord_messages').insert({
+        user_id: payload.user_id,
+        webhook_url: channels.discord_webhook,
+        payload: body as unknown as Record<string, unknown>,
+        attempts: 1,
+        next_retry_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        last_error: r.error,
+      });
+    }
+    return r.ok;
+  })();
 
+  const smsTask = (async (): Promise<boolean | null> => {
+    if (!channels?.sms_enabled || !channels.sms_phone) return null;
+    const r = await sendTwilioSMS(channels.sms_phone, `${payload.title}: ${payload.message}`);
+    if (!r.ok) {
+      await admin.from('pending_sms_messages').insert({
+        user_id: payload.user_id,
+        phone: channels.sms_phone,
+        body: `${payload.title}: ${payload.message}`.slice(0, 1500),
+        attempts: 1,
+        next_retry_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        last_error: r.error,
+      });
+    }
+    return r.ok;
+  })();
+
+  const emailTask = (async (): Promise<boolean | null> => {
+    if (!emailEnabled || !profile?.email) return null;
+    const r = await sendEmail({
+      to: profile.email,
+      from: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz',
+      subject: payload.title,
+      html: `<p>${payload.message}</p><p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
+    });
+    return r.ok;
+  })();
+
+  const [discordOk, smsOk, emailOk] = await Promise.all([discordTask, smsTask, emailTask]);
   return { inApp, discord: discordOk, sms: smsOk, email: emailOk };
 }

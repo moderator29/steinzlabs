@@ -24,6 +24,8 @@ import * as Sentry from '@sentry/nextjs';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cacheGet } from '@/lib/cache/redis';
+import { evaluateExpression } from '@/lib/alerts/evaluateComposite';
+import { fanOutNotification } from '@/lib/notifications/channels';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -125,8 +127,60 @@ export async function GET(request: NextRequest) {
     fired++;
   }
 
+  // ALERT2: composite alert evaluation. Pulls active rows whose cooldown
+  // has elapsed, evaluates the JSON expression tree against live price
+  // cache, fires via fanOutNotification, and stamps last_triggered_at on
+  // success. Cold-data evaluations (null) skip without stamping so the
+  // alert re-attempts on the next tick.
+  let compositeFired = 0;
+  let compositeColdSkipped = 0;
+  const { data: composites } = await admin
+    .from('composite_alerts')
+    .select('id, user_id, name, expression, cooldown_seconds, last_triggered_at')
+    .eq('active', true)
+    .limit(500);
+  for (const c of (composites ?? []) as Array<{
+    id: string; user_id: string; name: string;
+    expression: unknown; cooldown_seconds: number; last_triggered_at: string | null;
+  }>) {
+    if (c.last_triggered_at) {
+      const ageMs = Date.now() - new Date(c.last_triggered_at).getTime();
+      if (ageMs < c.cooldown_seconds * 1000) continue;
+    }
+    let result: boolean | null;
+    try {
+      result = await evaluateExpression(c.expression);
+    } catch (err) {
+      Sentry.captureException(err, { tags: { cron: NAME, composite_id: c.id } });
+      continue;
+    }
+    if (result === null) { compositeColdSkipped++; continue; }
+    if (result !== true) continue;
+
+    const { error: stampErr } = await admin
+      .from('composite_alerts')
+      .update({ last_triggered_at: nowIso })
+      .eq('id', c.id)
+      // Guard against a concurrent tick firing the same alert twice.
+      .or(`last_triggered_at.is.null,last_triggered_at.lt.${new Date(Date.now() - c.cooldown_seconds * 1000).toISOString()}`);
+    if (stampErr) continue;
+
+    try {
+      await fanOutNotification({
+        user_id: c.user_id,
+        title: c.name,
+        message: 'Composite alert condition met.',
+        type: 'composite_alert',
+        metadata: { composite_alert_id: c.id },
+      });
+      compositeFired++;
+    } catch (err) {
+      Sentry.captureException(err, { tags: { cron: NAME, composite_id: c.id } });
+    }
+  }
+
   try {
-    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, fired);
+    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, fired + compositeFired);
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
   }
@@ -134,5 +188,8 @@ export async function GET(request: NextRequest) {
     scanned: alerts.length,
     fired,
     skipped_no_price: skippedNoPrice,
+    composite_scanned: composites?.length ?? 0,
+    composite_fired: compositeFired,
+    composite_cold_skipped: compositeColdSkipped,
   });
 }
