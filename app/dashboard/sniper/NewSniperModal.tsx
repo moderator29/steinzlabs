@@ -184,7 +184,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             <h2 className="text-xl font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> New Sniper</h2>
             <p className="text-xs text-white/50 mt-0.5">Configure a rule that triggers a buy when conditions match.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} aria-label="Close sniper rule editor" className="p-2 rounded-lg hover:bg-white/10 transition"><X className="w-5 h-5" aria-hidden="true" /></button>
         </div>
 
         <div className="p-5 space-y-5">
@@ -423,7 +423,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-2xl border-2 border-blue-500/30 bg-[#0a0d18] shadow-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> Confirm sniper</h3>
-                <button onClick={() => !saving && setShowReview(false)} disabled={saving} className="p-1.5 rounded-lg hover:bg-white/10 transition disabled:opacity-50"><X className="w-4 h-4" /></button>
+                <button onClick={() => !saving && setShowReview(false)} disabled={saving} aria-label="Close confirm sniper" className="p-1.5 rounded-lg hover:bg-white/10 transition disabled:opacity-50"><X className="w-4 h-4" aria-hidden="true" /></button>
               </div>
               <p className="text-xs text-white/60 mb-4">Review every value before this rule goes live. Once saved, it watches the chain on every match.</p>
               <dl className="space-y-2 text-sm">

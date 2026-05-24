@@ -16,6 +16,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import Link from 'next/link';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 const STORAGE_KEY = 'naka_first_trade_acknowledged';
 
@@ -45,6 +46,8 @@ interface Props {
 
 export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props) {
   const [confirmed, setConfirmed] = useState(false);
+  // A11Y4: focus trap + Escape closes (treat as cancel).
+  const trapRef = useFocusTrap<HTMLDivElement>(open, onCancel);
 
   // Reset the checkbox each time the modal re-opens so a returning
   // user must re-affirm the read (browsers retain controlled-input
@@ -62,7 +65,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
       aria-labelledby="first-trade-risk-title"
       className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
     >
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0A0E1A] shadow-2xl">
+      <div ref={trapRef} className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0A0E1A] shadow-2xl">
         <button
           type="button"
           onClick={onCancel}

@@ -5,6 +5,7 @@ import {
   X, Globe, Brain, Shield, TrendingUp, Image as ImageIcon, Repeat, ChevronDown,
   Save, Check, Loader2, Trash2,
 } from 'lucide-react';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 // Full VTX settings panel. Persists to Supabase user_preferences under the
 // vtx_settings key. Settings apply immediately on save.
@@ -38,6 +39,8 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [settings, setSettings] = useState<VtxSettings>(DEFAULTS);
+  // A11Y4: focus trap + Escape closes the drawer.
+  const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -90,9 +93,9 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex" role="dialog">
+    <div className="fixed inset-0 z-[70] flex" role="dialog" aria-modal="true" aria-label="VTX settings">
       <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-full sm:w-[420px] bg-[#0b0f1a] border-l border-white/[0.06] h-full overflow-y-auto flex flex-col">
+      <div ref={trapRef} className="w-full sm:w-[420px] bg-[#0b0f1a] border-l border-white/[0.06] h-full overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] sticky top-0 bg-[#0b0f1a] z-10">
           <div className="flex items-center gap-2.5">
@@ -104,7 +107,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
               <div className="text-[10px] text-gray-500">Saved to your account</div>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} aria-label="Close VTX settings" className="text-gray-500 hover:text-white"><X className="w-5 h-5" aria-hidden="true" /></button>
         </div>
 
         <div className="flex-1 p-5 space-y-5">

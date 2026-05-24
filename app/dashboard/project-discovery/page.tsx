@@ -314,7 +314,7 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
       <div className="bg-[#111827] border border-white/10 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-heading font-bold">List Your Token</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} aria-label="Close list-token dialog" className="p-1.5 hover:bg-white/10 rounded-lg"><X className="w-4 h-4" aria-hidden="true" /></button>
         </div>
 
         {submitted ? (

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal, UserMinus, VolumeX, Flag, Share2, Link as LinkIcon, ShieldAlert } from 'lucide-react';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 /**
  * MoreMenu — the "⋯" overflow menu next to Follow / Message on a
@@ -111,6 +112,8 @@ function ReportDialog({ targetId, username, onClose }: { targetId: string; usern
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A11Y4: focus trap + Escape closes.
+  const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
   const submit = async () => {
     setSubmitting(true);
     setError(null);
@@ -132,8 +135,8 @@ function ReportDialog({ targetId, username, onClose }: { targetId: string; usern
     }
   };
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md mx-4 rounded-2xl bg-[#0F1627] border border-white/10 p-5">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`Report @${username}`}>
+      <div ref={trapRef} className="w-full max-w-md mx-4 rounded-2xl bg-[#0F1627] border border-white/10 p-5">
         <div className="flex items-center gap-2 mb-3">
           <ShieldAlert className="w-4 h-4 text-red-400" />
           <h2 className="text-base font-semibold text-white">Report @{username}</h2>

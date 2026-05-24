@@ -190,7 +190,7 @@ export default function WalletClustersPage() {
                 placeholder="Search cluster id…"
                 className="flex-1 bg-transparent outline-none text-sm placeholder-slate-500"
               />
-              {q && <button onClick={() => setQ('')} className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>}
+              {q && <button onClick={() => setQ('')} aria-label="Clear search" className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>}
             </div>
             <select value={sort} onChange={(e) => { setSort(e.target.value); setOffset(0); }} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none">
               <option value="whale_score" className="bg-[#05081E]">Whale Score</option>

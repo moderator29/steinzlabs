@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface Props {
   href: string;
@@ -24,6 +25,10 @@ interface Props {
  * via the underlying CSS.
  */
 export function ChamberPortal({ href, name, tagline, description, sigil, comingSoon }: Props) {
+  // A11Y3: respect prefers-reduced-motion by skipping the fade-up entry
+  // and the hover lift. The CSS-driven idle "breathe" continues to honor
+  // the same media query at the stylesheet level.
+  const reduced = useReducedMotion();
   const inner = (
     <motion.div
       // §nakacult-scroll-bug: was `whileInView` with `viewport={{ once: true }}`,
@@ -32,10 +37,10 @@ export function ChamberPortal({ href, name, tagline, description, sigil, comingS
       // page back to its previous scroll position. Swapped to a mount-time
       // `initial → animate` (runs once when the card mounts; never re-fires
       // on scroll), so the page no longer auto-scrolls while user is reading.
-      initial={{ opacity: 0, y: 24 }}
+      initial={reduced ? false : { opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -4 }}
+      transition={reduced ? { duration: 0 } : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={reduced ? undefined : { y: -4 }}
       className="vault-portal group"
     >
       <div className="vault-portal__sigil">{sigil}</div>

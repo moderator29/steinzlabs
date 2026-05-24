@@ -259,7 +259,7 @@ export default function WhaleDirectoryPage() {
                 className="flex-1 bg-transparent outline-none text-sm placeholder-slate-500"
               />
               {q && (
-                <button onClick={() => setQ('')} className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setQ('')} aria-label="Clear search" className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
               )}
             </div>
             <select
