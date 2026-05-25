@@ -1,8 +1,20 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
+
+const CreateBody = z.object({
+  symbol: z.string().min(1).max(32),
+  name: z.string().min(1).max(200),
+  chain: z.string().min(2).max(32),
+  address: z.string().min(8).max(128),
+  display_order: z.number().int().min(0).max(10_000).optional(),
+  displayOrder: z.number().int().min(0).max(10_000).optional(),
+  active: z.boolean().optional(),
+  badge: z.string().max(80).nullish(),
+}).refine((b) => b.display_order !== undefined || b.displayOrder !== undefined || true);
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -32,7 +44,11 @@ export async function POST(request: Request) {
   if (!adminId) return unauthorizedResponse();
 
   try {
-    const body = await request.json();
+    const parsed = CreateBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
+    }
+    const body = parsed.data;
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('featured_tokens')
@@ -43,7 +59,7 @@ export async function POST(request: Request) {
         address: body.address,
         display_order: body.display_order ?? body.displayOrder ?? 0,
         active: body.active !== false,
-        badge: body.badge || null,
+        badge: body.badge ?? null,
       }])
       .select()
       .single();
