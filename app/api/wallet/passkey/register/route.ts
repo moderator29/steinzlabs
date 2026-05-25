@@ -143,3 +143,28 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, credentialId: credential.id });
 }
+
+// ─── DELETE → rollback / revoke a credential ─────────────────────────────────
+// Used by the client when the post-registration PRF ceremony fails so we
+// don't leave a registered credential the user can't actually unwrap with.
+// Also serves as the "remove this passkey" admin action.
+export async function DELETE(req: NextRequest) {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const credentialId = req.nextUrl.searchParams.get('credentialId');
+  if (!credentialId) {
+    return NextResponse.json({ error: 'credentialId required' }, { status: 400 });
+  }
+
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
+    .from('user_passkeys')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('credential_id', credentialId);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
+}

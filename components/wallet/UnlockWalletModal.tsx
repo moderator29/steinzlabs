@@ -72,32 +72,59 @@ export default function UnlockWalletModal({
   }, []);
 
   const handlePasskeyRegister = async () => {
+    // To wrap the password we need it in memory. Verify it first against
+    // the encrypted key, then hand it to registerPasskey which runs the
+    // WebAuthn + PRF ceremony and stores the AES-GCM ciphertext locally.
+    if (!password) {
+      setError('Enter your wallet password first to enable passkey unlock.');
+      inputRef.current?.focus();
+      return;
+    }
     setError(null);
     setPasskeyBusy('register');
-    const result = await registerPasskey(navigator.userAgent.slice(0, 60));
-    setPasskeyBusy(null);
-    if (result.ok) {
-      setHasRegisteredPasskey(true);
-    } else {
-      setError(result.error);
+    try {
+      const ok = await verifyWalletPassword(encryptedKey, password);
+      if (!ok) {
+        setError('Wrong password. Re-enter it to set up the passkey.');
+        return;
+      }
+      const result = await registerPasskey(password, navigator.userAgent.slice(0, 60));
+      if (result.ok) {
+        setHasRegisteredPasskey(true);
+        // Password is already verified — finish the unlock so the user
+        // doesn't need a separate Unlock click after registration.
+        setWalletSessionKey(password);
+        onUnlocked(password);
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setPasskeyBusy(null);
     }
   };
 
   const handlePasskeyUnlock = async () => {
     setError(null);
     setPasskeyBusy('auth');
-    const result = await authenticateWithPasskey();
-    setPasskeyBusy(null);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await authenticateWithPasskey();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      // Defense in depth: sanity-check the unwrapped password against the
+      // on-disk encrypted key in case the user re-encrypted on another
+      // device after wrapping.
+      const ok = await verifyWalletPassword(encryptedKey, result.password);
+      if (!ok) {
+        setError('Stored passkey wrap is out of date for this wallet. Enter your password to re-wrap.');
+        return;
+      }
+      setWalletSessionKey(result.password);
+      onUnlocked(result.password);
+    } finally {
+      setPasskeyBusy(null);
     }
-    // Passkey authenticated. To preserve the non-custodial guarantee the
-    // wallet password still has to enter setWalletSessionKey from the
-    // user; this flow proves possession but does NOT skip the password
-    // step yet. PRF-wrap follow-up (lib/wallet/passkeyWrap.ts) replaces
-    // this notice with a true skip-password unlock.
-    setError('Passkey verified. Enter your password once to finish unlocking — PRF unlock lands in the next release.');
   };
 
   const submit = async () => {
