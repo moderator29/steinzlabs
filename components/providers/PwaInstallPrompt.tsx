@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 
 /**
@@ -46,14 +46,14 @@ export function PwaInstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler as EventListener);
   }, []);
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(false);
     try {
       localStorage.setItem(DISMISS_KEY, String(Date.now()));
     } catch {
       /* non-fatal */
     }
-  };
+  }, []);
 
   const install = async () => {
     if (!deferred) return;
@@ -66,6 +66,18 @@ export function PwaInstallPrompt() {
     setDeferred(null);
     close();
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, close]);
 
   if (!open || !deferred) return null;
 

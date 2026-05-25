@@ -55,12 +55,24 @@ export default function CookieConsent() {
     setHydrated(true);
   }, []);
 
-  if (!hydrated || choice !== null) return null;
-
   const accept = (c: ConsentChoice) => {
     writeConsent(c);
     setChoice(c);
   };
+
+  useEffect(() => {
+    if (!hydrated || choice !== null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        accept('essential');
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [hydrated, choice]);
+
+  if (!hydrated || choice !== null) return null;
 
   return (
     <div
