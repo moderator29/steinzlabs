@@ -468,8 +468,15 @@ export default function WalletIntelligencePage() {
             className="ms-auto whale-pill"
             title="Compare two wallets side by side"
           >
-            <GitCompare className="w-3.5 h-3.5" />
+            <GitCompare className="w-3.5 h-3.5" aria-hidden="true" />
             Compare
+          </Link>
+          <Link
+            href="/dashboard/security/wallet-analysis"
+            className="whale-pill"
+            title="Run a Shadow Guardian scan in the Security Center"
+          >
+            Wallet scan →
           </Link>
         </div>
       </div>
