@@ -266,7 +266,6 @@ export default function ProfileTab() {
   const [privacySettings, setPrivacySettings] = useState({
     showWallet: true,
     showActivity: true,
-    showPredictions: true,
     allowDMs: true,
     publicProfile: false,
   });
@@ -946,7 +945,6 @@ export default function ProfileTab() {
           {([
             { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,        label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
             { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,     label: 'Show Trading Activity', desc: 'Let others see your trading history' },
-            { key: 'showPredictions',icon: <Award className="w-4 h-4 text-[#F59E0B]" />,         label: 'Show Predictions',      desc: 'Share your prediction win rate' },
             { key: 'allowDMs',       icon: <MessageCircle className="w-4 h-4 text-[#10B981]" />, label: 'Allow Direct Messages', desc: 'Allow other users to message you' },
             { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,          label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
           ] as const).map(({ key, icon, label, desc }) => (
@@ -1049,9 +1047,9 @@ export default function ProfileTab() {
                   <Headphones className="w-6 h-6 text-[#0A1EFF]" />
                 </div>
                 <p className="text-sm font-semibold mb-1">How can we help?</p>
-                <p className="text-[11px] text-gray-500 mb-4 max-w-[250px]">Ask about features, wallet setup, trading, predictions, security, or anything else.</p>
+                <p className="text-[11px] text-gray-500 mb-4 max-w-[250px]">Ask about features, wallet setup, trading, security, or anything else.</p>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {['How do I connect my wallet?', 'Is my data safe?', 'How do predictions work?'].map(q => (
+                  {['How do I connect my wallet?', 'Is my data safe?', 'How do I customise my dashboard?'].map(q => (
                     <button
                       key={q}
                       onClick={() => { setChatInput(q); }}
@@ -1207,6 +1205,17 @@ export default function ProfileTab() {
             <LanguageSwitcher />
           </div>
         </div>
+
+        <a
+          href="/dashboard?customise=1"
+          className="glass rounded-lg border border-white/10 p-3 mb-3 flex items-center justify-between gap-3 hover:border-[#0A1EFF]/30 transition-colors"
+        >
+          <div>
+            <div className="text-sm font-semibold">Customise dashboard</div>
+            <div className="text-[10px] text-gray-500">Reorder and show/hide widgets on your home tab</div>
+          </div>
+          <ArrowLeft className="w-4 h-4 rotate-180 text-gray-400" aria-hidden="true" />
+        </a>
 
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden mb-3">
