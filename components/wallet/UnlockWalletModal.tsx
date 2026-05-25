@@ -20,10 +20,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Lock, X, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Lock, X, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { verifyWalletPassword } from '@/lib/wallet/encryption';
 import { setWalletSessionKey } from '@/lib/wallet/walletSession';
 import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
+import { isPasskeySupported, registerPasskey, authenticateWithPasskey } from '@/lib/wallet/passkeyClient';
 
 interface Props {
   /** AES-GCM JSON payload from StoredWallet.encryptedKey. */
@@ -48,6 +49,9 @@ export default function UnlockWalletModal({
   const [show, setShow] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+  const [hasRegisteredPasskey, setHasRegisteredPasskey] = useState(false);
+  const [passkeyBusy, setPasskeyBusy] = useState<'register' | 'auth' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // A11Y4: focus trap + restore prior focus on close. Escape handled
   // by the hook so the manual listener below is now redundant.
@@ -57,7 +61,44 @@ export default function UnlockWalletModal({
     // Auto-focus the password field — users open this modal expecting
     // to immediately type, no extra click required.
     inputRef.current?.focus();
+    setPasskeyAvailable(isPasskeySupported());
+    // Probe whether the user already has a registered passkey AND the
+    // flag is enabled. The authenticate options endpoint 404s when no
+    // credentials exist and 403s when the flag is off — either way we
+    // hide the "Use passkey" CTA.
+    void fetch('/api/wallet/passkey/authenticate', { method: 'GET' })
+      .then((r) => setHasRegisteredPasskey(r.ok))
+      .catch(() => setHasRegisteredPasskey(false));
   }, []);
+
+  const handlePasskeyRegister = async () => {
+    setError(null);
+    setPasskeyBusy('register');
+    const result = await registerPasskey(navigator.userAgent.slice(0, 60));
+    setPasskeyBusy(null);
+    if (result.ok) {
+      setHasRegisteredPasskey(true);
+    } else {
+      setError(result.error);
+    }
+  };
+
+  const handlePasskeyUnlock = async () => {
+    setError(null);
+    setPasskeyBusy('auth');
+    const result = await authenticateWithPasskey();
+    setPasskeyBusy(null);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    // Passkey authenticated. To preserve the non-custodial guarantee the
+    // wallet password still has to enter setWalletSessionKey from the
+    // user; this flow proves possession but does NOT skip the password
+    // step yet. PRF-wrap follow-up (lib/wallet/passkeyWrap.ts) replaces
+    // this notice with a true skip-password unlock.
+    setError('Passkey verified. Enter your password once to finish unlocking — PRF unlock lands in the next release.');
+  };
 
   const submit = async () => {
     if (!password) {
@@ -157,6 +198,32 @@ export default function UnlockWalletModal({
         >
           {verifying ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>) : 'Unlock'}
         </button>
+
+        {passkeyAvailable && hasRegisteredPasskey && (
+          <button
+            type="button"
+            onClick={() => void handlePasskeyUnlock()}
+            disabled={passkeyBusy !== null}
+            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0A1EFF]/40 hover:bg-white/[0.03] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          >
+            {passkeyBusy === 'auth'
+              ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Waiting for passkey…</>)
+              : (<><Fingerprint className="w-3.5 h-3.5" aria-hidden="true" /> Sign in with passkey</>)}
+          </button>
+        )}
+
+        {passkeyAvailable && !hasRegisteredPasskey && (
+          <button
+            type="button"
+            onClick={() => void handlePasskeyRegister()}
+            disabled={passkeyBusy !== null}
+            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0A1EFF]/40 hover:bg-white/[0.03] text-[11px] text-slate-400 hover:text-white inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          >
+            {passkeyBusy === 'register'
+              ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Registering…</>)
+              : (<><Fingerprint className="w-3.5 h-3.5" aria-hidden="true" /> Set up passkey for faster unlocking</>)}
+          </button>
+        )}
       </div>
     </div>
   );
