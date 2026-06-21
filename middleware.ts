@@ -4,19 +4,21 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/auth/callback', '/auth/clear'];
 
-// Vercel's edge rejects requests with >32KB total headers with a 494 before
-// this middleware even runs. The usual cause is accumulated Supabase auth
+// Vercel's edge rejects requests with oversized total headers (494
+// REQUEST_HEADER_TOO_LARGE) BEFORE this middleware runs, so this guard can
+// only catch a request on the way up — once cookies exceed the edge ceiling
+// the request never reaches us. The usual cause is accumulated Supabase auth
 // cookies (the SSR client chunks large JWTs into .0 / .1 parts and stale
 // pairs from multiple projects / auth attempts pile up). We pre-emptively
-// nuke cookies when the Cookie header climbs past 12KB — well below the
-// edge ceiling — so affected users get bounced to /auth/clear + /login
-// instead of the 494 wall. The threshold is deliberately aggressive: if
-// we're above 12KB we're on a trajectory to 32KB, and a forced re-login
-// is a much cheaper failure mode than a bricked site.
-const COOKIE_BUDGET_BYTES = 8 * 1024; // 8KB — hard ceiling, Vercel 494s at 32KB
+// nuke cookies when the Cookie header climbs past 8KB — well below the edge
+// ceiling — so affected users get bounced to /auth/clear + /login instead of
+// the 494 wall. The threshold is deliberately aggressive: above 8KB we're on
+// a trajectory to the ceiling, and a forced re-login is a much cheaper
+// failure mode than a bricked site.
+const COOKIE_BUDGET_BYTES = 8 * 1024; // 8KB — well under the Vercel edge header ceiling
 
 // When a request triggers the overflow guard we wipe EVERY cookie, not
-// just auth ones. At 12KB+ something is off — translate cookies, tracking
+// just auth ones. At 8KB+ something is off — translate cookies, tracking
 // cookies, stray testing fixtures, any of it — and the only reliable way
 // to recover is to nuke the whole jar. Users log in again; no app data
 // lives in cookies (we use localStorage for wallets, preferences, chat
@@ -91,22 +93,33 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
-            // Before writing a new auth chunk, delete ALL existing sb-*
-            // chunks in the response so stale shards from previous sessions
-            // are gone — prevents chunk count from growing across logins.
-            if (name.startsWith('sb-')) {
-              request.cookies.getAll()
-                .filter(c => c.name.startsWith('sb-') && c.name !== name)
-                .forEach(c => response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 }));
-            }
+            // Do NOT force httpOnly on these cookies. They are @supabase/ssr
+            // auth cookies that the BROWSER client (createBrowserClient in
+            // lib/supabase.ts) reads and writes via document.cookie. Forcing
+            // httpOnly here made them (a) unreadable by the SDK — so the
+            // client thought it had no session and churned through re-auth,
+            // and (b) undeletable by our client-side recovery (clearSbCookies
+            // + /auth/clear use document.cookie, which cannot touch httpOnly
+            // cookies). That combination is exactly how users got permanently
+            // stuck behind the 494 REQUEST_HEADER_TOO_LARGE wall: stale auth
+            // chunks accumulated, no in-app path could clear them, and only a
+            // manual browser-settings wipe recovered the account.
+            //
+            // We also no longer delete sibling sb-* chunks inside set().
+            // Supabase writes chunks (.0, .1, …) in sequence; nuking the
+            // others on each write dropped not-yet-rewritten chunks and
+            // corrupted multi-chunk sessions (see the warning in
+            // lib/supabase.ts). Stale shards are handled by the 1-hour maxAge
+            // cap below and the server-side sweep on the sign-out redirect.
             response.cookies.set({
               name,
               value,
               ...options,
-              // Hard cap: never let a session cookie outlive 1 hour.
+              // Hard cap so a session cookie never outlives 1 hour (matches
+              // the browser client's SESSION_SECONDS). Keeps orphaned shards
+              // from lingering indefinitely.
               maxAge: options.maxAge ? Math.min(options.maxAge, SESSION_MAX_AGE) : SESSION_MAX_AGE,
               sameSite: 'lax',
-              httpOnly: true,
               secure: true,
               path: '/',
             });
