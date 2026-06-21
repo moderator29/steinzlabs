@@ -117,12 +117,12 @@ export default async function NakaCultLanding() {
             <p className="nakacult-pillar__desc">
               Identity made permanent. Choose a <strong>Mantle</strong>, write into the{' '}
               <strong>Annals</strong>, and let the <strong>Library</strong> play — Ddergo&apos;s
-              soundtrack, scored for the chamber and streaming the moment you walk in.
+              soundtrack, scored for the chamber and one tap away the moment you walk in.
             </p>
             <ul className="nakacult-pillar__list">
               <li>The Mantle — your chosen title</li>
               <li>The Annals — your record</li>
-              <li>The Library — ambient, auto-play</li>
+              <li>The Library — ambient, one tap</li>
               <li>The Forge — sigil collection</li>
             </ul>
           </article>
@@ -144,7 +144,7 @@ export default async function NakaCultLanding() {
             { n: '02', t: 'Governance with weight', b: 'One vote per sigil. Chosen members vote twice. Decrees that pass move the treasury without committee delay.' },
             { n: '03', t: 'Private comms', b: 'The Whisper Network is libsodium end-to-end encrypted. Keys ship to your device only — the server cannot read a word.' },
             { n: '04', t: 'A permanent identity', b: 'The Mantle and Annals turn the cult into an on-record stage. Achievements stick to your sigil, not your wallet balance.' },
-            { n: '05', t: 'Sound, by Ddergo', b: 'The Library auto-plays inside the Vault — a soundtrack scored for the chamber. The cult sounds nothing like the dashboard.' },
+            { n: '05', t: 'Sound, by Ddergo', b: 'The Library plays inside the Vault — a soundtrack scored for the chamber. The cult sounds nothing like the dashboard.' },
             { n: '06', t: 'No staking, no churn', b: 'Membership is your wallet — checked on-chain. Hold the key and you are in; let it go and the chambers go dark until you return.' },
           ].map((f, i) => (
             <div key={f.n} className="nakacult-feature" style={{ animationDelay: `${i * 70}ms` }}>

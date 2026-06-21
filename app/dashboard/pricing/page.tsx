@@ -214,7 +214,7 @@ export default function PricingPage() {
                   'The Commons — Hall, Offering, Conviction, Pulse',
                   'Daily Seal + Whisper Network (E2E)',
                   'Permanent on-chain identity (Mantle, Annals)',
-                  'Auto-play Ddergo soundtrack',
+                  'Ddergo soundtrack in the Vault',
                 ].map(f => (
                   <div key={f} className="flex items-start gap-2">
                     <Check size={12} className="mt-0.5 shrink-0 text-[#FF5B7A]" />
