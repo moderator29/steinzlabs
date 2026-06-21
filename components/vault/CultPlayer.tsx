@@ -1,76 +1,77 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Music, Play, Pause, X, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { Disc3, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, ChevronDown } from 'lucide-react';
 
 /**
- * CultPlayer — single global Spotify embed for the entire Vault.
+ * CultPlayer — the Vault's self-hosted ambient player (Ddergo, scored for the
+ * chamber). Mounts once in /vault/layout so playback survives chamber nav.
  *
- * Mounts once at /vault/layout.tsx so playback survives chamber-to-
- * chamber navigation (Conclave → Oracle → Sanctum). Renders a quiet,
- * cinematic mini-bar pinned to the bottom-right. The actual Spotify
- * iframe lives inside the bar — when "expanded" the full Spotify
- * player drops in, when minimized only the bar shows.
+ * Rebrand: replaced the Spotify embed with a native <audio> player so we get
+ * full tracks, full styling control, and real auto-play. Two surfaces:
+ *   • a circular ORB pinned bottom-right (the persistent handle), and
+ *   • a RECTANGLE panel with transport + tracklist that slides up from it.
  *
- * Auto-resume: the bar honours localStorage('naka_cult_player') —
- * once a member clicks Play once, every subsequent /vault visit
- * auto-mounts the iframe so playback can resume without re-asking
- * (browser autoplay-with-sound policy still requires the original
- * user gesture; once granted it persists for the session). After the
- * first click, navigating between chambers preserves track position
- * because the iframe is never remounted.
+ * Auto-play on entry: browsers block sound without a user gesture, so we try
+ * play() on mount AND arm a one-time global gesture listener — the instant the
+ * member touches anything in the Vault (including the orb), the Library starts.
  *
- * Playlist source is read from the per-track `storage_path` in
- * cult_ambient_tracks via /api/cult/sanctum/library, so swapping the
- * playlist is a single SQL update — no code change required.
+ * Tracks come from cult_ambient_tracks via /api/cult/sanctum/library; only
+ * self-hosted entries (storage_path that isn't a 'spotify:' marker) are played.
+ * If none are configured yet the player renders nothing — drop MP3s into
+ * /public/audio and point storage_path at them (e.g. /audio/seal.mp3).
  */
 
-const STORAGE_KEY = 'naka_cult_player_v1';
-const DEFAULT_PLAYLIST_ID = '2tuf8ddMY5YPMlqzNWsVyC'; // Ddergo Sanctuary
-
-interface PlayerState {
-  expanded: boolean;
-  consented: boolean;
-}
-
-function loadState(): PlayerState {
-  if (typeof window === 'undefined') return { expanded: false, consented: false };
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as PlayerState;
-      if (parsed && typeof parsed.consented === 'boolean') return parsed;
-    }
-  } catch { /* ignore */ }
-  return { expanded: false, consented: false };
-}
-
-function saveState(state: PlayerState) {
-  if (typeof window === 'undefined') return;
-  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* storage blocked */ }
-}
-
-interface TrackHint {
+interface Track {
   title: string;
   artist: string;
+  src: string;
+}
+
+interface Persist {
+  expanded: boolean;
+  muted: boolean;
+  volume: number;
+  index: number;
+}
+
+const KEY = 'naka_cult_player_v2';
+const DEFAULTS: Persist = { expanded: false, muted: false, volume: 0.55, index: 0 };
+
+function loadPersist(): Persist {
+  if (typeof window === 'undefined') return DEFAULTS;
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<Persist>;
+      return {
+        expanded: !!p.expanded,
+        muted: !!p.muted,
+        volume: typeof p.volume === 'number' ? p.volume : DEFAULTS.volume,
+        index: typeof p.index === 'number' ? p.index : 0,
+      };
+    }
+  } catch { /* ignore */ }
+  return DEFAULTS;
+}
+
+function savePersist(p: Persist) {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* storage blocked */ }
 }
 
 export function CultPlayer() {
-  const [playlistId, setPlaylistId] = useState<string>(DEFAULT_PLAYLIST_ID);
-  const [tracks, setTracks] = useState<TrackHint[]>([]);
-  const [state, setState] = useState<PlayerState>({ expanded: false, consented: false });
-  const [tickerIndex, setTickerIndex] = useState(0);
-  const [muted, setMuted] = useState(false);
-  const tickerTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hydrated = useRef(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [persist, setPersist] = useState<Persist>(DEFAULTS);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0); // 0..1
+  const [hydrated, setHydrated] = useState(false);
 
-  // First-paint state hydrate (avoids SSR flash with empty bar)
-  useEffect(() => {
-    setState(loadState());
-    hydrated.current = true;
-  }, []);
+  // Hydrate persisted UI state (avoids SSR mismatch).
+  useEffect(() => { setPersist(loadPersist()); setHydrated(true); }, []);
 
-  // Pull the active playlist + track metadata for the ticker.
+  // Pull the self-hosted track catalog.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -78,139 +79,181 @@ export function CultPlayer() {
         const res = await fetch('/api/cult/sanctum/library', { cache: 'no-store' });
         const json = (await res.json()) as { tracks?: Array<{ title: string; artist: string; storage_path: string }> };
         if (cancelled) return;
-        const all = json.tracks ?? [];
-        if (all.length === 0) return;
-        const spotifyOnly = all.filter((t) => t.storage_path.startsWith('spotify:playlist:'));
-        if (spotifyOnly.length === all.length && spotifyOnly[0]) {
-          setPlaylistId(spotifyOnly[0].storage_path.replace('spotify:playlist:', ''));
-        }
-        setTracks(all.map((t) => ({ title: t.title, artist: t.artist })));
-      } catch { /* library route unavailable — fall back to defaults */ }
+        const selfHosted = (json.tracks ?? [])
+          .filter((t) => t.storage_path && !t.storage_path.startsWith('spotify:'))
+          .map((t) => ({ title: t.title, artist: t.artist, src: t.storage_path }));
+        setTracks(selfHosted);
+      } catch { /* library route unavailable — render nothing */ }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  // Track ticker — cycles every 8s so the bar never feels static.
-  useEffect(() => {
-    if (tracks.length === 0) return;
-    tickerTimer.current = setInterval(() => {
-      setTickerIndex((i) => (i + 1) % tracks.length);
-    }, 8000);
-    return () => { if (tickerTimer.current) clearInterval(tickerTimer.current); };
-  }, [tracks.length]);
-
-  const grantConsent = useCallback(() => {
-    const next = { expanded: true, consented: true };
-    setState(next);
-    saveState(next);
+  const update = useCallback((patch: Partial<Persist>) => {
+    setPersist((prev) => {
+      const next = { ...prev, ...patch };
+      savePersist(next);
+      return next;
+    });
   }, []);
 
-  const toggleExpand = useCallback(() => {
-    const next = { ...state, expanded: !state.expanded };
-    if (next.expanded) next.consented = true;
-    setState(next);
-    saveState(next);
-  }, [state]);
+  const current = tracks[persist.index] ?? null;
 
-  const dismissBar = useCallback(() => {
-    // Soft dismiss: collapses the bar for this session but keeps consent so
-    // a return visit re-opens cleanly. Hard reset lives in Settings.
-    const next = { ...state, expanded: false };
-    setState(next);
-    saveState(next);
-  }, [state]);
+  // Load the current track's source (and resume if we were playing).
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a || !current) return;
+    if (a.src.endsWith(current.src)) return;
+    const wasPlaying = !a.paused;
+    a.src = current.src;
+    a.load();
+    if (wasPlaying || playing) a.play().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist.index, current?.src]);
 
-  const trackNow = tracks[tickerIndex];
-  const embedSrc = `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=naka-cult&theme=0`;
+  // Auto-play on entry, with a global first-gesture fallback.
+  useEffect(() => {
+    if (!hydrated || tracks.length === 0) return;
+    const a = audioRef.current;
+    if (!a) return;
+    a.volume = persist.muted ? 0 : persist.volume;
+    let started = false;
+    const tryPlay = () => {
+      a.play().then(() => { started = true; setPlaying(true); detach(); }).catch(() => {});
+    };
+    const onGesture = () => { if (!started) tryPlay(); };
+    const detach = () => {
+      document.removeEventListener('pointerdown', onGesture);
+      document.removeEventListener('keydown', onGesture);
+    };
+    tryPlay();
+    document.addEventListener('pointerdown', onGesture, { passive: true });
+    document.addEventListener('keydown', onGesture);
+    return detach;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, tracks.length]);
+
+  // Keep volume / mute in sync.
+  useEffect(() => {
+    const a = audioRef.current;
+    if (a) a.volume = persist.muted ? 0 : persist.volume;
+  }, [persist.muted, persist.volume]);
+
+  const togglePlay = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) a.play().then(() => setPlaying(true)).catch(() => {});
+    else { a.pause(); setPlaying(false); }
+  }, []);
+
+  const skip = useCallback((dir: 1 | -1) => {
+    setPersist((prev) => {
+      if (tracks.length === 0) return prev;
+      const next = { ...prev, index: (prev.index + dir + tracks.length) % tracks.length };
+      savePersist(next);
+      return next;
+    });
+  }, [tracks.length]);
+
+  if (!hydrated || tracks.length === 0) return null;
+
+  const pct = Math.round(progress * 100);
 
   return (
     <div
-      className={`cult-player ${state.expanded ? 'cult-player--expanded' : 'cult-player--mini'}`}
+      className={`cult-player ${persist.expanded ? 'cult-player--expanded' : 'cult-player--mini'}`}
       role="region"
-      aria-label="Cult library player"
+      aria-label="Cult Library player"
     >
-      {/* Cinematic mini-bar — always rendered once hydrated */}
-      <button
-        type="button"
-        className="cult-player__bar"
-        onClick={state.consented ? toggleExpand : grantConsent}
-        aria-expanded={state.expanded}
-        aria-label={state.consented ? (state.expanded ? 'Collapse the Library' : 'Expand the Library') : 'Open the Library and begin playback'}
-      >
-        <span className="cult-player__sigil" aria-hidden>
-          <span className="cult-player__sigil-ring" />
-          <Music className="cult-player__icon" />
-        </span>
-        <span className="cult-player__meta">
-          <span className="cult-player__eyebrow">
-            {state.consented ? 'The Library' : 'Tap to begin'} · Ddergo Sanctuary
-          </span>
-          <span className="cult-player__title">
-            {trackNow ? `${trackNow.title} — ${trackNow.artist}` : 'Curated sound for the chamber'}
-          </span>
-        </span>
-        <span className="cult-player__cta" aria-hidden>
-          {state.expanded ? <X size={14} /> : state.consented ? <ChevronUp size={14} /> : <Play size={14} />}
-        </span>
-      </button>
+      <audio
+        ref={audioRef}
+        preload="auto"
+        onTimeUpdate={(e) => {
+          const a = e.currentTarget;
+          if (a.duration) setProgress(a.currentTime / a.duration);
+        }}
+        onEnded={() => skip(1)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
 
-      {/* Active iframe — only mounted after the user grants consent so
-          we don't ship Spotify's network calls to non-listeners. Once
-          mounted it stays mounted across chamber nav. */}
-      {state.consented && (
-        <div className="cult-player__pane" aria-hidden={!state.expanded}>
-          <div className="cult-player__pane-head">
-            <div>
-              <span className="cult-player__eyebrow">Now playing in the Sanctum</span>
-              <h3 className="cult-player__pane-title">Ddergo Sanctuary</h3>
-            </div>
-            <div className="cult-player__pane-actions">
-              <button
-                type="button"
-                onClick={() => setMuted((m) => !m)}
-                aria-pressed={muted}
-                aria-label={muted ? 'Unmute' : 'Mute'}
-                className="cult-player__icon-btn"
-              >
-                {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-              </button>
-              <button
-                type="button"
-                onClick={dismissBar}
-                aria-label="Close player"
-                className="cult-player__icon-btn"
-              >
-                <X size={14} />
-              </button>
-            </div>
+      {/* Rectangle panel — transport + tracklist */}
+      <div className="cult-player__panel" aria-hidden={!persist.expanded}>
+        <div className="cult-player__panel-head">
+          <div className="cult-player__np-wrap">
+            <span className="cult-player__eyebrow">Now playing · The Library</span>
+            <h3 className="cult-player__np">{current ? current.title : '—'}</h3>
+            <p className="cult-player__artist">{current ? current.artist : 'Ddergo'}</p>
           </div>
-          <div className={`cult-player__embed ${muted ? 'cult-player__embed--muted' : ''}`}>
-            <iframe
-              src={embedSrc}
-              width="100%"
-              height="352"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-              title="Ddergo Sanctuary — cult Library"
-              style={{ border: 0, borderRadius: 12 }}
-            />
-          </div>
-          {tracks.length > 0 && (
-            <ol className="cult-player__tracklist" aria-label="Tracks in the Sanctum">
-              {tracks.map((t, i) => (
-                <li
-                  key={`${t.title}-${i}`}
-                  className={`cult-player__track ${i === tickerIndex ? 'cult-player__track--active' : ''}`}
+          <button
+            type="button"
+            className="cult-player__icon-btn"
+            onClick={() => update({ expanded: false })}
+            aria-label="Collapse the Library"
+          >
+            <ChevronDown size={16} />
+          </button>
+        </div>
+
+        <div className="cult-player__seek" aria-hidden>
+          <span className="cult-player__seek-fill" style={{ width: `${pct}%` }} />
+        </div>
+
+        <div className="cult-player__controls">
+          <button type="button" className="cult-player__ctrl" onClick={() => skip(-1)} aria-label="Previous track">
+            <SkipBack size={18} />
+          </button>
+          <button
+            type="button"
+            className="cult-player__ctrl cult-player__ctrl--play"
+            onClick={togglePlay}
+            aria-label={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? <Pause size={20} /> : <Play size={20} />}
+          </button>
+          <button type="button" className="cult-player__ctrl" onClick={() => skip(1)} aria-label="Next track">
+            <SkipForward size={18} />
+          </button>
+          <button
+            type="button"
+            className="cult-player__ctrl"
+            onClick={() => update({ muted: !persist.muted })}
+            aria-pressed={persist.muted}
+            aria-label={persist.muted ? 'Unmute' : 'Mute'}
+          >
+            {persist.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        </div>
+
+        {tracks.length > 1 && (
+          <ol className="cult-player__tracklist" aria-label="Library tracks">
+            {tracks.map((t, i) => (
+              <li key={`${t.title}-${i}`}>
+                <button
+                  type="button"
+                  className={`cult-player__track ${i === persist.index ? 'cult-player__track--active' : ''}`}
+                  onClick={() => { update({ index: i }); setPlaying(true); }}
                 >
                   <span className="cult-player__track-num">{String(i + 1).padStart(2, '0')}</span>
                   <span className="cult-player__track-title">{t.title}</span>
                   <span className="cult-player__track-artist">{t.artist}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      )}
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {/* Circle orb — persistent handle / play indicator */}
+      <button
+        type="button"
+        className={`cult-player__orb ${playing ? 'cult-player__orb--playing' : ''}`}
+        onClick={() => update({ expanded: !persist.expanded })}
+        aria-expanded={persist.expanded}
+        aria-label={persist.expanded ? 'Collapse the Library' : 'Open the Library'}
+      >
+        <span className="cult-player__orb-ring" aria-hidden />
+        <Disc3 className="cult-player__orb-icon" size={22} />
+      </button>
     </div>
   );
 }
