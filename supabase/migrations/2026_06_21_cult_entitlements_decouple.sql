@@ -21,6 +21,12 @@ ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_cult_source_check;
 ALTER TABLE profiles ADD CONSTRAINT profiles_cult_source_check
   CHECK (cult_source IS NULL OR cult_source IN ('nippo_nft', 'naka_holdings', 'legacy', 'admin'));
 
+-- 1b. Ensure tier_source exists. The handoff claimed this column was already
+--     live, but it is NOT present on the production profiles table (verified by
+--     a failed run). The migrate step below and the NFT-resolver branch both
+--     write it (platform-tier provenance: stripe / founder_pass_nft / legacy).
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS tier_source text;
+
 -- 2. Migrate existing apex-tier users. Under the old model a `naka_cult` tier
 --    implied Max-tier platform access, so preserve exactly what they have:
 --    grant the decoupled cult entitlement AND move them to `max`. No one loses
