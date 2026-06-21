@@ -89,9 +89,9 @@ function timeAgo(iso: string): string {
 export default function SniperPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  // Sniper Bot is MAX-tier OR naka_cult (the 5th tier sits above max).
-  // Use hasTierAccess instead of strict === 'max' so Cult members aren't
-  // locked out of features they should own.
+  // Sniper Bot is a MAX-tier platform feature. Cult membership is a separate,
+  // decoupled entitlement and does NOT grant platform features, so the gate
+  // here is purely the platform tier.
   const hasSniperAccess = hasTierAccess(user, 'max');
 
   const [tab, setTab] = useState<Tab>('snipers');

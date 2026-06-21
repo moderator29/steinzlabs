@@ -9,14 +9,15 @@ import { verifyCron, cronResponse, logCronExecution, withCronErrorReporting } fr
  * Owner spec (HANDOFF + auto-memory):
  *   NAKA token  : 0x6967b9a8c0b14849CFE8f9E5732B401433fD2898 (Ethereum mainnet)
  *   Threshold   : 1,227,000 NAKA (18 decimals)
- *   Action      : sweep all wallets we know about; upsert profiles.tier
- *                 to 'naka_cult' for any user holding >= threshold; revert
- *                 to 'free' (or last paid tier) for any user whose balance
- *                 dropped below.
+ *   Action      : sweep all wallets we know about; grant the decoupled cult
+ *                 entitlement (profiles.cult_member = true, cult_source =
+ *                 'naka_holdings') for any user holding >= threshold; revoke
+ *                 it for any holdings-granted member who dropped below. The
+ *                 platform tier (free/mini/pro/max) is never touched here —
+ *                 cult is a separate entitlement.
  *
- * Without this cron, wallet-auth users (no email tier, no Stripe row) have
- * profiles.tier=NULL and the NakaCult gate always denies them — the
- * "NakaCult wallet flow doesn't work" bug owner reported.
+ * Without this cron, wallet-auth holders never get cult_member set and the
+ * NakaCult gate always denies them.
  *
  * Sweeps in batches via Alchemy alchemy_getTokenBalances on a multicall
  * grouping of up to 100 addresses per request (Alchemy free-tier limit).
@@ -140,31 +141,32 @@ export async function GET(request: NextRequest) {
 
     for (const [userId, totalRaw] of totalByUser.entries()) {
       const meets = totalRaw >= THRESHOLD_RAW;
-      // Read current tier so we only downgrade users who got their cult
-      // tier from THIS resolver — paying tiers (mini/pro/max via Stripe)
-      // must not be flipped to free by a balance drop.
+      // Read current cult membership so we only revoke members this resolver
+      // granted via NAKA balance. NFT-granted members (cult_source =
+      // 'nippo_nft') must NOT be revoked by a balance drop, and the platform
+      // tier (free/mini/pro/max) is never touched here — cult is decoupled.
       const { data: prof } = await supabase
         .from('profiles')
-        .select('tier, tier_source')
+        .select('cult_member, cult_source')
         .eq('id', userId)
-        .maybeSingle<{ tier: string | null; tier_source: string | null }>();
+        .maybeSingle<{ cult_member: boolean | null; cult_source: string | null }>();
 
-      const currentTier = prof?.tier ?? null;
-      const tierSource = prof?.tier_source ?? null;
+      const isMember = !!prof?.cult_member;
+      const cultSource = prof?.cult_source ?? null;
 
       if (meets) {
-        if (currentTier !== 'naka_cult') {
+        if (!isMember) {
           await supabase
             .from('profiles')
-            .update({ tier: 'naka_cult', tier_source: 'naka_balance', tier_updated_at: nowIso })
+            .update({ cult_member: true, cult_source: 'naka_holdings', cult_member_since: nowIso })
             .eq('id', userId);
           qualified++;
         }
-      } else if (currentTier === 'naka_cult' && tierSource === 'naka_balance') {
-        // Only revoke cult tier if THIS resolver granted it.
+      } else if (isMember && cultSource === 'naka_holdings') {
+        // Only revoke membership THIS resolver granted via NAKA balance.
         await supabase
           .from('profiles')
-          .update({ tier: 'free', tier_source: null, tier_updated_at: nowIso })
+          .update({ cult_member: false, cult_source: null, cult_member_since: null })
           .eq('id', userId);
         revoked++;
       }

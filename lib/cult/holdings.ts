@@ -5,10 +5,11 @@ import { getSolanaWalletTokens, getSolanaAssetsByOwner } from '@/lib/services/al
 /**
  * On-chain holdings resolver for the Naka Cult.
  *
- * Three paths qualify a wallet:
- *   1. Holds ≥ NAKA_HOLDING_THRESHOLD $NAKA  → naka_cult tier
- *   2. Holds the Loyalty Gem NFT             → naka_cult tier
- *   3. Holds the Development NFT             → naka_cult tier + is_chosen
+ * Qualifies a wallet for cult membership (profiles.cult_member — a standalone
+ * entitlement, decoupled from the platform tier ladder):
+ *   1. Holds ≥ NAKA_HOLDING_THRESHOLD $NAKA  → cult member
+ *   2. Holds a qualifying cult NFT           → cult member
+ *      (the Development-NFT path also sets is_chosen)
  *
  * Until $NAKA mints, NAKA_TOKEN_CONTRACT is unset and every read returns
  * { isMember: false, isChosen: false, nakaBalance: 0 }. The cron paths

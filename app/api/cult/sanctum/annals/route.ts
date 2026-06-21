@@ -88,13 +88,13 @@ export async function POST(req: NextRequest) {
   if (!achievement.active) return NextResponse.json({ error: 'inactive_code' }, { status: 410 });
 
   // Only grant to actual cult members so a Chosen can't accidentally award
-  // a free user the chamber doesn't surface.
+  // a non-member the chamber doesn't surface.
   const { data: targetProfile } = await admin
     .from('profiles')
-    .select('id,tier')
+    .select('id,cult_member')
     .eq('id', targetUser)
-    .maybeSingle<{ id: string; tier: string | null }>();
-  if (!targetProfile || targetProfile.tier !== 'naka_cult') {
+    .maybeSingle<{ id: string; cult_member: boolean | null }>();
+  if (!targetProfile || !targetProfile.cult_member) {
     return NextResponse.json({ error: 'target_not_in_cult' }, { status: 403 });
   }
 
