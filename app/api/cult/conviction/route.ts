@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
+import { resolveAssetPrice } from '@/lib/cult/convictionPrice';
 
 export const runtime = 'nodejs';
 
@@ -98,6 +99,13 @@ export async function POST(req: NextRequest) {
   if (thesis.length > 500) return NextResponse.json({ error: 'thesis_too_long' }, { status: 400 });
 
   const admin = getSupabaseAdmin();
+
+  // Capture an entry price so the scoring cron can grade this call. Best-effort:
+  // an unresolvable asset still posts, it just won't auto-score. Calls become
+  // eligible to score 7 days after posting.
+  const resolved = await resolveAssetPrice(asset, chain || null);
+  const RESOLVE_WINDOW_DAYS = 7;
+
   const { data, error } = await admin
     .from('cult_convictions')
     .insert({
@@ -106,10 +114,14 @@ export async function POST(req: NextRequest) {
       chain: chain || null,
       direction,
       thesis: thesis || null,
+      entry_price_usd: resolved?.priceUsd ?? null,
+      pair_ref: resolved?.pairRef ?? null,
+      pair_chain: resolved?.pairChain ?? null,
+      resolve_at: new Date(Date.now() + RESOLVE_WINDOW_DAYS * 86_400_000).toISOString(),
     })
     .select('id, asset, direction, status, created_at')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ conviction: data }, { status: 201 });
+  return NextResponse.json({ conviction: data, priced: !!resolved }, { status: 201 });
 }
