@@ -6,10 +6,15 @@ import { DUNE_TOOLS } from '@/lib/ai/vtxToolsDune';
  * VTX AI Engine — Advisor Strategy Architecture
  *
  * Executor: claude-sonnet-4-6  (handles all requests, calls tools)
- * Advisor:  claude-opus-4-6    (consulted on complex decisions, max 2x per request)
+ * Advisor:  claude-opus-4-8    (consulted on complex decisions, max 2x per request)
  *
  * The Advisor tool is invoked via the anthropic-beta: advisor-tool-2026-03-01 header.
  * This delivers near-Opus quality at ~80-90% Sonnet cost.
+ *
+ * IMPORTANT — advisor pairing: the advisor model must be at least as capable as
+ * the executor. For a claude-sonnet-4-6 executor the ONLY valid advisors are
+ * claude-opus-4-8 / claude-opus-4-7; claude-opus-4-6 is rejected with HTTP 400
+ * (this was the cause of every VTX advisor call silently failing).
  */
 
 const API_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS || '900000', 10);
@@ -19,6 +24,14 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
   timeout: API_TIMEOUT_MS,
 });
+
+// VTX model configuration.
+// The advisor tool requires an advisor model at least as capable as the
+// executor. For a claude-sonnet-4-6 executor the only valid advisors are
+// claude-opus-4-8 / claude-opus-4-7 — claude-opus-4-6 is rejected with HTTP 400.
+const VTX_EXECUTOR_MODEL = 'claude-sonnet-4-6';
+const VTX_ADVISOR_MODEL = 'claude-opus-4-8';
+const ADVISOR_BETA = 'advisor-tool-2026-03-01';
 
 export const VTX_SYSTEM_PROMPT = `You are VTX, the intelligence layer of Naka Labs.
 
@@ -357,13 +370,13 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
     name: 'advisor',
-    model: 'claude-opus-4-6',
+    model: VTX_ADVISOR_MODEL,
     max_uses: maxAdvisorUses,
   };
 
   const response = await (client.messages.create as Function)(
     {
-      model: 'claude-sonnet-4-6',
+      model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
       tools: tagToolsForCache([advisorTool, ...tools] as Anthropic.Tool[]),
@@ -371,7 +384,7 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
     },
     {
       headers: {
-        'anthropic-beta': 'advisor-tool-2026-03-01',
+        'anthropic-beta': ADVISOR_BETA,
       },
     }
   );
@@ -389,13 +402,13 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
     name: 'advisor',
-    model: 'claude-opus-4-6',
+    model: VTX_ADVISOR_MODEL,
     max_uses: maxAdvisorUses,
   };
 
   const stream = await (client.messages.stream as Function)(
     {
-      model: 'claude-sonnet-4-6',
+      model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
       // §13b: same prompt-cache wrapping as vtxQuery — keeps streaming
       // and non-streaming paths on the same cached prefix.
@@ -405,7 +418,7 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
     },
     {
       headers: {
-        'anthropic-beta': 'advisor-tool-2026-03-01',
+        'anthropic-beta': ADVISOR_BETA,
       },
     }
   );
@@ -466,6 +479,39 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
       controller.close();
     },
   });
+}
+
+/**
+ * Raw streaming VTX query — returns the SDK MessageStream so callers can BOTH
+ * forward text deltas live AND inspect finalMessage() to drive a tool-execution
+ * loop. `vtxStream` above wraps a text-only ReadableStream for callers that
+ * don't run tools; the main /api/vtx-ai route uses this to stream tool-backed
+ * answers instead of returning empty replies.
+ */
+export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client.messages.stream> {
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096 } = options;
+
+  const advisorTool = {
+    type: 'advisor_20260301' as Anthropic.Tool['type'],
+    name: 'advisor',
+    model: VTX_ADVISOR_MODEL,
+    max_uses: maxAdvisorUses,
+  };
+
+  return (client.messages.stream as Function)(
+    {
+      model: VTX_EXECUTOR_MODEL,
+      max_tokens: maxTokens,
+      system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
+      tools: tagToolsForCache([advisorTool, ...tools] as Anthropic.Tool[]),
+      messages,
+    },
+    {
+      headers: {
+        'anthropic-beta': ADVISOR_BETA,
+      },
+    }
+  ) as ReturnType<typeof client.messages.stream>;
 }
 
 /**

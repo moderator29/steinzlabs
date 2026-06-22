@@ -6,7 +6,7 @@ import * as Sentry from '@sentry/nextjs';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Service layer — all external data comes through here
-import { vtxQuery, vtxStream, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
+import { vtxQuery, vtxStreamRaw, vtxAnalyze, VTX_TOOLS } from '@/lib/services/anthropic';
 import { dispatchP2BTool } from '@/lib/ai/vtxToolsP2B';
 import { dispatchDuneTool } from '@/lib/ai/vtxToolsDune';
 import { getTokenSecurity } from '@/lib/services/goplus';
@@ -1220,24 +1220,66 @@ export async function POST(request: NextRequest) {
       : cleanMessage;
     loopMessages.push({ role: 'user', content: finalUserMessage });
 
-    // ── Streaming Path (no tool loop) ───────────────────────────────────────
+    // ── Streaming Path (with tool-execution loop) ───────────────────────────
+    // Streams text deltas live; when the model calls a client-side tool it
+    // finalizes the current turn, runs the tool via executeVTXTool, appends the
+    // result, and re-opens a stream — repeating up to MAX_TOOL_ITERATIONS. This
+    // is what lets tool-backed answers stream instead of returning empty bubbles
+    // (the previous text-only path dropped every tool turn).
     if (wantsStream) {
-      const textStream = await vtxStream({ messages: loopMessages, system: systemPrompt });
       const encoder = new TextEncoder();
       const sseStream = new ReadableStream({
         async start(controller) {
-          const reader = textStream.getReader();
           let fullText = '';
+          const toolsUsed: string[] = [];
           try {
+            let streamIterations = 0;
             while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              fullText += value;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: value })}\n\n`));
+              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt });
+              for await (const event of stream) {
+                if (
+                  event.type === 'content_block_delta' &&
+                  event.delta.type === 'text_delta'
+                ) {
+                  fullText += event.delta.text;
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ delta: event.delta.text })}\n\n`)
+                  );
+                }
+              }
+              const finalMsg: Anthropic.Message = await stream.finalMessage();
+
+              if (finalMsg.stop_reason === 'tool_use' && streamIterations < MAX_TOOL_ITERATIONS) {
+                const toolUseBlocks = finalMsg.content.filter(
+                  (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+                );
+                const toolResults = await Promise.all(
+                  toolUseBlocks.map(async (block) => {
+                    toolsUsed.push(block.name);
+                    const result = await executeVTXTool(
+                      block.name,
+                      block.input as Record<string, unknown>,
+                      callerUserId
+                    );
+                    return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
+                  })
+                );
+                loopMessages.push({ role: 'assistant', content: finalMsg.content });
+                loopMessages.push({ role: 'user', content: toolResults });
+                streamIterations++;
+                continue;
+              }
+              break;
             }
-            // Final event with scrubbed full text
+
             const scrubbed = sanitizeVtxResponse(scrubBranding(fullText));
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: scrubbed })}\n\n`));
+            const reply = scrubbed || 'VTX could not generate a response. Please try again.';
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ done: true, reply, toolsUsed })}\n\n`)
+            );
+            // Only count a free-tier message once a real reply was produced —
+            // not on an empty/errored turn.
+            if (scrubbed && !isPro && !skipRateLimit) await incrementUsage(ip);
           } catch (streamErr) {
             logger.error({ err: streamErr instanceof Error ? streamErr.message : streamErr }, '[VTX-AI] Stream error:');
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
@@ -1246,7 +1288,6 @@ export async function POST(request: NextRequest) {
           }
         },
       });
-      if (!isPro && !skipRateLimit) await incrementUsage(ip);
       return new Response(sseStream, {
         headers: {
           'Content-Type': 'text/event-stream',
