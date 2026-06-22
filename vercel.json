@@ -38,6 +38,8 @@
     { "path": "/api/cron/cult-offering-draw",         "schedule": "*/15 * * * *" },
     { "path": "/api/cron/cult-conviction-score",      "schedule": "30 4 * * *" },
     { "path": "/api/cron/cult-signal-feed",           "schedule": "0 * * * *" },
+    { "path": "/api/cron/cult-ape-open",              "schedule": "0 8 * * *" },
+    { "path": "/api/cron/cult-ape-resolve",           "schedule": "*/15 * * * *" },
     { "path": "/api/cron/smart-money-convergence",    "schedule": "*/15 * * * *" },
     { "path": "/api/cron/whale-score-populator",      "schedule": "0 */4 * * *" },
     { "path": "/api/cron/recompute-reputation",       "schedule": "0 5 * * *" },

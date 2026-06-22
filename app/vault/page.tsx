@@ -5,7 +5,7 @@ import { ConclaveSigil } from '@/components/vault/sigils/ConclaveSigil';
 import { OracleSigil } from '@/components/vault/sigils/OracleSigil';
 import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
 import { VaultEntryGateway } from './VaultEntryGateway';
-import { MessagesSquare, Gift, TrendingUp, Radar } from 'lucide-react';
+import { MessagesSquare, Gift, TrendingUp, Radar, Rocket } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -86,7 +86,14 @@ export default async function VaultPage() {
         <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B4C0E0]">
           THE COMMONS
         </p>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <ChamberPortal
+            href="/vault/ape"
+            name="Ape or Nope"
+            tagline="Instinct"
+            description="A trending coin a day — call it, build your streak. 🚀💀"
+            sigil={<Rocket size={64} className="text-emerald-300" />}
+          />
           <ChamberPortal
             href="/vault/hall"
             name="The Hall"
