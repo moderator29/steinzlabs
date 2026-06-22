@@ -13,7 +13,7 @@
     "postinstall": "echo 'Setup complete'"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.96.0",
+    "@anthropic-ai/sdk": "^0.105.0",
     "@reown/appkit": "^1.8.19",
     "@reown/appkit-adapter-solana": "^1.8.19",
     "@reown/appkit-adapter-wagmi": "^1.8.19",

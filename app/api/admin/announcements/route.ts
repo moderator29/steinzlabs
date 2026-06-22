@@ -1,8 +1,18 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
+
+const CreateBody = z.object({
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(20_000),
+  type: z.enum(['info', 'warning', 'success', 'critical']).optional(),
+  active: z.boolean().optional(),
+  target_audience: z.string().min(1).max(64).optional(),
+  expires_at: z.string().datetime().nullish(),
+});
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -32,17 +42,21 @@ export async function POST(request: Request) {
   if (!adminId) return unauthorizedResponse();
 
   try {
-    const body = await request.json();
+    const parsed = CreateBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
+    }
+    const body = parsed.data;
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('announcements')
       .insert([{
         title: body.title,
         body: body.body,
-        type: body.type || 'info',
+        type: body.type ?? 'info',
         active: body.active !== false,
-        target_audience: body.target_audience || 'All',
-        expires_at: body.expires_at || null,
+        target_audience: body.target_audience ?? 'All',
+        expires_at: body.expires_at ?? null,
         created_by: adminId,
       }])
       .select()

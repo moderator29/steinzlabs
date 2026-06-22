@@ -1,25 +1,24 @@
 /**
  * NakaCult / Vault access gate.
  *
- * A user can enter the Vault if their canonical tier is `naka_cult`.
- * Phase-4 sets the tier manually; a future on-chain resolver will
- * upgrade users to `naka_cult` automatically when their connected
- * wallet holds:
- *   - ≥ 1,227,000 $NAKA, OR
- *   - a NakaLabs Loyalty Gem NFT, OR
- *   - a NakaLabs Development NFT (also grants The Chosen Seal)
+ * Cult membership is a standalone entitlement (profiles.cult_member),
+ * fully decoupled from the platform tier ladder. A user enters the Vault
+ * iff cult_member = true, regardless of their free/mini/pro/max tier.
+ * The resolver branch sets cult_member from on-chain state:
+ *   - a NIPPO NFT (0x6941…), OR
+ *   - a >= 1,227,000 $NAKA balance
+ * (The Founder Pass NFT grants Max-tier platform access, NOT cult access.)
  *
  * Server-side only. Reads the authenticated user's profile via the
  * server Supabase client; admins are NOT auto-granted access — the
- * Vault is intentionally exclusive even from staff. Use the existing
- * tier ladder for general feature gating.
+ * Vault is intentionally exclusive even from staff.
  */
 
 import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import * as Sentry from "@sentry/nextjs";
-import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
+import { normalizeTier, type Tier } from "@/lib/subscriptions/tierCheck";
 
 /**
  * Surface a denial both to the Vercel runtime log (instant grep) AND
@@ -92,33 +91,32 @@ export async function getCultAccess(): Promise<CultAccess> {
 
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
-    .select("tier, tier_expires_at, username, display_name, is_chosen")
+    .select("tier, cult_member, cult_source, username, display_name, is_chosen")
     .eq("id", user.id)
     .maybeSingle<{
       tier: string | null;
-      tier_expires_at: string | null;
+      cult_member: boolean | null;
+      cult_source: string | null;
       username: string | null;
       display_name: string | null;
       is_chosen: boolean | null;
     }>();
 
-  const result = checkTier(profile?.tier ?? "free", profile?.tier_expires_at ?? null, "naka_cult");
+  const allowed = !!profile?.cult_member;
 
-  if (!result.allowed) {
-    reportDenial('tier-check', {
+  if (!allowed) {
+    reportDenial('not-cult-member', {
       userId: user.id,
-      rawTier: profile?.tier ?? null,
-      currentTier: result.currentTier,
-      expired: result.expired,
-      tierExpiresAt: profile?.tier_expires_at ?? null,
+      cultMember: profile?.cult_member ?? null,
+      cultSource: profile?.cult_source ?? null,
       profileError: profileErr?.message ?? null,
     });
   }
 
   return {
-    allowed: result.allowed,
+    allowed,
     userId: user.id,
-    tier: result.currentTier,
+    tier: normalizeTier(profile?.tier),
     isChosen: !!profile?.is_chosen,
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,

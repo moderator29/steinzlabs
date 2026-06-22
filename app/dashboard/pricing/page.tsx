@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 // Naka Labs brand icons — Check via CheckCircle, Star (gold).
-// Zap stays on lucide (no brand equivalent yet).
 import { CheckCircle as Check, Star } from '@/components/icons/brand';
 import { Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
@@ -11,6 +9,8 @@ import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { TierBadge } from '@/components/ui/TierBadge';
 
+// Platform tiers only (free/mini/pro/max). NakaCult is NOT a tier — it's a
+// separate on-chain entitlement shown in the NFT section below.
 const TIERS = [
   {
     id: 'free',
@@ -88,31 +88,6 @@ const TIERS = [
       'Early access to new features',
     ],
   },
-  {
-    id: 'naka_cult',
-    name: 'Naka Cult',
-    price: 'Held',
-    period: 'not bought',
-    description: 'The Vault. The Conclave. The Oracle. The Sanctum.',
-    accent: '#DC143C',
-    popular: false,
-    gated: true,
-    features: [
-      'Everything in Max',
-      'Vault entry — three sealed chambers',
-      'The Conclave — vote on Decrees, shape the platform',
-      'The Oracle — Daily Seal briefings, VTX Sage, Whisper Network',
-      'The Sanctum — identity, achievements, lore, music',
-      'Holders of NakaLabs Development NFT receive The Chosen Seal',
-      'Quarterly Audience with the team (Chosen)',
-      'Early Access Lab — test features 24-72h before public',
-    ],
-    entryRules: [
-      'Hold ≥ 1,227,000 $NAKA, OR',
-      'Own a NakaLabs Loyalty Gem NFT, OR',
-      'Own a NakaLabs Development NFT (grants The Chosen)',
-    ],
-  },
 ] as const;
 
 export default function PricingPage() {
@@ -122,12 +97,6 @@ export default function PricingPage() {
 
   const handleSubscribe = (tierId: string) => {
     if (tierId === 'free') return;
-    if (tierId === 'naka_cult') {
-      // Gated tier — owner action: hold $NAKA or mint a NakaLabs NFT.
-      // Route to the NakaCult landing instead of the Stripe stub.
-      router.push('/naka-cult');
-      return;
-    }
     toast.info('Crypto payment integration coming soon. Join our waitlist at support@nakalabs.com');
   };
 
@@ -144,19 +113,14 @@ export default function PricingPage() {
           <p className="text-gray-400 text-lg">Professional on-chain intelligence. Cancel anytime.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {TIERS.map(tier => {
             const isCurrent = currentPlan === tier.id;
-            const isCult = tier.id === 'naka_cult';
             return (
               <div
                 key={tier.id}
                 className={`relative bg-[#141824] rounded-2xl border p-5 flex flex-col ${
-                  tier.popular
-                    ? 'border-[#0A1EFF] shadow-lg shadow-[#0A1EFF]/10'
-                    : isCult
-                    ? 'border-[#DC143C]/40 shadow-lg shadow-[#DC143C]/15'
-                    : 'border-[#1E2433]'
+                  tier.popular ? 'border-[#0A1EFF] shadow-lg shadow-[#0A1EFF]/10' : 'border-[#1E2433]'
                 }`}
               >
                 {tier.popular && (
@@ -174,9 +138,6 @@ export default function PricingPage() {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-semibold" style={{ color: tier.accent }}>{tier.name}</span>
-                    {/* Inline tier badge — same SVG users see beside their display
-                        name once they subscribe, so they know exactly what they're
-                        getting. Free tier renders nothing. */}
                     <TierBadge tier={tier.id} size={16} title={`${tier.name} verified mark`} />
                   </div>
                   <div className="flex items-baseline gap-1">
@@ -193,16 +154,6 @@ export default function PricingPage() {
                       <span className="text-gray-300 text-xs">{f}</span>
                     </div>
                   ))}
-                  {isCult && 'entryRules' in tier && Array.isArray((tier as { entryRules?: readonly string[] }).entryRules) && (
-                    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-1.5">
-                      <div className="text-[10px] uppercase tracking-wider text-[#DC143C]/80 font-semibold mb-1.5">
-                        Entry
-                      </div>
-                      {(tier as { entryRules: readonly string[] }).entryRules.map(r => (
-                        <div key={r} className="text-gray-400 text-xs leading-snug">{r}</div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -213,21 +164,13 @@ export default function PricingPage() {
                       ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
                       : tier.id === 'free'
                       ? 'bg-[#1E2433] text-gray-500 cursor-default'
-                      : isCult
-                      ? 'border text-white hover:bg-[#DC143C]/10'
                       : tier.popular
                       ? 'bg-[#0A1EFF] hover:bg-[#0916CC] text-white'
                       : 'border text-white hover:bg-white/5 transition-colors'
                   }`}
                   style={!isCurrent && tier.id !== 'free' && !tier.popular ? { borderColor: tier.accent, color: tier.accent } : {}}
                 >
-                  {isCurrent
-                    ? 'Current Plan'
-                    : tier.id === 'free'
-                    ? 'Free Forever'
-                    : isCult
-                    ? 'Enter the Cult'
-                    : `Get ${tier.name}`}
+                  {isCurrent ? 'Current Plan' : tier.id === 'free' ? 'Free Forever' : `Get ${tier.name}`}
                 </button>
               </div>
             );
@@ -239,6 +182,96 @@ export default function PricingPage() {
             <Zap size={12} className="text-yellow-400" />
             Crypto payment integration coming soon. Join our waitlist for early access.
           </p>
+        </div>
+
+        {/* ── Two NFT keys — held, not subscribed ───────────────────────── */}
+        <div className="mt-14">
+          <div className="text-center mb-6">
+            <h2 className="text-white font-bold text-2xl mb-2">Two NFT keys</h2>
+            <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+              Held, not subscribed. Each key opens a different door — connect your wallet and Naka Labs detects it
+              automatically. They are deliberately separate: one is the cult, one is the platform.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {/* NIPPO → the cult */}
+            <div className="bg-[#141824] rounded-2xl border border-[#DC143C]/40 shadow-lg shadow-[#DC143C]/10 p-6 flex flex-col">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-[#FF5B7A] font-bold text-sm tracking-wide">NIPPO</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">$27</span>
+                </div>
+              </div>
+              <h3 className="text-white font-bold text-lg mb-1">The Naka Cult</h3>
+              <p className="text-gray-400 text-xs mb-4">
+                The perpetual cult key. Hold it and you are of the cult — The Vault and every chamber — for as long as
+                it sits in your wallet. No threshold, no monthly.
+              </p>
+              <div className="flex-1 space-y-2 mb-4">
+                {[
+                  'The Vault — Conclave, Oracle, Sanctum',
+                  'The Commons — Hall, Offering, Conviction, Pulse',
+                  'Daily Seal + Whisper Network (E2E)',
+                  'Permanent on-chain identity (Mantle, Annals)',
+                  'Ddergo soundtrack in the Vault',
+                ].map(f => (
+                  <div key={f} className="flex items-start gap-2">
+                    <Check size={12} className="mt-0.5 shrink-0 text-[#FF5B7A]" />
+                    <span className="text-gray-300 text-xs">{f}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500 mb-4 leading-snug">
+                Does not include the platform’s Pro/Max trading features — the cult is its own world.
+              </p>
+              <button
+                onClick={() => router.push('/naka-cult')}
+                className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#DC143C]/50 text-white hover:bg-[#DC143C]/10 transition-colors"
+              >
+                Enter the Cult →
+              </button>
+            </div>
+
+            {/* Founder Pass → Max on the platform */}
+            <div className="bg-[#141824] rounded-2xl border border-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/10 p-6 flex flex-col">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-[#F59E0B] font-bold text-sm tracking-wide">FOUNDER PASS</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">$48</span>
+                </div>
+              </div>
+              <h3 className="text-white font-bold text-lg mb-1">Max, baked in</h3>
+              <p className="text-gray-400 text-xs mb-4">
+                Unlocks the <strong className="text-white">Max</strong> tier on the main platform for{' '}
+                <strong className="text-white">6 months</strong>, starting the moment you connect the holding wallet.
+                Everything in Max, no subscription for half a year.
+              </p>
+              <div className="flex-1 space-y-2 mb-4">
+                {[
+                  'Everything in Max for 6 months',
+                  'Sniper Bot + real-time alerts',
+                  'Unlimited connected wallets',
+                  'Gasless swaps, copy trading, smart money',
+                  'Then continues at $15/mo only if you choose',
+                ].map(f => (
+                  <div key={f} className="flex items-start gap-2">
+                    <Check size={12} className="mt-0.5 shrink-0 text-[#F59E0B]" />
+                    <span className="text-gray-300 text-xs">{f}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500 mb-4 leading-snug">
+                Does not include the Naka Cult — that’s the NIPPO. Two doors, two keys.
+              </p>
+              <button
+                onClick={() => toast.info('Connect a wallet holding the Founder Pass on the dashboard and Max unlocks automatically.')}
+                className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#F59E0B]/50 text-white hover:bg-[#F59E0B]/10 transition-colors"
+              >
+                How it works
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="mt-12 bg-[#141824] rounded-2xl border border-[#1E2433] p-6">

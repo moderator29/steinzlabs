@@ -198,6 +198,25 @@ export async function isHolderOfContract(
   });
 }
 
+/**
+ * Reverse-resolve an EVM address to its primary ENS name (mainnet). Returns
+ * null when the address has no ENS name or the lookup errors. Cached because
+ * wallet sign-in reads this once per new wallet.
+ */
+export async function lookupEnsName(address: string): Promise<string | null> {
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return null;
+  const key = cacheKey('alchemy', 'ens_name', { address: address.toLowerCase() });
+  return withCache(key, TTL.ENTITY_LABEL, async () => {
+    try {
+      const alchemy = getAlchemy('ethereum');
+      const name = await alchemy.core.lookupAddress(address);
+      return name ?? null;
+    } catch {
+      return null;
+    }
+  });
+}
+
 export async function getContractCode(
   contractAddress: string,
   chain: string

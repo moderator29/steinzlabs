@@ -1,8 +1,27 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
+
+const CreateBody = z.object({
+  address: z.string().min(8).max(128),
+  chain: z.string().min(2).max(32),
+  label: z.string().min(1).max(120),
+  category: z.string().min(1).max(64),
+  notes: z.string().max(2_000).nullish(),
+  verified: z.boolean().optional(),
+});
+
+const PatchBody = z.object({
+  address: z.string().min(8).max(128).optional(),
+  chain: z.string().min(2).max(32).optional(),
+  label: z.string().min(1).max(120).optional(),
+  category: z.string().min(1).max(64).optional(),
+  notes: z.string().max(2_000).nullish(),
+  verified: z.boolean().optional(),
+}).strict();
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -32,7 +51,12 @@ export async function POST(request: Request) {
   if (!adminId) return unauthorizedResponse();
 
   try {
-    const body = await request.json();
+    const raw = await request.json().catch(() => null);
+    const parsed = CreateBody.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
+    }
+    const body = parsed.data;
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('whale_addresses')
@@ -41,7 +65,7 @@ export async function POST(request: Request) {
         chain: body.chain,
         label: body.label,
         category: body.category,
-        notes: body.notes || null,
+        notes: body.notes ?? null,
         verified: body.verified ?? false,
       }])
       .select()
@@ -69,11 +93,19 @@ export async function PATCH(request: Request) {
     const id = url.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const body = await request.json();
+    const raw = await request.json().catch(() => null);
+    const parsed = PatchBody.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
+    }
+    const body = parsed.data;
+    if (Object.keys(body).length === 0) {
+      return NextResponse.json({ error: 'No updatable fields' }, { status: 400 });
+    }
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('whale_addresses')
-      .update({ ...body })
+      .update(body)
       .eq('id', id);
 
     if (error) {

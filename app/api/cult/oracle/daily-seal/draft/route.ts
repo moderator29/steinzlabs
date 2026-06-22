@@ -21,7 +21,7 @@ function nextUtcDate(): string {
  *   • `next` = the most recent pending draft for tomorrow's seal (any author)
  *   • `mine` = up to 10 most recent drafts authored by the caller
  *
- * Any naka_cult member can read; only Chosen members can POST.
+ * Any cult member can read; only Chosen members can POST.
  */
 export async function GET(_req: NextRequest) {
   const access = await getCultAccess();

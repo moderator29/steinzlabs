@@ -12,12 +12,14 @@ const NAME = 'cult-verify-membership';
 type WalletEntry = { address: string; chain?: string };
 
 /**
- * Cron — re-verifies on-chain holdings for every active naka_cult member daily.
+ * Cron — re-verifies on-chain holdings for every active cult member daily.
  *
  * For each member with a connected wallet:
  *   - reads on-chain $NAKA balance + NFT ownership via resolveHoldings()
- *   - if the wallet still qualifies → leaves tier alone, syncs is_chosen
- *   - if the wallet no longer qualifies → demotes to 'free' tier
+ *   - if the wallet still qualifies → leaves membership alone, syncs is_chosen
+ *   - if an on-chain-granted member no longer qualifies → revokes cult_member
+ *     (legacy/admin-granted members are left untouched; platform tier is
+ *     never changed here — cult is decoupled)
  *
  * Until NAKA_TOKEN_CONTRACT (and the NFT contracts) are set, the resolver
  * is disabled and this cron exits in <100ms with skipped='resolver_disabled'.
@@ -50,11 +52,11 @@ export async function GET(request: NextRequest) {
   try {
     const admin = getSupabaseAdmin();
 
-    // Pull every current naka_cult member + their default wallet address.
+    // Pull every current cult member + their default wallet address.
     const { data: members, error: selErr } = await admin
       .from('profiles')
-      .select('id, is_chosen')
-      .eq('tier', 'naka_cult');
+      .select('id, is_chosen, cult_source')
+      .eq('cult_member', true);
     if (selErr) throw selErr;
     if (!members || members.length === 0) {
       const duration = Date.now() - startedAt;
@@ -84,12 +86,17 @@ export async function GET(request: NextRequest) {
       processed += 1;
 
       if (!holdings.isMember) {
-        // Demote — wallet no longer qualifies on any of the 3 paths.
-        await admin
-          .from('profiles')
-          .update({ tier: 'free', is_chosen: false })
-          .eq('id', member.id);
-        demoted += 1;
+        // Revoke — wallet no longer qualifies. Only revoke memberships THIS
+        // pipeline granted on-chain (naka_holdings / nippo_nft); legacy and
+        // admin-granted members are left untouched. Platform tier is never
+        // changed here — cult is decoupled.
+        if (member.cult_source === 'naka_holdings' || member.cult_source === 'nippo_nft') {
+          await admin
+            .from('profiles')
+            .update({ cult_member: false, cult_source: null, cult_member_since: null, is_chosen: false })
+            .eq('id', member.id);
+          demoted += 1;
+        }
         continue;
       }
 

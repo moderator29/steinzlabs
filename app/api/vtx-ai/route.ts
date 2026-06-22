@@ -1038,7 +1038,7 @@ export async function POST(request: NextRequest) {
     // for authenticated callers; anonymous callers always count as free.
     // checkTier() also honors tier_expires_at so expired comp-Max
     // accounts auto-revert.
-    let serverTier: 'free' | 'mini' | 'pro' | 'max' | 'naka_cult' = 'free';
+    let serverTier: 'free' | 'mini' | 'pro' | 'max' = 'free';
     if (callerUserId) {
       try {
         const admin = getSupabaseAdmin();
@@ -1056,7 +1056,7 @@ export async function POST(request: NextRequest) {
         // tier lookup hiccupped.
       }
     }
-    const isPro = serverTier === 'pro' || serverTier === 'max' || serverTier === 'naka_cult';
+    const isPro = serverTier === 'pro' || serverTier === 'max';
 
     if (!isPro && !skipRateLimit) {
       const rateInfo = await getRateLimitInfo(ip);

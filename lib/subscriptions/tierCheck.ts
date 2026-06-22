@@ -6,18 +6,18 @@
  */
 
 /**
- * Five-tier ladder. `naka_cult` is the apex tier, gated by holding
- * 1,227,000 $NAKA OR a NakaLabs NFT — not a Stripe purchase. It implies
- * full Max-tier access plus Vault / NakaCult / Sanctum / Conclave.
+ * Four-tier platform ladder. NakaCult membership is NOT a tier — it is a
+ * separate, decoupled entitlement (see lib/cult/access.ts +
+ * profiles.cult_member) so a user can hold a Max plan and cult access
+ * independently of each other. Never reintroduce a cult tier here.
  */
-export type Tier = "free" | "mini" | "pro" | "max" | "naka_cult";
+export type Tier = "free" | "mini" | "pro" | "max";
 
 export const TIER_ORDER: Record<Tier, number> = {
   free: 0,
   mini: 1,
   pro: 2,
   max: 3,
-  naka_cult: 4,
 };
 
 export interface TierCheckResult {
@@ -27,9 +27,9 @@ export interface TierCheckResult {
   expired: boolean;
 }
 
-function normalizeTier(raw: string | null | undefined): Tier {
+export function normalizeTier(raw: string | null | undefined): Tier {
   const v = (raw ?? "free").toLowerCase();
-  if (v === "mini" || v === "pro" || v === "max" || v === "naka_cult") return v;
+  if (v === "mini" || v === "pro" || v === "max") return v;
   return "free";
 }
 

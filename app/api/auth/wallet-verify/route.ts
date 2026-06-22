@@ -6,6 +6,8 @@ import * as Sentry from "@sentry/nextjs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import { buildSiweMessage, resolveSiweOrigin } from "@/lib/auth/siwe";
+import { generateWalletProfileName } from "@/lib/auth/walletProfileName";
+import { applyWalletEntitlements } from "@/lib/cult/entitlements";
 
 export const runtime = "nodejs";
 
@@ -113,10 +115,20 @@ export async function POST(request: NextRequest) {
     if (existing) {
       userId = existing.user_id;
     } else {
+      // Industry-standard default identity: ENS name if the wallet has one,
+      // else a stable friendly handle; deterministic unique @username. The
+      // handle_new_user() trigger reads these from metadata to fill profiles.
+      const { username, displayName } = await generateWalletProfileName(address, chain);
       const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { wallet_address: address, chain, auth_method: "wallet" },
+        user_metadata: {
+          wallet_address: address,
+          chain,
+          auth_method: "wallet",
+          username,
+          display_name: displayName,
+        },
       });
       if (createErr || !newUser.user) {
         return NextResponse.json(
@@ -131,6 +143,17 @@ export async function POST(request: NextRequest) {
         address: normalized,
         chain,
         is_primary: true,
+      });
+    }
+
+    // Grant on-chain entitlements immediately on connect so the user lands with
+    // their cult / Max access already applied (NIPPO → cult, Founder Pass → Max,
+    // NAKA → cult). Non-fatal: a chain hiccup must never block sign-in.
+    try {
+      await applyWalletEntitlements(userId, [normalized]);
+    } catch (entErr) {
+      Sentry.captureException(entErr, {
+        tags: { route: "auth/wallet-verify", phase: "entitlements" },
       });
     }
 

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tier, tier_expires_at, verified_badge, role')
+      .select('tier, tier_expires_at, verified_badge, role, cult_member')
       .eq('id', user.id)
       .single();
 
@@ -37,11 +37,13 @@ export async function GET(request: NextRequest) {
       {
         tier,
         isPaid: tier !== 'free',
-        // naka_cult sits ABOVE max — Cult members satisfy every paid-tier
-        // gate (isPro AND isMax) since the 5th tier is held, not bought.
-        isPro: tier === 'pro' || tier === 'max' || tier === 'naka_cult',
-        isMax: tier === 'max' || tier === 'naka_cult',
-        isCult: tier === 'naka_cult',
+        // Cult membership is decoupled from the platform tier — it comes from
+        // the standalone cult_member entitlement, not the tier ladder. A cult
+        // member on the free plan is NOT isPro/isMax; a Founder-Pass Max holder
+        // is isMax but not isCult.
+        isPro: tier === 'pro' || tier === 'max',
+        isMax: tier === 'max',
+        isCult: !!profile?.cult_member,
         isAdmin,
         verifiedBadge: profile?.verified_badge || null,
         tierExpiresAt: profile?.tier_expires_at || null,
