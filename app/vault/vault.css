@@ -841,3 +841,99 @@
   .cult-player__bar,
   .cult-player__pane { animation: none !important; transition: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   CultPlayer — rebuilt self-hosted player (circle ORB + rectangle PANEL).
+   Supersedes the Spotify-embed bar styles above (__bar/__sigil/__cta/__pane/
+   __embed are no longer rendered). Reuses __eyebrow/__icon-btn/__tracklist/
+   __track* from above.
+   ════════════════════════════════════════════════════════════════════════ */
+.cult-player { align-items: flex-end; }
+
+/* Circle orb — persistent handle, pinned bottom-right */
+.cult-player__orb {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: #FFFFFF;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(245, 197, 68, 0.55), transparent 60%),
+    linear-gradient(135deg, #3D5AFE, #E11D48);
+  border: 1px solid rgba(255, 233, 166, 0.45);
+  box-shadow: 0 12px 36px rgba(61, 90, 254, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.cult-player__orb:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 18px 48px rgba(225, 29, 72, 0.45); }
+.cult-player__orb-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 233, 166, 0.55);
+  opacity: 0.6;
+}
+.cult-player__orb--playing .cult-player__orb-ring { animation: cp-orb-pulse 2.4s ease-in-out infinite; }
+.cult-player__orb--playing .cult-player__orb-icon { animation: cp-orb-spin 6s linear infinite; }
+@keyframes cp-orb-pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.18); opacity: 0.9; } }
+@keyframes cp-orb-spin { to { transform: rotate(360deg); } }
+
+/* Rectangle panel */
+.cult-player__panel {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(5, 8, 22, 0.95), rgba(11, 18, 46, 0.93));
+  border: 1px solid rgba(61, 90, 254, 0.32);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(22px) saturate(160%);
+  transform-origin: bottom right;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+.cult-player--mini .cult-player__panel { opacity: 0; transform: translateY(10px) scale(0.96); pointer-events: none; }
+.cult-player--expanded .cult-player__panel { opacity: 1; transform: translateY(0) scale(1); }
+
+.cult-player__panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.cult-player__np-wrap { min-width: 0; }
+.cult-player__np {
+  font-size: 17px; font-weight: 700; color: #FFFFFF; margin: 3px 0 0;
+  letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cult-player__artist { font-size: 12px; color: #B4C0E0; margin: 2px 0 0; }
+
+.cult-player__seek { height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.10); overflow: hidden; margin-bottom: 16px; }
+.cult-player__seek-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3D5AFE, #F5C544); transition: width 0.25s linear; }
+
+.cult-player__controls { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.cult-player__ctrl {
+  display: grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: #E6ECFF;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.cult-player__ctrl:hover { background: rgba(61, 90, 254, 0.20); color: #FFFFFF; transform: translateY(-1px); }
+.cult-player__ctrl[aria-pressed="true"] { background: rgba(245, 197, 68, 0.16); color: #FFD86B; }
+.cult-player__ctrl--play {
+  width: 54px; height: 54px;
+  background: linear-gradient(135deg, #3D5AFE, #E11D48);
+  border-color: rgba(255, 233, 166, 0.40);
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(61, 90, 254, 0.40);
+}
+.cult-player__ctrl--play:hover { box-shadow: 0 12px 30px rgba(225, 29, 72, 0.45); }
+
+@media (max-width: 520px) {
+  .cult-player__panel { width: calc(100vw - 24px); }
+  .cult-player__orb { width: 54px; height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cult-player__orb--playing .cult-player__orb-ring,
+  .cult-player__orb--playing .cult-player__orb-icon { animation: none !important; }
+  .cult-player__panel { transition: none !important; }
+}

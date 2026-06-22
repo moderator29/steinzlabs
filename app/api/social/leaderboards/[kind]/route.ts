@@ -148,15 +148,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
       metric_label: METRIC_LABEL['new-users'],
     }));
   } else if (kind === 'max-tier') {
-    // §social-discovery — was `.eq('tier','max')` which excluded
-    // naka_cult tier holders. naka_cult is the apex tier above max
-    // (gated by holding 1.227M $NAKA or the Dev NFT); Chosen members
-    // ARE Max-tier members + more. Include both so the Max board
-    // actually represents every wallet that has Max-or-better access.
+    // The Max board lists Max-tier platform members. Cult membership is a
+    // separate entitlement now (a cult member can be on any tier), so it is
+    // no longer conflated with Max here.
     const { data } = await sb
       .from('profiles')
       .select('id, username, display_name, avatar_url, tier, verified_badge, is_chosen, created_at')
-      .in('tier', ['max', 'naka_cult'])
+      .eq('tier', 'max')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     rows = (data ?? []).map((p) => ({

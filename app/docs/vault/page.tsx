@@ -232,7 +232,7 @@ export default function VaultDocsPage() {
               <H3>What we provision for you</H3>
               <UL>
                 <li>An auto-generated Naka-username (rotatable from Profile → Edit).</li>
-                <li>A profile row scoped to <Code>profiles.tier = &apos;naka_cult&apos;</Code>.</li>
+                <li>A profile row with <Code>profiles.cult_member = true</Code>.</li>
                 <li>A separation between your <em>detection wallet</em> (the one we read balance from) and your
                   <em>trading wallet</em> (the one that signs swap transactions). One can be the other; they are not
                   required to be.</li>
