@@ -19,8 +19,9 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  * in a social_recommendations_dismissed table once the UI demands it.
  */
 
-// naka_cult grants Max-tier via the cult NFT, so it ranks alongside max.
-const TIER_RANK: Record<string, number> = { free: 0, mini: 1, pro: 2, max: 3, naka_cult: 3 };
+// Platform tiers only. NakaCult is a separate entitlement (NIPPO NFT -> cult
+// features), NOT a platform tier — a cult member keeps their own Free/Mini/Pro/Max.
+const TIER_RANK: Record<string, number> = { free: 0, mini: 1, pro: 2, max: 3 };
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
