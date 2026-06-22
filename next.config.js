@@ -8,10 +8,17 @@ try {
     silent: true,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
+    // SENTRY_AUTH_TOKEN powers source-map upload — without it the
+    // Sentry CLI silently no-ops and prod stack traces stay minified.
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    sourcemaps: {
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    },
   }, {
     widenClientFileUpload: true,
     transpileClientSDK: true,
     tunnelRoute: '/monitoring',
+    // Keep uploaded maps server-side; browsers still get minified bundles.
     hideSourceMaps: true,
     disableLogger: true,
   });
