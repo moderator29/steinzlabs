@@ -19,7 +19,8 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  * in a social_recommendations_dismissed table once the UI demands it.
  */
 
-const TIER_RANK: Record<string, number> = { free: 0, pro: 1, max: 2 };
+// naka_cult grants Max-tier via the cult NFT, so it ranks alongside max.
+const TIER_RANK: Record<string, number> = { free: 0, mini: 1, pro: 2, max: 3, naka_cult: 3 };
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -64,6 +65,13 @@ export async function GET(req: NextRequest) {
     .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
   const blocked = new Set((blocks ?? []).map((b) => (b.blocker_id === user.id ? b.blocked_id : b.blocker_id)));
 
+  // Muted set (one-directional — hide users the caller muted).
+  const { data: mutes } = await sb
+    .from('social_mutes')
+    .select('muted_id')
+    .eq('muter_id', user.id);
+  const muted = new Set((mutes ?? []).map((m) => m.muted_id));
+
   // 5. Candidate pool: high-success-rate users + recently-active users
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   type ProfileLite = { id: string; username: string | null; display_name: string | null; avatar_url: string | null; tier: string | null; verified_badge: string | null; is_chosen: boolean | null };
@@ -89,6 +97,7 @@ export async function GET(req: NextRequest) {
   candidateIds.delete(user.id);
   for (const id of myFollows) candidateIds.delete(id);
   for (const id of blocked) candidateIds.delete(id);
+  for (const id of muted) candidateIds.delete(id);
   for (const id of dismissed) candidateIds.delete(id);
 
   if (candidateIds.size === 0) return NextResponse.json({ users: [] });
