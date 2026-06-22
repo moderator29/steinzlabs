@@ -19,10 +19,10 @@ function sanitizeNumeric(n: unknown): string {
   return Math.min(v, 1e15).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-// withTierGate('pro') — DNA analysis calls Sonnet 4.6 (billable);
+// withTierGate('mini') — DNA analysis calls Sonnet 4.6 (billable);
 // the route had zero auth or rate-limit so a script could iterate
 // addresses and burn $150-300/day in Anthropic spend. Pro+ only now.
-export const POST = withTierGate('pro', async (request: NextRequest) => {
+export const POST = withTierGate('mini', async (request: NextRequest) => {
   try {
     const { walletAddress, holdings, totalBalance, txCount } = await request.json() as {
       walletAddress?: string;

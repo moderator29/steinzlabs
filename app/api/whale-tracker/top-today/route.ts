@@ -20,7 +20,7 @@ interface TopWhaleRow {
  * Enriches with known entity labels from the `whales` table (if seeded).
  * Pro+ only.
  */
-export const GET = withTierGate("pro", async (_request: NextRequest) => {
+export const GET = withTierGate("mini", async (_request: NextRequest) => {
   try {
     const rows = await cacheWithFallback<TopWhaleRow[]>("whale-tracker:top-today", 300, async () => {
       const admin = getSupabaseAdmin();

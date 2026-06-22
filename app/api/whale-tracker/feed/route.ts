@@ -49,7 +49,7 @@ const TIME_WINDOW_SECONDS: Record<string, number> = {
   "7d": 7 * 24 * 3600,
 };
 
-export const GET = withTierGate("pro", async (request: NextRequest) => {
+export const GET = withTierGate("mini", async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
   const chainsParam = sp.get("chains");
   const chains = chainsParam

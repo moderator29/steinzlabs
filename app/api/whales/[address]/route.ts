@@ -108,7 +108,7 @@ async function fetchLiveActivitySolana(address: string) {
   }
 }
 
-export const GET = withTierGate('pro', async (
+export const GET = withTierGate('mini', async (
   request: NextRequest,
   { params }: { params: Promise<{ address: string }> },
 ) => {

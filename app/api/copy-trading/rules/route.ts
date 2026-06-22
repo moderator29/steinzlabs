@@ -21,7 +21,7 @@ async function getSupabase() {
   );
 }
 
-export const GET = withTierGate("mini", async () => {
+export const GET = withTierGate("pro", async () => {
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,7 +56,7 @@ interface RuleBody {
   paused?: boolean;
 }
 
-export const POST = withTierGate("mini", async (request: NextRequest) => {
+export const POST = withTierGate("pro", async (request: NextRequest) => {
   const guard = await guardRoute(request, { rate: 'med' });
   if (!guard.ok) return guard.response;
   const supabase = await getSupabase();
@@ -91,7 +91,7 @@ export const POST = withTierGate("mini", async (request: NextRequest) => {
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   }
   // Tier gates: alerts_only is allowed at mini+, oneclick at pro+, auto_copy
-  // at max. The withTierGate("mini") wrapper enforces the floor; the
+  // at max. The withTierGate("pro") wrapper enforces the floor; the
   // per-mode upgrade is enforced via the user's profile tier.
   if (mode !== "alerts_only") {
     const { data: profile } = await supabase

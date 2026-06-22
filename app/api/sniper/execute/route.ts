@@ -48,7 +48,7 @@ const MAX_SNIPE_AMOUNT = 500;
  * authenticated session — never accepted from the request body, which
  * previously allowed cross-user execution-history pollution.
  */
-export const POST = withTierGate('pro', async (req: NextRequest) => {
+export const POST = withTierGate('max', async (req: NextRequest) => {
   const t0 = Date.now();
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();

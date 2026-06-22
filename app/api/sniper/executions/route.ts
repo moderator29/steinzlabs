@@ -23,7 +23,7 @@ async function getSupabase() {
   );
 }
 
-export const GET = withTierGate("pro", async (request: NextRequest) => {
+export const GET = withTierGate("max", async (request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
