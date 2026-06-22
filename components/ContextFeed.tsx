@@ -762,10 +762,15 @@ export default function ContextFeed() {
                 const c = sym ? convergence[sym] : undefined;
                 if (!c || c.wallet_count < 2) return null;
                 return (
-                  <div className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF]">
+                  <a
+                    href="/dashboard/security/portfolio-risk"
+                    className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF] hover:bg-[#0A1EFF]/15 hover:border-[#0A1EFF]/50"
+                    aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours — check portfolio risk`}
+                  >
                     <span aria-hidden>◈</span>
                     <span>{c.wallet_count} smart wallets bought ${sym} (24h)</span>
-                  </div>
+                    <span aria-hidden className="text-[#8FA3FF]/60">→ check holders</span>
+                  </a>
                 );
               })()}
 
