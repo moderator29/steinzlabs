@@ -1,7 +1,6 @@
 'use client';
 
-import { Shield, Search, AlertTriangle, Globe, Scan, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
-import BackButton from '@/components/ui/BackButton';
+import { Shield, Search, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
 import { SecurityHealthCard } from '@/components/security/SecurityHealthCard';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -132,19 +131,7 @@ export default function SecurityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
-        <div className="flex items-center gap-3 px-4 h-14">
-          <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
-            <Shield className="w-4 h-4" />
-          </div>
-          <h1 className="text-sm font-heading font-bold">Security Center</h1>
-          <span className="ms-auto px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg text-[9px] font-bold">VERIFIED</span>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4">
         {/* SC1 + SC2 + SC3: composite health score, HIBP breach banner,
             and the 2FA-enable CTA, all live above the existing token
             scanner. */}
@@ -585,7 +572,6 @@ export default function SecurityPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2, Unplug, ShieldCheck, AlertTriangle } from 'lucide-react';
-import BackButton from '@/components/ui/BackButton';
 import { useDisconnect, useAccount } from 'wagmi';
 
 /**
@@ -96,12 +95,11 @@ export default function ConnectedDappsPage() {
   };
 
   return (
-    <div className="min-h-screen text-white pb-20">
+    <div className="text-white">
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <div className="mb-4"><BackButton href="/dashboard/security" label="Security" /></div>
-        <h1 className="text-xl font-bold flex items-center gap-2 mb-1">
+        <h2 className="text-xl font-bold flex items-center gap-2 mb-1">
           <ShieldCheck className="w-5 h-5 text-emerald-300" /> Connected dApps
-        </h1>
+        </h2>
         <p className="text-sm text-slate-400 mb-6">Every WalletConnect session your wallet currently has open. Revoke any you don&apos;t recognise.</p>
 
         {!isConnected && (
