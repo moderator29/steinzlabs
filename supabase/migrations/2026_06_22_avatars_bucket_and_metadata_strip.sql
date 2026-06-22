@@ -49,6 +49,12 @@ WHERE raw_user_meta_data->>'avatar_url' LIKE 'data:%';
 UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'cover_url'
 WHERE raw_user_meta_data->>'cover_url' LIKE 'data:%';
 
+-- ── 3. profiles.cover_url ────────────────────────────────────────────────────
+-- Only avatar_url existed; add cover_url so cover images persist and are
+-- queryable by social / public-profile surfaces (the upload code now writes
+-- both the avatar and cover URL straight to profiles).
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS cover_url text;
+
 -- Mirror table cleanup (profiles.avatar_url got the base64 copied in by the
 -- handle_new_user trigger). Doesn't affect the 494 — profiles isn't in the
 -- session — but keeps the rows from carrying 300KB blobs.

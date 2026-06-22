@@ -543,6 +543,9 @@ export default function ProfileTab() {
       setLocal(url);
       try { localStorage.setItem(lsKey, url); } catch { /* localStorage unavailable — silently ignore */ }
       await supabase.auth.updateUser({ data: { [metaKey]: url } });
+      // Mirror the URL to the profiles table so it persists and shows on social
+      // / public-profile cards (user_metadata alone isn't queryable by others).
+      try { await supabase.from('profiles').update({ [metaKey]: url }).eq('id', user.id); } catch { /* non-fatal — metadata already holds it */ }
       setEditError('');
     } catch (err) {
       console.error(`[ProfileTab] ${kind} upload failed:`, err);
