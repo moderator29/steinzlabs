@@ -169,7 +169,20 @@ export async function GET(req: NextRequest) {
         .filter((v) => typeof v === 'number' && v > 0);
     } catch { /* fall back to the synthetic series below */ }
 
-    const series = realPoints.length > 1 ? realPoints : points;
+    // Chart source priority: Birdeye OHLC (real candles) -> CoinGecko (for the
+    // majors it covers) -> the synthetic %-reconstruction as a last resort.
+    let series = points;
+    let chartSource = 'dexscreener';
+    if (realPoints.length > 1) {
+      series = realPoints;
+      chartSource = 'birdeye';
+    } else {
+      const cgSymbol = symbol || pair.baseToken?.symbol;
+      if (cgSymbol) {
+        const cg = await fetchCoinGeckoChart(cgSymbol, tf);
+        if (cg && cg.points.length > 1) { series = cg.points; chartSource = 'coingecko'; }
+      }
+    }
     const first = series[0] ?? price;
     const last = series[series.length - 1] ?? price;
     const changePct = first ? ((last - first) / first) * 100 : 0;
@@ -178,7 +191,7 @@ export async function GET(req: NextRequest) {
     const data = {
       points: series,
       changePct,
-      source: realPoints.length > 1 ? 'birdeye' : 'dexscreener',
+      source: chartSource,
       price,
       change24h: changes.h24 ?? 0,
       volume24h: pair.volume?.h24 ?? 0,
