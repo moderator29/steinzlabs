@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { MicroBar } from '@/components/charts/MicroChart';
 import { formatLargeNumber } from '@/lib/formatters';
 import { Zap, RefreshCw } from 'lucide-react';
 
@@ -90,16 +90,14 @@ export default function FeatureUsagePage() {
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-white mb-4">Usage by Feature</h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={features} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-                <XAxis type="number" tick={{ fontSize: 9, fill: '#6B7280' }} tickFormatter={v => formatLargeNumber(v)} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#6B7280' }} width={120} />
-                <Tooltip formatter={(v: number) => formatLargeNumber(v)} contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-                <Bar dataKey="usage_count" fill="#0A1EFF" radius={[0, 2, 2, 0]} name="Usage" />
-                <Bar dataKey="unique_users" fill="#7C3AED" radius={[0, 2, 2, 0]} name="Unique users" />
-              </BarChart>
-            </ResponsiveContainer>
+            <MicroBar
+              data={features}
+              xKey="name"
+              yKey="usage_count"
+              color="#0A1EFF"
+              height={240}
+              formatY={(v) => formatLargeNumber(v)}
+            />
           </div>
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">

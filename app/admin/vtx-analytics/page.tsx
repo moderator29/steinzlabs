@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { MicroBar } from '@/components/charts/MicroChart';
 import { Brain, RefreshCw, Users } from 'lucide-react';
 import { formatLargeNumber } from '@/lib/formatters';
 
@@ -102,15 +102,7 @@ export default function VtxAnalyticsPage() {
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-white mb-4">Top Users by Query Count (30d)</h3>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={chartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => formatLargeNumber(v)} />
-                  <YAxis type="category" dataKey="user" tick={{ fontSize: 9, fill: '#6B7280' }} width={100} />
-                  <Tooltip formatter={(v: number) => formatLargeNumber(v)} contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-                  <Bar dataKey="count" fill="#0A1EFF" radius={[0, 2, 2, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <MicroBar data={chartData} xKey="user" yKey="count" color="#0A1EFF" height={240} formatY={(v) => formatLargeNumber(v)} />
             ) : (
               <div className="text-xs text-gray-500 py-6 text-center">No top user data available</div>
             )}
