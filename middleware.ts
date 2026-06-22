@@ -24,11 +24,25 @@ const COOKIE_BUDGET_BYTES = 8 * 1024; // 8KB — well under the Vercel edge head
 // lives in cookies (we use localStorage for wallets, preferences, chat
 // history), so nothing important is lost.
 function clearAllCookies(request: NextRequest, response: NextResponse) {
+  // A cookie can only be deleted by a Set-Cookie whose (name, path, domain)
+  // EXACTLY matches how it was written. Auth chunks have been written across
+  // several variants over time (host-only, explicit host, leading-dot, and the
+  // registrable apex), so fan the deletion across every plausible domain on
+  // path '/'. Crucially this is a SERVER-side Set-Cookie sweep, so unlike the
+  // /auth/clear page's document.cookie clear it CAN evict httpOnly cookies.
+  const host = request.nextUrl.hostname;
+  const registrable = host.split('.').slice(-2).join('.'); // e.g. nakalabs.xyz
+  const domains: (string | undefined)[] = Array.from(
+    new Set([undefined, host, `.${host}`, registrable, `.${registrable}`]),
+  );
   for (const c of request.cookies.getAll()) {
-    response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0 });
-    // Also clear on bare domain + leading-dot domain so pre-deploy chunks
-    // written against alternate host variants don't survive the sweep.
-    response.cookies.set({ name: c.name, value: '', path: '/', maxAge: 0, domain: request.nextUrl.hostname });
+    for (const domain of domains) {
+      response.cookies.set(
+        domain
+          ? { name: c.name, value: '', path: '/', maxAge: 0, domain }
+          : { name: c.name, value: '', path: '/', maxAge: 0 },
+      );
+    }
   }
 }
 
@@ -54,11 +68,25 @@ export async function middleware(request: NextRequest) {
   const isAdminRoute = path.startsWith('/admin');
   const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
+  // /auth/clear is the recovery hatch for cookie overflow. Clear EVERY cookie
+  // SERVER-SIDE here: a Set-Cookie deletion (unlike the page's document.cookie
+  // JS) can evict httpOnly cookies — which is exactly what stale pre-fix auth
+  // chunks are. Without this, the JS-only clear page could never remove
+  // httpOnly shards, so users stayed permanently stuck behind the 494. We then
+  // continue (no redirect) so the page also runs its own localStorage/JS sweep.
+  // Caveat: this only helps once the request is UNDER the ~32KB edge ceiling;
+  // past it the edge 494s before middleware runs and only a manual browser
+  // "clear site data" recovers — there is no code path the edge will execute.
+  if (path === '/auth/clear') {
+    const resp = NextResponse.next();
+    clearAllCookies(request, resp);
+    return applyHeaders(resp);
+  }
+
   // Pre-flight: if the cookie header is anywhere near the Vercel edge
   // ceiling, nuke the jar and redirect to /auth/clear. Except we don't
-  // want to loop — /auth/clear itself is exempt, otherwise a user whose
-  // incoming cookies still haven't been committed by the browser yet
-  // would bounce back here forever.
+  // want to loop — /auth/clear itself is handled above (server-clear +
+  // continue), so it never re-enters this guard.
   const cookieHeader = request.headers.get('cookie') || '';
   if (cookieHeader.length > COOKIE_BUDGET_BYTES && path !== '/auth/clear') {
     const url = request.nextUrl.clone();
