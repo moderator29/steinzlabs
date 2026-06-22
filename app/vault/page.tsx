@@ -5,6 +5,7 @@ import { ConclaveSigil } from '@/components/vault/sigils/ConclaveSigil';
 import { OracleSigil } from '@/components/vault/sigils/OracleSigil';
 import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
 import { VaultEntryGateway } from './VaultEntryGateway';
+import { MessagesSquare, Gift, TrendingUp, Radar, Rocket } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -79,6 +80,49 @@ export default async function VaultPage() {
           sigil={<SanctumSigil size={88} />}
           comingSoon
         />
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 pb-6">
+        <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B4C0E0]">
+          THE COMMONS
+        </p>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <ChamberPortal
+            href="/vault/ape"
+            name="Ape or Nope"
+            tagline="Instinct"
+            description="A trending coin a day — call it, build your streak. 🚀💀"
+            sigil={<Rocket size={64} className="text-emerald-300" />}
+          />
+          <ChamberPortal
+            href="/vault/hall"
+            name="The Hall"
+            tagline="Voice"
+            description="Members-only live chat. Identity-based, real time."
+            sigil={<MessagesSquare size={64} className="text-[#9FB8FF]" />}
+          />
+          <ChamberPortal
+            href="/vault/offering"
+            name="The Offering"
+            tagline="Spoils"
+            description="Treasury-funded raffles and rewards you enter."
+            sigil={<Gift size={64} className="text-[#FFD86B]" />}
+          />
+          <ChamberPortal
+            href="/vault/conviction"
+            name="Conviction Board"
+            tagline="Reputation"
+            description="Post calls, get scored, climb the leaderboard."
+            sigil={<TrendingUp size={64} className="text-emerald-300" />}
+          />
+          <ChamberPortal
+            href="/vault/pulse"
+            name="Signal Pulse"
+            tagline="Signal"
+            description="A cult-only on-chain signal stream, before the crowd."
+            sigil={<Radar size={64} className="text-[#9FB8FF]" />}
+          />
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-16">

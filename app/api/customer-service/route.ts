@@ -22,8 +22,6 @@ DNA ANALYZER (/dashboard/dna-analyzer): Deep-dive token analysis — fundamental
 
 MARKET + TRADING TERMINAL (/dashboard/market): Token list. Click any coin to open /dashboard/market/[chain]/[address] — the unified trading terminal with professional charts, multiple timeframes, order placement, position management. (Replaces the retired /dashboard/trading-suite.)
 
-PREDICTIONS MARKET (/dashboard/predictions): Community price predictions. Create predictions, vote, submit proof, climb leaderboard.
-
 SWAP (/dashboard/swap): Quick token swap interface.
 
 SMART MONEY (/dashboard/smart-money): Track institutional and top trader wallet activity.
@@ -69,9 +67,6 @@ A: Ethereum, Solana, BNB Chain, Polygon, Arbitrum, Optimism, Avalanche, Base, Fa
 
 Q: How do I check if a token is safe?
 A: Go to Security Center (/dashboard/security), paste the contract address, select the chain, and scan. It checks for honeypots, taxes, owner privileges, and more.
-
-Q: How do predictions work?
-A: Go to Predictions (/dashboard/predictions), create a prediction with a target price and deadline. Other users can vote. Submit proof via TradingView screenshots when resolved.
 
 Q: How do I cancel my subscription?
 A: Go to Profile > Settings and click "Manage Subscription". Cancel anytime with one click. No hidden fees.

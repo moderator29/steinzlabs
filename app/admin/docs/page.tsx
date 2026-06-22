@@ -706,7 +706,7 @@ export default function AdminDocsPage() {
                 <ul className="list-disc ps-5 mt-1">
                   <li>Verifies the signature recovers the claimed address.</li>
                   <li>Calls Alchemy <Code>alchemy_getTokenBalances</Code> for the NAKA contract.</li>
-                  <li>If balance &ge; 1,227,000 NAKA, sets <Code>profiles.tier = &apos;naka_cult&apos;</Code> and
+                  <li>If balance &ge; 1,227,000 NAKA, sets <Code>profiles.cult_member = true</Code> and
                     stores the address as the detection wallet.</li>
                 </ul>
               </li>
