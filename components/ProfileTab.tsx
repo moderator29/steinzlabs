@@ -520,46 +520,48 @@ export default function ProfileTab() {
     }
   }, [user]);
 
+  // Uploads to the public `avatars` Storage bucket and persists ONLY the short
+  // public URL to user_metadata. Never store the base64 data-URL in
+  // user_metadata: it rides inside the session cookie, and a single image blew
+  // the cookie past Vercel's edge header limit, 494-ing every request. See
+  // migration 2026_06_22_avatars_bucket_and_metadata_strip.sql.
+  const uploadProfileImage = async (file: File, kind: 'avatar' | 'cover') => {
+    if (!supabase || !user?.id) { setEditError('Sign in to upload an image'); return; }
+    const setLocal = kind === 'avatar' ? setAvatarUrl : setCoverUrl;
+    const metaKey = kind === 'avatar' ? 'avatar_url' : 'cover_url';
+    const lsKey = kind === 'avatar' ? 'steinz_avatar_url' : 'steinz_cover_url';
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+    const path = `${user.id}/${kind}.${ext}`;
+    try {
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      // Cache-bust so a re-upload to the same path shows immediately.
+      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      setLocal(url);
+      try { localStorage.setItem(lsKey, url); } catch { /* localStorage unavailable — silently ignore */ }
+      await supabase.auth.updateUser({ data: { [metaKey]: url } });
+      setEditError('');
+    } catch (err) {
+      console.error(`[ProfileTab] ${kind} upload failed:`, err);
+      setEditError('Image upload failed. Please try again.');
+    }
+  };
+
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { setEditError('Image must be under 2MB'); return; }
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const url = ev.target?.result as string;
-      setAvatarUrl(url);
-      try { localStorage.setItem('steinz_avatar_url', url); } catch { /* localStorage unavailable — silently ignore */ }
-      // Persist to Supabase user_metadata so it works across all devices/URLs
-      try {
-        if (supabase) {
-          await supabase.auth.updateUser({ data: { avatar_url: url } });
-        }
-      } catch (err) {
-        console.error('[ProfileTab] Persist avatar to Supabase failed:', err);
-      }
-    };
-    reader.readAsDataURL(file);
+    void uploadProfileImage(file, 'avatar');
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) { setEditError('Cover image must be under 4MB'); return; }
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const url = ev.target?.result as string;
-      setCoverUrl(url);
-      try { localStorage.setItem('steinz_cover_url', url); } catch { /* localStorage unavailable — silently ignore */ }
-      // Persist to Supabase user_metadata so it works across all devices/URLs
-      try {
-        if (supabase) {
-          await supabase.auth.updateUser({ data: { cover_url: url } });
-        }
-      } catch (err) {
-        console.error('[ProfileTab] Persist cover to Supabase failed:', err);
-      }
-    };
-    reader.readAsDataURL(file);
+    void uploadProfileImage(file, 'cover');
   };
 
   const handleSaveProfile = async () => {
