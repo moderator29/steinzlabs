@@ -333,7 +333,17 @@ async function buildSolContractIntelligence(
   let holders: ContractHolder[] = [];
 
   if (birdeyeHolders.length > 0) {
-    const totalSupply = birdeyeHolders.reduce((s, h) => s + h.uiAmount, 0) || 1;
+    // Percentages must be share-of-supply, not share-of-fetched-holders.
+    // Circulating supply = marketCap / price (by definition). Fall back to the
+    // sum of fetched holders only when we can't derive real supply.
+    const derivedSupply =
+      birdeye && birdeye.price > 0 && birdeye.marketCap > 0
+        ? birdeye.marketCap / birdeye.price
+        : 0;
+    const totalSupply =
+      derivedSupply > 0
+        ? derivedSupply
+        : birdeyeHolders.reduce((s, h) => s + h.uiAmount, 0) || 1;
     holders = birdeyeHolders
       .filter(h => h.uiAmount > 0)
       .map(h => {
