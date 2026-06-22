@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { getBirdeyeOHLCV } from '@/lib/services/birdeye';
 
 // FIX 5A.1 / Phase 5: returns a short price history for the VTX inline token card's chart.
 // Uses DexScreener pair m5 candles (free, no API key) for on-chain tokens.
@@ -154,19 +155,39 @@ export async function GET(req: NextRequest) {
       points.push(price);
     }
 
-    const first = points[0] ?? price;
-    const last = points[points.length - 1] ?? price;
+    // Real OHLC candles from Birdeye replace the crude %-reconstruction with
+    // an actual price series. Falls back to the synthetic `points` only when
+    // Birdeye has no data for this token/chain.
+    let realPoints: number[] = [];
+    try {
+      const tfType = tf === '7d' ? '4H' : '1H';
+      const tail = tf === '7d' ? 42 : tf === '1h' ? 6 : 24;
+      const ohlcv = await getBirdeyeOHLCV(address, tfType, 200, chain || 'solana');
+      realPoints = ohlcv
+        .slice(-tail)
+        .map((c) => c.close)
+        .filter((v) => typeof v === 'number' && v > 0);
+    } catch { /* fall back to the synthetic series below */ }
+
+    const series = realPoints.length > 1 ? realPoints : points;
+    const first = series[0] ?? price;
+    const last = series[series.length - 1] ?? price;
     const changePct = first ? ((last - first) / first) * 100 : 0;
 
+    const marketCap = pair.marketCap ?? pair.fdv ?? 0;
     const data = {
-      points,
+      points: series,
       changePct,
-      source: 'dexscreener',
+      source: realPoints.length > 1 ? 'birdeye' : 'dexscreener',
       price,
       change24h: changes.h24 ?? 0,
       volume24h: pair.volume?.h24 ?? 0,
       liquidity: pair.liquidity?.usd ?? 0,
-      marketCap: pair.marketCap ?? pair.fdv ?? 0,
+      marketCap,
+      fdv: pair.fdv ?? 0,
+      // Circulating supply implied by marketCap / price (no fabricated number;
+      // null when we can't derive it cleanly).
+      supply: price > 0 && marketCap > 0 ? marketCap / price : null,
       symbol: pair.baseToken?.symbol,
       name: pair.baseToken?.name,
       chain: pair.chainId,
