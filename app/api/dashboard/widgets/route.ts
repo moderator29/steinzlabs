@@ -17,6 +17,32 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 export const runtime = 'nodejs';
 
 const VALID_WIDGETS = ['hero', 'digest', 'markets', 'gainers', 'heating', 'context-feed', 'top-gainers'] as const;
+type Widget = typeof VALID_WIDGETS[number];
+
+// Stored shape evolves from string[] (Session U) to { order, hidden }
+// to support show/hide per widget. Reads accept either shape; writes
+// always emit the new object form.
+interface StoredWidgets {
+  order: Widget[];
+  hidden: Widget[];
+}
+
+function isWidget(s: unknown): s is Widget {
+  return typeof s === 'string' && (VALID_WIDGETS as readonly string[]).includes(s);
+}
+
+function normaliseStored(raw: unknown): StoredWidgets {
+  if (Array.isArray(raw)) {
+    return { order: raw.filter(isWidget), hidden: [] };
+  }
+  if (raw && typeof raw === 'object') {
+    const obj = raw as { order?: unknown; hidden?: unknown };
+    const order = Array.isArray(obj.order) ? obj.order.filter(isWidget) : [];
+    const hidden = Array.isArray(obj.hidden) ? obj.hidden.filter(isWidget) : [];
+    return { order, hidden };
+  }
+  return { order: [], hidden: [] };
+}
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -45,17 +71,27 @@ export async function GET(_req: NextRequest) {
     .eq('user_id', user.id)
     .maybeSingle<{ preferences: { dashboard_widgets?: unknown } | null }>();
 
-  const stored = data?.preferences?.dashboard_widgets;
-  const widgets = Array.isArray(stored)
-    ? stored.filter((s): s is string => typeof s === 'string')
-    : [];
+  const normalised = normaliseStored(data?.preferences?.dashboard_widgets);
 
-  return NextResponse.json({ widgets, supported: VALID_WIDGETS });
+  return NextResponse.json({
+    // `widgets` kept for backward compat with any client still reading
+    // the flat array shape; `order` + `hidden` are the new canonical fields.
+    widgets: normalised.order,
+    order: normalised.order,
+    hidden: normalised.hidden,
+    supported: VALID_WIDGETS,
+  });
 }
 
-const PatchBody = z.object({
-  widgets: z.array(z.enum(VALID_WIDGETS)).max(20),
-});
+const PatchBody = z.union([
+  // Legacy: flat array of slugs (order only, hidden defaults to []).
+  z.object({ widgets: z.array(z.enum(VALID_WIDGETS)).max(20) }),
+  // New: explicit order + hidden lists.
+  z.object({
+    order: z.array(z.enum(VALID_WIDGETS)).max(20),
+    hidden: z.array(z.enum(VALID_WIDGETS)).max(20).optional(),
+  }),
+]);
 
 export async function PATCH(req: NextRequest) {
   const supabase = await getSupabase();
@@ -67,6 +103,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload', details: parsed.error.issues }, { status: 400 });
   }
 
+  const incoming: StoredWidgets = 'widgets' in parsed.data
+    ? { order: parsed.data.widgets as Widget[], hidden: [] }
+    : { order: parsed.data.order as Widget[], hidden: (parsed.data.hidden ?? []) as Widget[] };
+
   const admin = getSupabaseAdmin();
   // Read-modify-write so we don't clobber any other keys in the
   // preferences blob (muted_feed_sources from Branch 19 etc).
@@ -75,12 +115,12 @@ export async function PATCH(req: NextRequest) {
     .select('preferences')
     .eq('user_id', user.id)
     .maybeSingle<{ preferences: Record<string, unknown> | null }>();
-  const next = { ...(row?.preferences ?? {}), dashboard_widgets: parsed.data.widgets };
+  const next = { ...(row?.preferences ?? {}), dashboard_widgets: incoming };
 
   const { error } = await admin
     .from('user_preferences')
     .upsert({ user_id: user.id, preferences: next, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, widgets: parsed.data.widgets });
+  return NextResponse.json({ ok: true, order: incoming.order, hidden: incoming.hidden });
 }

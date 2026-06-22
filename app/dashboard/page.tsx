@@ -24,10 +24,8 @@ import NotificationBell from '@/components/NotificationBell';
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
 // Dominance / Chains Tracked.
-import { PersonalizedHome } from '@/components/dashboard/PersonalizedHome';
 import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
-import { PortfolioHeroCard } from '@/components/dashboard/PortfolioHeroCard';
-import { SinceLastLoginDigest } from '@/components/dashboard/SinceLastLoginDigest';
+import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
@@ -421,14 +419,12 @@ export default function Dashboard() {
       if (activeTab === 'markets') return <MarketDashboard />;
       if (activeTab === 'context') return <ContextFeed />;
       return (
-        <>
-          {/* OV1 + OV2: above-fold portfolio hero + since-last-login digest.
-              Both self-hide when there's nothing to show (no wallets / no
-              prior login / no diff), so existing users get the same dashboard. */}
-          <PortfolioHeroCard />
-          <SinceLastLoginDigest />
-          <PersonalizedHome />
-        </>
+        // OV3: widget order honours the user's saved preference from
+        // /api/dashboard/widgets. Each widget retains its own self-hide
+        // logic (PortfolioHeroCard returns null for no-wallets users,
+        // SinceLastLoginDigest hides on first-ever visit, etc.) so the
+        // dashboard stays clean for fresh accounts.
+        <RenderWidgets />
       );
     }
     if (activeNav === 'vtxai') return <VtxAiTab />;

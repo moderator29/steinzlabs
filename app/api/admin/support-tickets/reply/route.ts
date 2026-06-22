@@ -1,18 +1,25 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
+
+const Body = z.object({
+  ticketId: z.string().min(1).max(64),
+  body: z.string().min(1).max(8_000),
+});
 
 export async function POST(request: Request) {
   const adminId = await verifyAdminRequest(request);
   if (!adminId) return unauthorizedResponse();
 
   try {
-    const { ticketId, body: replyBody } = await request.json();
-    if (!ticketId || !replyBody?.trim()) {
-      return NextResponse.json({ error: 'Missing ticketId or body' }, { status: 400 });
+    const parsed = Body.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
     }
+    const { ticketId, body: replyBody } = parsed.data;
 
     const supabase = getSupabaseAdmin();
 

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Admin → NakaCult overview stats. Returns the live threshold + a
- * member count from profiles where tier = 'naka_cult'. Admin-gated.
+ * member count from profiles where cult_member = true. Admin-gated.
  */
 
 const THRESHOLD = Number(process.env.NAKA_HOLDING_THRESHOLD ?? '1227000');
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const { count: totalMembers, error } = await supabase
     .from('profiles')
     .select('id', { count: 'exact', head: true })
-    .eq('tier', 'naka_cult');
+    .eq('cult_member', true);
 
   if (error) {
     return NextResponse.json(

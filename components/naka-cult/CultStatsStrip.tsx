@@ -52,7 +52,7 @@ async function loadStats(): Promise<Stat[]> {
     const { count } = await db
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('tier', 'naka_cult');
+      .eq('cult_member', true);
     memberCount = count ?? null;
   } catch { /* graceful empty */ }
 
