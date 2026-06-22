@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { verifyAdminRequest as verifyAdmin } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { logAdminAction } from '@/lib/admin/auditLog';
+
+const SettingsBody = z.object({
+  flags: z.record(z.string().min(1).max(120), z.boolean()),
+});
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const adminId = await verifyAdmin(request);
@@ -9,14 +14,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let flags: Record<string, boolean>;
-  try {
-    const body = await request.json() as { flags: Record<string, boolean> };
-    flags = body.flags;
-    if (!flags || typeof flags !== 'object') throw new Error('Invalid flags');
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  const raw = await request.json().catch(() => null);
+  const parsed = SettingsBody.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
   }
+  const { flags } = parsed.data;
 
   try {
     const supabase = getSupabaseAdmin();
