@@ -1916,6 +1916,7 @@ export default function SwapPage() {
                 loading={tokenSecurityLoading}
                 priceImpact={pi}
                 slippagePct={parseFloat(slippage) || 0}
+                tokenAddress={getTokenAddresses(fromToken, toToken, chain).buyToken}
               />
 
               <div className="flex gap-2">

@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertTriangle, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, ShieldAlert, Loader2, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 export interface SwapSecurityBlockerInput {
   /** GoPlus / Naka security summary for the destination token. */
@@ -18,6 +19,9 @@ export interface SwapSecurityBlockerInput {
   priceImpact: number;
   /** Slippage tolerance the user set, in % (e.g. 1, 5, 50). */
   slippagePct: number;
+  /** Destination token contract address — deep-links the "View full report"
+   *  CTA into /dashboard/security/wallet-analysis with the token prefilled. */
+  tokenAddress?: string;
 }
 
 /**
@@ -49,8 +53,12 @@ export function shouldBlockSwap(input: SwapSecurityBlockerInput): {
 }
 
 export function SwapSecurityWarnings(props: SwapSecurityBlockerInput) {
-  const { data, loading, priceImpact, slippagePct } = props;
+  const { data, loading, slippagePct, tokenAddress } = props;
   const { blocking, reason } = shouldBlockSwap(props);
+
+  const detailsHref = tokenAddress
+    ? `/dashboard/security/wallet-analysis?address=${encodeURIComponent(tokenAddress)}`
+    : '/dashboard/security/wallet-analysis';
 
   if (loading) {
     return (
@@ -89,8 +97,11 @@ export function SwapSecurityWarnings(props: SwapSecurityBlockerInput) {
   if (items.length === 0 && data && data.safetyLevel === 'SAFE') {
     return (
       <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 border border-emerald-500/20 bg-emerald-500/[0.04] text-[11px] text-emerald-300">
-        <ShieldCheck className="w-3.5 h-3.5" /> Security checks passed.
+        <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" /> Security checks passed.
         <span className="ms-auto text-emerald-500/70">Buy {((data.buyTax ?? 0) * 100).toFixed(1)}% · Sell {((data.sellTax ?? 0) * 100).toFixed(1)}%</span>
+        <Link href={detailsHref} className="text-emerald-200 hover:text-white inline-flex items-center gap-1 ms-2" title="Open the full Security Center report">
+          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+        </Link>
       </div>
     );
   }
@@ -106,11 +117,18 @@ export function SwapSecurityWarnings(props: SwapSecurityBlockerInput) {
         const iconColor = tone === 'block' ? 'text-red-400' : 'text-amber-400';
         return (
           <div key={i} className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border ${bg}`}>
-            <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${iconColor}`} />
+            <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${iconColor}`} aria-hidden="true" />
             <div className="text-[11px] leading-snug">{item.label}</div>
           </div>
         );
       })}
+      <Link
+        href={detailsHref}
+        className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white"
+      >
+        <ExternalLink className="w-3 h-3" aria-hidden="true" />
+        View full security details
+      </Link>
     </div>
   );
 }
