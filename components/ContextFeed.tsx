@@ -28,6 +28,12 @@ function ArchiveIcon({ className = 'w-4 h-4' }: { className?: string }) {
 
 type FeedMode = ChainFilter | 'archive';
 
+// CF4 — DOM cap. Keep the rendered feed bounded so heavy SSE traffic
+// can't push the live list into thousands of DOM nodes (which was
+// killing scroll perf at >400 events). Cursor pagination + Archive tab
+// own deep history; this is the live window only.
+const VIRTUAL_CAP = 80;
+
 const CHAIN_TABS: { id: FeedMode; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
   { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#0A1EFF', gradient: 'from-[#0A1EFF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
@@ -676,7 +682,12 @@ export default function ContextFeed() {
           )}
         </div>
       ) : (
-        displayEvents.map((event, i) => {
+        // CF4: cap rendered cards to keep DOM bounded under heavy SSE
+        // load. Cursor pagination (Branch 19) still controls what enters
+        // displayEvents from the server; this slice keeps the DOM cost
+        // capped regardless of how aggressive the upstream pagination is.
+        // Owner-facing deep history lives in the Archive tab.
+        displayEvents.slice(0, VIRTUAL_CAP).map((event, i) => {
           const isPositive = event.sentiment === 'BULLISH';
           const isNegative = event.sentiment === 'BEARISH';
           const sentimentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#F59E0B';
@@ -901,6 +912,13 @@ export default function ContextFeed() {
             </div>
           );
         })
+      )}
+
+      {displayEvents.length > VIRTUAL_CAP && (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center text-[11px] text-gray-400">
+          Showing the {VIRTUAL_CAP} most recent of {displayEvents.length.toLocaleString()} events.
+          Older items live in the Archive tab.
+        </div>
       )}
 
       {shareEvent && (
