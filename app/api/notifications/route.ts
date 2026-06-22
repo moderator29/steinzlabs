@@ -129,7 +129,7 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
     );
     let query = adminClient
       .from('notifications')
-      .select('id, type, title, message, read, created_at, metadata')
+      .select('id, type, title, body, read, created_at, metadata')
       .order('created_at', { ascending: false })
       .limit(50);
     if (userId) query = query.eq('user_id', userId);
@@ -139,7 +139,7 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
       id: `sb-${row.id}`,
       type: row.type as NotificationItem['type'],
       title: String(row.title),
-      message: String(row.message),
+      message: String(row.body),
       time: timeAgo(new Date(String(row.created_at || Date.now()))),
       read: (row.read as boolean) ?? false,
       createdAt: String(row.created_at),
@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
         }
         const persistedMetadata = eventId ? { ...(metadata || {}), event_id: String(eventId) } : metadata || {};
         const { data, error } = await adminClient.from('notifications')
-          .insert([{ user_id: body.userId || null, type, title, message, read: false, created_at: now, metadata: persistedMetadata }])
+          .insert([{ user_id: body.userId || null, type, title, body: message, read: false, created_at: now, metadata: persistedMetadata }])
           .select('id').single();
         if (!error && data) { supabaseId = data.id; notification.id = `sb-${data.id}`; }
       }

@@ -97,7 +97,7 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
     user_id: payload.user_id,
     type: payload.type ?? 'alert',
     title: payload.title,
-    message: payload.message,
+    body: payload.message,
     metadata: payload.metadata ?? {},
     read: false,
   });

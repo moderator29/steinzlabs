@@ -47,6 +47,14 @@ const TITLE: Record<SocialEvent, string> = {
   mentioned:      'Mentioned you',
 };
 
+// notifications.body is NOT NULL — every insert must supply it.
+const BODY: Record<SocialEvent, string> = {
+  new_follower:   'Someone started following you.',
+  follow_request: 'Someone requested to follow you.',
+  dm_received:    'You received a new message.',
+  mentioned:      'Someone mentioned you.',
+};
+
 export async function notifySocialEvent({ recipient_id, event, metadata }: NotifyInput): Promise<void> {
   const sb = getSupabaseAdmin();
   // Honor the per-event toggle on social_notification_preferences. If
@@ -72,6 +80,7 @@ export async function notifySocialEvent({ recipient_id, event, metadata }: Notif
     user_id: recipient_id,
     type: `social.${event}`,
     title: TITLE[event],
+    body: BODY[event],
     metadata: metadata ?? {},
     read: false,
   });
