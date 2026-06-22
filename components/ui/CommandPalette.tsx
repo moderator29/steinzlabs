@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X } from 'lucide-react';
+import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 /**
  * Naka ⌘K command palette. Linear / Notion / Vercel-style global
@@ -60,6 +61,7 @@ export function CommandPalette({ items = DEFAULT_ITEMS, hotkey = 'k' }: CommandP
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const trapRef = useFocusTrap<HTMLDivElement>(open, () => setOpen(false));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,6 +110,7 @@ export function CommandPalette({ items = DEFAULT_ITEMS, hotkey = 'k' }: CommandP
       onClick={() => setOpen(false)}
     >
       <div
+        ref={trapRef}
         className="w-full max-w-xl rounded-2xl bg-[#0F1320] border border-white/10 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
