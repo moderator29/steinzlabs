@@ -61,8 +61,13 @@ export async function POST(req: NextRequest) {
   const isUserA = pair.user_a_id === user.id;
   const sb = getSupabaseAdmin();
 
-  // Upsert so reopening a conversation re-uses the same row + keys.
-  const { data, error } = await sb
+  // Insert the conversation only if it does not exist yet. ignoreDuplicates
+  // (ON CONFLICT DO NOTHING) means an existing row KEEPS its original keys —
+  // reopening a thread must never overwrite the conversation key, or every
+  // message sent under the old key becomes permanently undecryptable. (The
+  // previous upsert used ignoreDuplicates:false, which UPDATEd the keys on
+  // every open and silently destroyed history.)
+  const { error: insertError } = await sb
     .from('dm_conversations')
     .upsert(
       {
@@ -71,11 +76,21 @@ export async function POST(req: NextRequest) {
         conversation_key_a: isUserA ? parsed.data.sealed_key_self : parsed.data.sealed_key_peer,
         conversation_key_b: isUserA ? parsed.data.sealed_key_peer : parsed.data.sealed_key_self,
       },
-      { onConflict: 'user_a_id,user_b_id', ignoreDuplicates: false },
-    )
+      { onConflict: 'user_a_id,user_b_id', ignoreDuplicates: true },
+    );
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // Read back the authoritative stored keys: the original ones if the row
+  // already existed, the just-inserted ones for a brand-new conversation.
+  const { data, error } = await sb
+    .from('dm_conversations')
     .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, created_at, last_message_at')
+    .eq('user_a_id', pair.user_a_id)
+    .eq('user_b_id', pair.user_b_id)
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message ?? 'Conversation lookup failed' }, { status: 500 });
+  }
   return NextResponse.json({
     id: data.id,
     peer_id: parsed.data.peer_id,
