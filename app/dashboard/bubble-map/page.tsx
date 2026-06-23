@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as d3 from 'd3';
 import {
   Search, Send, Bot, Copy, Check, User,
@@ -380,8 +380,10 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function BubbleMapPage() {
+function BubbleMapInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkDone = useRef(false);
   const [tokenAddress, setTokenAddress] = useState('');
   const [chain, setChain] = useState('solana');
   const [mode, setMode] = useState<ViewMode>('holders');
@@ -434,6 +436,41 @@ export default function BubbleMapPage() {
   // BUBBLE4: mint a signed permalink. Server-side JWT signing — the
   // share URL is unforgeable, so a sender can't be impersonated into
   // pointing at a different token.
+  // Deep-link entry: ?address=<addr> (from the VTX "view full bubble map" CTA)
+  // or ?share=<jwt> (share link). Without this, both landed on the empty
+  // "no token loaded" state.
+  useEffect(() => {
+    if (deepLinkDone.current) return;
+    const share = searchParams.get('share');
+    const addr = searchParams.get('address');
+    if (share) {
+      deepLinkDone.current = true;
+      (async () => {
+        try {
+          const r = await fetch(`/api/bubble-map/share?t=${encodeURIComponent(share)}`);
+          if (!r.ok) return;
+          const p = (await r.json()) as { token?: string; chain?: string; mode?: ViewMode; at?: number | null };
+          if (p.token) setTokenAddress(p.token);
+          if (p.chain) setChain(p.chain);
+          if (p.mode) setMode(p.mode);
+          if (typeof p.at === 'number') setSnapshotMs(p.at);
+        } catch { /* ignore bad/expired share token */ }
+      })();
+    } else if (addr) {
+      deepLinkDone.current = true;
+      setTokenAddress(addr);
+      const c = searchParams.get('chain');
+      if (c) setChain(c);
+    }
+  }, [searchParams]);
+
+  // Auto-fire the map once a deep link has populated the address.
+  useEffect(() => {
+    if (deepLinkDone.current && tokenAddress.trim() && !mapData && !loading) {
+      void fetchMap();
+    }
+  }, [tokenAddress, mapData, loading, fetchMap]);
+
   const shareView = useCallback(async () => {
     if (!tokenAddress.trim()) return;
     setSharing(true);
@@ -805,5 +842,13 @@ export default function BubbleMapPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BubbleMapPage() {
+  return (
+    <Suspense fallback={null}>
+      <BubbleMapInner />
+    </Suspense>
   );
 }
