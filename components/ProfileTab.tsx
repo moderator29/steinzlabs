@@ -15,6 +15,7 @@ import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import NotificationSettingsPanel from '@/components/profile/NotificationSettingsPanel';
+import { AppearancePanel } from '@/components/profile/AppearancePanel';
 
 interface Notification {
   id: string;
@@ -1188,7 +1189,14 @@ export default function ProfileTab() {
           <ArrowLeft className="w-4 h-4" /> Back to Profile
         </button>
         <h2 className="text-lg font-heading font-bold mb-1">Preferences</h2>
-        <p className="text-xs text-gray-500 mb-4">Customize your STEINZ experience.</p>
+        <p className="text-xs text-gray-500 mb-4">Customize your Naka Labs experience.</p>
+
+        {/* §3.4 — Appearance: theme, accent, glass, density, text size, motion.
+            Applies live and syncs per-user to Supabase. */}
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Appearance</div>
+        <div className="mb-4">
+          <AppearancePanel />
+        </div>
 
         {/* Phase B — Supabase-backed notification settings. Replaces the
             localStorage toggles that lived inline. Web Push subscribe,
