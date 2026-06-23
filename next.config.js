@@ -55,6 +55,11 @@ const nextConfig = {
   },
   redirects: async () => [
     { source: '/whitepaper', destination: '/docs', permanent: false },
+    // §16 — several surfaces (portfolio connect, onboarding, tour, email,
+    // command palette) link to /dashboard/settings, which doesn't exist yet
+    // and fell through to the cult-themed 404. Settings currently live under
+    // Profile; redirect there until the dedicated Settings page is built.
+    { source: '/dashboard/settings', destination: '/dashboard/profile', permanent: false },
   ],
   headers: async () => [
     // Global security headers — applied to every route. CSP is intentionally
