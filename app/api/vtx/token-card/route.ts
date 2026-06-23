@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getBirdeyeOHLCV } from '@/lib/services/birdeye';
+import { getBirdeyeOHLCV, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
+import { getTokenSecurity } from '@/lib/services/goplus';
 
 // FIX 5A.1 / Phase 5: returns a short price history for the VTX inline token card's chart.
 // Uses DexScreener pair m5 candles (free, no API key) for on-chain tokens.
@@ -187,6 +188,24 @@ export async function GET(req: NextRequest) {
     const last = series[series.length - 1] ?? price;
     const changePct = first ? ((last - first) / first) * 100 : 0;
 
+    // Holders (Birdeye overview) + Trusted (GoPlus) — best-effort and in
+    // parallel so they add no serial latency; hidden in the card when absent.
+    const tkChain: string = chain || pair.chainId || 'solana';
+    let holders: number | null = null;
+    let trusted = false;
+    try {
+      const [ovRes, secRes] = await Promise.allSettled([
+        getBirdeyeTokenOverview(address, tkChain),
+        getTokenSecurity(address, tkChain),
+      ]);
+      if (ovRes.status === 'fulfilled' && ovRes.value && typeof ovRes.value.holder === 'number' && ovRes.value.holder > 0) {
+        holders = ovRes.value.holder;
+      }
+      if (secRes.status === 'fulfilled' && secRes.value) {
+        trusted = secRes.value.safetyLevel === 'SAFE' && !secRes.value.isHoneypot;
+      }
+    } catch { /* best-effort enrichment — card hides what's missing */ }
+
     const marketCap = pair.marketCap ?? pair.fdv ?? 0;
     const data = {
       points: series,
@@ -201,6 +220,9 @@ export async function GET(req: NextRequest) {
       // Circulating supply implied by marketCap / price (no fabricated number;
       // null when we can't derive it cleanly).
       supply: price > 0 && marketCap > 0 ? marketCap / price : null,
+      holders,
+      trusted,
+      orbUrl: `/intelligence/${address}`,
       symbol: pair.baseToken?.symbol,
       name: pair.baseToken?.name,
       chain: pair.chainId,
