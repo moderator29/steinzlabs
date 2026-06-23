@@ -11,6 +11,8 @@ import {
   getRecentlyAdded as cgRecentlyAdded,
   getTopTokens as cgTopTokens,
 } from '@/lib/services/coingecko';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
   // 1.5 s hard ceiling. Personal context is a nice-to-have re-ranking input;
@@ -712,6 +714,171 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
   }
 }
 
+// §B5 — GoPlus rug alerts. Scans the freshest boosted/trending EVM tokens for
+// honeypot / rug signatures and emits high-confidence `rug_alert` events (the
+// feed filter weights these 90, but nothing was emitting them). GoPlus results
+// are mem+Redis cached, so repeat scans of the same trending set are cheap.
+// Real data only — a token with no confirmed risk is dropped, never invented.
+const RUG_EVM_CHAINS = new Set(['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'avalanche', 'optimism']);
+const EVM_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+
+async function fetchRugAlerts(): Promise<WhaleEvent[]> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', { cache: 'no-store' });
+    if (!res.ok) return [];
+    const boosts = await res.json();
+    if (!Array.isArray(boosts)) return [];
+
+    const seen = new Set<string>();
+    const candidates = boosts
+      .filter((b: { chainId?: string; tokenAddress?: string }) =>
+        b.chainId && b.tokenAddress && RUG_EVM_CHAINS.has(b.chainId) && EVM_ADDR_RE.test(b.tokenAddress))
+      .filter((b: { chainId?: string; tokenAddress?: string }) => {
+        const k = `${b.chainId}-${b.tokenAddress!.toLowerCase()}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .slice(0, 8) as Array<{ chainId: string; tokenAddress: string }>;
+    if (candidates.length === 0) return [];
+
+    const scans = await Promise.all(
+      candidates.map(async (c) => {
+        try {
+          // Security scan (cached) + a token meta lookup for symbol/mcap, in parallel.
+          const [sec, metaRes] = await Promise.all([
+            getTokenSecurity(c.tokenAddress, c.chainId),
+            fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.tokenAddress}`, { cache: 'no-store' })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ]);
+          return { c, sec, metaRes };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    const alerts: WhaleEvent[] = [];
+    for (const s of scans) {
+      if (!s?.sec) continue;
+      const { sec } = s;
+      const reasons: string[] = [];
+      if (sec.isHoneypot) reasons.push('honeypot');
+      if (sec.cannotSellAll) reasons.push('cannot sell all');
+      if (sec.sellTax >= 0.3) reasons.push(`${Math.round(sec.sellTax * 100)}% sell tax`);
+      if (sec.hasHiddenOwner) reasons.push('hidden owner');
+      if (sec.canTakeBackOwnership) reasons.push('reclaimable ownership');
+      if (sec.ownerCanChangeBalance) reasons.push('owner can edit balances');
+      if (sec.selfDestruct) reasons.push('self-destruct');
+      if (sec.creatorIsTopHolder && sec.creatorHoldingPct > 0.2) reasons.push(`creator holds ${Math.round(sec.creatorHoldingPct * 100)}%`);
+
+      // Only surface genuine danger: a confirmed honeypot, GoPlus DANGER, or
+      // two+ independent red flags. Mild "caution" tokens are not rug alerts.
+      const danger = sec.isHoneypot || sec.safetyLevel === 'DANGER' || reasons.length >= 2;
+      if (!danger || reasons.length === 0) continue;
+
+      const pair = (s.metaRes?.pairs ?? [])[0];
+      const symbol = pair?.baseToken?.symbol || '';
+      const name = pair?.baseToken?.name || symbol || 'Token';
+      const mcap = pair?.marketCap || pair?.fdv || 0;
+
+      alerts.push({
+        id: `rug-${s.c.chainId}-${s.c.tokenAddress.toLowerCase()}`,
+        type: 'rug_alert',
+        sentiment: 'BEARISH',
+        title: symbol ? `Rug risk: $${symbol} — ${reasons[0]}` : `Rug risk — ${reasons[0]}`,
+        summary: `${name} flagged by security scan: ${reasons.join(', ')}. GoPlus safety: ${sec.safetyLevel}.${mcap > 0 ? ` MCap ${fmtUsd(mcap)}.` : ''} Avoid until cleared.`,
+        from: 'GoPlus Security',
+        to: s.c.tokenAddress.slice(0, 12),
+        value: 0,
+        valueUsd: mcap,
+        chain: s.c.chainId,
+        // High trustScore = high CONFIDENCE in the ALERT (honeypot confirmed),
+        // not token safety — drives the prominent "STRONG signal" treatment.
+        trustScore: sec.isHoneypot ? 95 : 82,
+        txHash: s.c.tokenAddress,
+        blockNumber: 0,
+        timestamp: recentTimestamp(),
+        tokenName: name,
+        tokenSymbol: symbol,
+        // Intentionally NO tokenMarketCap — the $500k mcap gate in
+        // applyContextFilter would otherwise drop low-cap scam tokens, which
+        // are exactly the ones a rug alert must surface. MCap lives in the
+        // summary instead.
+        pairAddress: pair?.pairAddress || '',
+        dexUrl: pair?.url || '',
+        platform: 'GoPlus',
+      });
+    }
+    return alerts;
+  } catch {
+    return [];
+  }
+}
+
+// §B5 — LunarCrush social-velocity events, given real on-chain values. LunarCrush
+// surfaces what's spiking SOCIALLY (galaxy score + post velocity) but has no
+// contract/chain; we resolve each symbol through DexScreener to attach the real
+// pair (address, chain, price, vol, liq, mcap). A symbol with no on-chain match
+// is dropped — never emitted with fabricated chain data.
+async function fetchSocialVelocity(): Promise<WhaleEvent[]> {
+  try {
+    const trends = await lcTrendingTokens(15);
+    if (!Array.isArray(trends) || trends.length === 0) return [];
+
+    const top = trends
+      .filter((t) => t.symbol && t.galaxyScore >= 55)
+      .sort((a, b) => b.socialVolume - a.socialVolume)
+      .slice(0, 6);
+    if (top.length === 0) return [];
+
+    const built = await Promise.all(
+      top.map(async (t) => {
+        try {
+          const [vel, dexRes] = await Promise.all([
+            lcSocialVelocity(t.symbol).catch(() => null),
+            fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(t.symbol)}`, { cache: 'no-store' })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ]);
+          const pairs = (dexRes?.pairs ?? []).filter(
+            (p: { baseToken?: { symbol?: string }; liquidity?: { usd?: number } }) =>
+              (p.baseToken?.symbol || '').toUpperCase() === t.symbol.toUpperCase(),
+          );
+          const best = pairs.sort(
+            (a: { liquidity?: { usd?: number } }, b: { liquidity?: { usd?: number } }) =>
+              (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0),
+          )[0];
+          if (!best) return null; // no on-chain match → skip, don't fabricate
+          const base = mapDexPairToEvent(best, 'lunarcrush');
+          if (!base) return null;
+
+          const velPct = vel?.velocity_pct ?? 0;
+          const shift = vel?.sentiment_shift ?? 0;
+          return {
+            ...base,
+            id: `social-${base.chain}-${t.symbol}-${(best.baseToken?.address || '').toLowerCase()}`,
+            type: 'trending',
+            title: velPct >= 50
+              ? `${t.name} social velocity +${Math.round(velPct)}% — buzz spiking`
+              : `${t.name} trending socially · Galaxy ${Math.round(t.galaxyScore)}`,
+            summary: `${base.summary} · Social: ${t.socialVolume.toLocaleString()} posts, velocity ${velPct >= 0 ? '+' : ''}${Math.round(velPct)}%, Galaxy ${Math.round(t.galaxyScore)}.`,
+            sentiment: shift > 5 ? 'BULLISH' : shift < -5 ? 'BEARISH' : base.sentiment,
+            platform: 'LunarCrush',
+            trustScore: Math.min(92, base.trustScore + Math.round(t.galaxyScore / 10)),
+          } as WhaleEvent;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return built.filter((e): e is WhaleEvent => e !== null);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
   try {
     const boostsRes = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
@@ -989,7 +1156,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -1003,13 +1170,19 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchArbitrumDexEvents(), SRC_TIMEOUT, 'dex-arbitrum'),
         withSrcTimeout(fetchOptimismDexEvents(), SRC_TIMEOUT, 'dex-optimism'),
         withSrcTimeout(fetchCoingeckoEvents(), SRC_TIMEOUT, 'coingecko'),
+        // §B5 — give rug alerts + social velocity a longer leash (GoPlus +
+        // cross-referenced lookups), but still time-capped so a slow upstream
+        // can't stall the feed.
+        withSrcTimeout(fetchRugAlerts(), 7000, 'goplus-rug'),
+        withSrcTimeout(fetchSocialVelocity(), 7000, 'lunarcrush-social'),
       ]);
 
-      // Order matters: whale > smart-money > rug > new-listing > large-transfer.
-      // CoinGecko events are interleaved alongside on-chain ones — the score
-      // function in /lib/contextFeed/filter.ts re-ranks by trustScore + USD,
-      // so this is just the de-dupe input order.
-      events = [...cgEvents, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      // Order matters: rug alerts + smart-money first (highest type weight),
+      // then trending. The score function in /lib/contextFeed/filter.ts
+      // re-ranks by type/trust/USD, so this is just the de-dupe input order.
+      events = [...rugAlerts, ...cgEvents, ...socialVel, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      if (rugAlerts.length > 0) sources.push('goplus');
+      if (socialVel.length > 0) sources.push('lunarcrush');
       if (cgEvents.length > 0) sources.push('coingecko');
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
