@@ -28,11 +28,24 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   // username is null. If the slug looks like a UUID, look up by id too.
   const cols = 'id, username, display_name, avatar_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at';
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const initial = await sb.from('profiles').select(cols).ilike('username', username).maybeSingle();
-  let profile = initial.data;
+  // §8 — resolve case-insensitively WITHOUT erroring on a casing collision.
+  // Exact match wins first, so /u/Puffnutz resolves to Puffnutz and not its
+  // lowercase twin. The old code used ilike(...).maybeSingle(), which ERRORS
+  // when >1 row matches (Puffnutz + puffnutz both exist); that error was then
+  // mapped to a 404 — the "User not found" bug for users that clearly exist.
+  // The fallback uses limit(1) so a collision yields one deterministic row.
+  let profile = (await sb.from('profiles').select(cols).eq('username', username).maybeSingle()).data;
+  if (!profile) {
+    const ci = await sb
+      .from('profiles')
+      .select(cols)
+      .ilike('username', username)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    profile = ci.data?.[0] ?? null;
+  }
   if (!profile && UUID_RE.test(username)) {
-    const byId = await sb.from('profiles').select(cols).eq('id', username).maybeSingle();
-    profile = byId.data;
+    profile = (await sb.from('profiles').select(cols).eq('id', username).maybeSingle()).data;
   }
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

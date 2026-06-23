@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, X } from 'lucide-react';
+import { TierBadge } from '@/components/ui/TierBadge';
 
 /**
  * SearchBox — 300ms-debounced live autocomplete over /api/social/search.
@@ -94,7 +95,11 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-[12px] font-semibold text-white truncate">{u.display_name || u.username}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[12px] font-semibold text-white truncate">{u.display_name || u.username}</span>
+                      {/* §8 — surface the tier/verified badge next to the name. */}
+                      {u.tier && u.tier !== 'free' && <TierBadge tier={u.tier} size={13} />}
+                    </div>
                     <div className="text-[10px] text-slate-400 truncate">@{u.username}</div>
                   </div>
                 </Link>
