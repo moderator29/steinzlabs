@@ -189,7 +189,7 @@ function generateSuggestions(content: string): string[] {
 //   2. Replace the textual 'Loading chart…' placeholder with a subtle
 //      animated skeleton so even a first-time render feels populated
 //      while the real points stream in.
-const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string; cachedAt: number }> = new Map();
+const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string; holders?: number | null; trusted?: boolean; orbUrl?: string; cachedAt: number }> = new Map();
 const VTX_CHART_TTL_MS = 5 * 60 * 1000;
 
 function chartCacheKey(token: TokenCardData): string {
@@ -225,9 +225,9 @@ function TokenCard({ token }: { token: TokenCardData }) {
   );
   const [livePrice, setLivePrice] = useState<number | null>(cachedFresh?.price ?? null);
   const [liveChange24h, setLiveChange24h] = useState<number | null>(cachedFresh?.change24h ?? null);
-  const [stats, setStats] = useState<{ volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string } | null>(
+  const [stats, setStats] = useState<{ volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string; holders?: number | null; trusted?: boolean; orbUrl?: string } | null>(
     cachedFresh
-      ? { volume24h: cachedFresh.volume24h, liquidity: cachedFresh.liquidity, marketCap: cachedFresh.marketCap, fdv: cachedFresh.fdv, supply: cachedFresh.supply, name: cachedFresh.name }
+      ? { volume24h: cachedFresh.volume24h, liquidity: cachedFresh.liquidity, marketCap: cachedFresh.marketCap, fdv: cachedFresh.fdv, supply: cachedFresh.supply, name: cachedFresh.name, holders: cachedFresh.holders, trusted: cachedFresh.trusted, orbUrl: cachedFresh.orbUrl }
       : null,
   );
 
@@ -254,6 +254,9 @@ function TokenCard({ token }: { token: TokenCardData }) {
           fdv: typeof d.fdv === 'number' ? d.fdv : undefined,
           supply: typeof d.supply === 'number' ? d.supply : null,
           name: typeof d.name === 'string' ? d.name : undefined,
+          holders: typeof d.holders === 'number' ? d.holders : null,
+          trusted: d.trusted === true,
+          orbUrl: typeof d.orbUrl === 'string' ? d.orbUrl : undefined,
         });
         // Only cache when we have at least the chart points — partial
         // responses (price-only, error path) shouldn't replace a future
@@ -270,6 +273,9 @@ function TokenCard({ token }: { token: TokenCardData }) {
             fdv: typeof d.fdv === 'number' ? d.fdv : undefined,
             supply: typeof d.supply === 'number' ? d.supply : null,
             name: typeof d.name === 'string' ? d.name : undefined,
+            holders: typeof d.holders === 'number' ? d.holders : null,
+            trusted: d.trusted === true,
+            orbUrl: typeof d.orbUrl === 'string' ? d.orbUrl : undefined,
             cachedAt: Date.now(),
           });
         }
@@ -300,6 +306,9 @@ function TokenCard({ token }: { token: TokenCardData }) {
       liquidity={stats?.liquidity ?? null}
       fdv={stats?.fdv ?? null}
       supply={stats?.supply ?? null}
+      holders={stats?.holders ?? null}
+      trusted={stats?.trusted ?? false}
+      orbUrl={stats?.orbUrl}
     />
   );
 }
