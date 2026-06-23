@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
   const url = request.nextUrl;
   const chain = url.searchParams.get('chain') ?? 'all';
   const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? '50'), 1), 200);
+  // §B5 — forward the type-filter pill to the underlying feed. Without this
+  // the SSE stream always ran the unfiltered feed, so a client on the
+  // "news"/"trending"/etc. pill would get every event type pushed at it.
+  const filter = url.searchParams.get('filter') ?? 'all';
   const origin = new URL(request.url).origin;
   const cookie = request.headers.get('cookie') ?? '';
 
@@ -51,7 +55,7 @@ export async function GET(request: NextRequest) {
       const tick = async () => {
         if (closed) return;
         try {
-          const res = await fetch(`${origin}/api/context-feed?chain=${encodeURIComponent(chain)}&limit=${limit}`, {
+          const res = await fetch(`${origin}/api/context-feed?chain=${encodeURIComponent(chain)}&limit=${limit}&filter=${encodeURIComponent(filter)}`, {
             // Forward the auth cookie so the personalised filter + muted
             // sources apply to the SSE stream too.
             headers: { cookie },

@@ -75,8 +75,29 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all', 
   const [loading, setLoading] = useState(true);
   const [hasArchive, setHasArchive] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
-  const currentChain = useRef<ChainFilter>(chain);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Merge a batch of raw events into state — chain-filter client-side, dedup,
+  // sort newest-first, re-stagger display timestamps. Shared by the initial
+  // fetch and the live SSE stream so both deliver identical UI behaviour.
+  const applyRawEvents = useCallback((rawEvents: ContextEvent[]) => {
+    if (!rawEvents.length) return;
+    const dedupMap = new Map<string, ContextEvent>();
+    rawEvents.forEach((e) => { if (e.id && !dedupMap.has(e.id)) dedupMap.set(e.id, e); });
+    const allEvents = Array.from(dedupMap.values());
+    const chainFilter = chain === 'bookmarks' ? 'all' : chain;
+    const newEvents = chainFilter === 'all' ? allEvents : allEvents.filter((e) => e.chain === chainFilter);
+
+    setEvents((prev: ContextEvent[]) => {
+      const mergedMap = new Map<string, ContextEvent>();
+      newEvents.forEach((e) => mergedMap.set(e.id, e));
+      prev.forEach((e) => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
+      const merged = Array.from(mergedMap.values());
+      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return staggerDisplayTimestamps(merged.slice(0, 200));
+    });
+    allEvents.forEach((e) => seenIds.current.add(e.id));
+  }, [chain]);
 
   const fetchEvents = useCallback(async () => {
     abortRef.current?.abort();
@@ -94,76 +115,82 @@ export function useContextFeed(limit: number = 200, chain: ChainFilter = 'all', 
       });
       clearTimeout(timeoutId);
       const data = await response.json();
-      const rawEvents: ContextEvent[] = data.events || [];
       if (data.hasArchive !== undefined) setHasArchive(data.hasArchive);
-      const dedupMap = new Map<string, ContextEvent>();
-      rawEvents.forEach(e => { if (!dedupMap.has(e.id)) dedupMap.set(e.id, e); });
-      const allEvents = Array.from(dedupMap.values());
-
-      // Apply chain filter client-side (bookmarks filter is handled in the component)
-      const chainFilter = chain === 'bookmarks' ? 'all' : chain;
-      const newEvents = chainFilter === 'all'
-        ? allEvents
-        : allEvents.filter(e => e.chain === chainFilter);
-
-      if (currentChain.current !== chain) {
-        currentChain.current = chain;
-        seenIds.current.clear();
-        const sorted = [...newEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setEvents(staggerDisplayTimestamps(sorted.slice(0, 200)));
-      } else {
-        setEvents((prev: ContextEvent[]) => {
-          const mergedMap = new Map<string, ContextEvent>();
-          newEvents.forEach((e: ContextEvent) => mergedMap.set(e.id, e));
-          prev.forEach((e: ContextEvent) => { if (!mergedMap.has(e.id)) mergedMap.set(e.id, e); });
-          const merged = Array.from(mergedMap.values());
-          merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          return staggerDisplayTimestamps(merged.slice(0, 200));
-        });
-      }
-
-      allEvents.forEach(e => seenIds.current.add(e.id));
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
-
+      applyRawEvents(data.events || []);
+    } catch (error) {
+      // AbortError is expected on chain switch / unmount — stay silent.
+      // Anything else is a real failure worth logging for diagnosis.
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.warn('[context-feed] fetch failed:', error.message);
       }
     } finally {
       setLoading(false);
     }
-  }, [limit, chain]);
+  }, [filter, applyRawEvents]);
 
   useEffect(() => {
     setLoading(true);
     seenIds.current.clear();
     setEvents([]);
-    currentChain.current = chain;
     fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chain, filter]);
 
+  // §B5 — live updates via the (previously-unwired) SSE endpoint, which pushes
+  // deltas every ~5s and shares one upstream tick across clients. Falls back to
+  // the original interval polling if SSE errors or EventSource is unavailable,
+  // so the worst case is exactly the prior behaviour.
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let es: EventSource | null = null;
 
     const startPolling = () => {
+      if (intervalId) clearInterval(intervalId);
       const interval = document.hidden ? POLL_INTERVAL_HIDDEN : POLL_INTERVAL;
-      clearInterval(intervalId);
       intervalId = setInterval(fetchEvents, interval);
     };
 
-    startPolling();
+    const startSse = () => {
+      if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+        startPolling();
+        return;
+      }
+      try {
+        es = new EventSource(`/api/context-feed/events?chain=all&limit=200&filter=${encodeURIComponent(filter)}`);
+        es.addEventListener('events', (ev) => {
+          try {
+            const payload = JSON.parse((ev as MessageEvent).data) as { events?: ContextEvent[] };
+            if (payload.events?.length) applyRawEvents(payload.events);
+          } catch { /* malformed frame — ignore this tick */ }
+        });
+        es.onerror = () => {
+          // SSE dropped — close it and degrade to interval polling.
+          es?.close();
+          es = null;
+          startPolling();
+        };
+      } catch {
+        startPolling();
+      }
+    };
+
+    startSse();
 
     const handleVisibility = () => {
-      startPolling();
+      // Re-sync immediately when the tab returns to the foreground. If we fell
+      // back to polling, also re-pace the interval for the new visibility.
       if (!document.hidden) fetchEvents();
+      if (intervalId) startPolling();
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      clearInterval(intervalId);
+      if (intervalId) clearInterval(intervalId);
+      es?.close();
       document.removeEventListener('visibilitychange', handleVisibility);
       abortRef.current?.abort();
     };
-  }, [fetchEvents]);
+  }, [fetchEvents, filter, applyRawEvents]);
 
   return { events, loading, refresh: fetchEvents, hasArchive };
 }
@@ -185,9 +212,9 @@ export function useArchivedFeed(chain: ChainFilter = 'all') {
       });
       const data = await response.json();
       setEvents(data.events || []);
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
-
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.warn('[context-feed] archive fetch failed:', error.message);
       }
     } finally {
       setLoading(false);
