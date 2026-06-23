@@ -19,7 +19,7 @@ export default function ContactPage() {
 
         <div className="space-y-3">
           <a
-            href="mailto:support@nakalabs.com"
+            href="mailto:support@nakalabs.xyz"
             className="flex items-center gap-4 bg-[#111827] border border-white/[0.08] rounded-xl px-5 py-4 hover:border-[#0A1EFF]/40 transition-colors group"
           >
             <div className="w-10 h-10 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#0A1EFF]/20 transition-colors">
@@ -27,7 +27,7 @@ export default function ContactPage() {
             </div>
             <div>
               <div className="text-sm font-semibold text-white">Email Support</div>
-              <div className="text-xs text-gray-400">support@nakalabs.com</div>
+              <div className="text-xs text-gray-400">support@nakalabs.xyz</div>
             </div>
             <ExternalLink className="w-4 h-4 text-gray-600 ms-auto" />
           </a>

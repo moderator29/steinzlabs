@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const shortId = crypto.randomBytes(4).toString('hex');
     shareStore.set(shortId, payload);
 
-    const host = request.headers.get('host') || 'nakalabs.com';
+    const host = request.headers.get('host') || 'nakalabs.xyz';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const shareUrl = `${protocol}://${host}/s/${shortId}`;
 

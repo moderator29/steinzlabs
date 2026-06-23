@@ -2,7 +2,7 @@ import { CheckCircle, ArrowRight, Zap, Globe, Shield, Brain, TrendingUp, Star } 
 import Link from 'next/link';
 
 const STEPS = [
-  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.com with your email. Verify to activate · no credit card required for the free tier.' },
+  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.xyz with your email. Verify to activate · no credit card required for the free tier.' },
   { n: '02', title: 'Connect your wallets', desc: 'Go to Portfolio and link up to 10 wallets across Ethereum, Base, Solana, Arbitrum, Polygon, and BSC for automatic tracking.' },
   { n: '03', title: 'Explore the Context Feed', desc: 'Your personalized real-time intelligence stream activates immediately · showing whale moves, smart money signals, and on-chain alerts.' },
   { n: '04', title: 'Run your first scan', desc: 'Paste any token address into the search bar or Security Center for an instant Trust Score, holder analysis, and risk breakdown.' },

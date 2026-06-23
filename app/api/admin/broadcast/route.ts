@@ -66,7 +66,7 @@ export async function POST(request: Request) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: 'NAKA LABS <noreply@nakalabs.com>',
+              from: 'NAKA LABS <noreply@nakalabs.xyz>',
               to: email,
               subject,
               html: `

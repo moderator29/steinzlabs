@@ -52,7 +52,7 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
 // Sender comes from EMAIL_FROM env when set (e.g.
 // "NAKA LABS <noreply@contact.nakalabs.xyz>"), falls back to the
 // Resend-verified contact.nakalabs.xyz subdomain. The previous
-// hardcoded noreply@nakalabs.com was on an unverified domain and
+// hardcoded noreply@nakalabs.xyz was on an unverified domain and
 // caused Resend to reject every send.
 const DEFAULT_FROM = 'NAKA LABS <noreply@contact.nakalabs.xyz>';
 

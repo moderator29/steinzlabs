@@ -1016,7 +1016,7 @@ export default function ProfileTab() {
         <div className="mt-6 glass rounded-lg p-4 border border-white/10 text-center">
           <p className="text-sm font-semibold mb-1">Still need help?</p>
           <p className="text-xs text-gray-500 mb-3">Contact our support team for personalized assistance.</p>
-          <a href="mailto:support@nakalabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+          <a href="mailto:support@nakalabs.xyz" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
             <Mail className="w-3 h-3" /> Contact Support
           </a>
         </div>

@@ -82,7 +82,7 @@ export function AISupportChat({ onClose }: Props) {
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          content: 'Sorry, I could not connect to support right now. Please try again or email support@nakalabs.com.',
+          content: 'Sorry, I could not connect to support right now. Please try again or email support@nakalabs.xyz.',
         };
         return updated;
       });

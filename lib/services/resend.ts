@@ -4,11 +4,11 @@ import { Resend } from 'resend';
 /**
  * Resend Email Delivery Service
  * Handles: broadcast emails, price alerts, security alerts, notifications.
- * FROM address: alerts@nakalabs.com (or configured via RESEND_FROM_EMAIL)
+ * FROM address: alerts@nakalabs.xyz (or configured via RESEND_FROM_EMAIL)
  */
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.com';
+const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.xyz';
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'Naka Labs';
 
 export interface EmailResult {
@@ -281,7 +281,7 @@ export async function sendResearchNotification(params: {
         <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7">${summary}</p>
       </div>
       <div style="text-align:center;margin-bottom:16px">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.com'}/research/${slug}"
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz'}/research/${slug}"
            style="display:inline-block;background:${categoryColor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
           Read Full Research
         </a>
