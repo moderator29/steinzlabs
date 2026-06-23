@@ -161,7 +161,9 @@ function getDailyUsage(): { used: number; limit: number; remaining: number } {
       if (parsed && typeof parsed.used === 'number') return parsed;
     }
   } catch { /* Malformed JSON — return default */ }
-  return { used: 0, limit: 15, remaining: 15 };
+  // Free tier is 25/day (matches FREE_TIER_LIMIT in app/api/vtx-ai/route.ts and
+  // the pricing page). The server's dailyUsage payload overrides this anyway.
+  return { used: 0, limit: 25, remaining: 25 };
 }
 
 function saveDailyUsage(usage: { used: number; limit: number; remaining: number }) {
@@ -551,7 +553,7 @@ export default function VtxAiTab() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [tier, setTier] = useState('free');
-  const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 15, remaining: 15 });
+  const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 25, remaining: 25 });
   const [rateLimited, setRateLimited] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -794,7 +796,7 @@ export default function VtxAiTab() {
 
       if (data.rateLimited) {
         setRateLimited(true);
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Daily free limit of 15 messages reached. Upgrade to Naka Pro for unlimited VTX Agent access and web search.' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Daily free limit of ${dailyUsage.limit} messages reached. Upgrade to Naka Pro for unlimited VTX Agent access and web search.` }]);
         if (data.usage) {
           const usage = { used: data.usage.used, limit: data.usage.limit, remaining: data.usage.remaining };
           setDailyUsage(usage);
