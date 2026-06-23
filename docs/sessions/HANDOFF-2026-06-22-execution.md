@@ -99,10 +99,11 @@ Merge order (P0 first):
    See-on-Orb) on shared `lib/market/formatters` + `TokenLogo`. Upgraded
    `/api/vtx/token-card` to real Birdeye OHLC (primary on-chain) → CoinGecko
    fallback → synthetic last; added fdv + derived supply. Wired into the VTX page;
-   deleted the old inline card + sparkline. NOTE: accent is teal/green per the
-   reference image; platform brand-primary is `#0A1EFF` blue (pricing-page Pro
-   accent) — confirm with owner whether to swap the card accent to brand blue.
-   Dead `components/vtx/TokenCard.tsx` still exists (delete in cleanup).
+   deleted the old inline card + sparkline. REBUILT on Naka branding (owner
+   confirmed the images are inspiration only, not literal colors): #0D1117 panel
+   / #1E2433 border / #0A1EFF accent / monospace numerals + the shared lightweight
+   SparklineChart (like WatchlistCard) — not the serif / teal / custom hour-tick
+   SVG. Dead `components/vtx/TokenCard.tsx` still exists (delete in cleanup).
 8. **`feat/social-notifications`** — fire `notifySocialEvent` (new_follower/
    follow_request) on follow; enforce `social_mutes` on leaderboards/
    recommendations/follows-list (were block-only); TIER_RANK now free/mini/pro/max
@@ -242,28 +243,34 @@ flow). This is the reference to reuse — do NOT rewrite it.
 
 ---
 
-## 7. CARD DESIGN SPEC (from the owner's 3 reference images)
+## 7. CARD DESIGN SPEC (reference images are INSPIRATION ONLY)
+
+> ⚠️ Build to **NAKA BRANDING**, not the images' colors: `#0D1117` panel,
+> `#1E2433` border, `#0A1EFF` electric-blue accent, **monospace/tabular**
+> numerals, and the shared `SparklineChart` for any chart (green=up / red=down,
+> current-view, instant, non-interactive). Match `WatchlistCard` and the rebuilt
+> `PriceCard`. NO teal, NO editorial serif. The owner was explicit on this.
 
 **SWAP CARD (multi-leg batch):** header "⇅ Swap N of M"; 3-segment step rail with
 per-leg labels (e.g. SOL→hSOL / SOL→BONK / SOL→2Z) filling as legs complete;
 completed legs collapse to green "✓ 0.0323 SOL → hSOL  View" rows; "You pay"
 (token logo + amount), ⇅ glyph, "You receive" (~estimated); stats list "Minimum
 received", "Slippage tolerance" (0.5%), "Price impact" (green); refresh-quote (↻);
-big teal "⇅ Sign & Swap" per leg → "◌ Confirm in your wallet…"; note above card:
+big #0A1EFF (Naka blue) "⇅ Sign & Swap" per leg → "◌ Confirm in your wallet…"; note above card:
 "Confirm each swap separately — a fresh quote is fetched at sign time…". Model:
 `SwapBatch { legs: SwapLeg[] }`, each leg `{fromToken,toToken,+addresses,chain,amount}`.
 Quote fetched FRESH at sign time per leg; each leg signed separately. The
 `/dashboard/swap` PAGE rebuilds to this same flow.
 
-**PRICE CARD (built this session — `components/market/PriceCard.tsx`):** logo /
-symbol(bold) / chain(muted) / truncated addr `So11…1112` + copy / green "Ⓐ
-Trusted" badge; big serif price + 24h% (↗ green / ↘ red); "24h" pill; real 24h
-area chart with hour-tick x-axis; stats grid (24h Volume +Δ, Holders, Market Cap,
-Liquidity, Supply, FDV + % unlocked); "See on Orb ↗". Dark near-black (#070A12),
-subtle grid texture, editorial serif numerals (Georgia), teal accent. Optional
-fields hidden when absent (no fabrication). **Open question for owner:** card
-accent is teal/green (matching the image); platform brand-primary is `#0A1EFF`
-blue — swap if desired (one-line).
+**PRICE CARD (built + rebranded this session — `components/market/PriceCard.tsx`):**
+logo / symbol(bold) / name(muted) / truncated addr `So11…1112` + copy / "Trusted"
+badge; big monospace price + 24h% via `PriceChangeDisplay` (↗ green / ↘ red);
+"24h" pill; the shared lightweight `SparklineChart` (current-view, instant,
+non-interactive — like WatchlistCard, NOT a heavy/loading/interactive chart);
+stats grid (24h Volume +Δ, Holders, Market Cap, Liquidity, Supply, FDV +
+% unlocked); "See on Orb ↗". NAKA BRANDING: `#0D1117` panel, `#1E2433` border,
+`#0A1EFF` accent, monospace/tabular numerals. Optional fields hidden when absent
+(no fabrication). Data: `/api/vtx/token-card` (Birdeye OHLC → CoinGecko fallback).
 
 ---
 
