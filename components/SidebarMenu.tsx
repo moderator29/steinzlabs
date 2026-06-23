@@ -13,9 +13,10 @@ import {
 import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History, MessageCircle, Compass,
+  Crosshair, Network, Globe, History, MessageCircle, Compass, Sun, Moon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/lib/theme/ThemeProvider';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -156,11 +157,44 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
           ))}
         </div>
 
-        <div className="px-4 py-3 border-t border-white/[0.06] flex-shrink-0">
-          <div className="text-[10px] text-gray-600 font-mono">NAKA LABS v1.0.0-beta</div>
+        {/* §3.2 — theme toggle lives at the bottom of the side nav (the spot
+            the equivalent control sits on X), moved out of the top header. */}
+        <div className="px-3 py-3 border-t border-white/[0.06] flex-shrink-0 space-y-2">
+          <ThemeFooterToggle />
+          <div className="text-[10px] text-gray-600 font-mono px-1">NAKA LABS v1.0.0-beta</div>
         </div>
       </div>
     </>
+  );
+}
+
+function ThemeFooterToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10" role="radiogroup" aria-label="Theme">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={theme === 'light'}
+        onClick={() => setTheme('light')}
+        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+          theme === 'light' ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+        }`}
+      >
+        <Sun className="w-3.5 h-3.5" /> Light
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={theme === 'dark'}
+        onClick={() => setTheme('dark')}
+        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+          theme === 'dark' ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+        }`}
+      >
+        <Moon className="w-3.5 h-3.5" /> Dark
+      </button>
+    </div>
   );
 }
 

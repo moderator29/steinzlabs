@@ -18,8 +18,6 @@ import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import GlobalControls from '@/components/GlobalControls';
-import NotificationBell from '@/components/NotificationBell';
 // CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
@@ -463,18 +461,15 @@ export default function Dashboard() {
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
             </button>
           </div>
-          {/* §header-scope / §4 — the logo + LIVE chip and the
-              QuickTranslate / LanguageSwitcher / ThemeToggle /
-              NotificationBell cluster only render on the Home tab.
-              Previously the logo+LIVE rendered unconditionally and
-              leaked onto Profile / Wallet / VTX sub-tabs (see circled
-              screenshot). Both clusters are now gated by activeNav and
-              pushed to the right per §3.1. */}
+          {/* §3.1 — the top dashboard bar is now just the logo + LIVE chip,
+              pushed right. Translate + language moved to Settings, the theme
+              toggle moved to the sidebar footer, and notifications live on the
+              home Notifications card + (soon) a sidebar item — so the header
+              stays minimal and clean. Home-tab-only so it never leaks onto the
+              Profile / Wallet / VTX sub-tabs (§4). */}
           <div className="flex-1" />
           {activeNav === 'home' && (
-            <div className="flex items-center gap-3" data-no-translate>
-              <GlobalControls />
-              <NotificationBell />
+            <div className="flex items-center gap-2">
               <SteinzLogo size={34} animated={false} />
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
