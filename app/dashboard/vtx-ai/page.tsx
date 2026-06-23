@@ -11,6 +11,7 @@ import { VtxConversationsRail } from '@/components/vtx/VtxConversationsRail';
 import { VtxToolSidecar, type SidecarTokenCard, type SidecarToolEvent, type SidecarPendingSwap } from '@/components/vtx/VtxToolSidecar';
 import { VtxSettingsDrawer } from '@/components/vtx/VtxSettingsDrawer';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
+import { PriceCard } from '@/components/market/PriceCard';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
@@ -188,7 +189,7 @@ function generateSuggestions(content: string): string[] {
 //   2. Replace the textual 'Loading chart…' placeholder with a subtle
 //      animated skeleton so even a first-time render feels populated
 //      while the real points stream in.
-const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; cachedAt: number }> = new Map();
+const VTX_CHART_CACHE: Map<string, { points: number[]; changePct: number; price: number | null; change24h: number | null; volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string; cachedAt: number }> = new Map();
 const VTX_CHART_TTL_MS = 5 * 60 * 1000;
 
 function chartCacheKey(token: TokenCardData): string {
@@ -209,7 +210,7 @@ function TokenCard({ token }: { token: TokenCardData }) {
   // fresh `price` and `change24h` alongside the chart points in the
   // SAME response we're already firing for the sparkline, so we just
   // pull them out of the same fetch — no second round-trip.
-  const logoUrl = token.logo || `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true&format=svg`;
+  // Token logo is rendered by <TokenLogo> inside <PriceCard> (handles fallback).
 
   // Unified: chart cache (Round-1 fix/vtx-card-instant-chart) AND live
   // price/change extracted from the same fetch (round-2 reliability fix).
@@ -224,13 +225,18 @@ function TokenCard({ token }: { token: TokenCardData }) {
   );
   const [livePrice, setLivePrice] = useState<number | null>(cachedFresh?.price ?? null);
   const [liveChange24h, setLiveChange24h] = useState<number | null>(cachedFresh?.change24h ?? null);
+  const [stats, setStats] = useState<{ volume24h?: number; liquidity?: number; marketCap?: number; fdv?: number; supply?: number | null; name?: string } | null>(
+    cachedFresh
+      ? { volume24h: cachedFresh.volume24h, liquidity: cachedFresh.liquidity, marketCap: cachedFresh.marketCap, fdv: cachedFresh.fdv, supply: cachedFresh.supply, name: cachedFresh.name }
+      : null,
+  );
 
   useEffect(() => {
     if (cachedFresh) return;
     let cancelled = false;
     const q = token.address
-      ? `/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=7d`
-      : `/api/vtx/token-card?symbol=${encodeURIComponent(token.symbol)}&tf=7d`;
+      ? `/api/vtx/token-card?address=${encodeURIComponent(token.address)}&chain=${token.chain || ''}&tf=24h`
+      : `/api/vtx/token-card?symbol=${encodeURIComponent(token.symbol)}&tf=24h`;
     fetch(q)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -241,6 +247,14 @@ function TokenCard({ token }: { token: TokenCardData }) {
         if (nextChart) setChart(nextChart);
         if (nextPrice !== null) setLivePrice(nextPrice);
         if (nextChange !== null) setLiveChange24h(nextChange);
+        setStats({
+          volume24h: typeof d.volume24h === 'number' ? d.volume24h : undefined,
+          liquidity: typeof d.liquidity === 'number' ? d.liquidity : undefined,
+          marketCap: typeof d.marketCap === 'number' ? d.marketCap : undefined,
+          fdv: typeof d.fdv === 'number' ? d.fdv : undefined,
+          supply: typeof d.supply === 'number' ? d.supply : null,
+          name: typeof d.name === 'string' ? d.name : undefined,
+        });
         // Only cache when we have at least the chart points — partial
         // responses (price-only, error path) shouldn't replace a future
         // good fetch.
@@ -250,6 +264,12 @@ function TokenCard({ token }: { token: TokenCardData }) {
             changePct: nextChart.changePct,
             price: nextPrice,
             change24h: nextChange,
+            volume24h: typeof d.volume24h === 'number' ? d.volume24h : undefined,
+            liquidity: typeof d.liquidity === 'number' ? d.liquidity : undefined,
+            marketCap: typeof d.marketCap === 'number' ? d.marketCap : undefined,
+            fdv: typeof d.fdv === 'number' ? d.fdv : undefined,
+            supply: typeof d.supply === 'number' ? d.supply : null,
+            name: typeof d.name === 'string' ? d.name : undefined,
             cachedAt: Date.now(),
           });
         }
@@ -258,122 +278,33 @@ function TokenCard({ token }: { token: TokenCardData }) {
     return () => { cancelled = true; };
   }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
 
-  // Display the live values when present, fall back to whatever the LLM
-  // streamed so the card still has SOMETHING during the brief fetch window.
-  const displayChange = liveChange24h !== null ? liveChange24h : token.change24h;
-  const isPositive = displayChange >= 0;
-  const displayPrice = livePrice !== null
-    ? `$${livePrice < 1 ? livePrice.toFixed(6).replace(/\.?0+$/, '') : livePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-    : token.price;
-
-  const chainName = (() => {
-    const c = (token.chain || '').toLowerCase();
-    if (!c) return '';
-    if (c === 'eth' || c === 'ethereum') return 'Ethereum';
-    if (c === 'sol' || c === 'solana') return 'Solana';
-    if (c === 'bsc' || c === 'bnb') return 'BNB Chain';
-    return c.charAt(0).toUpperCase() + c.slice(1);
-  })();
-
-  const trimmedAddr = token.address
-    ? `${token.address.slice(0, 4)}…${token.address.slice(-4)}`
-    : '';
+  // Live numeric price/change from the API fetch; fall back to the LLM's
+  // streamed values during the brief pre-fetch window.
+  const numericPrice = livePrice !== null
+    ? livePrice
+    : parseFloat(String(token.price).replace(/[$,]/g, '')) || 0;
+  const numericChange = liveChange24h !== null ? liveChange24h : token.change24h;
 
   return (
-    <div className="bg-[#0A0F1A] border border-white/[0.08] rounded-2xl p-4 w-full">
-      {/* Header: logo + name/chain + price + change */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <img
-            src={logoUrl}
-            alt={token.symbol}
-            className="w-10 h-10 rounded-full bg-[#141824] shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true`; }}
-          />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">{token.symbol}</span>
-              {chainName && <span className="text-[11px] text-gray-400">{chainName}</span>}
-            </div>
-            {trimmedAddr && (
-              <div className="text-[10px] text-gray-500 font-mono mt-0.5">{trimmedAddr}</div>
-            )}
-          </div>
-        </div>
-        <div className="text-end shrink-0">
-          {/* Canonical platform price font: tabular monospace + bold,
-              matches WatchlistCard / WalletTokenRow / trading terminal so
-              digits align across the platform and the card rhymes with
-              every other price surface. */}
-          <div className="text-lg font-bold text-white font-mono tabular-nums leading-none">{displayPrice}</div>
-          <div className={`text-[11px] font-semibold mt-1 tabular-nums ${isPositive ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-            {isPositive ? '↗ +' : '↘ '}{(displayChange ?? 0).toFixed(2)}%
-            <span className="text-gray-500 font-normal ms-1">24h</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Line chart (Lana AI style — single thin line, subtle fill, no controls).
-          Bug §4 — when chart points aren't in cache yet, render a faint
-          animated skeleton line instead of a 'Loading chart…' label so the
-          card never looks dead. The skeleton vanishes the instant real
-          points arrive. */}
-      <div className="h-28 w-full rounded-lg bg-transparent mb-4 overflow-hidden">
-        {chart && chart.points.length > 1 ? (
-          <CardSparkline points={chart.points} positive={chart.changePct >= 0} />
-        ) : (
-          <div className="h-full w-full flex items-center" aria-hidden="true">
-            <div className="w-full h-12 rounded bg-gradient-to-r from-white/[0.02] via-white/[0.06] to-white/[0.02] animate-pulse" />
-          </div>
-        )}
-      </div>
-
-      {/* Stats grid — Volume, Liquidity, MCap, FDV */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
-        <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
-          <span className="text-gray-500">24h Volume</span>
-          <span className="text-white font-semibold">{token.volume || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
-          <span className="text-gray-500">Market Cap</span>
-          <span className="text-white font-semibold">{token.marketCap || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Liquidity</span>
-          <span className="text-white font-semibold">{token.liquidity || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">FDV</span>
-          <span className="text-white font-semibold">{token.fdv || '—'}</span>
-        </div>
-      </div>
-    </div>
+    <PriceCard
+      symbol={token.symbol}
+      name={stats?.name || token.name}
+      chain={token.chain}
+      address={token.address}
+      logo={token.logo}
+      price={numericPrice}
+      change24h={numericChange}
+      points={chart?.points}
+      volume24h={stats?.volume24h ?? null}
+      marketCap={stats?.marketCap ?? null}
+      liquidity={stats?.liquidity ?? null}
+      fdv={stats?.fdv ?? null}
+      supply={stats?.supply ?? null}
+    />
   );
 }
 
-// Minimal inline-SVG sparkline — dependency-free.
-function CardSparkline({ points, positive }: { points: number[]; positive: boolean }) {
-  const w = 280;
-  const h = 60;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const d = points
-    .map((v, i) => {
-      const x = (i / (points.length - 1)) * w;
-      const y = h - ((v - min) / range) * h;
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  const stroke = positive ? '#10B981' : '#EF4444';
-  const fill = positive ? '#10B98115' : '#EF444415';
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} preserveAspectRatio="none" className="block">
-      <path d={`${d} L${w},${h} L0,${h} Z`} fill={fill} stroke="none" />
-      <path d={d} fill="none" stroke={stroke} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+// (CardSparkline removed — PriceCard renders its own area chart with hour ticks.)
 
 const DEFAULT_PAGE_SETTINGS: AgentSettings = {
   webSearch: false,
