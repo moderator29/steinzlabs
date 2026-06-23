@@ -1114,25 +1114,32 @@ function VtxAiPageInner() {
                         <TokenCard token={token} />
                         {/* §card-actions — contextual follow-ups under the card,
                             so the user can dig deeper with one tap. Responsive:
-                            wraps on narrow screens, sits inline on wider ones. */}
-                        {token.symbol && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { label: 'Security', q: `Run a full security scan on ${token.symbol}` },
-                              { label: 'Chart', q: `Show me the price chart for ${token.symbol}` },
-                              { label: 'Swap', q: `Swap into ${token.symbol}` },
-                              { label: 'Tell me more', q: `Tell me more about ${token.symbol} — fundamentals, momentum, and risks` },
-                            ].map((a) => (
-                              <button
-                                key={a.label}
-                                onClick={() => handleSend(a.q)}
-                                className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.06] transition-all"
-                              >
-                                {a.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                            wraps on narrow screens, sits inline on wider ones.
+                            Security/Chart/More send immediately; Swap prefills an
+                            editable template (a swap needs an amount + from-token),
+                            seeded with the token's chain native. */}
+                        {token.symbol && (() => {
+                          const native = ({ solana: 'SOL', ethereum: 'ETH', bsc: 'BNB', base: 'ETH', polygon: 'MATIC', avalanche: 'AVAX', arbitrum: 'ETH', optimism: 'ETH' } as Record<string, string>)[(token.chain || '').toLowerCase()] || 'SOL';
+                          const actions: Array<{ label: string; send?: string; prefill?: string }> = [
+                            { label: 'Security', send: `Run a full security scan on ${token.symbol}` },
+                            { label: 'Chart', send: `Show me the price chart for ${token.symbol}` },
+                            { label: 'Swap', prefill: `Swap 0.1 ${native} for ${token.symbol}` },
+                            { label: 'Tell me more', send: `Tell me more about ${token.symbol} — fundamentals, momentum, and risks` },
+                          ];
+                          return (
+                            <div className="flex flex-wrap gap-1.5">
+                              {actions.map((a) => (
+                                <button
+                                  key={a.label}
+                                  onClick={() => { if (a.send) handleSend(a.send); else if (a.prefill) setInput(a.prefill); }}
+                                  className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.06] transition-all"
+                                >
+                                  {a.label}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
