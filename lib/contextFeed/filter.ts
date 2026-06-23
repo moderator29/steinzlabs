@@ -57,7 +57,10 @@ const SENTIMENT_WEIGHT: Record<string, number> = {
 
 export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): number {
   const typeBase = TYPE_WEIGHT[event.type] ?? 40;
-  const sentimentAdj = SENTIMENT_WEIGHT[event.sentiment] ?? 0;
+  // Producers emit sentiment in UPPERCASE ("BULLISH"), but the weight keys
+  // are lowercase — so this lookup silently scored every event as neutral.
+  // Normalise the case so the sentiment weighting actually applies.
+  const sentimentAdj = SENTIMENT_WEIGHT[event.sentiment?.toLowerCase()] ?? 0;
   const trust = Math.min(100, Math.max(0, event.trustScore)) * 0.5;
   const usdLog = event.valueUsd > 0 ? Math.log10(event.valueUsd) * 6 : 0;
   const recencyMs = Date.now() - new Date(event.timestamp).getTime();

@@ -198,6 +198,7 @@ export type ContextFeedCardType =
   | 'smart_money_rotation'
   | 'stablecoin_pulse'
   | 'cex_drain'
+  | 'cex_inflow'
   | 'new_launch_smart_money'
   | 'mev_sandwich'
   | 'insider_wallet'
@@ -313,6 +314,27 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
       title: `${d.exchange} outflow on ${d.chain}`,
       body: `$${(Math.abs(d.net_inflow_usd) / 1_000_000).toFixed(2)}M withdrawn in the last hour.`,
       metric: Math.abs(d.net_inflow_usd),
+      fetched_at: d.hour_bucket,
+    });
+  }
+
+  // cex_inflow — biggest net CEX INflow in the last hour (positive
+  // net_inflow_usd means coins moving ONTO the exchange, which historically
+  // precedes sell pressure). The drain query above only selected net<0, so
+  // half the signal (deposits) was silently dropped — this surfaces it.
+  const { data: inflow } = await admin
+    .from('dune_cex_flow')
+    .select('chain, exchange, net_inflow_usd, hour_bucket')
+    .gte('hour_bucket', new Date(Date.now() - 3600 * 1000).toISOString())
+    .gt('net_inflow_usd', 0)
+    .order('net_inflow_usd', { ascending: false })
+    .limit(3);
+  for (const d of (inflow ?? []) as Array<{ chain: string; exchange: string; net_inflow_usd: number; hour_bucket: string }>) {
+    cards.push({
+      type: 'cex_inflow',
+      title: `${d.exchange} inflow on ${d.chain}`,
+      body: `$${(d.net_inflow_usd / 1_000_000).toFixed(2)}M deposited to the exchange in the last hour.`,
+      metric: d.net_inflow_usd,
       fetched_at: d.hour_bucket,
     });
   }

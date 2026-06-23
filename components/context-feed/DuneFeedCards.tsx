@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Repeat, ArrowRightLeft, AlertOctagon, Sparkles } from 'lucide-react';
+import { Repeat, ArrowRightLeft, AlertOctagon, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
 
 interface Card {
   type: string;
@@ -24,6 +24,10 @@ const ICON_BY_TYPE: Record<string, React.ReactNode> = {
   smart_money_rotation:  <Sparkles className="w-4 h-4 text-amber-300" />,
   mev_sandwich:          <AlertOctagon className="w-4 h-4 text-red-400" />,
   stablecoin_pulse:      <Repeat className="w-4 h-4 text-emerald-300" />,
+  // CEX outflow (withdrawals → historically bullish) vs inflow (deposits →
+  // potential sell pressure). Distinct directional glyphs.
+  cex_drain:             <TrendingDown className="w-4 h-4 text-emerald-400" />,
+  cex_inflow:            <TrendingUp className="w-4 h-4 text-red-400" />,
 };
 
 export default function DuneFeedCards({ limit = 12 }: { limit?: number }) {
