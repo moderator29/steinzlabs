@@ -21,7 +21,7 @@ async function getSupabase() {
   );
 }
 
-export const PATCH = withTierGate("mini", async (
+export const PATCH = withTierGate("pro", async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) => {
@@ -67,7 +67,7 @@ export const PATCH = withTierGate("mini", async (
   return NextResponse.json({ ok: true });
 });
 
-export const DELETE = withTierGate("mini", async (
+export const DELETE = withTierGate("pro", async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) => {

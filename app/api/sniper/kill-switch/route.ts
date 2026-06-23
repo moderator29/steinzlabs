@@ -28,7 +28,7 @@ async function getSupabase() {
  * in one call. The platform-wide admin kill-switch lives at
  * /api/admin/sniper-platform-state (separate route, not here).
  */
-export const POST = withTierGate("pro", async (_request: NextRequest) => {
+export const POST = withTierGate("max", async (_request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

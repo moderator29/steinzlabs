@@ -227,11 +227,11 @@ async function fetchCoinsWorthWatching(archetype: WalletArchetype, heldAddresses
 
 // ─── GET Handler ──────────────────────────────────────────────────────────────
 
-// withTierGate('pro') — DNA analysis fans out to Birdeye, Alchemy
+// withTierGate('mini') — DNA analysis fans out to Birdeye, Alchemy
 // + an Anthropic synthesis call (Sonnet 4.6, billable). Without an
 // auth + tier gate, a script could iterate addresses and burn
 // $150-300/day in API spend; tier-gating Pro+ caps the surface.
-export const GET = withTierGate('pro', async (request: NextRequest) => {
+export const GET = withTierGate('mini', async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 

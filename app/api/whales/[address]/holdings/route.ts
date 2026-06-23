@@ -54,7 +54,7 @@ interface HoldingRow {
 
 const MAX_TOKENS_PRICED = 25; // pricing batch ceiling — DexScreener rate-limits at ~5 req/s
 
-export const GET = withTierGate("pro", async (
+export const GET = withTierGate("mini", async (
   request: NextRequest,
   context: { params: Promise<{ address: string }> },
 ) => {

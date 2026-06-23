@@ -85,7 +85,7 @@ async function getOwnedAddresses(userId: string): Promise<string[]> {
   return owned;
 }
 
-export const GET = withTierGate("pro", async (_request: NextRequest) => {
+export const GET = withTierGate("max", async (_request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -98,7 +98,7 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
   return NextResponse.json({ criteria: data ?? [] });
 });
 
-export const POST = withTierGate("pro", async (request: NextRequest) => {
+export const POST = withTierGate("max", async (request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -192,7 +192,7 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
   return NextResponse.json({ criteria: data });
 });
 
-export const PATCH = withTierGate("pro", async (request: NextRequest) => {
+export const PATCH = withTierGate("max", async (request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -209,7 +209,7 @@ export const PATCH = withTierGate("pro", async (request: NextRequest) => {
   return NextResponse.json({ ok: true });
 });
 
-export const DELETE = withTierGate("pro", async (request: NextRequest) => {
+export const DELETE = withTierGate("max", async (request: NextRequest) => {
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

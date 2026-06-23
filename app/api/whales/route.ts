@@ -5,7 +5,7 @@ import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 
 export const runtime = "nodejs";
 
-export const GET = withTierGate("pro", async (request: NextRequest) => {
+export const GET = withTierGate("mini", async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
   const chain = sp.get("chain");
   const entityType = sp.get("entity_type");
