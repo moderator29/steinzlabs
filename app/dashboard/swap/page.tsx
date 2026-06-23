@@ -1167,12 +1167,21 @@ export default function SwapPage() {
               return <BackButton href={backHref} />;
             })()}
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={`p-2 rounded-xl transition-all ${showSettings ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'hover:bg-white/5 text-gray-400'}`}
-            >
-              <Settings className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Multi-leg batch flow — queue several swaps, sign each separately. */}
+              <button
+                onClick={() => router.push('/dashboard/swap/batch')}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all inline-flex items-center gap-1.5"
+              >
+                <ArrowDownUp className="w-3.5 h-3.5" /> Batch
+              </button>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-2 rounded-xl transition-all ${showSettings ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'hover:bg-white/5 text-gray-400'}`}
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Wallet Selector Pills */}
