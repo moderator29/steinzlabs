@@ -307,7 +307,17 @@ function LoginPageInner() {
       }
 
       showToast('Welcome back!', 'success');
-      const destination = searchParams.get('from') || '/dashboard';
+      // Only ever navigate to a safe SAME-ORIGIN RELATIVE path. A malformed,
+      // absolute, or protocol-relative `from` (stale in browser history,
+      // hand-crafted, or doubly-encoded) was previously handed straight to
+      // window.location.assign(), which the browser rejected with
+      // ERR_INVALID_URL — stranding the user in a login loop that only clearing
+      // history could break. This also closes an open-redirect.
+      const rawFrom = searchParams.get('from');
+      const destination =
+        rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') && !rawFrom.startsWith('/\\')
+          ? rawFrom
+          : '/dashboard';
       // Hard navigation so middleware reads the freshly-written cookies.
       window.location.assign(destination);
     } catch (err: any) {

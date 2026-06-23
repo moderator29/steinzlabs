@@ -77,8 +77,11 @@ function AuthClearInner() {
     } finally {
       setCleared(names);
       setDone(true);
-      // Auto-bounce back so users don't have to click anything.
-      const target = from.startsWith('/dashboard') || from.startsWith('/admin') ? '/login' : from;
+      // Auto-bounce back so users don't have to click anything. Sanitize first:
+      // only ever replace() to a safe same-origin relative path, or the same
+      // ERR_INVALID_URL that breaks /login would strand recovery here too.
+      const safeFrom = from.startsWith('/') && !from.startsWith('//') && !from.startsWith('/\\') ? from : '/';
+      const target = safeFrom.startsWith('/dashboard') || safeFrom.startsWith('/admin') ? '/login' : safeFrom;
       const t = setTimeout(() => { window.location.replace(target); }, 1500);
       return () => clearTimeout(t);
     }
