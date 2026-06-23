@@ -16,6 +16,8 @@ import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loade
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { useExpertMode } from '@/lib/hooks/useExpertMode';
+import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
+import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 
 export interface SwapCardData {
   fromToken: string;
@@ -78,6 +80,7 @@ function TokenGlyph({ symbol }: { symbol: string }) {
 
 export function SwapCard({ swap, walletAddress, onCancel }: Props) {
   const expertMode = useExpertMode();
+  const { broadcast, unlockRequest, resolveUnlock, cancelUnlock } = useSwapBroadcast();
   const [stage, setStage] = useState<Stage>('quoting');
   const [quote, setQuote] = useState<SwapCardData>(swap);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -141,20 +144,18 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
         }
         const data = await res.json();
         if (cancelled) return;
-        // §swap-price-solana — accept `priceImpact` (legacy numeric)
-        // OR the new normalised `priceImpactPct` (string from Jupiter
-        // and from 0x's estimatedPriceImpact). Parse to a number.
-        const priceImpactFromResp = typeof data?.priceImpact === 'number'
-          ? data.priceImpact
-          : (typeof data?.priceImpactPct === 'string'
-            ? parseFloat(data.priceImpactPct) || 0
-            : swap.priceImpact);
+        // §swap-real-broadcast — read the normalised /api/swap/price shape:
+        // `toAmount` (human number), `rate` (number), `priceImpactPct`
+        // (string, Jupiter or 0x), `quoteData` (carries token addresses).
+        const priceImpactFromResp = typeof data?.priceImpactPct === 'string'
+          ? parseFloat(data.priceImpactPct) || 0
+          : (typeof data?.priceImpact === 'number' ? data.priceImpact : swap.priceImpact);
         const next: SwapCardData = {
           ...swap,
-          toAmount: data?.toAmount ?? data?.buyAmount ? String(data.toAmount ?? data.buyAmount) : swap.toAmount,
-          rate: data?.rate ? String(data.rate) : swap.rate,
+          toAmount: typeof data?.toAmount === 'number' ? String(data.toAmount) : swap.toAmount,
+          rate: typeof data?.rate === 'number' ? data.rate.toLocaleString('en-US', { maximumFractionDigits: 6 }) : swap.rate,
           priceImpact: priceImpactFromResp,
-          platformFee: data?.platformFee ? String(data.platformFee) : swap.platformFee,
+          platformFee: swap.platformFee,
           quoteData: data?.quoteData || swap.quoteData,
         };
         setQuote(next);
@@ -195,36 +196,51 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
     setStage('signing');
     setError(null);
     try {
-      const res = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chain: quote.chain,
-          fromToken: quote.fromToken,
-          toToken: quote.toToken,
-          fromAmount: quote.fromAmount,
-          walletAddress,
-          quoteData: quote.quoteData,
-        }),
+      // §swap-real-broadcast — fetch a FRESH executable quote at sign time
+      // (a fresh quote per sign is exactly the contract the card promises),
+      // then sign + broadcast through the shared signer. Success is set ONLY
+      // from a real on-chain tx hash — no more fake "executed" state.
+      const params = new URLSearchParams({
+        chain: quote.chain,
+        // Prefer the resolved contract/mint when present so unknown-symbol
+        // tokens still resolve; fall back to the symbol for the known set.
+        from: quote.fromTokenAddress || quote.fromToken,
+        to: quote.toTokenAddress || quote.toToken,
+        amount: quote.fromAmount,
+        taker: walletAddress,
       });
-      const data = await res.json().catch(() => ({} as { error?: string; txHash?: string }));
-      if (data?.txHash) {
-        setTxHash(data.txHash);
-        setStage('done');
-      } else {
-        const msg = (data?.error || '').toString();
-        // Treat chain / router "insufficient funds / balance" responses the
-        // same way as a pre-flight balance miss: flip to the deposit CTA.
+      const qres = await fetch(`/api/swap/quote?${params.toString()}`);
+      const qdata = await qres.json().catch(() => ({} as { error?: string }));
+      if (!qres.ok) {
+        const msg = (qdata?.error || '').toString();
         if (/insufficient|not enough|balance/i.test(msg)) {
           setStage('insufficient');
         } else {
-          setError(msg || 'Swap failed. Make sure your wallet has enough balance plus gas — deposit and try again.');
+          setError(msg || 'Could not fetch a swap quote. Try again in a moment.');
           setStage('error');
         }
+        return;
       }
+      const walletKind = detectWalletKind(quote.chain, null);
+      const hash = await broadcast({
+        quote: qdata,
+        chain: quote.chain,
+        walletKind,
+        address: walletAddress,
+      });
+      setTxHash(hash);
+      setStage('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Swap failed. Please try again.');
-      setStage('error');
+      const msg = err instanceof Error ? err.message : 'Swap failed. Please try again.';
+      if (/insufficient|not enough|balance/i.test(msg)) {
+        setStage('insufficient');
+      } else if (/unlock cancelled/i.test(msg)) {
+        // User backed out of the unlock modal — return to the ready state.
+        setStage('ready');
+      } else {
+        setError(msg);
+        setStage('error');
+      }
     }
   };
 
@@ -507,6 +523,18 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
           </div>
         )}
       </div>
+
+      {/* Built-in (Naka) wallet unlock — the broadcast hook parks here when a
+          stored key needs the password to decrypt. Resolving it resumes the
+          in-flight signature; closing it cancels the swap back to ready. */}
+      {unlockRequest && (
+        <UnlockWalletModal
+          encryptedKey={unlockRequest.encryptedKey}
+          addressShort={unlockRequest.addressShort}
+          onUnlocked={resolveUnlock}
+          onClose={cancelUnlock}
+        />
+      )}
     </div>
   );
 }
