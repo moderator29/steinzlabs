@@ -1231,11 +1231,15 @@ export default function SwapPage() {
                     : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
                 }`}
                 aria-pressed={walletMode === w.id}
+                title={w.label}
+                aria-label={w.label}
               >
-                {w.id === 'naka' && <NakaLogo size={16} />}
-                {w.id === 'metamask' && <MetaMaskLogo size={16} />}
-                {w.id === 'phantom' && <PhantomLogo size={16} />}
-                {w.label}
+                {/* §17 — logo-only wallet chips (no name text); the
+                    brand mark identifies the wallet, title/aria-label
+                    keep it accessible. */}
+                {w.id === 'naka' && <NakaLogo size={20} />}
+                {w.id === 'metamask' && <MetaMaskLogo size={20} />}
+                {w.id === 'phantom' && <PhantomLogo size={20} />}
                 {walletMode === w.id && !w.connected && (
                   <span className="text-[9px] text-amber-400 font-normal ms-0.5">Connect</span>
                 )}
@@ -1259,9 +1263,9 @@ export default function SwapPage() {
                 onClick={() => openAppKitModal()}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border bg-[#0A1EFF]/10 text-blue-200 border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/20 hover:text-blue-100 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
                 aria-label="Connect via WalletConnect (mobile-friendly)"
+                title={onMobileDevice ? 'Mobile / WalletConnect' : 'WalletConnect'}
               >
-                <WalletConnectLogo size={16} />
-                {onMobileDevice ? 'Mobile / WalletConnect' : 'WalletConnect'}
+                <WalletConnectLogo size={20} />
                 {appKitConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ms-0.5" />}
               </button>
             )}
@@ -1272,14 +1276,19 @@ export default function SwapPage() {
               <button
                 key={c.id}
                 onClick={() => { setChain(c.id); setFromToken(c.symbol); simulateQuote(fromAmount, c.symbol, toToken, c.id); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                title={c.label}
+                aria-label={c.label}
+                aria-pressed={chain === c.id}
+                className={`flex items-center justify-center p-2 rounded-xl transition-all shrink-0 border ${
                   chain === c.id
-                    ? 'bg-white/10 text-white border border-[#1a1f2e]'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                    ? 'bg-white/10 border-[#0A1EFF]/40'
+                    : 'border-transparent hover:bg-white/[0.03]'
                 }`}
               >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                {c.label}
+                {/* §17 — chain text labels removed to stop the row from
+                    overflowing/overlapping; the colored mark + tooltip
+                    identifies the chain. */}
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
               </button>
             ))}
           </div>

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown } from "@/components/icons/brand";
 import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { createChart, AreaSeries, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
 import { TokenLogo } from "@/components/market/TokenLogo";
 import { EmptyStateCta } from "@/components/dashboard/EmptyStateCta";
@@ -299,23 +298,7 @@ export default function PortfolioPage() {
             {perfError} — chart may be empty.
           </div>
         )}
-        <PerformanceChart series={perf?.series ?? []} timeframe={timeframe} loading={loadingPerf} />
-
-        <div className="mt-3 flex gap-2">
-          {(["1D", "7D", "30D", "90D", "ALL"] as Timeframe[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTimeframe(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                timeframe === t
-                  ? "bg-[#0A1EFF] text-white"
-                  : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <PerformanceChart series={perf?.series ?? []} loading={loadingPerf} />
       </div>
 
       {!address && !loadingIntel && (
@@ -448,93 +431,79 @@ export default function PortfolioPage() {
 
 function PerformanceChart({
   series,
-  timeframe,
   loading,
 }: {
   series: PerformancePoint[];
-  timeframe: Timeframe;
   loading: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  // §15 — replaced the lightweight-charts embed (whose only visible
+  // element on an empty portfolio was the TradingView attribution
+  // watermark) with a dependency-free SVG sparkline. Colour tracks
+  // direction: cyan when up over the window, rose when down.
+  const W = 600;
+  const H = 180;
+  const PAD = 8;
 
-  const filtered = useMemo(() => {
-    if (series.length === 0) return series;
-    const nowSec = Math.floor(Date.now() / 1000);
-    const cutoff = (() => {
-      switch (timeframe) {
-        case "1D":
-          return nowSec - 86_400;
-        case "7D":
-          return nowSec - 86_400 * 7;
-        case "30D":
-          return nowSec - 86_400 * 30;
-        case "90D":
-          return nowSec - 86_400 * 90;
-        default:
-          return 0;
-      }
-    })();
-    return series.filter((p) => p.time >= cutoff);
-  }, [series, timeframe]);
+  const paths = useMemo(() => {
+    if (series.length < 2) return null;
+    const xs = series.map((p) => p.time);
+    const ys = series.map((p) => p.value);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const spanX = maxX - minX || 1;
+    const spanY = maxY - minY || 1;
+    const toX = (t: number) => PAD + ((t - minX) / spanX) * (W - PAD * 2);
+    const toY = (v: number) => PAD + (1 - (v - minY) / spanY) * (H - PAD * 2);
+    const line = series
+      .map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.time).toFixed(2)} ${toY(p.value).toFixed(2)}`)
+      .join(" ");
+    const area = `${line} L${toX(maxX).toFixed(2)} ${H - PAD} L${toX(minX).toFixed(2)} ${H - PAD} Z`;
+    const up = series[series.length - 1].value >= series[0].value;
+    return { line, area, up };
+  }, [series]);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#94A3B8",
-        fontSize: 11,
-      },
-      grid: { vertLines: { visible: false }, horzLines: { color: "rgba(148,163,184,0.08)" } },
-      timeScale: { borderColor: "rgba(148,163,184,0.12)", timeVisible: true },
-      rightPriceScale: { borderColor: "rgba(148,163,184,0.12)" },
-      width: containerRef.current.clientWidth,
-      height: 180,
-      autoSize: true,
-    });
-    const areaSeries = chart.addSeries(AreaSeries, {
-      lineColor: "#00BFFF",
-      topColor: "rgba(0,191,255,0.30)",
-      bottomColor: "rgba(0,191,255,0.02)",
-      lineWidth: 2,
-    });
-    chartRef.current = chart;
-    seriesRef.current = areaSeries;
-    const observer = new ResizeObserver((entries) => {
-      for (const e of entries) {
-        chart.applyOptions({ width: e.contentRect.width });
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => {
-      observer.disconnect();
-      chart.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!seriesRef.current) return;
-    const data = filtered.map((p) => ({ time: p.time as never, value: p.value }));
-    seriesRef.current.setData(data);
-    chartRef.current?.timeScale().fitContent();
-  }, [filtered]);
+  const stroke = paths && !paths.up ? "#F43F5E" : "#00BFFF";
+  const fillTop = paths && !paths.up ? "rgba(244,63,94,0.28)" : "rgba(0,191,255,0.30)";
+  const fillBot = paths && !paths.up ? "rgba(244,63,94,0.02)" : "rgba(0,191,255,0.02)";
 
   return (
     <div className="mt-4">
-      <div
-        ref={containerRef}
-        className="w-full"
-        style={{ height: 180 }}
-        aria-label="Portfolio performance chart"
-      />
-      {filtered.length === 0 && !loading && (
-        <p className="text-[11px] text-slate-500 text-center mt-2">
-          No trade history yet. Your portfolio chart appears after your first swap.
-        </p>
+      {paths ? (
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="w-full"
+          style={{ height: H }}
+          role="img"
+          aria-label="Portfolio performance chart"
+        >
+          <defs>
+            <linearGradient id="pf-spark-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={fillTop} />
+              <stop offset="100%" stopColor={fillBot} />
+            </linearGradient>
+          </defs>
+          <path d={paths.area} fill="url(#pf-spark-fill)" />
+          <path
+            d={paths.line}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      ) : (
+        <div className="w-full flex items-center justify-center" style={{ height: H }}>
+          <p className="text-[11px] text-slate-500 text-center px-4">
+            {loading
+              ? "Loading…"
+              : "No trade history yet. Your portfolio chart appears after your first swap."}
+          </p>
+        </div>
       )}
     </div>
   );
