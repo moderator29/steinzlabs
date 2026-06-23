@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getTopTraders } from '@/lib/services/birdeye';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { getExplorerUrl } from '@/lib/chain-explorer';
+import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 
 // Cache ETH price for 60s to avoid repeated CoinGecko calls within a single request cycle
 let ethPriceCache: { price: number; ts: number } = { price: 0, ts: 0 };
@@ -472,6 +473,9 @@ const CACHE_TTL = 90_000;
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
+  // Whale tracker view is a Mini-tier feature (per the pricing page).
+  const gate = await checkTierServer('mini');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const { searchParams } = new URL(request.url);
   const tab = searchParams.get('tab') ?? 'discover';
   const chainFilter = searchParams.get('chain') ?? 'all';
