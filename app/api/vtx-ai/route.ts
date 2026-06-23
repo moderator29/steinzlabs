@@ -980,12 +980,20 @@ export async function POST(request: NextRequest) {
       skipRateLimit?: boolean;
       context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
       stream?: boolean;
+      // §model-picker — VTX Fast/Balanced/Deepest reasoning-depth toggle.
+      model?: string;
     };
 
     const {
       message, history, tier, personality, language, depth,
       riskAppetite, responseStyle, skipRateLimit, context, stream: wantsStream,
+      model: vtxModel,
     } = body;
+
+    // Map the neutral picker label → Anthropic output_config.effort on the
+    // executor. Unknown / absent → undefined (model default = high).
+    const vtxEffort: 'low' | 'medium' | 'high' | undefined =
+      vtxModel === 'fast' ? 'low' : vtxModel === 'deepest' ? 'high' : vtxModel === 'balanced' ? 'medium' : undefined;
 
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -1235,7 +1243,7 @@ export async function POST(request: NextRequest) {
           try {
             let streamIterations = 0;
             while (true) {
-              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled });
+              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled, effort: vtxEffort });
               for await (const event of stream) {
                 if (
                   event.type === 'content_block_delta' &&
@@ -1308,6 +1316,7 @@ export async function POST(request: NextRequest) {
         messages: loopMessages,
         system: systemPrompt,
         webSearch: webSearchEnabled,
+        effort: vtxEffort,
       });
 
       if (vtxResponse.stop_reason === 'tool_use') {

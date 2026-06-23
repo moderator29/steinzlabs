@@ -59,7 +59,9 @@ export function VtxModelPicker({ value, onChange }: ModelPickerProps) {
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 hover:border-[#0A1EFF]/40 text-xs text-slate-200 transition-colors"
       >
         <CurrentIcon className="w-3 h-3 text-[#8FA3FF]" />
-        <span className="font-semibold">{current.label}</span>
+        {/* Label collapses to icon-only on the narrowest screens so the chat
+            input bar stays usable on small phones; shows from sm+ up. */}
+        <span className="font-semibold hidden sm:inline">{current.label}</span>
         <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
