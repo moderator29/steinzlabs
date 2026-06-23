@@ -174,7 +174,7 @@ async function withSrcTimeout<T>(p: Promise<T[]>, ms: number, label: string): Pr
   }
 }
 
-function getArchivedEvents(chain: string): WhaleEvent[] {
+function getArchivedEventsInMemory(chain: string): WhaleEvent[] {
   const now = Date.now();
   const archived: WhaleEvent[] = [];
   eventStore.forEach(stored => {
@@ -187,6 +187,106 @@ function getArchivedEvents(chain: string): WhaleEvent[] {
   });
   archived.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   return archived;
+}
+
+// §B5 — persist every fetched event so the live feed and (critically) the
+// 24–72h archive are deterministic across serverless instances. The in-memory
+// eventStore is per-lambda, so the old getArchivedEvents returned whatever
+// THIS instance happened to have seen — a random subset. Writes are
+// fire-and-forget: they never block the response and never fail the feed.
+let lastArchiveCleanup = 0;
+function persistEvents(events: WhaleEvent[]): void {
+  if (events.length === 0) return;
+  const admin = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const rows = events.map((e) => {
+    const t = e.timestamp ? new Date(e.timestamp) : null;
+    return {
+      id: e.id,
+      chain: e.chain,
+      type: e.type,
+      event_ts: t && Number.isFinite(t.getTime()) ? t.toISOString() : null,
+      fetched_at: nowIso,
+      payload: e as unknown as Record<string, unknown>,
+    };
+  });
+  // ignoreDuplicates keeps the original fetched_at (first-seen time), matching
+  // the in-memory archive-window semantics.
+  void admin
+    .from('context_feed_events')
+    .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+    .then(({ error }) => {
+      if (error) console.warn('[context-feed] persist failed:', error.message);
+    });
+  // Throttled cleanup (≤ every 5 min) — drop rows past the 72h archive window.
+  const now = Date.now();
+  if (now - lastArchiveCleanup > 5 * 60 * 1000) {
+    lastArchiveCleanup = now;
+    const cutoff = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString();
+    void admin
+      .from('context_feed_events')
+      .delete()
+      .lt('fetched_at', cutoff)
+      .then(({ error }) => {
+        if (error) console.warn('[context-feed] archive cleanup failed:', error.message);
+      });
+  }
+}
+
+// Archive read — pulls the 24–72h window from the persisted table (deterministic
+// across instances). Falls back to the per-lambda in-memory scan if the query
+// errors or returns nothing, so behaviour never regresses below the old path.
+async function getArchivedEvents(chain: string): Promise<WhaleEvent[]> {
+  const now = Date.now();
+  const minAge = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString(); // 72h ago
+  const maxAge = new Date(now - TWENTY_FOUR_HOURS).toISOString();     // 24h ago
+  try {
+    const admin = getSupabaseAdmin();
+    let q = admin
+      .from('context_feed_events')
+      .select('payload')
+      .gte('fetched_at', minAge)
+      .lte('fetched_at', maxAge)
+      .order('fetched_at', { ascending: false })
+      .limit(300);
+    if (chain !== 'all') q = q.eq('chain', chain);
+    const { data, error } = await q;
+    if (!error && data && data.length > 0) {
+      const events = data.map((r) => (r as { payload: WhaleEvent }).payload);
+      events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return events;
+    }
+  } catch (err) {
+    console.warn('[context-feed] archive read failed, using in-memory:', err instanceof Error ? err.message : String(err));
+  }
+  return getArchivedEventsInMemory(chain);
+}
+
+// Cheap, 60s-cached "is there an archive?" flag for the live-feed responses,
+// so the hot cache-hit path doesn't run a full archive query per request.
+const archiveFlagCache: Record<string, { has: boolean; ts: number }> = {};
+async function hasArchivedEvents(chain: string): Promise<boolean> {
+  const cached = archiveFlagCache[chain];
+  if (cached && Date.now() - cached.ts < 60_000) return cached.has;
+  const now = Date.now();
+  const minAge = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString();
+  const maxAge = new Date(now - TWENTY_FOUR_HOURS).toISOString();
+  let has = false;
+  try {
+    const admin = getSupabaseAdmin();
+    let q = admin
+      .from('context_feed_events')
+      .select('id', { count: 'exact', head: true })
+      .gte('fetched_at', minAge)
+      .lte('fetched_at', maxAge);
+    if (chain !== 'all') q = q.eq('chain', chain);
+    const { count, error } = await q;
+    has = !error && (count ?? 0) > 0;
+  } catch {
+    has = getArchivedEventsInMemory(chain).length > 0;
+  }
+  archiveFlagCache[chain] = { has, ts: Date.now() };
+  return has;
 }
 
 async function fetchPrices(): Promise<void> {
@@ -851,7 +951,7 @@ export async function GET(request: Request) {
     const archived = searchParams.get('archived') === 'true';
 
     if (archived) {
-      const archivedEvents = applyTypeFilter(getArchivedEvents(chain), filter);
+      const archivedEvents = applyTypeFilter(await getArchivedEvents(chain), filter);
       return NextResponse.json({
         events: archivedEvents.slice(0, limit),
         total: archivedEvents.length,
@@ -881,7 +981,7 @@ export async function GET(request: Request) {
         source: cached.sources.join('+'),
         chain,
         cached: true,
-        hasArchive: getArchivedEvents(chain).length > 0,
+        hasArchive: await hasArchivedEvents(chain),
       }, {
         headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
       });
@@ -988,6 +1088,10 @@ export async function GET(request: Request) {
     responseCache[chain] = { data: events, ts: Date.now(), sources };
 
     storeEvents(events);
+    // §B5 — persist this fresh batch so the cross-instance archive stays
+    // deterministic. Only the fresh path persists (≤ every 5s via CACHE_TTL),
+    // not the hot cache-hit path.
+    persistEvents(events);
 
     const liveEvents = getLiveEvents(chain);
     const personal = await buildPersonalContext(request);
@@ -1019,12 +1123,12 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,
-      hasArchive: getArchivedEvents(chain).length > 0,
+      hasArchive: await hasArchivedEvents(chain),
     }, {
       headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
     });
   } catch (error) {
-
+    console.error('[context-feed] request failed:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: 'Failed to fetch context feed' }, { status: 500 });
   }
 }

@@ -1,125 +1,79 @@
 'use client';
 
-import { Archive, Clock, Filter, Search, TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, ChevronDown, ExternalLink } from 'lucide-react';
-import BackButton from '@/components/ui/BackButton';
-import { useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * Archive — the Context Feed, historical. Renders the persisted 24–72h event
+ * window with the exact same cards, chain tabs, and type-filter pills as the
+ * live feed (via the shared ContextEventCard + matchesTypeFilter), so it reads
+ * as "the feed, just archived" rather than a separate, divergent surface.
+ */
 
-interface ArchivedEvent {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  chain: string;
-  timestamp: string;
-  timeAgo: string;
-  significance: number;
-  tokenSymbol?: string;
-  priceChange?: number;
-  volume?: string;
-  walletAddress?: string;
-  txHash?: string;
+import { Archive, Clock, Search, ChevronDown } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
+import { useState, useMemo } from 'react';
+import { useArchivedFeed, type ChainFilter, type ContextEventFilter } from '@/lib/hooks/useContextFeed';
+import ContextEventCard from '@/components/context-feed/ContextEventCard';
+
+// Pill → the underscored event types it surfaces. Source fetchers emit a
+// different taxonomy than the UI pills, and hyphen/prefix variants drift, so we
+// normalise to underscores and match on inclusion. (Self-contained here to keep
+// this branch independent of the parallel context-feed branch that adds the
+// shared matcher to lib/contextFeed/filter.ts.)
+const FILTER_TYPE_MAP: Record<Exclude<ContextEventFilter, 'all'>, readonly string[]> = {
+  news: ['new_listing', 'trending', 'token_launch'],
+  coins: ['new_listing', 'token_launch', 'trade', 'trending'],
+  new_coins: ['new_listing', 'token_launch'],
+  volume: ['whale_accumulation', 'whale_sell', 'large_transfer', 'trade'],
+  trending: ['trending'],
+};
+function matchesType(type: string | undefined, filter: ContextEventFilter): boolean {
+  if (filter === 'all') return true;
+  const t = (type || '').toLowerCase().replace(/-/g, '_');
+  return FILTER_TYPE_MAP[filter].some((allowed) => t.includes(allowed));
 }
 
-const FILTER_OPTIONS = [
-  { key: 'all', label: 'All Events' },
-  { key: 'whale', label: 'Whale Moves' },
-  { key: 'price', label: 'Price Alerts' },
-  { key: 'liquidity', label: 'Liquidity' },
-  { key: 'governance', label: 'Governance' },
-  { key: 'security', label: 'Security' },
+// Same type-filter pills as the live feed (drives the shared matchesTypeFilter).
+const TYPE_FILTERS: { key: ContextEventFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'news', label: 'News' },
+  { key: 'coins', label: 'Coins' },
+  { key: 'new_coins', label: 'New' },
+  { key: 'trending', label: 'Trending' },
+  { key: 'volume', label: 'Volume' },
 ];
 
-const CHAIN_FILTERS = [
+const CHAIN_FILTERS: { key: ChainFilter; label: string; color: string }[] = [
   { key: 'all', label: 'All Chains', color: '#9CA3AF' },
   { key: 'ethereum', label: 'ETH', color: '#627EEA' },
   { key: 'solana', label: 'SOL', color: '#9945FF' },
   { key: 'base', label: 'Base', color: '#0052FF' },
   { key: 'bsc', label: 'BSC', color: '#F0B90B' },
   { key: 'polygon', label: 'MATIC', color: '#8247E5' },
+  { key: 'arbitrum', label: 'ARB', color: '#28A0F0' },
 ];
 
-function loadArchivedEvents(): ArchivedEvent[] {
-  // Load real swap history from localStorage (saved by swap page)
-  if (typeof window === 'undefined') return [];
-  try {
-    const swapHistory = JSON.parse(localStorage.getItem('steinz_swap_history') || '[]');
-    const events: ArchivedEvent[] = swapHistory.map((tx: Record<string, unknown>, i: number) => {
-      const ts = tx.timestamp as number || Date.now();
-      const hoursAgo = Math.floor((Date.now() - ts) / 3600000);
-      const daysAgo = Math.floor(hoursAgo / 24);
-      return {
-        id: (tx.id as string) || `archive-${i}`,
-        type: 'large_swap',
-        title: `Swapped ${tx.fromAmount} ${tx.from} to ${tx.to}`,
-        description: `${tx.chain || 'ethereum'} swap via 0x Protocol`,
-        chain: (tx.chain as string) || 'ethereum',
-        timestamp: new Date(ts).toISOString(),
-        timeAgo: hoursAgo < 1 ? 'Just now' : daysAgo >= 1 ? `${daysAgo}d ago` : `${hoursAgo}h ago`,
-        significance: 5,
-        tokenSymbol: (tx.to as string) || '',
-      };
-    });
-    return events;
-  } catch {
-    return [];
-  }
-}
-
-function getEventIcon(type: string) {
-  switch (type) {
-    case 'whale_transfer': return { icon: Zap, color: '#0A1EFF' };
-    case 'price_alert': return { icon: TrendingUp, color: '#10B981' };
-    case 'liquidity_change': return { icon: RefreshCw, color: '#7C3AED' };
-    case 'governance_vote': return { icon: Filter, color: '#F59E0B' };
-    case 'security': return { icon: AlertTriangle, color: '#EF4444' };
-    default: return { icon: Zap, color: '#6B7280' };
-  }
-}
-
 export default function ArchivePage() {
-  const router = useRouter();
-  const [events, setEvents] = useState<ArchivedEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [chainFilter, setChainFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState<ContextEventFilter>('all');
+  const [chainFilter, setChainFilter] = useState<ChainFilter>('all');
   const [visibleCount, setVisibleCount] = useState(20);
 
-  useEffect(() => {
-    fetch('/api/context-feed?archived=true&limit=100')
-      .then(r => r.json())
-      .then(data => {
-        const mapped = (data.events || []).map((e: Record<string, unknown>) => ({
-          id: e.id as string || String(Date.now()),
-          type: e.type as string || 'whale_transfer',
-          title: e.title as string || '',
-          description: e.summary as string || '',
-          chain: e.chain as string || 'ethereum',
-          timestamp: e.timestamp as string || new Date().toISOString(),
-          timeAgo: '',
-          significance: (e.trustScore as number) ? Math.ceil((e.trustScore as number) / 10) : 5,
-          priceChange: e.tokenPriceChange24h as number || undefined,
-          volume: e.tokenVolume24h ? `$${(e.tokenVolume24h as number).toLocaleString()}` : undefined,
-        }));
-        setEvents(mapped);
-      })
-      .catch(() => {
-        // Fallback: load real swap history from localStorage
-        setEvents(loadArchivedEvents());
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // The archive hook fetches the persisted 24–72h window for the chain.
+  const { events, loading } = useArchivedFeed(chainFilter);
 
-  const filteredEvents = events.filter(e => {
-    if (typeFilter !== 'all' && !e.type.includes(typeFilter)) return false;
-    if (chainFilter !== 'all' && e.chain !== chainFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || (e.tokenSymbol?.toLowerCase().includes(q));
-    }
-    return true;
-  });
+  const filteredEvents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return events.filter((e) => {
+      if (!matchesType(e.type, typeFilter)) return false;
+      if (q) {
+        return (
+          e.title?.toLowerCase().includes(q) ||
+          e.summary?.toLowerCase().includes(q) ||
+          (e.tokenSymbol?.toLowerCase().includes(q) ?? false)
+        );
+      }
+      return true;
+    });
+  }, [events, typeFilter, searchQuery]);
 
   const visibleEvents = filteredEvents.slice(0, visibleCount);
 
@@ -134,7 +88,8 @@ export default function ArchivePage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4 max-w-4xl mx-auto">
+      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+        {/* Search */}
         <div className="flex items-center gap-2 bg-[#111827] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0A1EFF]/40 transition-colors">
           <Search className="w-4 h-4 text-gray-600" />
           <input
@@ -146,38 +101,39 @@ export default function ArchivePage() {
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-            {FILTER_OPTIONS.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setTypeFilter(f.key)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
-                  typeFilter === f.key
-                    ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30'
-                    : 'text-gray-500 border border-white/[0.06] hover:text-gray-300'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-            {CHAIN_FILTERS.map(c => (
-              <button
-                key={c.key}
-                onClick={() => setChainFilter(c.key)}
-                className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all border"
-                style={{
-                  borderColor: chainFilter === c.key ? c.color : 'rgba(255,255,255,0.04)',
-                  backgroundColor: chainFilter === c.key ? `${c.color}15` : 'transparent',
-                  color: chainFilter === c.key ? c.color : '#6B7280',
-                }}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+        {/* Type pills (same as the live feed) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+          {TYPE_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTypeFilter(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
+                typeFilter === f.key
+                  ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30'
+                  : 'text-gray-500 border border-white/[0.06] hover:text-gray-300'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Chain pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+          {CHAIN_FILTERS.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => { setChainFilter(c.key); setVisibleCount(20); }}
+              className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all border"
+              style={{
+                borderColor: chainFilter === c.key ? c.color : 'rgba(255,255,255,0.04)',
+                backgroundColor: chainFilter === c.key ? `${c.color}15` : 'transparent',
+                color: chainFilter === c.key ? c.color : '#6B7280',
+              }}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex items-center justify-between">
@@ -190,15 +146,15 @@ export default function ArchivePage() {
 
         {loading ? (
           <div className="space-y-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-[#111827] rounded-xl p-4 border border-white/[0.04] animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/5" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-white/5 rounded w-3/4" />
-                    <div className="h-2 bg-white/5 rounded w-1/2" />
-                  </div>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="glass rounded-2xl p-5 border border-white/10 animate-pulse">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-5 w-16 rounded-full bg-white/5" />
+                  <div className="h-5 w-12 rounded bg-white/5" />
                 </div>
+                <div className="h-4 bg-white/5 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-white/5 rounded w-full mb-1" />
+                <div className="h-3 bg-white/5 rounded w-1/2" />
               </div>
             ))}
           </div>
@@ -206,55 +162,17 @@ export default function ArchivePage() {
           <div className="text-center py-16">
             <Archive className="w-12 h-12 text-gray-700 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-gray-500">No archived events found</h3>
-            <p className="text-xs text-gray-600 mt-1">Try adjusting your filters</p>
+            <p className="text-xs text-gray-600 mt-1">Older events appear here once they pass 24h. Try adjusting your filters.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {visibleEvents.map((event) => {
-              const { icon: EventIcon, color } = getEventIcon(event.type);
-              return (
-                <div key={event.id} className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.04] hover:border-white/[0.08] transition-all group">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
-                      <EventIcon className="w-4 h-4" style={{ color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-xs font-semibold text-white truncate">{event.title}</h4>
-                        {event.significance >= 8 && (
-                          <span className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold shrink-0">HIGH</span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-gray-500 mb-2">{event.description}</p>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-[9px] text-gray-600 flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          {event.timeAgo}
-                        </span>
-                        {event.tokenSymbol && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/10 text-[#0A1EFF] font-semibold">
-                            {event.tokenSymbol}
-                          </span>
-                        )}
-                        {event.priceChange !== undefined && (
-                          <span className={`text-[9px] font-semibold flex items-center gap-0.5 ${event.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {event.priceChange >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-                            {event.priceChange >= 0 ? '+' : ''}{event.priceChange.toFixed(1)}%
-                          </span>
-                        )}
-                        {event.volume && (
-                          <span className="text-[9px] text-gray-600">Vol: {event.volume}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-3">
+            {visibleEvents.map((event) => (
+              <ContextEventCard key={event.id} event={event} />
+            ))}
 
             {visibleCount < filteredEvents.length && (
               <button
-                onClick={() => setVisibleCount(prev => prev + 20)}
+                onClick={() => setVisibleCount((prev) => prev + 20)}
                 className="w-full py-3 rounded-xl text-xs font-semibold text-gray-400 bg-[#111827] border border-white/[0.04] hover:border-white/[0.08] transition-all flex items-center justify-center gap-2"
               >
                 <ChevronDown className="w-3.5 h-3.5" />
