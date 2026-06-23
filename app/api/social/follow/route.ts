@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isBlockedBetween } from '@/lib/social/permissions';
 import { RATES, takeToken } from '@/lib/social/rateLimit';
+import { notifySocialEvent } from '@/lib/social/notify';
 
 /**
  * POST /api/social/follow  body: { target_id }
@@ -39,6 +40,15 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fire the social notification (fire-and-forget; never block the follow).
+  // A public account auto-accepts -> new_follower; a private one -> follow_request.
+  void notifySocialEvent({
+    recipient_id: targetId,
+    event: status === 'pending' ? 'follow_request' : 'new_follower',
+    metadata: { follower_id: user.id },
+  }).catch(() => {});
+
   return NextResponse.json({ follow: data });
 }
 

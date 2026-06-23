@@ -66,6 +66,13 @@ export async function GET(req: NextRequest) {
       .select('blocked_id, blocker_id')
       .or(`and(blocker_id.eq.${caller.id},blocked_id.in.(${peerIds.join(',')})),and(blocked_id.eq.${caller.id},blocker_id.in.(${peerIds.join(',')}))`);
     blockedSet = new Set((blocks ?? []).map((b) => (b.blocker_id === caller.id ? b.blocked_id : b.blocker_id)));
+    // Also hide users the caller has muted.
+    const { data: mutes } = await sb
+      .from('social_mutes')
+      .select('muted_id')
+      .eq('muter_id', caller.id)
+      .in('muted_id', peerIds);
+    for (const m of (mutes ?? [])) blockedSet.add(m.muted_id);
   }
   const visibleIds = peerIds.filter((id) => !blockedSet.has(id));
 
