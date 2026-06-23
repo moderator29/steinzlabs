@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewPairs } from '@/lib/services/dexscreener';
 import type { DexPair } from '@/lib/services/dexscreener';
@@ -76,6 +77,9 @@ function pairAgeLabel(pairCreatedAt?: number): string {
 // ─── GET Handler — New Token Feed ─────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
+  // Sniper Bot is a Max-tier feature (per the pricing page).
+  const gate = await checkTierServer('max');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 30);
   const chainFilter = searchParams.get('chain') || undefined;
@@ -115,6 +119,8 @@ export async function GET(request: NextRequest) {
 // ─── POST Handler — Token Security Check ──────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  const gate = await checkTierServer('max');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   try {
     const body = await request.json();
     const { address, chain } = body as { address: string; chain: string };

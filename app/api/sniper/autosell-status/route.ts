@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,8 @@ interface TriggeredStop {
 }
 
 export async function GET() {
+  const gate = await checkTierServer('max');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
