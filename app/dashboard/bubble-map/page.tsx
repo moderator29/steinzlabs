@@ -393,10 +393,11 @@ function BubbleMapInner() {
   const [pinnedAddress, setPinnedAddress] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showChainDrop, setShowChainDrop] = useState(false);
-  // BUBBLE4: timeline scrub + signed share link. snapshotMs=null means
-  // "now"; setting a value re-fetches with ?at=<ms> so the response
-  // labels the view deterministically.
-  const [snapshotMs, setSnapshotMs] = useState<number | null>(null);
+  // BUBBLE4: signed share link. The holder-intel pipeline is LIVE-ONLY —
+  // there is no historical holder snapshot store wired yet — so the old
+  // datetime "snapshot" scrubber was misleading: picking a past time still
+  // returned current data. It's been replaced with an honest "Live" badge
+  // until a real holder_snapshots source is wired.
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
 
@@ -417,9 +418,8 @@ function BubbleMapInner() {
     setLoading(true);
     setSelectedNode(null);
     try {
-      const atParam = snapshotMs ? `&at=${snapshotMs}` : '';
       const res = await fetch(
-        `/api/bubble-map?token=${encodeURIComponent(tokenAddress.trim())}&chain=${chain}&mode=${m}${atParam}`
+        `/api/bubble-map?token=${encodeURIComponent(tokenAddress.trim())}&chain=${chain}&mode=${m}`
       );
       const data = await res.json() as BubbleMapData;
       if (!data.error) setMapData(data);
@@ -431,7 +431,7 @@ function BubbleMapInner() {
       console.error('[bubble-map] fetch failed:', err);
       setMapData({ error: err instanceof Error ? err.message : 'Failed to load bubble map' } as BubbleMapData);
     } finally { setLoading(false); }
-  }, [tokenAddress, chain, mode, snapshotMs]);
+  }, [tokenAddress, chain, mode]);
 
   // BUBBLE4: mint a signed permalink. Server-side JWT signing — the
   // share URL is unforgeable, so a sender can't be impersonated into
@@ -449,11 +449,11 @@ function BubbleMapInner() {
         try {
           const r = await fetch(`/api/bubble-map/share?t=${encodeURIComponent(share)}`);
           if (!r.ok) return;
-          const p = (await r.json()) as { token?: string; chain?: string; mode?: ViewMode; at?: number | null };
+          const p = (await r.json()) as { token?: string; chain?: string; mode?: ViewMode };
           if (p.token) setTokenAddress(p.token);
           if (p.chain) setChain(p.chain);
           if (p.mode) setMode(p.mode);
-          if (typeof p.at === 'number') setSnapshotMs(p.at);
+          // `at` (legacy snapshot timestamp) is ignored — holder intel is live-only.
         } catch { /* ignore bad/expired share token */ }
       })();
     } else if (addr) {
@@ -482,7 +482,6 @@ function BubbleMapInner() {
           token: tokenAddress.trim(),
           chain,
           mode,
-          at: snapshotMs,
         }),
       });
       if (!res.ok) return;
@@ -492,7 +491,7 @@ function BubbleMapInner() {
     } finally {
       setSharing(false);
     }
-  }, [tokenAddress, chain, mode, snapshotMs]);
+  }, [tokenAddress, chain, mode]);
 
   function handleModeChange(m: ViewMode) {
     setMode(m);
@@ -651,23 +650,16 @@ function BubbleMapInner() {
                 <tab.icon className="w-3 h-3" />{tab.label}
               </button>
             ))}
-            {/* BUBBLE4 timeline scrub + share */}
-            <label className="ms-2 flex items-center gap-1 text-[10px] text-slate-400">
-              <span className="uppercase tracking-wider">Snapshot</span>
-              <input
-                type="datetime-local"
-                value={snapshotMs ? new Date(snapshotMs).toISOString().slice(0, 16) : ''}
-                onChange={(e) => setSnapshotMs(e.target.value ? new Date(e.target.value).getTime() : null)}
-                onBlur={() => { if (mapData) void fetchMap(mode); }}
-                className="bg-white/[0.03] border border-white/[0.06] rounded px-2 py-1 text-[10px] text-slate-200"
-                aria-label="Snapshot timestamp"
-              />
-              {snapshotMs !== null && (
-                <button type="button" onClick={() => { setSnapshotMs(null); if (mapData) void fetchMap(mode); }} className="text-slate-500 hover:text-white text-[10px] px-1">
-                  Now
-                </button>
-              )}
-            </label>
+            {/* BUBBLE4 — holder intel is live-only (no historical snapshot
+                store wired yet), so we show an honest "Live" badge instead of
+                a datetime scrubber that would imply time travel it can't do. */}
+            <span
+              className="ms-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-400"
+              title="Holder distribution reflects current on-chain data. Historical snapshots are coming."
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+              Live
+            </span>
             <button
               type="button"
               onClick={() => void shareView()}
