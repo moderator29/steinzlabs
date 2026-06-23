@@ -710,8 +710,12 @@ export default function VtxAiTab() {
       // The address regex stays case-sensitive (base58) — kept separate from
       // the case-insensitive keyword/symbol test.
       const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|convert|exchange|chart|price of|price for|trade|send|approve)\b|\$[A-Za-z]{2,10}\b/i;
+      // Common token names — mirrors the route's symbolQuery KNOWN list so a
+      // bare "eth" / "price of sol" / "tell me about bonk" still takes the
+      // card path (the route builds a token card for any of these).
+      const TOKEN_NAMES = /\b(bitcoin|btc|ethereum|eth|solana|sol|bnb|binance coin|xrp|usdt|tether|usdc|doge(coin)?|pepe|shiba?( inu)?|avax|avalanche|matic|polygon|arbitrum|arb|sui|ton|chainlink|link|uniswap|uni|aave|bonk|wif|jupiter|jup)\b/i;
       const TOKEN_ADDRESS = /0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
-      const needsCard = TOOL_USE_KEYWORDS.test(finalMessage) || TOKEN_ADDRESS.test(finalMessage);
+      const needsCard = TOOL_USE_KEYWORDS.test(finalMessage) || TOKEN_NAMES.test(finalMessage) || TOKEN_ADDRESS.test(finalMessage);
       const useStream = !needsCard;
 
       abortRef.current?.abort();

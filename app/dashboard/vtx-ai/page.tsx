@@ -550,11 +550,16 @@ function VtxAiPageInner() {
     setLoading(true);
     setShowTools(false);
 
-    // Streaming opt-in: skip when the prompt likely needs tool-use (price,
-    // chart, swap, buy/sell) so tool results + token cards still land via
-    // the JSON branch. Mirrors VtxAiTab's heuristic so behaviour is parity.
-    const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|chart|price of|trade|send|approve)\b/i;
-    const useStream = !TOOL_USE_KEYWORDS.test(finalMessage);
+    // Streaming opt-in: skip when the prompt likely needs a card (the streaming
+    // `done` event is text-only, so a card-worthy message must take the JSON
+    // branch or it silently loses its token/swap card). Mirrors the route's
+    // EXACT triggers — swap (swap|convert|trade|exchange), token card ($SYMBOL,
+    // any common token name, or a raw EVM/Solana address). Kept in sync with
+    // VtxAiTab.
+    const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|convert|exchange|chart|price of|price for|trade|send|approve)\b|\$[A-Za-z]{2,10}\b/i;
+    const TOKEN_NAMES = /\b(bitcoin|btc|ethereum|eth|solana|sol|bnb|binance coin|xrp|usdt|tether|usdc|doge(coin)?|pepe|shiba?( inu)?|avax|avalanche|matic|polygon|arbitrum|arb|sui|ton|chainlink|link|uniswap|uni|aave|bonk|wif|jupiter|jup)\b/i;
+    const TOKEN_ADDRESS = /0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
+    const useStream = !(TOOL_USE_KEYWORDS.test(finalMessage) || TOKEN_NAMES.test(finalMessage) || TOKEN_ADDRESS.test(finalMessage));
 
     try {
       const response = await fetch('/api/vtx-ai', {
@@ -1103,9 +1108,32 @@ function VtxAiPageInner() {
                 )}
                 <div className="whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere' }}>{cleanContent(msg.content)}</div>
                 {msg.tokenCards && msg.tokenCards.length > 0 && (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 space-y-3">
                     {msg.tokenCards.map((token, ti) => (
-                      <TokenCard key={ti} token={token} />
+                      <div key={ti} className="space-y-2">
+                        <TokenCard token={token} />
+                        {/* §card-actions — contextual follow-ups under the card,
+                            so the user can dig deeper with one tap. Responsive:
+                            wraps on narrow screens, sits inline on wider ones. */}
+                        {token.symbol && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              { label: 'Security', q: `Run a full security scan on ${token.symbol}` },
+                              { label: 'Chart', q: `Show me the price chart for ${token.symbol}` },
+                              { label: 'Swap', q: `Swap into ${token.symbol}` },
+                              { label: 'Tell me more', q: `Tell me more about ${token.symbol} — fundamentals, momentum, and risks` },
+                            ].map((a) => (
+                              <button
+                                key={a.label}
+                                onClick={() => handleSend(a.q)}
+                                className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.06] transition-all"
+                              >
+                                {a.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
