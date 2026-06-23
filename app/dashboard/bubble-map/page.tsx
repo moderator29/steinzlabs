@@ -484,7 +484,7 @@ export default function BubbleMapPage() {
         totalHolders: mapData.tokenInfo.totalHolders,
         riskLevel: mapData.risk?.riskLevel,
         topHolders: mapData.nodes
-          .filter(n => n.id !== 'token')
+          .filter(n => n.id !== 'center')
           .sort((a, b) => b.percentage - a.percentage)
           .slice(0, 10)
           .map(n => ({
