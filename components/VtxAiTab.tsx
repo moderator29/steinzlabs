@@ -702,8 +702,17 @@ export default function VtxAiTab() {
       // Otherwise stream tokens for instant feedback. Industry parity
       // with Claude.ai / ChatGPT / Perplexity: visible token streaming
       // is now table stakes for AI chat UX.
-      const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|chart|price of|trade|send|approve)\b/i;
-      const useStream = !TOOL_USE_KEYWORDS.test(finalMessage);
+      // Must mirror the route's card triggers EXACTLY, or a card-worthy
+      // message streams and silently drops its card (the streaming `done`
+      // event returns only text, not chart/tokenCard/swapCard). The route
+      // builds a swap card on swap|convert|trade|exchange, and a token card on
+      // any $SYMBOL mention OR a raw EVM/Solana address (detectTokenAddress).
+      // The address regex stays case-sensitive (base58) — kept separate from
+      // the case-insensitive keyword/symbol test.
+      const TOOL_USE_KEYWORDS = /\b(buy|sell|swap|convert|exchange|chart|price of|price for|trade|send|approve)\b|\$[A-Za-z]{2,10}\b/i;
+      const TOKEN_ADDRESS = /0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
+      const needsCard = TOOL_USE_KEYWORDS.test(finalMessage) || TOKEN_ADDRESS.test(finalMessage);
+      const useStream = !needsCard;
 
       abortRef.current?.abort();
       const controller = new AbortController();
