@@ -13,7 +13,7 @@ import {
 import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History, MessageCircle, Compass, Flame, Gem,
+  Crosshair, Network, Globe, History, MessageCircle, Compass,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -92,13 +92,9 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },
-  {
-    title: 'Cult',
-    items: [
-      { icon: Flame, label: 'NakaCult', path: '/naka-cult' },
-      { icon: Gem,  label: 'The Vault', path: '/vault' },
-    ],
-  },
+  // §12 — Naka Cult / The Vault are NOT part of the in-platform app. They
+  // live only on the standalone /naka-cult landing (reached from the main
+  // marketing landing), so the in-app sidebar no longer links into them.
   {
     title: 'Account',
     items: [

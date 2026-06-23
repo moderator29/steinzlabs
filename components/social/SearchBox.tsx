@@ -58,7 +58,10 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) router.push(`/discover?q=${encodeURIComponent(q.trim())}`); }}
           placeholder="Search users by username, name, badge…"
-          className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-slate-500"
+          // §search-zoom — iOS Safari auto-zooms any focused input whose
+          // font-size is < 16px. text-sm (14px) caused the view to jump/zoom
+          // on focus; text-base (16px) keeps the page stable, no zoom.
+          className="flex-1 bg-transparent outline-none text-base text-white placeholder:text-slate-500"
           aria-label="Search users"
         />
         {q && (

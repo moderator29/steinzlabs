@@ -33,8 +33,15 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
   // waiting for a fresh API roundtrip.
   const [state, setState] = useState(() => getCachedFollowState(targetId) ?? initialState);
   const [hover, setHover] = useState(false);
+  // §follow-inversion — after an optimistic state flip the pointer is still
+  // physically over the button, so `hover` stays true and the freshly-
+  // accepted state would render its destructive hover label ("Unfollow")
+  // the instant you click "Follow" — reading as inverted/broken. Suppress
+  // the destructive affordance until the pointer leaves and returns.
+  const [justChanged, setJustChanged] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const showDestructive = hover && !justChanged;
 
   // Subscribe to cross-surface changes so siblings update in real time.
   useEffect(() => {
@@ -58,12 +65,14 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
         const json = await res.json();
         const next = json.follow?.status === 'pending' ? 'pending' : 'accepted';
         setState(next);
+        setJustChanged(true);
         setCachedFollowState(targetId, next);
         onChange?.(next);
       } else {
         const res = await fetch(`/api/social/follow?target_id=${targetId}`, { method: 'DELETE' });
         if (!res.ok) { setError('Could not unfollow'); return; }
         setState('not_following');
+        setJustChanged(true);
         setCachedFollowState(targetId, 'not_following');
         onChange?.('not_following');
       }
@@ -83,7 +92,7 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
       ? 'bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white border border-transparent'
       : state === 'pending'
       ? 'bg-white/[0.04] hover:bg-amber-500/10 text-amber-300 border border-amber-500/30'
-      : hover
+      : showDestructive
       ? 'bg-red-500/10 text-red-400 border border-red-500/30'
       : 'bg-emerald-500/[0.08] text-emerald-300 border border-emerald-500/25';
 
@@ -94,20 +103,20 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
         onClick={handleClick}
         disabled={pending}
         onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
+        onMouseLeave={() => { setHover(false); setJustChanged(false); }}
         onFocus={() => setHover(true)}
-        onBlur={() => setHover(false)}
+        onBlur={() => { setHover(false); setJustChanged(false); }}
         className={`inline-flex items-center gap-1.5 font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${base} ${palette}`}
         aria-label={
           state === 'not_following' ? `Follow user` :
           state === 'pending' ? `Cancel follow request` :
-          hover ? `Unfollow user` : `Following`
+          showDestructive ? `Unfollow user` : `Following`
         }
       >
         {state === 'not_following' ? (<><UserPlus className="w-3 h-3" />Follow</>)
-          : state === 'pending' ? (hover ? (<><X className="w-3 h-3" />Cancel</>) : (<><Clock className="w-3 h-3" />Requested</>))
-          : hover ? (<><X className="w-3 h-3" />Unfollow</>) : (<><Check className="w-3 h-3" />Following</>)}
-        {state === 'accepted' && mutual && !hover && (
+          : state === 'pending' ? (showDestructive ? (<><X className="w-3 h-3" />Cancel</>) : (<><Clock className="w-3 h-3" />Requested</>))
+          : showDestructive ? (<><X className="w-3 h-3" />Unfollow</>) : (<><Check className="w-3 h-3" />Following</>)}
+        {state === 'accepted' && mutual && !showDestructive && (
           <span className="ms-1 px-1.5 py-[1px] rounded text-[9px] bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25">
             Mutual
           </span>

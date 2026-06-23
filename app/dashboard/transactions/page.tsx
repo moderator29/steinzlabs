@@ -121,7 +121,7 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" />
+        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" showBack backTo="/dashboard" />
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1 bg-[#141824] border border-[#1E2433] rounded-lg p-1">
