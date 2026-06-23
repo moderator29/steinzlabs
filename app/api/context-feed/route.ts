@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { applyContextFilter, type PersonalContext } from '@/lib/contextFeed/filter';
+import { applyContextFilter, matchesTypeFilter, type PersonalContext, type ContextTypeFilter } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 // Static imports — replaces the dynamic import inside fetchCoingeckoEvents
@@ -815,23 +815,16 @@ function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
 // §S2.2 — server-side event-type filter. Was applied client-side after a
 // 200-row fetch; pushing it into the query keeps the same UX but lets the
 // server hand back only the rows the user asked for.
-type FilterKind = 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+type FilterKind = ContextTypeFilter;
 const VALID_FILTERS: ReadonlySet<FilterKind> = new Set(['all', 'news', 'coins', 'new_coins', 'volume', 'trending']);
 
 function applyTypeFilter(events: WhaleEvent[], filter: FilterKind): WhaleEvent[] {
   if (filter === 'all') return events;
-  // Event.type values produced by the source fetchers (whale, new-listing,
-  // large-transfer, news, trending, volume-spike, coingecko-*). Map the UI
-  // pills to the underlying type predicates.
-  return events.filter((e) => {
-    const t = (e.type || '').toLowerCase();
-    if (filter === 'news') return t.includes('news') || t.startsWith('coingecko');
-    if (filter === 'coins') return t.includes('coin') || t.includes('listing') || t.includes('trending');
-    if (filter === 'new_coins') return t.includes('new-listing') || t.includes('new_coin') || t.includes('new-coin');
-    if (filter === 'volume') return t.includes('volume') || t.includes('large-transfer') || t.includes('whale');
-    if (filter === 'trending') return t.includes('trending');
-    return true;
-  });
+  // §B5 — delegate to the ONE shared matcher in lib/contextFeed/filter.ts.
+  // The old inline predicates matched a hyphenated/coingecko taxonomy that NO
+  // fetcher emits (real types are underscored: new_listing, token_launch,
+  // whale_accumulation, …), so `news` and `new_coins` returned zero rows.
+  return events.filter((e) => matchesTypeFilter(e.type, filter));
 }
 
 export async function GET(request: Request) {
