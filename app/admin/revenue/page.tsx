@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { DollarSign, Download, TrendingUp, Loader2 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { MicroArea } from '@/components/charts/MicroChart';
 
 interface AnalyticsData {
   revenue: {
@@ -118,21 +118,14 @@ export default function AdminRevenuePage() {
       {/* Daily Fees Chart */}
       <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
         <h3 className="text-sm font-semibold text-white mb-4">Daily Fee Revenue (30d)</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={data.revenue.dailyFeesChart}>
-            <defs>
-              <linearGradient id="feeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0A1EFF" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#0A1EFF" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#6B7280' }} />
-            <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => `$${v}`} />
-            <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-            <Area type="monotone" dataKey="fees" stroke="#0A1EFF" fill="url(#feeGrad)" strokeWidth={2} name="Fees USD" />
-          </AreaChart>
-        </ResponsiveContainer>
+        <MicroArea
+          data={data.revenue.dailyFeesChart}
+          xKey="date"
+          yKey="fees"
+          color="#0A1EFF"
+          height={200}
+          formatY={(v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        />
       </div>
 
       {/* Volume Stats */}

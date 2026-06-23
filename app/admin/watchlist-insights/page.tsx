@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { MicroBar } from '@/components/charts/MicroChart';
 import { Eye, TrendingUp, Users, RefreshCw } from 'lucide-react';
 import { formatLargeNumber } from '@/lib/formatters';
 
@@ -105,15 +105,7 @@ export default function WatchlistInsightsPage() {
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4">
             <h3 className="text-sm font-semibold text-white mb-4">Top 10 Watched Tokens</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-                <XAxis dataKey="symbol" tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => formatLargeNumber(v)} />
-                <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => formatLargeNumber(v)} />
-                <Bar dataKey="count" fill="#0A1EFF" radius={[2, 2, 0, 0]} name="Watchers" />
-              </BarChart>
-            </ResponsiveContainer>
+            <MicroBar data={chartData} xKey="symbol" yKey="count" color="#0A1EFF" height={220} formatY={(v) => formatLargeNumber(v)} />
           </div>
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">

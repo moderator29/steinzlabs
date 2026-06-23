@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 // Naka Labs brand icons — TrendingUp/Down swapped. ArrowRight + ShieldAlert stay on lucide.
 import { TrendingUp, TrendingDown } from "@/components/icons/brand";
 import { ArrowRight, ShieldAlert } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { MicroDonut } from "@/components/charts/MicroChart";
 import { createChart, AreaSeries, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
 import { TokenLogo } from "@/components/market/TokenLogo";
@@ -340,40 +340,15 @@ export default function PortfolioPage() {
           {donutData.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-500">No holdings to show.</div>
           ) : (
-            <div className="h-72 md:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 8, bottom: 24, left: 0, right: 0 }}>
-                  <Pie
-                    data={donutData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="38%"
-                    outerRadius="72%"
-                    paddingAngle={2}
-                    stroke="#0A0E1A"
-                  >
-                    {donutData.map((_, i) => (
-                      <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0A0E1A",
-                      border: "1px solid rgba(148,163,184,0.2)",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number, n: string) => [formatPrice(v), n]}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: 11, color: "#94A3B8" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="md:h-64">
+              <MicroDonut
+                data={donutData}
+                nameKey="name"
+                valueKey="value"
+                colors={DONUT_COLORS}
+                size={220}
+                formatValue={(v) => formatPrice(v)}
+              />
             </div>
           )}
         </div>
