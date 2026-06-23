@@ -4,7 +4,6 @@
 import { CheckCircle as Check, Star } from '@/components/icons/brand';
 import { Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { TierBadge } from '@/components/ui/TierBadge';
@@ -91,7 +90,6 @@ const TIERS = [
 ] as const;
 
 export default function PricingPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const currentPlan = effectiveTier(user);
 
@@ -184,55 +182,17 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* ── Two NFT keys — held, not subscribed ───────────────────────── */}
+        {/* ── Founder Pass — held, not subscribed ───────────────────────── */}
         <div className="mt-14">
           <div className="text-center mb-6">
-            <h2 className="text-white font-bold text-2xl mb-2">Two NFT keys</h2>
+            <h2 className="text-white font-bold text-2xl mb-2">The Founder Pass</h2>
             <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-              Held, not subscribed. Each key opens a different door — connect your wallet and Naka Labs detects it
-              automatically. They are deliberately separate: one is the cult, one is the platform.
+              An NFT key, held — not subscribed. Connect the wallet that holds it and Naka Labs unlocks your tier
+              automatically, for as long as it sits in your wallet.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-            {/* NIPPO → the cult */}
-            <div className="bg-[#141824] rounded-2xl border border-[#DC143C]/40 shadow-lg shadow-[#DC143C]/10 p-6 flex flex-col">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[#FF5B7A] font-bold text-sm tracking-wide">NIPPO</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-white">$27</span>
-                </div>
-              </div>
-              <h3 className="text-white font-bold text-lg mb-1">The Naka Cult</h3>
-              <p className="text-gray-400 text-xs mb-4">
-                The perpetual cult key. Hold it and you are of the cult — The Vault and every chamber — for as long as
-                it sits in your wallet. No threshold, no monthly.
-              </p>
-              <div className="flex-1 space-y-2 mb-4">
-                {[
-                  'The Vault — Conclave, Oracle, Sanctum',
-                  'The Commons — Hall, Offering, Conviction, Pulse',
-                  'Daily Seal + Whisper Network (E2E)',
-                  'Permanent on-chain identity (Mantle, Annals)',
-                  'Ddergo soundtrack in the Vault',
-                ].map(f => (
-                  <div key={f} className="flex items-start gap-2">
-                    <Check size={12} className="mt-0.5 shrink-0 text-[#FF5B7A]" />
-                    <span className="text-gray-300 text-xs">{f}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-gray-500 mb-4 leading-snug">
-                Does not include the platform’s Pro/Max trading features — the cult is its own world.
-              </p>
-              <button
-                onClick={() => router.push('/naka-cult')}
-                className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#DC143C]/50 text-white hover:bg-[#DC143C]/10 transition-colors"
-              >
-                Enter the Cult →
-              </button>
-            </div>
-
+          <div className="grid grid-cols-1 max-w-md mx-auto">
             {/* Founder Pass → Max on the platform */}
             <div className="bg-[#141824] rounded-2xl border border-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/10 p-6 flex flex-col">
               <div className="flex items-baseline justify-between mb-1">
@@ -262,7 +222,7 @@ export default function PricingPage() {
                 ))}
               </div>
               <p className="text-[11px] text-gray-500 mb-4 leading-snug">
-                Does not include the Naka Cult — that’s the NIPPO. Two doors, two keys.
+                Unlocks the Max trading tier on the main platform — detected automatically from your wallet.
               </p>
               <button
                 onClick={() => toast.info('Connect a wallet holding the Founder Pass on the dashboard and Max unlocks automatically.')}

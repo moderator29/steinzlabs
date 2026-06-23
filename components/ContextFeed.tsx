@@ -572,7 +572,7 @@ export default function ContextFeed() {
             <button
               key={tab.id}
               onClick={() => setActiveMode(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 border ${
                 isActive
                   ? `bg-gradient-to-r ${tab.gradient} text-white border-transparent shadow-lg`
                   : 'text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-white/5'

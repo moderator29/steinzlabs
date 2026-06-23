@@ -78,13 +78,13 @@ function ChannelRow({ icon, label, description, enabled, onToggle, trailingActio
         type="button"
         onClick={onToggle}
         disabled={disabled}
-        className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 mt-1 ${
+        className={`relative w-10 h-6 rounded-md transition-colors flex-shrink-0 mt-1 ${
           enabled ? 'bg-emerald-500' : 'bg-slate-800'
         } ${disabled ? 'cursor-not-allowed' : 'hover:opacity-90'}`}
         aria-pressed={enabled}
         aria-label={`Toggle ${label}`}
       >
-        <span className={`absolute top-0.5 ${enabled ? 'left-[18px]' : 'left-0.5'} w-5 h-5 rounded-full bg-white shadow transition-all`} />
+        <span className={`absolute top-0.5 ${enabled ? 'left-[18px]' : 'left-0.5'} w-5 h-5 rounded-[5px] bg-white shadow transition-all`} />
       </button>
     </div>
   );
@@ -117,8 +117,8 @@ function EventRow({ icon, label, description, enabled, onToggle }: EventRowProps
         <div className="text-sm font-medium text-white">{label}</div>
         <div className="text-[11px] text-slate-500 leading-snug">{description}</div>
       </div>
-      <div className={`w-8 h-5 rounded-full transition-colors relative flex-shrink-0 ${enabled ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
-        <span className={`absolute top-0.5 ${enabled ? 'left-[14px]' : 'left-0.5'} w-4 h-4 rounded-full bg-white shadow transition-all`} />
+      <div className={`w-8 h-5 rounded-md transition-colors relative flex-shrink-0 ${enabled ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
+        <span className={`absolute top-0.5 ${enabled ? 'left-[14px]' : 'left-0.5'} w-4 h-4 rounded-[4px] bg-white shadow transition-all`} />
       </div>
     </button>
   );
@@ -313,12 +313,12 @@ export default function NotificationSettingsPanel({ userId }: Props) {
               type="button"
               disabled={!hasExtendedSchema}
               onClick={() => void update({ quiet_hours_enabled: !settings.quiet_hours_enabled })}
-              className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${
+              className={`relative w-10 h-6 rounded-md transition-colors flex-shrink-0 ${
                 settings.quiet_hours_enabled ? 'bg-emerald-500' : 'bg-slate-800'
               } ${!hasExtendedSchema ? 'cursor-not-allowed opacity-60' : ''}`}
               aria-pressed={!!settings.quiet_hours_enabled}
             >
-              <span className={`absolute top-0.5 ${settings.quiet_hours_enabled ? 'left-[18px]' : 'left-0.5'} w-5 h-5 rounded-full bg-white shadow transition-all`} />
+              <span className={`absolute top-0.5 ${settings.quiet_hours_enabled ? 'left-[18px]' : 'left-0.5'} w-5 h-5 rounded-[5px] bg-white shadow transition-all`} />
             </button>
           </div>
 

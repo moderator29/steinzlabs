@@ -454,7 +454,7 @@ export default function Dashboard() {
       <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" aria-label="Open menu">
               {/* §hamburger-visibility — Menu icon was text-gray-400 on
                   a near-black header background which left it nearly
                   invisible while the button's click area still worked.
@@ -462,23 +462,24 @@ export default function Dashboard() {
                   that for the hamburger keeps both states legible. */}
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
             </button>
-            <SteinzLogo size={28} animated={false} />
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
-            </div>
           </div>
-          {/* §header-scope — the QuickTranslate / LanguageSwitcher /
-              ThemeToggle / NotificationBell cluster only renders on the
-              Home tab. Previously the cluster floated on top of every
-              /dashboard sub-tab (Profile / Wallet / VTX), overlapped
-              their own UI, and the items were jammed together. Inline
-              here so we can scope by activeNav and breathe with gap-3. */}
+          {/* §header-scope / §4 — the logo + LIVE chip and the
+              QuickTranslate / LanguageSwitcher / ThemeToggle /
+              NotificationBell cluster only render on the Home tab.
+              Previously the logo+LIVE rendered unconditionally and
+              leaked onto Profile / Wallet / VTX sub-tabs (see circled
+              screenshot). Both clusters are now gated by activeNav and
+              pushed to the right per §3.1. */}
           <div className="flex-1" />
           {activeNav === 'home' && (
             <div className="flex items-center gap-3" data-no-translate>
               <GlobalControls />
               <NotificationBell />
+              <SteinzLogo size={34} animated={false} />
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
+              </div>
             </div>
           )}
         </div>

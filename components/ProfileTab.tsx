@@ -968,9 +968,9 @@ export default function ProfileTab() {
                   // Save to Supabase user_metadata
                   savePrivacyToSupabase(key, newVal);
                 }}
-                className={`w-10 h-5 rounded-full transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-md transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}
@@ -1293,9 +1293,9 @@ export default function ProfileTab() {
               </div>
               <button
                 onClick={() => setPreferences(prev => ({ ...prev, [item.key]: !(prev as any)[item.key] }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-md transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${(preferences as any)[item.key] ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${(preferences as any)[item.key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}
@@ -1629,9 +1629,9 @@ export default function ProfileTab() {
             </div>
             <button
               onClick={() => setNotifications(prev => ({ ...prev, [key]: !value }))}
-              className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+              className={`w-10 h-5 rounded-md transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
             >
-              <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
+              <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
             </button>
           </div>
         ))}
@@ -1647,9 +1647,9 @@ export default function ProfileTab() {
           </div>
           <button
             onClick={() => setNotifPrefs(prev => ({ ...prev, emailWhaleAlerts: !prev.emailWhaleAlerts }))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+            className={`w-10 h-5 rounded-md transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
+            <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
           </button>
         </div>
         <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
@@ -1659,9 +1659,9 @@ export default function ProfileTab() {
           </div>
           <button
             onClick={() => setNotifPrefs(prev => ({ ...prev, emailPriceAlerts: !prev.emailPriceAlerts }))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+            className={`w-10 h-5 rounded-md transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
+            <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
           </button>
         </div>
         <div className="flex items-center justify-between px-3 py-3">
@@ -1674,9 +1674,9 @@ export default function ProfileTab() {
           </div>
           <button
             disabled
-            className="w-10 h-5 rounded-full transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
+            className="w-10 h-5 rounded-md transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
           >
-            <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5" />
+            <div className="w-4 h-4 bg-white rounded-[4px] absolute top-0.5 left-0.5" />
           </button>
         </div>
       </div>
