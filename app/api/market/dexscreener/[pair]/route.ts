@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { RecentTrade, OrderBookData } from '@/lib/market/types';
+import { getPoolTrades } from '@/lib/services/geckoTrades';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,10 +48,12 @@ export async function GET(
       sellCount: sells,
     };
 
-    // Recent trades: derive from buy/sell ratio data — no fake values
-    // DexScreener does not provide individual trade history via their free API.
-    // We expose empty trades array rather than fabricating transaction data.
-    const trades: RecentTrade[] = [];
+    // Recent trades: DexScreener's free API exposes only aggregate hourly
+    // counts, not individual swaps. We pull the REAL per-trade tape from
+    // GeckoTerminal's pool /trades endpoint (real tx hashes + maker
+    // addresses, EVM + Solana). Falls back to an empty array — never
+    // fabricated data — if the pool/network isn't on GeckoTerminal.
+    const trades: RecentTrade[] = await getPoolTrades(chain, pair);
 
     return NextResponse.json({
       priceUSD: parseFloat(p.priceUsd ?? '0'),

@@ -6,6 +6,7 @@ import { checkOfac } from '@/lib/security/ofac';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
 import { resolveTokenAddress } from '@/lib/market/tokenResolver';
+import { resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,12 +32,21 @@ interface ExecuteBody {
     buyAmount?: string;
     raw?: unknown;
   };
+  // §swap-real-broadcast — authoritative sell amount in BASE UNITS (wei /
+  // smallest token unit). When the client can compute this (it knows the
+  // token + decimals), it's used verbatim; 0x requires base units, and the
+  // old code passed the human `amountIn` straight through → quotes were off
+  // by 10**decimals. Falls back to converting `amountIn` with resolved
+  // decimals when absent.
+  sellAmountBase?: string;
+  /** Decimals of `tokenIn`, when the client knows them (unknown SELL tokens). */
+  tokenInDecimals?: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as ExecuteBody;
-    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, walletAddress, userId, selectedProvider, routeQuoteData } = body;
+    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, walletAddress, userId, selectedProvider, routeQuoteData, sellAmountBase, tokenInDecimals } = body;
 
     if (!chain || !tokenIn || !tokenOut || !amountIn || !walletAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -122,20 +132,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unsupported chain: ${chain}` }, { status: 400 });
     }
 
+    // §swap-real-broadcast — 0x needs BASE UNITS. Prefer the client's
+    // authoritative `sellAmountBase`; otherwise convert the human `amountIn`
+    // using the sell token's resolved decimals. Refuse rather than send a
+    // wrong-by-10**decimals quote when decimals can't be determined.
+    let sellAmount = sellAmountBase;
+    if (!sellAmount) {
+      const decimals = resolveSwapDecimals(tokenIn, chain, tokenInDecimals);
+      if (decimals === null) {
+        return NextResponse.json(
+          { error: `Cannot determine decimals for "${tokenIn}" on ${chain}. Pass sellAmountBase or tokenInDecimals.`, code: 'UNKNOWN_DECIMALS' },
+          { status: 422 },
+        );
+      }
+      sellAmount = toBaseUnits(amountIn, decimals);
+    }
+    if (!sellAmount || sellAmount === '0') {
+      return NextResponse.json({ error: 'Invalid trade amount' }, { status: 400 });
+    }
+
     // §3 P1-D.3 — auto-select Permit2 endpoint when the user has no
     // existing allowance, so the swap is 1 tx instead of 2.
     const permit2 = await needsPermit2({
       chainId,
       sellToken: resolvedIn,
       owner: walletAddress,
-      sellAmount: amountIn,
+      sellAmount,
     });
 
     const quote = await getSwapQuote({
       chainId,
       sellToken: resolvedIn,
       buyToken: resolvedOut,
-      sellAmount: amountIn,
+      sellAmount,
       taker: walletAddress,
       permit2,
     });
