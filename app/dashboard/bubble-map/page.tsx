@@ -260,8 +260,13 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
     // is required so iOS Safari doesn't intercept two-finger gestures
     // as page-scroll. The svg.style call sets the CSS attribute
     // directly so no Tailwind class is needed.
+    // §10 — keep the map stable and professional: a tighter zoom range
+    // (was [0.3,4] which let it zoom out tiny / blow up huge) and a
+    // translateExtent that clamps panning to a bounded region around the
+    // graph so it can no longer be dragged off into empty space.
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 4])
+      .scaleExtent([0.6, 2.5])
+      .translateExtent([[-W * 0.3, -H * 0.3], [W * 1.3, H * 1.3]])
       .on('zoom', ev => g.attr('transform', ev.transform.toString()));
     svg.call(zoom);
     svg.style('touch-action', 'manipulation');
