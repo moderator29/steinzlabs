@@ -111,14 +111,26 @@ export function resolveSwapToken(
 }
 
 /**
- * Convert a human amount string ("0.0323") to a base-unit integer string
- * ("32300000") for a token with the given decimals. Uses BigInt-safe
- * rounding so we never emit fractional base units.
+ * Convert a human amount ("0.0323") to a base-unit integer string
+ * ("32300000000000000") for a token with the given decimals.
+ *
+ * Done with STRING math, not `amount * 10**decimals`: float multiplication
+ * loses precision above 2**53, e.g. 0.0323 * 10**18 yields …004 instead of
+ * …000, which can push a MAX swap a few wei ABOVE the wallet balance and make
+ * it revert with "insufficient funds". We shift the decimal point by string
+ * surgery and FLOOR any excess fractional digits (never round up, so the
+ * result can never exceed what the user actually holds).
  */
 export function toBaseUnits(humanAmount: string | number, decimals: number): string {
-  const n = typeof humanAmount === 'number' ? humanAmount : parseFloat(humanAmount);
-  if (!Number.isFinite(n) || n <= 0) return '0';
-  return BigInt(Math.round(n * 10 ** decimals)).toString();
+  const s = String(humanAmount).trim();
+  // Plain positive decimal only — reject signs, exponents, junk.
+  if (!/^\d*\.?\d*$/.test(s) || s === '' || s === '.') return '0';
+  const [intRaw, fracRaw = ''] = s.split('.');
+  const intPart = intRaw || '0';
+  // Pad/truncate the fractional part to exactly `decimals` digits (floor).
+  const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
+  const combined = `${intPart}${frac}`.replace(/^0+/, '');
+  return combined === '' ? '0' : combined;
 }
 
 /** Convert a base-unit integer string back to a human number. */
