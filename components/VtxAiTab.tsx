@@ -16,6 +16,7 @@ import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 import { StreamingCursor } from '@/components/vtx/StreamingCursor';
 import { MessageActions } from '@/components/vtx/MessageActions';
 import { SuggestionPills } from '@/components/vtx/SuggestionPills';
+import { VtxModelPicker, type VtxModelId } from '@/components/vtx/ModelPicker';
 
 // §11 — Replace DexScreener / TradingView iframes with native
 // lightweight-charts. Lazy-loaded so the lightweight-charts bundle
@@ -556,6 +557,8 @@ export default function VtxAiTab() {
   const [dailyUsage, setDailyUsage] = useState({ used: 0, limit: 25, remaining: 25 });
   const [rateLimited, setRateLimited] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // §model-picker — Fast/Balanced/Deepest reasoning depth, persisted per device.
+  const [vtxModel, setVtxModel] = useState<VtxModelId>('balanced');
   const [showHistory, setShowHistory] = useState(false);
   const [settings, setSettings] = useState<VtxSettings>({ ...DEFAULT_SETTINGS });
   const [allHistory, setAllHistory] = useState<ChatHistoryEntry[]>([]);
@@ -578,6 +581,19 @@ export default function VtxAiTab() {
   useEffect(() => {
     void import('@/components/trading/AdvancedChart');
   }, []);
+
+  // §model-picker — restore the persisted reasoning-depth choice on mount.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('naka_vtx_model');
+      if (stored === 'fast' || stored === 'balanced' || stored === 'deepest') setVtxModel(stored);
+    } catch { /* storage disabled — keep the default */ }
+  }, []);
+
+  const handleModelChange = (id: VtxModelId) => {
+    setVtxModel(id);
+    try { localStorage.setItem('naka_vtx_model', id); } catch { /* storage disabled — session-only */ }
+  };
 
   useEffect(() => {
     if (!initialized.current) {
@@ -707,6 +723,7 @@ export default function VtxAiTab() {
           autoCharts: settings.autoCharts,
           focusMode: settings.focusMode,
           defaultChain: settings.defaultChain,
+          model: vtxModel,
           stream: useStream,
           context: {
             walletAddress: naka.address,
@@ -1301,6 +1318,8 @@ export default function VtxAiTab() {
       <div className="flex-shrink-0">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-2 bg-[#111827] border border-white/10 rounded-xl px-3">
+            {/* §model-picker — reasoning depth (Fast / Balanced / Deepest). */}
+            <VtxModelPicker value={vtxModel} onChange={handleModelChange} />
             <button
               type="button"
               onClick={() => updateSettings({ webSearch: !settings.webSearch })}

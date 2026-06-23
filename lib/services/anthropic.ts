@@ -338,6 +338,17 @@ export interface VTXQueryOptions {
   // training cutoff. The flag was parsed by the route but never wired to a
   // tool, so toggling it did nothing.
   webSearch?: boolean;
+  // §model-picker — reasoning depth, driven by the VTX Fast/Balanced/Deepest
+  // toggle. Maps to Anthropic's output_config.effort on the Sonnet executor
+  // (low/medium/high). Omitted = the model's default (high). Neutral labels
+  // per CLAUDE.md — the UI never names a vendor model.
+  effort?: 'low' | 'medium' | 'high';
+}
+
+// Build the optional output_config block so we only send it when an effort
+// level is chosen (an empty object would be a no-op but adds request noise).
+function effortConfig(effort?: 'low' | 'medium' | 'high'): { output_config: { effort: string } } | Record<string, never> {
+  return effort ? { output_config: { effort } } : {};
 }
 
 // Hosted web-search server tool. The `_20260209` variant (dynamic filtering)
@@ -380,7 +391,7 @@ function tagToolsForCache(tools: Anthropic.Tool[]): Anthropic.Tool[] {
 }
 
 export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Message> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch, effort } = options;
 
   // Advisor Strategy: Sonnet as executor, Opus as advisor on hard decisions
   const advisorTool = {
@@ -394,6 +405,7 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      ...effortConfig(effort),
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
       tools: tagToolsForCache([advisorTool, ...withWebSearch(tools, webSearch)] as Anthropic.Tool[]),
       messages,
@@ -413,7 +425,7 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
  * Used by the VTX chat API route for live streaming to the client.
  */
 export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStream<string>> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch, effort } = options;
 
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
@@ -426,6 +438,7 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      ...effortConfig(effort),
       // §13b: same prompt-cache wrapping as vtxQuery — keeps streaming
       // and non-streaming paths on the same cached prefix.
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
@@ -505,7 +518,7 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
  * answers instead of returning empty replies.
  */
 export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client.messages.stream> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch, effort } = options;
 
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
@@ -518,6 +531,7 @@ export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      ...effortConfig(effort),
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
       tools: tagToolsForCache([advisorTool, ...withWebSearch(tools, webSearch)] as Anthropic.Tool[]),
       messages,
