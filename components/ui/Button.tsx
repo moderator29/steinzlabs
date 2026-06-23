@@ -1,0 +1,48 @@
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
+
+/**
+ * §2 — the canonical button. One set of variants/sizes so CTAs look identical
+ * platform-wide. Accent-driven (var(--nl-blue)) so the Appearance accent
+ * control re-tints primary buttons live.
+ */
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size = 'sm' | 'md' | 'lg';
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  size?: Size;
+  block?: boolean;
+}
+
+const VARIANT: Record<Variant, string> = {
+  primary:
+    'bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white border border-transparent shadow-[0_0_16px_rgba(10,30,255,0.25)]',
+  secondary:
+    'bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/12',
+  ghost:
+    'bg-transparent hover:bg-white/[0.06] text-slate-300 hover:text-white border border-transparent',
+  danger:
+    'bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30',
+};
+
+const SIZE: Record<Size, string> = {
+  sm: 'text-xs px-3 py-1.5 rounded-lg gap-1.5',
+  md: 'text-sm px-4 py-2 rounded-xl gap-2',
+  lg: 'text-sm px-5 py-2.5 rounded-xl gap-2',
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'primary', size = 'md', block = false, className = '', children, ...rest },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      className={`inline-flex items-center justify-center font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${VARIANT[variant]} ${SIZE[size]} ${block ? 'w-full' : ''} ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+});

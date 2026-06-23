@@ -2,6 +2,7 @@
 
 import { useAppearance } from '@/lib/theme/ThemeProvider';
 import { ACCENTS, type Appearance } from '@/lib/theme/appearance';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Monitor, Moon, Sun } from 'lucide-react';
 
 /**
@@ -68,7 +69,7 @@ export function AppearancePanel() {
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => setAppearance({ [k]: v });
 
   return (
-    <div className="glass rounded-2xl border border-white/10 px-4">
+    <GlassPanel className="px-4">
       <Row label="Theme" hint="Light, dark, or follow your device.">
         <Segmented
           ariaLabel="Theme"
@@ -159,6 +160,6 @@ export function AppearancePanel() {
         {appearance.theme === 'light' ? <Sun size={12} /> : appearance.theme === 'system' ? <Monitor size={12} /> : <Moon size={12} />}
         Changes apply instantly and sync to your account.
       </div>
-    </div>
+    </GlassPanel>
   );
 }
