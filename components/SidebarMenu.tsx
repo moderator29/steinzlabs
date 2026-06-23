@@ -40,6 +40,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
       { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
+      { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
     ],
   },
   {
