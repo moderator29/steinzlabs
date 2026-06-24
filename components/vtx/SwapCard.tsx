@@ -294,7 +294,9 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
   }
 
   return (
-    <div className="bg-[#0A0F1A] border border-white/[0.08] rounded-2xl overflow-hidden">
+    <div className="relative bg-[#0A0F1A] border border-white/[0.08] rounded-2xl overflow-hidden">
+      {/* Aurora top accent — brand-consistent with the price card */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#0066FF] via-[#8B5CF6] to-[#10B981] opacity-70" />
       {/* Stage progress rail */}
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] font-semibold text-gray-500">
@@ -354,7 +356,7 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
 
       {/* From / To */}
       <div className="px-4 pb-4 space-y-2">
-        <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-white/[0.04]">
+        <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
           <TokenGlyph symbol={quote.fromToken} />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-wider text-gray-500">You pay</div>
@@ -364,13 +366,13 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center">
-          <div className="w-7 h-7 rounded-full bg-[#141824] border border-white/[0.06] flex items-center justify-center">
-            <ArrowDownUp size={12} className="text-gray-400" />
+        <div className="relative z-10 -my-3.5 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-[#141824] border-2 border-[#0A0F1A] ring-1 ring-white/[0.08] shadow-lg flex items-center justify-center">
+            <ArrowDownUp size={13} className="text-[#0066FF]" />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-white/[0.04]">
+        <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
           <TokenGlyph symbol={quote.toToken} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
