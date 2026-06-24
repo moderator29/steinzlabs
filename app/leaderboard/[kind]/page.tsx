@@ -19,7 +19,7 @@ const KIND_TITLES: Record<string, { title: string; sub: string }> = {
   'max-tier':       { title: 'Max Tier',           sub: 'Members on the Max subscription tier.' },
   'top-traders':    { title: 'Top Traders',        sub: 'Highest 30-day portfolio percentile.' },
   'copy-traders':   { title: 'Top Copy Traders',   sub: 'Best win rate on copy trades.' },
-  'whale-watchers': { title: 'Top Whale Watchers', sub: 'Most accurate at picking profitable whales to follow.' },
+  'whale-watchers': { title: 'Top Whale Watchers', sub: 'Ranked by how many whales they actively follow.' },
   'most-active':    { title: 'Most Active',        sub: 'Daily active engagement score.' },
 };
 
@@ -33,6 +33,7 @@ interface Row {
   is_chosen: boolean | null;
   metric_value: number | string | null;
   metric_label: string;
+  i_follow?: 'not_following' | 'pending' | 'accepted' | null;
 }
 
 function formatMetric(v: number | string | null, kind: string): string {
@@ -45,7 +46,12 @@ function formatMetric(v: number | string | null, kind: string): string {
   if (kind === 'top-traders') {
     const n = Number(v); return isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(1)}%` : '—';
   }
-  if (kind === 'copy-traders' || kind === 'whale-watchers') {
+  if (kind === 'whale-watchers') {
+    // metric_value is a count of whales followed, not a 0–1 accuracy — render
+    // it as a count. Was n*100% → e.g. "300%" for 3 followed whales.
+    const n = Number(v); return isFinite(n) ? `${n} whale${n === 1 ? '' : 's'}` : '—';
+  }
+  if (kind === 'copy-traders') {
     const n = Number(v); return isFinite(n) ? `${(n * 100).toFixed(0)}%` : '—';
   }
   return String(v);
@@ -121,7 +127,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
                 </div>
               </Link>
               <div className="text-[12px] tabular-nums text-slate-300 me-2">{formatMetric(r.metric_value, kind)}</div>
-              <FollowButton targetId={r.id} initialState="not_following" size="sm" />
+              <FollowButton targetId={r.id} initialState={r.i_follow ?? 'not_following'} size="sm" />
             </li>
           ))}
         </ol>
