@@ -24,7 +24,7 @@ import { NftTab } from '@/components/wallet/NftTab';
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
 import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
-import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { normalizeAddress, isEvmChain, isSolanaAddress } from '@/lib/utils/addressNormalize';
 
 interface TokenBalance {
   symbol: string;
@@ -2081,8 +2081,14 @@ function ReceiveView({
   );
 }
 
-function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: string[]; onAdd: (addr: string) => void }) {
+// Chains a custom token can be imported on. EVM chains validate as 0x-hex;
+// Solana validates as base58. Bitcoin/Sui are excluded — they don't expose
+// the ERC-20/SPL contract model the hydrator + price lookup understand.
+const ADD_TOKEN_CHAINS = SUPPORTED_CHAINS.filter((c) => c.id !== 'bitcoin' && c.id !== 'sui');
+
+function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: string[]; onAdd: (key: string) => void }) {
   const [address, setAddress] = useState('');
+  const [chain, setChain] = useState('ethereum');
   const [error, setError] = useState('');
   // Audit B4 / P1 #12 — GoPlus pre-add scan. Without this, users can
   // import any contract address as a custom token, including outright
@@ -2116,14 +2122,16 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     }
   };
 
-  const runScan = async (addr: string) => {
+  const runScan = async (addr: string, scanChain: string) => {
     setScanning(true);
     setScanVerdict(null);
     try {
       const res = await fetch('/api/security/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scan_type: 'token', target: addr, chain: 'ethereum' }),
+        // Scan on the SAME chain the token is being added on — a hardcoded
+        // 'ethereum' scanned the wrong network for Base/Solana/etc. tokens.
+        body: JSON.stringify({ scan_type: 'token', target: addr, chain }),
       });
       if (!res.ok) throw new Error(`Scan failed (${res.status})`);
       const json = (await res.json()) as { score: number; level: string; reasons: string[] };
@@ -2139,14 +2147,26 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   };
 
   const handleAdd = async () => {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { setError('Invalid ERC-20 contract address'); return; }
-    const lower = address.toLowerCase();
-    if (tokens.includes(lower)) { setError('Token already added'); return; }
+    // Chain-aware validation: EVM contracts are 0x + 40 hex, Solana is base58.
+    const trimmed = address.trim();
+    if (isEvmChain(chain)) {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) { setError('Invalid EVM contract address'); return; }
+    } else if (chain === 'solana') {
+      if (!isSolanaAddress(trimmed)) { setError('Invalid Solana mint address'); return; }
+    } else if (!trimmed) {
+      setError('Enter a contract address'); return;
+    }
+    // Persist chain-aware: EVM folds to lowercase, Solana keeps its case. The
+    // stored key is "<chain>:<contract>" to match the hydrator, which splits on
+    // ':' — storing a bare address meant the token never hydrated.
+    const normalized = normalizeAddress(trimmed, chain);
+    const key = `${chain}:${normalized}`;
+    if (tokens.includes(key)) { setError('Token already added'); return; }
     if (!scanVerdict) {
-      await runScan(lower);
+      await runScan(normalized, chain);
       return; // First click runs the scan; user confirms with second click.
     }
-    onAdd(lower);
+    onAdd(key);
   };
 
   // Static class map — Tailwind needs literal class names at build
@@ -2174,11 +2194,23 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold">Add Custom Token</h1>
-            <p className="text-gray-400 text-xs">Import any ERC-20 token by contract</p>
+            <p className="text-gray-400 text-xs">Import any token by contract — EVM or Solana</p>
           </div>
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Network</label>
+            <select
+              value={chain}
+              onChange={(e) => { setChain(e.target.value); setError(''); setScanVerdict(null); }}
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50"
+            >
+              {ADD_TOKEN_CHAINS.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Token Contract Address</label>
             <div className="relative">
@@ -2186,7 +2218,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
                 value={address}
                 onChange={e => { setAddress(e.target.value); setError(''); setScanVerdict(null); }}
                 className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-20 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
-                placeholder="0x..."
+                placeholder={chain === 'solana' ? 'Mint address…' : '0x…'}
               />
               <button
                 type="button"
@@ -2229,12 +2261,21 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
             <div className="mt-4">
               <h3 className="text-xs font-semibold text-gray-400 mb-2">Custom Tokens ({tokens.length})</h3>
               <div className="space-y-1.5">
-                {tokens.map(t => (
-                  <div key={t} className="flex items-center justify-between bg-[#111827] rounded-xl px-4 py-3 text-xs font-mono text-gray-400 border border-white/5">
-                    <span>{t.slice(0, 10)}...{t.slice(-8)}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </div>
-                ))}
+                {tokens.map(t => {
+                  // Stored as "<chain>:<contract>"; show the chain + a short address.
+                  const sep = t.indexOf(':');
+                  const tChain = sep > 0 ? t.slice(0, sep) : '';
+                  const tAddr = sep > 0 ? t.slice(sep + 1) : t;
+                  return (
+                    <div key={t} className="flex items-center justify-between bg-[#111827] rounded-xl px-4 py-3 text-xs font-mono text-gray-400 border border-white/5">
+                      <span>
+                        {tChain && <span className="text-slate-500 uppercase me-2">{tChain}</span>}
+                        {tAddr.slice(0, 8)}…{tAddr.slice(-6)}
+                      </span>
+                      <ExternalLink className="w-3 h-3" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
