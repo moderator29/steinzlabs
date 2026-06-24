@@ -24,6 +24,7 @@ import { NftTab } from '@/components/wallet/NftTab';
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
 import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 interface TokenBalance {
   symbol: string;
@@ -147,7 +148,9 @@ const TOKEN_SORT_PRIORITY: Array<{ chain: string; symbol?: string; contract?: st
   { chain: 'polygon',  contract: '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19' }, // Pleasure Coin
 ];
 function priorityIndex(chain: string, symbol: string, contract: string | null | undefined): number {
-  const c = (contract || '').toLowerCase();
+  // Chain-aware: EVM contracts fold to lowercase (matching the seeded
+  // entries), Solana addresses keep their case. Never bare .toLowerCase().
+  const c = contract ? normalizeAddress(contract, chain) : '';
   for (let i = 0; i < TOKEN_SORT_PRIORITY.length; i++) {
     const p = TOKEN_SORT_PRIORITY[i];
     if (p.chain !== chain) continue;
@@ -307,8 +310,10 @@ export default function WalletPage() {
         // Union local + cloud by address; cloud is the durable record but
         // local may have wallets not yet synced (offline-create case).
         const byAddr = new Map<string, StoredWallet>();
-        for (const w of cloudWallets) byAddr.set(w.address.toLowerCase(), w);
-        for (const w of localWallets) byAddr.set(w.address.toLowerCase(), w);
+        // Shape-aware key: EVM folds to lowercase, Solana keeps its case, so
+        // two distinct Solana wallets can't collide into one map entry.
+        for (const w of cloudWallets) byAddr.set(normalizeAddress(w.address), w);
+        for (const w of localWallets) byAddr.set(normalizeAddress(w.address), w);
         const merged = Array.from(byAddr.values());
 
         if (cancelled) return;
@@ -548,7 +553,7 @@ export default function WalletPage() {
       const rows = await Promise.all(customTokens.map(async (entry) => {
         const [chainId, contract] = entry.split(':');
         if (!chainId || !contract) return null;
-        const seed = SEEDED_META[contract.toLowerCase()];
+        const seed = SEEDED_META[normalizeAddress(contract, chainId)];
         try {
           const res = await fetch(`/api/market/token/${contract}`);
           const data = res.ok ? await res.json() as {
@@ -759,9 +764,14 @@ export default function WalletPage() {
       ...t,
       chain: activeChain.id,
     })) as Array<TokenBalance & { chain: string }>;
-    const seen = new Set(onChain.map((t) => `${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`));
+    // Identity key for a holding: chain + contract (chain-aware normalized so
+    // Solana keeps its case) or, for native assets with no contract, the
+    // lowercased symbol (matches the native-placeholder key below).
+    const tokenKey = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
+      `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
+    const seen = new Set(onChain.map((t) => tokenKey(t.chain, t.contractAddress, t.symbol)));
     const customOnly = customTokenRows.filter((t) =>
-      !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
+      !seen.has(tokenKey(t.chain, t.contractAddress, t.symbol))
     );
     // Native-asset placeholders for every enabled chain that hasn't been
     // fetched yet (user hasn't activated that chain pill). Without this,
@@ -773,7 +783,7 @@ export default function WalletPage() {
       if (chainId === activeChain.id) continue;
       const c = SUPPORTED_CHAINS.find((x) => x.id === chainId);
       if (!c) continue;
-      const key = `${chainId}:${c.symbol.toLowerCase()}`;
+      const key = tokenKey(chainId, null, c.symbol);
       if (seen.has(key)) continue;
       nativePlaceholders.push({
         symbol: c.symbol,
@@ -1133,7 +1143,7 @@ export default function WalletPage() {
                   // per-token logo the hydrator pulled from CoinGecko (gives
                   // Naka Go / Pleasure Coin their real branded icons), then
                   // per-contract overrides as a final safety net.
-                  const contractKey = (token.contractAddress || '').toLowerCase();
+                  const contractKey = token.contractAddress ? normalizeAddress(token.contractAddress, token.chain) : '';
                   const CONTRACT_LOGOS: Record<string, string> = {
                     '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898':
                       'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
