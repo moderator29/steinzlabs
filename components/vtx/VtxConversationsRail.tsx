@@ -46,12 +46,12 @@ export function VtxConversationsRail({
       {/* Header */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.04] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
-            <Bot className="w-4 h-4 text-[#0A1EFF]" />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/20">
+            <Bot className="w-4 h-4 text-[#0066FF]" />
           </div>
           <span className="text-xs font-bold tracking-tight">VTX Agent</span>
           {isPro && (
-            <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
+            <span className="px-1.5 py-0.5 bg-[#0066FF]/15 border border-[#0066FF]/30 rounded text-[9px] text-[#0066FF] font-bold">PRO</span>
           )}
         </div>
       </div>
@@ -60,7 +60,7 @@ export function VtxConversationsRail({
       <div className="px-3 pt-3 flex-shrink-0">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/20 hover:border-[#0A1EFF]/50 rounded-lg text-xs font-semibold text-[#0A1EFF] transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#0066FF]/10 border border-[#0066FF]/30 hover:bg-[#0066FF]/20 hover:border-[#0066FF]/50 rounded-lg text-xs font-semibold text-[#0066FF] transition-colors"
         >
           <MessageSquarePlus className="w-3.5 h-3.5" />
           New chat
@@ -93,7 +93,7 @@ export function VtxConversationsRail({
                   onClick={() => onSelect(session)}
                   className={`w-full text-start p-2.5 rounded-lg transition-all border ${
                     isActive
-                      ? "bg-[#0A1EFF]/10 border-[#0A1EFF]/40"
+                      ? "bg-[#0066FF]/10 border-[#0066FF]/40"
                       : "bg-transparent border-transparent hover:bg-white/[0.03] hover:border-white/[0.06]"
                   }`}
                 >

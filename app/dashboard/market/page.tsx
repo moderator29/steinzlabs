@@ -168,7 +168,7 @@ export default function DashboardMarketPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, ticker, or paste a contract address…"
-            className="w-full bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0A1EFF]/40 focus:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all"
+            className="w-full bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0066FF]/40 focus:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all"
           />
           {resolving && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" size={14} />
@@ -183,7 +183,7 @@ export default function DashboardMarketPage() {
       <CategoryPills active={category} onChange={setCategory as (id: CategoryId) => void} />
 
       {resolved.length > 0 && (
-        <div className="bg-slate-950/80 backdrop-blur-xl border border-[#0A1EFF]/30 rounded-xl overflow-hidden">
+        <div className="bg-slate-950/80 backdrop-blur-xl border border-[#0066FF]/30 rounded-xl overflow-hidden">
           <div className="px-4 py-2.5 border-b border-slate-800/60 flex items-center justify-between">
             <div>
               <p className="text-[11px] uppercase tracking-wider text-[#4D6BFF] font-semibold">

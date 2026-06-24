@@ -55,10 +55,16 @@ const nextConfig = {
   },
   redirects: async () => [
     { source: '/whitepaper', destination: '/docs', permanent: false },
-    // /dashboard/settings has no page — portfolio, onboarding, FirstRunTour
-    // and the command palette all linked to it and hit the cult 404. Send it
-    // to the canonical settings home on the profile.
+    // Several surfaces (portfolio connect, onboarding, tour, email, command
+    // palette) link to /dashboard/settings, which has no page and fell through
+    // to the cult-themed 404. Settings currently live under Profile; redirect
+    // there until a dedicated Settings page is built.
     { source: '/dashboard/settings', destination: '/dashboard/profile', permanent: false },
+    // Retired duplicate. Notification settings live on the canonical profile
+    // panel (NotificationSettingsPanel, live notification_settings columns);
+    // the old /settings/notifications page wrote phantom columns and saved
+    // nothing.
+    { source: '/settings/notifications', destination: '/dashboard/profile', permanent: false },
   ],
   headers: async () => [
     // Global security headers — applied to every route. CSP is intentionally

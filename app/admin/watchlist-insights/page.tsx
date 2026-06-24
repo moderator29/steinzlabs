@@ -70,7 +70,7 @@ export default function WatchlistInsightsPage() {
 
       {loading && data.tokens.length === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading watchlist insights...</span>
         </div>
       )}
@@ -92,8 +92,8 @@ export default function WatchlistInsightsPage() {
               { icon: TrendingUp, label: 'Avg Items / User', value: avgPerUser },
             ].map(k => (
               <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
-                <div className="w-9 h-9 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center">
-                  <k.icon className="w-4 h-4 text-[#0A1EFF]" />
+                <div className="w-9 h-9 bg-[#0066FF]/10 rounded-xl flex items-center justify-center">
+                  <k.icon className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <div>
                   <div className="text-xl font-bold text-white">{k.value}</div>
@@ -105,7 +105,7 @@ export default function WatchlistInsightsPage() {
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4">
             <h3 className="text-sm font-semibold text-white mb-4">Top 10 Watched Tokens</h3>
-            <MicroBar data={chartData} xKey="symbol" yKey="count" color="#0A1EFF" height={220} formatY={(v) => formatLargeNumber(v)} />
+            <MicroBar data={chartData} xKey="symbol" yKey="count" color="#0066FF" height={220} formatY={(v) => formatLargeNumber(v)} />
           </div>
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">

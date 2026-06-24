@@ -11,7 +11,7 @@
  * only from a real on-chain tx hash.
  *
  * Built to NAKA BRANDING (not the reference images' teal): #0D1117 panel,
- * #1E2433 border, #0A1EFF electric-blue accent, tabular/monospace numerals.
+ * #1E2433 border, #0066FF electric-blue accent, tabular/monospace numerals.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -206,7 +206,7 @@ export default function SwapBatchCard({
       <div className="bg-[#0D1117] border border-[#1E2433] rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-4 pb-3 text-gray-300">
-          <ArrowDownUp size={15} className="text-[#0A1EFF]" />
+          <ArrowDownUp size={15} className="text-[#0066FF]" />
           <span className="text-sm font-semibold tabular-nums">
             {allDone ? `Batch complete · ${legs.length}/${legs.length}` : `Swap ${activeIndex + 1} of ${legs.length}`}
           </span>
@@ -227,7 +227,7 @@ export default function SwapBatchCard({
                         done
                           ? 'w-full bg-emerald-500'
                           : isActive
-                            ? 'w-full bg-gradient-to-r from-[#0A1EFF] via-[#5566FF] to-[#0A1EFF] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]'
+                            ? 'w-full bg-gradient-to-r from-[#0066FF] via-[#5566FF] to-[#0066FF] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]'
                             : 'w-0'
                       }`}
                     />

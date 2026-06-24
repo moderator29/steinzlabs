@@ -28,7 +28,7 @@ export function DocsSection09() {
       {/* Portfolio Tracker */}
       <div id="portfolio-tracker" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-[#0A1EFF]" />Portfolio Tracker
+          <Wallet className="w-4 h-4 text-[#0066FF]" />Portfolio Tracker
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           Connect any number of wallets by address (no private keys required) and get a unified view of your holdings across all supported chains. The tracker auto-syncs with live price data so your portfolio value is always current.
@@ -36,7 +36,7 @@ export function DocsSection09() {
         <div className="space-y-2 mb-6">
           {PORTFOLIO_FEATURES.map(f => (
             <div key={f.title} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <BarChart3 className="w-3.5 h-3.5 text-[#0A1EFF] flex-shrink-0 mt-0.5" />
+              <BarChart3 className="w-3.5 h-3.5 text-[#0066FF] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs font-semibold text-white">{f.title}</div>
                 <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</div>

@@ -116,7 +116,7 @@ export function WalletAuthButton({ mode, redirectTo = '/dashboard', className }:
       disabled={busy}
       className={
         className ??
-        'flex w-full items-center justify-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3.5 text-[15px] font-semibold text-white transition hover:border-[#0A1EFF]/40 hover:bg-white/[0.05] disabled:opacity-60'
+        'flex w-full items-center justify-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3.5 text-[15px] font-semibold text-white transition hover:border-[#0066FF]/40 hover:bg-white/[0.05] disabled:opacity-60'
       }
       aria-busy={busy}
     >

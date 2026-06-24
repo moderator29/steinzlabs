@@ -95,18 +95,18 @@ export default function NotificationSetup({ session, compact = false }: Props) {
           </button>
         )}
         <div className="flex items-center gap-2 mb-3">
-          <Smartphone className="w-4 h-4 text-[#0A1EFF]" />
+          <Smartphone className="w-4 h-4 text-[#0066FF]" />
           <span className="text-sm font-bold">Get Whale Alerts on iPhone</span>
         </div>
         <div className="space-y-2">
           {[
-            { n: 1, icon: <Share className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Tap the Share button in Safari' },
-            { n: 2, icon: <Smartphone className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Tap "Add to Home Screen"' },
-            { n: 3, icon: <Bell className="w-3.5 h-3.5 text-[#0A1EFF]" />, text: 'Open Naka Labs from your home screen' },
+            { n: 1, icon: <Share className="w-3.5 h-3.5 text-[#0066FF]" />, text: 'Tap the Share button in Safari' },
+            { n: 2, icon: <Smartphone className="w-3.5 h-3.5 text-[#0066FF]" />, text: 'Tap "Add to Home Screen"' },
+            { n: 3, icon: <Bell className="w-3.5 h-3.5 text-[#0066FF]" />, text: 'Open Naka Labs from your home screen' },
             { n: 4, icon: <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />, text: 'Come back here to enable notifications' },
           ].map(step => (
             <div key={step.n} className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#0A1EFF]/20 text-[#0A1EFF] text-[10px] font-bold flex items-center justify-center flex-shrink-0">{step.n}</span>
+              <span className="w-5 h-5 rounded-full bg-[#0066FF]/20 text-[#0066FF] text-[10px] font-bold flex items-center justify-center flex-shrink-0">{step.n}</span>
               <div className="flex items-center gap-1.5">{step.icon}<span className="text-xs text-gray-300">{step.text}</span></div>
             </div>
           ))}
@@ -139,14 +139,14 @@ export default function NotificationSetup({ session, compact = false }: Props) {
   return (
     <div className="bg-[#0f1320] border border-[#1a1f2e] rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-2">
-        <Bell className="w-4 h-4 text-[#0A1EFF]" />
+        <Bell className="w-4 h-4 text-[#0066FF]" />
         <span className="text-sm font-bold">Get Instant Whale Alerts</span>
       </div>
       <p className="text-[11px] text-gray-400 mb-3">
         Know when whales move before the market reacts. Trades, convergence signals, and price alerts — right on your phone.
       </p>
       <button onClick={requestPermission} disabled={loading || !session}
-        className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-2.5 rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+        className="w-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-2.5 rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
         <Bell className="w-3.5 h-3.5" />
         {loading ? 'Setting up...' : 'Enable Notifications'}
       </button>

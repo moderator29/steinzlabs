@@ -18,7 +18,7 @@ export function CategoryPills({ active, onChange }: CategoryPillsProps) {
           onClick={() => onChange(cat.id as CategoryId)}
           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
             active === cat.id
-              ? 'bg-[#0A1EFF] text-white shadow-[0_0_10px_rgba(10,30,255,0.35)]'
+              ? 'bg-[#0066FF] text-white shadow-[0_0_10px_rgba(0,102,255,0.35)]'
               : 'bg-[#141824] text-gray-400 hover:text-white border border-[#1E2433]'
           }`}
         >

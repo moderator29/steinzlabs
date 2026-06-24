@@ -88,7 +88,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
     <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
       <header className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-[var(--nl-blue,#0A1EFF)]" />
+          <Trophy className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
           <h2 className="text-sm font-bold text-white tracking-wide">{title}</h2>
         </div>
         <Link href={`/leaderboard/${kind}`} className="text-[11px] text-slate-400 hover:text-white">View all →</Link>
@@ -117,7 +117,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
                       {(r.display_name || r.username || '?').slice(0, 1).toUpperCase()}
                     </div>
                   )}
@@ -137,7 +137,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
                 {kind === 'whale-watchers' && r.username && (
                   <Link
                     href={`/u/${r.username}/whales`}
-                    className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/[0.04] hover:bg-[var(--nl-blue,#0A1EFF)]/15 hover:text-[var(--nl-blue,#0A1EFF)] text-slate-400 transition-colors opacity-0 group-hover/lb-row:opacity-100 focus:opacity-100"
+                    className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/[0.04] hover:bg-[var(--nl-blue,#0066FF)]/15 hover:text-[var(--nl-blue,#0066FF)] text-slate-400 transition-colors opacity-0 group-hover/lb-row:opacity-100 focus:opacity-100"
                     aria-label={`See whales watched by ${r.display_name || r.username}`}
                     title="See watched whales"
                   >

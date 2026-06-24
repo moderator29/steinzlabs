@@ -97,7 +97,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.avatar_url} alt="" className="w-20 h-20 rounded-2xl object-cover border border-white/10" />
         ) : (
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white">
             {initial}
           </div>
         )}
@@ -141,7 +141,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                 });
                 load();
               }}
-              className="ms-auto text-[12px] px-3 py-1.5 rounded-lg bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25"
+              className="ms-auto text-[12px] px-3 py-1.5 rounded-lg bg-[var(--nl-blue,#0066FF)]/15 text-[var(--nl-blue,#0066FF)] border border-[var(--nl-blue,#0066FF)]/25"
             >
               Approve their follow request
             </Link>
@@ -174,7 +174,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-colors capitalize ${
-              tab === t ? 'bg-[var(--nl-blue,#0A1EFF)] text-white' : 'text-slate-400 hover:text-white'
+              tab === t ? 'bg-[var(--nl-blue,#0066FF)] text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
             {t}
@@ -198,7 +198,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
 function StatCard({ label, value, hint, clickable }: { label: string; value: string; hint?: string; clickable?: boolean }) {
   return (
-    <div className={`rounded-xl bg-white/[0.025] border border-white/[0.06] p-3 ${clickable ? 'hover:border-[var(--nl-blue,#0A1EFF)]/40 cursor-pointer transition-colors' : ''}`}>
+    <div className={`rounded-xl bg-white/[0.025] border border-white/[0.06] p-3 ${clickable ? 'hover:border-[var(--nl-blue,#0066FF)]/40 cursor-pointer transition-colors' : ''}`}>
       <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
       <div className="text-base font-bold text-white tabular-nums mt-0.5">{value}</div>
       {hint ? <div className="text-[10px] text-slate-500 mt-0.5">{hint}</div> : null}
@@ -222,7 +222,7 @@ function OverviewTab({ profile }: { profile: ProfileResponse['profile'] }) {
       {Object.keys(profile.social_links).length > 0 && (
         <div>
           <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Links</div>
-          <ul className="text-sm text-[var(--nl-blue,#0A1EFF)] space-y-0.5">
+          <ul className="text-sm text-[var(--nl-blue,#0066FF)] space-y-0.5">
             {Object.entries(profile.social_links).map(([k, v]) => (
               <li key={k}><a href={v} target="_blank" rel="noopener noreferrer">{k}</a></li>
             ))}

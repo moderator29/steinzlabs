@@ -78,7 +78,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
   return (
     <div className="bg-[#141824] rounded-lg p-4">
       <h3 className="text-sm font-medium text-gray-300 mb-4 flex items-center gap-2">
-        <TrendingUp size={16} className="text-[#0A1EFF]" />
+        <TrendingUp size={16} className="text-[#0066FF]" />
         Smart Money Intelligence (Live)
       </h3>
 
@@ -86,7 +86,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
         {entities.map((entity) => (
           <div
             key={entity.id}
-            className="bg-[#0A0E1A] rounded-lg p-3 border border-[#1E2433] hover:border-[#0A1EFF] transition-colors"
+            className="bg-[#0A0E1A] rounded-lg p-3 border border-[#1E2433] hover:border-[#0066FF] transition-colors"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">

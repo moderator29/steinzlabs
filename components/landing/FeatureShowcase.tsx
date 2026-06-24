@@ -305,7 +305,7 @@ export function FeatureShowcase() {
                     <span className="text-[9px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-400 border border-amber-500/25 rounded-full px-1.5 py-0.5">Soon</span>
                   )}
                   {f.badge === 'new' && (
-                    <span className="text-[9px] font-bold uppercase tracking-wide bg-[#0A1EFF]/20 text-[#6d85ff] border border-[#0A1EFF]/35 rounded-full px-1.5 py-0.5">New</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wide bg-[#0066FF]/20 text-[#6d85ff] border border-[#0066FF]/35 rounded-full px-1.5 py-0.5">New</span>
                   )}
                 </div>
 

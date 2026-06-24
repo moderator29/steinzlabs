@@ -3,8 +3,8 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-const PLATFORM_FEE_BPS = 40; // 0.4% — canonical fee rate
+import { getUserByWallet } from '@/lib/database/supabase';
+import { recordSwapLog, recordFeeRevenue, PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
       fromAmount,
       toAmount,
       platformFeeBps,
-      swapType,
       status,
     } = body as {
       walletAddress: string;
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
       fromAmount: number;
       toAmount: number;
       platformFeeBps?: number;
-      swapType?: string;
       status?: string;
     };
 
@@ -41,40 +39,31 @@ export async function POST(request: NextRequest) {
     const feeBps = platformFeeBps || PLATFORM_FEE_BPS;
     const feeUsd = fromAmount * (feeBps / 10000);
 
-    // Log the swap transaction
-    const { error: swapError } = await db.from('swap_logs').insert({
-      wallet_address: walletAddress,
-      chain,
-      input_token: fromToken,
-      output_token: toToken,
-      input_amount: fromAmount,
-      output_amount: toAmount,
-      status: status || 'confirmed',
-      tx_hash: txHash,
-      swap_type: swapType || 'standard',
-      created_at: new Date().toISOString(),
-    });
+    // swap_logs.user_id is NOT NULL; resolve it from the wallet (the client
+    // only sends an address here). fee_revenue tolerates a null user_id.
+    const user = await getUserByWallet(walletAddress);
+    const userId = user?.id ?? null;
 
-    if (swapError) {
-      logger.error({ err: swapError.message }, '[Swap Log] swap_logs insert failed:');
-    }
-
-    // Log platform fee revenue
-    const { error: feeError } = await db.from('fee_revenue').insert({
-      wallet_address: walletAddress,
-      tx_hash: txHash,
-      chain,
+    await recordSwapLog(db, {
+      user_id: userId,
+      token_in: fromToken,
+      token_out: toToken,
+      amount_in: fromAmount,
+      amount_out: toAmount,
       fee_usd: feeUsd,
-      fee_bps: feeBps,
-      input_token: fromToken,
-      output_token: toToken,
-      input_value_usd: fromAmount,
-      created_at: new Date().toISOString(),
+      chain,
+      status: status === 'failed' ? 'failed' : 'confirmed',
+      tx_hash: txHash,
     });
 
-    if (feeError) {
-      logger.error({ err: feeError.message }, '[Swap Log] fee_revenue insert failed:');
-    }
+    await recordFeeRevenue(db, {
+      user_id: userId,
+      tx_hash: txHash,
+      fee_amount: fromAmount * (feeBps / 10000),
+      fee_token: fromToken,
+      usd_value: feeUsd,
+      chain,
+    });
 
     return NextResponse.json({ success: true, feeUsd });
   } catch (error) {

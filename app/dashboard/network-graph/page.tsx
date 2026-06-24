@@ -126,7 +126,7 @@ function MiniBarChart({ data }: { data: number[] }) {
           className="flex-1 rounded-t transition-all duration-300"
           style={{
             height: `${Math.max(8, (val / max) * 100)}%`,
-            backgroundColor: i === Math.floor(data.length / 2) ? '#0A1EFF' : '#1E3A8A',
+            backgroundColor: i === Math.floor(data.length / 2) ? '#0066FF' : '#1E3A8A',
           }}
         />
       ))}
@@ -512,7 +512,7 @@ export default function NetworkGraphPage() {
       {/* ── Header ── */}
       <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <BackButton className="flex-shrink-0" />
-        <Network className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+        <Network className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -536,13 +536,13 @@ export default function NetworkGraphPage() {
               onChange={e => setWalletInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="Enter wallet address or token CA..."
-              className="w-full border border-white/[0.08] rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 focus:bg-[#0A0E1A] transition-all"
+              className="w-full border border-white/[0.08] rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0066FF]/50 focus:bg-[#0A0E1A] transition-all"
             />
           </div>
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/80 text-white text-xs font-semibold transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/80 text-white text-xs font-semibold transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
           >
             {loading ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -654,7 +654,7 @@ export default function NetworkGraphPage() {
         >
           {loading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#0A1EFF]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#0066FF]" />
               <p className="text-xs text-gray-500">Building network graph...</p>
             </div>
           ) : !data || nodes.length === 0 ? (

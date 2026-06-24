@@ -99,7 +99,7 @@ export default function PortfolioRiskPage() {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <PieChart className="w-4 h-4 text-[#0A1EFF]" aria-hidden="true" />
+          <PieChart className="w-4 h-4 text-[#0066FF]" aria-hidden="true" />
           <h2 className="text-sm font-bold">Portfolio Risk</h2>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -110,7 +110,7 @@ export default function PortfolioRiskPage() {
               onClick={() => setChainId(c.id)}
               className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold border ${
                 chainId === c.id
-                  ? 'bg-[#0A1EFF]/15 border-[#0A1EFF]/40 text-white'
+                  ? 'bg-[#0066FF]/15 border-[#0066FF]/40 text-white'
                   : 'bg-[#0f1320] border-[#1a1f2e] text-gray-400 hover:text-white'
               }`}
             >

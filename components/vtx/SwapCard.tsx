@@ -282,7 +282,7 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-[#0A1EFF] hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs text-[#0066FF] hover:underline"
         >
           View on explorer <ExternalLink size={10} />
         </a>

@@ -16,7 +16,7 @@ const CHAINS = [
 
 const FEATURE_GROUPS = [
   {
-    icon: Layers, color: '#0A1EFF', title: 'Intelligence Layer',
+    icon: Layers, color: '#0066FF', title: 'Intelligence Layer',
     features: ['Context Feed · real-time on-chain signal stream', 'VTX AI Engine · natural language on-chain analyst', 'Trading DNA Analyzer · complete wallet behavioral profiles', 'Wallet Intelligence · automatic wallet classification', 'On-Chain Trends · momentum and narrative detection'],
   },
   {
@@ -38,7 +38,7 @@ const FEATURE_GROUPS = [
 const TIERS = [
   { name: 'Free',  price: '$0/mo',  color: '#6B7280', perks: ['Context Feed (limited)', 'Basic wallet lookup', 'Token Trust Score', '25 VTX messages/day', '10 price alerts', '5 tracked wallets'] },
   { name: 'Mini',  price: '$5/mo',  color: '#10B981', perks: ['Everything in Free', 'Full Context Feed', '100 VTX messages/day', '25 price alerts', '10 tracked wallets', 'Whale snapshots'] },
-  { name: 'Pro',   price: '$9/mo',  color: '#0A1EFF', perks: ['Everything in Mini', 'Unlimited VTX messages', 'Smart Money Tracking', 'Wallet Clusters', 'Bubble Map', 'Whale Tracker + Follow', 'One-Click Copy Trading', '50 alerts, 25 wallets'] },
+  { name: 'Pro',   price: '$9/mo',  color: '#0066FF', perks: ['Everything in Mini', 'Unlimited VTX messages', 'Smart Money Tracking', 'Wallet Clusters', 'Bubble Map', 'Whale Tracker + Follow', 'One-Click Copy Trading', '50 alerts, 25 wallets'] },
   { name: 'Max',   price: '$15/mo', color: '#F59E0B', perks: ['Everything in Pro', 'Sniper Bot (auto-execute)', 'Auto-Copy Trading', 'Unlimited alerts + wallets', 'Priority data feeds', 'Early feature access'] },
 ];
 
@@ -79,7 +79,7 @@ export function DocsSection02() {
 
       <div id="overview-chains" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Globe className="w-4 h-4 text-[#0A1EFF]" />Supported Chains
+          <Globe className="w-4 h-4 text-[#0066FF]" />Supported Chains
         </h3>
         <div className="flex flex-wrap gap-2">
           {CHAINS.map(c => (

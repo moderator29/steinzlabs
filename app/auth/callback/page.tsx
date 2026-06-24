@@ -117,7 +117,7 @@ function AuthCallbackInner() {
       <div className="text-center px-6">
         {status === 'verifying' && (
           <>
-            <Loader2 className="w-12 h-12 text-[#0A1EFF] animate-spin mx-auto mb-4" />
+            <Loader2 className="w-12 h-12 text-[#0066FF] animate-spin mx-auto mb-4" />
             <p className="text-white text-xl font-bold mb-2">Verifying your account...</p>
             <p className="text-gray-500 text-sm">Logging you in now</p>
           </>
@@ -144,7 +144,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-[#0A1EFF] animate-spin" />
+        <Loader2 className="w-12 h-12 text-[#0066FF] animate-spin" />
       </div>
     }>
       <AuthCallbackInner />

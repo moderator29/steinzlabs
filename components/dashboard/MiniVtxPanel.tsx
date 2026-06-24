@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Send,
+  ArrowUp,
   Sparkles,
   ChevronDown,
   ChevronRight,
@@ -209,7 +209,7 @@ export function MiniVtxPanel({
             }}
             aria-label="Send"
           >
-            {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            {submitting ? <Loader2 size={13} className="animate-spin" /> : <ArrowUp size={15} strokeWidth={2.5} />}
           </button>
 
           {/* Toolbar row */}

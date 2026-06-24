@@ -30,16 +30,18 @@ const DEFAULT_ITEMS: CommandItem[] = [
   { id: 'go-dashboard',  label: 'Dashboard',     group: 'Navigation', href: '/dashboard' },
   { id: 'go-market',     label: 'Market',         group: 'Navigation', href: '/dashboard/market' },
   { id: 'go-portfolio',  label: 'Portfolio',     group: 'Navigation', href: '/dashboard/portfolio' },
-  { id: 'go-whales',     label: 'Whale tracker',  group: 'Navigation', href: '/dashboard/whales' },
-  { id: 'go-clusters',   label: 'Wallet clusters', group: 'Navigation', href: '/dashboard/clusters' },
+  { id: 'go-whales',     label: 'Whale tracker',  group: 'Navigation', href: '/dashboard/whale-tracker' },
+  { id: 'go-clusters',   label: 'Wallet clusters', group: 'Navigation', href: '/dashboard/wallet-clusters' },
   { id: 'go-sniper',     label: 'Sniper bot',     group: 'Navigation', href: '/dashboard/sniper' },
   { id: 'go-vtx',        label: 'VTX Agent',     group: 'Navigation', href: '/dashboard/vtx-ai' },
   { id: 'go-alerts',     label: 'Alerts',         group: 'Navigation', href: '/dashboard/alerts' },
   // Actions
   { id: 'act-swap',      label: 'Open swap',       group: 'Actions',   href: '/dashboard/swap' },
   { id: 'act-research',  label: 'Open research',   group: 'Actions',   href: '/research' },
-  { id: 'act-settings',  label: 'Open settings',  group: 'Actions',   href: '/dashboard/settings' },
-  { id: 'act-cult',      label: 'NakaCult',       group: 'Actions',   href: '/naka-cult' },
+  // §16 — /dashboard/settings doesn't exist yet (hits the cult-themed 404);
+  // settings currently live under Profile. §12 — NakaCult removed from the
+  // in-app command palette (reached only from the /naka-cult landing).
+  { id: 'act-settings',  label: 'Open settings',  group: 'Actions',   href: '/dashboard/profile' },
   // Account
   { id: 'acct-profile',  label: 'Profile',         group: 'Account',   href: '/dashboard/profile' },
   { id: 'acct-docs',     label: 'Docs',            group: 'Account',   href: '/docs' },

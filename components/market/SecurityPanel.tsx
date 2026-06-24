@@ -554,7 +554,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
                     </div>
                     <div className="h-1 rounded-full bg-slate-900 overflow-hidden">
                       <div
-                        className="h-1 rounded-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED]"
+                        className="h-1 rounded-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED]"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

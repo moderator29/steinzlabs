@@ -16,7 +16,12 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
-const VALID_WIDGETS = ['hero', 'digest', 'markets', 'gainers', 'heating', 'context-feed', 'top-gainers'] as const;
+// §14 — MUST mirror the slugs in lib/dashboard/widgetRegistry.tsx (the
+// single render source of truth). It had drifted to a stale set
+// (markets/gainers/heating/context-feed/top-gainers) that no longer
+// matched the registry's `personalized-home`, so the Customise PATCH
+// rejected the real payload with a 400 and reordering never persisted.
+const VALID_WIDGETS = ['hero', 'digest', 'personalized-home'] as const;
 type Widget = typeof VALID_WIDGETS[number];
 
 // Stored shape evolves from string[] (Session U) to { order, hidden }

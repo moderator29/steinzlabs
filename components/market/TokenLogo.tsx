@@ -14,7 +14,7 @@ export function TokenLogo({ src, symbol, size = 36, className = '' }: TokenLogoP
   const letter = (symbol ?? '?')[0].toUpperCase();
 
   const colors = [
-    '#0A1EFF', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+    '#0066FF', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
     '#06b6d4', '#ec4899', '#10b981',
   ];
   const colorIndex = letter.charCodeAt(0) % colors.length;

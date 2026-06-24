@@ -252,7 +252,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                   mine
-                    ? 'bg-[var(--nl-blue,#0A1EFF)]/15 border border-[var(--nl-blue,#0A1EFF)]/25 text-white'
+                    ? 'bg-[var(--nl-blue,#0066FF)]/15 border border-[var(--nl-blue,#0066FF)]/25 text-white'
                     : 'bg-white/[0.04] border border-white/[0.06] text-slate-100'
                 }`}>
                   <div className="whitespace-pre-wrap">{sanitizeMessageBody(m.body)}</div>
@@ -281,7 +281,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         <button
           type="submit"
           disabled={!convKey || sending || !draft.trim()}
-          className="px-4 py-2.5 rounded-xl bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+          className="px-4 py-2.5 rounded-xl bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
         >
           <Send className="w-3.5 h-3.5" />Send
         </button>

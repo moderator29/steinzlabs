@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: 'linear-gradient(135deg,#0A1EFF,#0815B3)',
+              background: 'linear-gradient(135deg,#0066FF,#0815B3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

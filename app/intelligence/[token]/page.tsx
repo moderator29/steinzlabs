@@ -70,7 +70,7 @@ export default function ViewProofPage() {
           <p className="text-gray-400 mb-4">Unable to fetch token data</p>
           <button
             onClick={() => router.back()}
-            className="bg-[#0A1EFF] hover:bg-[#0916CC] text-white px-4 py-2 rounded-lg"
+            className="bg-[#0066FF] hover:bg-[#0052CC] text-white px-4 py-2 rounded-lg"
           >
             Go Back
           </button>
@@ -260,12 +260,12 @@ export default function ViewProofPage() {
             </div>
 
             {/* AI Prediction */}
-            <div className="bg-gradient-to-r from-[#0A1EFF]/20 to-purple-500/20 border border-[#0A1EFF] rounded-lg p-4">
+            <div className="bg-gradient-to-r from-[#0066FF]/20 to-purple-500/20 border border-[#0066FF] rounded-lg p-4">
               <h4 className="text-sm font-medium text-white mb-2">AI Prediction</h4>
               <div className="grid grid-cols-3 gap-4 mb-3">
                 <div>
                   <div className="text-xs text-gray-400">Expected Gain</div>
-                  <div className="text-lg font-bold text-[#0A1EFF]">
+                  <div className="text-lg font-bold text-[#0066FF]">
                     {intelligence.patternMatching.aiPrediction.expectedGain}
                   </div>
                 </div>
@@ -291,7 +291,7 @@ export default function ViewProofPage() {
 
         {/* Trading Actions */}
         <div className="flex gap-4">
-          <button className="flex-1 bg-[#0A1EFF] hover:bg-[#0916CC] text-white font-medium py-4 px-6 rounded-lg transition-colors text-lg">
+          <button className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-4 px-6 rounded-lg transition-colors text-lg">
             Open Trading Terminal
           </button>
           <button className="flex-1 bg-[#141824] hover:bg-[#1E2433] border border-[#1E2433] text-white font-medium py-4 px-6 rounded-lg transition-colors text-lg">

@@ -160,7 +160,7 @@ export default function SmartMoneyPage() {
               onClick={() => setActiveFilter(key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeFilter === key
-                  ? 'bg-[var(--nl-blue,#0A1EFF)] text-white'
+                  ? 'bg-[var(--nl-blue,#0066FF)] text-white'
                   : 'bg-[var(--nl-canvas-slightly-elev,#141824)] text-slate-300 hover:text-white border border-[var(--nl-border-dark,#1E2433)]'
               }`}
             >
@@ -184,12 +184,12 @@ export default function SmartMoneyPage() {
               return (
                 <div
                   key={entity.id}
-                  className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-5 border border-[var(--nl-border-dark,#1E2433)] hover:border-[var(--nl-blue,#0A1EFF)]/50 transition-all"
+                  className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-5 border border-[var(--nl-border-dark,#1E2433)] hover:border-[var(--nl-blue,#0066FF)]/50 transition-all"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 bg-[var(--nl-blue,#0A1EFF)]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Users size={20} className="text-[var(--nl-blue,#0A1EFF)]" />
+                      <div className="w-10 h-10 bg-[var(--nl-blue,#0066FF)]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Users size={20} className="text-[var(--nl-blue,#0066FF)]" />
                       </div>
                       <div className="min-w-0">
                         <h3 className="text-white font-bold truncate">{entity.name}</h3>
@@ -221,7 +221,7 @@ export default function SmartMoneyPage() {
                       className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                         isFollowed
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white'
+                          : 'bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white'
                       }`}
                       aria-label={isFollowed ? `Following ${entity.name}` : `Follow ${entity.name}`}
                     >

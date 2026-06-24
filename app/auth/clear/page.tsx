@@ -109,7 +109,7 @@ function AuthClearInner() {
         <div className="flex items-center justify-center gap-3">
           <Link
             href="/login"
-            className="px-5 py-2.5 rounded-xl bg-[#0A1EFF] hover:bg-[#0916CC] text-white text-sm font-semibold transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-[#0066FF] hover:bg-[#0052CC] text-white text-sm font-semibold transition-colors"
           >
             Go to login
           </Link>

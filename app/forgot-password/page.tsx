@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
     <AuroraBackground fullHeight>
     <div className="min-h-screen text-white flex">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0A1EFF]/[0.04] rounded-full blur-[150px]" />
+        <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0066FF]/[0.04] rounded-full blur-[150px]" />
         <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
       </div>
 
@@ -67,12 +67,12 @@ export default function ForgotPasswordPage() {
           <span className="text-base font-bold tracking-tight">NAKA LABS</span>
         </Link>
         <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight mb-4">Reset your<br /><span className="text-[#0A1EFF]">password</span></h1>
+          <h1 className="text-4xl font-bold leading-tight mb-4">Reset your<br /><span className="text-[#0066FF]">password</span></h1>
           <p className="text-gray-400 text-sm leading-relaxed mb-8">Enter your email and we will send you a link to reset your password and get back into your account.</p>
           <div className="space-y-3">
             {['Secure password reset', 'Link expires in 1 hour', 'Check spam folder if not received'].map(t => (
               <div key={t} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#0A1EFF]/10 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-[#0A1EFF]" /></div>
+                <div className="w-5 h-5 rounded-full bg-[#0066FF]/10 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-[#0066FF]" /></div>
                 <span className="text-sm text-gray-300">{t}</span>
               </div>
             ))}
@@ -89,8 +89,8 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-              <Shield className="w-8 h-8 text-[#0A1EFF]" />
+            <div className="w-16 h-16 mx-auto bg-[#0066FF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0066FF]/20">
+              <Shield className="w-8 h-8 text-[#0066FF]" />
             </div>
             <h2 className="text-2xl font-bold mb-2">{sent ? 'Check your email' : 'Forgot password?'}</h2>
             <p className="text-gray-500 text-sm">{sent ? 'We sent a password reset link to your email' : 'Enter your email to receive a reset link'}</p>
@@ -98,8 +98,8 @@ export default function ForgotPasswordPage() {
 
           {sent ? (
             <div className="space-y-5">
-              <div className="bg-[#0A1EFF]/5 border border-[#0A1EFF]/20 rounded-xl p-5 text-center">
-                <Mail className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3" />
+              <div className="bg-[#0066FF]/5 border border-[#0066FF]/20 rounded-xl p-5 text-center">
+                <Mail className="w-10 h-10 text-[#0066FF] mx-auto mb-3" />
                 <p className="text-sm text-gray-300 mb-1">Reset link sent to</p>
                 <p className="text-white font-medium">{email}</p>
                 <p className="text-xs text-gray-500 mt-3">Check your inbox and spam folder for the email from NAKA LABS.</p>
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
                 Try another email
               </button>
               <p className="text-center text-sm text-gray-500">
-                <Link href="/login" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-medium transition-colors">Back to sign in</Link>
+                <Link href="/login" className="text-[#0066FF] hover:text-[#0066FF]/80 font-medium transition-colors">Back to sign in</Link>
               </p>
             </div>
           ) : (
@@ -125,7 +125,7 @@ export default function ForgotPasswordPage() {
                       type="email"
                       value={email}
                       onChange={e => { setEmail(e.target.value); setError(''); }}
-                      className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                      className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors`}
                       placeholder="john@example.com"
                       autoComplete="email"
                       autoFocus
@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
+                  className="w-full bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0066FF]/20"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
                   {loading ? 'Sending...' : 'Send Reset Link'}
@@ -146,7 +146,7 @@ export default function ForgotPasswordPage() {
 
               <p className="text-center text-sm text-gray-500 mt-6">
                 Remember your password?{' '}
-                <Link href="/login" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-medium transition-colors">Sign in</Link>
+                <Link href="/login" className="text-[#0066FF] hover:text-[#0066FF]/80 font-medium transition-colors">Sign in</Link>
               </p>
             </>
           )}

@@ -21,7 +21,7 @@ const LAYERS: Layer[] = [
     icon: Cpu,
     title: 'Shadow Guardian simulation',
     detail: 'Every swap is simulated on-chain in under 200ms before it’s submitted. If a token prevents selling — the fingerprint of a honeypot — the trade is aborted automatically. No gas spent, no funds lost.',
-    color: '#0A1EFF',
+    color: '#0066FF',
   },
   {
     icon: Lock,

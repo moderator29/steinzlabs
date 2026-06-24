@@ -129,7 +129,7 @@ export default function SupportPage() {
         <div className="flex gap-1.5">
           {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)}
-              className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors ${filter === s ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
+              className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors ${filter === s ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
               {s.replace('_', ' ')}
             </button>
           ))}
@@ -149,7 +149,7 @@ export default function SupportPage() {
             </div>
           ) : filtered.map(t => (
             <div key={t.id} onClick={() => setSelected(t)}
-              className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0A1EFF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+              className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0066FF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
               <div className="flex items-start justify-between gap-2 mb-1.5">
                 <span className="text-xs font-semibold text-white line-clamp-1">{t.subject}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
@@ -200,9 +200,9 @@ export default function SupportPage() {
                   <p className="text-xs text-gray-300">{ticketBody(selected)}</p>
                 </div>
                 {selected.replies.map((r, i) => (
-                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 ms-6' : 'bg-[#0A0E1A]'}`}>
+                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0066FF]/10 border border-[#0066FF]/20 ms-6' : 'bg-[#0A0E1A]'}`}>
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`text-[10px] font-semibold ${r.from === 'admin' ? 'text-[#0A1EFF]' : 'text-gray-400'}`}>
+                      <span className={`text-[10px] font-semibold ${r.from === 'admin' ? 'text-[#0066FF]' : 'text-gray-400'}`}>
                         {r.from === 'admin' ? 'Support Team' : r.from}
                       </span>
                       <span className="text-[10px] text-gray-600">{formatTimeAgo(r.ts)}</span>
@@ -217,12 +217,12 @@ export default function SupportPage() {
                   onChange={e => setReply(e.target.value)}
                   rows={2}
                   placeholder="Write a reply..."
-                  className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 resize-none"
+                  className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none"
                 />
                 <button
                   onClick={sendReply}
                   disabled={!reply.trim() || sendingReply}
-                  className="bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+                  className="bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors flex-shrink-0"
                 >
                   {sendingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>

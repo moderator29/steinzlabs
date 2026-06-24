@@ -93,7 +93,7 @@ export function DocsSidebar({ activeSection, onSectionClick }: DocsSidebarProps)
                 onClick={onSectionClick}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all group ${
                   isExact
-                    ? 'bg-[#0A1EFF]/15 text-[#4D6BFF] font-semibold'
+                    ? 'bg-[#0066FF]/15 text-[#4D6BFF] font-semibold'
                     : isActive
                     ? 'text-gray-200'
                     : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]'

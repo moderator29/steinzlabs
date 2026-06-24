@@ -2,7 +2,7 @@ import { CheckCircle, ArrowRight, Zap, Globe, Shield, Brain, TrendingUp, Star } 
 import Link from 'next/link';
 
 const STEPS = [
-  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.com with your email. Verify to activate · no credit card required for the free tier.' },
+  { n: '01', title: 'Create your account', desc: 'Sign up at nakalabs.xyz with your email. Verify to activate · no credit card required for the free tier.' },
   { n: '02', title: 'Connect your wallets', desc: 'Go to Portfolio and link up to 10 wallets across Ethereum, Base, Solana, Arbitrum, Polygon, and BSC for automatic tracking.' },
   { n: '03', title: 'Explore the Context Feed', desc: 'Your personalized real-time intelligence stream activates immediately · showing whale moves, smart money signals, and on-chain alerts.' },
   { n: '04', title: 'Run your first scan', desc: 'Paste any token address into the search bar or Security Center for an instant Trust Score, holder analysis, and risk breakdown.' },
@@ -31,7 +31,7 @@ export function DocsSection01() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         {CAPABILITIES.map(({ icon: Icon, label, desc }) => (
           <div key={label} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
-            <div className="w-8 h-8 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-[#0066FF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <Icon className="w-4 h-4 text-[#4D6BFF]" />
             </div>
             <div>
@@ -45,12 +45,12 @@ export function DocsSection01() {
       {/* Setup steps */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[#0A1EFF]" />Quick Setup · 5 Steps
+          <Zap className="w-4 h-4 text-[#0066FF]" />Quick Setup · 5 Steps
         </h3>
         <div className="space-y-3">
           {STEPS.map(s => (
             <div key={s.n} className="flex gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
-              <div className="w-8 h-8 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-8 h-8 bg-[#0066FF]/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-[#4D6BFF]">{s.n}</span>
               </div>
               <div>
@@ -80,7 +80,7 @@ export function DocsSection01() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link href="/signup" className="inline-flex items-center justify-center gap-2 text-sm bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-4 py-2.5 rounded-xl font-semibold transition-colors">
+        <Link href="/signup" className="inline-flex items-center justify-center gap-2 text-sm bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2.5 rounded-xl font-semibold transition-colors">
           Create free account <ArrowRight className="w-4 h-4" />
         </Link>
         <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 text-sm bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 px-4 py-2.5 rounded-xl font-semibold border border-white/[0.06] transition-colors">

@@ -423,7 +423,7 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
             <button
               ref={lastFocusableRef}
               onClick={onAcknowledge}
-              className="text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0918CC] px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+              className="text-xs font-semibold text-white bg-[#0066FF] hover:bg-[#0918CC] px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
             >
               <ShieldCheck className="w-3.5 h-3.5 inline me-1" aria-hidden="true" />
               Continue

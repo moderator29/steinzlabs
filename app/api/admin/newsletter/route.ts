@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
 
-const FROM_ADDRESS = 'Naka Labs <hello@nakalabs.com>';
+const FROM_ADDRESS = 'Naka Labs <hello@nakalabs.xyz>';
 const BATCH_SIZE = 50;
 
 type Audience = 'all' | 'pro' | 'free';

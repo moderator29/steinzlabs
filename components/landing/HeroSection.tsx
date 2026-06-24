@@ -26,7 +26,7 @@ export function HeroSection() {
     <section
       id="hero"
       className="relative min-h-screen flex items-center px-5 pt-24 pb-16 overflow-hidden"
-      style={{ background: 'linear-gradient(160deg,#0A1EFF 0%,#050ea8 20%,#07090f 55%)' }}
+      style={{ background: 'linear-gradient(160deg,#0066FF 0%,#050ea8 20%,#07090f 55%)' }}
     >
       {/* CSS grid overlay — drifts up on scroll */}
       <div className="absolute inset-0 pointer-events-none will-change-transform" style={{

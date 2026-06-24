@@ -41,6 +41,16 @@ const STATUS_STYLES: Record<TxStatus, string> = {
   failed: 'text-red-400 bg-red-400/10 border-red-400/20',
 };
 
+// Map the DB status vocabularies (swap_logs: success/completed/confirmed/
+// pending/failed; sniper_executions: confirmed/pending/failed) onto the three
+// display buckets. An unknown/absent status is pending, never a fabricated
+// "confirmed".
+function toTxStatus(raw: string | null | undefined): TxStatus {
+  if (raw === 'failed') return 'failed';
+  if (raw === 'confirmed' || raw === 'completed' || raw === 'success') return 'confirmed';
+  return 'pending';
+}
+
 export default function TransactionsPage() {
   const router = useRouter();
   const [txs, setTxs] = useState<Transaction[]>([]);
@@ -67,7 +77,9 @@ export default function TransactionsPage() {
 
       const [swapRes, sniperRes] = await Promise.all([
         supabase.from('swap_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
-        supabase.from('sniper_executions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+        // sniper_executions has no created_at — ordering by it errored the whole
+        // query and dropped every snipe. The real timestamp is executed_at.
+        supabase.from('sniper_executions').select('*').eq('user_id', user.id).order('executed_at', { ascending: false }).limit(50),
       ]);
 
       const allTxs: Transaction[] = [];
@@ -77,13 +89,13 @@ export default function TransactionsPage() {
           allTxs.push({
             id: `swap-${s.id}`,
             type: 'swap',
-            fromToken: s.from_token,
-            toToken: s.to_token,
-            fromAmount: s.from_amount,
-            toAmount: s.to_amount,
-            amountUsd: s.amount_usd,
+            fromToken: s.token_in,
+            toToken: s.token_out,
+            fromAmount: s.amount_in != null ? String(s.amount_in) : undefined,
+            toAmount: s.amount_out != null ? String(s.amount_out) : undefined,
+            amountUsd: undefined, // swap_logs stores no USD trade value (only fee_usd)
             chain: s.chain || 'ethereum',
-            status: (s.status || 'confirmed') as TxStatus,
+            status: toTxStatus(s.status),
             txHash: s.tx_hash,
             createdAt: s.created_at,
           });
@@ -96,11 +108,11 @@ export default function TransactionsPage() {
             id: `snipe-${e.id}`,
             type: 'snipe',
             tokenSymbol: e.token_symbol,
-            amountUsd: e.amount_usd,
+            amountUsd: e.buy_amount_usd ?? undefined,
             chain: e.chain || 'ethereum',
-            status: (e.status || 'pending') as TxStatus,
+            status: toTxStatus(e.status),
             txHash: e.tx_hash,
-            createdAt: e.created_at,
+            createdAt: e.executed_at,
           });
         }
       }
@@ -121,7 +133,7 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" />
+        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" showBack backTo="/dashboard" />
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1 bg-[#141824] border border-[#1E2433] rounded-lg p-1">
@@ -130,7 +142,7 @@ export default function TransactionsPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 text-xs font-medium rounded transition-colors capitalize ${
-                  filter === f ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white'
+                  filter === f ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {f === 'all' ? 'All' : f === 'swap' ? 'Swaps' : 'Snipes'}
@@ -149,7 +161,7 @@ export default function TransactionsPage() {
 
         {loading && txs.length === 0 ? (
           <div className="flex items-center justify-center py-16 gap-2">
-            <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
+            <Loader2 className="w-5 h-5 text-[#0066FF] animate-spin" />
             <span className="text-sm text-gray-500">Loading transactions...</span>
           </div>
         ) : filtered.length === 0 ? (
@@ -162,9 +174,9 @@ export default function TransactionsPage() {
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden divide-y divide-[#1E2433]">
             {filtered.map(tx => (
               <div key={tx.id} className="flex items-center gap-4 px-4 py-3 hover:bg-[#1E2433]/30 transition-colors">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === 'swap' ? 'bg-[#0A1EFF]/10' : 'bg-[#F59E0B]/10'}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === 'swap' ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
                   {tx.type === 'swap' ? (
-                    <ArrowLeftRight className="w-5 h-5 text-[#0A1EFF]" />
+                    <ArrowLeftRight className="w-5 h-5 text-[#0066FF]" />
                   ) : (
                     <Crosshair className="w-5 h-5 text-[#F59E0B]" />
                   )}
@@ -190,7 +202,7 @@ export default function TransactionsPage() {
                     href={`${EXPLORER_BASE[tx.chain]}${tx.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#0A1EFF] transition-colors"
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#0066FF] transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>

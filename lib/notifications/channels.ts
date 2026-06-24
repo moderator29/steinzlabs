@@ -33,7 +33,7 @@ function buildDiscordPayload(payload: FanOutPayload): DiscordPayload {
     embeds: [{
       title: payload.title,
       description: payload.message,
-      color: 0x0a1eff,
+      color: 0x0066FF,
       timestamp: new Date().toISOString(),
     }],
   };

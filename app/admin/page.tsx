@@ -99,8 +99,8 @@ function MetricCard({ icon: Icon, label, value, sub, color, loading, trend }: {
   return (
     <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 group">
       <div className="flex items-center justify-between mb-3">
-        <div className={`p-2 rounded-lg bg-gradient-to-br ${color === 'blue' ? 'from-[#0A1EFF]/10 to-[#0A1EFF]/5' : color === 'green' ? 'from-[#10B981]/10 to-[#10B981]/5' : color === 'purple' ? 'from-[#7C3AED]/10 to-[#7C3AED]/5' : color === 'amber' ? 'from-[#F59E0B]/10 to-[#F59E0B]/5' : 'from-[#EF4444]/10 to-[#EF4444]/5'}`}>
-          <Icon className={`w-4 h-4 ${color === 'blue' ? 'text-[#0A1EFF]' : color === 'green' ? 'text-[#10B981]' : color === 'purple' ? 'text-[#7C3AED]' : color === 'amber' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`} />
+        <div className={`p-2 rounded-lg bg-gradient-to-br ${color === 'blue' ? 'from-[#0066FF]/10 to-[#0066FF]/5' : color === 'green' ? 'from-[#10B981]/10 to-[#10B981]/5' : color === 'purple' ? 'from-[#7C3AED]/10 to-[#7C3AED]/5' : color === 'amber' ? 'from-[#F59E0B]/10 to-[#F59E0B]/5' : 'from-[#EF4444]/10 to-[#EF4444]/5'}`}>
+          <Icon className={`w-4 h-4 ${color === 'blue' ? 'text-[#0066FF]' : color === 'green' ? 'text-[#10B981]' : color === 'purple' ? 'text-[#7C3AED]' : color === 'amber' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`} />
         </div>
         {trend && (
           <div className={`flex items-center gap-0.5 text-[10px] font-medium ${trend === 'up' ? 'text-[#10B981]' : trend === 'down' ? 'text-[#EF4444]' : 'text-gray-500'}`}>
@@ -361,7 +361,7 @@ export default function AdminPanel() {
         <div className="w-full max-w-sm">
           <div className="bg-[#111827]/80 rounded-2xl p-8 border border-white/[0.06] backdrop-blur-xl">
             <div className="flex flex-col items-center gap-3 mb-8">
-              <div className="w-14 h-14 bg-gradient-to-br from-[#0A1EFF] to-[#0A1EFF]/60 rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#0066FF] to-[#0066FF]/60 rounded-xl flex items-center justify-center shadow-lg shadow-[#0066FF]/20">
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <div className="text-center">
@@ -374,7 +374,7 @@ export default function AdminPanel() {
                 Sign in to your Naka Labs account with admin privileges to access this panel.
               </p>
               {loginError && <p className="text-[#EF4444] text-xs text-center">{loginError}</p>}
-              <button onClick={handleLogin} className="w-full bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
+              <button onClick={handleLogin} className="w-full bg-[#0066FF] hover:bg-[#0066FF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
                 Verify Admin Access
               </button>
               <a href="/login" className="block text-center text-xs text-gray-500 hover:text-gray-300 transition-colors">
@@ -424,11 +424,11 @@ export default function AdminPanel() {
                 onClick={() => { setActiveSection(section.id); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
                   isActive
-                    ? 'bg-[#0A1EFF]/10 text-white border border-[#0A1EFF]/20'
+                    ? 'bg-[#0066FF]/10 text-white border border-[#0066FF]/20'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.03]'
                 }`}
               >
-                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : ''}`} />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#0066FF]' : ''}`} />
                 <span className="font-medium">{section.label}</span>
                 {section.id === 'token-listings' && pendingListings > 0 && (
                   <span className="ms-auto bg-[#F59E0B] text-black text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{pendingListings}</span>
@@ -439,7 +439,7 @@ export default function AdminPanel() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-2.5 border-t border-white/[0.06] bg-[#0D1117]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0A1EFF]/5 border border-[#0A1EFF]/10 mb-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0066FF]/5 border border-[#0066FF]/10 mb-2">
             <Radio className="w-3 h-3 text-[#10B981] animate-pulse" />
             <span className="text-[10px] text-gray-400">Auto-refresh in <span className="text-white font-mono font-bold">{countdown}s</span></span>
           </div>
@@ -508,10 +508,10 @@ export default function AdminPanel() {
                 <div className="lg:col-span-2 bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <UserPlus className="w-4 h-4 text-[#0A1EFF]" />
+                      <UserPlus className="w-4 h-4 text-[#0066FF]" />
                       <span className="text-xs font-heading font-bold">Recent Signups</span>
                     </div>
-                    <button onClick={() => setActiveSection('users')} className="text-[10px] text-[#0A1EFF] hover:underline flex items-center gap-1">
+                    <button onClick={() => setActiveSection('users')} className="text-[10px] text-[#0066FF] hover:underline flex items-center gap-1">
                       View All <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -521,7 +521,7 @@ export default function AdminPanel() {
                     ) : (stats?.users.recentUsers || []).slice(0, 8).map((user) => (
                       <div key={user.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.02] transition-colors">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0066FF]">
                             {(user.first_name?.[0] || user.username?.[0] || '?').toUpperCase()}
                           </div>
                           <div>
@@ -541,7 +541,7 @@ export default function AdminPanel() {
                 <div className="space-y-4">
                   <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Activity className="w-4 h-4 text-[#0A1EFF]" />
+                      <Activity className="w-4 h-4 text-[#0066FF]" />
                       <span className="text-xs font-heading font-bold">API Health</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -581,9 +581,9 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-[#0A1EFF]/5 to-transparent rounded-xl p-4 border border-[#0A1EFF]/10">
+              <div className="bg-gradient-to-r from-[#0066FF]/5 to-transparent rounded-xl p-4 border border-[#0066FF]/10">
                 <div className="flex items-center gap-2 mb-1">
-                  <Globe className="w-4 h-4 text-[#0A1EFF]" />
+                  <Globe className="w-4 h-4 text-[#0066FF]" />
                   <span className="text-xs font-heading font-bold">Platform Intelligence</span>
                 </div>
                 <p className="text-[10px] text-gray-500">Stats auto-refresh every 30 seconds. All data sourced from Supabase, CoinGecko, and internal APIs. Last synced: {lastRefresh.toLocaleString()}</p>
@@ -604,7 +604,7 @@ export default function AdminPanel() {
                       value={userSearch}
                       onChange={(e) => handleUserSearch(e.target.value)}
                       placeholder="Search users..."
-                      className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-56 transition-colors"
+                      className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/40 w-56 transition-colors"
                     />
                   </div>
                 }
@@ -638,7 +638,7 @@ export default function AdminPanel() {
                           <tr key={user.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0066FF]">
                                   {(user.first_name?.[0] || '?').toUpperCase()}
                                 </div>
                                 <span className="text-xs font-semibold">{user.first_name} {user.last_name}</span>
@@ -682,7 +682,7 @@ export default function AdminPanel() {
                 action={
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/40 w-48 transition-colors" />
+                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/40 w-48 transition-colors" />
                   </div>
                 }
               />
@@ -752,7 +752,7 @@ export default function AdminPanel() {
                 title="Service Health Monitor"
                 subtitle="Real-time status of all platform services"
                 action={
-                  <button onClick={checkApiHealth} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A1EFF]/10 text-[#0A1EFF] text-[11px] font-semibold hover:bg-[#0A1EFF]/20 transition-colors">
+                  <button onClick={checkApiHealth} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0066FF]/10 text-[#0066FF] text-[11px] font-semibold hover:bg-[#0066FF]/20 transition-colors">
                     <RefreshCw className="w-3 h-3" /> Recheck All
                   </button>
                 }
@@ -814,7 +814,7 @@ export default function AdminPanel() {
                             {listing.logoUrl ? (
                               <img src={listing.logoUrl} alt={listing.tokenName} className="w-10 h-10 rounded-xl object-cover" />
                             ) : (
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0A1EFF]/15 to-[#7C3AED]/15 flex items-center justify-center text-xs font-bold text-[#0A1EFF]">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0066FF]/15 to-[#7C3AED]/15 flex items-center justify-center text-xs font-bold text-[#0066FF]">
                                 {listing.symbol?.slice(0, 2) || '?'}
                               </div>
                             )}
@@ -826,7 +826,7 @@ export default function AdminPanel() {
                                   listing.status === 'pending' ? 'bg-[#F59E0B]/15 text-[#F59E0B]' :
                                   listing.status === 'listed' ? 'bg-[#10B981]/15 text-[#10B981]' :
                                   listing.status === 'rejected' ? 'bg-[#EF4444]/15 text-[#EF4444]' :
-                                  'bg-[#0A1EFF]/15 text-[#0A1EFF]'
+                                  'bg-[#0066FF]/15 text-[#0066FF]'
                                 }`}>
                                   {listing.status === 'approved_pending_payment' ? 'APPROVED' : listing.status?.toUpperCase()}
                                 </span>
@@ -834,9 +834,9 @@ export default function AdminPanel() {
                               <div className="text-[10px] text-gray-500 mt-0.5">{listing.chain} · {listing.contractAddress?.slice(0, 8)}...{listing.contractAddress?.slice(-4)}</div>
                               {listing.description && <div className="text-[10px] text-gray-500 mt-1 line-clamp-1">{listing.description}</div>}
                               <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-600">
-                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Website</a>}
-                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Telegram</a>}
-                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#0A1EFF] transition-colors">Twitter</a>}
+                                {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:text-[#0066FF] transition-colors">Website</a>}
+                                {listing.telegram && <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-[#0066FF] transition-colors">Telegram</a>}
+                                {listing.twitter && <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-[#0066FF] transition-colors">Twitter</a>}
                                 <span>Submitted: {new Date(listing.submittedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
@@ -863,7 +863,7 @@ export default function AdminPanel() {
                               </button>
                             )}
                             {listing.status === 'paid' && (
-                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-3 py-1.5 bg-[#0A1EFF]/10 text-[#0A1EFF] text-[10px] font-semibold rounded-lg hover:bg-[#0A1EFF]/20 transition-colors flex items-center gap-1">
+                              <button onClick={() => handleListingAction(listing.id, 'list')} className="px-3 py-1.5 bg-[#0066FF]/10 text-[#0066FF] text-[10px] font-semibold rounded-lg hover:bg-[#0066FF]/20 transition-colors flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" /> List on Discovery
                               </button>
                             )}
@@ -913,7 +913,7 @@ export default function AdminPanel() {
 
                 <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
                   <div className="flex items-center gap-2 mb-3">
-                    <Layers className="w-4 h-4 text-[#0A1EFF]" />
+                    <Layers className="w-4 h-4 text-[#0066FF]" />
                     <span className="text-xs font-heading font-bold">Trading Infrastructure</span>
                   </div>
                   <div className="space-y-2">
@@ -942,18 +942,18 @@ export default function AdminPanel() {
 
               <div className="bg-[#111827]/80 rounded-xl p-5 border border-white/[0.06]">
                 <div className="flex items-center gap-2 mb-4">
-                  <Send className="w-4 h-4 text-[#0A1EFF]" />
+                  <Send className="w-4 h-4 text-[#0066FF]" />
                   <span className="text-xs font-heading font-bold">Compose Broadcast</span>
                 </div>
                 <textarea
                   value={broadcastMsg}
                   onChange={(e) => setBroadcastMsg(e.target.value)}
                   placeholder="Write a platform-wide notification message..."
-                  className="w-full bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#0A1EFF]/30 min-h-[100px] text-white placeholder-gray-600 mb-4 transition-colors resize-none"
+                  className="w-full bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#0066FF]/30 min-h-[100px] text-white placeholder-gray-600 mb-4 transition-colors resize-none"
                 />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }} className="bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    <button onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }} className="bg-[#0066FF] hover:bg-[#0066FF]/90 px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
                       <Send className="w-3.5 h-3.5" /> Send Broadcast
                     </button>
                     {broadcastSent && <span className="text-[#10B981] text-[11px] font-medium">Sent successfully!</span>}
@@ -967,7 +967,7 @@ export default function AdminPanel() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {[
                     { label: 'Scheduled Maintenance', msg: 'NAKA LABS will undergo scheduled maintenance shortly. Some features may be temporarily unavailable.', icon: Clock, color: 'text-[#F59E0B]' },
-                    { label: 'New Feature', msg: 'New feature available! Check out the latest updates on NAKA LABS.', icon: Zap, color: 'text-[#0A1EFF]' },
+                    { label: 'New Feature', msg: 'New feature available! Check out the latest updates on NAKA LABS.', icon: Zap, color: 'text-[#0066FF]' },
                     { label: 'Security Advisory', msg: 'Security advisory: Always verify tokens before trading. Use Shadow Guardian for safety checks.', icon: ShieldAlert, color: 'text-[#EF4444]' },
                     { label: 'Market Alert', msg: 'Significant market movement detected. Check VTX AI for analysis.', icon: TrendingUp, color: 'text-[#10B981]' },
                   ].map((alert, i) => {

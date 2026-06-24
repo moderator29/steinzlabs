@@ -187,7 +187,7 @@ export default function EmailTemplatesPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={() => setShowNew(s => !s)}
-            className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors">
+            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors">
             <Plus className="w-3.5 h-3.5" /> New Template
           </button>
         </div>
@@ -198,19 +198,19 @@ export default function EmailTemplatesPage() {
           <h3 className="text-sm font-semibold text-white">New Template</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} placeholder="Template name"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
             <select value={newForm.type} onChange={e => setNewForm(f => ({ ...f, type: e.target.value as TemplateType }))}
               className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
               {(['transactional', 'marketing', 'system'] as TemplateType[]).map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <input value={newForm.subject} onChange={e => setNewForm(f => ({ ...f, subject: e.target.value }))} placeholder="Subject"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
           <textarea value={newForm.body} onChange={e => setNewForm(f => ({ ...f, body: e.target.value }))} rows={4} placeholder="Body (use {{variable}} for placeholders)"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 resize-none" />
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
           <div className="flex gap-2">
             <button onClick={() => setShowNew(false)} className="text-xs text-gray-400 hover:text-white px-3 py-2">Cancel</button>
-            <button onClick={createNew} disabled={saving} className="bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
+            <button onClick={createNew} disabled={saving} className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
               {saving ? 'Creating...' : 'Create'}
             </button>
           </div>
@@ -219,7 +219,7 @@ export default function EmailTemplatesPage() {
 
       {loading && templates.length === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading email templates...</span>
         </div>
       )}
@@ -237,7 +237,7 @@ export default function EmailTemplatesPage() {
           <div className="col-span-2 space-y-2">
             {templates.map(t => (
               <div key={t.id} onClick={() => setSelected(t)}
-                className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0A1EFF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0066FF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <span className="text-xs font-semibold text-white">{t.name}</span>
                   <button onClick={e => { e.stopPropagation(); remove(t.id); }} className="text-red-500/30 hover:text-red-400 transition-colors flex-shrink-0">
@@ -258,7 +258,7 @@ export default function EmailTemplatesPage() {
               <>
                 <div className="p-4 border-b border-[#1E2433] flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-[#0A1EFF]" />
+                    <Mail className="w-4 h-4 text-[#0066FF]" />
                     <span className="text-sm font-semibold text-white">{selected.name}</span>
                     <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${TYPE_STYLES[selected.type]}`}>{selected.type}</span>
                   </div>
@@ -270,10 +270,10 @@ export default function EmailTemplatesPage() {
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input type="checkbox" checked={selected.active}
                         onChange={e => toggleActive(e.target.checked)}
-                        className="accent-[#0A1EFF]" />
+                        className="accent-[#0066FF]" />
                       <span className="text-xs text-gray-300">Active</span>
                     </label>
-                    <button onClick={save} disabled={saving} className="flex items-center gap-1.5 bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    <button onClick={save} disabled={saving} className="flex items-center gap-1.5 bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50">
                       {saved ? <><Check className="w-3.5 h-3.5" /> Saved</> : <><Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save'}</>}
                     </button>
                   </div>
@@ -284,12 +284,12 @@ export default function EmailTemplatesPage() {
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1">Subject</label>
                         <input value={selected.subject} onChange={e => setSelected(s => s ? { ...s, subject: e.target.value } : s)}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
                       </div>
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1">Body</label>
                         <textarea value={selected.body} onChange={e => setSelected(s => s ? { ...s, body: e.target.value } : s)} rows={10}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 resize-none" />
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
                       </div>
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1.5">Variables detected</label>

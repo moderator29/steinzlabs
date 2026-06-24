@@ -18,8 +18,6 @@ import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import GlobalControls from '@/components/GlobalControls';
-import NotificationBell from '@/components/NotificationBell';
 // CompactKpiBar removed — duplicated the 4 main KPI cards as a "ticker" strip
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
@@ -38,7 +36,7 @@ const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 function TabSpinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
     </div>
   );
 }
@@ -110,7 +108,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
       if (this.state.retries < 1) {
         return (
           <div className="flex items-center justify-center py-20">
-            <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           </div>
         );
       }
@@ -123,7 +121,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
           <button
             type="button"
             onClick={this.handleManualRetry}
-            className="mt-2 px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs font-semibold transition-colors"
+            className="mt-2 px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs font-semibold transition-colors"
           >
             Retry
           </button>
@@ -250,7 +248,7 @@ function DashboardAuthLoadingGate() {
   if (!timedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
       </div>
     );
   }
@@ -269,7 +267,7 @@ function DashboardAuthLoadingGate() {
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-sm font-semibold transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-sm font-semibold transition-colors"
           >
             Retry
           </button>
@@ -454,7 +452,7 @@ export default function Dashboard() {
       <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" aria-label="Open menu">
               {/* §hamburger-visibility — Menu icon was text-gray-400 on
                   a near-black header background which left it nearly
                   invisible while the button's click area still worked.
@@ -462,23 +460,21 @@ export default function Dashboard() {
                   that for the hamburger keeps both states legible. */}
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
             </button>
-            <SteinzLogo size={28} animated={false} />
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
-            </div>
           </div>
-          {/* §header-scope — the QuickTranslate / LanguageSwitcher /
-              ThemeToggle / NotificationBell cluster only renders on the
-              Home tab. Previously the cluster floated on top of every
-              /dashboard sub-tab (Profile / Wallet / VTX), overlapped
-              their own UI, and the items were jammed together. Inline
-              here so we can scope by activeNav and breathe with gap-3. */}
+          {/* §3.1 — the top dashboard bar is now just the logo + LIVE chip,
+              pushed right. Translate + language moved to Settings, the theme
+              toggle moved to the sidebar footer, and notifications live on the
+              home Notifications card + (soon) a sidebar item — so the header
+              stays minimal and clean. Home-tab-only so it never leaks onto the
+              Profile / Wallet / VTX sub-tabs (§4). */}
           <div className="flex-1" />
           {activeNav === 'home' && (
-            <div className="flex items-center gap-3" data-no-translate>
-              <GlobalControls />
-              <NotificationBell />
+            <div className="flex items-center gap-2">
+              <SteinzLogo size={34} animated={false} />
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
+              </div>
             </div>
           )}
         </div>
@@ -527,7 +523,7 @@ export default function Dashboard() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
                     activeTab === tab.id
-                      ? 'bg-[#0A1EFF] text-white shadow-[0_0_12px_rgba(10,30,255,0.35)]'
+                      ? 'bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.35)]'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >

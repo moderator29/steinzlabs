@@ -110,7 +110,7 @@ export default function CookieConsent() {
             <button
               type="button"
               onClick={() => accept('all')}
-              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-semibold text-white hover:scale-[1.02] transition-transform"
+              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-semibold text-white hover:scale-[1.02] transition-transform"
             >
               Accept all
             </button>

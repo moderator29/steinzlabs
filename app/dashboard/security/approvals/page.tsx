@@ -116,12 +116,12 @@ export default function ApprovalsPage() {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           placeholder="0x..."
-          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]"
+          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
         />
         <button
           onClick={fetchAudit}
           disabled={loading}
-          className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
+          className="px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
         >
           {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning</> : 'Scan'}
         </button>

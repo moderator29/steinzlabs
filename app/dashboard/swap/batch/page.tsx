@@ -6,7 +6,7 @@
  * This is the reference multi-leg flow: queue N legs (e.g. SOL→hSOL, SOL→BONK,
  * SOL→2Z), then run them through SwapBatchCard, which fetches a fresh quote per
  * leg at sign time and broadcasts each through the shared `useSwapBroadcast`
- * signer. Built on Naka branding (#0D1117 / #1E2433 / #0A1EFF).
+ * signer. Built on Naka branding (#0D1117 / #1E2433 / #0066FF).
  */
 
 import { useState } from 'react';
@@ -56,7 +56,7 @@ export default function BatchSwapPage() {
 
   const removeLeg = (i: number) => setLegs((prev) => prev.filter((_, idx) => idx !== i));
 
-  const field = 'w-full bg-[#060A12] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50 transition-colors';
+  const field = 'w-full bg-[#060A12] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors';
 
   return (
     <div className="min-h-screen bg-[#060A12] text-white">
@@ -83,7 +83,7 @@ export default function BatchSwapPage() {
               {/* Leg builder */}
               <div className="bg-[#0D1117] border border-[#1E2433] rounded-2xl p-4 mb-4">
                 <div className="flex items-center gap-2 mb-3 text-gray-300">
-                  <Plus size={15} className="text-[#0A1EFF]" />
+                  <Plus size={15} className="text-[#0066FF]" />
                   <span className="text-sm font-semibold">Add a swap</span>
                 </div>
                 <div className="space-y-2.5">

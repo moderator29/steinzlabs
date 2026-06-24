@@ -44,7 +44,7 @@ const OUTBOUND_NOTIFS = [
 const TIER_BADGES = {
   free: { name: 'Free', price: '$0', color: '#6B7280' },
   mini: { name: 'Mini', price: '$5', color: '#10B981' },
-  pro:  { name: 'Pro',  price: '$9', color: '#0A1EFF' },
+  pro:  { name: 'Pro',  price: '$9', color: '#0066FF' },
   max:  { name: 'Max',  price: '$15', color: '#F59E0B' },
 } as const;
 
@@ -95,7 +95,7 @@ export function DocsSection11() {
       {/* Commands by tier */}
       <div id="bot-commands" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Command className="w-4 h-4 text-[#0A1EFF]" /> Commands by Tier
+          <Command className="w-4 h-4 text-[#0066FF]" /> Commands by Tier
         </h3>
 
         {([

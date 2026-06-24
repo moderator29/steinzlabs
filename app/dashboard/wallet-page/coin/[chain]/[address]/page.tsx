@@ -211,7 +211,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`pb-3 -mb-px border-b-2 transition-colors ${
-              tab === t.id ? 'border-[#0A1EFF] text-white' : 'border-transparent text-slate-500 hover:text-white'
+              tab === t.id ? 'border-[#0066FF] text-white' : 'border-transparent text-slate-500 hover:text-white'
             }`}
           >
             {t.label}
@@ -263,8 +263,8 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
       {comingSoonOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#0D1117] border border-slate-800 rounded-2xl p-6 w-full max-w-xs text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#0A1EFF]/15 flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-[#0A1EFF]" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#0066FF]/15 flex items-center justify-center">
+              <Repeat className="w-5 h-5 text-[#0066FF]" />
             </div>
             <h3 className="text-base font-bold mb-1">{comingSoonOpen} — Coming Soon</h3>
             <p className="text-xs text-slate-400 mb-4">
@@ -293,7 +293,7 @@ function WalletAction({
       onClick={onClick}
       className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-colors ${
         primary
-          ? 'bg-[#0A1EFF] text-white shadow-[0_0_16px_rgba(10,30,255,0.35)] hover:bg-[#0818CC]'
+          ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.35)] hover:bg-[#0818CC]'
           : 'bg-slate-900/70 text-slate-300 hover:bg-slate-800'
       }`}
     >

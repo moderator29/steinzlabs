@@ -165,7 +165,7 @@ function TradingViewChartInner({ symbol, height = 400, interval = '15', showTool
         backgroundColor: bg,
         gridColor: grid,
         studies: ['Volume@tv-basicstudies'],
-        loading_screen: { backgroundColor: bg, foregroundColor: '#0A1EFF' },
+        loading_screen: { backgroundColor: bg, foregroundColor: '#0066FF' },
         overrides: {
           'paneProperties.background': bg,
           'paneProperties.backgroundType': 'solid',

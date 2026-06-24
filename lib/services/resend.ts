@@ -4,11 +4,19 @@ import { Resend } from 'resend';
 /**
  * Resend Email Delivery Service
  * Handles: broadcast emails, price alerts, security alerts, notifications.
- * FROM address: alerts@nakalabs.com (or configured via RESEND_FROM_EMAIL)
+ * FROM address: alerts@nakalabs.xyz (or configured via RESEND_FROM_EMAIL)
  */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.com';
+// Lazily constructed: building the client at module scope throws
+// "Missing API key" at import/build time on any route that transitively
+// imports this file when RESEND_API_KEY is unset, taking the whole route
+// down. Defer construction to first send.
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
+const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.xyz';
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'Naka Labs';
 
 export interface EmailResult {
@@ -28,7 +36,7 @@ export async function sendBroadcast(params: {
   tags?: { name: string; value: string }[];
 }): Promise<EmailResult> {
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: `${FROM_NAME} <${FROM}>`,
       to: Array.isArray(params.to) ? params.to : [params.to],
       subject: params.subject,
@@ -265,7 +273,7 @@ export async function sendResearchNotification(params: {
   publishedAt?: string;
 }): Promise<EmailResult> {
   const { authorName, title, summary, category, slug, publishedAt } = params;
-  const categoryColor = '#0a1eff';
+  const categoryColor = '#0066FF';
   const dateLabel = publishedAt
     ? new Date(publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -281,7 +289,7 @@ export async function sendResearchNotification(params: {
         <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7">${summary}</p>
       </div>
       <div style="text-align:center;margin-bottom:16px">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.com'}/research/${slug}"
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz'}/research/${slug}"
            style="display:inline-block;background:${categoryColor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
           Read Full Research
         </a>
@@ -329,7 +337,7 @@ export async function sendBatch(emails: {
     }));
 
     try {
-      const { data, error } = await resend.batch.send(batch);
+      const { data, error } = await getResend().batch.send(batch);
       if (error) {
         failed += batch.length;
       } else {

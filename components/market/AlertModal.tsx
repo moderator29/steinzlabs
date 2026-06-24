@@ -37,7 +37,7 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
       <div ref={trapRef} className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Bell size={16} className="text-[#0A1EFF]" aria-hidden />
+            <Bell size={16} className="text-[#0066FF]" aria-hidden />
             <span id="alert-modal-title" className="text-white font-semibold">Set Price Alert — {symbol}</span>
           </div>
           <button onClick={onClose} aria-label="Close price alert modal" className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
@@ -49,7 +49,7 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
           {(['above', 'below'] as const).map((d) => (
             <button key={d} onClick={() => setDirection(d)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
-                direction === d ? 'bg-[#0A1EFF] text-white' : 'bg-[#141824] text-gray-400 border border-[#1E2433]'
+                direction === d ? 'bg-[#0066FF] text-white' : 'bg-[#141824] text-gray-400 border border-[#1E2433]'
               }`}>
               {d === 'above' ? 'Above $' : 'Below $'}
             </button>
@@ -61,19 +61,19 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Enter target price..."
-          className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-3 focus:outline-none focus:border-[#0A1EFF]"
+          className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-3 focus:outline-none focus:border-[#0066FF]"
         />
         {price && <p className="text-gray-500 text-xs mb-3">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)}</p>}
 
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} className="w-4 h-4 accent-[#0A1EFF]" />
+          <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} className="w-4 h-4 accent-[#0066FF]" />
           <span className="text-gray-400 text-sm">Also notify by email</span>
         </label>
 
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg text-sm text-gray-400 border border-[#1E2433] hover:text-white transition-colors">Cancel</button>
           <button onClick={handleSubmit} disabled={!price || loading}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-[#0A1EFF] text-white hover:bg-[#0916CC] disabled:opacity-50 transition-colors">
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-[#0066FF] text-white hover:bg-[#0052CC] disabled:opacity-50 transition-colors">
             {loading ? 'Setting...' : 'Set Alert'}
           </button>
         </div>

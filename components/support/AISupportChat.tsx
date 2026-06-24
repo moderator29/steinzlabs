@@ -82,7 +82,7 @@ export function AISupportChat({ onClose }: Props) {
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          content: 'Sorry, I could not connect to support right now. Please try again or email support@nakalabs.com.',
+          content: 'Sorry, I could not connect to support right now. Please try again or email support@nakalabs.xyz.',
         };
         return updated;
       });
@@ -101,7 +101,7 @@ export function AISupportChat({ onClose }: Props) {
     <div className="flex flex-col h-full bg-[#0D1117] rounded-xl border border-[#1E2433] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2433] bg-[#141824]">
         <div className="flex items-center gap-2">
-          <MessageCircle size={16} className="text-[#0A1EFF]" />
+          <MessageCircle size={16} className="text-[#0066FF]" />
           <span className="text-white font-semibold text-sm">AI Customer Support</span>
           <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">Online</span>
         </div>
@@ -127,7 +127,7 @@ export function AISupportChat({ onClose }: Props) {
                   <button
                     key={cat}
                     onClick={() => handleCategorySelect(cat)}
-                    className="text-start px-3 py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-sm text-gray-300 hover:border-[#0A1EFF]/50 hover:text-white transition-colors"
+                    className="text-start px-3 py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-sm text-gray-300 hover:border-[#0066FF]/50 hover:text-white transition-colors"
                   >
                     {cat}
                   </button>
@@ -142,7 +142,7 @@ export function AISupportChat({ onClose }: Props) {
             <div
               className={`max-w-[85%] rounded-lg px-3 py-2.5 text-sm ${
                 msg.role === 'user'
-                  ? 'bg-[#0A1EFF] text-white'
+                  ? 'bg-[#0066FF] text-white'
                   : 'bg-[#141824] border border-[#1E2433] text-gray-300'
               }`}
             >
@@ -165,12 +165,12 @@ export function AISupportChat({ onClose }: Props) {
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
             placeholder="Type your question..."
             disabled={loading}
-            className="flex-1 bg-[#0D1117] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/50 disabled:opacity-50"
+            className="flex-1 bg-[#0D1117] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/50 disabled:opacity-50"
           />
           <button
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || loading}
-            className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors"
+            className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           </button>

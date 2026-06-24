@@ -201,7 +201,7 @@ export default function SettingsPage() {
                   onClick={() => setActiveSection(section.id)}
                   className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === section.id
-                      ? 'bg-[#0A1EFF] text-white'
+                      ? 'bg-[#0066FF] text-white'
                       : 'text-gray-400 hover:bg-[#1E2433] hover:text-white'
                   }`}
                 >
@@ -225,7 +225,7 @@ export default function SettingsPage() {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Enter your name..."
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                     />
                   </div>
                   <div>
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBio(e.target.value.slice(0, 280))}
                       placeholder="A short description of who you are and what you trade."
                       rows={3}
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] resize-y"
+                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] resize-y"
                     />
                     <p className="text-[10px] text-gray-600 mt-1 text-end">{bio.length} / 280</p>
                   </div>
@@ -278,7 +278,7 @@ export default function SettingsPage() {
                           onChange={(e) => setTwitter(e.target.value)}
                           placeholder="handle"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                         />
                       </div>
                     </div>
@@ -290,7 +290,7 @@ export default function SettingsPage() {
                         onChange={(e) => setDiscord(e.target.value)}
                         placeholder="username"
                         maxLength={32}
-                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                       />
                     </div>
                     <div>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
                           onChange={(e) => setGithub(e.target.value)}
                           placeholder="username"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                         />
                       </div>
                     </div>
@@ -312,7 +312,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={profileLoading}
-                    className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                    className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
                   >
                     {profileLoading ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -334,7 +334,7 @@ export default function SettingsPage() {
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           placeholder="Min. 8 characters"
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF] pe-10"
+                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] pe-10"
                         />
                         <button onClick={() => setShowNewPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                           {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -348,13 +348,13 @@ export default function SettingsPage() {
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
                         placeholder="Repeat new password"
-                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                       />
                     </div>
                     <button
                       onClick={handleChangePassword}
                       disabled={passwordLoading || !newPassword}
-                      className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
                     >
                       {passwordLoading && <Loader2 size={14} className="animate-spin" />}
                       Update Password
@@ -458,7 +458,7 @@ export default function SettingsPage() {
                           onClick={() => setSlippage(s)}
                           className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                             slippage === s
-                              ? 'bg-[#0A1EFF] text-white'
+                              ? 'bg-[#0066FF] text-white'
                               : 'bg-[#0A0E1A] text-gray-400 border border-[#1E2433]'
                           }`}
                         >
@@ -551,7 +551,7 @@ function AccountActionsCard() {
         <button
           onClick={handleReplay}
           disabled={replaying}
-          className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
         >
           {replaying ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <RotateCcw size={14} aria-hidden />}
           Replay onboarding
@@ -564,7 +564,7 @@ function AccountActionsCard() {
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
         >
           {exporting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />}
           Download my data

@@ -40,8 +40,8 @@ function SkeletonRow() {
 function SortIcon({ col, sortKey, dir }: { col: SortKey; sortKey: SortKey; dir: SortDir }) {
   if (col !== sortKey) return <ChevronDown size={12} className="text-gray-600 ms-0.5" />;
   return dir === 'desc'
-    ? <ChevronDown size={12} className="text-[#0A1EFF] ms-0.5" />
-    : <ChevronUp size={12} className="text-[#0A1EFF] ms-0.5" />;
+    ? <ChevronDown size={12} className="text-[#0066FF] ms-0.5" />
+    : <ChevronUp size={12} className="text-[#0066FF] ms-0.5" />;
 }
 
 export function PortfolioTable({ positions, loading = false }: PortfolioTableProps) {

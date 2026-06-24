@@ -86,7 +86,7 @@ export function TokenCard({ token }: { token: TokenCardData }) {
   };
 
   return (
-    <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 hover:border-[#0A1EFF]/30 transition-all cursor-pointer relative">
+    <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 hover:border-[#0066FF]/30 transition-all cursor-pointer relative">
       {toast && (
         <div className="absolute top-2 right-2 bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-lg border border-green-500/30 z-10">
           {toast}
@@ -100,10 +100,10 @@ export function TokenCard({ token }: { token: TokenCardData }) {
               src={token.logo}
               alt={token.symbol}
               className="w-8 h-8 rounded-full bg-[#0D1117]"
-              onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0A1EFF&color=fff&size=64&bold=true`; }}
+              onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0066FF&color=fff&size=64&bold=true`; }}
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-[#0A1EFF]/20 flex items-center justify-center text-xs font-bold text-[#0A1EFF]">
+            <div className="w-8 h-8 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-[#0066FF]">
               {token.symbol.slice(0, 2)}
             </div>
           )}
@@ -161,7 +161,7 @@ export function TokenCard({ token }: { token: TokenCardData }) {
       <div className="flex gap-1.5">
         <button
           onClick={handleBuy}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#0A1EFF]/10 hover:bg-[#0A1EFF]/20 text-[#0A1EFF] text-[10px] font-semibold rounded-lg transition-colors border border-[#0A1EFF]/20"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#0066FF]/10 hover:bg-[#0066FF]/20 text-[#0066FF] text-[10px] font-semibold rounded-lg transition-colors border border-[#0066FF]/20"
         >
           <ShoppingCart size={10} /> Buy
         </button>

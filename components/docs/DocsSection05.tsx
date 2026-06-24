@@ -11,7 +11,7 @@ const DNA_METRICS = [
 
 const ARCHETYPES = [
   { name: 'Diamond Hands', color: '#F59E0B', desc: 'Holds positions long-term (30+ days) with high win rates. Patient, conviction-based trader.' },
-  { name: 'Scalper', color: '#0A1EFF', desc: 'High-frequency trader, often 50+ trades. Short holding periods (under 1 day). Volume-driven.' },
+  { name: 'Scalper', color: '#0066FF', desc: 'High-frequency trader, often 50+ trades. Short holding periods (under 1 day). Volume-driven.' },
   { name: 'Degen', color: '#EF4444', desc: 'High-risk, high-volatility trading behavior. Often in early-stage tokens with large swings.' },
   { name: 'Whale Follower', color: '#8B5CF6', desc: 'Consistently enters positions shortly after known smart money wallets move.' },
   { name: 'Holder', color: '#10B981', desc: 'Buy-and-hold strategy with 7+ day average holds. Moderate trade count.' },
@@ -31,7 +31,7 @@ export function DocsSection05() {
       {/* DNA Analyzer */}
       <div id="dna-analyzer" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-          <Dna className="w-4 h-4 text-[#0A1EFF]" />Trading DNA Analyzer
+          <Dna className="w-4 h-4 text-[#0066FF]" />Trading DNA Analyzer
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           Enter any wallet address to receive a full Trading DNA report · a behavioral fingerprint built from every on-chain trade that wallet has made. Supports EVM and Solana wallets.

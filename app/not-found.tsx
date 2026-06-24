@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export const metadata = {
-  title: 'Not Found — Naka Labs',
-  description: 'The page you were looking for is not part of the cult.',
+  title: 'Page not found — Naka Labs',
+  description: 'The page you were looking for could not be found.',
 };
 
 export default function NotFound() {
@@ -25,7 +25,7 @@ export default function NotFound() {
               fontSize: 11,
               letterSpacing: '0.24em',
               textTransform: 'uppercase',
-              color: '#DC143C',
+              color: '#0066FF',
               marginBottom: 12,
             }}
           >
@@ -40,11 +40,11 @@ export default function NotFound() {
               lineHeight: 1.1,
             }}
           >
-            This path is not part of the cult.
+            Page not found
           </h1>
           <p style={{ color: '#B4C0E0', fontSize: 15, marginBottom: 28 }}>
-            The page you were looking for has been moved, retired, or was never here. The noise
-            ends; the signal continues elsewhere.
+            The page you were looking for has been moved, retired, or never existed. Let&apos;s get
+            you back on track.
           </p>
           <div style={{ display: 'inline-flex', gap: 12 }}>
             <Link href="/" className="nl-button" style={{ padding: '10px 20px' }}>

@@ -20,7 +20,7 @@ export function TimeframeSelector({ value, onChange, className = '' }: Timeframe
           aria-label={`Timeframe ${tf}`}
           className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
             value === tf
-              ? 'bg-[#0A1EFF] text-white'
+              ? 'bg-[#0066FF] text-white'
               : 'text-gray-300 hover:text-white hover:bg-[#1E2433]'
           }`}
         >

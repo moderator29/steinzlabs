@@ -85,7 +85,7 @@ export function TopGainersCard({ limit = 5, href = '/dashboard/top-gainers' }: P
             <p className="text-[10px] text-gray-500">24h movers</p>
           </div>
         </div>
-        <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0A1EFF] flex items-center gap-1">
+        <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0066FF] flex items-center gap-1">
           View all <ArrowUpRight className="w-3 h-3" />
         </Link>
       </div>

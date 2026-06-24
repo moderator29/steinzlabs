@@ -154,7 +154,7 @@ export function OrderForm({
             value={amount}
             onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="0.00"
-            className="w-full border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors pe-16"
+            className="w-full border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-[#0066FF]/50 transition-colors pe-16"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs font-medium">
             {side === 'buy' ? 'USD' : tokenSymbol.toUpperCase()}
@@ -179,7 +179,7 @@ export function OrderForm({
               onClick={() => setSlippageBps(opt.bps)}
               className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                 slippageBps === opt.bps
-                  ? 'bg-[#0A1EFF] border-[#0A1EFF] text-white'
+                  ? 'bg-[#0066FF] border-[#0066FF] text-white'
                   : 'bg-transparent border-[#1E2433] text-gray-500 hover:text-white hover:border-[#2E3443]'
               }`}
             >

@@ -42,7 +42,7 @@ export function TokenDetailHeader({
           href={coingeckoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-gray-500 hover:text-[#0A1EFF] text-xs font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 text-gray-500 hover:text-[#0066FF] text-xs font-medium transition-colors"
         >
           CoinGecko
           <ExternalLink size={11} />
