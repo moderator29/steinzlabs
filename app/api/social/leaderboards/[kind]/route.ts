@@ -63,7 +63,7 @@ const METRIC_LABEL: Record<Kind, string> = {
   'max-tier':       'Max Tier',
   'top-traders':    '30d',
   'copy-traders':   'Copy Winrate',
-  'whale-watchers': 'Whale Accuracy',
+  'whale-watchers': 'Whales Followed',
   'most-active':    'Activity',
 };
 
