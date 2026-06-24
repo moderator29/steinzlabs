@@ -104,12 +104,13 @@ export function PersonalizedHome() {
   // CRITICAL UX: never block the entire dashboard on the homepage data fetch.
   // Use the auth user (instantly available from useAuth) as fallback so the
   // shell renders in <100ms even if /api/dashboard/homepage is slow.
-  // Greeting prefers username-style handles so a user whose last name is "For" never
-  // renders as "Good evening, for". We never fall back to last_name.
+  // Greeting shows the user's actual name: prefer first_name, then a set
+  // display name, then the username handle as a fallback. We never fall back
+  // to last_name (so a user whose last name is "For" never reads as "for").
   const displayName =
-    authUser?.username ||
-    data?.user.displayName ||
     authUser?.first_name ||
+    data?.user.displayName ||
+    authUser?.username ||
     authUser?.email?.split("@")[0] ||
     "trader";
   const isVerified = data?.user.isVerified ?? authUser?.is_verified ?? false;
