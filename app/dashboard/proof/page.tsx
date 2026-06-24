@@ -354,7 +354,7 @@ export default function ViewProofPage() {
           <div className="glass rounded-xl p-4 border border-white/10">
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#0066FF]" />
-              AI Intelligence Analysis
+              On-chain Assessment
             </h3>
             <div className="space-y-3 text-sm text-gray-300 leading-relaxed">
               <p>
@@ -384,7 +384,7 @@ export default function ViewProofPage() {
                   <div className="flex justify-between"><span className="text-gray-500">Value</span><span className="font-semibold text-white">${event.valueUsd?.toLocaleString()}</span></div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-500">Analysis powered by Naka Labs on-chain verification. Data refreshed in real-time.</p>
+              <p className="text-[10px] text-gray-500">Rule-based assessment from live on-chain metrics — not AI-generated, and not financial advice.</p>
             </div>
           </div>
         )}
