@@ -103,7 +103,7 @@ export default function AlertsPage() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-[#0A1EFF] hover:bg-[#0916CC] text-white font-medium px-5 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            className="bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium px-5 py-2 rounded-lg flex items-center gap-2 transition-colors"
           >
             <Plus size={18} />
             New Alert
@@ -111,7 +111,7 @@ export default function AlertsPage() {
         </div>
 
         {showForm && (
-          <div className="bg-[#141824] rounded-lg p-6 border border-[#0A1EFF] mb-6">
+          <div className="bg-[#141824] rounded-lg p-6 border border-[#0066FF] mb-6">
             <h3 className="text-white font-bold text-lg mb-4">Create Alert</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -121,12 +121,12 @@ export default function AlertsPage() {
                   onClick={() => setAlertType(type.value)}
                   className={`p-3 rounded-lg border text-start transition-colors ${
                     alertType === type.value
-                      ? 'border-[#0A1EFF] bg-[#0A1EFF]/10'
+                      ? 'border-[#0066FF] bg-[#0066FF]/10'
                       : 'border-[#1E2433] hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <type.icon size={16} className={alertType === type.value ? 'text-[#0A1EFF]' : 'text-gray-400'} />
+                    <type.icon size={16} className={alertType === type.value ? 'text-[#0066FF]' : 'text-gray-400'} />
                     <span className="text-white font-medium text-sm">{type.label}</span>
                   </div>
                   <p className="text-gray-400 text-xs">{type.description}</p>
@@ -140,14 +140,14 @@ export default function AlertsPage() {
                 value={condition.token}
                 onChange={(e) => setCondition({ ...condition, token: e.target.value })}
                 placeholder="Token address or symbol..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
               />
               {(alertType === 'PRICE' || alertType === 'VOLUME') && (
                 <div className="flex gap-3">
                   <select
                     value={condition.direction}
                     onChange={(e) => setCondition({ ...condition, direction: e.target.value as 'above' | 'below' })}
-                    className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#0A1EFF]"
+                    className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#0066FF]"
                   >
                     <option value="above">Above</option>
                     <option value="below">Below</option>
@@ -157,7 +157,7 @@ export default function AlertsPage() {
                     value={condition.threshold}
                     onChange={(e) => setCondition({ ...condition, threshold: e.target.value })}
                     placeholder={alertType === 'PRICE' ? 'Price (USD)' : 'Volume threshold'}
-                    className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+                    className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
               )}
@@ -167,7 +167,7 @@ export default function AlertsPage() {
               <button
                 onClick={() => void createAlert()}
                 disabled={submitting || !condition.token}
-                className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg"
+                className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg"
               >
                 {submitting ? 'Creating…' : 'Create Alert'}
               </button>

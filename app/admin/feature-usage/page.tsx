@@ -60,7 +60,7 @@ export default function FeatureUsagePage() {
 
       {loading && features.length === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading feature usage...</span>
         </div>
       )}
@@ -94,7 +94,7 @@ export default function FeatureUsagePage() {
               data={features}
               xKey="name"
               yKey="usage_count"
-              color="#0A1EFF"
+              color="#0066FF"
               height={240}
               formatY={(v) => formatLargeNumber(v)}
             />
@@ -115,7 +115,7 @@ export default function FeatureUsagePage() {
                   <tr key={f.name} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-3 h-3 text-[#0A1EFF]" />
+                        <Zap className="w-3 h-3 text-[#0066FF]" />
                         <span className="text-white font-medium">{f.name}</span>
                       </div>
                     </td>

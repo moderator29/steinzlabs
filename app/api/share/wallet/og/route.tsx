@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: '64px',
-          background: 'linear-gradient(135deg, #05081E 0%, #0A1438 50%, #0A1EFF 100%)',
+          background: 'linear-gradient(135deg, #05081E 0%, #0A1438 50%, #0066FF 100%)',
           color: '#FFFFFF',
           fontFamily: 'sans-serif',
         }}
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: '#0A1EFF',
+              background: '#0066FF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

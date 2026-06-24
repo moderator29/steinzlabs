@@ -25,7 +25,7 @@ const CHAIN_BADGE: Record<string, { color: string; label: string }> = {
 };
 
 function chainBadge(chain: string) {
-  return CHAIN_BADGE[chain?.toLowerCase()] ?? { color: '#0A1EFF', label: (chain || '?').toUpperCase().slice(0, 4) };
+  return CHAIN_BADGE[chain?.toLowerCase()] ?? { color: '#0066FF', label: (chain || '?').toUpperCase().slice(0, 4) };
 }
 
 function fmtCompact(n: number): string {
@@ -43,7 +43,7 @@ export default function ContextEventCard({ event }: { event: ContextEvent }) {
   const hasStats = !!(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap);
 
   return (
-    <div className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0A1EFF]/30 transition-all overflow-hidden">
+    <div className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0066FF]/30 transition-all overflow-hidden">
       {/* Badge row + time */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -64,7 +64,7 @@ export default function ContextEventCard({ event }: { event: ContextEvent }) {
             <span className="px-2 py-0.5 rounded text-xs text-gray-300 bg-white/5 flex-shrink-0">{event.platform}</span>
           )}
           {event.valueUsd >= 50000 && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/20 flex-shrink-0">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0066FF]/10 text-[#0066FF] border border-[#0066FF]/20 flex-shrink-0">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
               INTEL
             </span>

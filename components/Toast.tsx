@@ -57,7 +57,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   const colors = {
     success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
     error: 'border-red-500/30 bg-red-500/10 text-red-400',
-    info: 'border-[#0A1EFF]/30 bg-[#0A1EFF]/10 text-blue-400',
+    info: 'border-[#0066FF]/30 bg-[#0066FF]/10 text-blue-400',
   };
 
   return (

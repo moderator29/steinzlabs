@@ -22,7 +22,7 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
             <td style="padding:40px 32px 24px;text-align:center;">
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
                 <tr>
-                  <td style="width:56px;height:56px;background:linear-gradient(135deg,#0A1EFF,#0815B3);border-radius:14px;text-align:center;vertical-align:middle;">
+                  <td style="width:56px;height:56px;background:linear-gradient(135deg,#0066FF,#0815B3);border-radius:14px;text-align:center;vertical-align:middle;">
                     <span style="font-size:28px;color:#fff;">&#x1F6E1;</span>
                   </td>
                 </tr>
@@ -52,7 +52,7 @@ function brandedEmailWrapper(title: string, subtitle: string, bodyHtml: string):
 // Sender comes from EMAIL_FROM env when set (e.g.
 // "NAKA LABS <noreply@contact.nakalabs.xyz>"), falls back to the
 // Resend-verified contact.nakalabs.xyz subdomain. The previous
-// hardcoded noreply@nakalabs.com was on an unverified domain and
+// hardcoded noreply@nakalabs.xyz was on an unverified domain and
 // caused Resend to reject every send.
 const DEFAULT_FROM = 'NAKA LABS <noreply@contact.nakalabs.xyz>';
 
@@ -103,12 +103,12 @@ export async function sendVerificationEmail(
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center">
-          <a href="${confirmUrl}" style="display:inline-block;padding:14px 40px;background-color:#0A1EFF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Verify Email</a>
+          <a href="${confirmUrl}" style="display:inline-block;padding:14px 40px;background-color:#0066FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Verify Email</a>
         </td>
       </tr>
     </table>
     <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If the button doesn't work, copy and paste this link into your browser:</p>
-    <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0A1EFF;word-break:break-all;">${confirmUrl}</p>
+    <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0066FF;word-break:break-all;">${confirmUrl}</p>
     <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If you didn't create a NAKA LABS account, you can safely ignore this email.</p>`;
 
   const html = brandedEmailWrapper('Verify your email', `Welcome to NAKA LABS, ${firstName}`, body);
@@ -135,7 +135,7 @@ export async function sendWelcomeEmail(
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center">
-          <a href="${appUrl}/dashboard" style="display:inline-block;padding:14px 40px;background-color:#0A1EFF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Open your dashboard</a>
+          <a href="${appUrl}/dashboard" style="display:inline-block;padding:14px 40px;background-color:#0066FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Open your dashboard</a>
         </td>
       </tr>
     </table>
@@ -178,7 +178,7 @@ export async function sendAlertDigestEmail(
     ${extra}
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center">
-        <a href="${appUrl}/dashboard/alerts" style="display:inline-block;padding:12px 32px;background-color:#0A1EFF;color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:10px;">Open alerts</a>
+        <a href="${appUrl}/dashboard/alerts" style="display:inline-block;padding:12px 32px;background-color:#0066FF;color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:10px;">Open alerts</a>
       </td></tr>
     </table>
     <p style="margin:24px 0 0;font-size:11px;color:#64748b;">Tune cadence or pause email digests in your <a href="${appUrl}/dashboard/settings" style="color:#4D6BFF;text-decoration:none;">notification settings</a>.</p>`;
@@ -197,12 +197,12 @@ export async function sendPasswordResetEmail(
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center">
-          <a href="${resetUrl}" style="display:inline-block;padding:14px 40px;background-color:#0A1EFF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Reset Password</a>
+          <a href="${resetUrl}" style="display:inline-block;padding:14px 40px;background-color:#0066FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;border-radius:10px;letter-spacing:0.3px;">Reset Password</a>
         </td>
       </tr>
     </table>
     <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#64748b;">If the button doesn't work, copy and paste this link into your browser:</p>
-    <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0A1EFF;word-break:break-all;">${resetUrl}</p>
+    <p style="margin:8px 0 0;font-size:11px;line-height:1.4;color:#0066FF;word-break:break-all;">${resetUrl}</p>
     <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#64748b;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>`;
 
   const html = brandedEmailWrapper('Reset your password', 'NAKA LABS Account Recovery', body);

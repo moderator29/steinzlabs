@@ -29,7 +29,7 @@ export default function TermsPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <BackButton href="/" label="Back" />
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <FileText className="w-4 h-4 text-[#0A1EFF]" />
+            <FileText className="w-4 h-4 text-[#0066FF]" />
             Terms of Service
           </div>
           <Link href="/privacy" className="text-xs text-gray-400 hover:text-white">Privacy</Link>

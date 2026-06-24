@@ -92,7 +92,7 @@ export function FirstRunTour() {
           </button>
         </div>
         <div className="p-5">
-          <div className="w-10 h-10 rounded-xl bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 flex items-center justify-center mb-4">
+          <div className="w-10 h-10 rounded-xl bg-[#0066FF]/15 border border-[#0066FF]/30 flex items-center justify-center mb-4">
             <Icon className="w-5 h-5 text-[#8FA3FF]" />
           </div>
           <h2 id="naka-tour-title" className="text-base font-semibold text-white mb-1">
@@ -103,7 +103,7 @@ export function FirstRunTour() {
             {STEPS.map((_, i) => (
               <div
                 key={i}
-                className={`h-1 flex-1 rounded-full ${i === step ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}
+                className={`h-1 flex-1 rounded-full ${i === step ? 'bg-[#0066FF]' : 'bg-white/10'}`}
               />
             ))}
           </div>
@@ -124,7 +124,7 @@ export function FirstRunTour() {
               </Link>
               <button
                 onClick={() => (isLast ? close() : setStep((s) => s + 1))}
-                className="inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white"
+                className="inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white"
               >
                 {isLast ? 'Done' : 'Next'}
                 {!isLast && <ArrowRight className="w-3 h-3" />}

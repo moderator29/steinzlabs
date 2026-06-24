@@ -66,7 +66,7 @@ export default function TokenPreviewPage() {
   const statusInfo: Record<string, { label: string; color: string; desc: string }> = {
     pending: { label: 'Under Review', color: 'bg-[#F59E0B]/20 text-[#F59E0B]', desc: 'Our team is reviewing your submission. You will be notified once a decision is made.' },
     approved_pending_payment: { label: 'Approved - Awaiting Payment', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Your token has been approved! Please check your email for payment instructions to complete the listing.' },
-    payment_sent: { label: 'Payment Email Sent', color: 'bg-[#0A1EFF]/20 text-[#0A1EFF]', desc: 'Payment instructions have been sent to your email. Complete payment to get listed.' },
+    payment_sent: { label: 'Payment Email Sent', color: 'bg-[#0066FF]/20 text-[#0066FF]', desc: 'Payment instructions have been sent to your email. Complete payment to get listed.' },
     paid: { label: 'Payment Confirmed', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Payment confirmed! Your token will be listed on Project Discovery shortly.' },
     listed: { label: 'Listed', color: 'bg-[#10B981]/20 text-[#10B981]', desc: 'Your token is now live on NAKA Project Discovery!' },
     rejected: { label: 'Rejected', color: 'bg-[#EF4444]/20 text-[#EF4444]', desc: 'Unfortunately, your token listing was not approved at this time.' },
@@ -75,7 +75,7 @@ export default function TokenPreviewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function TokenPreviewPage() {
       <div className="min-h-screen flex flex-col items-center justify-center text-white p-4">
         <div className="text-xl font-bold mb-2">Token Not Found</div>
         <p className="text-gray-400 text-sm mb-4">This preview link may have expired or the token was not submitted.</p>
-        <button onClick={() => router.push('/dashboard/project-discovery')} className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-2 rounded-lg text-sm font-semibold">
+        <button onClick={() => router.push('/dashboard/project-discovery')} className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-6 py-2 rounded-lg text-sm font-semibold">
           Go to Project Discovery
         </button>
       </div>
@@ -101,7 +101,7 @@ export default function TokenPreviewPage() {
         <div className="mb-6"><BackButton href="/dashboard/project-discovery" label="Back to Discovery" /></div>
 
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#0A1EFF]/10 to-[#7C3AED]/10 px-6 py-4 border-b border-white/5">
+          <div className="bg-gradient-to-r from-[#0066FF]/10 to-[#7C3AED]/10 px-6 py-4 border-b border-white/5">
             <div className="flex items-center gap-2 text-[10px] text-gray-400 mb-1">
               <Shield className="w-3 h-3" />
               TOKEN LISTING PREVIEW
@@ -121,7 +121,7 @@ export default function TokenPreviewPage() {
                 {listing.logoUrl ? (
                   <img src={listing.logoUrl} alt={listing.tokenName} className="w-14 h-14 rounded-xl object-cover border border-white/10" />
                 ) : (
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center text-lg font-bold border border-white/10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-lg font-bold border border-white/10">
                     {listing.symbol?.slice(0, 2)}
                   </div>
                 )}
@@ -158,24 +158,24 @@ export default function TokenPreviewPage() {
 
               <div className="flex items-center gap-3 mt-4">
                 {listing.website && (
-                  <a href={listing.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0A1EFF] transition-colors">
+                  <a href={listing.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0066FF] transition-colors">
                     <Globe className="w-3.5 h-3.5" /> Website
                   </a>
                 )}
                 {listing.telegram && (
-                  <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0A1EFF] transition-colors">
+                  <a href={listing.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0066FF] transition-colors">
                     <MessageCircle className="w-3.5 h-3.5" /> Telegram
                   </a>
                 )}
                 {listing.twitter && (
-                  <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0A1EFF] transition-colors">
+                  <a href={listing.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#0066FF] transition-colors">
                     <Twitter className="w-3.5 h-3.5" /> Twitter
                   </a>
                 )}
               </div>
             </div>
 
-            <div className={`rounded-xl p-4 border ${listing.status === 'rejected' ? 'border-[#EF4444]/20 bg-[#EF4444]/5' : 'border-[#0A1EFF]/20 bg-[#0A1EFF]/5'}`}>
+            <div className={`rounded-xl p-4 border ${listing.status === 'rejected' ? 'border-[#EF4444]/20 bg-[#EF4444]/5' : 'border-[#0066FF]/20 bg-[#0066FF]/5'}`}>
               <div className="text-xs font-bold mb-1">Status Update</div>
               <p className="text-[11px] text-gray-400 leading-relaxed">{status.desc}</p>
             </div>

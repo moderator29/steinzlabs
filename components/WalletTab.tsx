@@ -86,8 +86,8 @@ export default function WalletTab() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
-          <Wallet className="w-4 h-4 text-[#0A1EFF]" />
+        <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
+          <Wallet className="w-4 h-4 text-[#0066FF]" />
         </div>
         <div>
           <h2 className="text-base font-heading font-bold">Wallet</h2>
@@ -116,8 +116,8 @@ export default function WalletTab() {
             const Icon = action.icon;
             return (
               <button key={action.label} className="flex flex-col items-center gap-1.5">
-                <div className="w-10 h-10 border border-[#0A1EFF]/30 rounded-full flex items-center justify-center hover:bg-[#0A1EFF]/10 transition-colors">
-                  <Icon className="w-4 h-4 text-[#0A1EFF]" />
+                <div className="w-10 h-10 border border-[#0066FF]/30 rounded-full flex items-center justify-center hover:bg-[#0066FF]/10 transition-colors">
+                  <Icon className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <span className="text-[10px] text-gray-400">{action.label}</span>
               </button>
@@ -138,7 +138,7 @@ export default function WalletTab() {
           <div className="space-y-2">
             {balances.map((token, i) => (
               <div key={`${token.contractAddress ?? 'native'}-${i}`} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold">
                   {token.icon}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -170,17 +170,17 @@ export default function WalletTab() {
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 glass rounded-xl p-3 border border-white/10 text-xs text-gray-400 hover:text-[#0A1EFF] transition-colors mb-4"
+          className="flex items-center justify-center gap-2 glass rounded-xl p-3 border border-white/10 text-xs text-gray-400 hover:text-[#0066FF] transition-colors mb-4"
         >
           View on {provider === 'phantom' ? 'Solscan' : 'Etherscan'} <ExternalLink className="w-3 h-3" />
         </a>
       )}
 
-      <div className="glass rounded-xl p-4 border border-[#0A1EFF]/20 mb-4 bg-gradient-to-br from-[#0A1EFF]/5 to-[#7C3AED]/5">
+      <div className="glass rounded-xl p-4 border border-[#0066FF]/20 mb-4 bg-gradient-to-br from-[#0066FF]/5 to-[#7C3AED]/5">
         <div className="flex items-center gap-3 mb-2">
-          <Key className="w-4 h-4 text-[#0A1EFF]" />
+          <Key className="w-4 h-4 text-[#0066FF]" />
           <h3 className="text-xs font-bold">Naka Built-in Wallet</h3>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#0A1EFF]/20 text-[#0A1EFF]">NEW</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#0066FF]/20 text-[#0066FF]">NEW</span>
         </div>
         <p className="text-[10px] text-gray-400 mb-2">Create or import a non-custodial wallet. Your keys stay on your device.</p>
         <WalletPageButton />
@@ -195,7 +195,7 @@ function WalletPageButton() {
   return (
     <button
       onClick={() => router.push('/dashboard/wallet-page')}
-      className="w-full py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+      className="w-full py-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
     >
       <Plus className="w-3 h-3" /> Open Naka Wallet
     </button>

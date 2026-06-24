@@ -71,7 +71,7 @@ export function RecommendationsStrip() {
   return (
     <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
       <header className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-4 h-4 text-[var(--nl-blue,#0A1EFF)]" />
+        <Sparkles className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
         <h2 className="text-sm font-bold text-white tracking-wide">You might like to follow</h2>
       </header>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1 snap-x snap-mandatory">
@@ -90,13 +90,13 @@ export function RecommendationsStrip() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={u.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover border border-white/10 mb-2" />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white mb-2">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white mb-2">
                   {(u.display_name || u.username || '?').slice(0, 1).toUpperCase()}
                 </div>
               )}
               <div className="text-[12px] font-semibold text-white truncate">{u.display_name || u.username}</div>
               <div className="text-[10px] text-slate-400 truncate">@{u.username}</div>
-              <div className="text-[10px] text-[var(--nl-blue,#0A1EFF)] mt-1 truncate">{u.reason}</div>
+              <div className="text-[10px] text-[var(--nl-blue,#0066FF)] mt-1 truncate">{u.reason}</div>
             </Link>
             <div className="mt-2">
               <FollowButton targetId={u.id} initialState="not_following" size="sm" />

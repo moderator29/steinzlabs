@@ -84,7 +84,7 @@ export default function SearchLogsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Searches by Hour (Today)</h3>
-              <MicroBar data={data.hourly} xKey="hour" yKey="searches" color="#0A1EFF" height={160} />
+              <MicroBar data={data.hourly} xKey="hour" yKey="searches" color="#0066FF" height={160} />
             </div>
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Top Search Queries</h3>
@@ -108,7 +108,7 @@ export default function SearchLogsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-                <TrendingUp className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <TrendingUp className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Trending Searches</h3>
               </div>
               <div className="p-4 space-y-2 overflow-x-auto">
@@ -126,7 +126,7 @@ export default function SearchLogsPage() {
             </div>
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <Search className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Recent Searches</h3>
               </div>
               <div className="divide-y divide-[#1E2433] overflow-x-auto">

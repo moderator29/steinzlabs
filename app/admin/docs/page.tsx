@@ -43,7 +43,7 @@ function Callout({
   icon: React.ElementType; title: string; children: React.ReactNode;
 }) {
   const colors = {
-    info:   { bg: 'rgba(10,30,255,0.08)',  border: 'rgba(10,30,255,0.30)',  fg: '#4D6BFF' },
+    info:   { bg: 'rgba(0,102,255,0.08)',  border: 'rgba(0,102,255,0.30)',  fg: '#4D6BFF' },
     warn:   { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.30)', fg: '#F59E0B' },
     ok:     { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.30)', fg: '#10B981' },
     danger: { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.30)',  fg: '#EF4444' },
@@ -134,9 +134,9 @@ export default function AdminDocsPage() {
   return (
     <div className="min-h-screen bg-[#060A14] text-white">
       {/* Hero */}
-      <div className="border-b border-white/[0.06] bg-gradient-to-br from-[#0A1EFF]/5 via-transparent to-[#10B981]/5">
+      <div className="border-b border-white/[0.06] bg-gradient-to-br from-[#0066FF]/5 via-transparent to-[#10B981]/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
-          <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 bg-[#0066FF]/10 border border-[#0066FF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold mb-4">
             <FileText className="w-3 h-3" /> Admin-only · CEO briefing
           </div>
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight mb-3">
@@ -151,7 +151,7 @@ export default function AdminDocsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search this doc…"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
         </div>
@@ -570,7 +570,7 @@ export default function AdminDocsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
               {[
                 { name: 'Free',  price: '$0',      color: '#9CA3AF', access: 'Basic intelligence, 25 VTX/day, 3 price alerts, 1 wallet, standard swap' },
-                { name: 'Mini',  price: '$5 / mo', color: '#0A1EFF', access: 'Full wallet intel, 100 VTX/day, 10 alerts, whale tracker (view), DNA analyzer, 3 wallets' },
+                { name: 'Mini',  price: '$5 / mo', color: '#0066FF', access: 'Full wallet intel, 100 VTX/day, 10 alerts, whale tracker (view), DNA analyzer, 3 wallets' },
                 { name: 'Pro',   price: '$9 / mo', color: '#10B981', access: 'Unlimited VTX, gasless swap, one-click copy trading, bubble map, wallet clusters, 10 wallets' },
                 { name: 'Max',   price: '$15/ mo', color: '#F59E0B', access: 'Sniper Bot, auto-copy trading, unlimited wallets, priority support, early access' },
               ].map((t) => (

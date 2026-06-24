@@ -32,7 +32,7 @@ const DIMENSIONS: Array<{
   color: string;
   weight: number; // matches riskDecomposition weights
 }> = [
-  { key: 'concentration',         label: 'Concentration',    color: '#0A1EFF', weight: 0.20 },
+  { key: 'concentration',         label: 'Concentration',    color: '#0066FF', weight: 0.20 },
   { key: 'liquidity',              label: 'Liquidity',         color: '#7C3AED', weight: 0.25 },
   { key: 'entryTiming',            label: 'Entry timing',      color: '#F59E0B', weight: 0.15 },
   { key: 'smartMoneyFollowing',    label: 'Smart-money risk',  color: '#06B6D4', weight: 0.10 },

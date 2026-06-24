@@ -98,7 +98,7 @@ export default function WhaleSubmissionsAdminPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto text-slate-100">
       <div className="flex items-center gap-3 mb-6">
-        <FileText className="w-6 h-6 text-[#0A1EFF]" />
+        <FileText className="w-6 h-6 text-[#0066FF]" />
         <h1 className="text-2xl font-bold">Whale Submissions</h1>
         <button
           onClick={load}
@@ -119,7 +119,7 @@ export default function WhaleSubmissionsAdminPage() {
             onClick={() => setStatus(s)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
               status === s
-                ? 'bg-[#0A1EFF] border-[#0A1EFF] text-white'
+                ? 'bg-[#0066FF] border-[#0066FF] text-white'
                 : 'bg-transparent border-white/10 text-slate-400 hover:border-white/30 hover:text-white'
             }`}
           >
@@ -147,7 +147,7 @@ export default function WhaleSubmissionsAdminPage() {
                       {s.chain}
                     </span>
                     {s.proposed_entity_type && (
-                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#0A1EFF]/20 text-[#6F7EFF]">
+                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#0066FF]/20 text-[#6F7EFF]">
                         {s.proposed_entity_type}
                       </span>
                     )}

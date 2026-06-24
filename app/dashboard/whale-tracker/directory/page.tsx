@@ -295,7 +295,7 @@ export default function WhaleDirectoryPage() {
                   key={c.id || 'all'}
                   onClick={() => { setChain(c.id); setOffset(0); }}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'
+                    active ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'
                   }`}
                 >
                   {c.label}
@@ -337,7 +337,7 @@ export default function WhaleDirectoryPage() {
                   key={t.id}
                   onClick={() => { setTimeframe(t.id); setOffset(0); }}
                   className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
+                    active ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
                   }`}
                 >
                   {t.label}
@@ -415,7 +415,7 @@ export default function WhaleDirectoryPage() {
                 <p className="text-slate-500 text-sm mb-3">No whale matches <code className="px-1 py-0.5 rounded bg-slate-900 text-[11px] font-mono">{q.slice(0, 10)}…</code> in our directory.</p>
                 <a
                   href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(q.trim())}`}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-xs font-semibold"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-xs font-semibold"
                 >
                   Submit this whale
                 </a>
@@ -499,7 +499,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-bold text-white text-sm truncate">{row.label || short(row.address)}</span>
-            {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0A1EFF] shrink-0" />}
+            {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}>{row.chain.toUpperCase()}</span>
@@ -534,7 +534,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         <div className="flex items-center gap-1.5">
           <button
             onClick={(e) => { e.stopPropagation(); onFollow(); }}
-            className="px-2.5 py-1 rounded-lg bg-[#0A1EFF]/15 hover:bg-[#0A1EFF]/25 text-[#8FA3FF] text-[10px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-[#0066FF]/15 hover:bg-[#0066FF]/25 text-[#8FA3FF] text-[10px] font-semibold"
           >
             Follow
           </button>

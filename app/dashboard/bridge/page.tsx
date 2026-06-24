@@ -212,7 +212,7 @@ export default function BridgePage() {
   return (
     <div className="max-w-xl mx-auto px-4 py-8 text-white">
       <div className="flex items-center gap-2 mb-6">
-        <ArrowLeftRight className="w-5 h-5 text-[#0A1EFF]" />
+        <ArrowLeftRight className="w-5 h-5 text-[#0066FF]" />
         <h1 className="text-2xl font-bold">Bridge</h1>
         <span className="text-[10px] uppercase px-2 py-0.5 bg-white/[0.06] rounded text-slate-400">LiFi</span>
       </div>
@@ -227,7 +227,7 @@ export default function BridgePage() {
         <button
           onClick={fetchQuote}
           disabled={quoting || executing}
-          className="w-full py-3 rounded-xl bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-xl bg-[#0066FF] hover:bg-[#0066FF]/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-2"
         >
           {quoting ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching route…</> : 'Get route'}
         </button>
@@ -288,7 +288,7 @@ export default function BridgePage() {
                     href={status.bridgeExplorerLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[#0A1EFF] hover:underline text-[11px]"
+                    className="inline-flex items-center gap-1 text-[#0066FF] hover:underline text-[11px]"
                   >
                     Bridge explorer <ExternalLink className="w-3 h-3" />
                   </a>
@@ -313,7 +313,7 @@ function ChainPicker({ label, value, onChange }: { label: string; value: ChainOp
             const next = CHAINS.find((c) => c.key === e.target.value);
             if (next) onChange(next);
           }}
-          className="w-full appearance-none bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-8 text-sm font-semibold focus:outline-none focus:border-[#0A1EFF]"
+          className="w-full appearance-none bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-8 text-sm font-semibold focus:outline-none focus:border-[#0066FF]"
         >
           {CHAINS.map((c) => (
             <option key={c.key} value={c.key}>{c.label}</option>
@@ -334,7 +334,7 @@ function TokenField({ label, value, onChange, placeholder }: { label: string; va
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]"
+        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
       />
     </div>
   );
@@ -350,7 +350,7 @@ function AmountField({ value, onChange, nativeSymbol }: { value: string; onChang
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="0.0"
-          className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-16 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]"
+          className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-16 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] uppercase text-slate-500">{nativeSymbol}</span>
       </div>

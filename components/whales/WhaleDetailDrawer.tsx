@@ -175,12 +175,12 @@ export default function WhaleDetailDrawer({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h2 className="font-bold truncate">{w.label || short(w.address)}</h2>
-              {(w.verified || ark?.verified) && <CheckCircle2 className="w-4 h-4 text-[#0A1EFF] shrink-0" />}
+              {(w.verified || ark?.verified) && <CheckCircle2 className="w-4 h-4 text-[#0066FF] shrink-0" />}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{w.chain}</span>
               {w.archetype && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">{w.archetype}</span>}
-              {ark?.entity && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/20 text-[#8FA3FF]">Entity: {ark.entity}</span>}
+              {ark?.entity && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0066FF]/20 text-[#8FA3FF]">Entity: {ark.entity}</span>}
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5">
@@ -242,7 +242,7 @@ export default function WhaleDetailDrawer({
         <div className="px-5 pb-4 flex gap-2">
           <button
             onClick={onFollow}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] font-semibold text-sm hover:opacity-95"
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-semibold text-sm hover:opacity-95"
           >
             Follow / Copy Trade
           </button>

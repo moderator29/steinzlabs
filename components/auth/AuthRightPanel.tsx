@@ -30,7 +30,7 @@ function VTXCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,#0A1EFF,#6d85ff)' }}>
+            style={{ background: 'linear-gradient(135deg,#0066FF,#6d85ff)' }}>
             <span className="text-white font-black text-[10px]">V</span>
           </div>
           <span className="text-white text-xs font-bold">VTX Analysis</span>
@@ -101,11 +101,11 @@ export function AuthRightPanel({ mode }: AuthRightPanelProps) {
   return (
     <div
       className="hidden lg:flex lg:w-[55%] flex-col justify-between p-12 relative overflow-hidden"
-      style={{ background: 'linear-gradient(160deg,#0A1EFF 0%,#050ea8 30%,#07090f 65%)' }}
+      style={{ background: 'linear-gradient(160deg,#0066FF 0%,#050ea8 30%,#07090f 65%)' }}
     >
       {/* Glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle,rgba(10,30,255,.35) 0%,transparent 70%)', filter: 'blur(60px)' }} />
+        style={{ background: 'radial-gradient(circle,rgba(0,102,255,.35) 0%,transparent 70%)', filter: 'blur(60px)' }} />
 
       {/* Stars */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -151,7 +151,7 @@ export function AuthRightPanel({ mode }: AuthRightPanelProps) {
               </p>
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
-                  style={{ background: 'linear-gradient(135deg,#0A1EFF,#6d85ff)' }}>T</div>
+                  style={{ background: 'linear-gradient(135deg,#0066FF,#6d85ff)' }}>T</div>
                 <div>
                   <div className="text-white text-xs font-semibold">0xTradoor</div>
                   <div className="text-white/40 text-[10px]">Smart money trader · SOL/ETH</div>

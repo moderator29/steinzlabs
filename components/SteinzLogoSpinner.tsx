@@ -16,7 +16,7 @@ export default function SteinzLogoSpinner({ size = 40, message, className = '' }
         <div
           className="absolute inset-0 rounded-full animate-spin"
           style={{
-            background: 'conic-gradient(from 0deg, transparent 0%, #0A1EFF 50%, transparent 100%)',
+            background: 'conic-gradient(from 0deg, transparent 0%, #0066FF 50%, transparent 100%)',
             animationDuration: '1.2s',
           }}
         />

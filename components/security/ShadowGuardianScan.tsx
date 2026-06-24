@@ -46,7 +46,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
   if (scanning) {
     return (
       <div className="bg-[#141824] rounded-lg p-6 text-center">
-        <Loader className="animate-spin mx-auto mb-4 text-[#0A1EFF]" size={32} />
+        <Loader className="animate-spin mx-auto mb-4 text-[#0066FF]" size={32} />
         <p className="text-gray-300">Shadow Guardian scanning...</p>
         <p className="text-sm text-gray-500 mt-2">
           Checking for scammers, mixers, and suspicious activity
@@ -59,7 +59,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
     return (
       <button
         onClick={runScan}
-        className="w-full bg-[#0A1EFF] hover:bg-[#0916CC] text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
       >
         <Shield size={20} />
         Run Shadow Guardian Scan

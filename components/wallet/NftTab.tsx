@@ -66,7 +66,7 @@ export function NftTab({ address, chain }: Props) {
           href={n.marketplace_url ?? '#'}
           target="_blank"
           rel="noopener noreferrer"
-          className="group rounded-xl overflow-hidden bg-white/[0.04] border border-white/10 hover:border-[var(--nl-blue,#0A1EFF)]/40 transition-colors"
+          className="group rounded-xl overflow-hidden bg-white/[0.04] border border-white/10 hover:border-[var(--nl-blue,#0066FF)]/40 transition-colors"
           aria-label={`Open ${n.name ?? 'NFT'} on marketplace`}
         >
           <div className="aspect-square bg-[var(--nl-canvas-base,#0A0E1A)] flex items-center justify-center overflow-hidden">

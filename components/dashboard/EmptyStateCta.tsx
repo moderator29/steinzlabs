@@ -33,7 +33,7 @@ export function EmptyStateCta({
         {primaryLabel && primaryHref ? (
           <Link
             href={primaryHref}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2 rounded-xl text-xs font-bold text-white"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2 rounded-xl text-xs font-bold text-white"
           >
             {primaryLabel}
           </Link>
@@ -42,7 +42,7 @@ export function EmptyStateCta({
           <button
             type="button"
             onClick={onPrimaryClick}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2 rounded-xl text-xs font-bold text-white"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2 rounded-xl text-xs font-bold text-white"
           >
             {primaryLabel}
           </button>

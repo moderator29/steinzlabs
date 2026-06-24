@@ -77,7 +77,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
   if (!meta) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Unknown leaderboard. <Link href="/discover" className="ms-2 text-[var(--nl-blue,#0A1EFF)] underline">Back to Discover</Link>
+        Unknown leaderboard. <Link href="/discover" className="ms-2 text-[var(--nl-blue,#0066FF)] underline">Back to Discover</Link>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
     <div className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
-        <Trophy className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" />
+        <Trophy className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{meta.title}</h1>
           <p className="text-[12px] text-slate-400">{meta.sub}</p>
@@ -111,7 +111,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={r.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover border border-white/10" />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[12px] font-bold text-white">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-[12px] font-bold text-white">
                     {(r.display_name || r.username || '?').slice(0, 1).toUpperCase()}
                   </div>
                 )}

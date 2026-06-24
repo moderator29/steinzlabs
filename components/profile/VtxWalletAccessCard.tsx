@@ -50,7 +50,7 @@ export function VtxWalletAccessCard() {
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5">
       <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-[#0A1EFF]/10 border border-[#0A1EFF]/25 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/25 flex items-center justify-center flex-shrink-0">
           <Brain className="w-5 h-5 text-[#4D6BFF]" />
         </div>
         <div className="flex-1">
@@ -82,7 +82,7 @@ export function VtxWalletAccessCard() {
             aria-checked={enabled}
             disabled={loading || saving}
             onClick={() => toggle(!enabled)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-[#0A1EFF]' : 'bg-slate-700'}`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-[#0066FF]' : 'bg-slate-700'}`}
           >
             <span
               className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`}

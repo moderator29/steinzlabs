@@ -236,12 +236,12 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Suggest a label (2–4 words)…"
               maxLength={60}
-              className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0A1EFF]/50"
+              className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0066FF]/50"
             />
             <button
               onClick={submitLabel}
               disabled={submitting || !newLabel.trim()}
-              className="px-3 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0918CC] text-xs font-bold disabled:opacity-60 flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0918CC] text-xs font-bold disabled:opacity-60 flex items-center gap-1.5"
             >
               {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Submit
@@ -261,7 +261,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
                         <span className="font-semibold text-sm">{l.label}</span>
                         {l.status === 'approved' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">APPROVED</span>}
                         {l.status === 'pending' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">PENDING</span>}
-                        {l.ai_generated && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/15 text-[#8FA3FF]">AI</span>}
+                        {l.ai_generated && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0066FF]/15 text-[#8FA3FF]">AI</span>}
                       </div>
                       {l.description && <p className="text-[11px] text-slate-400 mt-0.5">{l.description}</p>}
                     </div>

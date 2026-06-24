@@ -46,16 +46,16 @@ function formatTimeAgo(ts: number): string {
 
 function getNotifIcon(type: DisplayNotification['type']) {
   switch (type) {
-    case 'welcome':         return <span className="text-sm leading-none font-bold text-[#0A1EFF]">W</span>;
+    case 'welcome':         return <span className="text-sm leading-none font-bold text-[#0066FF]">W</span>;
     case 'wallet_created':
     case 'wallet_imported': return <span className="text-sm leading-none font-bold text-[#F59E0B]">W</span>;
     case 'whale_alert':
     case 'whale':           return <span className="text-sm leading-none font-bold text-[#10B981]">WH</span>;
     case 'price_target':
-    case 'price':           return <span className="text-sm leading-none font-bold text-[#0A1EFF]">P</span>;
+    case 'price':           return <span className="text-sm leading-none font-bold text-[#0066FF]">P</span>;
     case 'new_launch':      return <span className="text-sm leading-none font-bold text-[#7C3AED]">NL</span>;
     case 'wallet_activity': return <span className="text-sm leading-none font-bold text-gray-400">A</span>;
-    case 'swap':            return <ArrowLeftRight className="w-4 h-4 text-[#0A1EFF]" />;
+    case 'swap':            return <ArrowLeftRight className="w-4 h-4 text-[#0066FF]" />;
     case 'send':            return <Send className="w-4 h-4 text-[#F59E0B]" />;
     case 'security':        return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
     case 'trending':        return <Flame className="w-4 h-4 text-[#EF4444]" />;
@@ -276,7 +276,7 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-[#0A1EFF]" />
+              <Bell className="w-4 h-4 text-[#0066FF]" />
               <span className="text-sm font-bold">Notifications</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 bg-[#EF4444]/20 text-[#EF4444] text-[9px] font-bold rounded-full">
@@ -288,7 +288,7 @@ export default function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/10 rounded transition-colors font-semibold"
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] text-[#0066FF] hover:bg-[#0066FF]/10 rounded transition-colors font-semibold"
                   title="Mark all as read"
                 >
                   <CheckCheck className="w-3 h-3" />
@@ -309,7 +309,7 @@ export default function NotificationBell() {
           <div className="max-h-[400px] overflow-y-auto">
             {apiLoading && notifications.length === 0 ? (
               <div className="flex items-center justify-center py-10 gap-2">
-                <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
                 <span className="text-xs text-gray-500">Loading...</span>
               </div>
             ) : notifications.length === 0 ? (
@@ -334,7 +334,7 @@ export default function NotificationBell() {
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold text-white truncate">{n.title}</span>
                       {!n.read && (
-                        <span className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full flex-shrink-0" />
+                        <span className="w-1.5 h-1.5 bg-[#0066FF] rounded-full flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>

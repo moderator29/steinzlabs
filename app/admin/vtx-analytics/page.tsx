@@ -71,7 +71,7 @@ export default function VtxAnalyticsPage() {
 
       {loading && data.totalQueries === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading VTX analytics...</span>
         </div>
       )}
@@ -102,7 +102,7 @@ export default function VtxAnalyticsPage() {
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-white mb-4">Top Users by Query Count (30d)</h3>
             {chartData.length > 0 ? (
-              <MicroBar data={chartData} xKey="user" yKey="count" color="#0A1EFF" height={240} formatY={(v) => formatLargeNumber(v)} />
+              <MicroBar data={chartData} xKey="user" yKey="count" color="#0066FF" height={240} formatY={(v) => formatLargeNumber(v)} />
             ) : (
               <div className="text-xs text-gray-500 py-6 text-center">No top user data available</div>
             )}
@@ -110,7 +110,7 @@ export default function VtxAnalyticsPage() {
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
             <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-[#0A1EFF]" />
+              <Users className="w-3.5 h-3.5 text-[#0066FF]" />
               <h3 className="text-sm font-semibold text-white">Top Users (30d)</h3>
             </div>
             <table className="w-full text-xs min-w-[500px]">

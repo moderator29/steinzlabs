@@ -141,7 +141,7 @@ export default function SecurityPage() {
             <button
               key={chain.id}
               onClick={() => setSelectedChain(chain.key)}
-              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/30 text-[#0A1EFF]' : 'bg-[#0f1320] border-[#1a1f2e] hover:border-[#0A1EFF]/20 text-gray-400'}`}
+              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#0066FF]' : 'bg-[#0f1320] border-[#1a1f2e] hover:border-[#0066FF]/20 text-gray-400'}`}
             >
               {chain.label}
             </button>
@@ -155,12 +155,12 @@ export default function SecurityPage() {
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="Contract address only (0x...), not wallet addresses"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
           />
           <button
             onClick={handleScan}
             disabled={scanning || !scanInput.trim()}
-            className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
@@ -170,9 +170,9 @@ export default function SecurityPage() {
         {scanning && (
           <div className="text-center py-12">
             <div className="relative w-16 h-16 mx-auto mb-4">
-              <div className="absolute inset-0 rounded-full border-2 border-[#0A1EFF]/20"></div>
-              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0A1EFF] animate-spin"></div>
-              <Shield className="w-6 h-6 text-[#0A1EFF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute inset-0 rounded-full border-2 border-[#0066FF]/20"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0066FF] animate-spin"></div>
+              <Shield className="w-6 h-6 text-[#0066FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
             <p className="text-sm text-gray-400">Scanning contract security...</p>
             <p className="text-[10px] text-gray-600 mt-1">Analyzing honeypot risk, ownership, taxes, and more</p>
@@ -219,7 +219,7 @@ export default function SecurityPage() {
                   href={explorerUrl(result.contract)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline"
+                  className="flex items-center gap-1 text-[10px] text-[#0066FF] hover:underline"
                 >
                   View on Explorer <ExternalLink className="w-3 h-3" />
                 </a>
@@ -320,7 +320,7 @@ export default function SecurityPage() {
                   </div>
                 </div>
                 {result.dexData.url && (
-                  <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center justify-center gap-1 text-[10px] text-[#0A1EFF] hover:underline">
+                  <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center justify-center gap-1 text-[10px] text-[#0066FF] hover:underline">
                     View on DexScreener <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
@@ -385,10 +385,10 @@ export default function SecurityPage() {
             </div>
 
             {/* AI Security Assessment */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <span className="font-bold text-sm">AI Security Assessment</span>
                 <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
@@ -559,13 +559,13 @@ export default function SecurityPage() {
               <p className="text-[10px] text-gray-600">Try these examples:</p>
               <button
                 onClick={() => { setScanInput('0xdac17f958d2ee523a2206206994597c13d831ec7'); setSelectedChain('ethereum'); }}
-                className="text-[10px] text-[#0A1EFF]/60 hover:text-[#0A1EFF] font-mono block mx-auto"
+                className="text-[10px] text-[#0066FF]/60 hover:text-[#0066FF] font-mono block mx-auto"
               >
                 USDT (Ethereum)
               </button>
               <button
                 onClick={() => { setScanInput('0x55d398326f99059ff775485246999027b3197955'); setSelectedChain('bsc'); }}
-                className="text-[10px] text-[#0A1EFF]/60 hover:text-[#0A1EFF] font-mono block mx-auto"
+                className="text-[10px] text-[#0066FF]/60 hover:text-[#0066FF] font-mono block mx-auto"
               >
                 USDT (BSC)
               </button>

@@ -98,7 +98,7 @@ export function getAppKit() {
     },
     themeMode: 'dark',
     themeVariables: {
-      '--w3m-accent': '#0A1EFF',
+      '--w3m-accent': '#0066FF',
       '--w3m-border-radius-master': '4px',
     },
     // Default chain the modal opens to when the user hasn't picked

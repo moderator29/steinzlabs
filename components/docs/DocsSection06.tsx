@@ -16,7 +16,7 @@ const SECURITY_TOOLS = [
     desc: 'Before every trade, Shadow Guardian simulates the transaction to detect honeypots, hidden sell taxes, and blacklist functions. If a token cannot be sold, you\'ll be warned before losing funds.',
   },
   {
-    icon: FileCode, color: '#0A1EFF',
+    icon: FileCode, color: '#0066FF',
     title: 'Contract Analyzer',
     desc: 'Paste any smart contract address and VTX AI will decode the bytecode and explain exactly what the contract does · in plain English. Identifies dangerous functions like mint, pause, blacklist, and proxy upgrades.',
   },

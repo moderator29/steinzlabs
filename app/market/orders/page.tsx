@@ -66,7 +66,7 @@ export default function MarketOrdersPage() {
               type="button"
               onClick={() => setTab(t.id)}
               className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                active ? 'border-[#0A1EFF] text-white' : 'border-transparent text-slate-400 hover:text-white'
+                active ? 'border-[#0066FF] text-white' : 'border-transparent text-slate-400 hover:text-white'
               }`}
             >
               <Icon size={13} />

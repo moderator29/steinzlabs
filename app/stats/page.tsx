@@ -88,13 +88,13 @@ export default function StatsPage() {
             <div className="bg-[#0f1320] rounded-2xl p-6 border border-[#1a1f2e]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-[#0A1EFF]" />
+                  <BarChart3 className="w-5 h-5 text-[#0066FF]" />
                   <span className="font-bold">Total Volume</span>
                 </div>
                 <div className="flex gap-1">
                   {(['24h', '7d', '30d', 'all'] as const).map(p => (
                     <button key={p} onClick={() => setPeriod(p)}
-                      className={`px-3 py-1 text-xs rounded-lg ${period === p ? 'bg-[#0A1EFF] text-white' : 'bg-white/5 text-gray-400'}`}
+                      className={`px-3 py-1 text-xs rounded-lg ${period === p ? 'bg-[#0066FF] text-white' : 'bg-white/5 text-gray-400'}`}
                     >{p === 'all' ? 'All Time' : p}</button>
                   ))}
                 </div>

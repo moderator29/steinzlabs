@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, X } from 'lucide-react';
+import { TierBadge } from '@/components/ui/TierBadge';
 
 /**
  * SearchBox — 300ms-debounced live autocomplete over /api/social/search.
@@ -50,7 +51,7 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 focus-within:border-[var(--nl-blue,#0A1EFF)]/60">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 focus-within:border-[var(--nl-blue,#0066FF)]/60">
         <Search className="w-4 h-4 text-slate-400" />
         <input
           autoFocus={autoFocus}
@@ -58,7 +59,10 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) router.push(`/discover?q=${encodeURIComponent(q.trim())}`); }}
           placeholder="Search users by username, name, badge…"
-          className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-slate-500"
+          // §search-zoom — iOS Safari auto-zooms any focused input whose
+          // font-size is < 16px. text-sm (14px) caused the view to jump/zoom
+          // on focus; text-base (16px) keeps the page stable, no zoom.
+          className="flex-1 bg-transparent outline-none text-base text-white placeholder:text-slate-500"
           aria-label="Search users"
         />
         {q && (
@@ -86,17 +90,21 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={u.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
                       {(u.display_name || u.username || '?').slice(0, 1).toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-[12px] font-semibold text-white truncate">{u.display_name || u.username}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[12px] font-semibold text-white truncate">{u.display_name || u.username}</span>
+                      {/* §8 — surface the tier/verified badge next to the name. */}
+                      {u.tier && u.tier !== 'free' && <TierBadge tier={u.tier} size={13} />}
+                    </div>
                     <div className="text-[10px] text-slate-400 truncate">@{u.username}</div>
                   </div>
                 </Link>
               ))}
-              <Link href={`/discover?q=${encodeURIComponent(q.trim())}`} className="block text-center px-3 py-2 text-[11px] text-[var(--nl-blue,#0A1EFF)] hover:bg-white/[0.04]">
+              <Link href={`/discover?q=${encodeURIComponent(q.trim())}`} className="block text-center px-3 py-2 text-[11px] text-[var(--nl-blue,#0066FF)] hover:bg-white/[0.04]">
                 View all results →
               </Link>
             </>

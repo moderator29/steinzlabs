@@ -72,7 +72,7 @@ export default function MessagesInboxPage() {
     <div className="min-h-screen p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
-        <MessageCircle className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" />
+        <MessageCircle className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
         <h1 className="text-xl sm:text-2xl font-bold text-white">Messages</h1>
         <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
           <Lock className="w-3 h-3" />End-to-end encrypted
@@ -85,7 +85,7 @@ export default function MessagesInboxPage() {
       ) : convos.length === 0 ? (
         <div className="text-sm text-slate-400 italic">
           No conversations yet. Mutual follows can DM you — find people on{' '}
-          <Link href="/discover" className="text-[var(--nl-blue,#0A1EFF)]">Discover</Link>.
+          <Link href="/discover" className="text-[var(--nl-blue,#0066FF)]">Discover</Link>.
         </div>
       ) : (
         <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
@@ -102,7 +102,7 @@ export default function MessagesInboxPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={peer.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">
                     {initial}
                   </div>
                 )}

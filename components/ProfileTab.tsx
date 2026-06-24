@@ -15,6 +15,7 @@ import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import NotificationSettingsPanel from '@/components/profile/NotificationSettingsPanel';
+import { AppearancePanel } from '@/components/profile/AppearancePanel';
 
 interface Notification {
   id: string;
@@ -73,10 +74,10 @@ function FollowersTile() {
     <button
       type="button"
       onClick={() => username && router.push(`/u/${username}/followers`)}
-      className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0A1EFF]/40 transition-colors"
+      className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0066FF]/40 transition-colors"
       aria-label="View followers"
     >
-      <div className="text-lg font-bold text-[#0A1EFF]">{count === null ? '—' : count}</div>
+      <div className="text-lg font-bold text-[#0066FF]">{count === null ? '—' : count}</div>
       <div className="text-[10px] text-gray-400">Followers</div>
     </button>
   );
@@ -185,15 +186,15 @@ export default function ProfileTab() {
 
   const getNotifIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'whale': return <AlertTriangle className="w-4 h-4 text-[#0A1EFF]" />;
+      case 'whale': return <AlertTriangle className="w-4 h-4 text-[#0066FF]" />;
       case 'price': return <TrendingUp className="w-4 h-4 text-[#10B981]" />;
       case 'prediction': return <Target className="w-4 h-4 text-[#F59E0B]" />;
       case 'trending': return <Flame className="w-4 h-4 text-[#EF4444]" />;
       case 'security': return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
-      case 'welcome': return <Award className="w-4 h-4 text-[#0A1EFF]" />;
+      case 'welcome': return <Award className="w-4 h-4 text-[#0066FF]" />;
       case 'wallet_created': return <Wallet className="w-4 h-4 text-[#10B981]" />;
       case 'wallet_imported': return <Wallet className="w-4 h-4 text-[#10B981]" />;
-      case 'swap': return <TrendingUp className="w-4 h-4 text-[#0A1EFF]" />;
+      case 'swap': return <TrendingUp className="w-4 h-4 text-[#0066FF]" />;
       case 'send': return <Send className="w-4 h-4 text-[#F59E0B]" />;
       case 'system': return <Bell className="w-4 h-4 text-gray-400" />;
       default: return <Bell className="w-4 h-4 text-gray-400" />;
@@ -657,7 +658,7 @@ export default function ProfileTab() {
           {/* Email */}
           <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
             <div className="flex items-center gap-3">
-              <Mail className="w-4 h-4 text-[#0A1EFF]" />
+              <Mail className="w-4 h-4 text-[#0066FF]" />
               <div>
                 <div className="text-sm font-semibold">Email</div>
                 <div className="text-[10px] text-gray-500">{user?.email || 'Not set'}</div>
@@ -685,11 +686,11 @@ export default function ProfileTab() {
             </div>
             {pwdOld === '__toggle__' && (
               <div className="space-y-2 mt-3">
-                <input type="password" value={pwdNew} onChange={e => { setPwdNew(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
-                <input type="password" value={pwdConfirm} onChange={e => { setPwdConfirm(e.target.value); setPwdError(''); }} placeholder="Confirm new password" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0A1EFF]/40 text-white" />
+                <input type="password" value={pwdNew} onChange={e => { setPwdNew(e.target.value); setPwdError(''); }} placeholder="New password (min 8 chars)" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/40 text-white" />
+                <input type="password" value={pwdConfirm} onChange={e => { setPwdConfirm(e.target.value); setPwdError(''); }} placeholder="Confirm new password" className="w-full bg-[#060A12] border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/40 text-white" />
                 {pwdError && <p className="text-[10px] text-[#EF4444]">{pwdError}</p>}
                 {pwdSuccess && <p className="text-[10px] text-[#10B981]">Password updated successfully!</p>}
-                <button onClick={handlePasswordChange} disabled={pwdLoading || !pwdNew || !pwdConfirm} className="w-full py-2 bg-[#0A1EFF] rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+                <button onClick={handlePasswordChange} disabled={pwdLoading || !pwdNew || !pwdConfirm} className="w-full py-2 bg-[#0066FF] rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
                   {pwdLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Updating...</> : 'Update Password'}
                 </button>
               </div>
@@ -791,8 +792,8 @@ export default function ProfileTab() {
           </div>
         )}
 
-        <div className="mt-4 glass rounded-lg p-3 border border-[#0A1EFF]/20 bg-[#0A1EFF]/5">
-          <p className="text-[11px] text-[#0A1EFF]">Your account is protected with industry-standard encryption. Enable two-factor authentication for maximum security.</p>
+        <div className="mt-4 glass rounded-lg p-3 border border-[#0066FF]/20 bg-[#0066FF]/5">
+          <p className="text-[11px] text-[#0066FF]">Your account is protected with industry-standard encryption. Enable two-factor authentication for maximum security.</p>
         </div>
       </div>
     );
@@ -815,7 +816,7 @@ export default function ProfileTab() {
             style={{
               background: coverUrl
                 ? `url(${coverUrl}) center/cover no-repeat`
-                : 'linear-gradient(135deg, #0A1EFF15 0%, #7C3AED20 100%)',
+                : 'linear-gradient(135deg, #0066FF15 0%, #7C3AED20 100%)',
             }}
             onClick={() => coverInputRef.current?.click()}
           >
@@ -849,8 +850,8 @@ export default function ProfileTab() {
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                  <User className="w-9 h-9 text-[#0A1EFF]" />
+                <div className="w-full h-full bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                  <User className="w-9 h-9 text-[#0066FF]" />
                 </div>
               )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-full transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -860,7 +861,7 @@ export default function ProfileTab() {
             <div>
               <button
                 onClick={() => avatarInputRef.current?.click()}
-                className="block mb-1.5 px-3 py-1.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded-lg text-[11px] font-semibold text-[#0A1EFF] hover:bg-[#0A1EFF]/25 transition-colors"
+                className="block mb-1.5 px-3 py-1.5 bg-[#0066FF]/15 border border-[#0066FF]/30 rounded-lg text-[11px] font-semibold text-[#0066FF] hover:bg-[#0066FF]/25 transition-colors"
               >
                 Upload Photo
               </button>
@@ -886,7 +887,7 @@ export default function ProfileTab() {
               value={editUsername}
               onChange={(e) => { setEditUsername(e.target.value); setEditError(''); }}
               placeholder="username"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
             />
             <p className="text-[9px] text-gray-600 mt-1">Letters, numbers and underscores only</p>
           </div>
@@ -897,7 +898,7 @@ export default function ProfileTab() {
               value={editFirstName}
               onChange={(e) => setEditFirstName(e.target.value)}
               placeholder="First name"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
             />
           </div>
           <div className="px-3 py-3 border-b border-white/5">
@@ -907,7 +908,7 @@ export default function ProfileTab() {
               value={editLastName}
               onChange={(e) => setEditLastName(e.target.value)}
               placeholder="Last name"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
             />
           </div>
           <div className="px-3 py-3">
@@ -917,7 +918,7 @@ export default function ProfileTab() {
               onChange={(e) => setEditBio(e.target.value)}
               placeholder="Tell the world about yourself..."
               rows={3}
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/40 text-white resize-none"
+              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white resize-none"
             />
             <p className="text-[9px] text-gray-600 mt-1">Max 160 characters</p>
           </div>
@@ -929,7 +930,7 @@ export default function ProfileTab() {
         <button
           onClick={handleSaveProfile}
           disabled={editLoading}
-          className="w-full py-3 bg-[#0A1EFF] rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#0A1EFF]/90 transition-colors"
+          className="w-full py-3 bg-[#0066FF] rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#0066FF]/90 transition-colors"
         >
           {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Changes'}
         </button>
@@ -949,7 +950,7 @@ export default function ProfileTab() {
         <div className="glass rounded-lg border border-white/10 overflow-hidden">
           {([
             { key: 'showWallet',     icon: <Wallet className="w-4 h-4 text-[#7C3AED]" />,        label: 'Show Wallet Address',   desc: 'Display your wallet address on profile' },
-            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />,     label: 'Show Trading Activity', desc: 'Let others see your trading history' },
+            { key: 'showActivity',   icon: <BarChart3 className="w-4 h-4 text-[#0066FF]" />,     label: 'Show Trading Activity', desc: 'Let others see your trading history' },
             { key: 'allowDMs',       icon: <MessageCircle className="w-4 h-4 text-[#10B981]" />, label: 'Allow Direct Messages', desc: 'Allow other users to message you' },
             { key: 'publicProfile',  icon: <Globe className="w-4 h-4 text-[#EF4444]" />,          label: 'Public Profile',        desc: 'Make your profile discoverable to others' },
           ] as const).map(({ key, icon, label, desc }) => (
@@ -968,9 +969,9 @@ export default function ProfileTab() {
                   // Save to Supabase user_metadata
                   savePrivacyToSupabase(key, newVal);
                 }}
-                className={`w-10 h-5 rounded-full transition-colors relative ${privacySettings[key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-md transition-colors relative ${privacySettings[key] ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${privacySettings[key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}
@@ -1016,7 +1017,7 @@ export default function ProfileTab() {
         <div className="mt-6 glass rounded-lg p-4 border border-white/10 text-center">
           <p className="text-sm font-semibold mb-1">Still need help?</p>
           <p className="text-xs text-gray-500 mb-3">Contact our support team for personalized assistance.</p>
-          <a href="mailto:support@nakalabs.com" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
+          <a href="mailto:support@nakalabs.xyz" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
             <Mail className="w-3 h-3" /> Contact Support
           </a>
         </div>
@@ -1033,7 +1034,7 @@ export default function ProfileTab() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-heading font-bold flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#0A1EFF]" /> AI Support
+              <Bot className="w-5 h-5 text-[#0066FF]" /> AI Support
             </h2>
             <p className="text-xs text-gray-500">Ask anything about NAKA LABS</p>
           </div>
@@ -1048,8 +1049,8 @@ export default function ProfileTab() {
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {chatMessages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border border-white/10">
-                  <Headphones className="w-6 h-6 text-[#0A1EFF]" />
+                <div className="w-12 h-12 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mb-3 border border-white/10">
+                  <Headphones className="w-6 h-6 text-[#0066FF]" />
                 </div>
                 <p className="text-sm font-semibold mb-1">How can we help?</p>
                 <p className="text-[11px] text-gray-500 mb-4 max-w-[250px]">Ask about features, wallet setup, trading, security, or anything else.</p>
@@ -1058,7 +1059,7 @@ export default function ProfileTab() {
                     <button
                       key={q}
                       onClick={() => { setChatInput(q); }}
-                      className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white hover:border-[#0A1EFF]/30 transition-colors"
+                      className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white hover:border-[#0066FF]/30 transition-colors"
                     >
                       {q}
                     </button>
@@ -1068,11 +1069,11 @@ export default function ProfileTab() {
             )}
             {chatMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20' : 'bg-white/5 border border-white/10'}`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gradient-to-r from-[#0066FF]/20 to-[#7C3AED]/20 border border-[#0066FF]/20' : 'bg-white/5 border border-white/10'}`}>
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Bot className="w-3 h-3 text-[#0A1EFF]" />
-                      <span className="text-[9px] text-[#0A1EFF] font-semibold">STEINZ Support</span>
+                      <Bot className="w-3 h-3 text-[#0066FF]" />
+                      <span className="text-[9px] text-[#0066FF] font-semibold">STEINZ Support</span>
                     </div>
                   )}
                   <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -1086,13 +1087,13 @@ export default function ProfileTab() {
               <div className="flex justify-start">
                 <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Bot className="w-3 h-3 text-[#0A1EFF]" />
-                    <span className="text-[9px] text-[#0A1EFF] font-semibold">STEINZ Support</span>
+                    <Bot className="w-3 h-3 text-[#0066FF]" />
+                    <span className="text-[9px] text-[#0066FF] font-semibold">STEINZ Support</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -1108,12 +1109,12 @@ export default function ProfileTab() {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendSupportMessage()}
                 placeholder="Type your question..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/30"
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/30"
               />
               <button
                 onClick={sendSupportMessage}
                 disabled={!chatInput.trim() || chatLoading}
-                className="p-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-lg hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100"
+                className="p-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100"
               >
                 <Send className="w-3.5 h-3.5 text-white" />
               </button>
@@ -1188,7 +1189,14 @@ export default function ProfileTab() {
           <ArrowLeft className="w-4 h-4" /> Back to Profile
         </button>
         <h2 className="text-lg font-heading font-bold mb-1">Preferences</h2>
-        <p className="text-xs text-gray-500 mb-4">Customize your STEINZ experience.</p>
+        <p className="text-xs text-gray-500 mb-4">Customize your Naka Labs experience.</p>
+
+        {/* §3.4 — Appearance: theme, accent, glass, density, text size, motion.
+            Applies live and syncs per-user to Supabase. */}
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Appearance</div>
+        <div className="mb-4">
+          <AppearancePanel />
+        </div>
 
         {/* Phase B — Supabase-backed notification settings. Replaces the
             localStorage toggles that lived inline. Web Push subscribe,
@@ -1213,7 +1221,7 @@ export default function ProfileTab() {
 
         <a
           href="/dashboard?customise=1"
-          className="glass rounded-lg border border-white/10 p-3 mb-3 flex items-center justify-between gap-3 hover:border-[#0A1EFF]/30 transition-colors"
+          className="glass rounded-lg border border-white/10 p-3 mb-3 flex items-center justify-between gap-3 hover:border-[#0066FF]/30 transition-colors"
         >
           <div>
             <div className="text-sm font-semibold">Customise dashboard</div>
@@ -1232,7 +1240,7 @@ export default function ProfileTab() {
             <select
               value={preferences.defaultChain}
               onChange={(e) => setPreferences(prev => ({ ...prev, defaultChain: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/30"
             >
               <option value="ethereum">Ethereum</option>
               <option value="solana">Solana</option>
@@ -1251,7 +1259,7 @@ export default function ProfileTab() {
             <select
               value={preferences.currency}
               onChange={(e) => setPreferences(prev => ({ ...prev, currency: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/30"
             >
               <option value="usd">USD ($)</option>
               <option value="eur">EUR (&euro;)</option>
@@ -1269,7 +1277,7 @@ export default function ProfileTab() {
             <select
               value={preferences.language}
               onChange={(e) => setPreferences(prev => ({ ...prev, language: e.target.value }))}
-              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/30"
+              className="bg-[#111827] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/30"
             >
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -1293,9 +1301,9 @@ export default function ProfileTab() {
               </div>
               <button
                 onClick={() => setPreferences(prev => ({ ...prev, [item.key]: !(prev as any)[item.key] }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                className={`w-10 h-5 rounded-md transition-colors relative ${(preferences as any)[item.key] ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${(preferences as any)[item.key] ? 'right-0.5' : 'left-0.5'}`} />
+                <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${(preferences as any)[item.key] ? 'right-0.5' : 'left-0.5'}`} />
               </button>
             </div>
           ))}
@@ -1313,7 +1321,7 @@ export default function ProfileTab() {
         >
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Bell className="w-5 h-5 text-[#0A1EFF]" />
+              <Bell className="w-5 h-5 text-[#0066FF]" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-bold flex items-center justify-center text-white">{unreadCount}</span>
               )}
@@ -1330,7 +1338,7 @@ export default function ProfileTab() {
           <div className="border-t border-white/5">
             {unreadCount > 0 && (
               <div className="flex justify-end px-4 py-2 border-b border-white/5">
-                <button onClick={markAllRead} className="text-[10px] text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-semibold transition-colors">
+                <button onClick={markAllRead} className="text-[10px] text-[#0066FF] hover:text-[#0066FF]/80 font-semibold transition-colors">
                   Mark all read
                 </button>
               </div>
@@ -1338,7 +1346,7 @@ export default function ProfileTab() {
             <div className="max-h-[320px] overflow-y-auto">
               {notifLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="w-5 h-5 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
                   <span className="text-xs text-gray-500 ms-2">Loading notifications...</span>
                 </div>
               ) : notifList.length === 0 ? (
@@ -1357,7 +1365,7 @@ export default function ProfileTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold">{n.title}</span>
-                        {!n.read && <span className="w-1.5 h-1.5 bg-[#0A1EFF] rounded-full flex-shrink-0" />}
+                        {!n.read && <span className="w-1.5 h-1.5 bg-[#0066FF] rounded-full flex-shrink-0" />}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
                       <span className="text-[9px] text-gray-600 mt-1 block">{n.time}</span>
@@ -1378,7 +1386,7 @@ export default function ProfileTab() {
           style={{
             background: coverUrl
               ? `url(${coverUrl}) center/cover no-repeat`
-              : 'linear-gradient(135deg, #0A1EFF15 0%, #7C3AED15 50%, #0A1EFF08 100%)',
+              : 'linear-gradient(135deg, #0066FF15 0%, #7C3AED15 50%, #0066FF08 100%)',
           }}
           onClick={() => isConnected && coverInputRef.current?.click()}
         >
@@ -1412,8 +1420,8 @@ export default function ProfileTab() {
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                  <User className="w-7 h-7 text-[#0A1EFF]" />
+                <div className="w-full h-full bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                  <User className="w-7 h-7 text-[#0066FF]" />
                 </div>
               )}
               {isConnected && (
@@ -1426,7 +1434,7 @@ export default function ProfileTab() {
             {isConnected && (
               <button
                 onClick={() => setSubPage('edit-profile')}
-                className="px-3 py-1.5 border border-white/20 rounded-full text-[10px] font-semibold text-gray-300 hover:border-[#0A1EFF]/40 hover:text-white transition-all flex items-center gap-1.5"
+                className="px-3 py-1.5 border border-white/20 rounded-full text-[10px] font-semibold text-gray-300 hover:border-[#0066FF]/40 hover:text-white transition-all flex items-center gap-1.5"
               >
                 <Settings className="w-3 h-3" /> Edit Profile
               </button>
@@ -1457,7 +1465,7 @@ export default function ProfileTab() {
             {(() => {
               const tier = user?.tier ?? 'free';
               const tierLabel = tier === 'max' ? 'Max Plan' : tier === 'pro' ? 'Pro Plan' : tier === 'mini' ? 'Mini Plan' : 'Free Tier';
-              const tierColor = tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0A1EFF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500';
+              const tierColor = tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0066FF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500';
               if (!isConnected) return <span className="text-[10px] text-gray-500">Sign in to unlock features</span>;
               return (
                 <>
@@ -1505,9 +1513,9 @@ export default function ProfileTab() {
         <button
           type="button"
           onClick={() => router.push('/dashboard/whale-tracker?tab=my-whales')}
-          className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0A1EFF]/40 transition-colors"
+          className="glass rounded-lg p-3 text-center border border-white/10 hover:border-[#0066FF]/40 transition-colors"
         >
-          <div className="text-lg font-bold text-[#0A1EFF]">
+          <div className="text-lg font-bold text-[#0066FF]">
             {followingCount === null ? '—' : followingCount}
           </div>
           <div className="text-[10px] text-gray-400">Following</div>
@@ -1523,7 +1531,7 @@ export default function ProfileTab() {
       {user?.email && (
         <div className="glass rounded-lg p-3 mb-3 border border-white/10">
           <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-[#0A1EFF]" />
+            <Mail className="w-4 h-4 text-[#0066FF]" />
             <div className="flex-1">
               <div className="text-[10px] text-gray-500">Email</div>
               <div className="text-xs text-gray-300">{user.email}</div>
@@ -1579,7 +1587,7 @@ export default function ProfileTab() {
           <div className="glass rounded-lg border border-white/10 mb-4 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <Crown className={`w-4 h-4 ${tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0A1EFF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <Crown className={`w-4 h-4 ${tier === 'max' ? 'text-[#FFD700]' : tier === 'pro' ? 'text-[#0066FF]' : tier === 'mini' ? 'text-emerald-400' : 'text-gray-500'}`} />
                 <div>
                   <div className="text-sm font-semibold">Current Plan: {d.name}</div>
                   <div className="text-[10px] text-gray-500">{d.summary}</div>
@@ -1588,7 +1596,7 @@ export default function ProfileTab() {
               {tier !== 'max' && (
                 <button
                   onClick={() => router.push('/dashboard/pricing')}
-                  className="px-3 py-1 bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/30 rounded-lg text-[10px] font-bold text-[#0A1EFF] hover:opacity-80 transition-opacity"
+                  className="px-3 py-1 bg-gradient-to-r from-[#0066FF]/20 to-[#7C3AED]/20 border border-[#0066FF]/30 rounded-lg text-[10px] font-bold text-[#0066FF] hover:opacity-80 transition-opacity"
                 >
                   {tier === 'free' ? 'Upgrade' : 'Change'}
                 </button>
@@ -1600,7 +1608,7 @@ export default function ProfileTab() {
               </div>
               {d.features.map(f => (
                 <div key={f} className="flex items-center gap-2 mb-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${tier === 'free' ? 'bg-[#0A1EFF]' : 'bg-emerald-400'} flex-shrink-0`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${tier === 'free' ? 'bg-[#0066FF]' : 'bg-emerald-400'} flex-shrink-0`} />
                   <span className="text-[11px] text-gray-300">{f}</span>
                 </div>
               ))}
@@ -1629,9 +1637,9 @@ export default function ProfileTab() {
             </div>
             <button
               onClick={() => setNotifications(prev => ({ ...prev, [key]: !value }))}
-              className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+              className={`w-10 h-5 rounded-md transition-colors relative ${value ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
             >
-              <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
+              <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${value ? 'right-0.5' : 'left-0.5'}`} />
             </button>
           </div>
         ))}
@@ -1647,9 +1655,9 @@ export default function ProfileTab() {
           </div>
           <button
             onClick={() => setNotifPrefs(prev => ({ ...prev, emailWhaleAlerts: !prev.emailWhaleAlerts }))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+            className={`w-10 h-5 rounded-md transition-colors relative ${notifPrefs.emailWhaleAlerts ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
+            <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${notifPrefs.emailWhaleAlerts ? 'right-0.5' : 'left-0.5'}`} />
           </button>
         </div>
         <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
@@ -1659,9 +1667,9 @@ export default function ProfileTab() {
           </div>
           <button
             onClick={() => setNotifPrefs(prev => ({ ...prev, emailPriceAlerts: !prev.emailPriceAlerts }))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+            className={`w-10 h-5 rounded-md transition-colors relative ${notifPrefs.emailPriceAlerts ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
+            <div className={`w-4 h-4 bg-white rounded-[4px] absolute top-0.5 transition-transform ${notifPrefs.emailPriceAlerts ? 'right-0.5' : 'left-0.5'}`} />
           </button>
         </div>
         <div className="flex items-center justify-between px-3 py-3">
@@ -1674,15 +1682,16 @@ export default function ProfileTab() {
           </div>
           <button
             disabled
-            className="w-10 h-5 rounded-full transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
+            className="w-10 h-5 rounded-md transition-colors relative bg-gray-700 opacity-40 cursor-not-allowed"
           >
-            <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5" />
+            <div className="w-4 h-4 bg-white rounded-[4px] absolute top-0.5 left-0.5" />
           </button>
         </div>
       </div>
 
       <ProfileRow icon={MessageCircle} label="Messages" sub="Encrypted DMs with mutual follows" onClick={() => router.push('/dashboard/messages')} />
-      <ProfileRow icon={Flame} label="NakaCult" sub={isChosen ? 'Chosen — enter the Vault' : 'Lore, sigils, the path in'} onClick={() => router.push(isChosen ? '/vault' : '/naka-cult')} />
+      {/* §12 — NakaCult/Vault removed from the in-app profile; the cult is
+          reached only from the standalone /naka-cult landing page. */}
       <ProfileRow icon={Lock} label="Security" sub="Protect your account" onClick={() => setSubPage('security')} />
       <ProfileRow icon={Shield} label="Privacy" sub="Manage data & visibility" onClick={() => setSubPage('privacy')} />
       <ProfileRow icon={Settings} label="Preferences" sub="Customize your experience" onClick={() => setSubPage('preferences')} />
@@ -1700,7 +1709,7 @@ export default function ProfileTab() {
           rel="noopener noreferrer"
           className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/5 rounded-lg transition-colors text-sm text-gray-400"
         >
-          <ExternalLink className="w-4 h-4 text-[#0A1EFF]" />
+          <ExternalLink className="w-4 h-4 text-[#0066FF]" />
           <span>View on Etherscan</span>
           <ChevronRight className="w-4 h-4 ms-auto text-gray-600" />
         </a>
@@ -1733,7 +1742,7 @@ function ProfileRow({ icon: Icon, label, sub, onClick }: { icon: React.ElementTy
       onClick={onClick}
       className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/5 rounded-lg transition-colors border-b border-white/5"
     >
-      <Icon className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+      <Icon className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
       <div className="flex-1 text-start">
         <div className="text-sm font-semibold">{label}</div>
         <div className="text-[10px] text-gray-500">{sub}</div>
@@ -1746,10 +1755,10 @@ function ProfileRow({ icon: Icon, label, sub, onClick }: { icon: React.ElementTy
 function HelpItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`glass rounded-xl overflow-hidden border transition-all duration-300 ${open ? 'border-[#0A1EFF]/30 bg-gradient-to-r from-[#0A1EFF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06]'}`}>
+    <div className={`glass rounded-xl overflow-hidden border transition-all duration-300 ${open ? 'border-[#0066FF]/30 bg-gradient-to-r from-[#0066FF]/[0.03] to-[#7C3AED]/[0.03]' : 'border-white/[0.06]'}`}>
       <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex justify-between items-center text-start hover:bg-white/[0.02] transition-colors">
         <span className="font-semibold text-xs pe-3">{question}</span>
-        <ChevronDown className={`w-4 h-4 text-[#0A1EFF] transition-transform duration-300 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-[#0066FF] transition-transform duration-300 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
       <div className={`grid transition-all duration-300 ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
         <div className="overflow-hidden">

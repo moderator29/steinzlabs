@@ -34,9 +34,9 @@ export function OnboardingMention() {
           <span
             className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-4"
             style={{
-              background: 'rgba(10,30,255,.10)',
+              background: 'rgba(0,102,255,.10)',
               color: 'var(--nl-text-secondary,#8FA3FF)',
-              border: '1px solid rgba(10,30,255,.25)',
+              border: '1px solid rgba(0,102,255,.25)',
             }}
           >
             Get Started
@@ -68,9 +68,9 @@ export function OnboardingMention() {
               </span>
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                style={{ background: 'rgba(10,30,255,.10)' }}
+                style={{ background: 'rgba(0,102,255,.10)' }}
               >
-                <Icon className="w-4 h-4 text-[var(--nl-blue,#0A1EFF)]" />
+                <Icon className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
               </div>
               <h3 className="text-base font-bold text-white mb-1">{title}</h3>
               <p className="text-[13px] leading-relaxed" style={{ color: 'var(--nl-text-muted,#B4C0E0)' }}>

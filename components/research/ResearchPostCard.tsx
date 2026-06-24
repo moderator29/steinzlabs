@@ -46,7 +46,7 @@ function timeAgo(sec: number): string {
 
 const TIER_COLOR: Record<NonNullable<ResearchPostCardProps['requiredTier']>, string> = {
   free: '#94A3B8',
-  pro: '#0A1EFF',
+  pro: '#0066FF',
   max: '#7C3AED',
   naka_cult: '#DC143C',
 };
@@ -56,7 +56,7 @@ export function ResearchPostCard(props: ResearchPostCardProps) {
   const tierColor = props.requiredTier ? TIER_COLOR[props.requiredTier] : '#94A3B8';
 
   const inner = (
-    <div className="relative h-full rounded-2xl border border-white/10 bg-white/[0.02] hover:border-[#0A1EFF]/40 transition-all overflow-hidden">
+    <div className="relative h-full rounded-2xl border border-white/10 bg-white/[0.02] hover:border-[#0066FF]/40 transition-all overflow-hidden">
       {props.coverUrl ? (
         <div
           className="h-32 w-full bg-cover bg-center"

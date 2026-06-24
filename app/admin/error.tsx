@@ -20,7 +20,7 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
           {error.digest ? <p className="text-[10px] text-slate-500 mt-2 font-mono">ref: {error.digest}</p> : null}
         </div>
         <div className="flex items-center justify-center gap-2">
-          <button onClick={reset} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0A1EFF)] text-white text-sm font-semibold">
+          <button onClick={reset} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0066FF)] text-white text-sm font-semibold">
             <RefreshCw className="w-3.5 h-3.5" />Retry
           </button>
           <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 text-sm font-semibold border border-white/10">

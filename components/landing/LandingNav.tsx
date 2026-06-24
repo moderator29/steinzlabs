@@ -80,7 +80,7 @@ export function LandingNav() {
                 button compact next to the CULT pill + hamburger. */}
             <Link href="/signup"
               className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-[13px] sm:text-sm font-bold text-white flex items-center whitespace-nowrap transition-all hover:scale-[1.03]"
-              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 20px rgba(10,30,255,.35)', letterSpacing: '0.01em' }}>
+              style={{ background: 'linear-gradient(135deg,#0066FF,#3d57ff)', boxShadow: '0 0 20px rgba(0,102,255,.35)', letterSpacing: '0.01em' }}>
               Get Started
             </Link>
             <button className="md:hidden text-white/60 hover:text-white" onClick={() => setOpen(true)}>
@@ -116,7 +116,7 @@ export function LandingNav() {
                 className="text-base font-medium text-white/70 hover:text-white transition-colors">Log In</Link>
             </div>
             <Link href="/signup" className="w-full py-3.5 rounded-xl font-bold text-white text-center"
-              style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)' }}>
+              style={{ background: 'linear-gradient(135deg,#0066FF,#3d57ff)' }}>
               Get Started
             </Link>
           </div>

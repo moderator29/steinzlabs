@@ -27,7 +27,7 @@ export interface BehaviorTimelineProps {
 }
 
 const KIND_COLOR: Record<TimelineShift['kind'], string> = {
-  style: '#0A1EFF',
+  style: '#0066FF',
   risk: '#F59E0B',
   pnl: '#10B981',
 };

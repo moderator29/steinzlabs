@@ -67,7 +67,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
   function txIcon(type: string | undefined) {
     if (type === 'send') return <Send className="w-3 h-3 text-[#EF4444]" />;
     if (type === 'receive') return <ArrowDownLeft className="w-3 h-3 text-[#10B981]" />;
-    return <RefreshCw className="w-3 h-3 text-[#0A1EFF]" />;
+    return <RefreshCw className="w-3 h-3 text-[#0066FF]" />;
   }
 
   function txColor(type: string | undefined) {
@@ -118,7 +118,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
                       {tx.status === 'failed' ? '✗' : '✓'}
                     </span>
                     <a href={`${explorerBase}${tx.hash}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-2.5 h-2.5 text-gray-600 hover:text-[#0A1EFF]" />
+                      <ExternalLink className="w-2.5 h-2.5 text-gray-600 hover:text-[#0066FF]" />
                     </a>
                   </div>
                 </div>
@@ -127,7 +127,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
           </div>
           {transactions.length > 15 && (
             <button onClick={() => setExpanded(e => !e)}
-              className="w-full mt-2 py-2 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
+              className="w-full mt-2 py-2 text-[10px] text-[#0066FF] hover:bg-[#0066FF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
               {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show all {transactions.length} transactions</>}
             </button>
           )}
@@ -456,7 +456,7 @@ export default function WalletIntelligencePage() {
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Search className="w-4 h-4" />
           </div>
           <h1 className="text-sm font-heading font-bold">Wallet Intelligence</h1>
@@ -487,7 +487,7 @@ export default function WalletIntelligencePage() {
             onClick={() => setActiveTab('wallet')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'wallet'
-                ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
+                ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/20'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -498,7 +498,7 @@ export default function WalletIntelligencePage() {
             onClick={() => setActiveTab('contract')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'contract'
-                ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
+                ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/20'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -537,12 +537,12 @@ export default function WalletIntelligencePage() {
                   onChange={(e) => setAddress(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleWalletSearch()}
                   placeholder="Enter wallet address (0x... or SOL)"
-                  className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+                  className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
                 />
                 <button
                   onClick={handleWalletSearch}
                   disabled={loading}
-                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+                  className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   Scan
@@ -561,7 +561,7 @@ export default function WalletIntelligencePage() {
 
             {loading && (
               <div className="text-center py-12">
-                <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
+                <Loader2 className="w-10 h-10 text-[#0066FF] mx-auto mb-3 animate-spin" />
                 <h3 className="text-sm font-semibold text-gray-400">Scanning wallet...</h3>
                 <p className="text-xs text-gray-600 mt-1">Fetching on-chain data</p>
               </div>
@@ -572,8 +572,8 @@ export default function WalletIntelligencePage() {
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
-                        <Wallet className="w-5 h-5 text-[#0A1EFF]" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-[#0066FF]" />
                       </div>
                       <div>
                         <div className="text-xs font-mono font-semibold">{walletData.address.slice(0, 8)}...{walletData.address.slice(-6)}</div>
@@ -584,7 +584,7 @@ export default function WalletIntelligencePage() {
                       href={getExplorerUrl(walletData.address, walletData.chain, walletData.explorerUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline"
+                      className="flex items-center gap-1 text-[10px] text-[#0066FF] hover:underline"
                     >
                       Explorer <ExternalLink className="w-3 h-3" />
                     </a>
@@ -630,7 +630,7 @@ export default function WalletIntelligencePage() {
                               {h.logoUrl ? (
                                 <img src={h.logoUrl} alt={h.symbol} className="w-7 h-7 rounded-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                               ) : (
-                                <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A1EFF]">
+                                <div className="w-7 h-7 bg-[#0066FF]/10 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0066FF]">
                                   {h.symbol.charAt(0)}
                                 </div>
                               )}
@@ -644,7 +644,7 @@ export default function WalletIntelligencePage() {
                                 <div className="flex items-center gap-1.5 w-12 sm:w-20">
                                   {/* Bar hidden on small screens to save space; numeric % always visible */}
                                   <div className="hidden sm:block flex-1 bg-white/5 rounded-full h-1">
-                                    <div className="h-1 rounded-full bg-[#0A1EFF]" style={{ width: `${Math.min(100, pct)}%` }} />
+                                    <div className="h-1 rounded-full bg-[#0066FF]" style={{ width: `${Math.min(100, pct)}%` }} />
                                   </div>
                                   <span className="text-[9px] text-gray-600 w-full sm:w-8 text-end">{pct.toFixed(1)}%</span>
                                 </div>
@@ -663,7 +663,7 @@ export default function WalletIntelligencePage() {
                   </div>
                   {walletData.holdings.length > 10 && (
                     <button onClick={() => setShowAllHoldings(v => !v)}
-                      className="w-full mt-2 py-2 text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
+                      className="w-full mt-2 py-2 text-[10px] text-[#0066FF] hover:bg-[#0066FF]/5 rounded-lg transition-colors flex items-center justify-center gap-1">
                       {showAllHoldings ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show all {walletData.holdings.length} holdings</>}
                     </button>
                   )}
@@ -672,7 +672,7 @@ export default function WalletIntelligencePage() {
                 {/* ─── Full DNA-Level AI Analysis ─── */}
                 {aiLoading && (
                   <div className="bg-[#0f1320] rounded-2xl p-6 border border-[#1a1f2e] flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin flex-shrink-0" />
+                    <Loader2 className="w-5 h-5 text-[#0066FF] animate-spin flex-shrink-0" />
                     <div>
                       <div className="text-sm font-semibold">Running AI Analysis...</div>
                       <div className="text-[10px] text-gray-500 mt-0.5">Analyzing portfolio patterns and risk</div>
@@ -722,7 +722,7 @@ export default function WalletIntelligencePage() {
                     {aiAnalysis.metrics && (
                       <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                         <div className="flex items-center gap-2 mb-3">
-                          <PieChart className="w-4 h-4 text-[#0A1EFF]" />
+                          <PieChart className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Performance Metrics</h3>
                         </div>
                         <div className="space-y-3">
@@ -751,7 +751,7 @@ export default function WalletIntelligencePage() {
                     {aiAnalysis.topInsight && (
                       <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                         <div className="flex items-center gap-2 mb-2">
-                          <Zap className="w-4 h-4 text-[#0A1EFF]" />
+                          <Zap className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Key Insight</h3>
                         </div>
                         <p className="text-sm text-gray-300 leading-relaxed">{aiAnalysis.topInsight}</p>
@@ -841,7 +841,7 @@ export default function WalletIntelligencePage() {
                     {aiAnalysis.activityPattern && (
                       <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                         <div className="flex items-center gap-2 mb-2">
-                          <Activity className="w-4 h-4 text-[#0A1EFF]" />
+                          <Activity className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Activity Pattern</h3>
                           <span className="text-[10px] text-gray-500 ms-auto">{aiAnalysis.activityPattern.estimatedFrequency}</span>
                         </div>
@@ -931,12 +931,12 @@ export default function WalletIntelligencePage() {
                   onChange={(e) => setContractInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleContractScan()}
                   placeholder="Enter contract address (0x...)"
-                  className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+                  className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
                 />
                 <button
                   onClick={handleContractScan}
                   disabled={contractLoading}
-                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+                  className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {contractLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
                   Scan
@@ -955,7 +955,7 @@ export default function WalletIntelligencePage() {
 
             {contractLoading && (
               <div className="text-center py-12">
-                <Loader2 className="w-10 h-10 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
+                <Loader2 className="w-10 h-10 text-[#0066FF] mx-auto mb-3 animate-spin" />
                 <h3 className="text-sm font-semibold text-gray-400">Scanning contract...</h3>
                 <p className="text-xs text-gray-600 mt-1">Analyzing security risks and tax structure</p>
               </div>
@@ -976,7 +976,7 @@ export default function WalletIntelligencePage() {
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[10px] font-mono text-gray-500">{contractResult.contract.slice(0, 10)}...{contractResult.contract.slice(-8)}</span>
-                          <button onClick={() => copyAddr(contractResult.contract, 'contract')} className="hover:text-[#0A1EFF] transition-colors">
+                          <button onClick={() => copyAddr(contractResult.contract, 'contract')} className="hover:text-[#0066FF] transition-colors">
                             {copied === 'contract' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-500" />}
                           </button>
                         </div>
@@ -993,7 +993,7 @@ export default function WalletIntelligencePage() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Holders</div>
-                      <div className="text-sm font-bold text-[#0A1EFF]">{contractResult.holderCount.toLocaleString()}</div>
+                      <div className="text-sm font-bold text-[#0066FF]">{contractResult.holderCount.toLocaleString()}</div>
                     </div>
                     <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Buy Tax</div>
@@ -1022,7 +1022,7 @@ export default function WalletIntelligencePage() {
                 {contractResult.dexData && (
                   <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-[#0A1EFF]" />
+                      <TrendingUp className="w-4 h-4 text-[#0066FF]" />
                       <h3 className="font-bold text-sm">Market Data</h3>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
@@ -1083,7 +1083,7 @@ export default function WalletIntelligencePage() {
                     </div>
                     {contractResult.dexData.url && (
                       <a href={contractResult.dexData.url} target="_blank" rel="noopener noreferrer"
-                        className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-[#0A1EFF] hover:underline">
+                        className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-[#0066FF] hover:underline">
                         View on DexScreener <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
@@ -1126,7 +1126,7 @@ export default function WalletIntelligencePage() {
                             {item.value.length > 20 ? `${item.value.slice(0, 10)}...${item.value.slice(-8)}` : item.value}
                           </span>
                           {item.value.startsWith('0x') && (
-                            <button onClick={() => copyAddr(item.value, item.label)} className="hover:text-[#0A1EFF] transition-colors">
+                            <button onClick={() => copyAddr(item.value, item.label)} className="hover:text-[#0066FF] transition-colors">
                               {copied === item.label ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-600" />}
                             </button>
                           )}

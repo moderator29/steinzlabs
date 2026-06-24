@@ -30,7 +30,7 @@ function DiscoverInner() {
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
         <div className="flex items-center gap-2">
-          <Compass className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" />
+          <Compass className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discover users</h1>
         </div>
       </div>

@@ -39,7 +39,7 @@ export function MessageButton({ peerId, permission, size = 'md', className }: Me
       className={`inline-flex items-center gap-1.5 font-semibold transition-colors border ${base} ${
         disabled
           ? 'bg-white/[0.02] border-white/[0.06] text-gray-500 cursor-not-allowed'
-          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 hover:border-[var(--nl-blue,#0A1EFF)]/40 text-slate-200'
+          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 hover:border-[var(--nl-blue,#0066FF)]/40 text-slate-200'
       } ${className ?? ''}`}
     >
       {disabled ? <Lock className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}

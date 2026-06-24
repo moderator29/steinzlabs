@@ -75,10 +75,10 @@ export function CohortRadar({ axes, size = 220 }: CohortRadarProps) {
           />
         );
       })}
-      <path d={targetPath} fill="rgba(10,30,255,0.20)" stroke="#0A1EFF" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d={targetPath} fill="rgba(0,102,255,0.20)" stroke="#0066FF" strokeWidth={1.5} strokeLinejoin="round" />
       {AXES.map((a, i) => {
         const p = pointForAxis(i, axes[a.key].percentile / 100, cx, cy, radius);
-        return <circle key={a.key} cx={p.x} cy={p.y} r={3} fill="#0A1EFF" />;
+        return <circle key={a.key} cx={p.x} cy={p.y} r={3} fill="#0066FF" />;
       })}
       {labels.map((l) => (
         <text

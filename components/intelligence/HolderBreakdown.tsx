@@ -37,7 +37,7 @@ export function HolderBreakdown({ composition }: HolderBreakdownProps) {
       percentage: composition.institutions.percentage,
       count: composition.institutions.count,
       value: composition.institutions.totalValue,
-      color: '#0A1EFF',
+      color: '#0066FF',
       detail: composition.institutions.entities.join(', ') || 'None detected',
     },
     {

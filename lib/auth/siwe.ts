@@ -15,7 +15,7 @@
  *    Expires: <iso>"
  *
  * It carried no domain, no URI, and no chainId. Without domain binding,
- * a phishing site (`fake.nakalabs.com`) can request the same string,
+ * a phishing site (`fake.nakalabs.xyz`) can request the same string,
  * the wallet UI shows nothing distinguishing, and a relayed signature
  * is structurally indistinguishable from a real one. EIP-4361 fixes
  * this by making the domain + URI + chainId part of the signed

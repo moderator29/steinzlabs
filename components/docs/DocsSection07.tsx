@@ -30,7 +30,7 @@ export function DocsSection07() {
       {/* Multi-Chain Swap */}
       <div id="swap-engine" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-          <Repeat className="w-4 h-4 text-[#0A1EFF]" />Multi-Chain Swap
+          <Repeat className="w-4 h-4 text-[#0066FF]" />Multi-Chain Swap
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           Swap any token on any supported chain from one interface. The routing engine queries multiple sources in parallel and picks the best price · no wallet switching, no bridge juggling.
@@ -75,7 +75,7 @@ export function DocsSection07() {
           </p>
         </div>
 
-        <div className="mt-3 bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/25 rounded-xl p-3 space-y-2">
+        <div className="mt-3 bg-[#0066FF]/[0.05] border border-[#0066FF]/25 rounded-xl p-3 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold">AI &amp; Swap Safety</p>
           <p className="text-xs text-gray-300 leading-relaxed">
             VTX Agent can quote swaps and render an inline Swap Card, but it <span className="text-white font-semibold">cannot execute trades, withdraw funds, or sign anything</span> on your behalf. Every swap is broadcast only after you manually tap <span className="font-mono text-[#4D6BFF]">Sign &amp; Swap</span> and your wallet approves the signature.

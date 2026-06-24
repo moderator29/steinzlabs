@@ -21,7 +21,7 @@ export const FEATURE_CARDS: CardData[] = [
     badge: 'AI_POWERED',
     badgePosition: 'top-right',
     icon: Brain,
-    gradient: 'linear-gradient(135deg,#0A1EFF 0%,#0c22e0 50%,#050ea8 100%)',
+    gradient: 'linear-gradient(135deg,#0066FF 0%,#0c22e0 50%,#050ea8 100%)',
     cta: 'Start Analyzing →', href: '/dashboard',
   },
   {

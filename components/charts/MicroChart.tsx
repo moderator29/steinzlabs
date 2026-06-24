@@ -35,7 +35,7 @@ interface CommonProps<T extends Row> {
   className?: string;
 }
 
-const DEFAULT_COLOR = '#0A1EFF';
+const DEFAULT_COLOR = '#0066FF';
 const PAD = { top: 12, right: 8, bottom: 22, left: 36 };
 
 function num(v: unknown): number {
@@ -285,7 +285,7 @@ interface DonutProps<T extends Row> {
   className?: string;
 }
 
-const DONUT_DEFAULT_COLORS = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899', '#84CC16'];
+const DONUT_DEFAULT_COLORS = ['#0066FF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899', '#84CC16'];
 
 export function MicroDonut<T extends Row>({
   data,

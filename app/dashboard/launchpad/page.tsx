@@ -66,7 +66,7 @@ export default function LaunchpadPage() {
 
   const statusColor = (status: string) => {
     if (status === 'active') return 'bg-[#10B981]/20 text-[#10B981]';
-    if (status === 'funded' || status === 'completed') return 'bg-[#0A1EFF]/20 text-[#0A1EFF]';
+    if (status === 'funded' || status === 'completed') return 'bg-[#0066FF]/20 text-[#0066FF]';
     if (status === 'pending') return 'bg-[#F59E0B]/20 text-[#F59E0B]';
     return 'bg-gray-500/20 text-gray-500';
   };
@@ -92,14 +92,14 @@ export default function LaunchpadPage() {
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <Rocket className="w-5 h-5 text-[#0A1EFF]" />
+          <Rocket className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Launchpad</h1>
           <span className="ms-auto px-2 py-0.5 bg-[#10B981]/20 text-[#10B981] rounded text-[10px] font-semibold">Milestone-Gated</span>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="glass rounded-xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-r from-[#0A1EFF]/5 to-[#7C3AED]/5">
+        <div className="glass rounded-xl p-4 border border-[#0066FF]/20 bg-gradient-to-r from-[#0066FF]/5 to-[#7C3AED]/5">
           <h2 className="text-sm font-bold mb-1">NAKA Milestone-Gated Launchpad</h2>
           <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
             Every project is verified, every milestone is enforced, and every investor is protected. Funds release only when builders deliver.
@@ -115,7 +115,7 @@ export default function LaunchpadPage() {
             <div className="text-[10px] text-gray-500">Total Raised</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#0A1EFF]">{stats.totalProjects}</div>
+            <div className="text-lg font-bold text-[#0066FF]">{stats.totalProjects}</div>
             <div className="text-[10px] text-gray-500">Projects</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
@@ -130,7 +130,7 @@ export default function LaunchpadPage() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Live', 'Upcoming', 'Funded'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
               {f}
             </button>
           ))}
@@ -138,7 +138,7 @@ export default function LaunchpadPage() {
 
         {loading ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 text-[#0A1EFF] mx-auto mb-3 animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#0066FF] mx-auto mb-3 animate-spin" />
             <p className="text-sm text-gray-400">Loading projects...</p>
           </div>
         ) : (
@@ -152,7 +152,7 @@ export default function LaunchpadPage() {
                 <div key={project.id} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center relative">
+                      <div className="w-11 h-11 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center relative">
                         <span className="text-xs font-bold">{project.name.charAt(0)}</span>
                         {project.verified && <img src="/verified-badge.png" alt="Verified" className="absolute -bottom-1 -right-1 w-4 h-4" />}
                       </div>
@@ -171,10 +171,10 @@ export default function LaunchpadPage() {
                   <div className="mb-2">
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-gray-500">${project.raised.toLocaleString()} / ${project.goal.toLocaleString()}</span>
-                      <span className="font-semibold text-[#0A1EFF]">{pct}%</span>
+                      <span className="font-semibold text-[#0066FF]">{pct}%</span>
                     </div>
                     <div className="w-full bg-white/10 rounded-full h-2">
-                      <div className="h-2 rounded-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED]" style={{ width: `${Math.min(pct, 100)}%` }}></div>
+                      <div className="h-2 rounded-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED]" style={{ width: `${Math.min(pct, 100)}%` }}></div>
                     </div>
                   </div>
 
