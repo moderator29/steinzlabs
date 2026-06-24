@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getUserByWallet } from '@/lib/database/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -238,7 +239,12 @@ export async function GET(req: NextRequest) {
     // Bulk upsert by (chain, tx_hash). Best-effort: a single failed insert
     // shouldn't poison the response.
     try {
+      // Attribute the cache rows to the wallet's owner (if any) so RLS-bound
+      // readers can see them; the column is nullable for unowned wallets.
+      const owner = await getUserByWallet(address).catch(() => null);
+      const userId = owner?.id ?? null;
       const rows = upstream.map((d) => ({
+        user_id: userId,
         wallet: address,
         chain: d.chain,
         tx_hash: d.tx_hash,
@@ -250,7 +256,9 @@ export async function GET(req: NextRequest) {
         usd_value: d.usd_value,
         timestamp: d.timestamp,
       }));
-      await admin.from('transaction_history').upsert(rows, { onConflict: 'tx_hash' });
+      // The unique index is idx_tx_history_hash (tx_hash, chain) — conflicting
+      // on tx_hash alone matched no constraint and errored every cache write.
+      await admin.from('transaction_history').upsert(rows, { onConflict: 'tx_hash,chain' });
     } catch (err) {
       Sentry.captureException(err, { tags: { route: 'wallet/transactions', stage: 'cache-write' } });
     }
