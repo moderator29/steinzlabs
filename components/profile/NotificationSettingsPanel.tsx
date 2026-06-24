@@ -108,7 +108,7 @@ function EventRow({ icon, label, description, enabled, onToggle }: EventRowProps
     >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
         enabled
-          ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/30'
+          ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/30'
           : 'bg-slate-900/60 text-slate-500 border border-slate-800'
       }`}>
         {icon}
@@ -117,7 +117,7 @@ function EventRow({ icon, label, description, enabled, onToggle }: EventRowProps
         <div className="text-sm font-medium text-white">{label}</div>
         <div className="text-[11px] text-slate-500 leading-snug">{description}</div>
       </div>
-      <div className={`w-8 h-5 rounded-md transition-colors relative flex-shrink-0 ${enabled ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
+      <div className={`w-8 h-5 rounded-md transition-colors relative flex-shrink-0 ${enabled ? 'bg-[#0066FF]' : 'bg-slate-800'}`}>
         <span className={`absolute top-0.5 ${enabled ? 'left-[14px]' : 'left-0.5'} w-4 h-4 rounded-[4px] bg-white shadow transition-all`} />
       </div>
     </button>
@@ -331,7 +331,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
                   value={minutesToTimeString(settings.quiet_hours_start_minute ?? 1320)}
                   onChange={(e) => void update({ quiet_hours_start_minute: timeStringToMinutes(e.target.value) })}
                   disabled={!settings.quiet_hours_enabled}
-                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40 disabled:opacity-60"
+                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
                 />
               </label>
               <label className="text-[11px] text-slate-400">
@@ -341,7 +341,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
                   value={minutesToTimeString(settings.quiet_hours_end_minute ?? 420)}
                   onChange={(e) => void update({ quiet_hours_end_minute: timeStringToMinutes(e.target.value) })}
                   disabled={!settings.quiet_hours_enabled}
-                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0A1EFF]/40 disabled:opacity-60"
+                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
                 />
               </label>
               <div className="col-span-2 flex items-center gap-2 mt-1 text-[11px]">

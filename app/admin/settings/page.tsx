@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
             </div>
           )}
           <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors font-medium">
+            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors font-medium">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <StatusDot status="active" size="sm" /> : <Save className="w-3.5 h-3.5" />}
             {saved ? 'Saved!' : 'Save Changes'}
           </button>
@@ -116,7 +116,7 @@ export default function AdminSettingsPage() {
       <div className="flex gap-1.5 mb-4 flex-wrap">
         {CATEGORIES.map(c => (
           <button key={c} onClick={() => setCategory(c)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${category === c ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
+            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${category === c ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
             {c}
           </button>
         ))}
@@ -138,7 +138,7 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <button onClick={() => toggle(flag.key)}
-                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${flag.enabled ? 'bg-[#0A1EFF]' : 'bg-[#1E2433]'}`}>
+                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${flag.enabled ? 'bg-[#0066FF]' : 'bg-[#1E2433]'}`}>
                 <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${flag.enabled ? 'right-1' : 'left-1'}`} />
               </button>
             </div>

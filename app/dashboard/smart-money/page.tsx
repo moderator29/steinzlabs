@@ -225,7 +225,7 @@ export default function SmartMoneyPage() {
         </div>
 
         {activeTab === 'leaderboard' && <div className="px-4 pb-3">
-          <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 focus-within:border-[#0A1EFF]/30 transition-colors">
+          <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 focus-within:border-[#0066FF]/30 transition-colors">
             <Search className="w-3.5 h-3.5 text-gray-600" />
             <input
               type="text"
@@ -250,7 +250,7 @@ export default function SmartMoneyPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
-            <Users className="w-4 h-4 text-[#0A1EFF] mx-auto mb-1" />
+            <Users className="w-4 h-4 text-[#0066FF] mx-auto mb-1" />
             <div className="text-lg font-bold">{wallets.length}</div>
             <div className="text-[9px] text-gray-600 uppercase">Tracked</div>
           </div>
@@ -355,7 +355,7 @@ export default function SmartMoneyPage() {
           <SortAsc className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
           {(['rank', 'winRate', 'pnlChange', 'totalVolume', 'trades'] as SortKey[]).map(k => (
             <button key={k} onClick={() => setSortKey(k)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.05]'}`}>
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.05]'}`}>
               {k === 'pnlChange' ? 'PnL%' : k === 'totalVolume' ? 'Volume' : k === 'winRate' ? 'Win Rate' : k.charAt(0).toUpperCase() + k.slice(1)}
             </button>
           ))}
@@ -382,7 +382,7 @@ export default function SmartMoneyPage() {
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold ${
                       move.action === 'Bought' || move.action === 'Added LP' ? 'bg-[#10B981]/10 text-[#10B981]' :
                       move.action === 'Sold' ? 'bg-[#EF4444]/10 text-[#EF4444]' :
-                      'bg-[#0A1EFF]/10 text-[#0A1EFF]'
+                      'bg-[#0066FF]/10 text-[#0066FF]'
                     }`}>
                       {move.action === 'Bought' ? '↑' : move.action === 'Sold' ? '↓' : '↔'}
                     </div>
@@ -405,7 +405,7 @@ export default function SmartMoneyPage() {
         {/* Wallet List */}
         {loading && wallets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 text-[#0A1EFF] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#0066FF] animate-spin" />
             <p className="text-sm text-gray-400">Scanning on-chain activity...</p>
             <p className="text-xs text-gray-600">Fetching real wallet data from Alchemy &amp; DexScreener</p>
           </div>
@@ -413,7 +413,7 @@ export default function SmartMoneyPage() {
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Trophy className="w-10 h-10 text-gray-700" />
             <p className="text-sm text-red-400">{error}</p>
-            <button onClick={() => fetchData()} className="text-xs text-[#0A1EFF] hover:underline">Try again</button>
+            <button onClick={() => fetchData()} className="text-xs text-[#0066FF] hover:underline">Try again</button>
           </div>
         ) : (
           <div className="space-y-2">
@@ -421,7 +421,7 @@ export default function SmartMoneyPage() {
               <div
                 key={wallet.id}
                 className={`bg-[#0D1117] rounded-2xl border transition-all ${
-                  watching.includes(wallet.id) ? 'border-[#0A1EFF]/15' : 'border-white/[0.04]'
+                  watching.includes(wallet.id) ? 'border-[#0066FF]/15' : 'border-white/[0.04]'
                 } hover:border-white/[0.08]`}
               >
                 <div className="p-4 cursor-pointer" onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)}>
@@ -453,7 +453,7 @@ export default function SmartMoneyPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleWatch(wallet.id); }}
-                        className={`p-2 rounded-lg transition-all ${watching.includes(wallet.id) ? 'bg-[#0A1EFF]/15 text-[#0A1EFF]' : 'text-gray-600 hover:bg-white/[0.04]'}`}
+                        className={`p-2 rounded-lg transition-all ${watching.includes(wallet.id) ? 'bg-[#0066FF]/15 text-[#0066FF]' : 'text-gray-600 hover:bg-white/[0.04]'}`}
                         title={watching.includes(wallet.id) ? 'Unwatch' : 'Watch'}
                       >
                         {watching.includes(wallet.id) ? <Eye className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -467,9 +467,9 @@ export default function SmartMoneyPage() {
                       <Target className="w-3 h-3 text-[#10B981]" />
                       <span className="text-[10px] font-semibold text-[#10B981]">{wallet.winRate}% Win</span>
                     </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0A1EFF]/[0.06]">
-                      <DollarSign className="w-3 h-3 text-[#0A1EFF]" />
-                      <span className="text-[10px] font-semibold text-[#0A1EFF]">{wallet.totalVolumeStr}</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0066FF]/[0.06]">
+                      <DollarSign className="w-3 h-3 text-[#0066FF]" />
+                      <span className="text-[10px] font-semibold text-[#0066FF]">{wallet.totalVolumeStr}</span>
                       <span className={`text-[8px] font-bold ${wallet.pnlChange >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
                         {wallet.pnlChange >= 0 ? '+' : ''}{wallet.pnlChange}%
                       </span>
@@ -486,7 +486,7 @@ export default function SmartMoneyPage() {
                       <span key={c} className="text-[8px] px-1.5 py-0.5 bg-white/[0.04] rounded font-mono text-gray-500">{c}</span>
                     ))}
                     {wallet.tags.map(t => (
-                      <span key={t} className="text-[8px] px-1.5 py-0.5 bg-[#0A1EFF]/[0.06] rounded text-[#0A1EFF]/70">{t}</span>
+                      <span key={t} className="text-[8px] px-1.5 py-0.5 bg-[#0066FF]/[0.06] rounded text-[#0066FF]/70">{t}</span>
                     ))}
                     <button onClick={e => { e.stopPropagation(); setPaperTrade(wallet); }}
                       className="ms-auto text-[9px] px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded-lg font-semibold">
@@ -502,7 +502,7 @@ export default function SmartMoneyPage() {
                         <div className="text-[9px] text-gray-600 uppercase font-semibold mb-1.5">Recent Activity</div>
                         {wallet.recentTrades.map((trade, ti) => (
                           <div key={ti} className="flex items-center gap-2 bg-[#060A12] rounded-lg px-2.5 py-1.5">
-                            <span className={`text-[9px] font-bold w-10 ${trade.action === 'Bought' ? 'text-[#10B981]' : trade.action === 'Sold' ? 'text-[#EF4444]' : 'text-[#0A1EFF]'}`}>
+                            <span className={`text-[9px] font-bold w-10 ${trade.action === 'Bought' ? 'text-[#10B981]' : trade.action === 'Sold' ? 'text-[#EF4444]' : 'text-[#0066FF]'}`}>
                               {trade.action}
                             </span>
                             <span className="text-[10px] font-semibold flex-1">{trade.token}</span>
@@ -529,7 +529,7 @@ export default function SmartMoneyPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => router.push(`/dashboard/wallet-intelligence?address=${wallet.address}`)}
-                        className="flex-1 py-2.5 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-xl text-[10px] font-semibold text-[#0A1EFF] hover:bg-[#0A1EFF]/15 transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 bg-[#0066FF]/10 border border-[#0066FF]/20 rounded-xl text-[10px] font-semibold text-[#0066FF] hover:bg-[#0066FF]/15 transition-colors flex items-center justify-center gap-1.5"
                       >
                         <Shield className="w-3 h-3" /> Analyze
                       </button>
@@ -609,7 +609,7 @@ export default function SmartMoneyPage() {
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
                 </div>
-                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ms-4 cursor-pointer">
+                <div className="w-10 h-5 rounded-full bg-[#0066FF] relative flex-shrink-0 ms-4 cursor-pointer">
                   <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
                 </div>
               </div>
@@ -625,7 +625,7 @@ export default function SmartMoneyPage() {
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
                 </div>
-                <div className="w-10 h-5 rounded-full bg-[#0A1EFF] relative flex-shrink-0 ms-4 cursor-pointer">
+                <div className="w-10 h-5 rounded-full bg-[#0066FF] relative flex-shrink-0 ms-4 cursor-pointer">
                   <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
                 </div>
               </div>
@@ -675,7 +675,7 @@ export default function SmartMoneyPage() {
                 ))}
               </div>
               <button onClick={() => setPaperTrade(null)}
-                className="w-full py-2.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-xs font-bold">
+                className="w-full py-2.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl text-xs font-bold">
                 Start Paper Simulation
               </button>
             </div>

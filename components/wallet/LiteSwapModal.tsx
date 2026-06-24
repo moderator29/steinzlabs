@@ -159,7 +159,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
       <div ref={trapRef} className="bg-[#0D1117] border border-slate-800 rounded-2xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Repeat className="w-4 h-4 text-[#0A1EFF]" aria-hidden />
+            <Repeat className="w-4 h-4 text-[#0066FF]" aria-hidden />
             <h3 id="lite-swap-title" className="text-base font-bold">Swap USDC → {tokenSymbol}</h3>
           </div>
           <button onClick={onClose} aria-label="Close swap modal" className="p-1 rounded-md hover:bg-white/10">
@@ -201,7 +201,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
                 key={bps}
                 onClick={() => setSlippageBps(bps)}
                 aria-pressed={slippageBps === bps}
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${slippageBps === bps ? 'bg-[#0A1EFF] text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${slippageBps === bps ? 'bg-[#0066FF] text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
               >
                 {bps / 100}%
               </button>
@@ -224,7 +224,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
           type="button"
           onClick={handleConfirm}
           disabled={!quote || loading || !!error}
-          className="w-full py-2.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold text-white flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-lg bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold text-white flex items-center justify-center gap-1.5"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden /> : <Repeat className="w-3.5 h-3.5" aria-hidden />}
           Open in swap to sign

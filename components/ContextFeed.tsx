@@ -35,7 +35,7 @@ type FeedMode = ChainFilter | 'archive';
 const VIRTUAL_CAP = 80;
 
 const CHAIN_TABS: { id: FeedMode; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
-  { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#0A1EFF', gradient: 'from-[#0A1EFF] to-[#7C3AED]' },
+  { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#0066FF', gradient: 'from-[#0066FF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
   { id: 'ethereum', label: 'Ethereum', icon: EthereumIcon, color: '#627EEA', gradient: 'from-[#627EEA] to-[#C99DFF]' },
   { id: 'bsc', label: 'BSC', icon: BscIcon, color: '#F0B90B', gradient: 'from-[#F0B90B] to-[#FCD535]' },
@@ -58,7 +58,7 @@ function getChainBadgeIcon(chain: string) {
     case 'base': return { Icon: EthereumIcon, color: '#0052FF', bg: '#0052FF15', label: 'BASE' };
     case 'arbitrum': return { Icon: EthereumIcon, color: '#28A0F0', bg: '#28A0F015', label: 'ARB' };
     case 'optimism': return { Icon: EthereumIcon, color: '#FF0420', bg: '#FF042015', label: 'OP' };
-    default: return { Icon: AllChainsIcon, color: '#0A1EFF', bg: '#0A1EFF15', label: chain.toUpperCase().slice(0, 4) };
+    default: return { Icon: AllChainsIcon, color: '#0066FF', bg: '#0066FF15', label: chain.toUpperCase().slice(0, 4) };
   }
 }
 
@@ -148,7 +148,7 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
 
         {generating ? (
           <div className="flex items-center justify-center py-6">
-            <div className="w-5 h-5 border-2 border-[#0A1EFF] border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -598,7 +598,7 @@ export default function ContextFeed() {
               onClick={() => setActiveFilter(f.id)}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${
                 isActive
-                  ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border-[#0A1EFF]/40'
+                  ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40'
                   : 'text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-white/5'
               }`}
             >
@@ -630,7 +630,7 @@ export default function ContextFeed() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#0A1EFF] hover:bg-white/5 transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-[#0066FF] hover:bg-white/5 transition-all"
           >
             <RefreshIcon spinning={refreshing} />
             <span className="hidden sm:inline">Refresh</span>
@@ -698,7 +698,7 @@ export default function ContextFeed() {
           return (
             <div
               key={`${event.id}-${i}`}
-              className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0A1EFF]/30 transition-all overflow-hidden"
+              className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0066FF]/30 transition-all overflow-hidden"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -724,7 +724,7 @@ export default function ContextFeed() {
                     </span>
                   )}
                   {event.valueUsd >= 50000 && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0A1EFF]/10 text-[#0A1EFF] border border-[#0A1EFF]/20 flex-shrink-0">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#0066FF]/10 text-[#0066FF] border border-[#0066FF]/20 flex-shrink-0">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                       INTEL
                     </span>
@@ -764,7 +764,7 @@ export default function ContextFeed() {
                 return (
                   <a
                     href="/dashboard/security/portfolio-risk"
-                    className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF] hover:bg-[#0A1EFF]/15 hover:border-[#0A1EFF]/50"
+                    className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0066FF]/10 border border-[#0066FF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF] hover:bg-[#0066FF]/15 hover:border-[#0066FF]/50"
                     aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours — check portfolio risk`}
                   >
                     <span aria-hidden>◈</span>
@@ -892,8 +892,8 @@ export default function ContextFeed() {
                   onClick={() => handleShare(event)}
                   className={`flex items-center gap-1.5 transition-all ${
                     eng.shared
-                      ? 'text-[#0A1EFF]'
-                      : 'hover:text-[#0A1EFF]'
+                      ? 'text-[#0066FF]'
+                      : 'hover:text-[#0066FF]'
                   }`}
                 >
                   <Share2 className="w-3.5 h-3.5" /> {eng.shares.toLocaleString()}

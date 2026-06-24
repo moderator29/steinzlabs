@@ -246,7 +246,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               type="button"
               onClick={() => setShowIntel((v) => !v)}
               className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-                showIntel ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40' : 'bg-slate-900/60 text-slate-400 hover:text-white border border-transparent'
+                showIntel ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-slate-900/60 text-slate-400 hover:text-white border border-transparent'
               }`}
             >
               <Brain size={13} /> Intel
@@ -329,7 +329,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                       onClick={() => handleIntervalChange(tf.id)}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors flex-shrink-0 ${
                         active
-                          ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                          ? 'bg-[#0066FF]/20 text-[#8FA3FF] border border-[#0066FF]/40'
                           : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
                       }`}
                       aria-pressed={active}

@@ -79,7 +79,7 @@ export function LanguageSwitcher({ variant = 'nav' }: Props) {
               key={l.code}
               onClick={() => choose(l)}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start text-xs transition-colors ${
-                l.code === lang ? 'bg-[#0A1EFF]/15 text-white' : 'text-gray-300 hover:bg-white/[0.04]'
+                l.code === lang ? 'bg-[#0066FF]/15 text-white' : 'text-gray-300 hover:bg-white/[0.04]'
               }`}
             >
               <span className="text-base leading-none">{l.flag}</span>

@@ -20,7 +20,7 @@ export function StreamingCursor() {
           height: 14px;
           margin-left: 2px;
           vertical-align: -2px;
-          background: linear-gradient(135deg, #0A1EFF, #7C3AED);
+          background: linear-gradient(135deg, #0066FF, #7C3AED);
           border-radius: 2px;
           animation: naka-stream-blink 1.05s ease-in-out infinite;
         }

@@ -68,7 +68,7 @@ function loadArchivedEvents(): ArchivedEvent[] {
 
 function getEventIcon(type: string) {
   switch (type) {
-    case 'whale_transfer': return { icon: Zap, color: '#0A1EFF' };
+    case 'whale_transfer': return { icon: Zap, color: '#0066FF' };
     case 'price_alert': return { icon: TrendingUp, color: '#10B981' };
     case 'liquidity_change': return { icon: RefreshCw, color: '#7C3AED' };
     case 'governance_vote': return { icon: Filter, color: '#F59E0B' };
@@ -128,14 +128,14 @@ export default function ArchivePage() {
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <Archive className="w-5 h-5 text-[#0A1EFF]" />
+          <Archive className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Archive</h1>
           <span className="text-[10px] text-gray-500 ms-1">Events older than 24h</span>
         </div>
       </div>
 
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
-        <div className="flex items-center gap-2 bg-[#111827] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0A1EFF]/40 transition-colors">
+        <div className="flex items-center gap-2 bg-[#111827] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0066FF]/40 transition-colors">
           <Search className="w-4 h-4 text-gray-600" />
           <input
             type="text"
@@ -154,7 +154,7 @@ export default function ArchivePage() {
                 onClick={() => setTypeFilter(f.key)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
                   typeFilter === f.key
-                    ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30'
+                    ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30'
                     : 'text-gray-500 border border-white/[0.06] hover:text-gray-300'
                 }`}
               >
@@ -232,7 +232,7 @@ export default function ArchivePage() {
                           {event.timeAgo}
                         </span>
                         {event.tokenSymbol && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0A1EFF]/10 text-[#0A1EFF] font-semibold">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0066FF]/10 text-[#0066FF] font-semibold">
                             {event.tokenSymbol}
                           </span>
                         )}

@@ -15,7 +15,7 @@ export function ErrorState({ message = 'Failed to load data', onRetry }: ErrorSt
       {onRetry && (
         <button
           onClick={onRetry}
-          className="flex items-center gap-2 text-sm text-[#0A1EFF] hover:text-blue-400 transition-colors"
+          className="flex items-center gap-2 text-sm text-[#0066FF] hover:text-blue-400 transition-colors"
         >
           <RefreshCw size={14} />
           Retry

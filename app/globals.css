@@ -26,8 +26,8 @@
 }
 
 :root {
-  --primary: #0A1EFF;
-  --primary-rgb: 10, 30, 255;
+  --primary: #0066FF;
+  --primary-rgb: 0, 102, 255;
   --accent-purple: #7C3AED;
   --accent-purple-rgb: 124, 58, 237;
   --bg-primary: #060A12;
@@ -44,9 +44,9 @@
 
   /* Naka Labs design tokens — PDF S1/S2 sweep. Components must
      reference var(--nl-*) for brand colors instead of inline hex.
-     Audit identified 1,348 inline #0A1EFF usages as top candidate
+     Audit identified 1,348 inline #0066FF usages as top candidate
      for the ongoing per-file sweep across ~200 files. */
-  --nl-blue:                  #0A1EFF;
+  --nl-blue:                  #0066FF;
   --nl-blue-strong:           #0818CC;
   --nl-blue-lighter:          #4D6BFF;
   --nl-blue-darker:           #0818CC;
@@ -321,7 +321,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 8px;
   z-index: 9999;
   padding: 8px 16px;
-  background: #0A1EFF;
+  background: #0066FF;
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -365,8 +365,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .naka-card:hover {
-  border-color: rgba(10, 30, 255, 0.35);
-  box-shadow: 0 0 30px rgba(10, 30, 255, 0.18);
+  border-color: rgba(0, 102, 255, 0.35);
+  box-shadow: 0 0 30px rgba(0, 102, 255, 0.18);
 }
 
 .card-hover {
@@ -386,7 +386,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .gradient-text-blue {
-  background: linear-gradient(135deg, #0A1EFF, #5166FF);
+  background: linear-gradient(135deg, #0066FF, #5166FF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -782,19 +782,19 @@ h1, h2, h3, h4, h5, h6 {
 
 /* "Dark neon blue" brand buttons in light mode — Send / Receive / Swap,
    Add Account, Import Wallet, wallet hero container. Anything carrying the
-   #0A1EFF tint gets pinned to a deeper, readable neon shade with white text
+   #0066FF tint gets pinned to a deeper, readable neon shade with white text
    so the buttons pop on a light surface. */
-[data-theme="light"] .bg-\[\#0A1EFF\],
-[data-theme="light"] .bg-\[\#0916CC\],
-[data-theme="light"] button.bg-\[\#0A1EFF\]\/10,
-[data-theme="light"] button.bg-\[\#0A1EFF\]\/15,
-[data-theme="light"] button.bg-\[\#0A1EFF\]\/20 {
-  background: #0A1EFF !important;
+[data-theme="light"] .bg-\[\#0066FF\],
+[data-theme="light"] .bg-\[\#0052CC\],
+[data-theme="light"] button.bg-\[\#0066FF\]\/10,
+[data-theme="light"] button.bg-\[\#0066FF\]\/15,
+[data-theme="light"] button.bg-\[\#0066FF\]\/20 {
+  background: #0066FF !important;
   color: #FFFFFF !important;
-  border-color: #0A1EFF !important;
+  border-color: #0066FF !important;
 }
-[data-theme="light"] .text-\[\#0A1EFF\] {
-  color: #0A1EFF !important;
+[data-theme="light"] .text-\[\#0066FF\] {
+  color: #0066FF !important;
 }
 
 [data-theme="light"] .text-white {
@@ -831,7 +831,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .cyber-line::after {
-  background: linear-gradient(90deg, transparent, #0A1EFF, #7C3AED, transparent) !important;
+  background: linear-gradient(90deg, transparent, #0066FF, #7C3AED, transparent) !important;
 }
 
 [data-theme="bingo"] body,
@@ -860,12 +860,12 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(124, 58, 237, 0.2) !important;
 }
 
-[data-theme="bingo"] .text-\[\#0A1EFF\],
+[data-theme="bingo"] .text-\[\#0066FF\],
 [data-theme="bingo"] .text-neon-blue {
   color: #E040FB !important;
 }
 
-[data-theme="bingo"] .from-\[\#0A1EFF\],
+[data-theme="bingo"] .from-\[\#0066FF\],
 [data-theme="bingo"] .from-neon-blue {
   --tw-gradient-from: #E040FB !important;
 }
@@ -874,7 +874,7 @@ h1, h2, h3, h4, h5, h6 {
   --tw-gradient-to: #FF6D00 !important;
 }
 
-[data-theme="bingo"] .shadow-\[\#0A1EFF\]\/20 {
+[data-theme="bingo"] .shadow-\[\#0066FF\]\/20 {
   --tw-shadow-color: rgba(224, 64, 251, 0.2) !important;
 }
 
@@ -1554,15 +1554,15 @@ html body {
 }
 .naka-card:hover {
   border-color: rgba(125, 163, 255, 0.35);
-  box-shadow: 0 6px 28px rgba(10, 30, 255, 0.08);
+  box-shadow: 0 6px 28px rgba(0, 102, 255, 0.08);
 }
 [data-theme="light"] .naka-card {
   background: #ffffff;
   border-color: rgba(15, 23, 42, 0.1);
 }
 [data-theme="light"] .naka-card:hover {
-  border-color: rgba(10, 30, 255, 0.25);
-  box-shadow: 0 6px 28px rgba(10, 30, 255, 0.12);
+  border-color: rgba(0, 102, 255, 0.25);
+  box-shadow: 0 6px 28px rgba(0, 102, 255, 0.12);
 }
 
 .naka-button-primary {
@@ -1571,17 +1571,17 @@ html body {
   gap: 6px;
   padding: 10px 18px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0A1EFF 0%, #5566FF 100%);
+  background: linear-gradient(135deg, #0066FF 0%, #5566FF 100%);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   transition: transform 150ms ease, box-shadow 200ms ease, filter 150ms ease;
-  box-shadow: 0 4px 16px rgba(10, 30, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 102, 255, 0.25);
 }
 .naka-button-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 28px rgba(10, 30, 255, 0.45), 0 0 24px rgba(10, 30, 255, 0.2);
+  box-shadow: 0 8px 28px rgba(0, 102, 255, 0.45), 0 0 24px rgba(0, 102, 255, 0.2);
   filter: brightness(1.08);
 }
 .naka-button-primary:active { transform: translateY(0); }
@@ -1622,13 +1622,13 @@ html body {
 [data-theme="light"] .naka-auth-page input {
   background: #ffffff !important;
   color: #0a0e1a !important;
-  border-color: rgba(10, 30, 255, 0.25) !important;
+  border-color: rgba(0, 102, 255, 0.25) !important;
 }
 [data-theme="light"] .naka-auth-page input::placeholder {
   color: rgba(10, 14, 26, 0.45) !important;
 }
 [data-theme="light"] .naka-auth-page a {
-  color: #0a1eff !important;
+  color: #0066FF !important;
 }
 
 /* ── §3.4 Appearance system ───────────────────────────────────────────────

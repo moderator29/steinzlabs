@@ -26,7 +26,7 @@ export default function WalletAnalysisPage() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <Wallet className="w-4 h-4 text-[#0A1EFF]" aria-hidden="true" />
+        <Wallet className="w-4 h-4 text-[#0066FF]" aria-hidden="true" />
         <h2 className="text-sm font-bold">Wallet Analysis</h2>
       </div>
 
@@ -42,13 +42,13 @@ export default function WalletAnalysisPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runScan()}
             placeholder="0x… or Solana address"
-            className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30"
+            className="flex-1 bg-[#060A12] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
           />
           <button
             type="button"
             onClick={runScan}
             disabled={!input.trim()}
-            className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             <Search className="w-3.5 h-3.5" aria-hidden="true" />
             Scan
@@ -58,7 +58,7 @@ export default function WalletAnalysisPage() {
           <button
             type="button"
             onClick={useConnected}
-            className="mt-2 text-[10px] text-[#0A1EFF] hover:underline"
+            className="mt-2 text-[10px] text-[#0066FF] hover:underline"
           >
             Use connected wallet
           </button>
@@ -70,13 +70,13 @@ export default function WalletAnalysisPage() {
       {target && (
         <Link
           href={`/dashboard/wallet-intelligence?address=${encodeURIComponent(target)}`}
-          className="flex items-center justify-between rounded-2xl border border-[#0A1EFF]/30 bg-gradient-to-br from-[#0A1EFF]/[0.05] to-transparent p-4 hover:border-[#0A1EFF]/60 transition-colors"
+          className="flex items-center justify-between rounded-2xl border border-[#0066FF]/30 bg-gradient-to-br from-[#0066FF]/[0.05] to-transparent p-4 hover:border-[#0066FF]/60 transition-colors"
         >
           <div>
             <div className="text-sm font-semibold">Full alpha report</div>
             <p className="text-[11px] text-gray-400 mt-1">Trading history, PnL, smart-money flags, cluster analysis.</p>
           </div>
-          <ExternalLink className="w-4 h-4 text-[#0A1EFF]" aria-hidden="true" />
+          <ExternalLink className="w-4 h-4 text-[#0066FF]" aria-hidden="true" />
         </Link>
       )}
 

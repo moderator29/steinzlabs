@@ -40,7 +40,7 @@ export function DetailErrorBoundary({
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white text-sm font-semibold"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white text-sm font-semibold"
           >
             <RefreshCw className="w-3.5 h-3.5" aria-hidden />Retry
           </button>

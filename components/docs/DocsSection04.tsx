@@ -57,7 +57,7 @@ export function DocsSection04() {
             <div className="flex-1 text-sm text-white">is PEPE safe to buy right now</div>
           </div>
           <div className="px-4 py-3 flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-[#0A1EFF]/20 border border-[#0A1EFF]/30 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded-full bg-[#0066FF]/20 border border-[#0066FF]/30 flex items-center justify-center shrink-0">
               <Sparkles className="w-3 h-3 text-[#4D6BFF]" />
             </div>
             <div className="flex-1 text-sm text-gray-300 leading-relaxed space-y-2">
@@ -94,7 +94,7 @@ export function DocsSection04() {
             <div className="flex-1 text-sm text-white">swap 100 USDC to SOL</div>
           </div>
           <div className="px-4 py-3 flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-[#0A1EFF]/20 border border-[#0A1EFF]/30 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded-full bg-[#0066FF]/20 border border-[#0066FF]/30 flex items-center justify-center shrink-0">
               <Sparkles className="w-3 h-3 text-[#4D6BFF]" />
             </div>
             <div className="flex-1 text-sm text-gray-300 leading-relaxed space-y-2">
@@ -178,7 +178,7 @@ export function DocsSection04() {
           </p>
         </div>
 
-        <div className="bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/25 rounded-xl p-3 space-y-1.5">
+        <div className="bg-[#0066FF]/[0.05] border border-[#0066FF]/25 rounded-xl p-3 space-y-1.5">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold">Safety reminder</p>
           <p className="text-xs text-gray-300 leading-relaxed">
             The Swap Card only <span className="text-white font-semibold">previews</span> the trade. Nothing is signed or broadcast until you tap <span className="font-mono text-[#4D6BFF]">Sign &amp; Swap</span> and your wallet approves the signature. VTX cannot withdraw funds, approve allowances, or move assets on its own. AI = assistant. Wallet = authority.

@@ -200,7 +200,7 @@ export function TelegramConnectCard() {
       {/* Code displayed, waiting for /link */}
       {!status?.linked && code && (
         <div className="space-y-3">
-          <div className="text-center bg-gradient-to-br from-[#229ED9]/10 to-[#0A1EFF]/10 border border-[#229ED9]/30 rounded-xl py-4">
+          <div className="text-center bg-gradient-to-br from-[#229ED9]/10 to-[#0066FF]/10 border border-[#229ED9]/30 rounded-xl py-4">
             <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Your code</div>
             <div className="text-3xl font-bold font-mono text-white tracking-wider">{code}</div>
             <div className="text-[10px] text-gray-500 mt-1">

@@ -76,7 +76,7 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
             <p className="text-[10px] text-gray-500">Search-trending on CoinGecko · 24h</p>
           </div>
         </div>
-        <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0A1EFF] flex items-center gap-1">
+        <Link href={href} className="text-[11px] text-[#4D6BFF] hover:text-[#0066FF] flex items-center gap-1">
           Explore <ArrowUpRight className="w-3 h-3" />
         </Link>
       </div>

@@ -143,7 +143,7 @@ export default function FollowWhaleModal({
                 step={1000}
                 value={threshold}
                 onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
-                className="flex-1 accent-[#0A1EFF]"
+                className="flex-1 accent-[#0066FF]"
               />
               <div className="w-20 text-end font-mono text-sm">${threshold.toLocaleString()}</div>
             </div>
@@ -152,7 +152,7 @@ export default function FollowWhaleModal({
           <div className="flex items-center gap-2">
             {(['push', 'email', 'telegram'] as const).map((k) => (
               <label key={k} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-                channels[k] ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border-[#0A1EFF]/40' : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
               }`}>
                 <input
                   type="checkbox"
@@ -179,7 +179,7 @@ export default function FollowWhaleModal({
                 <input
                   type="range" min={0.1} max={10} step={0.1} value={slippage}
                   onChange={(e) => setSlippage(parseFloat(e.target.value))}
-                  className="w-full accent-[#0A1EFF] mt-1"
+                  className="w-full accent-[#0066FF] mt-1"
                 />
               </div>
               {mode === 'auto' && (
@@ -203,7 +203,7 @@ export default function FollowWhaleModal({
           <button
             onClick={submit}
             disabled={saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-bold disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Confirm Follow'}
           </button>
@@ -236,12 +236,12 @@ function ModeCard({
       onClick={onClick}
       disabled={locked}
       className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-start ${
-        active ? 'bg-[#0A1EFF]/15 border-[#0A1EFF]/50'
+        active ? 'bg-[#0066FF]/15 border-[#0066FF]/50'
         : locked ? 'bg-white/[0.02] border-white/10 opacity-60 cursor-not-allowed'
         : 'bg-white/[0.03] border-white/10 hover:border-white/20'
       }`}
     >
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-[#0A1EFF]/20 text-[#8FA3FF]' : 'bg-white/5 text-slate-400'}`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'bg-white/5 text-slate-400'}`}>
         {locked ? <Lock className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
       </div>
       <div className="flex-1 min-w-0">
@@ -268,7 +268,7 @@ function NumberRow({ label, value, setValue, step }: { label: string; value: num
         value={value}
         step={step}
         onChange={(e) => setValue(parseInt(e.target.value || '0', 10) || 0)}
-        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0A1EFF]/50"
+        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0066FF]/50"
       />
     </div>
   );

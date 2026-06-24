@@ -134,7 +134,7 @@ export function OnboardingFlow({ onComplete, onSkip }: Props) {
     <div className="fixed inset-0 z-[200] flex flex-col bg-gradient-to-br from-[#070B1A] via-[#0A0F2C] to-[#070B1A]">
       {/* Aurora-style backdrop */}
       <div aria-hidden className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[var(--nl-blue,#0A1EFF)]/20 blur-3xl animate-pulse" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[var(--nl-blue,#0066FF)]/20 blur-3xl animate-pulse" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#7C3AED]/15 blur-3xl animate-pulse" />
       </div>
 
@@ -147,7 +147,7 @@ export function OnboardingFlow({ onComplete, onSkip }: Props) {
             aria-label={`Go to card ${c.index}`}
             className={`h-1.5 rounded-full transition-all ${
               c.index === index + 1
-                ? 'w-6 bg-[var(--nl-blue,#0A1EFF)] shadow-[0_0_12px_rgba(10,30,255,0.6)]'
+                ? 'w-6 bg-[var(--nl-blue,#0066FF)] shadow-[0_0_12px_rgba(0,102,255,0.6)]'
                 : c.index < index + 1
                 ? 'w-1.5 bg-white/40 hover:bg-white/60'
                 : 'w-1.5 bg-white/15 hover:bg-white/30'
@@ -172,8 +172,8 @@ export function OnboardingFlow({ onComplete, onSkip }: Props) {
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-md w-full text-center select-none touch-pan-y"
           >
-            <div className="mx-auto mb-8 w-28 h-28 rounded-3xl bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)]/30 to-[#7C3AED]/30 border border-white/10 flex items-center justify-center shadow-[0_10px_60px_rgba(10,30,255,0.4)]">
-              <Illustration className="w-14 h-14 text-white drop-shadow-[0_0_12px_rgba(10,30,255,0.7)]" />
+            <div className="mx-auto mb-8 w-28 h-28 rounded-3xl bg-gradient-to-br from-[var(--nl-blue,#0066FF)]/30 to-[#7C3AED]/30 border border-white/10 flex items-center justify-center shadow-[0_10px_60px_rgba(0,102,255,0.4)]">
+              <Illustration className="w-14 h-14 text-white drop-shadow-[0_0_12px_rgba(0,102,255,0.7)]" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3">{title}</h1>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">{body}</p>
@@ -202,7 +202,7 @@ export function OnboardingFlow({ onComplete, onSkip }: Props) {
           )}
           <button
             onClick={advance}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] hover:brightness-110 text-white text-sm font-bold shadow-[0_0_28px_rgba(10,30,255,0.5)]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[var(--nl-blue,#0066FF)] to-[#7C3AED] hover:brightness-110 text-white text-sm font-bold shadow-[0_0_28px_rgba(0,102,255,0.5)]"
           >
             {isLast ? 'Get Started' : 'Next'}
             <ArrowRight className="w-4 h-4" />

@@ -51,7 +51,7 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 focus-within:border-[var(--nl-blue,#0A1EFF)]/60">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 focus-within:border-[var(--nl-blue,#0066FF)]/60">
         <Search className="w-4 h-4 text-slate-400" />
         <input
           autoFocus={autoFocus}
@@ -90,7 +90,7 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={u.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
                       {(u.display_name || u.username || '?').slice(0, 1).toUpperCase()}
                     </div>
                   )}
@@ -104,7 +104,7 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
                   </div>
                 </Link>
               ))}
-              <Link href={`/discover?q=${encodeURIComponent(q.trim())}`} className="block text-center px-3 py-2 text-[11px] text-[var(--nl-blue,#0A1EFF)] hover:bg-white/[0.04]">
+              <Link href={`/discover?q=${encodeURIComponent(q.trim())}`} className="block text-center px-3 py-2 text-[11px] text-[var(--nl-blue,#0066FF)] hover:bg-white/[0.04]">
                 View all results →
               </Link>
             </>

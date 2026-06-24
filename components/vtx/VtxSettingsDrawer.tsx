@@ -99,7 +99,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] sticky top-0 bg-[#0b0f1a] z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#0A1EFF]/15 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#0066FF]/15 flex items-center justify-center">
               <Brain className="w-4 h-4 text-[#4D6BFF]" />
             </div>
             <div>
@@ -219,7 +219,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
           <button
             onClick={save}
             disabled={saving || loading}
-            className="flex-1 py-2.5 rounded-xl bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-xl bg-[#0066FF] hover:bg-[#0818CC] text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : savedFlash ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : savedFlash ? 'Saved' : 'Save settings'}
@@ -264,7 +264,7 @@ function Toggle({ label, desc, value, onChange }: { label: string; desc: string;
         role="switch"
         aria-checked={value}
         onClick={() => onChange(!value)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${value ? 'bg-[#0A1EFF]' : 'bg-slate-700'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${value ? 'bg-[#0066FF]' : 'bg-slate-700'}`}
       >
         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-0.5'}`} />
       </button>

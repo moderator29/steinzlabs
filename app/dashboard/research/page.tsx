@@ -36,7 +36,7 @@ const SORT_OPTIONS = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  DeFi: 'bg-[#0A1EFF]/15 text-[#6B7FFF] border-[#0A1EFF]/20',
+  DeFi: 'bg-[#0066FF]/15 text-[#6B7FFF] border-[#0066FF]/20',
   NFT: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
   Layer2: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20',
   Meme: 'bg-yellow-400/15 text-yellow-400 border-yellow-400/20',
@@ -53,7 +53,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const SOURCE_COLORS: Record<string, string> = {
   CryptoPanic: 'text-orange-400',
   CoinGecko: 'text-emerald-400',
-  DexScreener: 'text-[#0A1EFF]',
+  DexScreener: 'text-[#0066FF]',
   Supabase: 'text-gray-400',
 };
 
@@ -113,7 +113,7 @@ function ArticleCard({
     return (
       <button
         onClick={onClick}
-        className="w-full text-start rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0A1EFF]/30 hover:shadow-[0_0_24px_rgba(10,30,255,0.08)] transition-all duration-200 group"
+        className="w-full text-start rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
       >
         {post.image_url ? (
           <div className="h-44 w-full overflow-hidden">
@@ -124,14 +124,14 @@ function ArticleCard({
             />
           </div>
         ) : (
-          <div className="h-44 w-full bg-gradient-to-br from-[#0A1EFF]/10 to-[#7C3AED]/10 flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(10,30,255,0.06)_0%,_transparent_70%)]" />
-            <BookOpen className="w-10 h-10 text-[#0A1EFF]/30" />
+          <div className="h-44 w-full bg-gradient-to-br from-[#0066FF]/10 to-[#7C3AED]/10 flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,102,255,0.06)_0%,_transparent_70%)]" />
+            <BookOpen className="w-10 h-10 text-[#0066FF]/30" />
           </div>
         )}
         <div className="p-5">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[9px] font-bold text-[#0A1EFF] uppercase tracking-widest flex items-center gap-1">
+            <span className="text-[9px] font-bold text-[#0066FF] uppercase tracking-widest flex items-center gap-1">
               <Zap className="w-2.5 h-2.5" /> Featured
             </span>
             <span className="text-white/20">·</span>
@@ -158,7 +158,7 @@ function ArticleCard({
                 {readTime} min read
               </span>
             </div>
-            <span className="text-[11px] font-semibold text-[#0A1EFF] flex items-center gap-1 group-hover:gap-2 transition-all">
+            <span className="text-[11px] font-semibold text-[#0066FF] flex items-center gap-1 group-hover:gap-2 transition-all">
               Read <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </div>
@@ -170,7 +170,7 @@ function ArticleCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-start rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0A1EFF]/20 hover:shadow-[0_0_16px_rgba(10,30,255,0.06)] transition-all duration-200 group flex"
+      className="w-full text-start rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
     >
       {post.image_url ? (
         <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '88px' }}>
@@ -182,10 +182,10 @@ function ArticleCard({
         </div>
       ) : (
         <div
-          className="w-20 flex-shrink-0 bg-gradient-to-br from-[#0A1EFF]/08 to-[#7C3AED]/06 flex items-center justify-center"
+          className="w-20 flex-shrink-0 bg-gradient-to-br from-[#0066FF]/08 to-[#7C3AED]/06 flex items-center justify-center"
           style={{ minHeight: '88px' }}
         >
-          <BookOpen className="w-4 h-4 text-[#0A1EFF]/25" />
+          <BookOpen className="w-4 h-4 text-[#0066FF]/25" />
         </div>
       )}
       <div className="flex-1 p-3.5 min-w-0">
@@ -250,7 +250,7 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
             href={post.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-lg text-[12px] font-semibold text-[#6B7FFF] hover:bg-[#0A1EFF]/20 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0066FF]/10 border border-[#0066FF]/20 rounded-lg text-[12px] font-semibold text-[#6B7FFF] hover:bg-[#0066FF]/20 transition-colors"
           >
             View Source <ChevronRight className="w-3.5 h-3.5" />
           </a>
@@ -385,7 +385,7 @@ export default function ResearchPage() {
           <div className="flex items-center gap-2">
             {lastUpdated && (
               <span className="text-[10px] text-gray-600 flex items-center gap-1 whitespace-nowrap">
-                <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin text-[#0A1EFF]' : ''}`} />
+                <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin text-[#0066FF]' : ''}`} />
                 {/* eslint-disable-next-line react-hooks/exhaustive-deps */}
                 {timeAgo(lastUpdated)}
               </span>
@@ -401,7 +401,7 @@ export default function ResearchPage() {
             <button
               onClick={() => setShowFilters((v) => !v)}
               className={`p-1.5 rounded-lg transition-colors ${
-                showFilters ? 'bg-[#0A1EFF]/20 text-[#6B7FFF]' : 'hover:bg-white/5 text-gray-400'
+                showFilters ? 'bg-[#0066FF]/20 text-[#6B7FFF]' : 'hover:bg-white/5 text-gray-400'
               }`}
               title="Filters"
             >
@@ -430,7 +430,7 @@ export default function ResearchPage() {
                     onClick={() => { setSort(value); setPage(1); }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                       sort === value
-                        ? 'bg-[#0A1EFF] text-white'
+                        ? 'bg-[#0066FF] text-white'
                         : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
                     }`}
                   >
@@ -451,7 +451,7 @@ export default function ResearchPage() {
                     onClick={() => { setCategory(label); setPage(1); }}
                     className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
                       category === label
-                        ? 'bg-[#0A1EFF] text-white'
+                        ? 'bg-[#0066FF] text-white'
                         : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
                     }`}
                   >
@@ -471,7 +471,7 @@ export default function ResearchPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search research..."
-            className="w-full border border-white/[0.07] rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
+            className="w-full border border-white/[0.07] rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors"
           />
           {search && (
             <button
@@ -491,7 +491,7 @@ export default function ResearchPage() {
               onClick={() => { setCategory(label); setPage(1); }}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                 category === label
-                  ? 'bg-[#0A1EFF] text-white shadow-[0_0_12px_rgba(10,30,255,0.4)]'
+                  ? 'bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.4)]'
                   : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
               }`}
             >
@@ -503,7 +503,7 @@ export default function ResearchPage() {
         {/* ── Content ── */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-[#0A1EFF] animate-spin mb-3" />
+            <Loader2 className="w-6 h-6 text-[#0066FF] animate-spin mb-3" />
             <p className="text-xs text-gray-500">Fetching latest research...</p>
           </div>
         ) : filtered.length === 0 ? (
@@ -553,7 +553,7 @@ export default function ResearchPage() {
               <span>Sources:</span>
               <span className="text-emerald-900">CoinGecko</span>
               <span>·</span>
-              <span className="text-[#0A1EFF]/40">DexScreener</span>
+              <span className="text-[#0066FF]/40">DexScreener</span>
               <span>·</span>
               <span className="text-orange-900">CryptoPanic</span>
             </div>

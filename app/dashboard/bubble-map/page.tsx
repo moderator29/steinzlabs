@@ -199,7 +199,7 @@ function WalletPanel({ node, chain, onClose }: { node: BubbleNode; chain: string
           const { url, label } = explorerForChain(chain, addr);
           return (
             <a href={url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs text-[#0A1EFF] hover:text-blue-400 transition-colors">
+              className="flex items-center gap-2 text-xs text-[#0066FF] hover:text-blue-400 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" />View on {label}
             </a>
           );
@@ -572,13 +572,13 @@ function BubbleMapInner() {
       <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-9 h-9 bg-gradient-to-br from-[#0A1EFF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0A1EFF]/20">
+          <div className="w-9 h-9 bg-gradient-to-br from-[#0066FF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0066FF]/20">
             <Layers className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold tracking-tight">Bubble Map</span>
-              <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">INTEL</span>
+              <span className="px-1.5 py-0.5 bg-[#0066FF]/15 border border-[#0066FF]/30 rounded text-[9px] text-[#0066FF] font-bold">INTEL</span>
             </div>
             <span className="text-[10px] text-gray-600">Token holder distribution · D3 force graph</span>
           </div>
@@ -598,14 +598,14 @@ function BubbleMapInner() {
               <div className="absolute top-full left-0 mt-1 w-40 bg-[#0f1320] border border-white/[0.08] rounded-xl overflow-hidden z-40 shadow-xl">
                 {CHAIN_OPTIONS.map(c => (
                   <button key={c.value} onClick={() => { setChain(c.value); setShowChainDrop(false); }}
-                    className={`w-full text-start px-3 py-2.5 text-xs hover:bg-white/[0.06] transition-colors ${chain === c.value ? 'text-[#0A1EFF]' : 'text-gray-400'}`}>
+                    className={`w-full text-start px-3 py-2.5 text-xs hover:bg-white/[0.06] transition-colors ${chain === c.value ? 'text-[#0066FF]' : 'text-gray-400'}`}>
                     {c.label}
                   </button>
                 ))}
               </div>
             </>}
           </div>
-          <div className="flex-1 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 focus-within:border-[#0A1EFF]/30 transition-colors">
+          <div className="flex-1 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 focus-within:border-[#0066FF]/30 transition-colors">
             <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
             <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && fetchMap()}
@@ -613,7 +613,7 @@ function BubbleMapInner() {
               className="flex-1 bg-transparent py-3 px-2 text-xs placeholder-gray-600 focus:outline-none font-mono" />
           </div>
           <button onClick={() => fetchMap()} disabled={loading || !tokenAddress.trim()}
-            className="h-11 px-4 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-xl text-xs font-bold transition-colors disabled:opacity-30 flex-shrink-0">
+            className="h-11 px-4 bg-[#0066FF] hover:bg-[#0918D0] rounded-xl text-xs font-bold transition-colors disabled:opacity-30 flex-shrink-0">
             {loading ? '…' : 'Analyze'}
           </button>
         </div>
@@ -652,7 +652,7 @@ function BubbleMapInner() {
           <div className="flex gap-1 mt-3 flex-wrap items-center">
             {MODE_TABS.map(tab => (
               <button key={tab.id} onClick={() => handleModeChange(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${mode === tab.id ? 'bg-[#0A1EFF] text-white' : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06]'}`}>
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${mode === tab.id ? 'bg-[#0066FF] text-white' : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06]'}`}>
                 <tab.icon className="w-3 h-3" />{tab.label}
               </button>
             ))}
@@ -757,7 +757,7 @@ function BubbleMapInner() {
                 </div>
                 {mapData.nodes.filter(n => n.id !== 'center').sort((a, b) => b.percentage - a.percentage).map((node, idx) => (
                   <div key={node.id} onClick={() => setSelectedNode(node.id === selectedNode?.id ? null : node)}
-                    className={`px-3 py-1.5 text-[10px] cursor-pointer transition-colors hover:bg-white/[0.03] ${selectedNode?.id === node.id ? 'bg-[#0A1EFF]/[0.06]' : ''}`}>
+                    className={`px-3 py-1.5 text-[10px] cursor-pointer transition-colors hover:bg-white/[0.03] ${selectedNode?.id === node.id ? 'bg-[#0066FF]/[0.06]' : ''}`}>
                     <div className="grid grid-cols-[20px_1fr_55px_55px] gap-2 items-center">
                       <span className="text-gray-600 font-mono">{idx + 1}</span>
                       <div className="flex items-center gap-1 min-w-0">
@@ -775,8 +775,8 @@ function BubbleMapInner() {
 
             {/* VTX Chat */}
             <div className="px-3 py-2 border-b border-white/[0.04] flex items-center gap-2 flex-shrink-0 bg-[#060A12]/50">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-3.5 h-3.5 text-[#0A1EFF]" />
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3.5 h-3.5 text-[#0066FF]" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -789,10 +789,10 @@ function BubbleMapInner() {
             <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] ${msg.role === 'user' ? 'bg-[#0A1EFF]/20' : 'bg-white/[0.05]'}`}>
-                    {msg.role === 'user' ? <User className="w-3.5 h-3.5 text-[#0A1EFF]" /> : <Bot className="w-3.5 h-3.5 text-gray-400" />}
+                  <div className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] ${msg.role === 'user' ? 'bg-[#0066FF]/20' : 'bg-white/[0.05]'}`}>
+                    {msg.role === 'user' ? <User className="w-3.5 h-3.5 text-[#0066FF]" /> : <Bot className="w-3.5 h-3.5 text-gray-400" />}
                   </div>
-                  <div className={`relative group max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#0A1EFF]/15 text-gray-100' : 'bg-white/[0.04] text-gray-200'}`}>
+                  <div className={`relative group max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#0066FF]/15 text-gray-100' : 'bg-white/[0.04] text-gray-200'}`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     <div className="flex items-center justify-between mt-1 gap-2">
                       <span className="text-[9px] text-gray-600">{fmtTime(msg.timestamp)}</span>
@@ -825,7 +825,7 @@ function BubbleMapInner() {
                       key={q}
                       type="button"
                       onClick={() => setChatInput(q)}
-                      className="text-[10px] px-2 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-[#0A1EFF]/40 transition-colors"
+                      className="text-[10px] px-2 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-[#0066FF]/40 transition-colors"
                     >
                       {q}
                     </button>
@@ -836,9 +836,9 @@ function BubbleMapInner() {
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
                   placeholder="Ask about holders, risk, dev wallets, cluster patterns…"
-                  className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/30 transition-colors" />
+                  className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30 transition-colors" />
                 <button onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
-                  className="w-8 h-8 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 flex-shrink-0">
+                  className="w-8 h-8 bg-[#0066FF] hover:bg-[#0918D0] rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 flex-shrink-0">
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </div>

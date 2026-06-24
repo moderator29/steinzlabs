@@ -53,7 +53,7 @@ const TIERS = [
     price: '$9',
     period: '/month',
     description: 'Full platform access for serious traders',
-    accent: '#0A1EFF',
+    accent: '#0066FF',
     popular: true,
     features: [
       'Unlimited VTX AI messages',
@@ -118,11 +118,11 @@ export default function PricingPage() {
               <div
                 key={tier.id}
                 className={`relative bg-[#141824] rounded-2xl border p-5 flex flex-col ${
-                  tier.popular ? 'border-[#0A1EFF] shadow-lg shadow-[#0A1EFF]/10' : 'border-[#1E2433]'
+                  tier.popular ? 'border-[#0066FF] shadow-lg shadow-[#0066FF]/10' : 'border-[#1E2433]'
                 }`}
               >
                 {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#0A1EFF] text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#0066FF] text-white text-xs font-bold px-3 py-1 rounded-full">
                     <Star size={10} /> Most Popular
                   </div>
                 )}
@@ -163,7 +163,7 @@ export default function PricingPage() {
                       : tier.id === 'free'
                       ? 'bg-[#1E2433] text-gray-500 cursor-default'
                       : tier.popular
-                      ? 'bg-[#0A1EFF] hover:bg-[#0916CC] text-white'
+                      ? 'bg-[#0066FF] hover:bg-[#0052CC] text-white'
                       : 'border text-white hover:bg-white/5 transition-colors'
                   }`}
                   style={!isCurrent && tier.id !== 'free' && !tier.popular ? { borderColor: tier.accent, color: tier.accent } : {}}

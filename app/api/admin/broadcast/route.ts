@@ -73,7 +73,7 @@ export async function POST(request: Request) {
                 <div style="background:#0A0E1A;color:#fff;padding:40px 20px;font-family:system-ui,-apple-system,sans-serif;">
                   <div style="max-width:600px;margin:0 auto;">
                     <div style="text-align:center;margin-bottom:30px;">
-                      <h1 style="color:#0A1EFF;margin:0;font-size:24px;">NAKA LABS</h1>
+                      <h1 style="color:#0066FF;margin:0;font-size:24px;">NAKA LABS</h1>
                       <p style="color:#6B7280;font-size:12px;margin-top:4px;">On-chain Intelligence Platform</p>
                     </div>
                     <div style="background:#111827;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:24px;">

@@ -123,7 +123,7 @@ export function WidgetOrderer({ open, onClose, onSaved }: Props) {
         className="w-full max-w-[480px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4"
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0A1EFF]/15 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[#0066FF]/15 flex items-center justify-center">
             <Settings className="w-4 h-4 text-[#8FA3FF]" />
           </div>
           <div className="flex-1">
@@ -165,7 +165,7 @@ export function WidgetOrderer({ open, onClose, onSaved }: Props) {
                     else if (e.key === 'ArrowDown') { e.preventDefault(); move(idx, 1); }
                   }}
                   tabIndex={0}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] px-3 py-2.5 cursor-grab active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#0A1EFF]/60"
+                  className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] px-3 py-2.5 cursor-grab active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#0066FF]/60"
                 >
                   <GripVertical className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden="true" />
                   <div className="flex-1 min-w-0">

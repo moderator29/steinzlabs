@@ -17,7 +17,7 @@ export function SuccessRateBadge({ value, className }: SuccessRateBadgeProps) {
   if (value === null) return null;
   const tone =
     value >= 80 ? { c: 'text-emerald-300', bg: 'bg-emerald-500/[0.08]', b: 'border-emerald-500/25' }
-    : value >= 60 ? { c: 'text-[var(--nl-blue,#0A1EFF)]', bg: 'bg-[var(--nl-blue,#0A1EFF)]/[0.10]', b: 'border-[var(--nl-blue,#0A1EFF)]/25' }
+    : value >= 60 ? { c: 'text-[var(--nl-blue,#0066FF)]', bg: 'bg-[var(--nl-blue,#0066FF)]/[0.10]', b: 'border-[var(--nl-blue,#0066FF)]/25' }
     : value >= 40 ? { c: 'text-amber-300', bg: 'bg-amber-500/[0.08]', b: 'border-amber-500/25' }
     :               { c: 'text-red-300', bg: 'bg-red-500/[0.08]', b: 'border-red-500/25' };
   return (

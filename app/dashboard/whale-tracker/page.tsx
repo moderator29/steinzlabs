@@ -294,7 +294,7 @@ export default function WhaleTrackerPage() {
             <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
             </span>
-            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30">
+            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
               PRO
             </span>
           </div>
@@ -326,7 +326,7 @@ export default function WhaleTrackerPage() {
                   onClick={() => toggleChain(c.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
                     active
-                      ? "bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30"
+                      ? "bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30"
                       : "bg-slate-900/50 text-slate-400 border border-transparent hover:text-white"
                   }`}
                 >
@@ -701,7 +701,7 @@ function WatchlistPanel({
         <button
           type="button"
           onClick={onAddClick}
-          className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-[#0A1EFF]/10 hover:bg-[#0A1EFF]/20 text-[#6F7EFF] border border-[#0A1EFF]/30 font-semibold"
+          className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-[#0066FF]/10 hover:bg-[#0066FF]/20 text-[#6F7EFF] border border-[#0066FF]/30 font-semibold"
         >
           <Plus size={12} /> Add
         </button>
@@ -1109,7 +1109,7 @@ function AddWhaleModal({
               type="button"
               onClick={() => setAlertEnabled((v) => !v)}
               className={`w-10 h-5 rounded-full relative transition-colors ${
-                alertEnabled ? "bg-[#0A1EFF]" : "bg-slate-700"
+                alertEnabled ? "bg-[#0066FF]" : "bg-slate-700"
               }`}
             >
               <span
@@ -1131,7 +1131,7 @@ function AddWhaleModal({
                       onClick={() => setThreshold(v)}
                       className={`flex-1 py-1.5 text-[10px] rounded-lg transition-colors ${
                         threshold === v
-                          ? "bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30"
+                          ? "bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30"
                           : "bg-slate-900 text-slate-400 border border-slate-800"
                       }`}
                     >
@@ -1182,7 +1182,7 @@ function AddWhaleModal({
             type="button"
             onClick={submit}
             disabled={submitting || !address.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-[#0A1EFF] hover:bg-[#0918D0] text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-[#0066FF] hover:bg-[#0918D0] text-white disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting && <Loader2 size={12} className="animate-spin" />}
             Save

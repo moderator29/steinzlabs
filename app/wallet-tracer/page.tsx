@@ -63,13 +63,13 @@ export default function WalletTracerPage() {
               onChange={(e) => setWallet(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && traceWallet()}
               placeholder="Enter wallet address (0x... or Solana address)..."
-              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-12 pe-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]"
+              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-12 pe-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
             />
           </div>
           <select
             value={chain}
             onChange={(e) => setChain(e.target.value)}
-            className="bg-[#141824] border border-[#1E2433] rounded-lg px-4 text-white focus:outline-none focus:border-[#0A1EFF]"
+            className="bg-[#141824] border border-[#1E2433] rounded-lg px-4 text-white focus:outline-none focus:border-[#0066FF]"
           >
             {['ethereum', 'solana', 'base', 'bsc', 'polygon', 'arbitrum'].map((c) => (
               <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -78,7 +78,7 @@ export default function WalletTracerPage() {
           <button
             onClick={traceWallet}
             disabled={loading || !wallet.trim()}
-            className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:opacity-50 text-white font-bold px-8 py-4 rounded-lg transition-colors"
+            className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-bold px-8 py-4 rounded-lg transition-colors"
           >
             {loading ? 'Tracing...' : 'Trace'}
           </button>
@@ -100,7 +100,7 @@ export default function WalletTracerPage() {
                   onClick={() => setActiveTab(tab)}
                   className={`px-6 py-2 rounded-lg font-medium capitalize transition-colors ${
                     activeTab === tab
-                      ? 'bg-[#0A1EFF] text-white'
+                      ? 'bg-[#0066FF] text-white'
                       : 'bg-[#141824] text-gray-400 hover:text-white border border-[#1E2433]'
                   }`}
                 >
@@ -179,7 +179,7 @@ export default function WalletTracerPage() {
                         </div>
                         <div className="text-end">
                           <div className="text-white">{tx.valueUSD}</div>
-                          <a href={`https://etherscan.io/tx/${tx.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#0A1EFF] text-xs flex items-center gap-1 justify-end mt-1">
+                          <a href={`https://etherscan.io/tx/${tx.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#0066FF] text-xs flex items-center gap-1 justify-end mt-1">
                             <ExternalLink size={10} /> View
                           </a>
                         </div>

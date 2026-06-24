@@ -23,7 +23,7 @@ export function DocsSection03() {
       </div>
       <div id="context-signals" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Radio className="w-4 h-4 text-[#0A1EFF]" />Signal Types
+          <Radio className="w-4 h-4 text-[#0066FF]" />Signal Types
         </h3>
         <div className="space-y-3">
           {SIGNAL_TYPES.map(s => (
@@ -50,7 +50,7 @@ export function DocsSection03() {
           </div>
         </div>
       </div>
-      <div className="bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/20 rounded-xl p-4">
+      <div className="bg-[#0066FF]/[0.05] border border-[#0066FF]/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-[#4D6BFF]" />
           <span className="text-sm font-semibold text-white">Available Filters</span>

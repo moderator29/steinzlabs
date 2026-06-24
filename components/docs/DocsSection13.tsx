@@ -67,7 +67,7 @@ export function DocsSection13() {
       {/* Help Center */}
       <div id="about-help" className="scroll-mt-20 mb-8">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#0A1EFF]" /> Help Center &amp; support
+          <Users className="w-4 h-4 text-[#0066FF]" /> Help Center &amp; support
         </h3>
         <p className="text-sm text-gray-300 leading-relaxed mb-4">
           Most questions have an answer somewhere in these docs · use the sidebar to jump to a feature. For anything else:
@@ -81,7 +81,7 @@ export function DocsSection13() {
             </div>
           </div>
           <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-            <Users className="w-3.5 h-3.5 text-[#0A1EFF] mt-0.5 shrink-0" />
+            <Users className="w-3.5 h-3.5 text-[#0066FF] mt-0.5 shrink-0" />
             <div>
               <div className="text-white font-semibold">AI Customer Service</div>
               <div>In Profile → AI Customer Service you get a dedicated account-support chat that can see your plan, wallets, and recent activity so it can unstick you faster.</div>

@@ -148,7 +148,7 @@ export default function WhitepaperPage() {
             <BackButton href="/" label="Back" />
             <span className="hidden sm:block w-px h-4 bg-white/[0.08]" />
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#0A1EFF]" />
+              <FileText className="w-4 h-4 text-[#0066FF]" />
               <span className="text-sm font-semibold">Naka Labs Whitepaper</span>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function WhitepaperPage() {
             <Link href="/docs" className="hidden sm:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg">
               Docs
             </Link>
-            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+            <Link href="/dashboard" className="text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
               Open App
             </Link>
           </div>
@@ -185,7 +185,7 @@ export default function WhitepaperPage() {
           {/* Hero */}
           <div className="mb-16 pb-12 border-b border-white/[0.06]">
             <div className="flex flex-wrap gap-2 mb-6">
-              <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold">
+              <div className="inline-flex items-center gap-2 bg-[#0066FF]/10 border border-[#0066FF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold">
                 <FileText className="w-3 h-3" /> v1.0 · 2026
               </div>
               <div className="inline-flex items-center gap-2 bg-[#F59E0B]/10 border border-[#F59E0B]/25 rounded-full px-3 py-1 text-xs text-[#F59E0B] font-semibold">
@@ -202,7 +202,7 @@ export default function WhitepaperPage() {
               A unified intelligence, security and trading workspace for anyone who takes crypto seriously. Built for people who want the same data professional funds use — without the five-figure subscription, without giving up custody, and without the jargon.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
-              <a href="#overview" className="inline-flex items-center gap-2 text-sm bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-5 py-3 rounded-xl font-semibold transition-colors">
+              <a href="#overview" className="inline-flex items-center gap-2 text-sm bg-[#0066FF] hover:bg-[#0818CC] text-white px-5 py-3 rounded-xl font-semibold transition-colors">
                 Start reading
               </a>
               <Link href="/docs" className="inline-flex items-center gap-2 text-sm bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-gray-300 px-5 py-3 rounded-xl font-semibold transition-colors">
@@ -262,7 +262,7 @@ export default function WhitepaperPage() {
               The platform brings four things together in one place:
             </p>
             <FeatureGrid items={[
-              { icon: Brain,    color: '#0A1EFF', title: 'Intelligence',  desc: 'A real-time signal stream, an AI agent with live on-chain tools, and behavioural fingerprints for any wallet on any chain we support.' },
+              { icon: Brain,    color: '#0066FF', title: 'Intelligence',  desc: 'A real-time signal stream, an AI agent with live on-chain tools, and behavioural fingerprints for any wallet on any chain we support.' },
               { icon: Shield,   color: '#10B981', title: 'Security',      desc: 'Every token gets a Trust Score. Every swap gets a pre-flight simulation. Every approval, URL and signature gets checked — automatically.' },
               { icon: Repeat,   color: '#F59E0B', title: 'Execution',     desc: 'Multi-chain swaps routed through best-price liquidity. A sniper engine that won’t fire on honeypots. Copy-trade tooling built on verified on-chain P&L.' },
               { icon: BarChart3,color: '#8B5CF6', title: 'Analytics',     desc: 'Portfolio tracking, smart-money convergence, whale flow, network metrics and research — all using the same live data feed.' },
@@ -300,7 +300,7 @@ export default function WhitepaperPage() {
               Naka Labs is organised into four layers that share a single real-time data pipeline. You never have to think about which layer you’re in — the product decides — but the shape matters because it’s why the number you see in the Context Feed is the same number VTX reasons over and the same number the swap engine quotes against. One source of truth, everywhere.
             </p>
             <FeatureGrid items={[
-              { icon: Layers,    color: '#0A1EFF', title: 'Intelligence Layer', desc: 'Context Feed, VTX AI Agent, DNA Analyzer, Wallet Intelligence, Bubble Map, On-Chain Trends.' },
+              { icon: Layers,    color: '#0066FF', title: 'Intelligence Layer', desc: 'Context Feed, VTX AI Agent, DNA Analyzer, Wallet Intelligence, Bubble Map, On-Chain Trends.' },
               { icon: ShieldCheck, color: '#10B981', title: 'Security Layer',  desc: 'Trust Score, Shadow Guardian, Contract Analyzer, Domain Shield, Signature Insight, Approval Manager, Risk Scanner.' },
               { icon: Repeat,    color: '#F59E0B', title: 'Execution Layer',   desc: 'Multi-chain Swap, VTX built-in swap, Sniper Bot, Whale Copy-Trading, Alerts & automation hooks.' },
               { icon: BarChart3, color: '#8B5CF6', title: 'Analytics Layer',   desc: 'Portfolio Tracker, Research, Whale Tracker, Smart Money, Network Graph, Archive.' },
@@ -344,7 +344,7 @@ export default function WhitepaperPage() {
               A complete behavioural fingerprint for any wallet on a supported chain. The analyzer processes every historical trade and produces: win rate, total realised P&L, average hold time, best and worst trades, an archetype classification, and an Alpha Score representing overall decision quality.
             </p>
             <p>
-              Archetypes detected: <Pill color="#F59E0B">Diamond Hands</Pill> <Pill color="#0A1EFF">Scalper</Pill> <Pill color="#EF4444">Degen</Pill> <Pill color="#8B5CF6">Whale Follower</Pill> <Pill color="#10B981">Holder</Pill> <Pill color="#9CA3AF">New Wallet</Pill>.
+              Archetypes detected: <Pill color="#F59E0B">Diamond Hands</Pill> <Pill color="#0066FF">Scalper</Pill> <Pill color="#EF4444">Degen</Pill> <Pill color="#8B5CF6">Whale Follower</Pill> <Pill color="#10B981">Holder</Pill> <Pill color="#9CA3AF">New Wallet</Pill>.
             </p>
 
             <H3>Bubble Map</H3>
@@ -447,7 +447,7 @@ export default function WhitepaperPage() {
             <p>Underneath the feature-level tools, the platform itself runs on hardened infrastructure:</p>
             <FeatureGrid items={[
               { icon: Lock,      color: '#10B981', title: 'Row-Level Security', desc: 'Every Supabase table enforces RLS. Users can only read and write rows they own. Admin routes use a separate service-role key that never reaches the browser.' },
-              { icon: KeyRound,  color: '#0A1EFF', title: 'JWT verification',    desc: 'Middleware verifies Supabase JWTs on every protected route. Cookies are httpOnly, secure, SameSite=lax. PKCE flow for auth.' },
+              { icon: KeyRound,  color: '#0066FF', title: 'JWT verification',    desc: 'Middleware verifies Supabase JWTs on every protected route. Cookies are httpOnly, secure, SameSite=lax. PKCE flow for auth.' },
               { icon: ShieldCheck, color: '#F59E0B', title: 'Bot & abuse',       desc: 'Cloudflare Turnstile gates signup and login. Rate limits on every sensitive endpoint. Sentry for error tracking, PostHog for anomaly detection.' },
               { icon: Database,  color: '#8B5CF6', title: 'Wallet encryption',  desc: 'Internal wallet keys encrypted client-side with AES-256-GCM + PBKDF2 (100k rounds) before ever touching our servers.' },
             ]} />
@@ -484,7 +484,7 @@ export default function WhitepaperPage() {
             <p>
               Mirror the on-chain activity of any tracked whale. Configure a copy size (absolute or percentage of the source), a maximum per-trade cap, and optional safety filters (skip tokens below a Trust Score threshold). Copies execute when the source wallet buys; users retain control over exits.
             </p>
-            <p>Tier mapping: <Pill color="#0A1EFF">Alerts-only</Pill> <Pill color="#10B981">Pro — one-click copy</Pill> <Pill color="#F59E0B">Max — auto-copy</Pill>.</p>
+            <p>Tier mapping: <Pill color="#0066FF">Alerts-only</Pill> <Pill color="#10B981">Pro — one-click copy</Pill> <Pill color="#F59E0B">Max — auto-copy</Pill>.</p>
 
             <H3>Alerts</H3>
             <p>
@@ -515,7 +515,7 @@ export default function WhitepaperPage() {
 
             <H3>Whale Tracker</H3>
             <p>
-              Whales are classified into four tiers by 7-day volume: <Pill color="#EF4444">MEGA $10M+</Pill> <Pill color="#F59E0B">LARGE $1M–$10M</Pill> <Pill color="#0A1EFF">MID $100K–$1M</Pill> <Pill color="#6B7280">SMALL</Pill>. The Live Feed tab streams their transactions in real time. My Whale Tracker lets you watchlist specific whales and act on their activity directly.
+              Whales are classified into four tiers by 7-day volume: <Pill color="#EF4444">MEGA $10M+</Pill> <Pill color="#F59E0B">LARGE $1M–$10M</Pill> <Pill color="#0066FF">MID $100K–$1M</Pill> <Pill color="#6B7280">SMALL</Pill>. The Live Feed tab streams their transactions in real time. My Whale Tracker lets you watchlist specific whales and act on their activity directly.
             </p>
 
             <H3>Wallet Clusters</H3>
@@ -643,7 +643,7 @@ export default function WhitepaperPage() {
                     <code className="text-[12px] bg-white/5 px-2 py-1 rounded font-mono text-[#4D6BFF]">{r.cmd}</code>
                     <div className="text-[13px] text-gray-400 truncate">{r.desc}</div>
                   </div>
-                  <Pill color={r.tier === 'Max' ? '#F59E0B' : r.tier === 'Pro+' ? '#8B5CF6' : r.tier === 'Mini+' ? '#0A1EFF' : '#10B981'}>{r.tier}</Pill>
+                  <Pill color={r.tier === 'Max' ? '#F59E0B' : r.tier === 'Pro+' ? '#8B5CF6' : r.tier === 'Mini+' ? '#0066FF' : '#10B981'}>{r.tier}</Pill>
                 </div>
               ))}
             </div>
@@ -662,7 +662,7 @@ export default function WhitepaperPage() {
                   bullets: ['25 VTX messages / day', 'Basic wallet intelligence (EVM)', '3 price alerts', 'Standard swap (0.4% fee)', 'Market + charts access', 'Basic security scanner', '1 connected wallet'],
                 },
                 {
-                  name: 'Mini', price: '$5 / mo', color: '#0A1EFF',
+                  name: 'Mini', price: '$5 / mo', color: '#0066FF',
                   bullets: ['100 VTX messages / day', 'Full wallet intelligence (all chains)', '10 price alerts', 'Standard swap', 'Whale tracker (view only)', 'DNA Analyzer', '3 connected wallets'],
                 },
                 {
@@ -783,7 +783,7 @@ export default function WhitepaperPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.06]">
               <span className="text-xs text-gray-600">&copy; 2026 Naka Labs. All rights reserved.</span>
               <div className="flex items-center gap-4">
-                <Link href="/docs"     className="text-xs text-[#0A1EFF] hover:text-[#4D6BFF] transition-colors">Docs</Link>
+                <Link href="/docs"     className="text-xs text-[#0066FF] hover:text-[#4D6BFF] transition-colors">Docs</Link>
                 <Link href="/terms"    className="text-xs text-gray-400 hover:text-white transition-colors">Terms</Link>
                 <Link href="/privacy"  className="text-xs text-gray-400 hover:text-white transition-colors">Privacy</Link>
                 <Link href="/dashboard"className="text-xs text-gray-400 hover:text-white transition-colors">Open App</Link>

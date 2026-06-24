@@ -157,7 +157,7 @@ export default function WalletClustersPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">Wallet Clusters</h1>
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0A1EFF]/15 text-[#6F7EFF] border border-[#0A1EFF]/30">NEXT-GEN</span>
+              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">NEXT-GEN</span>
               <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">PRO</span>
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
@@ -207,7 +207,7 @@ export default function WalletClustersPage() {
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => { setArchetype(''); setOffset(0); }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${!archetype ? 'bg-[#0A1EFF]/15 text-[#8FA3FF] border border-[#0A1EFF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${!archetype ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
             >
               All <span className="text-slate-500 text-[10px]">{total}</span>
             </button>
@@ -234,7 +234,7 @@ export default function WalletClustersPage() {
 
       {/* Paste-wallet analyzer */}
       <div className="max-w-7xl mx-auto px-4 mt-5">
-        <form onSubmit={runAnalysis} className="bg-gradient-to-br from-[#0A1EFF]/10 via-[#7C3AED]/5 to-transparent border border-[#0A1EFF]/30 rounded-xl p-4 flex items-start gap-3 flex-wrap">
+        <form onSubmit={runAnalysis} className="bg-gradient-to-br from-[#0066FF]/10 via-[#7C3AED]/5 to-transparent border border-[#0066FF]/30 rounded-xl p-4 flex items-start gap-3 flex-wrap">
           <Cpu className="w-5 h-5 text-[#8FA3FF] mt-0.5 shrink-0" />
           <div className="flex-1 min-w-[200px]">
             <div className="text-sm font-bold">Analyze any wallet</div>
@@ -244,12 +244,12 @@ export default function WalletClustersPage() {
             value={analyzeAddr}
             onChange={(e) => setAnalyzeAddr(e.target.value)}
             placeholder="0x… or Solana address"
-            className="flex-1 min-w-[240px] bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[#0A1EFF]/50"
+            className="flex-1 min-w-[240px] bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[#0066FF]/50"
           />
           <button
             type="submit"
             disabled={analyzing || !analyzeAddr.trim()}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] font-bold text-sm disabled:opacity-60 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-bold text-sm disabled:opacity-60 flex items-center gap-2"
           >
             {analyzing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing…</> : <><Sparkles className="w-3.5 h-3.5" /> Analyze</>}
           </button>

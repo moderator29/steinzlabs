@@ -34,7 +34,7 @@ export function Toggle({ checked, onChange, disabled = false, label, size = 'md'
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={`relative ${d.track} rounded-md transition-colors flex-shrink-0 ${
-        checked ? 'bg-[var(--nl-blue,#0A1EFF)]' : 'bg-slate-700'
+        checked ? 'bg-[var(--nl-blue,#0066FF)]' : 'bg-slate-700'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'} ${className}`}
     >
       <span

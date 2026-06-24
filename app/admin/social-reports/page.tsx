@@ -99,9 +99,9 @@ export default function SocialReportsAdminPage() {
                 </div>
                 <div className="text-sm text-slate-200">
                   <span className="text-slate-400">By</span>{' '}
-                  {r.reporter ? <Link href={`/u/${r.reporter.username}`} className="text-[var(--nl-blue,#0A1EFF)]">@{r.reporter.username}</Link> : <span className="italic text-slate-500">unknown</span>}{' '}
+                  {r.reporter ? <Link href={`/u/${r.reporter.username}`} className="text-[var(--nl-blue,#0066FF)]">@{r.reporter.username}</Link> : <span className="italic text-slate-500">unknown</span>}{' '}
                   <span className="text-slate-400">against</span>{' '}
-                  {r.reported ? <Link href={`/u/${r.reported.username}`} className="text-[var(--nl-blue,#0A1EFF)]">@{r.reported.username}</Link> : <span className="italic text-slate-500">unknown</span>}
+                  {r.reported ? <Link href={`/u/${r.reported.username}`} className="text-[var(--nl-blue,#0066FF)]">@{r.reported.username}</Link> : <span className="italic text-slate-500">unknown</span>}
                 </div>
                 <p className="text-sm text-slate-100 whitespace-pre-wrap">{r.reason}</p>
                 {r.admin_notes && <p className="text-[11px] text-slate-400 italic">Note: {r.admin_notes}</p>}

@@ -265,7 +265,7 @@ export async function sendResearchNotification(params: {
   publishedAt?: string;
 }): Promise<EmailResult> {
   const { authorName, title, summary, category, slug, publishedAt } = params;
-  const categoryColor = '#0a1eff';
+  const categoryColor = '#0066FF';
   const dateLabel = publishedAt
     ? new Date(publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

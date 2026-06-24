@@ -2,7 +2,7 @@ import { TrendingUp, Star, Fish, Crown, Zap } from 'lucide-react';
 
 const ARCHETYPES = [
   { name: 'DIAMOND HANDS', color: '#F59E0B', desc: 'Holds long-term with high conviction. Patient accumulator.' },
-  { name: 'SCALPER', color: '#0A1EFF', desc: 'High-frequency, short-term trader. Volume and momentum driven.' },
+  { name: 'SCALPER', color: '#0066FF', desc: 'High-frequency, short-term trader. Volume and momentum driven.' },
   { name: 'DEGEN', color: '#EF4444', desc: 'High risk appetite, early-stage token focus, large swings.' },
   { name: 'WHALE FOLLOWER', color: '#8B5CF6', desc: 'Mirrors large wallet entries shortly after they execute.' },
   { name: 'HOLDER', color: '#10B981', desc: 'Moderate-frequency, medium-term positions (7+ day holds).' },
@@ -11,7 +11,7 @@ const ARCHETYPES = [
 const WHALE_TIERS = [
   { tier: 'MEGA', color: '#F59E0B', threshold: '$10M+ volume (7d)', desc: 'Top institutional-grade wallets. Moves by MEGA whales often precede significant market shifts.' },
   { tier: 'LARGE', color: '#8B5CF6', threshold: '$1M–$10M volume (7d)', desc: 'Professional traders or large funds. Consistent top performers.' },
-  { tier: 'MID', color: '#0A1EFF', threshold: '$100K–$1M volume (7d)', desc: 'Active retail-professional hybrids. High trade frequency.' },
+  { tier: 'MID', color: '#0066FF', threshold: '$100K–$1M volume (7d)', desc: 'Active retail-professional hybrids. High trade frequency.' },
   { tier: 'SMALL', color: '#6B7280', threshold: 'Under $100K volume (7d)', desc: 'Active wallets with lower absolute volume.' },
 ];
 
@@ -53,7 +53,7 @@ export function DocsSection08() {
       {/* Whale Tracker */}
       <div id="whale-tracker" className="scroll-mt-20">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Fish className="w-4 h-4 text-[#0A1EFF]" />Whale Tracker
+          <Fish className="w-4 h-4 text-[#0066FF]" />Whale Tracker
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           Monitors 1,000+ wallets across 10 chains in real time · ranking them by volume, win rate, and tier. The Live Feed tab streams large wallet movements as they happen via server-sent events.
@@ -69,7 +69,7 @@ export function DocsSection08() {
             </div>
           ))}
         </div>
-        <div className="bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/20 rounded-xl p-4">
+        <div className="bg-[#0066FF]/[0.05] border border-[#0066FF]/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-[#4D6BFF]" />
             <span className="text-sm font-semibold text-white">Copy Trade Flow</span>

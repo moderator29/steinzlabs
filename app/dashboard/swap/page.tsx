@@ -191,7 +191,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
         </div>
 
         <div className="p-4 space-y-3 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0A1EFF]/40 transition-colors">
+          <div className="flex items-center gap-2 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0066FF]/40 transition-colors">
             <Search className="w-4 h-4 text-gray-600" />
             <input
               ref={inputRef}
@@ -209,7 +209,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
                 <button
                   key={t.symbol}
                   onClick={() => { onSelect(t.symbol); onClose(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#060A12] border border-white/[0.06] rounded-full hover:border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/5 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#060A12] border border-white/[0.06] rounded-full hover:border-[#0066FF]/40 hover:bg-[#0066FF]/5 transition-all"
                 >
                   <TokenBadge symbol={t.symbol} size={18} />
                   <span className="text-xs font-semibold text-white">{t.symbol}</span>
@@ -277,7 +277,7 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
               onClick={() => { setSlippage(s); setCustomSlippage(''); }}
               className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 slippage === s && !customSlippage
-                  ? 'bg-[#0A1EFF] text-white shadow-lg shadow-[#0A1EFF]/20'
+                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/20'
                   : 'bg-[#060A12] text-gray-400 hover:text-white hover:bg-[#060A12]/80'
               }`}
             >
@@ -295,7 +295,7 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
             if (e.target.value) setSlippage(e.target.value);
           }}
           placeholder="Custom"
-          className="flex-1 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 transition-colors text-white placeholder-gray-600"
+          className="flex-1 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 transition-colors text-white placeholder-gray-600"
         />
         <span className="text-sm text-gray-500">%</span>
       </div>
@@ -322,7 +322,7 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
             type="button"
             onClick={() => setMevProtect(!mevProtect)}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              mevProtect ? 'bg-[#0A1EFF]' : 'bg-slate-700'
+              mevProtect ? 'bg-[#0066FF]' : 'bg-slate-700'
             }`}
             aria-pressed={mevProtect}
             aria-label="Toggle MEV protection"
@@ -1141,7 +1141,7 @@ export default function SwapPage() {
   return (
     <div className="min-h-screen bg-[#060A12] text-white">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#0A1EFF]/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#0066FF]/[0.03] rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 flex flex-col items-center px-4 pt-6 sm:pt-12 pb-20 min-h-screen">
@@ -1169,7 +1169,7 @@ export default function SwapPage() {
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`p-2 rounded-xl transition-all ${showSettings ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'hover:bg-white/5 text-gray-400'}`}
+              className={`p-2 rounded-xl transition-all ${showSettings ? 'bg-[#0066FF]/20 text-[#0066FF]' : 'hover:bg-white/5 text-gray-400'}`}
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -1227,7 +1227,7 @@ export default function SwapPage() {
                 onClick={() => handleSelectWalletMode(w.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                   walletMode === w.id
-                    ? 'bg-[#0A1EFF]/15 text-blue-400 border-[#0A1EFF]/40'
+                    ? 'bg-[#0066FF]/15 text-blue-400 border-[#0066FF]/40'
                     : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
                 }`}
                 aria-pressed={walletMode === w.id}
@@ -1261,7 +1261,7 @@ export default function SwapPage() {
             {HAS_APPKIT && (
               <button
                 onClick={() => openAppKitModal()}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border bg-[#0A1EFF]/10 text-blue-200 border-[#0A1EFF]/40 hover:bg-[#0A1EFF]/20 hover:text-blue-100 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border bg-[#0066FF]/10 text-blue-200 border-[#0066FF]/40 hover:bg-[#0066FF]/20 hover:text-blue-100 focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                 aria-label="Connect via WalletConnect (mobile-friendly)"
                 title={onMobileDevice ? 'Mobile / WalletConnect' : 'WalletConnect'}
               >
@@ -1281,7 +1281,7 @@ export default function SwapPage() {
                 aria-pressed={chain === c.id}
                 className={`flex items-center justify-center p-2 rounded-xl transition-all shrink-0 border ${
                   chain === c.id
-                    ? 'bg-white/10 border-[#0A1EFF]/40'
+                    ? 'bg-white/10 border-[#0066FF]/40'
                     : 'border-transparent hover:bg-white/[0.03]'
                 }`}
               >
@@ -1312,7 +1312,7 @@ export default function SwapPage() {
                   <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[fromToken]?.toFixed(4) || '0.00') : '--'}</span>
                   {connectedAddress && walletBalance[fromToken] > 0 && (
                     <>
-                      <button onClick={() => handleFromAmountChange(walletBalance[fromToken].toString())} className="text-[10px] text-[#0A1EFF] font-bold hover:text-[#0A1EFF]/80 transition-colors px-1.5 py-0.5 rounded bg-[#0A1EFF]/10">MAX</button>
+                      <button onClick={() => handleFromAmountChange(walletBalance[fromToken].toString())} className="text-[10px] text-[#0066FF] font-bold hover:text-[#0066FF]/80 transition-colors px-1.5 py-0.5 rounded bg-[#0066FF]/10">MAX</button>
                       <button onClick={() => handleFromAmountChange((walletBalance[fromToken] / 2).toString())} className="text-[10px] text-gray-500 font-bold hover:text-gray-400 transition-colors px-1.5 py-0.5 rounded bg-white/5">HALF</button>
                     </>
                   )}
@@ -1346,7 +1346,7 @@ export default function SwapPage() {
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <button
                   onClick={handleSwapTokens}
-                  className="w-10 h-10 bg-[#1a2332] border-[3px] border-[#0A0E1A] rounded-xl flex items-center justify-center hover:bg-[#0A1EFF] transition-all duration-300 group shadow-lg"
+                  className="w-10 h-10 bg-[#1a2332] border-[3px] border-[#0A0E1A] rounded-xl flex items-center justify-center hover:bg-[#0066FF] transition-all duration-300 group shadow-lg"
                   style={{ transform: `rotate(${swapRotate}deg)`, transition: 'transform 0.3s ease, background-color 0.2s ease' }}
                 >
                   <ArrowDownUp className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
@@ -1362,7 +1362,7 @@ export default function SwapPage() {
               <div className="flex items-center gap-3">
                 {fetchingQuote ? (
                   <div className="flex-1 flex items-center gap-2.5">
-                    <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
+                    <Loader2 className="w-5 h-5 text-[#0066FF] animate-spin" />
                     <span className="text-sm text-gray-500">Finding best route...</span>
                   </div>
                 ) : (
@@ -1462,7 +1462,7 @@ export default function SwapPage() {
               </div>
               <button
                 onClick={() => setGaslessEnabled(!gaslessEnabled)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${gaslessEnabled ? 'bg-[#0A1EFF]' : 'bg-gray-600'}`}
+                className={`relative w-10 h-5 rounded-full transition-colors ${gaslessEnabled ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
               >
                 <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gaslessEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </button>
@@ -1473,16 +1473,16 @@ export default function SwapPage() {
             {/* Transaction Status Overlay */}
             {txStatus !== 'idle' && (
               <div className={`mb-3 rounded-2xl p-4 flex flex-col gap-2 border ${
-                txStatus === 'pending' ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/30' :
+                txStatus === 'pending' ? 'bg-[#0066FF]/10 border-[#0066FF]/30' :
                 txStatus === 'confirmed' ? 'bg-green-500/10 border-green-500/30' :
                 'bg-red-500/10 border-red-500/30'
               }`}>
                 <div className="flex items-center gap-2">
-                  {txStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin text-[#0A1EFF]" />}
+                  {txStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />}
                   {txStatus === 'confirmed' && <CheckCircle className="w-4 h-4 text-green-400" />}
                   {txStatus === 'failed' && <AlertTriangle className="w-4 h-4 text-red-400" />}
                   <span className={`text-xs font-bold ${
-                    txStatus === 'pending' ? 'text-[#0A1EFF]' :
+                    txStatus === 'pending' ? 'text-[#0066FF]' :
                     txStatus === 'confirmed' ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {txStatus === 'pending' ? 'Transaction Pending...' :
@@ -1498,7 +1498,7 @@ export default function SwapPage() {
                       href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : chain === 'base' ? `https://basescan.org/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-[#0A1EFF] hover:underline shrink-0"
+                      className="flex items-center gap-1 text-[10px] text-[#0066FF] hover:underline shrink-0"
                     >
                       View <ExternalLink className="w-3 h-3" />
                     </a>
@@ -1522,7 +1522,7 @@ export default function SwapPage() {
                 {walletMode === 'naka' && (
                   <button
                     onClick={() => router.push('/dashboard/wallet-page')}
-                    className="shrink-0 px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                    className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
                   >
                     Create
                   </button>
@@ -1530,7 +1530,7 @@ export default function SwapPage() {
                 {walletMode !== 'naka' && (
                   <button
                     onClick={() => handleSelectWalletMode(walletMode)}
-                    className="shrink-0 px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                    className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
                   >
                     Connect
                   </button>
@@ -1561,7 +1561,7 @@ export default function SwapPage() {
               disabled={!fromAmount || parseFloat(fromAmount) <= 0 || swapping || fetchingQuote}
               className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 fromAmount && parseFloat(fromAmount) > 0 && !swapping && !fetchingQuote
-                  ? 'bg-[#0A1EFF] hover:bg-[#0918CC] active:scale-[0.98] text-white shadow-lg shadow-[#0A1EFF]/20'
+                  ? 'bg-[#0066FF] hover:bg-[#0918CC] active:scale-[0.98] text-white shadow-lg shadow-[#0066FF]/20'
                   : 'bg-[#0f1320] text-gray-600 cursor-not-allowed border border-white/[0.04]'
               }`}
             >
@@ -1631,7 +1631,7 @@ export default function SwapPage() {
                 aria-expanded={showAdvancedOrders}
               >
                 <div className="flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                  <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
                   <span className="text-xs text-gray-300 font-semibold">Advanced orders</span>
                   <span className="text-[10px] text-gray-500">Limit · DCA · Stop · Take-profit</span>
                 </div>
@@ -1654,7 +1654,7 @@ export default function SwapPage() {
           {hasQuote && (
             <div className="mt-3 bg-[#0f1320]/60 rounded-2xl border border-white/[0.04] p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
                 <span className="text-xs text-gray-400 font-medium">Order routing</span>
               </div>
               <div className="flex items-center justify-between">
@@ -1941,7 +1941,7 @@ export default function SwapPage() {
                   className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${
                     piBlocked || securityBlocking
                       ? 'bg-red-500/20 text-red-400 cursor-not-allowed'
-                      : 'bg-[#0A1EFF] hover:bg-[#0918CC] text-white active:scale-[0.98]'
+                      : 'bg-[#0066FF] hover:bg-[#0918CC] text-white active:scale-[0.98]'
                   }`}
                 >
                   {piBlocked || securityBlocking ? 'Blocked' : 'Confirm swap'}

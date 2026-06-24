@@ -116,8 +116,8 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                   onClick={() => set({ category: cat })}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                     filters.category === cat
-                      ? 'bg-[#0A1EFF] border-[#0A1EFF] text-white'
-                      : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#0A1EFF]/50 hover:text-white'
+                      ? 'bg-[#0066FF] border-[#0066FF] text-white'
+                      : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#0066FF]/50 hover:text-white'
                   }`}
                 >
                   {cat}
@@ -136,8 +136,8 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                   onClick={() => set({ sortBy: opt.value })}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
                     filters.sortBy === opt.value
-                      ? 'bg-[#0A1EFF] border-[#0A1EFF] text-white'
-                      : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#0A1EFF]/50 hover:text-white'
+                      ? 'bg-[#0066FF] border-[#0066FF] text-white'
+                      : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#0066FF]/50 hover:text-white'
                   }`}
                 >
                   {opt.label}
@@ -163,7 +163,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                     onClick={() => set({ minMarketCap: p.min, maxMarketCap: p.max })}
                     className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
                       active
-                        ? 'bg-[#0A1EFF]/20 border-[#0A1EFF] text-white'
+                        ? 'bg-[#0066FF]/20 border-[#0066FF] text-white'
                         : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#1E2433] hover:text-gray-300'
                     }`}
                   >
@@ -186,7 +186,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
                     onClick={() => set({ minVolume: p.value })}
                     className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
                       active
-                        ? 'bg-[#0A1EFF]/20 border-[#0A1EFF] text-white'
+                        ? 'bg-[#0066FF]/20 border-[#0066FF] text-white'
                         : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#1E2433] hover:text-gray-300'
                     }`}
                   >
@@ -208,7 +208,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-sm font-semibold transition-colors"
+            className="flex-1 py-2.5 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-sm font-semibold transition-colors"
           >
             Apply
           </button>

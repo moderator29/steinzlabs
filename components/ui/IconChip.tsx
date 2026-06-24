@@ -24,7 +24,7 @@ const SIZE: Record<Size, string> = {
 
 const TONE: Record<Tone, string> = {
   default: 'bg-white/[0.05] border-white/10 text-slate-300',
-  accent: 'bg-[var(--nl-accent-soft,rgba(10,30,255,0.15))] border-[var(--nl-blue,#0A1EFF)]/30 text-[var(--nl-blue,#0A1EFF)]',
+  accent: 'bg-[var(--nl-accent-soft,rgba(0,102,255,0.15))] border-[var(--nl-blue,#0066FF)]/30 text-[var(--nl-blue,#0066FF)]',
   success: 'bg-emerald-500/12 border-emerald-500/30 text-emerald-400',
   warning: 'bg-amber-500/12 border-amber-500/30 text-amber-400',
   danger: 'bg-red-500/12 border-red-500/30 text-red-400',

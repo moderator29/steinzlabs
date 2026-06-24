@@ -71,7 +71,7 @@ export default function VtxAnalyticsPage() {
 
       {loading && data.totalQueries === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading VTX analytics...</span>
         </div>
       )}
@@ -108,7 +108,7 @@ export default function VtxAnalyticsPage() {
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => formatLargeNumber(v)} />
                   <YAxis type="category" dataKey="user" tick={{ fontSize: 9, fill: '#6B7280' }} width={100} />
                   <Tooltip formatter={(v: number) => formatLargeNumber(v)} contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-                  <Bar dataKey="count" fill="#0A1EFF" radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="count" fill="#0066FF" radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -118,7 +118,7 @@ export default function VtxAnalyticsPage() {
 
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
             <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-[#0A1EFF]" />
+              <Users className="w-3.5 h-3.5 text-[#0066FF]" />
               <h3 className="text-sm font-semibold text-white">Top Users (30d)</h3>
             </div>
             <table className="w-full text-xs min-w-[500px]">

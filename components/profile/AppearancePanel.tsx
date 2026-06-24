@@ -40,7 +40,7 @@ function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               active
-                ? 'bg-[var(--nl-blue,#0A1EFF)] text-white'
+                ? 'bg-[var(--nl-blue,#0066FF)] text-white'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
             }`}
           >

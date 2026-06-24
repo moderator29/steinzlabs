@@ -138,7 +138,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
               {(['BUY', 'SELL'] as const).map((m) => (
                 <button key={m} onClick={() => setMode(m)}
                   className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    m === 'BUY' ? (mode === 'BUY' ? 'bg-[#0A1EFF] text-white' : 'bg-[#141824] text-gray-400 border border-[#1E2433]')
+                    m === 'BUY' ? (mode === 'BUY' ? 'bg-[#0066FF] text-white' : 'bg-[#141824] text-gray-400 border border-[#1E2433]')
                                : (mode === 'SELL' ? 'bg-red-600 text-white' : 'bg-[#141824] text-gray-400 border border-[#1E2433]')
                   }`}>{m}</button>
               ))}
@@ -149,12 +149,12 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
             </div>
 
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00"
-              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-2 focus:outline-none focus:border-[#0A1EFF]" />
+              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-2 focus:outline-none focus:border-[#0066FF]" />
 
             <div className="flex gap-2 mb-4">
               {QUICK_AMOUNTS.map((v) => (
                 <button key={v} onClick={() => setAmount(v === 'MAX' ? (walletBalance?.toString() || '0') : v)}
-                  className="flex-1 text-xs py-1.5 bg-[#141824] border border-[#1E2433] rounded text-gray-400 hover:text-white hover:border-[#0A1EFF]/50 transition-colors">
+                  className="flex-1 text-xs py-1.5 bg-[#141824] border border-[#1E2433] rounded text-gray-400 hover:text-white hover:border-[#0066FF]/50 transition-colors">
                   {v === 'MAX' ? 'MAX' : `$${v}`}
                 </button>
               ))}
@@ -181,7 +181,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
                   <button
                     type="button"
                     onClick={() => { window.location.href = `/dashboard/wallet-page?action=receive&chain=${chain}`; }}
-                    className="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
+                    className="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-[#0066FF] hover:bg-[#0066FF]/90 text-white"
                   >
                     Add Funds
                   </button>
@@ -220,7 +220,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
             <div className="flex gap-2 text-xs mb-3">
               {[0.1, 0.5, 1.0, 2.0].map((s) => (
                 <button key={s} onClick={() => setSlippage(s)}
-                  className={`flex-1 py-1 rounded border transition-colors ${slippage === s ? 'border-[#0A1EFF] text-[#0A1EFF]' : 'border-[#1E2433] text-gray-500'}`}>
+                  className={`flex-1 py-1 rounded border transition-colors ${slippage === s ? 'border-[#0066FF] text-[#0066FF]' : 'border-[#1E2433] text-gray-500'}`}>
                   {s}%
                 </button>
               ))}
@@ -228,7 +228,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
 
             <button onClick={handleExecute} disabled={!amountNum || executing}
               className={`w-full py-3 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 ${
-                mode === 'BUY' ? 'bg-[#0A1EFF] hover:bg-[#0916CC] text-white' : 'bg-red-600 hover:bg-red-700 text-white'
+                mode === 'BUY' ? 'bg-[#0066FF] hover:bg-[#0052CC] text-white' : 'bg-red-600 hover:bg-red-700 text-white'
               }`}>
               {executing ? 'Confirming...' : `${mode} ${symbol}`}
             </button>

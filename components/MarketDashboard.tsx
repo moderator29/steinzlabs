@@ -303,7 +303,7 @@ export default function MarketDashboard() {
         <div className="flex flex-wrap gap-2 mb-5">
           {[{v:'market_cap',l:'Market Cap'},{v:'change_desc',l:'Top Gainers'},{v:'change_asc',l:'Top Losers'},{v:'volume',l:'Volume'},{v:'price_desc',l:'Price ↓'}].map(o=>(
             <button key={o.v} onClick={()=>setPendingFilters(p=>({...p,sortBy:o.v}))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.sortBy===o.v?'bg-[#0A1EFF] border-[#0A1EFF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.sortBy===o.v?'bg-[#0066FF] border-[#0066FF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
               {o.l}
             </button>
           ))}
@@ -312,7 +312,7 @@ export default function MarketDashboard() {
         <div className="flex flex-wrap gap-2 mb-5">
           {[{v:'all',l:'All'},{v:'gainers',l:'Gainers'},{v:'big_gainers',l:'Big Gainers (>5%)'},{v:'losers',l:'Losers'},{v:'big_losers',l:'Big Losers (<-5%)'}].map(o=>(
             <button key={o.v} onClick={()=>setPendingFilters(p=>({...p,priceChange:o.v}))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.priceChange===o.v?'bg-[#0A1EFF] border-[#0A1EFF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.priceChange===o.v?'bg-[#0066FF] border-[#0066FF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
               {o.l}
             </button>
           ))}
@@ -321,14 +321,14 @@ export default function MarketDashboard() {
         <div className="flex flex-wrap gap-2 mb-6">
           {[{v:'all',l:'All'},{v:'micro',l:'Micro (<$10M)'},{v:'small',l:'Small ($10M–$100M)'},{v:'mid',l:'Mid ($100M–$1B)'},{v:'large',l:'Large (>$1B)'}].map(o=>(
             <button key={o.v} onClick={()=>setPendingFilters(p=>({...p,mcap:o.v}))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.mcap===o.v?'bg-[#0A1EFF] border-[#0A1EFF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${pendingFilters.mcap===o.v?'bg-[#0066FF] border-[#0066FF] text-white':'bg-transparent border-white/[0.1] text-gray-400 hover:text-white'}`}>
               {o.l}
             </button>
           ))}
         </div>
         <div className="flex gap-3">
           <button onClick={()=>{setFilters(pendingFilters);setShowFilters(false);}}
-            className="flex-1 py-3.5 bg-[#0A1EFF] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
+            className="flex-1 py-3.5 bg-[#0066FF] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
             Apply
           </button>
           <button onClick={()=>{const d={mcap:'all',priceChange:'all',sortBy:'market_cap'};setPendingFilters(d);setFilters(d);setShowFilters(false);}}
@@ -345,7 +345,7 @@ export default function MarketDashboard() {
       <div className="flex gap-1 p-1 bg-[#111827] border border-white/[0.06] rounded-xl mb-4">
         {(['prices','watchlist'] as const).map(t=>(
           <button key={t} onClick={()=>setTab(t)}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all capitalize ${t===tab?'bg-[#0A1EFF] text-white shadow-[0_0_10px_rgba(10,30,255,0.35)]':'text-gray-400 hover:text-white'}`}>
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all capitalize ${t===tab?'bg-[#0066FF] text-white shadow-[0_0_10px_rgba(0,102,255,0.35)]':'text-gray-400 hover:text-white'}`}>
             {t==='prices'?'Prices':'Watchlist'}
           </button>
         ))}
@@ -356,8 +356,8 @@ export default function MarketDashboard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Search by name or CA..."
-            className="w-full ps-9 pe-10 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
-          {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1EFF] animate-spin" />}
+            className="w-full ps-9 pe-10 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
+          {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0066FF] animate-spin" />}
           {search && !searching && (
             <button onClick={()=>{setSearch('');setSearchResults([]);}}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
@@ -367,10 +367,10 @@ export default function MarketDashboard() {
         </div>
         {tab === 'prices' && (
           <button onClick={()=>{setPendingFilters(filters);setShowFilters(true);}}
-            className={`relative flex items-center justify-center w-10 h-10 bg-[#111827] border rounded-xl transition-all flex-shrink-0 ${activeFilterCount>0?'border-[#0A1EFF]/60 text-[#0A1EFF]':'border-white/[0.06] text-gray-400 hover:text-white'}`}>
+            className={`relative flex items-center justify-center w-10 h-10 bg-[#111827] border rounded-xl transition-all flex-shrink-0 ${activeFilterCount>0?'border-[#0066FF]/60 text-[#0066FF]':'border-white/[0.06] text-gray-400 hover:text-white'}`}>
             <SlidersHorizontal className="w-4 h-4" />
             {activeFilterCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#0A1EFF] rounded-full text-[9px] text-white flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#0066FF] rounded-full text-[9px] text-white flex items-center justify-center font-bold">
                 {activeFilterCount}
               </span>
             )}
@@ -382,7 +382,7 @@ export default function MarketDashboard() {
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide" style={{scrollbarWidth:'none'}}>
           {CATEGORIES.map(cat=>(
             <button key={cat.id} onClick={()=>setCategory(cat.id)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${category===cat.id?'bg-[#0A1EFF] text-white shadow-[0_0_10px_rgba(10,30,255,0.35)]':'bg-[#111827] text-gray-400 hover:text-white border border-white/[0.06]'}`}>
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${category===cat.id?'bg-[#0066FF] text-white shadow-[0_0_10px_rgba(0,102,255,0.35)]':'bg-[#111827] text-gray-400 hover:text-white border border-white/[0.06]'}`}>
               {cat.label}
             </button>
           ))}
@@ -401,10 +401,10 @@ export default function MarketDashboard() {
               const pos = coin.change24h >= 0;
               return (
                 <div key={coin.id} onClick={()=>handleCoinTap(coin)}
-                  className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 cursor-pointer hover:border-[#0A1EFF]/40 transition-all">
+                  className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 cursor-pointer hover:border-[#0066FF]/40 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
                         {coin.image
                           ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
                           : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0,2)}</span>}
@@ -448,7 +448,7 @@ export default function MarketDashboard() {
         ) : coins.length === 0 && search.length < 2 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <p className="text-gray-400 text-sm text-center">Market data unavailable.<br/>Please retry.</p>
-            <button onClick={fetchCoins} className="text-sm text-[#0A1EFF] hover:text-blue-400 transition-colors">Retry</button>
+            <button onClick={fetchCoins} className="text-sm text-[#0066FF] hover:text-blue-400 transition-colors">Retry</button>
           </div>
         ) : (
           <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06]">
@@ -465,7 +465,7 @@ export default function MarketDashboard() {
                   <div className="w-6 text-end text-[11px] text-gray-500 flex-shrink-0 font-mono">
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
                     {coin.image
                       ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
                       : <span className="text-xs font-bold text-white">{coin.symbol.slice(0,2)}</span>}
@@ -474,7 +474,7 @@ export default function MarketDashboard() {
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-white truncate">{coin.name}</span>
                       {coin.source==='dex' && coin.chain && (
-                        <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0A1EFF]/20 text-[#0A1EFF] rounded font-medium">
+                        <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
                           {CHAIN_LABEL[coin.chain]||coin.chain.slice(0,4).toUpperCase()}
                         </span>
                       )}

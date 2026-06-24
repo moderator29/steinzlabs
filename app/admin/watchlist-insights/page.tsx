@@ -70,7 +70,7 @@ export default function WatchlistInsightsPage() {
 
       {loading && data.tokens.length === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading watchlist insights...</span>
         </div>
       )}
@@ -92,8 +92,8 @@ export default function WatchlistInsightsPage() {
               { icon: TrendingUp, label: 'Avg Items / User', value: avgPerUser },
             ].map(k => (
               <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
-                <div className="w-9 h-9 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center">
-                  <k.icon className="w-4 h-4 text-[#0A1EFF]" />
+                <div className="w-9 h-9 bg-[#0066FF]/10 rounded-xl flex items-center justify-center">
+                  <k.icon className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <div>
                   <div className="text-xl font-bold text-white">{k.value}</div>
@@ -111,7 +111,7 @@ export default function WatchlistInsightsPage() {
                 <XAxis dataKey="symbol" tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => formatLargeNumber(v)} />
                 <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => formatLargeNumber(v)} />
-                <Bar dataKey="count" fill="#0A1EFF" radius={[2, 2, 0, 0]} name="Watchers" />
+                <Bar dataKey="count" fill="#0066FF" radius={[2, 2, 0, 0]} name="Watchers" />
               </BarChart>
             </ResponsiveContainer>
           </div>

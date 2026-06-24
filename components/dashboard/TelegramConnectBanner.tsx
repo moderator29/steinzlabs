@@ -42,7 +42,7 @@ export function TelegramConnectBanner() {
   return (
     <Link
       href="/settings/notifications#telegram"
-      className="group relative flex items-center justify-between gap-3 rounded-xl border border-[#229ED9]/30 bg-gradient-to-r from-[#229ED9]/10 to-[#0A1EFF]/10 p-4 transition hover:border-[#229ED9]/60"
+      className="group relative flex items-center justify-between gap-3 rounded-xl border border-[#229ED9]/30 bg-gradient-to-r from-[#229ED9]/10 to-[#0066FF]/10 p-4 transition hover:border-[#229ED9]/60"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#229ED9]/15">

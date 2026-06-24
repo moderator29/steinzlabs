@@ -73,7 +73,7 @@ export default function DocsPage() {
             <BackButton href="/" label="Back" className="hidden sm:inline-flex" />
             <span className="hidden sm:block w-px h-4 bg-white/[0.08] flex-shrink-0" />
             <div className="flex items-center gap-1.5 min-w-0">
-              <BookOpen className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+              <BookOpen className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
               <span className="text-sm font-semibold text-white whitespace-nowrap truncate">
                 <span className="hidden sm:inline">NAKA LABS Docs</span>
                 <span className="sm:hidden">Docs</span>
@@ -85,7 +85,7 @@ export default function DocsPage() {
             <Link href="/whitepaper" className="hidden lg:flex text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 border border-white/[0.08] rounded-lg hover:border-white/[0.15]">
               Whitepaper
             </Link>
-            <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-semibold whitespace-nowrap">
+            <Link href="/dashboard" className="text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg transition-colors font-semibold whitespace-nowrap">
               Open App
             </Link>
           </div>
@@ -99,7 +99,7 @@ export default function DocsPage() {
           <div className="absolute left-0 top-0 bottom-0 w-72 bg-[#0D1117] border-r border-white/[0.06] overflow-y-auto">
             <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.06]">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#0A1EFF]" />
+                <BookOpen className="w-4 h-4 text-[#0066FF]" />
                 <span className="text-sm font-semibold">Documentation</span>
               </div>
               <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-white/[0.06]">
@@ -127,7 +127,7 @@ export default function DocsPage() {
         {/* Main Content */}
         <main className="flex-1 min-w-0 max-w-3xl">
           <div className="mb-10 pb-8 border-b border-white/[0.06]">
-            <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 rounded-full px-3 py-1 text-xs text-[#0A1EFF] font-semibold mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#0066FF]/10 border border-[#0066FF]/20 rounded-full px-3 py-1 text-xs text-[#0066FF] font-semibold mb-4">
               <BookOpen className="w-3 h-3" />
               Platform Documentation
             </div>
@@ -160,7 +160,7 @@ export default function DocsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <span className="text-xs text-gray-600">&copy; 2026 NAKA LABS. All rights reserved.</span>
               <div className="flex items-center gap-4">
-                <Link href="/whitepaper" className="flex items-center gap-1 text-xs text-[#0A1EFF] hover:text-[#0A1EFF]/80 transition-colors">
+                <Link href="/whitepaper" className="flex items-center gap-1 text-xs text-[#0066FF] hover:text-[#0066FF]/80 transition-colors">
                   <ExternalLink className="w-3 h-3" />View Whitepaper
                 </Link>
                 <Link href="/dashboard" className="text-xs text-gray-400 hover:text-white transition-colors">Open App</Link>

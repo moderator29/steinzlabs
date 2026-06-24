@@ -104,7 +104,7 @@ export default function ApprovalManagerPage() {
           <button onClick={() => router.back()} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0A1EFF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Key className="w-4 h-4" />
           </div>
           <div>
@@ -153,7 +153,7 @@ export default function ApprovalManagerPage() {
           <button
             onClick={handleScan}
             disabled={loading || !address.trim()}
-            className="bg-gradient-to-r from-[#7C3AED] to-[#0A1EFF] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="bg-gradient-to-r from-[#7C3AED] to-[#0066FF] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
@@ -201,7 +201,7 @@ export default function ApprovalManagerPage() {
               href={getRevokeUrl(address.trim(), selectedChain.chainId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-gradient-to-r from-[#7C3AED]/10 to-[#0A1EFF]/10 border border-[#7C3AED]/20 rounded-2xl p-4 hover:border-[#7C3AED]/40 transition-all"
+              className="flex items-center justify-between bg-gradient-to-r from-[#7C3AED]/10 to-[#0066FF]/10 border border-[#7C3AED]/20 rounded-2xl p-4 hover:border-[#7C3AED]/40 transition-all"
             >
               <div>
                 <p className="text-sm font-bold">Revoke Approvals</p>

@@ -56,7 +56,7 @@ export function VtxModelPicker({ value, onChange }: ModelPickerProps) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 hover:border-[#0A1EFF]/40 text-xs text-slate-200 transition-colors"
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 hover:border-[#0066FF]/40 text-xs text-slate-200 transition-colors"
       >
         <CurrentIcon className="w-3 h-3 text-[#8FA3FF]" />
         <span className="font-semibold">{current.label}</span>
@@ -81,7 +81,7 @@ export function VtxModelPicker({ value, onChange }: ModelPickerProps) {
                     setOpen(false);
                   }}
                   className={`w-full text-start px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
-                    active ? 'bg-[#0A1EFF]/10' : 'hover:bg-white/[0.04]'
+                    active ? 'bg-[#0066FF]/10' : 'hover:bg-white/[0.04]'
                   }`}
                 >
                   <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${active ? 'text-[#8FA3FF]' : 'text-slate-500'}`} />

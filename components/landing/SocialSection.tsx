@@ -43,9 +43,9 @@ export function SocialSection() {
           <span
             className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-4"
             style={{
-              background: 'rgba(10,30,255,.10)',
+              background: 'rgba(0,102,255,.10)',
               color: 'var(--nl-text-secondary,#8FA3FF)',
-              border: '1px solid rgba(10,30,255,.25)',
+              border: '1px solid rgba(0,102,255,.25)',
             }}
           >
             Social Layer
@@ -62,7 +62,7 @@ export function SocialSection() {
           {PILLARS.map(({ icon: Icon, title, body }) => (
             <div
               key={title}
-              className="rounded-2xl p-5 border transition-all hover:border-[var(--nl-blue,#0A1EFF)]/40"
+              className="rounded-2xl p-5 border transition-all hover:border-[var(--nl-blue,#0066FF)]/40"
               style={{
                 background: 'rgba(255,255,255,.025)',
                 borderColor: 'rgba(255,255,255,.08)',
@@ -71,9 +71,9 @@ export function SocialSection() {
               <div className="flex items-center gap-3 mb-2">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(10,30,255,.10)' }}
+                  style={{ background: 'rgba(0,102,255,.10)' }}
                 >
-                  <Icon className="w-4 h-4 text-[var(--nl-blue,#0A1EFF)]" />
+                  <Icon className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
                 </div>
                 <h3 className="text-base font-bold text-white">{title}</h3>
               </div>
@@ -88,7 +88,7 @@ export function SocialSection() {
           <Link
             href="/discover"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg,#0A1EFF,#3d57ff)', boxShadow: '0 0 20px rgba(10,30,255,.35)' }}
+            style={{ background: 'linear-gradient(135deg,#0066FF,#3d57ff)', boxShadow: '0 0 20px rgba(0,102,255,.35)' }}
           >
             Explore Discover <ArrowRight className="w-4 h-4" />
           </Link>

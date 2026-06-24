@@ -54,7 +54,7 @@ function inlineMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-white">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em class="italic text-gray-200">$1</em>')
     .replace(/`([^`\n]+)`/g, '<code class="text-xs bg-black/40 border border-white/10 rounded px-1.5 py-0.5 font-mono text-[#7C9EFF]">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-[#0A1EFF] underline underline-offset-2" target="_blank" rel="noopener noreferrer">$1</a>');
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-[#0066FF] underline underline-offset-2" target="_blank" rel="noopener noreferrer">$1</a>');
 }
 
 function renderMarkdown(md: string): string {
@@ -78,7 +78,7 @@ function renderMarkdown(md: string): string {
     if (line.startsWith('## '))  { out.push(`<h2 class="text-lg font-bold text-white mt-5 mb-2">${inlineMarkdown(line.slice(3))}</h2>`); continue; }
     if (line.startsWith('# '))   { out.push(`<h1 class="text-2xl font-bold text-white mt-6 mb-3">${inlineMarkdown(line.slice(2))}</h1>`); continue; }
     if (/^---+$/.test(line.trim())) { out.push('<hr class="border-white/10 my-4" />'); continue; }
-    if (line.startsWith('> '))   { out.push(`<blockquote class="border-l-2 border-[#0A1EFF]/50 ps-4 py-1 my-2 text-gray-400 italic">${inlineMarkdown(line.slice(2))}</blockquote>`); continue; }
+    if (line.startsWith('> '))   { out.push(`<blockquote class="border-l-2 border-[#0066FF]/50 ps-4 py-1 my-2 text-gray-400 italic">${inlineMarkdown(line.slice(2))}</blockquote>`); continue; }
     if (/^[-*] /.test(line))     { out.push(`<li class="ms-5 list-disc text-gray-300 my-0.5">${inlineMarkdown(line.slice(2))}</li>`); continue; }
     if (/^\d+\. /.test(line))    { out.push(`<li class="ms-5 list-decimal text-gray-300 my-0.5">${inlineMarkdown(line.replace(/^\d+\. /, ''))}</li>`); continue; }
     if (line.trim() === '')      { out.push('<div class="my-2"></div>'); continue; }
@@ -240,7 +240,7 @@ export default function AdminResearchPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-[#0A1EFF]" />
+            <BookOpen className="w-5 h-5 text-[#0066FF]" />
             Research Labs CMS
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -248,10 +248,10 @@ export default function AdminResearchPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} aria-label="Refresh post list" className="p-2 text-gray-300 hover:text-white border border-[#1E2433] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+          <button onClick={load} disabled={loading} aria-label="Refresh post list" className="p-2 text-gray-300 hover:text-white border border-[#1E2433] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
-          <button onClick={openNew} className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0818CC] rounded-lg px-4 py-2 transition-colors">
+          <button onClick={openNew} className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0066FF] hover:bg-[#0818CC] rounded-lg px-4 py-2 transition-colors">
             <Plus className="w-3.5 h-3.5" /> New Post
           </button>
         </div>
@@ -263,7 +263,7 @@ export default function AdminResearchPage() {
       <div className="relative mb-5">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search posts…"
-          className="w-full bg-[#141824] border border-[#1E2433] rounded-xl ps-9 pe-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50" />
+          className="w-full bg-[#141824] border border-[#1E2433] rounded-xl ps-9 pe-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50" />
       </div>
 
       {/* Post list */}
@@ -283,7 +283,7 @@ export default function AdminResearchPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <h3 className="text-sm font-semibold text-white truncate">{post.title}</h3>
-                  <span className="text-[10px] bg-[#0A1EFF]/15 text-[#6B7FFF] border border-[#0A1EFF]/20 px-1.5 py-0.5 rounded-full flex-shrink-0">{post.category}</span>
+                  <span className="text-[10px] bg-[#0066FF]/15 text-[#6B7FFF] border border-[#0066FF]/20 px-1.5 py-0.5 rounded-full flex-shrink-0">{post.category}</span>
                 </div>
                 <p className="text-xs text-gray-500 truncate">{post.summary || 'No summary'}</p>
                 <p className="text-[10px] text-gray-600 mt-0.5">
@@ -297,17 +297,17 @@ export default function AdminResearchPage() {
                 {post.published && (
                   <a href={`/dashboard/research?post=${post.id}`} target="_blank"
                     aria-label={`View "${post.title}" on the public site`}
-                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]" title="View live">
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]" title="View live">
                     <Globe className="w-3.5 h-3.5" aria-hidden="true" />
                   </a>
                 )}
                 <button onClick={() => togglePublish(post)} title={post.published ? 'Unpublish' : 'Publish'}
                   aria-label={post.published ? `Unpublish "${post.title}"` : `Publish "${post.title}"`}
-                  className={`p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] ${post.published ? 'text-emerald-300 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
+                  className={`p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF] ${post.published ? 'text-emerald-300 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
                   {post.published ? <Eye className="w-3.5 h-3.5" aria-hidden="true" /> : <EyeOff className="w-3.5 h-3.5" aria-hidden="true" />}
                 </button>
                 <button onClick={() => openEdit(post)} title="Edit" aria-label={`Edit "${post.title}"`}
-                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E2433] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                   <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
                 <button onClick={() => deletePost(post)} title="Delete" aria-label={`Delete "${post.title}"`}
@@ -328,7 +328,7 @@ export default function AdminResearchPage() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E2433] flex-shrink-0">
               <h2 className="text-sm font-bold text-white">{editing ? 'Edit Post' : 'New Post'}</h2>
-              <button onClick={() => setShowForm(false)} aria-label="Close editor" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+              <button onClick={() => setShowForm(false)} aria-label="Close editor" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
@@ -344,7 +344,7 @@ export default function AdminResearchPage() {
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Title *</label>
                   <input type="text" value={form.title}
                     onChange={e => setForm(f => ({ ...f, title: e.target.value, slug: slugify(e.target.value) }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50"
                     placeholder="Post title" />
                 </div>
 
@@ -352,7 +352,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Slug</label>
                   <input type="text" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#0066FF]/50"
                     placeholder="auto-generated" />
                 </div>
 
@@ -360,7 +360,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Category</label>
                   <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50">
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50">
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
@@ -369,7 +369,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Summary</label>
                   <textarea value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} rows={3}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50 resize-none"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 resize-none"
                     placeholder="Short description shown in feed" />
                 </div>
 
@@ -380,19 +380,19 @@ export default function AdminResearchPage() {
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = ''; }} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={imageUploading}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-[#1E2433] hover:border-[#0A1EFF]/50 rounded-xl py-3 text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 mb-2">
+                    className="w-full flex items-center justify-center gap-2 border border-dashed border-[#1E2433] hover:border-[#0066FF]/50 rounded-xl py-3 text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 mb-2">
                     {imageUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                     {imageUploading ? 'Uploading…' : 'Upload image'}
                   </button>
                   {/* OR paste URL */}
                   <input type="url" value={form.image_url ?? ''} onChange={e => setForm(f => ({ ...f, image_url: e.target.value || null }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50"
                     placeholder="…or paste URL" />
                   {form.image_url && (
                     <div className="mt-2 relative">
                       <img src={form.image_url} alt="preview" className="w-full h-28 object-cover rounded-lg border border-white/10" />
                       <button onClick={() => setForm(f => ({ ...f, image_url: null }))} aria-label="Remove cover image"
-                        className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                        className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                         <X className="w-3 h-3" aria-hidden="true" />
                       </button>
                     </div>
@@ -404,7 +404,7 @@ export default function AdminResearchPage() {
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Tags (comma separated)</label>
                   <input type="text" value={form.tags.join(', ')}
                     onChange={e => setForm(f => ({ ...f, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50"
                     placeholder="DeFi, Solana, Analysis" />
                 </div>
 
@@ -415,7 +415,7 @@ export default function AdminResearchPage() {
                     type="datetime-local"
                     value={form.scheduled_at ?? ''}
                     onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value || null }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50"
                   />
                   {form.scheduled_at && (
                     <p className="text-[10px] text-amber-300/80 mt-1">
@@ -441,7 +441,7 @@ export default function AdminResearchPage() {
                   {(['write', 'preview'] as EditorTab[]).map(tab => (
                     <button key={tab} onClick={() => setEditorTab(tab)}
                       className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold capitalize transition-colors border-b-2 ${
-                        editorTab === tab ? 'border-[#0A1EFF] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+                        editorTab === tab ? 'border-[#0066FF] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
                       {tab === 'write' ? <FileText className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       {tab}
                     </button>
@@ -481,7 +481,7 @@ export default function AdminResearchPage() {
                   Cancel
                 </button>
                 <button onClick={save} disabled={saving}
-                  className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 px-5 py-2 rounded-lg transition-colors">
+                  className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 px-5 py-2 rounded-lg transition-colors">
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Post'}
                 </button>

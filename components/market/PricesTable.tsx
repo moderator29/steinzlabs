@@ -84,7 +84,7 @@ export function PricesTable({ tokens, loading = false, onTokenClick }: PricesTab
                       <div className="flex items-center gap-2.5">
                         <TokenLogo src={token.image} symbol={token.symbol} size={28} />
                         <div>
-                          <div className="text-white font-medium text-sm leading-tight group-hover:text-[#0A1EFF] transition-colors">
+                          <div className="text-white font-medium text-sm leading-tight group-hover:text-[#0066FF] transition-colors">
                             {token.name}
                           </div>
                           <div className="text-gray-500 text-xs uppercase">{token.symbol}</div>

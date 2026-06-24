@@ -319,7 +319,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
                 onClick={() => onSlippagePreset(preset)}
                 className={`py-1 rounded text-[10px] font-semibold transition-colors ${
                   active
-                    ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                    ? 'bg-[#0066FF]/20 text-[#8FA3FF] border border-[#0066FF]/40'
                     : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-transparent'
                 }`}
                 aria-pressed={active}
@@ -333,7 +333,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
             onClick={() => setShowSlippageInput((v) => !v)}
             className={`py-1 rounded text-[10px] font-semibold transition-colors ${
               showSlippageInput
-                ? 'bg-[#0A1EFF]/20 text-[#8FA3FF] border border-[#0A1EFF]/40'
+                ? 'bg-[#0066FF]/20 text-[#8FA3FF] border border-[#0066FF]/40'
                 : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-transparent'
             }`}
           >
@@ -351,7 +351,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
             onBlur={(e) => onSlippageCustom(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
             placeholder="Custom %"
-            className="mt-1.5 w-full px-2 py-1 rounded bg-slate-900/60 border border-slate-800 text-[11px] focus:outline-none focus:border-[#0A1EFF]/50"
+            className="mt-1.5 w-full px-2 py-1 rounded bg-slate-900/60 border border-slate-800 text-[11px] focus:outline-none focus:border-[#0066FF]/50"
             autoFocus
           />
         )}

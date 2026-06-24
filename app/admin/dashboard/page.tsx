@@ -13,8 +13,8 @@ function KpiCard({ icon: Icon, label, value, change, changeType }: {
     <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-gray-400 font-medium">{label}</span>
-        <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
-          <Icon className="w-3.5 h-3.5 text-[#0A1EFF]" />
+        <div className="w-7 h-7 bg-[#0066FF]/10 rounded-lg flex items-center justify-center">
+          <Icon className="w-3.5 h-3.5 text-[#0066FF]" />
         </div>
       </div>
       <div className="text-xl font-bold text-white mb-1">{value}</div>
@@ -103,15 +103,15 @@ export default function AdminDashboard() {
             <AreaChart data={CHART_DATA}>
               <defs>
                 <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0A1EFF" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#0A1EFF" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0066FF" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#0066FF" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
               <XAxis dataKey="day" hide />
               <YAxis hide />
               <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-              <Area type="monotone" dataKey="users" stroke="#0A1EFF" fill="url(#userGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="users" stroke="#0066FF" fill="url(#userGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
               <XAxis dataKey="day" hide />
               <YAxis hide />
               <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => formatUSD(v)} />
-              <Bar dataKey="revenue" fill="#0A1EFF" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="revenue" fill="#0066FF" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -179,7 +179,7 @@ function ThemeFooterToggle() {
         aria-checked={theme === 'light'}
         onClick={() => setTheme('light')}
         className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-          theme === 'light' ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+          theme === 'light' ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
         }`}
       >
         <Sun className="w-3.5 h-3.5" /> Light
@@ -190,7 +190,7 @@ function ThemeFooterToggle() {
         aria-checked={theme === 'dark'}
         onClick={() => setTheme('dark')}
         className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-          theme === 'dark' ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+          theme === 'dark' ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
         }`}
       >
         <Moon className="w-3.5 h-3.5" /> Dark
@@ -220,21 +220,21 @@ const SidebarNavItem = memo(function SidebarNavItem({
       onMouseEnter={onHover}
       className={`w-full text-start px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[12px] group relative ${
         isActive
-          ? 'bg-[#0A1EFF]/[0.08] text-white font-medium'
+          ? 'bg-[#0066FF]/[0.08] text-white font-medium'
           : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#0A1EFF]" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#0066FF]" />
       )}
-      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0A1EFF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
+      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0066FF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
       <span className="truncate">{label}</span>
       {badge && (
         <span className={`ms-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
           badge === 'AI' ? 'bg-purple-500/15 text-purple-400' :
           badge === 'BETA' ? 'bg-[#10B981]/15 text-[#10B981]' :
           badge === 'PRO' ? 'bg-amber-500/15 text-amber-400' :
-          'bg-[#0A1EFF]/15 text-blue-300'
+          'bg-[#0066FF]/15 text-blue-300'
         }`}>{badge}</span>
       )}
     </button>

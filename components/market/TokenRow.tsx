@@ -36,7 +36,7 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-white font-medium text-sm truncate">{token.name}</span>
             {chainLabel && (
-              <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0A1EFF]/15 text-[#8FA3FF] rounded font-semibold uppercase tracking-wide">
+              <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0066FF]/15 text-[#8FA3FF] rounded font-semibold uppercase tracking-wide">
                 {chainLabel}
               </span>
             )}
@@ -48,7 +48,7 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
           <PriceChangeDisplay value={token.price_change_percentage_24h} size="sm" />
         </div>
         <button onClick={(e) => { e.stopPropagation(); onToggleWatch(token.id); }} className="ms-1 p-1">
-          <Star size={14} className={isWatched ? 'fill-[#0A1EFF] text-[#0A1EFF]' : 'text-gray-600'} />
+          <Star size={14} className={isWatched ? 'fill-[#0066FF] text-[#0066FF]' : 'text-gray-600'} />
         </button>
       </div>
     );
@@ -58,7 +58,7 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
   return (
     <tr
       onClick={() => onClick(token.id)}
-      className="hover:bg-[#0A1EFF]/5 cursor-pointer transition-colors border-b border-[#1E2433]/50 group"
+      className="hover:bg-[#0066FF]/5 cursor-pointer transition-colors border-b border-[#1E2433]/50 group"
     >
       <td className="px-4 py-3.5 text-gray-500 text-sm w-12">{rank}</td>
       <td className="px-4 py-3.5">
@@ -81,7 +81,7 @@ export function TokenRow({ token, rank, isWatched, onToggleWatch, onClick, varia
       </td>
       <td className="px-4 py-3.5 w-10">
         <button onClick={(e) => { e.stopPropagation(); onToggleWatch(token.id); }} className="p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Star size={14} className={isWatched ? 'fill-[#0A1EFF] text-[#0A1EFF]' : 'text-gray-600'} />
+          <Star size={14} className={isWatched ? 'fill-[#0066FF] text-[#0066FF]' : 'text-gray-600'} />
         </button>
       </td>
     </tr>

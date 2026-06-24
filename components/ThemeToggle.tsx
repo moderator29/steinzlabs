@@ -54,13 +54,13 @@ export default function ThemeToggle() {
                 onClick={() => { setTheme(m.id); setOpen(false); }}
                 className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-colors ${
                   active
-                    ? 'bg-[#0A1EFF]/10 text-[#0A1EFF]'
+                    ? 'bg-[#0066FF]/10 text-[#0066FF]'
                     : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {m.label}
-                {active && <span className="ms-auto w-1.5 h-1.5 rounded-full bg-[#0A1EFF]" />}
+                {active && <span className="ms-auto w-1.5 h-1.5 rounded-full bg-[#0066FF]" />}
               </button>
             );
           })}

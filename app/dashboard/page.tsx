@@ -36,7 +36,7 @@ const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 function TabSpinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
     </div>
   );
 }
@@ -108,7 +108,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
       if (this.state.retries < 1) {
         return (
           <div className="flex items-center justify-center py-20">
-            <div className="w-6 h-6 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           </div>
         );
       }
@@ -121,7 +121,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
           <button
             type="button"
             onClick={this.handleManualRetry}
-            className="mt-2 px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs font-semibold transition-colors"
+            className="mt-2 px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs font-semibold transition-colors"
           >
             Retry
           </button>
@@ -248,7 +248,7 @@ function DashboardAuthLoadingGate() {
   if (!timedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
       </div>
     );
   }
@@ -267,7 +267,7 @@ function DashboardAuthLoadingGate() {
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-sm font-semibold transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-sm font-semibold transition-colors"
           >
             Retry
           </button>
@@ -523,7 +523,7 @@ export default function Dashboard() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
                     activeTab === tab.id
-                      ? 'bg-[#0A1EFF] text-white shadow-[0_0_12px_rgba(10,30,255,0.35)]'
+                      ? 'bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.35)]'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >

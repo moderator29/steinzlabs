@@ -2,7 +2,7 @@ import { Bell, Zap, Shield, Smartphone, Clock, Settings } from 'lucide-react';
 
 const ALERT_TYPES = [
   { icon: Zap, color: '#F59E0B', title: 'Price Alerts', desc: 'Set a target price for any token. You will be notified the moment it crosses your threshold · above or below.' },
-  { icon: Bell, color: '#0A1EFF', title: 'Whale Movement Alerts', desc: 'Get notified when a watched whale wallet makes a transaction above your configured USD threshold (min $10K).' },
+  { icon: Bell, color: '#0066FF', title: 'Whale Movement Alerts', desc: 'Get notified when a watched whale wallet makes a transaction above your configured USD threshold (min $10K).' },
   { icon: Shield, color: '#EF4444', title: 'Security Alerts', desc: 'Instant notification when a token in your portfolio drops below a Trust Score threshold or a new risk is detected.' },
   { icon: Zap, color: '#10B981', title: 'Smart Money Alerts', desc: 'Alert when 2+ smart money wallets buy the same token · the convergence signal delivered to your device.' },
   { icon: Bell, color: '#8B5CF6', title: 'Trend Alerts', desc: 'Notified when a monitored on-chain metric (TVL, stablecoin flow, active addresses) moves more than 10% in 24 hours.' },
@@ -29,7 +29,7 @@ export function DocsSection10() {
       {/* Alert types */}
       <div id="price-alerts" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Bell className="w-4 h-4 text-[#0A1EFF]" />Alert Types
+          <Bell className="w-4 h-4 text-[#0066FF]" />Alert Types
         </h3>
         <div className="space-y-3">
           {ALERT_TYPES.map(({ icon: Icon, color, title, desc }) => (
@@ -74,7 +74,7 @@ export function DocsSection10() {
         {[
           { tier: 'Free',  limit: '3 alerts',         color: '#6B7280' },
           { tier: 'Mini',  limit: '10 alerts',        color: '#10B981' },
-          { tier: 'Pro',   limit: '50 alerts',        color: '#0A1EFF' },
+          { tier: 'Pro',   limit: '50 alerts',        color: '#0066FF' },
           { tier: 'Max',   limit: 'Unlimited alerts', color: '#F59E0B' },
         ].map(t => (
           <div key={t.tier} className="bg-white/[0.02] border rounded-xl p-3 text-center" style={{ borderColor: t.color + '30' }}>

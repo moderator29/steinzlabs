@@ -89,7 +89,7 @@ export default function SearchLogsPage() {
                   <XAxis dataKey="hour" tick={{ fontSize: 9, fill: '#6B7280' }} interval={5} />
                   <YAxis hide />
                   <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-                  <Bar dataKey="searches" fill="#0A1EFF" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="searches" fill="#0066FF" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -115,7 +115,7 @@ export default function SearchLogsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-                <TrendingUp className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <TrendingUp className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Trending Searches</h3>
               </div>
               <div className="p-4 space-y-2 overflow-x-auto">
@@ -133,7 +133,7 @@ export default function SearchLogsPage() {
             </div>
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                <Search className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Recent Searches</h3>
               </div>
               <div className="divide-y divide-[#1E2433] overflow-x-auto">

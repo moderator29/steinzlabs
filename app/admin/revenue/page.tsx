@@ -122,15 +122,15 @@ export default function AdminRevenuePage() {
           <AreaChart data={data.revenue.dailyFeesChart}>
             <defs>
               <linearGradient id="feeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0A1EFF" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#0A1EFF" stopOpacity={0} />
+                <stop offset="5%" stopColor="#0066FF" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#0066FF" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#6B7280' }} />
             <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => `$${v}`} />
             <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-            <Area type="monotone" dataKey="fees" stroke="#0A1EFF" fill="url(#feeGrad)" strokeWidth={2} name="Fees USD" />
+            <Area type="monotone" dataKey="fees" stroke="#0066FF" fill="url(#feeGrad)" strokeWidth={2} name="Fees USD" />
           </AreaChart>
         </ResponsiveContainer>
       </div>

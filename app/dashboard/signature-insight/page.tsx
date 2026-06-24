@@ -90,7 +90,7 @@ export default function SignatureInsightPage() {
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0A1EFF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0066FF] rounded-xl flex items-center justify-center">
             <FileCode className="w-4 h-4" />
           </div>
           <div>
@@ -139,7 +139,7 @@ export default function SignatureInsightPage() {
           <button
             onClick={handleDecode}
             disabled={decoding || !input.trim()}
-            className="w-full bg-gradient-to-r from-[#7C3AED] to-[#0A1EFF] py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-[#7C3AED] to-[#0066FF] py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {decoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
             {decoding ? 'Decoding...' : 'Decode Signature'}

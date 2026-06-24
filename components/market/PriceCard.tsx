@@ -17,7 +17,7 @@ import {
  * PriceCard — the canonical token price surface for Naka Labs.
  *
  * Naka branding (matches WatchlistCard): #0D1117 panel, #1E2433 border, the
- * #0A1EFF electric-blue accent, monospace/tabular numerals, and the same
+ * #0066FF electric-blue accent, monospace/tabular numerals, and the same
  * lightweight SparklineChart the watchlist uses (current price view, instant,
  * non-interactive — no heavy per-card data pull). Up = green, down = red, the
  * platform chart convention.
@@ -93,11 +93,11 @@ export function PriceCard(props: PriceCardProps) {
             {address && (
               <button
                 onClick={copyAddr}
-                className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#0A1EFF] transition-colors font-mono"
+                className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#0066FF] transition-colors font-mono"
                 title="Copy address"
               >
                 {shortenAddress(address)}
-                {copied ? <Check size={11} className="text-[#0A1EFF]" /> : <Copy size={11} />}
+                {copied ? <Check size={11} className="text-[#0066FF]" /> : <Copy size={11} />}
               </button>
             )}
           </div>
@@ -152,7 +152,7 @@ export function PriceCard(props: PriceCardProps) {
             href={orbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="justify-self-end inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#0A1EFF] transition-colors"
+            className="justify-self-end inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#0066FF] transition-colors"
           >
             See on Orb <ExternalLink size={11} />
           </a>

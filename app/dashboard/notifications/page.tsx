@@ -46,9 +46,9 @@ function timeAgo(ms: number): string {
 function icon(type: string) {
   switch (type) {
     case 'whale_alert': case 'whale': return <span className="text-xs font-bold text-[#10B981]">WH</span>;
-    case 'price_target': case 'price': return <span className="text-xs font-bold text-[#0A1EFF]">P</span>;
+    case 'price_target': case 'price': return <span className="text-xs font-bold text-[#0066FF]">P</span>;
     case 'new_launch': return <span className="text-xs font-bold text-[#7C3AED]">NL</span>;
-    case 'swap': return <ArrowLeftRight className="w-4 h-4 text-[#0A1EFF]" />;
+    case 'swap': return <ArrowLeftRight className="w-4 h-4 text-[#0066FF]" />;
     case 'send': return <Send className="w-4 h-4 text-[#F59E0B]" />;
     case 'security': return <ShieldAlert className="w-4 h-4 text-[#EF4444]" />;
     case 'trending': return <Flame className="w-4 h-4 text-[#EF4444]" />;
@@ -142,7 +142,7 @@ export default function NotificationsPage() {
               className={`w-full text-start flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${
                 n.read
                   ? 'bg-white/[0.02] border-white/[0.06]'
-                  : 'bg-[#0A1EFF]/[0.06] border-[#0A1EFF]/25'
+                  : 'bg-[#0066FF]/[0.06] border-[#0066FF]/25'
               } ${n.href ? 'hover:border-white/20' : ''}`}
             >
               <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -151,7 +151,7 @@ export default function NotificationsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white truncate">{n.title}</span>
-                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#0A1EFF] flex-shrink-0" />}
+                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] flex-shrink-0" />}
                 </div>
                 <p className="text-[12px] text-slate-400 leading-snug mt-0.5">{n.message}</p>
                 <div className="text-[10px] text-slate-600 mt-1">{n.time}</div>

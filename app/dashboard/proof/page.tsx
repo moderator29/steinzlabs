@@ -123,7 +123,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
       return;
     }
     let cancelled = false;
-    const palette = ['#0A1EFF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899', '#84CC16'];
+    const palette = ['#0066FF', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899', '#84CC16'];
     (async () => {
       try {
         const res = await fetch(
@@ -158,7 +158,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
     return (
       <div className="glass rounded-xl p-4 border border-white/10">
         <div className="flex items-center gap-2 mb-2">
-          <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
+          <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
           <h3 className="font-bold text-sm">Token Distribution</h3>
         </div>
         <p className="text-[11px] text-gray-400">
@@ -172,7 +172,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
     return (
       <div className="glass rounded-xl p-4 border border-white/10">
         <div className="flex items-center gap-2 mb-2">
-          <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
+          <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
           <h3 className="font-bold text-sm">Token Distribution</h3>
         </div>
         <p className="text-[11px] text-gray-500">Loading on-chain holders…</p>
@@ -183,7 +183,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
   return (
     <div className="glass rounded-xl p-4 border border-white/10">
       <div className="flex items-center gap-2 mb-4">
-        <svg className="w-5 h-5 text-[#0A1EFF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
+        <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
         <h3 className="font-bold text-sm">Token Distribution</h3>
         <span className="text-[10px] text-emerald-400/80 ms-auto">On-chain (top 5 + rest)</span>
       </div>
@@ -267,7 +267,7 @@ export default function ViewProofPage() {
       <div className="min-h-screen text-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">Event not found</p>
-          <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-[#0A1EFF] rounded-lg text-sm font-semibold">
+          <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-[#0066FF] rounded-lg text-sm font-semibold">
             Back to Dashboard
           </button>
         </div>
@@ -353,7 +353,7 @@ export default function ViewProofPage() {
         {event.tokenSymbol && (
           <div className="glass rounded-xl p-4 border border-white/10">
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#0A1EFF]" />
+              <Activity className="w-4 h-4 text-[#0066FF]" />
               AI Intelligence Analysis
             </h3>
             <div className="space-y-3 text-sm text-gray-300 leading-relaxed">
@@ -501,7 +501,7 @@ export default function ViewProofPage() {
               href={explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 py-2 border border-[#0A1EFF]/30 rounded-lg text-[#0A1EFF] text-xs font-semibold hover:bg-[#0A1EFF]/10 transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2 border border-[#0066FF]/30 rounded-lg text-[#0066FF] text-xs font-semibold hover:bg-[#0066FF]/10 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               View on {chainId === 'solana' ? 'Solscan' : 'Etherscan'}
@@ -514,7 +514,7 @@ export default function ViewProofPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSwapCard((v) => !v)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
               >
                 {showSwapCard ? <X className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 {showSwapCard ? 'Hide swap' : `Buy ${event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}`}

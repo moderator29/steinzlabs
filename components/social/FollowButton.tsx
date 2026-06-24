@@ -89,7 +89,7 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
       : 'text-[12px] px-3.5 py-1.5 rounded-lg';
   const palette =
     state === 'not_following'
-      ? 'bg-[var(--nl-blue,#0A1EFF)] hover:bg-[var(--nl-blue-strong,#0916CC)] text-white border border-transparent'
+      ? 'bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white border border-transparent'
       : state === 'pending'
       ? 'bg-white/[0.04] hover:bg-amber-500/10 text-amber-300 border border-amber-500/30'
       : showDestructive
@@ -117,7 +117,7 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
           : state === 'pending' ? (showDestructive ? (<><X className="w-3 h-3" />Cancel</>) : (<><Clock className="w-3 h-3" />Requested</>))
           : showDestructive ? (<><X className="w-3 h-3" />Unfollow</>) : (<><Check className="w-3 h-3" />Following</>)}
         {state === 'accepted' && mutual && !showDestructive && (
-          <span className="ms-1 px-1.5 py-[1px] rounded text-[9px] bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue,#0A1EFF)] border border-[var(--nl-blue,#0A1EFF)]/25">
+          <span className="ms-1 px-1.5 py-[1px] rounded text-[9px] bg-[var(--nl-blue,#0066FF)]/15 text-[var(--nl-blue,#0066FF)] border border-[var(--nl-blue,#0066FF)]/25">
             Mutual
           </span>
         )}

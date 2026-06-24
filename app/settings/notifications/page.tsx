@@ -36,7 +36,7 @@ const DEFAULTS: NotifSettings = {
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!on)}
-      className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'bg-[#0A1EFF]' : 'bg-[#2a3040]'}`}>
+      className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'bg-[#0066FF]' : 'bg-[#2a3040]'}`}>
       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${on ? 'right-0.5' : 'left-0.5'}`} />
     </button>
   );
@@ -133,7 +133,7 @@ export default function NotificationSettingsPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-[#0A1EFF] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
@@ -146,7 +146,7 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* 1 — Status */}
-        <SectionCard title="Push Status" icon={Bell} color="#0A1EFF">
+        <SectionCard title="Push Status" icon={Bell} color="#0066FF">
           <NotificationSetup session={session} compact />
         </SectionCard>
 
@@ -291,7 +291,7 @@ export default function NotificationSettingsPage() {
           )}
           {!saved && <span className="text-xs text-gray-600">Changes are not saved automatically</span>}
           <button onClick={save} disabled={saving || !session}
-            className="ms-auto flex items-center gap-2 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition-opacity">
+            className="ms-auto flex items-center gap-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition-opacity">
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Settings'}
           </button>

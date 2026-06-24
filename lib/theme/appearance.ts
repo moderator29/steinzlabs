@@ -43,7 +43,7 @@ export const LEGACY_THEME_KEY = 'naka_theme';
 
 /** On-brand accent presets. base drives --nl-blue (used app-wide); strong is the hover/active tone. */
 export const ACCENTS: Record<Accent, { base: string; strong: string; soft: string }> = {
-  blue:    { base: '#0A1EFF', strong: '#0916CC', soft: 'rgba(10,30,255,0.15)' },
+  blue:    { base: '#0066FF', strong: '#0052CC', soft: 'rgba(0,102,255,0.15)' },
   violet:  { base: '#7C3AED', strong: '#6D28D9', soft: 'rgba(124,58,237,0.15)' },
   teal:    { base: '#06B6D4', strong: '#0891B2', soft: 'rgba(6,182,212,0.15)' },
   crimson: { base: '#DC143C', strong: '#B01030', soft: 'rgba(220,20,60,0.15)' },

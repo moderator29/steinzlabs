@@ -32,7 +32,7 @@ export interface NotificationCenterProps {
 }
 
 const KIND_ACCENT: Record<NonNullable<NotificationItem['kind']>, string> = {
-  info: '#0A1EFF',
+  info: '#0066FF',
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
@@ -114,7 +114,7 @@ export function NotificationCenter({ items, onMarkAllRead, onItemClick }: Notifi
               </div>
             ) : (
               items.slice(0, 20).map((n) => {
-                const accent = n.kind ? KIND_ACCENT[n.kind] : '#0A1EFF';
+                const accent = n.kind ? KIND_ACCENT[n.kind] : '#0066FF';
                 return (
                   <button
                     key={n.id}

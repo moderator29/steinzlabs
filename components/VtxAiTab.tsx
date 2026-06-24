@@ -274,7 +274,7 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
   if (loading) {
     return (
       <div className="mt-2 p-3 bg-[#0d1117] rounded-xl border border-white/10 flex items-center gap-2">
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0A1EFF]" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0066FF]" />
         <span className="text-[11px] text-gray-500">Fetching live token data...</span>
       </div>
     );
@@ -291,8 +291,8 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
-            <span className="text-[10px] font-bold text-[#0A1EFF]">{cardData.symbol.slice(0, 2)}</span>
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
+            <span className="text-[10px] font-bold text-[#0066FF]">{cardData.symbol.slice(0, 2)}</span>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -337,7 +337,7 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
               href={cardData.dexUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[9px] text-[#0A1EFF] hover:text-[#6B7FFF] transition-colors font-semibold"
+              className="flex items-center gap-1 text-[9px] text-[#0066FF] hover:text-[#6B7FFF] transition-colors font-semibold"
             >
               See on DEX <ExternalLink className="w-2.5 h-2.5" />
             </a>
@@ -886,7 +886,7 @@ export default function VtxAiTab() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="glass rounded-xl p-3 border border-white/10 flex items-center gap-2 mb-4 flex-shrink-0">
-        <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center flex-shrink-0">
           <SteinzLogo size={20} />
         </div>
         <div className="flex-1 min-w-0">
@@ -902,7 +902,7 @@ export default function VtxAiTab() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="w-12 h-1 bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0A1EFF]'}`}
+                  className={`h-full rounded-full transition-all ${dailyUsage.remaining <= 3 ? 'bg-red-500' : dailyUsage.remaining <= 7 ? 'bg-amber-500' : 'bg-[#0066FF]'}`}
                   style={{ width: `${(dailyUsage.used / dailyUsage.limit) * 100}%` }}
                 />
               </div>
@@ -920,14 +920,14 @@ export default function VtxAiTab() {
           </button>
           <button
             onClick={() => { setShowHistory(!showHistory); setShowSettings(false); }}
-            className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'hover:bg-white/10 text-gray-400'}`}
+            className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-[#0066FF]/20 text-[#0066FF]' : 'hover:bg-white/10 text-gray-400'}`}
             title="Chat history"
           >
             <History className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => { setShowSettings(!showSettings); setShowHistory(false); }}
-            className={`p-1.5 rounded-lg transition-colors ${showSettings ? 'bg-[#0A1EFF]/20 text-[#0A1EFF]' : 'hover:bg-white/10 text-gray-400'}`}
+            className={`p-1.5 rounded-lg transition-colors ${showSettings ? 'bg-[#0066FF]/20 text-[#0066FF]' : 'hover:bg-white/10 text-gray-400'}`}
             title="Settings"
           >
             <Settings className="w-3.5 h-3.5" />
@@ -937,7 +937,7 @@ export default function VtxAiTab() {
 
       {/* Settings Toast */}
       {settingsToast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0A1EFF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none animate-fade-in">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0066FF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none animate-fade-in">
           Settings saved
         </div>
       )}
@@ -954,14 +954,14 @@ export default function VtxAiTab() {
 
           {/* Section: Response Style */}
           <div className="mb-3">
-            <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Response Style</p>
+            <p className="text-[9px] text-[#0066FF] uppercase tracking-widest font-bold mb-2">Response Style</p>
             <div className="space-y-2.5">
               <div>
                 <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Personality</label>
                 <select
                   value={settings.personality}
                   onChange={(e) => updateSettings({ personality: e.target.value as VtxSettings['personality'] })}
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                 >
                   <option value="professional">Professional Analyst</option>
                   <option value="degen">Degen Trader</option>
@@ -977,7 +977,7 @@ export default function VtxAiTab() {
                     <button
                       key={d}
                       onClick={() => updateSettings({ depth: d })}
-                      className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.depth === d ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                      className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.depth === d ? 'bg-[#0066FF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                       {d}
                     </button>
@@ -990,7 +990,7 @@ export default function VtxAiTab() {
                 <select
                   value={settings.language}
                   onChange={(e) => updateSettings({ language: e.target.value })}
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                 >
                   <option value="English">English</option>
                   <option value="Spanish">Spanish</option>
@@ -1013,7 +1013,7 @@ export default function VtxAiTab() {
                     <button
                       key={value}
                       onClick={() => updateSettings({ riskAppetite: value })}
-                      className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-1 ${settings.riskAppetite === value ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                      className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-1 ${settings.riskAppetite === value ? 'bg-[#0066FF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                       <span>{icon}</span>
                       <span className="hidden sm:inline">{value}</span>
@@ -1032,7 +1032,7 @@ export default function VtxAiTab() {
                 <select
                   value={settings.defaultChain}
                   onChange={(e) => updateSettings({ defaultChain: e.target.value as VtxSettings['defaultChain'] })}
-                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                  className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                 >
                   <option value="solana">Solana</option>
                   <option value="ethereum">Ethereum</option>
@@ -1046,7 +1046,7 @@ export default function VtxAiTab() {
 
           {/* Section: Features */}
           <div className="border-t border-white/[0.06] pt-3">
-            <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Features</p>
+            <p className="text-[9px] text-[#0066FF] uppercase tracking-widest font-bold mb-2">Features</p>
             <div className="space-y-2.5">
               {/* Web Search */}
               <div className="flex items-center justify-between">
@@ -1056,7 +1056,7 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ webSearch: !settings.webSearch })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}
+                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
@@ -1070,7 +1070,7 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ autoCharts: !settings.autoCharts })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}
+                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
@@ -1084,7 +1084,7 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ focusMode: !settings.focusMode })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}
+                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
@@ -1098,7 +1098,7 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ messageSound: !settings.messageSound })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}
+                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
@@ -1120,7 +1120,7 @@ export default function VtxAiTab() {
             <div className="flex items-center gap-1">
               <button
                 onClick={startNewChat}
-                className="px-2 py-1 bg-[#0A1EFF]/20 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-semibold hover:bg-[#0A1EFF]/30 transition-colors"
+                className="px-2 py-1 bg-[#0066FF]/20 border border-[#0066FF]/30 rounded text-[9px] text-[#0066FF] font-semibold hover:bg-[#0066FF]/30 transition-colors"
               >
                 + New Chat
               </button>
@@ -1137,7 +1137,7 @@ export default function VtxAiTab() {
                 <button
                   key={entry.id}
                   onClick={() => loadHistoryEntry(entry)}
-                  className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all"
+                  className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0066FF]/20 transition-all"
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <Clock className="w-2.5 h-2.5 text-gray-600 flex-shrink-0" />
@@ -1165,9 +1165,9 @@ export default function VtxAiTab() {
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
-                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#0A1EFF]/20 transition-all text-start"
+                  className="glass rounded-xl p-4 border border-white/10 hover:border-[#0066FF]/20 transition-all text-start"
                 >
-                  <Icon className="w-5 h-5 text-[#0A1EFF] mb-2" />
+                  <Icon className="w-5 h-5 text-[#0066FF] mb-2" />
                   <div className="text-xs font-semibold">{action.label}</div>
                 </button>
               );
@@ -1195,14 +1195,14 @@ export default function VtxAiTab() {
                 className={`group flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-7 h-7 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                     <SteinzLogo size={18} />
                   </div>
                 )}
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-r from-[#0A1EFF]/20 to-[#7C3AED]/20 border border-[#0A1EFF]/20'
+                      ? 'bg-gradient-to-r from-[#0066FF]/20 to-[#7C3AED]/20 border border-[#0066FF]/20'
                       : 'glass border border-white/10'
                   }`}
                 >
@@ -1258,7 +1258,7 @@ export default function VtxAiTab() {
 
           {loading && (
             <div className="flex gap-3 justify-start items-center">
-              <div className="w-7 h-7 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+              <div className="w-7 h-7 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                 <SteinzLogo size={18} />
               </div>
               <div className="glass border border-white/10 rounded-2xl px-4 py-3">
@@ -1304,7 +1304,7 @@ export default function VtxAiTab() {
             <button
               type="button"
               onClick={() => updateSettings({ webSearch: !settings.webSearch })}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${settings.webSearch ? 'bg-[#0A1EFF]/20 text-[#0A1EFF] border border-[#0A1EFF]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
               title={settings.webSearch ? 'Web search enabled' : 'Enable web search'}
             >
               <Globe className="w-3 h-3" />
@@ -1322,7 +1322,7 @@ export default function VtxAiTab() {
           <button
             type="submit"
             disabled={loading || !message.trim() || (rateLimited && !isPro)}
-            className="w-10 h-10 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0 disabled:opacity-50"
+            className="w-10 h-10 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0 disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>

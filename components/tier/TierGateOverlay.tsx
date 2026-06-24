@@ -38,9 +38,9 @@ export default function TierGateOverlay({
       </div>
 
       <div className="absolute inset-0 flex items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-slate-800/70 bg-slate-950/80 p-6 text-center shadow-2xl shadow-[#0A1EFF]/10 backdrop-blur-xl">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[#0A1EFF]/30 bg-[#0A1EFF]/10">
-            <Lock className="h-5 w-5 text-[#0A1EFF]" />
+        <div className="w-full max-w-md rounded-2xl border border-slate-800/70 bg-slate-950/80 p-6 text-center shadow-2xl shadow-[#0066FF]/10 backdrop-blur-xl">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10">
+            <Lock className="h-5 w-5 text-[#0066FF]" />
           </div>
           <h3 className="mb-1 text-lg font-bold text-white">
             {featureName} requires {tierName}
@@ -52,7 +52,7 @@ export default function TierGateOverlay({
           <ul className="mb-6 space-y-2 text-start">
             {bulletPoints.map((bp) => (
               <li key={bp} className="flex items-start gap-2 text-xs text-slate-300">
-                <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0A1EFF]" />
+                <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0066FF]" />
                 <span>{bp}</span>
               </li>
             ))}
@@ -61,7 +61,7 @@ export default function TierGateOverlay({
           <div className="space-y-2">
             <Link
               href="/dashboard/pricing"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0A1EFF] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0918D0]"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0918D0]"
             >
               Upgrade to {tierName}
               <ArrowRight className="h-4 w-4" />

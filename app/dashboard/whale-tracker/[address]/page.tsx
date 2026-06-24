@@ -533,7 +533,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <button
                 type="button"
                 onClick={() => setCopyRuleOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white text-sm font-semibold hover:scale-[1.02] transition-transform shrink-0"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white text-sm font-semibold hover:scale-[1.02] transition-transform shrink-0"
               >
                 <Repeat2 className="w-4 h-4" />
                 Copy this whale
@@ -614,7 +614,7 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
         {state === 'idle' && (
           <button
             onClick={run}
-            className="ms-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white"
+            className="ms-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white"
           >
             Generate
           </button>

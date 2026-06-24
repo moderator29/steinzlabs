@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 function buildEmailHtml(title: string, message: string, type: string): string {
   const typeColors: Record<string, string> = {
-    whale_alert: '#0A1EFF',
+    whale_alert: '#0066FF',
     price_target: '#10B981',
     new_launch: '#7C3AED',
     wallet_activity: '#F59E0B',
-    welcome: '#0A1EFF',
+    welcome: '#0066FF',
     wallet_created: '#10B981',
     system: '#6B7280',
   };
-  const color = typeColors[type] || '#0A1EFF';
+  const color = typeColors[type] || '#0066FF';
 
   return `<!DOCTYPE html>
 <html lang="en">

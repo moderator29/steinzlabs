@@ -119,7 +119,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 text-[#0A1EFF] focus:ring-[#0A1EFF]"
+              className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 text-[#0066FF] focus:ring-[#0066FF]"
             />
             <span className="text-[12px] text-slate-300 leading-relaxed">
               I understand the risks and confirm I am only trading capital I can afford
@@ -150,7 +150,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
                 recordTradeRiskAck();
                 onConfirm();
               }}
-              className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:scale-[1.02] transition-transform"
+              className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:scale-[1.02] transition-transform"
             >
               I understand — continue
             </button>

@@ -28,7 +28,7 @@ export interface UserListRowProps {
 
 const TIER_COLOR: Record<string, string> = {
   free: 'text-slate-400 border-white/10',
-  pro:  'text-[var(--nl-blue,#0A1EFF)] border-[var(--nl-blue,#0A1EFF)]/30',
+  pro:  'text-[var(--nl-blue,#0066FF)] border-[var(--nl-blue,#0066FF)]/30',
   max:  'text-amber-300 border-amber-500/30',
 };
 
@@ -42,7 +42,7 @@ export function UserListRow({ user, showFollowButton = true, onFollowChange }: U
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0A1EFF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">
             {initial}
           </div>
         )}

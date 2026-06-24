@@ -129,7 +129,7 @@ export function FirstRunTour({ steps, storageKey = DEFAULT_KEY }: FirstRunTourPr
           left: rect.left - 6,
           width: rect.width + 12,
           height: rect.height + 12,
-          boxShadow: '0 0 0 9999px rgba(0,0,0,0.55), 0 0 22px rgba(10,30,255,0.6)',
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.55), 0 0 22px rgba(0,102,255,0.6)',
           borderRadius: 14,
         }}
       />
@@ -138,7 +138,7 @@ export function FirstRunTour({ steps, storageKey = DEFAULT_KEY }: FirstRunTourPr
         role="dialog"
         aria-modal="true"
         aria-label={step.title}
-        className="absolute z-[197] w-[280px] rounded-2xl border border-[#0A1EFF]/40 bg-[#0F1320] shadow-2xl p-4"
+        className="absolute z-[197] w-[280px] rounded-2xl border border-[#0066FF]/40 bg-[#0F1320] shadow-2xl p-4"
         style={{ top: pos.top, left: Math.max(12, pos.left) }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -155,7 +155,7 @@ export function FirstRunTour({ steps, storageKey = DEFAULT_KEY }: FirstRunTourPr
               if (stepIndex + 1 >= steps.length) finish();
               else setStepIndex((i) => i + 1);
             }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-bold text-white"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-bold text-white"
           >
             {stepIndex + 1 >= steps.length ? 'Done' : 'Next'}
             <ArrowRight className="w-3 h-3" />
