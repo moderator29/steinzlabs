@@ -3,6 +3,7 @@ import { getQuote, buildSwapTransaction, SOL_MINT, JupiterQuote } from './jupite
 import { getSwapQuote as get0xQuote, getChainId } from './zerox';
 import { isHighRisk } from './goplus';
 import { getSupabaseAdmin } from '../supabaseAdmin';
+import { recordSwapLog, recordFeeRevenue } from '../trading/swapLogging';
 
 /**
  * Unified Swap Router
@@ -224,8 +225,7 @@ export async function recordSwapCompletion(params: {
       chain: params.chain,
       feeUsd,
       inputToken: params.inputToken,
-      outputToken: params.outputToken,
-      inputValueUsd: params.inputValueUsd,
+      inputAmount: params.inputAmount,
     }),
   ]);
 }
@@ -242,22 +242,16 @@ async function logSwap(params: {
   status: 'pending' | 'completed' | 'failed';
   txHash: string | null;
 }): Promise<void> {
-  try {
-    const db = getSupabaseAdmin();
-    await db.from('swap_logs').insert({
-      user_id: params.userId ?? null,
-      chain: params.chain,
-      input_token: params.inputToken,
-      output_token: params.outputToken,
-      input_amount: params.inputAmount,
-      output_amount: params.outputAmount,
-      status: params.status,
-      tx_hash: params.txHash,
-      created_at: new Date().toISOString(),
-    });
-  } catch {
-    // Non-blocking
-  }
+  await recordSwapLog(getSupabaseAdmin(), {
+    user_id: params.userId ?? null,
+    chain: params.chain,
+    token_in: params.inputToken,
+    token_out: params.outputToken,
+    amount_in: params.inputAmount,
+    amount_out: params.outputAmount,
+    status: params.status,
+    tx_hash: params.txHash,
+  });
 }
 
 async function logFeeRevenue(params: {
@@ -266,23 +260,14 @@ async function logFeeRevenue(params: {
   chain: string;
   feeUsd: number;
   inputToken: string;
-  outputToken: string;
-  inputValueUsd: number;
+  inputAmount: number;
 }): Promise<void> {
-  try {
-    const db = getSupabaseAdmin();
-    await db.from('fee_revenue').insert({
-      user_id: params.userId ?? null,
-      tx_hash: params.txHash,
-      chain: params.chain,
-      fee_usd: params.feeUsd,
-      fee_bps: PLATFORM_FEE_BPS,
-      input_token: params.inputToken,
-      output_token: params.outputToken,
-      input_value_usd: params.inputValueUsd,
-      created_at: new Date().toISOString(),
-    });
-  } catch {
-    // Non-blocking
-  }
+  await recordFeeRevenue(getSupabaseAdmin(), {
+    user_id: params.userId ?? null,
+    tx_hash: params.txHash,
+    chain: params.chain,
+    fee_amount: params.inputAmount * (PLATFORM_FEE_BPS / 10_000),
+    fee_token: params.inputToken,
+    usd_value: params.feeUsd,
+  });
 }

@@ -7,6 +7,8 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
 import { resolveTokenAddress } from '@/lib/market/tokenResolver';
 import { resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
+import { getUserByWallet } from '@/lib/database/supabase';
+import { recordSwapLog } from '@/lib/trading/swapLogging';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,14 +104,18 @@ export async function POST(req: NextRequest) {
     const feePercent = 0.4;
     const feeUSD = amountInUSD * 0.004;
     const db = getSupabaseAdmin();
+    // swap_logs.user_id is NOT NULL; trust the client userId if present, else
+    // resolve from the wallet so the row actually lands.
+    const resolvedUserId = userId ?? (await getUserByWallet(walletAddress))?.id ?? null;
 
     if (provider !== '0x' && routeQuoteData?.transaction?.data) {
-      await db.from('swap_logs').insert({
-        user_id: userId ?? null,
+      await recordSwapLog(db, {
+        user_id: resolvedUserId,
         chain,
-        input_token: resolvedIn,
-        output_token: resolvedOut,
-        input_amount: parseFloat(amountIn),
+        token_in: resolvedIn,
+        token_out: resolvedOut,
+        amount_in: parseFloat(amountIn),
+        fee_usd: feeUSD,
         status: 'pending',
         dex: provider,
       });
@@ -169,12 +175,13 @@ export async function POST(req: NextRequest) {
       permit2,
     });
 
-    await db.from('swap_logs').insert({
-      user_id: userId ?? null,
+    await recordSwapLog(db, {
+      user_id: resolvedUserId,
       chain,
-      input_token: resolvedIn,
-      output_token: resolvedOut,
-      input_amount: parseFloat(amountIn),
+      token_in: resolvedIn,
+      token_out: resolvedOut,
+      amount_in: parseFloat(amountIn),
+      fee_usd: feeUSD,
       status: 'pending',
       dex: '0x',
     });
