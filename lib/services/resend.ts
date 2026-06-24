@@ -7,7 +7,15 @@ import { Resend } from 'resend';
  * FROM address: alerts@nakalabs.xyz (or configured via RESEND_FROM_EMAIL)
  */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazily constructed: building the client at module scope throws
+// "Missing API key" at import/build time on any route that transitively
+// imports this file when RESEND_API_KEY is unset, taking the whole route
+// down. Defer construction to first send.
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const FROM = process.env.RESEND_FROM_EMAIL || 'alerts@nakalabs.xyz';
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'Naka Labs';
 
@@ -28,7 +36,7 @@ export async function sendBroadcast(params: {
   tags?: { name: string; value: string }[];
 }): Promise<EmailResult> {
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: `${FROM_NAME} <${FROM}>`,
       to: Array.isArray(params.to) ? params.to : [params.to],
       subject: params.subject,
@@ -329,7 +337,7 @@ export async function sendBatch(emails: {
     }));
 
     try {
-      const { data, error } = await resend.batch.send(batch);
+      const { data, error } = await getResend().batch.send(batch);
       if (error) {
         failed += batch.length;
       } else {
