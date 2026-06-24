@@ -34,7 +34,18 @@ export async function GET(req: NextRequest) {
     .limit(parsed.data.limit);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  let users = data ?? [];
+  interface SearchUser {
+    id: string;
+    username: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+    tier: string | null;
+    verified_badge: string | null;
+    is_chosen: boolean | null;
+    i_follow?: 'not_following' | 'pending' | 'accepted';
+    they_follow_me?: boolean;
+  }
+  let users: SearchUser[] = (data ?? []) as SearchUser[];
   if (caller && users.length) {
     const ids = users.map((u) => u.id);
     const { data: blocks } = await sb
@@ -43,6 +54,29 @@ export async function GET(req: NextRequest) {
       .or(`and(blocker_id.eq.${caller.id},blocked_id.in.(${ids.join(',')})),and(blocked_id.eq.${caller.id},blocker_id.in.(${ids.join(',')}))`);
     const hidden = new Set((blocks ?? []).map((b) => (b.blocker_id === caller.id ? b.blocked_id : b.blocker_id)));
     users = users.filter((u) => !hidden.has(u.id));
+
+    // Per-caller follow state so search results render the correct
+    // FollowButton label and a "Follows you" hint, instead of every row
+    // hardcoding not_following / false.
+    const liveIds = users.map((u) => u.id);
+    if (liveIds.length) {
+      const [outgoing, incoming] = await Promise.all([
+        sb.from('social_follows').select('following_id, status').eq('follower_id', caller.id).in('following_id', liveIds),
+        sb.from('social_follows').select('follower_id').eq('following_id', caller.id).eq('status', 'accepted').in('follower_id', liveIds),
+      ]);
+      const iFollow = new Map(
+        (outgoing.data ?? []).map((f) => [
+          (f as { following_id: string }).following_id,
+          ((f as { status: string }).status === 'pending' ? 'pending' : 'accepted') as 'pending' | 'accepted',
+        ]),
+      );
+      const followsMe = new Set((incoming.data ?? []).map((f) => (f as { follower_id: string }).follower_id));
+      users = users.map((u) => ({
+        ...u,
+        i_follow: iFollow.get(u.id) ?? 'not_following',
+        they_follow_me: followsMe.has(u.id),
+      }));
+    }
   }
   return NextResponse.json({ users });
 }

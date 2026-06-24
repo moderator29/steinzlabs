@@ -72,6 +72,8 @@ interface User {
   tier: string | null;
   verified_badge: string | null;
   is_chosen: boolean | null;
+  i_follow?: 'not_following' | 'pending' | 'accepted';
+  they_follow_me?: boolean;
 }
 
 function SearchResults({ q }: { q: string }) {
@@ -110,7 +112,9 @@ function SearchResults({ q }: { q: string }) {
             verified_badge: u.verified_badge,
             is_chosen: u.is_chosen,
             success_rate: null,
-            i_follow: false,
+            i_follow: u.i_follow === 'accepted',
+            pending_outgoing: u.i_follow === 'pending',
+            they_follow_me: u.they_follow_me ?? false,
           }}
         />
       ))}
