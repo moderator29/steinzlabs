@@ -8,7 +8,7 @@ import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
 import { resolveTokenAddress } from '@/lib/market/tokenResolver';
 import { resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
 import { getUserByWallet } from '@/lib/database/supabase';
-import { recordSwapLog } from '@/lib/trading/swapLogging';
+import { recordSwapLog, PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,8 +101,8 @@ export async function POST(req: NextRequest) {
     // fall back to 0x (the historical default) and run the P1-D.3
     // Permit2 detection below.
     const provider = selectedProvider ?? '0x';
-    const feePercent = 0.4;
-    const feeUSD = amountInUSD * 0.004;
+    const feePercent = PLATFORM_FEE_BPS / 100;
+    const feeUSD = amountInUSD * (PLATFORM_FEE_BPS / 10000);
     const db = getSupabaseAdmin();
     // swap_logs.user_id is NOT NULL; trust the client userId if present, else
     // resolve from the wallet so the row actually lands.

@@ -3,6 +3,7 @@ import { TradeQuote, TradeExecution } from './types';
 import { shadowGuardian } from '../security/shadowGuardian';
 import { savePosition, getUserByWallet } from '../database/supabase';
 import { calculateFee, recordRevenue } from '../revenue/feeSystem';
+import { PLATFORM_FEE_DECIMAL } from './swapLogging';
 
 // 0x Protocol replaces 1inch for all EVM swaps
 async function getZeroXQuote(
@@ -21,7 +22,7 @@ async function getZeroXQuote(
 
   const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.004';
+  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
 
   const params = new URLSearchParams({
     chainId: String(chainId),
@@ -129,7 +130,7 @@ export async function executeTrade(params: {
 
         const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
         const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-        const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.004';
+        const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
         const amountWei = Math.floor(parseFloat(quote.fromAmount) * 1e18).toString();
 
         const params = new URLSearchParams({

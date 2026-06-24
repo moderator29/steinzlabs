@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '../supabaseAdmin';
+import { PLATFORM_FEE_BPS } from '../trading/swapLogging';
 
 export interface FeeConfiguration {
   swapFeeBps: number;
@@ -18,10 +19,13 @@ export interface FeeCalculation {
 }
 
 const FEE_CONFIG: FeeConfiguration = {
-  swapFeeBps: 40,
+  // Swap / limit-order / DCA executions all carry the single canonical Naka
+  // platform fee (PLATFORM_FEE_BPS = 0.5%). Copy-trade keeps its deliberately
+  // higher 1% rate. Treasury wallets are env-configured and NOT changed here.
+  swapFeeBps: PLATFORM_FEE_BPS,
   copyTradeFeeBps: 100,
-  limitOrderFeeBps: 40,
-  dcaFeeBps: 40,
+  limitOrderFeeBps: PLATFORM_FEE_BPS,
+  dcaFeeBps: PLATFORM_FEE_BPS,
   treasuryWalletEvm: process.env.TREASURY_WALLET_EVM || '0xfe4a53af5336eba5d675d95e9795aCd6C05Ad9A4',
   treasuryWalletSolana: process.env.TREASURY_WALLET_SOLANA || 'Ar6uFNvdFATXEA3nNtSmUyYv7WG3QAsaURjESs313TUy',
 };
