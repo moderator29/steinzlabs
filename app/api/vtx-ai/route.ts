@@ -12,9 +12,22 @@ import { dispatchDuneTool } from '@/lib/ai/vtxToolsDune';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
-  searchTokens, getCoinMarketChart,
+  searchTokens, getCoinMarketChart, getMarketsByIds,
 } from '@/lib/services/coingecko';
 import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
+
+// Recognised majors → CoinGecko id. For these we price from CoinGecko and omit
+// a contract address, so the card never lands on a same-ticker DexScreener
+// scam/derivative pair (which showed SOL at $95 vs the real ~$67). Mirrors the
+// SYMBOL_TO_CG map in /api/vtx/token-card.
+const MAJOR_CG_ID: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', DOGE: 'dogecoin', ADA: 'cardano', AVAX: 'avalanche-2',
+  MATIC: 'matic-network', POL: 'matic-network', ARB: 'arbitrum', SUI: 'sui',
+  LINK: 'chainlink', UNI: 'uniswap', AAVE: 'aave', PEPE: 'pepe', SHIB: 'shiba-inu',
+  USDT: 'tether', USDC: 'usd-coin', BONK: 'bonk', WIF: 'dogwifcoin', JUP: 'jupiter-exchange-solana',
+  TON: 'the-open-network', OP: 'optimism', LTC: 'litecoin', TRX: 'tron',
+};
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getSocialScore } from '@/lib/services/lunarcrush';
@@ -1417,8 +1430,30 @@ export async function POST(request: NextRequest) {
     const cardQuery = tokenDetected || chartPayload?.address || symbolQuery;
     if (cardQuery) {
       try {
-        const pairs = await searchPairs(cardQuery);
-        if (pairs.length > 0) {
+        // Majors → CoinGecko (authoritative), no address so the client's
+        // symbol path stays on CoinGecko. Memecoins / pump.fun / four.meme
+        // tokens (queried by address, not in MAJOR_CG_ID) fall through to
+        // DexScreener below — the right source for on-chain long-tail tokens.
+        const cgId = symbolQuery && !tokenDetected && !chartPayload?.address
+          ? MAJOR_CG_ID[symbolQuery.toUpperCase()]
+          : null;
+        if (cgId) {
+          const [m] = await getMarketsByIds([cgId], false);
+          if (m) {
+            tokenCard = {
+              symbol: (m.symbol || symbolQuery || '').toUpperCase(),
+              name: m.name,
+              price: m.current_price ?? 0,
+              change24h: m.price_change_percentage_24h ?? 0,
+              volume24h: m.total_volume ?? 0,
+              marketCap: m.market_cap ?? 0,
+              fdv: m.fully_diluted_valuation ?? m.market_cap ?? 0,
+              logo: m.image || null,
+            };
+          }
+        }
+        const pairs = tokenCard ? [] : await searchPairs(cardQuery);
+        if (!tokenCard && pairs.length > 0) {
           // Prefer the highest-liquidity pair so we don't land on a scam fork.
           const p = [...pairs].sort(
             (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0),

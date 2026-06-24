@@ -26,10 +26,15 @@ async function fetchCoinGeckoChart(symbol: string, tf: '1h' | '24h' | '7d') {
   const id = SYMBOL_TO_CG[symbol.toUpperCase()];
   if (!id) return null;
   const days = tf === '1h' ? 1 : tf === '7d' ? 7 : 1;
-  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`;
-  const res = await fetch(url, { next: { revalidate: 60 } });
-  if (!res.ok) return null;
-  const body = await res.json();
+  // Fetch the price series AND the live market row in parallel. The market
+  // row is authoritative for the current price + full stats (volume, mcap,
+  // FDV, supply) — the chart's last sample lags by a minute or two.
+  const [chartRes, mktRes] = await Promise.all([
+    fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`, { next: { revalidate: 60 } }),
+    fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${id}`, { next: { revalidate: 60 } }),
+  ]);
+  if (!chartRes.ok) return null;
+  const body = await chartRes.json();
   const prices: [number, number][] = Array.isArray(body?.prices) ? body.prices : [];
   // Downsample to ~48 points so the SVG path stays light.
   const step = Math.max(1, Math.floor(prices.length / 48));
@@ -37,10 +42,7 @@ async function fetchCoinGeckoChart(symbol: string, tf: '1h' | '24h' | '7d') {
   const first = points[0] ?? 0;
   const last = points[points.length - 1] ?? 0;
   const changePct = first ? ((last - first) / first) * 100 : 0;
-  // Deep-dive fix — return change24h too (was missing). When tf=7d we
-  // still want the 24h change for the price-card label, so derive it
-  // from the last two points if the requested tf is 7d, else use changePct.
-  const change24h = tf === '24h'
+  const change24hDerived = tf === '24h'
     ? changePct
     : (() => {
         const len = points.length;
@@ -50,7 +52,22 @@ async function fetchCoinGeckoChart(symbol: string, tf: '1h' | '24h' | '7d') {
         const b = points[len - 1];
         return a ? ((b - a) / a) * 100 : changePct;
       })();
-  return { points, changePct, source: 'coingecko', price: last, change24h };
+  const mkt = mktRes.ok ? (await mktRes.json())?.[0] : null;
+  return {
+    points,
+    changePct,
+    source: 'coingecko',
+    price: typeof mkt?.current_price === 'number' ? mkt.current_price : last,
+    change24h: typeof mkt?.price_change_percentage_24h === 'number' ? mkt.price_change_percentage_24h : change24hDerived,
+    volume24h: typeof mkt?.total_volume === 'number' ? mkt.total_volume : undefined,
+    marketCap: typeof mkt?.market_cap === 'number' ? mkt.market_cap : undefined,
+    fdv: typeof mkt?.fully_diluted_valuation === 'number' ? mkt.fully_diluted_valuation
+      : (typeof mkt?.market_cap === 'number' ? mkt.market_cap : undefined),
+    supply: typeof mkt?.circulating_supply === 'number' ? mkt.circulating_supply : null,
+    name: typeof mkt?.name === 'string' ? mkt.name : undefined,
+    logo: typeof mkt?.image === 'string' ? mkt.image : undefined,
+    trusted: true,
+  };
 }
 
 export async function GET(req: NextRequest) {
