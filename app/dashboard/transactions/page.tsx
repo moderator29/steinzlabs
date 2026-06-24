@@ -41,6 +41,16 @@ const STATUS_STYLES: Record<TxStatus, string> = {
   failed: 'text-red-400 bg-red-400/10 border-red-400/20',
 };
 
+// Map the DB status vocabularies (swap_logs: success/completed/confirmed/
+// pending/failed; sniper_executions: confirmed/pending/failed) onto the three
+// display buckets. An unknown/absent status is pending, never a fabricated
+// "confirmed".
+function toTxStatus(raw: string | null | undefined): TxStatus {
+  if (raw === 'failed') return 'failed';
+  if (raw === 'confirmed' || raw === 'completed' || raw === 'success') return 'confirmed';
+  return 'pending';
+}
+
 export default function TransactionsPage() {
   const router = useRouter();
   const [txs, setTxs] = useState<Transaction[]>([]);
@@ -67,7 +77,9 @@ export default function TransactionsPage() {
 
       const [swapRes, sniperRes] = await Promise.all([
         supabase.from('swap_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
-        supabase.from('sniper_executions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+        // sniper_executions has no created_at — ordering by it errored the whole
+        // query and dropped every snipe. The real timestamp is executed_at.
+        supabase.from('sniper_executions').select('*').eq('user_id', user.id).order('executed_at', { ascending: false }).limit(50),
       ]);
 
       const allTxs: Transaction[] = [];
@@ -77,13 +89,13 @@ export default function TransactionsPage() {
           allTxs.push({
             id: `swap-${s.id}`,
             type: 'swap',
-            fromToken: s.from_token,
-            toToken: s.to_token,
-            fromAmount: s.from_amount,
-            toAmount: s.to_amount,
-            amountUsd: s.amount_usd,
+            fromToken: s.token_in,
+            toToken: s.token_out,
+            fromAmount: s.amount_in != null ? String(s.amount_in) : undefined,
+            toAmount: s.amount_out != null ? String(s.amount_out) : undefined,
+            amountUsd: undefined, // swap_logs stores no USD trade value (only fee_usd)
             chain: s.chain || 'ethereum',
-            status: (s.status || 'confirmed') as TxStatus,
+            status: toTxStatus(s.status),
             txHash: s.tx_hash,
             createdAt: s.created_at,
           });
@@ -96,11 +108,11 @@ export default function TransactionsPage() {
             id: `snipe-${e.id}`,
             type: 'snipe',
             tokenSymbol: e.token_symbol,
-            amountUsd: e.amount_usd,
+            amountUsd: e.buy_amount_usd ?? undefined,
             chain: e.chain || 'ethereum',
-            status: (e.status || 'pending') as TxStatus,
+            status: toTxStatus(e.status),
             txHash: e.tx_hash,
-            createdAt: e.created_at,
+            createdAt: e.executed_at,
           });
         }
       }
