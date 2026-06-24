@@ -12,7 +12,9 @@
 // authority over the signature.
 
 import { useEffect, useState } from 'react';
-import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check } from 'lucide-react';
+import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loader2, Copy, Check, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { useAppKit } from '@reown/appkit/react';
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { useExpertMode } from '@/lib/hooks/useExpertMode';
@@ -80,6 +82,7 @@ function TokenGlyph({ symbol }: { symbol: string }) {
 
 export function SwapCard({ swap, walletAddress, onCancel }: Props) {
   const expertMode = useExpertMode();
+  const { open } = useAppKit();
   const { broadcast, unlockRequest, resolveUnlock, cancelUnlock } = useSwapBroadcast();
   const [stage, setStage] = useState<Stage>('quoting');
   const [quote, setQuote] = useState<SwapCardData>(swap);
@@ -291,7 +294,9 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
   }
 
   return (
-    <div className="bg-[#0A0F1A] border border-white/[0.08] rounded-2xl overflow-hidden">
+    <div className="relative bg-[#0A0F1A] border border-white/[0.08] rounded-2xl overflow-hidden">
+      {/* Aurora top accent — brand-consistent with the price card */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#0066FF] via-[#8B5CF6] to-[#10B981] opacity-70" />
       {/* Stage progress rail */}
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] font-semibold text-gray-500">
@@ -351,7 +356,7 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
 
       {/* From / To */}
       <div className="px-4 pb-4 space-y-2">
-        <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-white/[0.04]">
+        <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
           <TokenGlyph symbol={quote.fromToken} />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-wider text-gray-500">You pay</div>
@@ -361,13 +366,13 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center">
-          <div className="w-7 h-7 rounded-full bg-[#141824] border border-white/[0.06] flex items-center justify-center">
-            <ArrowDownUp size={12} className="text-gray-400" />
+        <div className="relative z-10 -my-3.5 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-[#141824] border-2 border-[#0A0F1A] ring-1 ring-white/[0.08] shadow-lg flex items-center justify-center">
+            <ArrowDownUp size={13} className="text-[#0066FF]" />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-white/[0.04]">
+        <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
           <TokenGlyph symbol={quote.toToken} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -429,13 +434,33 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
         </div>
       )}
 
-      {/* No wallet at all — prompt to connect one on the platform. */}
+      {/* No wallet — wallet access is off by default. Surface a clean, fully
+          functional connect prompt: WalletConnect/external via the AppKit
+          modal, or the built-in Naka wallet on the wallet page. The swap stays
+          non-custodial either way — nothing executes until the user signs. */}
       {!walletAddress && stage === 'ready' && (
-        <div className="mx-4 mb-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-          <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
-          <span className="text-[11px] text-amber-300 leading-relaxed">
-            Connect a wallet on the Wallet page to sign this swap.
-          </span>
+        <div className="mx-4 mb-3 rounded-xl border border-[#1E2433] bg-[#0B0F1A]/60 px-4 py-3.5">
+          <div className="flex items-center gap-2">
+            <Wallet size={14} className="text-[#0066FF]" />
+            <span className="text-[12px] font-semibold text-white">Connect a wallet to swap</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+            Swaps are non-custodial — you hold your keys and nothing moves until you sign.
+          </p>
+          <div className="mt-3 flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => open()}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0066FF] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#0052CC]"
+            >
+              <Wallet size={13} /> Connect Wallet
+            </button>
+            <Link
+              href="/dashboard/wallet-page"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#1E2433] bg-[#141824] px-3 py-2 text-[12px] font-semibold text-gray-200 transition-colors hover:border-[#0066FF]/40 hover:text-white"
+            >
+              Set up Naka Wallet
+            </Link>
+          </div>
         </div>
       )}
 
