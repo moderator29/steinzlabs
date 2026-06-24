@@ -36,6 +36,7 @@ import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 import { getAddressSecurity, getDomainSecurity } from '@/lib/services/goplus';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { executeTrade, type TradeIntent } from '@/lib/trading/relayer';
+import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1507,7 +1508,9 @@ export async function POST(request: NextRequest) {
           toAmount: '~',
           rate: '—',
           priceImpact: 0,
-          platformFee: '0.3%',
+          // Derive from the single canonical fee constant so the card never
+          // shows a different fee than what the swap actually charges.
+          platformFee: `${(PLATFORM_FEE_BPS / 100).toFixed(1)}%`,
           chain: /\b(sol|solana|bonk|wif|jup)\b/i.test(`${swapIntent.from} ${swapIntent.to}`) ? 'solana' : 'ethereum',
           walletAddress: walletForSwap,
           needsWallet: !walletForSwap,
