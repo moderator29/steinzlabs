@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const stored = loadPrefs();
   const [notifications, setNotifications] = useState({
     threats: stored?.threats ?? true,
@@ -80,6 +81,7 @@ export default function SettingsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
+        setUserId(user.id);
         setUserEmail(user.email || '');
         setDisplayName(user.user_metadata?.display_name || user.user_metadata?.full_name || '');
         setBio(user.user_metadata?.bio ?? '');
@@ -162,21 +164,41 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!mounted) return;
     savePrefs({ ...notifications, slippage, theme, expertMode });
+    if (!userId) return; // can't persist server-side until we know the user
     const timer = setTimeout(() => {
-      supabase.from('user_preferences').upsert({
+      // Route each preference to the table that actually owns it, keyed by
+      // user_id. The old code upserted into user_preferences (which only has
+      // (user_id, preferences jsonb)) with non-existent columns and no
+      // user_id, so every save failed silently while the UI said "saved".
+      const now = new Date().toISOString();
+      void supabase.from('notification_settings').upsert({
+        user_id: userId,
         whale_alerts: notifications.whaleAlerts,
         price_alerts: notifications.priceAlerts,
         security_alerts: notifications.threats,
-        entity_moves: notifications.entityMoves,
-        default_slippage: slippage,
+        smart_money: notifications.entityMoves,
+        updated_at: now,
+      }, { onConflict: 'user_id' }).then(({ error }) => {
+        if (error) console.error('[Settings] notification_settings sync failed:', error.message);
+      });
+      void supabase.from('user_trading_preferences').upsert({
+        user_id: userId,
+        default_slippage_bps: Math.round((parseFloat(slippage) || 1) * 100),
+        expert_mode: expertMode,
+        updated_at: now,
+      }, { onConflict: 'user_id' }).then(({ error }) => {
+        if (error) console.error('[Settings] user_trading_preferences sync failed:', error.message);
+      });
+      void supabase.from('user_display_preferences').upsert({
+        user_id: userId,
         theme,
-        updated_at: new Date().toISOString(),
-      }).then(({ error }) => {
-        if (error) console.error('[Settings] Failed to sync to Supabase:', error.message);
+        updated_at: now,
+      }, { onConflict: 'user_id' }).then(({ error }) => {
+        if (error) console.error('[Settings] user_display_preferences sync failed:', error.message);
       });
     }, 1000);
     return () => clearTimeout(timer);
-  }, [notifications, slippage, theme, expertMode, mounted]);
+  }, [notifications, slippage, theme, expertMode, mounted, userId]);
 
   const sections = [
     { id: 'profile', label: 'Profile', icon: User },
