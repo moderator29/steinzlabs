@@ -60,6 +60,11 @@ const nextConfig = {
     // and fell through to the cult-themed 404. Settings currently live under
     // Profile; redirect there until the dedicated Settings page is built.
     { source: '/dashboard/settings', destination: '/dashboard/profile', permanent: false },
+    // Retired duplicate. Notification settings live on the canonical profile
+    // panel (NotificationSettingsPanel, live notification_settings columns);
+    // the old /settings/notifications page wrote phantom columns and saved
+    // nothing.
+    { source: '/settings/notifications', destination: '/dashboard/profile', permanent: false },
   ],
   headers: async () => [
     // Global security headers — applied to every route. CSP is intentionally
