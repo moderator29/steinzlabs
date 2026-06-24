@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
 // icons fall back to lucide-react (hybrid pattern used elsewhere on main).
 import {
-  Wallet, User, Menu, X, TrendingDown, Activity, ChartBar as BarChart3,
+  Wallet, User, TrendingDown, Activity, ChartBar as BarChart3,
 } from '@/components/icons/brand';
 import {
-  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search,
+  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search, Menu, X,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -453,12 +453,12 @@ export default function Dashboard() {
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" aria-label="Open menu">
-              {/* §hamburger-visibility — Menu icon was text-gray-400 on
-                  a near-black header background which left it nearly
-                  invisible while the button's click area still worked.
-                  X has no color override and inherits white; matching
-                  that for the hamburger keeps both states legible. */}
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
+              {/* §hamburger-visibility — use lucide Menu/X here. The brand
+                  icons paint with a fixed gradient stroke and ignore the
+                  text-* colour, so the toggle read as invisible on the
+                  near-black header even though its click area worked. lucide
+                  honours currentColor, so text-white/80 actually applies. */}
+              {menuOpen ? <X className="w-5 h-5 text-white/80 hover:text-white" /> : <Menu className="w-5 h-5 text-white/80 hover:text-white" />}
             </button>
           </div>
           {/* §3.1 — the top dashboard bar is now just the logo + LIVE chip,

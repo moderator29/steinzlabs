@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-// Naka Labs brand icons — Menu, X swapped to glowing-geometric.
-import { Menu, X } from '@/components/icons/brand';
+// lucide Menu/X — the brand glowing-geometric variants paint with a fixed
+// gradient stroke and ignore text-* colour, leaving the mobile toggle
+// invisible on the dark nav; lucide honours the button's currentColor.
+import { Menu, X } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import GlobalControls from '@/components/GlobalControls';
 
