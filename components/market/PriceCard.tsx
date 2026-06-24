@@ -51,11 +51,11 @@ export interface PriceCardProps {
   orbUrl?: string;
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
+function Stat({ label, value, sub, tile = false }: { label: string; value: string; sub?: React.ReactNode; tile?: boolean }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[11px] text-gray-500">{label}</div>
-      <div className="text-sm font-semibold text-gray-100 font-mono tabular-nums truncate">{value}</div>
+    <div className={`min-w-0 ${tile ? 'rounded-xl border border-[#1E2433]/60 bg-[#0B0F1A]/50 px-3 py-2 transition-colors hover:border-[#1E2433]' : ''}`}>
+      <div className="text-[10px] uppercase tracking-wide text-gray-500">{label}</div>
+      <div className="mt-0.5 text-sm font-semibold text-gray-100 font-mono tabular-nums truncate">{value}</div>
       {sub != null && <div className="text-[10px] mt-0.5">{sub}</div>}
     </div>
   );
@@ -80,7 +80,7 @@ export function PriceCard(props: PriceCardProps) {
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-[#1E2433] bg-[#0D1117] p-4 sm:p-5">
+    <div className="group relative w-full overflow-hidden rounded-2xl border border-[#1E2433] bg-[#0D1117] p-4 sm:p-5 transition-all duration-300 hover:border-[#0066FF]/40 hover:shadow-[0_0_30px_-8px_rgba(0,102,255,0.25)]">
       {/* Aurora glow — soft blue/violet/emerald orbs (Naka brand palette) */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-16 -right-12 h-44 w-44 rounded-full bg-[#0066FF]/20 blur-3xl" />
@@ -124,7 +124,7 @@ export function PriceCard(props: PriceCardProps) {
         {/* Price + 24h change */}
         <div className="mt-3 flex items-end justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-3xl font-bold text-white font-mono tabular-nums leading-none">
+            <span className="text-[26px] sm:text-3xl md:text-[34px] font-bold text-white font-mono tabular-nums leading-none tracking-tight">
               {formatPrice(price)}
             </span>
             <PriceChangeDisplay value={change24h} size="md" />
@@ -170,13 +170,14 @@ export function PriceCard(props: PriceCardProps) {
           )}
         </div>
 
-        {/* Stats row 2 — contained panel instead of a thin divider line.
-            2×2 on phones, single row from sm+, so every stat stays legible. */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-xl border border-[#1E2433]/70 bg-[#0B0F1A]/60 p-3">
-          <Stat label="Market Cap" value={marketCap != null ? formatLargeNumber(marketCap) : '—'} />
-          <Stat label="Liquidity" value={liquidity != null ? formatLargeNumber(liquidity) : '—'} />
-          <Stat label="Supply" value={supply != null ? formatSupply(supply, '').trim() : '—'} />
+        {/* Stats row 2 — individual premium tiles (replaces the thin divider).
+            2×2 on phones, 4-across from sm+, so every stat stays legible. */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <Stat tile label="Market Cap" value={marketCap != null ? formatLargeNumber(marketCap) : '—'} />
+          <Stat tile label="Liquidity" value={liquidity != null ? formatLargeNumber(liquidity) : '—'} />
+          <Stat tile label="Supply" value={supply != null ? formatSupply(supply, '').trim() : '—'} />
           <Stat
+            tile
             label="FDV"
             value={fdv != null ? formatLargeNumber(fdv) : '—'}
             sub={pctUnlocked != null ? <span className="text-gray-500">{pctUnlocked.toFixed(0)}% unlocked</span> : undefined}
