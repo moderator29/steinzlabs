@@ -7,6 +7,7 @@ import { FollowButton } from '@/components/social/FollowButton';
 import { MessageButton } from '@/components/social/MessageButton';
 import { MoreMenu } from '@/components/social/MoreMenu';
 import { UserListRow } from '@/components/social/UserListRow';
+import { TierBadge } from '@/components/ui/TierBadge';
 
 /**
  * /u/[username] — public profile.
@@ -104,7 +105,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{p.display_name || p.username}</h1>
-            {p.is_chosen ? <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Chosen</span> : null}
+            <TierBadge tier={p.tier} size={20} />
             {p.verified_badge ? <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{p.verified_badge}</span> : null}
             {p.is_private ? <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 border border-white/10 uppercase">Private</span> : null}
           </div>
