@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useMarketData } from "@/hooks/market/useMarketData";
 import { useWatchlist } from "@/hooks/market/useWatchlist";
 import { CategoryPills } from "@/components/market/CategoryPills";
+import { FiltersModal, type MarketFilters } from "@/components/market/FiltersModal";
 import { TopGainersBar } from "@/components/market/TopGainersBar";
 import { TokenRow } from "@/components/market/TokenRow";
 import { LoadingSkeleton } from "@/components/market/LoadingSkeleton";
@@ -61,6 +62,8 @@ export default function DashboardMarketPage() {
   const { user } = useAuth();
   const [category, setCategory] = useState<CategoryId>("all");
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [mFilters, setMFilters] = useState<MarketFilters>({ sortBy: "market_cap", minMarketCap: 0, maxMarketCap: 0, minVolume: 0 });
 
   const { tokens, loading, error, refetch } = useMarketData({ category });
   const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
@@ -111,14 +114,27 @@ export default function DashboardMarketPage() {
   // Live "Majors" = first MAJORS_LIMIT rows of the API's market_cap_desc
   // response, computed each render against fresh data.
   const majorsSet = new Set(tokens.slice(0, MAJORS_LIMIT).map((t) => t.id));
-  const filtered = tokens.filter((t) => {
-    if (category === "majors") return majorsSet.has(t.id);
-    if (search) {
-      const q = search.toLowerCase();
-      return t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q);
-    }
-    return true;
-  });
+  const filtered = tokens
+    .filter((t) => {
+      if (category === "majors") return majorsSet.has(t.id);
+      if (search) {
+        const q = search.toLowerCase();
+        return t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q);
+      }
+      return true;
+    })
+    // FiltersModal — market-cap range + min 24h volume, then sort.
+    .filter((t) => {
+      if (mFilters.minMarketCap > 0 && (t.market_cap ?? 0) < mFilters.minMarketCap) return false;
+      if (mFilters.maxMarketCap > 0 && (t.market_cap ?? 0) > mFilters.maxMarketCap) return false;
+      if (mFilters.minVolume > 0 && (t.total_volume ?? 0) < mFilters.minVolume) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (mFilters.sortBy === "volume") return (b.total_volume ?? 0) - (a.total_volume ?? 0);
+      if (mFilters.sortBy === "price_change") return (b.price_change_percentage_24h ?? 0) - (a.price_change_percentage_24h ?? 0);
+      return (b.market_cap ?? 0) - (a.market_cap ?? 0);
+    });
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -174,7 +190,14 @@ export default function DashboardMarketPage() {
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" size={14} />
           )}
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl text-slate-400 hover:text-white hover:border-slate-700 text-sm transition-colors">
+        <button
+          onClick={() => setShowFilters(true)}
+          className={`flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 backdrop-blur-xl border rounded-xl text-sm transition-colors ${
+            mFilters.sortBy !== "market_cap" || mFilters.minMarketCap > 0 || mFilters.maxMarketCap > 0 || mFilters.minVolume > 0
+              ? "border-[#0066FF] text-white"
+              : "border-slate-800/50 text-slate-400 hover:text-white hover:border-slate-700"
+          }`}
+        >
           <SlidersHorizontal size={14} />
           Filters
         </button>
@@ -281,6 +304,12 @@ export default function DashboardMarketPage() {
           )}
         </>
       )}
+      <FiltersModal
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        filters={mFilters}
+        onChange={setMFilters}
+      />
     </div>
   );
 }

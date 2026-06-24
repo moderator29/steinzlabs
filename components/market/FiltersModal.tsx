@@ -5,7 +5,6 @@ import { X } from 'lucide-react';
 import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
 export interface MarketFilters {
-  category: string;
   sortBy: string;
   minMarketCap: number;
   maxMarketCap: number;
@@ -19,13 +18,10 @@ interface FiltersModalProps {
   onChange: (f: MarketFilters) => void;
 }
 
-const CATEGORIES = ['All', 'DeFi', 'Gaming', 'L1', 'L2', 'Meme', 'AI'];
-
 const SORT_OPTIONS = [
   { label: 'Market Cap', value: 'market_cap' },
   { label: 'Volume', value: 'volume' },
   { label: 'Price Change', value: 'price_change' },
-  { label: 'New', value: 'new' },
 ];
 
 const MARKET_CAP_PRESETS = [
@@ -69,7 +65,7 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
   const set = (patch: Partial<MarketFilters>) => onChange({ ...filters, ...patch });
 
   const handleReset = () =>
-    onChange({ category: 'All', sortBy: 'market_cap', minMarketCap: 0, maxMarketCap: 0, minVolume: 0 });
+    onChange({ sortBy: 'market_cap', minMarketCap: 0, maxMarketCap: 0, minVolume: 0 });
 
   if (!isOpen) return null;
 
@@ -106,26 +102,6 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
         </div>
 
         <div className="flex-1 px-5 py-5 space-y-6">
-          {/* Category */}
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Category</h3>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => set({ category: cat })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                    filters.category === cat
-                      ? 'bg-[#0066FF] border-[#0066FF] text-white'
-                      : 'bg-transparent border-[#1E2433] text-gray-400 hover:border-[#0066FF]/50 hover:text-white'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </section>
-
           {/* Sort By */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Sort By</h3>
