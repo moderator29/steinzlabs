@@ -21,7 +21,7 @@ const AUDIT_AREAS = [
 ];
 
 const STATUS_TONE = {
-  'fresh':       { c: 'text-[var(--nl-blue,#0A1EFF)]', bg: 'bg-[var(--nl-blue,#0A1EFF)]/[0.10]', label: 'New build' },
+  'fresh':       { c: 'text-[var(--nl-blue,#0066FF)]', bg: 'bg-[var(--nl-blue,#0066FF)]/[0.10]', label: 'New build' },
   'in-progress': { c: 'text-amber-300', bg: 'bg-amber-500/[0.08]', label: 'In progress' },
   'partial':     { c: 'text-emerald-300', bg: 'bg-emerald-500/[0.08]', label: 'Partial parity' },
   'done':        { c: 'text-emerald-400', bg: 'bg-emerald-500/[0.12]', label: 'Industry parity' },
@@ -31,11 +31,11 @@ export default function AuditTrackerPage() {
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-2">
-        <ClipboardList className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" />
+        <ClipboardList className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
         <h1 className="text-xl sm:text-2xl font-bold text-white">Industry Standard Audit</h1>
       </div>
       <p className="text-[12px] text-slate-400 mb-5">
-        Full gap analysis in <Link href="/docs/industry-standard-audit" className="text-[var(--nl-blue,#0A1EFF)]">docs/industry-standard-audit.md</Link>. Per-area status here is updated after each audit pass.
+        Full gap analysis in <Link href="/docs/industry-standard-audit" className="text-[var(--nl-blue,#0066FF)]">docs/industry-standard-audit.md</Link>. Per-area status here is updated after each audit pass.
       </p>
       <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
         {AUDIT_AREAS.map((a) => {

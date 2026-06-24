@@ -56,7 +56,7 @@ async function fetchTokenMeta(address: string, chain: string): Promise<TokenMeta
 // Deterministic color from symbol
 function symbolColor(symbol: string): string {
   const colors = [
-    '#0A1EFF', '#8B5CF6', '#EC4899', '#F59E0B',
+    '#0066FF', '#8B5CF6', '#EC4899', '#F59E0B',
     '#10B981', '#3B82F6', '#EF4444', '#14B8A6',
   ];
   let hash = 0;

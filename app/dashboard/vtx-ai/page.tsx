@@ -800,7 +800,7 @@ function VtxAiPageInner() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* Settings Toast */}
       {settingsToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0A1EFF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-[#0066FF]/90 text-white text-[11px] font-semibold rounded-full shadow-lg pointer-events-none">
           Settings saved
         </div>
       )}
@@ -808,7 +808,7 @@ function VtxAiPageInner() {
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
 
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/20">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/20">
             <SteinzLogo size={22} />
           </div>
 
@@ -816,7 +816,7 @@ function VtxAiPageInner() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold tracking-tight">VTX Agent</span>
               {isPro && (
-                <span className="px-1.5 py-0.5 bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-bold">PRO</span>
+                <span className="px-1.5 py-0.5 bg-[#0066FF]/15 border border-[#0066FF]/30 rounded text-[9px] text-[#0066FF] font-bold">PRO</span>
               )}
             </div>
           </div>
@@ -841,7 +841,7 @@ function VtxAiPageInner() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={clearChat}
-                  className="px-2 py-1 bg-[#0A1EFF]/20 border border-[#0A1EFF]/30 rounded text-[9px] text-[#0A1EFF] font-semibold hover:bg-[#0A1EFF]/30 transition-colors"
+                  className="px-2 py-1 bg-[#0066FF]/20 border border-[#0066FF]/30 rounded text-[9px] text-[#0066FF] font-semibold hover:bg-[#0066FF]/30 transition-colors"
                 >
                   + New Chat
                 </button>
@@ -856,7 +856,7 @@ function VtxAiPageInner() {
                   <button
                     key={session.id}
                     onClick={() => loadChatSession(session)}
-                    className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0A1EFF]/20 transition-all flex items-center gap-2"
+                    className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0066FF]/20 transition-all flex items-center gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -882,14 +882,14 @@ function VtxAiPageInner() {
 
             {/* Section: Response Style */}
             <div className="mb-3">
-              <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Response Style</p>
+              <p className="text-[9px] text-[#0066FF] uppercase tracking-widest font-bold mb-2">Response Style</p>
               <div className="space-y-2.5">
                 <div>
                   <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Personality</label>
                   <select
                     value={settings.personality}
                     onChange={(e) => updateSettings({ personality: e.target.value as AgentSettings['personality'] })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="professional">Professional Analyst</option>
                     <option value="degen">Degen Trader</option>
@@ -905,7 +905,7 @@ function VtxAiPageInner() {
                       <button
                         key={d}
                         onClick={() => updateSettings({ depth: d })}
-                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.depth === d ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.depth === d ? 'bg-[#0066FF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                         {d}
                       </button>
@@ -918,7 +918,7 @@ function VtxAiPageInner() {
                   <select
                     value={settings.language}
                     onChange={(e) => updateSettings({ language: e.target.value })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="English">English</option>
                     <option value="Spanish">Spanish</option>
@@ -941,7 +941,7 @@ function VtxAiPageInner() {
                       <button
                         key={value}
                         onClick={() => updateSettings({ riskAppetite: value })}
-                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.riskAppetite === value ? 'bg-[#0A1EFF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 py-1.5 rounded text-[10px] font-medium transition-colors ${settings.riskAppetite === value ? 'bg-[#0066FF] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                         {label}
                       </button>
@@ -959,7 +959,7 @@ function VtxAiPageInner() {
                   <select
                     value={settings.defaultChain}
                     onChange={(e) => updateSettings({ defaultChain: e.target.value as AgentSettings['defaultChain'] })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0A1EFF]/40"
+                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="solana">Solana</option>
                     <option value="ethereum">Ethereum</option>
@@ -973,14 +973,14 @@ function VtxAiPageInner() {
 
             {/* Section: Features */}
             <div className="border-t border-white/[0.04] pt-3 mb-3">
-              <p className="text-[9px] text-[#0A1EFF] uppercase tracking-widest font-bold mb-2">Features</p>
+              <p className="text-[9px] text-[#0066FF] uppercase tracking-widest font-bold mb-2">Features</p>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-gray-300">Web Search</p>
                     <p className="text-[9px] text-gray-500">Include live web results in context</p>
                   </div>
-                  <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
                     <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
@@ -990,7 +990,7 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Auto-show Charts</p>
                     <p className="text-[9px] text-gray-500">Render inline charts when AI signals them</p>
                   </div>
-                  <button onClick={() => updateSettings({ autoCharts: !settings.autoCharts })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <button onClick={() => updateSettings({ autoCharts: !settings.autoCharts })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
                     <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
@@ -1000,7 +1000,7 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Focus Mode</p>
                     <p className="text-[9px] text-gray-500">Expand chat view while messaging</p>
                   </div>
-                  <button onClick={() => updateSettings({ focusMode: !settings.focusMode })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <button onClick={() => updateSettings({ focusMode: !settings.focusMode })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
                     <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
@@ -1010,7 +1010,7 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Message Sound</p>
                     <p className="text-[9px] text-gray-500">Chime when VTX replies</p>
                   </div>
-                  <button onClick={() => updateSettings({ messageSound: !settings.messageSound })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0A1EFF]' : 'bg-white/10'}`}>
+                  <button onClick={() => updateSettings({ messageSound: !settings.messageSound })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
                     <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
@@ -1042,7 +1042,7 @@ function VtxAiPageInner() {
         {!messages.some(m => m.role === 'user') && (
           <div className="px-4 pt-6 pb-2">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0A1EFF]/10 overflow-hidden">
+              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 rounded-2xl flex items-center justify-center border border-[#0066FF]/10 overflow-hidden">
                 <SteinzLogo size={40} animated={false} />
               </div>
               <h2 className="text-lg font-bold mb-1">What do you need analyzed?</h2>
@@ -1051,7 +1051,7 @@ function VtxAiPageInner() {
 
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
               {QUICK_ACTIONS.map((action) => (
-                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
+                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
                   {action.label}
                 </button>
               ))}
@@ -1067,9 +1067,9 @@ function VtxAiPageInner() {
                 <button
                   key={card.label}
                   onClick={() => handleSend(card.query)}
-                  className="text-start p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0A1EFF]/30 hover:bg-slate-900/80 transition-all group"
+                  className="text-start p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0066FF]/30 hover:bg-slate-900/80 transition-all group"
                 >
-                  <card.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
+                  <card.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0066FF] mb-1.5 transition-colors" />
                   <p className="text-xs font-semibold text-gray-200">{card.label}</p>
                 </button>
               ))}
@@ -1084,8 +1084,8 @@ function VtxAiPageInner() {
             {showTools && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {TOOLS.slice(4).map((tool) => (
-                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.03] transition-all group">
-                    <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0A1EFF] mb-1.5 transition-colors" />
+                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.03] transition-all group">
+                    <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0066FF] mb-1.5 transition-colors" />
                     <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
                     <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
                   </button>
@@ -1099,19 +1099,19 @@ function VtxAiPageInner() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 shadow-sm shadow-[#0A1EFF]/10 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 shadow-sm shadow-[#0066FF]/10 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15">
                   <SteinzLogo size={18} animated={false} />
                 </div>
               )}
               <div className={`max-w-[82%] min-w-0 rounded-2xl px-4 py-3 text-xs leading-relaxed relative overflow-hidden ${
                 msg.role === 'user'
-                  ? 'bg-[#0A1EFF]/10 border border-[#0A1EFF]/15 text-white'
+                  ? 'bg-[#0066FF]/10 border border-[#0066FF]/15 text-white'
                   : 'bg-white/[0.02] border border-white/[0.06] text-gray-300'
               }`}>
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Sparkles className="w-3 h-3 text-[#0A1EFF]" />
-                    <span className="text-[10px] font-semibold text-[#0A1EFF]">VTX Agent</span>
+                    <Sparkles className="w-3 h-3 text-[#0066FF]" />
+                    <span className="text-[10px] font-semibold text-[#0066FF]">VTX Agent</span>
                     {msg.timestamp && <span className="text-[9px] text-gray-700 ms-auto">{formatTime(msg.timestamp)}</span>}
                   </div>
                 )}
@@ -1141,7 +1141,7 @@ function VtxAiPageInner() {
                                 <button
                                   key={a.label}
                                   onClick={() => { if (a.send) handleSend(a.send); else if (a.prefill) setInput(a.prefill); }}
-                                  className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0A1EFF]/30 hover:bg-[#0A1EFF]/[0.06] transition-all"
+                                  className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.06] transition-all"
                                 >
                                   {a.label}
                                 </button>
@@ -1180,7 +1180,7 @@ function VtxAiPageInner() {
                   <div className="mt-3 pt-3 border-t border-white/[0.06]">
                     <div className="flex flex-wrap gap-1.5">
                       {msg.suggestions.map((s, si) => (
-                        <button key={si} onClick={() => handleSend(s)} className="px-2.5 py-1.5 bg-[#0A1EFF]/[0.06] border border-[#0A1EFF]/15 rounded-lg text-[10px] text-[#0A1EFF] hover:bg-[#0A1EFF]/10 transition-all">
+                        <button key={si} onClick={() => handleSend(s)} className="px-2.5 py-1.5 bg-[#0066FF]/[0.06] border border-[#0066FF]/15 rounded-lg text-[10px] text-[#0066FF] hover:bg-[#0066FF]/10 transition-all">
                           {s}
                         </button>
                       ))}
@@ -1210,7 +1210,7 @@ function VtxAiPageInner() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#4F46E5]/20 border border-[#0A1EFF]/15">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15">
                 <SteinzLogo size={18} animated={false} />
               </div>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
@@ -1225,25 +1225,25 @@ function VtxAiPageInner() {
 
       <div className="sticky bottom-0 bg-[#060A12]/95 backdrop-blur-xl border-t border-white/[0.04] p-3 space-y-2">
         {rateLimited && !isPro && (
-          <div className="flex items-center gap-3 p-3 bg-[#0A1EFF]/[0.05] border border-[#0A1EFF]/15 rounded-xl">
-            <Lock className="w-4 h-4 text-[#0A1EFF] flex-shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-[#0066FF]/[0.05] border border-[#0066FF]/15 rounded-xl">
+            <Lock className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
             <div className="flex-1">
               <p className="text-[11px] text-white font-semibold">Daily limit reached</p>
               <p className="text-[10px] text-gray-500">Upgrade to Pro for unlimited messages</p>
             </div>
-            <button onClick={() => router.push('/dashboard/pricing')} className="px-3 py-1.5 bg-[#0A1EFF] rounded-lg text-[10px] font-bold hover:bg-[#0918D0] transition-colors">
+            <button onClick={() => router.push('/dashboard/pricing')} className="px-3 py-1.5 bg-[#0066FF] rounded-lg text-[10px] font-bold hover:bg-[#0918D0] transition-colors">
               Upgrade
             </button>
           </div>
         )}
 
         <div className="flex gap-2 items-start">
-          <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/20 text-[#0A1EFF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
+          <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0066FF]/10 border-[#0066FF]/20 text-[#0066FF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
             <Wrench className="w-4 h-4" />
           </button>
-          <div className="flex-1 flex items-start bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl px-3 py-2 focus-within:border-[#0A1EFF]/40 focus-within:shadow-[0_0_0_3px_rgba(10,30,255,0.08)] transition-all">
+          <div className="flex-1 flex items-start bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
             {settings.webSearch && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0A1EFF]/10 rounded text-[9px] text-[#0A1EFF] font-semibold me-2 mt-1.5 flex-shrink-0">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0066FF]/10 rounded text-[9px] text-[#0066FF] font-semibold me-2 mt-1.5 flex-shrink-0">
                 <Globe className="w-2.5 h-2.5" /> WEB
               </div>
             )}
@@ -1282,7 +1282,7 @@ function VtxAiPageInner() {
               }}
               disabled={loading || !input.trim() || (rateLimited && !isPro)}
               aria-label="Send message"
-              className="ms-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(10,30,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="ms-2 mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#7C3AED] text-white flex items-center justify-center hover:shadow-[0_0_0_3px_rgba(0,102,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -1319,7 +1319,7 @@ export default function VtxAiPage() {
     <Suspense
       fallback={
         <div className="h-[100dvh] flex items-center justify-center bg-[#060A12] text-slate-500 text-sm gap-3">
-          <div className="w-5 h-5 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span>Loading VTX Agent…</span>
         </div>
       }

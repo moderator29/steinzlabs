@@ -103,8 +103,8 @@ export default function TreasuryPage() {
             <div key={w.address} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Landmark className="w-5 h-5 text-[#0A1EFF]" />
+                  <div className="w-10 h-10 bg-[#0066FF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Landmark className="w-5 h-5 text-[#0066FF]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
@@ -138,13 +138,13 @@ export default function TreasuryPage() {
                 </div>
                 <div>
                   <div className="text-gray-500 mb-0.5">% of Treasury</div>
-                  <div className="text-[#0A1EFF] font-bold">
+                  <div className="text-[#0066FF] font-bold">
                     {totalTreasury > 0 ? (w.totalUsd / totalTreasury * 100).toFixed(1) : '0.0'}%
                   </div>
                   <div className="flex justify-center mt-1">
                     <div className="w-20 bg-[#0A0E1A] rounded-full h-1">
                       <div
-                        className="bg-[#0A1EFF] h-1 rounded-full"
+                        className="bg-[#0066FF] h-1 rounded-full"
                         style={{ width: `${totalTreasury > 0 ? (w.totalUsd / totalTreasury * 100).toFixed(0) : 0}%` }}
                       />
                     </div>

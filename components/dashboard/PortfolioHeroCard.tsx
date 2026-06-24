@@ -62,11 +62,11 @@ export function PortfolioHeroCard() {
   return (
     <Link
       href="/dashboard/portfolio"
-      className="block rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#0A1EFF]/[0.08] to-transparent p-5 mb-4 hover:border-white/[0.12] transition-colors"
+      className="block rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#0066FF]/[0.08] to-transparent p-5 mb-4 hover:border-white/[0.12] transition-colors"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0A1EFF]/15 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-[#0066FF]/15 flex items-center justify-center">
             <Wallet className="w-5 h-5 text-[#8FA3FF]" />
           </div>
           <div>

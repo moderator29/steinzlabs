@@ -90,8 +90,8 @@ export default function BroadcastPage() {
               const c = counts[key];
               return (
                 <button key={key} onClick={() => setAudience(key)}
-                  className={`flex items-start gap-3 p-3 rounded-xl border text-start transition-all ${audience === key ? 'border-[#0A1EFF] bg-[#0A1EFF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
-                  <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0A1EFF]' : 'text-gray-500'}`} />
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-start transition-all ${audience === key ? 'border-[#0066FF] bg-[#0066FF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                  <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0066FF]' : 'text-gray-500'}`} />
                   <div>
                     <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>
                     <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients — {val.desc}</div>
@@ -107,12 +107,12 @@ export default function BroadcastPage() {
           <div>
             <label className="text-xs text-gray-400 mb-1 block">Subject Line</label>
             <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Enter email subject..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs text-gray-400">Body (Markdown supported)</label>
-              <button onClick={() => setPreview(p => !p)} className="text-[10px] text-[#0A1EFF] hover:text-white transition-colors">
+              <button onClick={() => setPreview(p => !p)} className="text-[10px] text-[#0066FF] hover:text-white transition-colors">
                 {preview ? 'Edit' : 'Preview'}
               </button>
             </div>
@@ -123,7 +123,7 @@ export default function BroadcastPage() {
             ) : (
               <textarea value={body} onChange={e => setBody(e.target.value)} rows={10}
                 placeholder="Write your email body here. Supports Markdown formatting..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 resize-none font-mono" />
+                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none font-mono" />
             )}
           </div>
         </div>
@@ -134,14 +134,14 @@ export default function BroadcastPage() {
             <p className="text-xs text-orange-400 font-semibold mb-1">Confirm before sending</p>
             <p className="text-xs text-gray-400 mb-2">This will send emails to {selectedCount === null ? '—' : selectedCount.toLocaleString()} users ({selectedMeta.label}). This cannot be undone.</p>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="accent-[#0A1EFF]" />
+              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="accent-[#0066FF]" />
               <span className="text-xs text-gray-300">I understand and confirm this broadcast</span>
             </label>
           </div>
         </div>
 
         <button onClick={send} disabled={!confirmed || !subject.trim() || !body.trim() || status === 'sending'}
-          className="w-full flex items-center justify-center gap-2 bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold transition-colors">
+          className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold transition-colors">
           {status === 'sending' ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><Send className="w-4 h-4" /> Send Broadcast</>}
         </button>
       </div>

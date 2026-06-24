@@ -119,8 +119,8 @@ export default function SniperOversightPage() {
           { label: 'Failed Jobs', value: jobs.filter(j => j.status === 'failed').length, icon: AlertTriangle },
         ].map(k => (
           <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-              <k.icon className="w-4 h-4 text-[#0A1EFF]" />
+            <div className="w-9 h-9 bg-[#0066FF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <k.icon className="w-4 h-4 text-[#0066FF]" />
             </div>
             <div>
               <div className="text-xl font-bold text-white">{k.value}</div>
@@ -143,7 +143,7 @@ export default function SniperOversightPage() {
               return (
                 <tr key={job.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
                   <td className="px-4 py-3 text-white font-bold">{job.token}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-[#0A1EFF]/10 text-[#0A1EFF] rounded text-[10px] font-mono">{job.chain}</span></td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-[#0066FF]/10 text-[#0066FF] rounded text-[10px] font-mono">{job.chain}</span></td>
                   <td className="px-4 py-3 font-mono text-gray-300">${job.targetPrice.toFixed(8)}</td>
                   <td className="px-4 py-3">
                     <div className="font-mono text-white">${job.currentPrice.toFixed(8)}</div>

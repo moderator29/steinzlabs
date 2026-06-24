@@ -48,13 +48,13 @@ export default function DNAAnalyzerPage() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && analyzeWallet()}
                 placeholder="Enter wallet address..."
-                className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-10 pe-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF] font-mono"
+                className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-10 pe-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF] font-mono"
               />
             </div>
             <button
               onClick={analyzeWallet}
               disabled={analyzing || !walletAddress}
-              className="bg-[#0A1EFF] hover:bg-[#0916CC] disabled:bg-gray-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="bg-[#0066FF] hover:bg-[#0052CC] disabled:bg-gray-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               {analyzing ? 'Analyzing...' : 'Analyze'}
             </button>
@@ -133,7 +133,7 @@ export default function DNAAnalyzerPage() {
 
             {/* Actions */}
             <div className="flex gap-3">
-              <button className="flex-1 bg-[#0A1EFF] hover:bg-[#0916CC] text-white font-medium py-3 rounded-lg">
+              <button className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-3 rounded-lg">
                 Follow Entity
               </button>
               <button className="flex-1 bg-[#141824] hover:bg-[#1E2433] border border-[#1E2433] text-white font-medium py-3 rounded-lg">

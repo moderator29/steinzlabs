@@ -134,7 +134,7 @@ export default function WalletLabelsPage() {
         </div>
         <button
           onClick={() => { setShowForm(true); setEditing(null); setForm({ ...BLANK }); }}
-          className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors"
+          className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors"
         >
           <Plus className="w-3.5 h-3.5" /> Add Label
         </button>
@@ -153,13 +153,13 @@ export default function WalletLabelsPage() {
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               placeholder="Wallet address"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
             />
             <input
               value={form.label}
               onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
               placeholder="Entity label (e.g. Binance Hot Wallet)"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
             />
             <select
               value={form.chain}
@@ -180,7 +180,7 @@ export default function WalletLabelsPage() {
             value={form.notes ?? ''}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder="Notes (optional)"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
           />
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -188,7 +188,7 @@ export default function WalletLabelsPage() {
                 type="checkbox"
                 checked={form.verified}
                 onChange={e => setForm(f => ({ ...f, verified: e.target.checked }))}
-                className="accent-[#0A1EFF]"
+                className="accent-[#0066FF]"
               />
               <span className="text-xs text-gray-300">Mark as verified</span>
             </label>
@@ -196,7 +196,7 @@ export default function WalletLabelsPage() {
             <button
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-60 text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-60 text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? 'Saving…' : 'Save'}
@@ -213,7 +213,7 @@ export default function WalletLabelsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, label, or category..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
         </div>

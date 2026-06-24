@@ -17,7 +17,7 @@ import {
  * PriceCard — the canonical token price surface for Naka Labs.
  *
  * Naka aurora branding: #0D1117 panel + #1E2433 border, with a soft aurora glow
- * (electric-blue #0A1EFF → violet #8B5CF6 → emerald #10B981, the same palette as
+ * (electric-blue #0066FF → violet #8B5CF6 → emerald #10B981, the same palette as
  * AuroraBackground) and a gradient top accent. Monospace/tabular numerals and
  * the shared lightweight SparklineChart (current price view, instant,
  * non-interactive). Up = green, down = red — the platform chart convention.
@@ -83,12 +83,12 @@ export function PriceCard(props: PriceCardProps) {
     <div className="relative w-full overflow-hidden rounded-2xl border border-[#1E2433] bg-[#0D1117] p-4 sm:p-5">
       {/* Aurora glow — soft blue/violet/emerald orbs (Naka brand palette) */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-16 -right-12 h-44 w-44 rounded-full bg-[#0A1EFF]/20 blur-3xl" />
+        <div className="absolute -top-16 -right-12 h-44 w-44 rounded-full bg-[#0066FF]/20 blur-3xl" />
         <div className="absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-[#8B5CF6]/15 blur-3xl" />
         <div className="absolute -bottom-12 right-1/3 h-32 w-32 rounded-full bg-[#10B981]/10 blur-3xl" />
       </div>
       {/* Aurora top accent line */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#0A1EFF] via-[#8B5CF6] to-[#10B981] opacity-70" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#0066FF] via-[#8B5CF6] to-[#10B981] opacity-70" />
 
       <div className="relative">
         {/* Header */}
@@ -103,11 +103,11 @@ export function PriceCard(props: PriceCardProps) {
               {address && (
                 <button
                   onClick={copyAddr}
-                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#0A1EFF] transition-colors font-mono"
+                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#0066FF] transition-colors font-mono"
                   title="Copy address"
                 >
                   {shortenAddress(address)}
-                  {copied ? <Check size={11} className="text-[#0A1EFF]" /> : <Copy size={11} />}
+                  {copied ? <Check size={11} className="text-[#0066FF]" /> : <Copy size={11} />}
                 </button>
               )}
             </div>
@@ -129,7 +129,7 @@ export function PriceCard(props: PriceCardProps) {
             </span>
             <PriceChangeDisplay value={change24h} size="md" />
           </div>
-          <span className="rounded-md border border-[#1E2433] bg-[#0A1EFF]/[0.06] px-2 py-0.5 text-[11px] text-gray-400">24h</span>
+          <span className="rounded-md border border-[#1E2433] bg-[#0066FF]/[0.06] px-2 py-0.5 text-[11px] text-gray-400">24h</span>
         </div>
 
         {/* Chart — same lightweight sparkline the watchlist uses (instant, non-interactive) */}
@@ -162,7 +162,7 @@ export function PriceCard(props: PriceCardProps) {
               href={orbUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="justify-self-end inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#0A1EFF] transition-colors"
+              className="justify-self-end inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#0066FF] transition-colors"
             >
               See on Orb <ExternalLink size={11} />
             </a>

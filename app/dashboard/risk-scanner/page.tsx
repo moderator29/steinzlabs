@@ -157,7 +157,7 @@ export default function RiskScannerPage() {
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <Target className="w-5 h-5 text-[#0A1EFF]" />
+          <Target className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">AI Risk Scanner</h1>
         </div>
       </div>
@@ -165,8 +165,8 @@ export default function RiskScannerPage() {
       <div className="p-4 space-y-4">
         {!scanned && !scanning && (
           <div className="glass rounded-xl p-6 border border-white/10 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Target className="w-8 h-8 text-[#0A1EFF]" />
+            <div className="w-16 h-16 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Target className="w-8 h-8 text-[#0066FF]" />
             </div>
             <h2 className="text-base font-heading font-bold mb-1">AI Portfolio Risk Scanner</h2>
             <p className="text-xs text-gray-500 mb-4">Scan any wallet for on-chain risks across all positions</p>
@@ -187,7 +187,7 @@ export default function RiskScannerPage() {
             <button
               onClick={handleScan}
               disabled={scanning || (!manualAddress.trim() && !walletAddress)}
-              className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
+              className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
             >
               <Zap className="w-4 h-4" /> Run Full Scan
             </button>
@@ -200,7 +200,7 @@ export default function RiskScannerPage() {
 
         {scanning && (
           <div className="glass rounded-xl p-8 border border-white/10 text-center">
-            <Loader2 className="w-10 h-10 text-[#0A1EFF] animate-spin mx-auto mb-4" />
+            <Loader2 className="w-10 h-10 text-[#0066FF] animate-spin mx-auto mb-4" />
             <p className="text-sm font-semibold mb-1">Scanning wallet...</p>
             <p className="text-[10px] text-gray-500 font-mono">{scannedAddress.slice(0, 10)}...{scannedAddress.slice(-6)}</p>
           </div>
@@ -263,10 +263,10 @@ export default function RiskScannerPage() {
 
             {/* Intelligence Report */}
             {hasData && (
-              <div className="bg-[#0A0E1A] rounded-xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+              <div className="bg-[#0A0E1A] rounded-xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                  <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Brain className="w-4 h-4 text-[#0066FF]" />
                   </div>
                   <span className="font-bold text-sm">Intelligence Report</span>
                   <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
@@ -325,7 +325,7 @@ export default function RiskScannerPage() {
                 {/* Recommendations list */}
                 <div className="mb-3">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#0A1EFF]" />
+                    <TrendingUp className="w-3.5 h-3.5 text-[#0066FF]" />
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">Recommendations</p>
                   </div>
                   <div className="space-y-1.5">
@@ -403,7 +403,7 @@ export default function RiskScannerPage() {
               </div>
             )}
 
-            <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0A1EFF] border border-white/10 hover:bg-white/5 transition-colors">
+            <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0066FF] border border-white/10 hover:bg-white/5 transition-colors">
               Scan Again
             </button>
           </>

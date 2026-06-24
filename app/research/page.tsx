@@ -49,9 +49,9 @@ export default function PublicResearchPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <BackButton href="/" label="Home" />
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <BookOpen className="w-4 h-4 text-[#0A1EFF]" /> Research
+            <BookOpen className="w-4 h-4 text-[#0066FF]" /> Research
           </div>
-          <Link href="/dashboard" className="text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+          <Link href="/dashboard" className="text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
             Open App
           </Link>
         </div>
@@ -60,7 +60,7 @@ export default function PublicResearchPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
         {/* Hero */}
         <div className="mb-10 pb-8 border-b border-white/[0.06]">
-          <div className="inline-flex items-center gap-2 bg-[#0A1EFF]/10 border border-[#0A1EFF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 bg-[#0066FF]/10 border border-[#0066FF]/25 rounded-full px-3 py-1 text-xs text-[#4D6BFF] font-semibold mb-4">
             <BookOpen className="w-3 h-3" /> Naka Labs Research
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">On-chain research, open to everyone.</h1>
@@ -77,7 +77,7 @@ export default function PublicResearchPage() {
               onClick={() => setCategory(c)}
               className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
                 category === c
-                  ? 'bg-[#0A1EFF] text-white'
+                  ? 'bg-[#0066FF] text-white'
                   : 'bg-white/[0.04] text-gray-400 hover:text-white hover:bg-white/[0.08]'
               }`}
             >
@@ -133,12 +133,12 @@ export default function PublicResearchPage() {
         )}
 
         {/* Signup CTA */}
-        <div className="mt-16 rounded-3xl border border-[#0A1EFF]/25 bg-gradient-to-br from-[#0A1EFF]/10 to-[#8B5CF6]/10 p-8 sm:p-12 text-center">
+        <div className="mt-16 rounded-3xl border border-[#0066FF]/25 bg-gradient-to-br from-[#0066FF]/10 to-[#8B5CF6]/10 p-8 sm:p-12 text-center">
           <h3 className="text-2xl sm:text-3xl font-black tracking-tight mb-3">Want the raw data behind the research?</h3>
           <p className="text-gray-400 text-sm max-w-xl mx-auto mb-6">
             The full intelligence platform — live whale feeds, VTX AI, portfolio tracking, and every security tool — is free to start. Pro unlocks unlimited VTX and copy-trading from $9/mo.
           </p>
-          <Link href="/dashboard" className="inline-flex items-center gap-2 bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-bold text-sm transition-colors">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-bold text-sm transition-colors">
             Open the app <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

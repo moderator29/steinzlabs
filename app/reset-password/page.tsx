@@ -36,12 +36,12 @@ function ResetPasswordInner() {
       <AuroraBackground fullHeight>
       <div className="min-h-screen text-white flex items-center justify-center">
         <div className="text-center max-w-md px-6">
-          <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-            <Shield className="w-8 h-8 text-[#0A1EFF]" />
+          <div className="w-16 h-16 mx-auto bg-[#0066FF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0066FF]/20">
+            <Shield className="w-8 h-8 text-[#0066FF]" />
           </div>
           <h2 className="text-xl font-bold mb-2">Invalid or expired link</h2>
           <p className="text-gray-500 text-sm mb-6">This password reset link is no longer valid. Please request a new one.</p>
-          <Link href="/forgot-password" className="inline-block bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all">
+          <Link href="/forgot-password" className="inline-block bg-[#0066FF] hover:bg-[#0818CC] text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all">
             Request New Link
           </Link>
         </div>
@@ -103,7 +103,7 @@ function ResetPasswordInner() {
           <span className="text-base font-bold tracking-tight">NAKA LABS</span>
         </Link>
         <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight mb-4">Set your new<br /><span className="text-[#0A1EFF]">password</span></h1>
+          <h1 className="text-4xl font-bold leading-tight mb-4">Set your new<br /><span className="text-[#0066FF]">password</span></h1>
           <p className="text-gray-400 text-sm leading-relaxed">Choose a strong password to secure your account.</p>
         </div>
         <p className="text-xs text-gray-600">&copy; 2026 NAKA LABS. All rights reserved.</p>
@@ -116,8 +116,8 @@ function ResetPasswordInner() {
           </div>
 
           <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-[#0A1EFF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0A1EFF]/20">
-              <Lock className="w-8 h-8 text-[#0A1EFF]" />
+            <div className="w-16 h-16 mx-auto bg-[#0066FF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0066FF]/20">
+              <Lock className="w-8 h-8 text-[#0066FF]" />
             </div>
             <h2 className="text-2xl font-bold mb-2">Create new password</h2>
             <p className="text-gray-500 text-sm">Your new password must be different from your previous one</p>
@@ -132,7 +132,7 @@ function ResetPasswordInner() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl ps-12 pe-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl ps-12 pe-12 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors"
                   placeholder="Enter new password"
                   autoComplete="new-password"
                   autoFocus
@@ -161,7 +161,7 @@ function ResetPasswordInner() {
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
-                  className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 transition-colors`}
+                  className={`w-full bg-white/[0.04] border ${error ? 'border-red-500/50' : 'border-white/[0.08]'} rounded-xl ps-12 pe-4 py-4 text-base text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />
@@ -172,7 +172,7 @@ function ResetPasswordInner() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0A1EFF]/20"
+              className="w-full bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0066FF]/20"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               {loading ? 'Updating...' : 'Update Password'}
@@ -180,7 +180,7 @@ function ResetPasswordInner() {
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            <Link href="/login" className="text-[#0A1EFF] hover:text-[#0A1EFF]/80 font-medium transition-colors">Back to sign in</Link>
+            <Link href="/login" className="text-[#0066FF] hover:text-[#0066FF]/80 font-medium transition-colors">Back to sign in</Link>
           </p>
         </div>
       </div>

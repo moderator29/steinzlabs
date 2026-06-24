@@ -105,15 +105,15 @@ export function VtxToolSidecar({ tokens, toolEvents, pendingSwap }: Props) {
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-4 h-14 border-b border-white/[0.04] flex-shrink-0">
-        <Wrench className="w-4 h-4 text-[#0A1EFF]" />
+        <Wrench className="w-4 h-4 text-[#0066FF]" />
         <span className="text-xs font-bold tracking-tight">Intelligence Output</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4 min-h-0">
         {empty && (
           <div className="text-center pt-12 px-4">
-            <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-[#0A1EFF]/10 border border-[#0A1EFF]/20 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-[#0A1EFF]" />
+            <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/20 flex items-center justify-center">
+              <Wrench className="w-5 h-5 text-[#0066FF]" />
             </div>
             <p className="text-xs text-gray-400">No tool output yet.</p>
             <p className="text-[10px] text-gray-600 mt-1.5">
@@ -154,7 +154,7 @@ export function VtxToolSidecar({ tokens, toolEvents, pendingSwap }: Props) {
         {tokens.length > 0 && (
           <section>
             <div className="flex items-center gap-1.5 mb-2 px-1">
-              <Coins className="w-3 h-3 text-[#0A1EFF]" />
+              <Coins className="w-3 h-3 text-[#0066FF]" />
               <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
                 Tokens analyzed
               </span>
@@ -204,7 +204,7 @@ export function VtxToolSidecar({ tokens, toolEvents, pendingSwap }: Props) {
                   {t.contract && (
                     <a
                       href={`#contract-${t.contract}`}
-                      className="mt-2 flex items-center gap-1 text-[9px] text-[#0A1EFF] hover:opacity-80 transition-opacity"
+                      className="mt-2 flex items-center gap-1 text-[9px] text-[#0066FF] hover:opacity-80 transition-opacity"
                     >
                       <ExternalLink className="w-2.5 h-2.5" />
                       <span className="font-mono truncate">

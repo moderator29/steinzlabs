@@ -66,7 +66,7 @@ interface BubbleMapData {
 // ─── Node Colors ──────────────────────────────────────────────────────────────
 
 const NODE_COLORS: Record<string, string> = {
-  token:    '#0A1EFF',
+  token:    '#0066FF',
   exchange: '#10B981',
   whale:    '#F59E0B',
   contract: '#8B5CF6',

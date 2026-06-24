@@ -80,8 +80,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center p-6">
         <div className="w-full max-w-sm bg-[#141824] border border-[#1E2433] rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-[#0A1EFF]/10 rounded-xl flex items-center justify-center">
-              <Lock className="w-5 h-5 text-[#0A1EFF]" />
+            <div className="w-10 h-10 bg-[#0066FF]/10 rounded-xl flex items-center justify-center">
+              <Lock className="w-5 h-5 text-[#0066FF]" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">Admin Access</h1>
@@ -93,10 +93,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               name="token"
               type="password"
               placeholder="Admin bearer token"
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#0A1EFF]/50 transition-colors"
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               autoComplete="off"
             />
-            <button type="submit" className="w-full bg-[#0A1EFF] hover:bg-[#0818CC] text-white py-3 rounded-xl text-sm font-semibold transition-colors">
+            <button type="submit" className="w-full bg-[#0066FF] hover:bg-[#0818CC] text-white py-3 rounded-xl text-sm font-semibold transition-colors">
               Authenticate
             </button>
           </form>
@@ -139,7 +139,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all group ${active ? 'bg-[#0A1EFF]/15 text-[#0A1EFF] font-semibold' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all group ${active ? 'bg-[#0066FF]/15 text-[#0066FF] font-semibold' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
                 <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
                 {active && <ChevronRight className="w-3 h-3" />}

@@ -50,7 +50,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={() => { setTimedOut(false); window.location.reload(); }}
-              className="px-4 py-2 rounded-lg bg-[#0A1EFF] hover:bg-[#0A1EFF]/90 text-white text-sm font-semibold transition-colors"
+              className="px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-sm font-semibold transition-colors"
             >
               Retry
             </button>
@@ -68,7 +68,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-[#0A1EFF] animate-spin" />
+      <Loader2 className="w-8 h-8 text-[#0066FF] animate-spin" />
     </div>
   );
 }

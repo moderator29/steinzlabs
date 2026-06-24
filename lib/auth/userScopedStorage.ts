@@ -24,8 +24,11 @@ const STALE_KEY_PREFIXES = [
   'steinz_notif_prefs',
 ];
 
-// Keys to preserve across user switches (device-level prefs, not user data)
-const PRESERVE_PREFIXES = ['steinz_theme', 'steinz_remember_me'];
+// Keys to preserve across user switches (device-level prefs, not user data).
+// naka_appearance / naka_theme back the appearance system; they are device
+// visual prefs, not user data, so a same-device account switch must keep them
+// (the provider still rehydrates from the new user's server row on load).
+const PRESERVE_PREFIXES = ['naka_appearance', 'naka_theme', 'steinz_theme', 'steinz_remember_me'];
 
 function shouldWipe(key: string): boolean {
   if (PRESERVE_PREFIXES.some((p) => key.startsWith(p))) return false;

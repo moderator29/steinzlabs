@@ -217,7 +217,7 @@ export default function WalletCompareePage() {
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14 max-w-6xl mx-auto">
           <BackButton href="/dashboard/wallet-intelligence" label="Back" />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#00C8FF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#00C8FF] rounded-xl flex items-center justify-center">
             <ArrowLeftRight className="w-4 h-4" />
           </div>
           <h1 className="text-sm font-heading font-bold">Compare Wallets</h1>

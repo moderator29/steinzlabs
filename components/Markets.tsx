@@ -177,10 +177,10 @@ export default function Markets() {
             value={searchQuery}
             onChange={e => handleSearch(e.target.value)}
             placeholder="Search by name or CA..."
-            className="w-full ps-9 pe-4 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0A1EFF]/50 transition-colors"
+            className="w-full ps-9 pe-4 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           />
           {searching && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1EFF] animate-spin" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0066FF] animate-spin" />
           )}
           {searchQuery && !searching && (
             <button
@@ -193,7 +193,7 @@ export default function Markets() {
         </div>
         <button
           onClick={() => setShowFilters(true)}
-          className="flex items-center justify-center w-10 h-10 bg-[#111827] border border-white/[0.06] rounded-xl text-gray-400 hover:text-white hover:border-[#0A1EFF]/30 transition-all flex-shrink-0"
+          className="flex items-center justify-center w-10 h-10 bg-[#111827] border border-white/[0.06] rounded-xl text-gray-400 hover:text-white hover:border-[#0066FF]/30 transition-all flex-shrink-0"
         >
           <SlidersHorizontal className="w-4 h-4" />
         </button>
@@ -201,7 +201,7 @@ export default function Markets() {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="w-8 h-8 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-sm text-gray-500">Loading all coins...</span>
         </div>
       ) : coins.length === 0 ? (
@@ -209,7 +209,7 @@ export default function Markets() {
           <p className="text-gray-400 text-sm text-center">Market data unavailable.<br />Please retry in a moment.</p>
           <button
             onClick={fetchTopCoins}
-            className="flex items-center gap-2 text-sm text-[#0A1EFF] hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-[#0066FF] hover:text-blue-400 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             Retry
@@ -234,7 +234,7 @@ export default function Markets() {
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
 
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
                     {coin.image ? (
                       <img src={coin.image} alt={coin.symbol} className="w-full h-full object-cover rounded-full" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     ) : (
@@ -246,7 +246,7 @@ export default function Markets() {
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-white">{coin.name}</span>
                       {coin.source === 'dex' && coin.chain && (
-                        <span className="text-[9px] px-1 py-0.5 bg-[#0A1EFF]/20 text-[#0A1EFF] rounded font-medium">
+                        <span className="text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
                           {CHAIN_LABEL[coin.chain] || coin.chain.slice(0, 4).toUpperCase()}
                         </span>
                       )}

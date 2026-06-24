@@ -14,7 +14,7 @@ import { SocialSection } from '@/components/landing/SocialSection';
 import { OnboardingMention } from '@/components/landing/OnboardingMention';
 import type { Metadata } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz';
 const OG_IMAGE = `${SITE_URL}/og-default.png`;
 
 export const metadata: Metadata = {

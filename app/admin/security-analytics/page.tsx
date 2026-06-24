@@ -124,7 +124,7 @@ export default function SecurityAnalyticsPage() {
         </div>
         <button
           onClick={() => setShowAdd(prev => !prev)}
-          className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium"
+          className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium"
         >
           <Plus className="w-3.5 h-3.5" /> Flag Token
         </button>
@@ -140,7 +140,7 @@ export default function SecurityAnalyticsPage() {
                 placeholder={placeholder}
                 value={(newToken as Record<string, string>)[name]}
                 onChange={e => setNewToken(prev => ({ ...prev, [name]: e.target.value }))}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
               />
             ))}
             <select
@@ -162,13 +162,13 @@ export default function SecurityAnalyticsPage() {
             placeholder="Reason for flagging"
             value={newToken.reason}
             onChange={e => setNewToken(prev => ({ ...prev, reason: e.target.value }))}
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 mb-3"
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 mb-3"
           />
           <div className="flex gap-2">
             <button
               onClick={addToken}
               disabled={submitting}
-              className="bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 disabled:opacity-50"
+              className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 disabled:opacity-50"
             >
               {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
               Add to Registry
@@ -191,7 +191,7 @@ export default function SecurityAnalyticsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, symbol, or reason..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
         </div>

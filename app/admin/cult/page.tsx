@@ -105,7 +105,7 @@ export default function AdminCultPage() {
 
       <Link
         href="/admin/users?tier=naka_cult"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-sm font-bold text-white"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-sm font-bold text-white"
       >
         View cult members
         <ArrowRight className="w-4 h-4" />

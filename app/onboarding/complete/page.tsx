@@ -46,7 +46,7 @@ export default function OnboardingCompletePage() {
 
         <Link
           href="/dashboard"
-          className="block w-full text-center bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold"
+          className="block w-full text-center bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold"
         >
           Go to dashboard <ArrowRight className="inline w-4 h-4 ms-1" />
         </Link>
@@ -77,7 +77,7 @@ function FunnelStep({
   const linkProps = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
   return (
     <div className="flex items-start gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-      <div className="w-9 h-9 rounded-lg bg-[#0A1EFF]/15 border border-[#0A1EFF]/30 flex items-center justify-center shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-[#0066FF]/15 border border-[#0066FF]/30 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4 text-[#8FA3FF]" />
       </div>
       <div className="flex-1 min-w-0">

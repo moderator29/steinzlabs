@@ -13,8 +13,8 @@ function KpiCard({ icon: Icon, label, value, change, changeType }: {
     <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-gray-400 font-medium">{label}</span>
-        <div className="w-7 h-7 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
-          <Icon className="w-3.5 h-3.5 text-[#0A1EFF]" />
+        <div className="w-7 h-7 bg-[#0066FF]/10 rounded-lg flex items-center justify-center">
+          <Icon className="w-3.5 h-3.5 text-[#0066FF]" />
         </div>
       </div>
       <div className="text-xl font-bold text-white mb-1">{value}</div>
@@ -99,11 +99,11 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">User Growth (30d)</h3>
-          <MicroArea data={CHART_DATA} xKey="day" yKey="users" color="#0A1EFF" height={160} />
+          <MicroArea data={CHART_DATA} xKey="day" yKey="users" color="#0066FF" height={160} />
         </div>
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Revenue (30d)</h3>
-          <MicroBar data={CHART_DATA} xKey="day" yKey="revenue" color="#0A1EFF" height={160} formatY={(v) => formatUSD(v)} />
+          <MicroBar data={CHART_DATA} xKey="day" yKey="revenue" color="#0066FF" height={160} formatY={(v) => formatUSD(v)} />
         </div>
       </div>
 

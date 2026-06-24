@@ -113,7 +113,7 @@ export default function ContractAnalyzerPage() {
       <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Code className="w-4 h-4" />
           </div>
           <div>
@@ -124,8 +124,8 @@ export default function ContractAnalyzerPage() {
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="bg-[#0A1EFF]/5 border border-[#0A1EFF]/20 rounded-2xl p-3 flex items-start gap-3">
-          <Info className="w-4 h-4 text-[#0A1EFF] mt-0.5 flex-shrink-0" />
+        <div className="bg-[#0066FF]/5 border border-[#0066FF]/20 rounded-2xl p-3 flex items-start gap-3">
+          <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns.
           </p>
@@ -134,7 +134,7 @@ export default function ContractAnalyzerPage() {
         <div className="flex gap-2 flex-wrap">
           {CHAINS.map((c) => (
             <button key={c.id} onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0A1EFF]/10 border-[#0A1EFF]/30 text-blue-300' : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'}`}>
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'}`}>
               {c.label}
             </button>
           ))}
@@ -147,10 +147,10 @@ export default function ContractAnalyzerPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
             placeholder="Contract or token address (0x... or Solana)"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40"
+            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
           />
           <button onClick={handleAnalyze} disabled={analyzing || !input.trim()}
-            className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
             {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Analyze
           </button>
@@ -159,9 +159,9 @@ export default function ContractAnalyzerPage() {
         {analyzing && (
           <div className="text-center py-12">
             <div className="relative w-16 h-16 mx-auto mb-4">
-              <div className="absolute inset-0 rounded-full border-2 border-[#0A1EFF]/20" />
-              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0A1EFF] animate-spin" />
-              <Code className="w-6 h-6 text-[#0A1EFF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute inset-0 rounded-full border-2 border-[#0066FF]/20" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0066FF] animate-spin" />
+              <Code className="w-6 h-6 text-[#0066FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
             <p className="text-sm text-gray-400">Analyzing contract...</p>
             <p className="text-[10px] text-gray-600 mt-1">Running honeypot detection, security checks, and risk analysis</p>
@@ -184,8 +184,8 @@ export default function ContractAnalyzerPage() {
                   {result.dexData.imageUrl ? (
                     <img src={result.dexData.imageUrl} alt={result.dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
-                    <div className="w-10 h-10 bg-[#0A1EFF]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Code className="w-5 h-5 text-[#0A1EFF]" />
+                    <div className="w-10 h-10 bg-[#0066FF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Code className="w-5 h-5 text-[#0066FF]" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -204,7 +204,7 @@ export default function ContractAnalyzerPage() {
                     </div>
                   </div>
                   {result.dexData.url && (
-                    <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#0A1EFF] flex items-center gap-1 hover:underline flex-shrink-0">
+                    <a href={result.dexData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#0066FF] flex items-center gap-1 hover:underline flex-shrink-0">
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -369,10 +369,10 @@ export default function ContractAnalyzerPage() {
             )}
 
             {/* Security Assessment Summary */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0A1EFF]/20 bg-gradient-to-br from-[#0A1EFF]/5 to-transparent">
+            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 bg-[#0A1EFF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Brain className="w-4 h-4 text-[#0A1EFF]" />
+                <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <span className="font-bold text-sm">Security Assessment Summary</span>
                 <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
@@ -462,7 +462,7 @@ export default function ContractAnalyzerPage() {
             </div>
 
             <button onClick={() => { setResult(null); setInput(''); }}
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0A1EFF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0066FF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
               Analyze another contract
             </button>
           </>
@@ -470,8 +470,8 @@ export default function ContractAnalyzerPage() {
 
         {!result && !analyzing && !error && (
           <div className="text-center py-10">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#0A1EFF]/10 flex items-center justify-center">
-              <Code className="w-8 h-8 text-[#0A1EFF]/60" />
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#0066FF]/10 flex items-center justify-center">
+              <Code className="w-8 h-8 text-[#0066FF]/60" />
             </div>
             <h3 className="text-sm font-semibold text-gray-500">Enter a contract address to analyze</h3>
             <p className="text-[11px] text-gray-600 mt-1.5 max-w-[260px] mx-auto">

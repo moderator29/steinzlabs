@@ -1412,7 +1412,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
         </div>
 
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#0A1EFF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center border border-[#0A1EFF]/20">
+          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-3xl flex items-center justify-center border border-[#0066FF]/20">
             <SteinzLogo size={48} />
           </div>
           <h1 className="text-2xl font-heading font-bold mb-1">Create New Wallet</h1>
@@ -1423,11 +1423,11 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
           <div className="space-y-5">
             <div>
               <label className="text-sm text-gray-300 mb-2 block font-medium">Wallet Name</label>
-              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" />
+              <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             </div>
             <div>
               <label className="text-sm text-gray-300 mb-2 block font-medium">Set Password (min 8 chars)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0A1EFF]/50 transition-colors" placeholder="Secure password to encrypt your keys" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#0066FF]/50 transition-colors" placeholder="Secure password to encrypt your keys" />
               {password.length > 0 && password.length < 8 && (
                 <p className="text-[10px] text-[#EF4444] mt-1">Password must be at least 8 characters</p>
               )}
@@ -1439,7 +1439,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
               </div>
               <p className="text-xs text-gray-400">This password encrypts your private key locally. If you lose it, you can only recover your wallet with the recovery phrase.</p>
             </div>
-            <button onClick={createWallet} disabled={password.length < 8 || creating} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 transition-colors shadow-lg shadow-[#0A1EFF]/20">
+            <button onClick={createWallet} disabled={password.length < 8 || creating} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 transition-colors shadow-lg shadow-[#0066FF]/20">
               {creating ? 'Generating...' : 'Generate Wallet'}
             </button>
           </div>
@@ -1486,17 +1486,17 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
 
             <div className="p-4 bg-[#111827] rounded-xl border border-white/5">
               <p className="text-xs text-gray-400 mb-1.5 font-medium">Your Wallet Address</p>
-              <p className="text-sm font-mono text-[#0A1EFF] break-all">{address}</p>
+              <p className="text-sm font-mono text-[#0066FF] break-all">{address}</p>
             </div>
 
             <button type="button" onClick={() => setConfirmed(!confirmed)} className="flex items-center gap-3 cursor-pointer p-3 bg-[#111827] rounded-xl border border-white/5 w-full text-start">
-              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${confirmed ? 'bg-[#0A1EFF] border-[#0A1EFF]' : 'border-white/20 bg-transparent'}`}>
+              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${confirmed ? 'bg-[#0066FF] border-[#0066FF]' : 'border-white/20 bg-transparent'}`}>
                 {confirmed && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
               <span className="text-sm text-gray-300">I have saved my recovery phrase securely</span>
             </button>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-4 bg-[#0A1EFF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0A1EFF]/20">
+            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
               <Check className="w-5 h-5" /> Continue to Wallet
             </button>
           </div>
@@ -1573,7 +1573,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Download className="w-5 h-5" />
           </div>
           <div>
@@ -1583,10 +1583,10 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         </div>
 
         <div className="flex gap-2 mb-5 bg-[#111827] rounded-xl p-1">
-          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'phrase' ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setMethod('phrase')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'phrase' ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Recovery Phrase
           </button>
-          <button onClick={() => setMethod('key')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'key' ? 'bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
+          <button onClick={() => setMethod('key')} className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all ${method === 'key' ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white' : 'text-gray-400'}`}>
             Private Key
           </button>
         </div>
@@ -1594,21 +1594,21 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         <div className="space-y-4">
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Name</label>
-            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" />
+            <input value={walletName} onChange={e => setWalletName(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50" />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">{method === 'phrase' ? 'Recovery Phrase (12 or 24 words)' : 'Private Key'}</label>
             <textarea value={input} onChange={e => setInput(e.target.value)}
               rows={method === 'phrase' ? 4 : 2}
-              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50 resize-none"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50 resize-none"
               placeholder={method === 'phrase' ? 'word1 word2 word3 ...' : '0x...'} />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Set Password (min 8 chars)</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Encrypt your keys" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="Encrypt your keys" />
           </div>
           {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 8} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+          <button onClick={handleImport} disabled={importing || !input.trim() || password.length < 8} className="w-full py-3.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
             {importing ? 'Importing...' : 'Import Wallet'}
           </button>
         </div>
@@ -1741,7 +1741,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             </div>
             <h2 className="text-xl font-bold mb-2">Transaction Sent!</h2>
             <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
-            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#0A1EFF] text-xs underline flex items-center justify-center gap-1">
+            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#0066FF] text-xs underline flex items-center justify-center gap-1">
               View on {chain.explorerName} <ExternalLink className="w-3 h-3" />
             </a>
             <button onClick={onBack} className="w-full mt-6 py-3 bg-[#111827] border border-white/10 rounded-xl text-sm font-semibold">Done</button>
@@ -1753,7 +1753,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               <input
                 value={to}
                 onChange={e => setTo(e.target.value)}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
                 placeholder={chain.id === 'solana' ? 'Solana address...' : '0x...'}
               />
               {/* FIX 5A.1 / Phase 4: inline address-validity feedback. */}
@@ -1767,20 +1767,20 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-500">Balance: {parseFloat(nativeBalance || '0').toFixed(6)}</span>
                   {/* FIX 5A.1 / Phase 4: MAX button — was missing. Reserves gas for EVM chains. */}
-                  <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0A1EFF] hover:text-[#3B4EFF]">MAX</button>
+                  <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0066FF] hover:text-[#3B4EFF]">MAX</button>
                 </div>
               </div>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50" placeholder="0.01" />
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50" placeholder="0.01" />
               {gasEstimateEth && (
                 <p className="text-[10px] text-slate-500 mt-1.5">Est. gas: {parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</p>
               )}
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0A1EFF]/50" placeholder="Enter your wallet password" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="Enter your wallet password" />
             </div>
             {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
+            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
               {status === 'sending' ? 'Sending...' : 'Send Transaction'}
             </button>
           </div>
@@ -1993,7 +1993,7 @@ function ReceiveView({
           <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
 
           <div className="bg-[#111827] border border-white/10 rounded-xl p-4 mb-4">
-            <p className="text-xs font-mono break-all text-[#0A1EFF]">{address}</p>
+            <p className="text-xs font-mono break-all text-[#0066FF]">{address}</p>
           </div>
 
           {/* Trust-Wallet-style 3-action row: Copy · Set Amount · Share. Each
@@ -2159,7 +2159,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Search className="w-5 h-5" />
           </div>
           <div>
@@ -2175,7 +2175,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
               <input
                 value={address}
                 onChange={e => { setAddress(e.target.value); setError(''); setScanVerdict(null); }}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-20 text-sm font-mono focus:outline-none focus:border-[#0A1EFF]/50"
+                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-20 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
                 placeholder="0x..."
               />
               <button
@@ -2210,7 +2210,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           <button
             onClick={handleAdd}
             disabled={!address || scanning}
-            className="w-full py-3.5 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50"
+            className="w-full py-3.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50"
           >
             {scanning ? 'Scanning…' : scanVerdict ? 'Add Token' : 'Scan + Add Token'}
           </button>
@@ -2788,8 +2788,8 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
           : `${chain.explorerUrl}/tx/${tx.tx_hash}`;
         return (
           <div key={tx.tx_hash} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0A1EFF]/10' : 'bg-[#F59E0B]/10'}`}>
-              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0A1EFF]' : 'text-[#F59E0B]'}`} aria-hidden />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
+              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold capitalize">
@@ -2812,7 +2812,7 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
                 href={explorerTxHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[9px] text-[#0A1EFF] hover:underline"
+                className="text-[9px] text-[#0066FF] hover:underline"
               >
                 View ↗
               </a>
@@ -2884,7 +2884,7 @@ function AddNetworkView({
                   </div>
                 </div>
                 {/* iOS-style toggle */}
-                <div className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${isOn ? 'bg-[#0A1EFF]' : 'bg-slate-800'}`}>
+                <div className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${isOn ? 'bg-[#0066FF]' : 'bg-slate-800'}`}>
                   <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isOn ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
               </button>

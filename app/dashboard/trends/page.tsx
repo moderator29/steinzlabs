@@ -157,10 +157,10 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
 
           {/* Insight text */}
           {card.insight && (
-            <div className="bg-[#0A1EFF]/[0.06] border border-[#0A1EFF]/20 rounded-xl p-4 mb-4">
+            <div className="bg-[#0066FF]/[0.06] border border-[#0066FF]/20 rounded-xl p-4 mb-4">
               <div className="flex items-center gap-1.5 mb-2">
-                <Zap className="w-3.5 h-3.5 text-[#0A1EFF]" />
-                <span className="text-[10px] font-bold text-[#0A1EFF] uppercase tracking-wider">VTX Analysis</span>
+                <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
+                <span className="text-[10px] font-bold text-[#0066FF] uppercase tracking-wider">VTX Analysis</span>
               </div>
               <p className="text-xs text-gray-300 leading-relaxed">{card.insight}</p>
             </div>
@@ -231,7 +231,7 @@ export default function TrendsPage() {
       <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0A1EFF] to-[#10B981] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#10B981] rounded-xl flex items-center justify-center">
             <TrendingUp className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -256,7 +256,7 @@ export default function TrendsPage() {
           {chainTabs.map(c => (
             <button key={c} onClick={() => handleChain(c)}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                chain === c ? 'bg-gradient-to-r from-[#0A1EFF] to-[#10B981] text-white' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'
+                chain === c ? 'bg-gradient-to-r from-[#0066FF] to-[#10B981] text-white' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'
               }`}>
               {chainLabels[c] ?? c}
             </button>
@@ -284,7 +284,7 @@ export default function TrendsPage() {
             </div>
             <div className="bg-[#0f1320] border border-white/[0.06] rounded-xl p-3">
               <div className="text-[10px] text-gray-500 mb-1">Chains Tracked</div>
-              <div className="text-xl font-bold text-[#0A1EFF]">{data.chains.length - 1}</div>
+              <div className="text-xl font-bold text-[#0066FF]">{data.chains.length - 1}</div>
             </div>
           </div>
         )}
@@ -300,7 +300,7 @@ export default function TrendsPage() {
         {sortedCards.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <BarChart3 className="w-4 h-4 text-[#0A1EFF]" />
+              <BarChart3 className="w-4 h-4 text-[#0066FF]" />
               <span className="text-xs font-bold text-gray-300">Intelligence Cards</span>
               <span className="text-[10px] text-gray-600">{sortedCards.length} metrics</span>
             </div>

@@ -121,7 +121,7 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" />
+        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" showBack backTo="/dashboard" />
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1 bg-[#141824] border border-[#1E2433] rounded-lg p-1">
@@ -130,7 +130,7 @@ export default function TransactionsPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 text-xs font-medium rounded transition-colors capitalize ${
-                  filter === f ? 'bg-[#0A1EFF] text-white' : 'text-gray-400 hover:text-white'
+                  filter === f ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {f === 'all' ? 'All' : f === 'swap' ? 'Swaps' : 'Snipes'}
@@ -149,7 +149,7 @@ export default function TransactionsPage() {
 
         {loading && txs.length === 0 ? (
           <div className="flex items-center justify-center py-16 gap-2">
-            <Loader2 className="w-5 h-5 text-[#0A1EFF] animate-spin" />
+            <Loader2 className="w-5 h-5 text-[#0066FF] animate-spin" />
             <span className="text-sm text-gray-500">Loading transactions...</span>
           </div>
         ) : filtered.length === 0 ? (
@@ -162,9 +162,9 @@ export default function TransactionsPage() {
           <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden divide-y divide-[#1E2433]">
             {filtered.map(tx => (
               <div key={tx.id} className="flex items-center gap-4 px-4 py-3 hover:bg-[#1E2433]/30 transition-colors">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === 'swap' ? 'bg-[#0A1EFF]/10' : 'bg-[#F59E0B]/10'}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === 'swap' ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
                   {tx.type === 'swap' ? (
-                    <ArrowLeftRight className="w-5 h-5 text-[#0A1EFF]" />
+                    <ArrowLeftRight className="w-5 h-5 text-[#0066FF]" />
                   ) : (
                     <Crosshair className="w-5 h-5 text-[#F59E0B]" />
                   )}
@@ -190,7 +190,7 @@ export default function TransactionsPage() {
                     href={`${EXPLORER_BASE[tx.chain]}${tx.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#0A1EFF] transition-colors"
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#0066FF] transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>

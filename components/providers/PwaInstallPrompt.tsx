@@ -86,10 +86,10 @@ export function PwaInstallPrompt() {
       role="dialog"
       aria-modal="false"
       aria-label="Install Naka Labs as an app"
-      className="fixed bottom-20 left-4 right-4 z-[160] max-w-md mx-auto rounded-2xl bg-[#0F1320] border border-[#0A1EFF]/30 shadow-2xl p-4 naka-safe-mb"
+      className="fixed bottom-20 left-4 right-4 z-[160] max-w-md mx-auto rounded-2xl bg-[#0F1320] border border-[#0066FF]/30 shadow-2xl p-4 naka-safe-mb"
     >
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A1EFF] to-[#7C3AED] flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#7C3AED] flex items-center justify-center shrink-0">
           <Download className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
@@ -100,7 +100,7 @@ export function PwaInstallPrompt() {
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={install}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-xs font-bold text-white"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-bold text-white"
             >
               Install
             </button>

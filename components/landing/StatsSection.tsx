@@ -19,7 +19,7 @@ interface StatsResponse {
 }
 
 const STAT_DEFS: { key: keyof StatsResponse; def: StatDef }[] = [
-  { key: 'tokensAnalyzed',   def: { icon: Search,      label: 'Tokens Analyzed',  color: '#6d85ff', bg: 'rgba(10,30,255,.12)',  format: 'number'  } },
+  { key: 'tokensAnalyzed',   def: { icon: Search,      label: 'Tokens Analyzed',  color: '#6d85ff', bg: 'rgba(0,102,255,.12)',  format: 'number'  } },
   { key: 'rugsDetected',     def: { icon: ShieldAlert, label: 'Rugs Detected',    color: '#f87171', bg: 'rgba(220,38,38,.12)',  format: 'number'  } },
   { key: 'swapsProtected',   def: { icon: Lock,        label: 'Swaps Protected',  color: '#4ade80', bg: 'rgba(22,163,74,.12)',  format: 'number'  } },
   { key: 'chainsSupported',  def: { icon: Globe,       label: 'Chains Supported', color: '#fbbf24', bg: 'rgba(217,119,6,.12)',  format: 'number'  } },

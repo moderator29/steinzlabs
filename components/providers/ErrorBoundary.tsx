@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
         </p>
         <button
           onClick={this.reset}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] text-sm font-bold text-white"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-sm font-bold text-white"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Reload this panel

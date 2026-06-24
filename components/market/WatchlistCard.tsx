@@ -23,14 +23,14 @@ export function WatchlistCard({ token, onRemove }: WatchlistCardProps) {
     <div
       onClick={() => router.push(`/dashboard/market/${resolveTokenChain({ id: token.id, symbol: token.symbol }).chain}/${token.id}`)}
       className="relative bg-[#0D1117] border border-[#1E2433] rounded-xl p-4 cursor-pointer
-                 hover:border-[#0A1EFF]/40 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(10,30,255,0.08)]
+                 hover:border-[#0066FF]/40 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,102,255,0.08)]
                  transition-all duration-150"
     >
       <button
         onClick={(e) => { e.stopPropagation(); onRemove(token.id); }}
-        className="absolute top-3 right-3 p-1 text-[#0A1EFF] hover:scale-110 transition-transform"
+        className="absolute top-3 right-3 p-1 text-[#0066FF] hover:scale-110 transition-transform"
       >
-        <Star size={14} className="fill-[#0A1EFF]" />
+        <Star size={14} className="fill-[#0066FF]" />
       </button>
 
       <div className="flex items-center gap-3 mb-3 pe-6">

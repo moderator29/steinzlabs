@@ -20,7 +20,7 @@ export function WatchlistEmpty() {
         href="/dashboard/market"
         className="
           inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-          bg-[#0A1EFF] hover:bg-[#0A1EFF]/90
+          bg-[#0066FF] hover:bg-[#0066FF]/90
           text-white text-sm font-semibold
           transition-colors
         "

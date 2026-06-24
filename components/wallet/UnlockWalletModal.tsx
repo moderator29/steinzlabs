@@ -164,8 +164,8 @@ export default function UnlockWalletModal({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#0A1EFF]/10 border border-[#0A1EFF]/30 flex items-center justify-center">
-              <Lock className="w-4 h-4 text-[#0A1EFF]" />
+            <div className="w-9 h-9 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/30 flex items-center justify-center">
+              <Lock className="w-4 h-4 text-[#0066FF]" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white leading-tight">Unlock {walletName || 'wallet'}</h2>
@@ -198,7 +198,7 @@ export default function UnlockWalletModal({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
-              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-11 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-11 text-sm focus:outline-none focus:border-[#0066FF]/50"
               placeholder="Wallet password"
               autoComplete="current-password"
             />
@@ -221,7 +221,7 @@ export default function UnlockWalletModal({
         <button
           onClick={() => void submit()}
           disabled={verifying || !password}
-          className="w-full py-3 bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+          className="w-full py-3 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
           {verifying ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>) : 'Unlock'}
         </button>
@@ -231,7 +231,7 @@ export default function UnlockWalletModal({
             type="button"
             onClick={() => void handlePasskeyUnlock()}
             disabled={passkeyBusy !== null}
-            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0A1EFF]/40 hover:bg-white/[0.03] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0066FF]/40 hover:bg-white/[0.03] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
             {passkeyBusy === 'auth'
               ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Waiting for passkey…</>)
@@ -244,7 +244,7 @@ export default function UnlockWalletModal({
             type="button"
             onClick={() => void handlePasskeyRegister()}
             disabled={passkeyBusy !== null}
-            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0A1EFF]/40 hover:bg-white/[0.03] text-[11px] text-slate-400 hover:text-white inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="w-full py-2.5 rounded-xl border border-white/10 hover:border-[#0066FF]/40 hover:bg-white/[0.03] text-[11px] text-slate-400 hover:text-white inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
             {passkeyBusy === 'register'
               ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Registering…</>)

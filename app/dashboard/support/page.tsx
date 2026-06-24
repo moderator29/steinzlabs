@@ -42,7 +42,7 @@ const CATEGORIES = [
 
 const STATUS_STYLES: Record<string, { label: string; color: string; bg: string }> = {
   open:         { label: 'Open',        color: '#F59E0B', bg: 'rgba(245,158,11,.15)'  },
-  in_progress:  { label: 'In progress', color: '#0A1EFF', bg: 'rgba(10,30,255,.15)'   },
+  in_progress:  { label: 'In progress', color: '#0066FF', bg: 'rgba(0,102,255,.15)'   },
   resolved:     { label: 'Resolved',    color: '#10B981', bg: 'rgba(16,185,129,.15)' },
   closed:       { label: 'Closed',      color: '#6B7280', bg: 'rgba(107,114,128,.15)'},
 };
@@ -162,7 +162,7 @@ export default function SupportPage() {
           </div>
           <button
             onClick={() => { setShowForm(true); setSelected(null); }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> New ticket
           </button>
@@ -249,7 +249,7 @@ export default function SupportPage() {
                     minLength={3}
                     maxLength={200}
                     placeholder="Quick summary of the issue"
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50"
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export default function SupportPage() {
                     maxLength={5000}
                     rows={8}
                     placeholder="Include what you were doing, what happened, and any tx hashes or wallet addresses involved."
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50 resize-none"
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                   />
                 </div>
 
@@ -274,7 +274,7 @@ export default function SupportPage() {
                   <button
                     type="submit"
                     disabled={creating}
-                    className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Submit ticket
@@ -331,7 +331,7 @@ export default function SupportPage() {
                   ) : replies.map((r) => (
                     <div
                       key={r.id}
-                      className={`rounded-xl p-3 ${r.sender_type === 'admin' ? 'bg-[#0A1EFF]/5 border border-[#0A1EFF]/20' : 'bg-white/[0.02] border border-white/[0.05]'}`}
+                      className={`rounded-xl p-3 ${r.sender_type === 'admin' ? 'bg-[#0066FF]/5 border border-[#0066FF]/20' : 'bg-white/[0.02] border border-white/[0.05]'}`}
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: r.sender_type === 'admin' ? '#4D6BFF' : '#9CA3AF' }}>
@@ -353,13 +353,13 @@ export default function SupportPage() {
                       onChange={(e) => setReplyInput(e.target.value)}
                       rows={3}
                       placeholder="Add a reply…"
-                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0A1EFF]/50 resize-none"
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                     />
                     <div className="flex justify-end">
                       <button
                         onClick={postReply}
                         disabled={posting || !replyInput.trim()}
-                        className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+                        className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
                       >
                         {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Send
@@ -375,7 +375,7 @@ export default function SupportPage() {
                 <p className="text-xs text-gray-500 max-w-xs mb-4">We respond to every ticket. Priority on Pro+ and urgent-flagged.</p>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" /> New ticket
                 </button>

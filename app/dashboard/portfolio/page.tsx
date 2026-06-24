@@ -70,7 +70,7 @@ interface PerformanceResponse {
   stats: PerformanceStats;
 }
 
-const DONUT_COLORS = ["#0A1EFF", "#7C3AED", "#10B981", "#F59E0B", "#EF4444", "#06B6D4", "#8B5CF6", "#EC4899"];
+const DONUT_COLORS = ["#0066FF", "#7C3AED", "#10B981", "#F59E0B", "#EF4444", "#06B6D4", "#8B5CF6", "#EC4899"];
 
 function chainFor(symbol: string | undefined): string {
   const s = (symbol ?? "").toUpperCase();
@@ -308,7 +308,7 @@ export default function PortfolioPage() {
               onClick={() => setTimeframe(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 timeframe === t
-                  ? "bg-[#0A1EFF] text-white"
+                  ? "bg-[#0066FF] text-white"
                   : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900"
               }`}
             >
@@ -398,7 +398,7 @@ export default function PortfolioPage() {
               onClick={() => setTab(id)}
               className={`px-4 py-3 text-sm transition-colors ${
                 tab === id
-                  ? "text-[#0A1EFF] border-b-2 border-[#0A1EFF] bg-[#0A1EFF]/5"
+                  ? "text-[#0066FF] border-b-2 border-[#0066FF] bg-[#0066FF]/5"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -608,7 +608,7 @@ function HoldingsTable({
             type="checkbox"
             checked={hideSpam}
             onChange={(e) => setHideSpam(e.target.checked)}
-            className="h-3.5 w-3.5 accent-[#0A1EFF]"
+            className="h-3.5 w-3.5 accent-[#0066FF]"
           />
           Hide suspected spam tokens
           {hideSpam && hiddenCount > 0 ? (
@@ -691,7 +691,7 @@ function HoldingsTable({
                     <div className="inline-flex items-center gap-2 min-w-[88px] justify-end">
                       <div className="h-1.5 w-12 rounded-full bg-slate-800/80 overflow-hidden">
                         <div
-                          className="h-full bg-[#0A1EFF]"
+                          className="h-full bg-[#0066FF]"
                           style={{ width: `${Math.min(100, (valueUsd / totalValueUsd) * 100)}%` }}
                         />
                       </div>
@@ -710,7 +710,7 @@ function HoldingsTable({
                         e.stopPropagation();
                         goTo(h);
                       }}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-[#0A1EFF]/15 text-[#6F7EFF] hover:bg-[#0A1EFF]/25 transition-colors"
+                      className="text-xs px-2.5 py-1 rounded-lg bg-[#0066FF]/15 text-[#6F7EFF] hover:bg-[#0066FF]/25 transition-colors"
                     >
                       Trade <ArrowRight size={10} className="inline ms-0.5" />
                     </button>

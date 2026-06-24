@@ -71,7 +71,7 @@ export default function AdminAuditLogPage() {
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-2">
-        <ScrollText className="w-5 h-5 text-[var(--nl-blue,#0A1EFF)]" aria-hidden />
+        <ScrollText className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" aria-hidden />
         <h1 className="text-xl sm:text-2xl font-bold text-white">Admin audit log</h1>
         <button
           onClick={load}
@@ -162,7 +162,7 @@ export default function AdminAuditLogPage() {
                 <td className="px-3 py-2 font-mono text-slate-200 whitespace-nowrap">{new Date(e.created_at).toISOString().replace('T', ' ').slice(0, 19)}</td>
                 <td className="px-3 py-2 font-mono text-slate-200">{shortId(e.admin_id)}</td>
                 <td className="px-3 py-2 font-mono text-slate-200">{shortId(e.target_user_id)}</td>
-                <td className="px-3 py-2"><span className="rounded bg-[var(--nl-blue,#0A1EFF)]/15 text-[var(--nl-blue-lighter,#4D6BFF)] px-1.5 py-0.5 text-[10px] font-semibold">{e.action}</span></td>
+                <td className="px-3 py-2"><span className="rounded bg-[var(--nl-blue,#0066FF)]/15 text-[var(--nl-blue-lighter,#4D6BFF)] px-1.5 py-0.5 text-[10px] font-semibold">{e.action}</span></td>
                 <td className="px-3 py-2 max-w-md">
                   <pre className="text-[10px] text-slate-300 whitespace-pre-wrap break-all leading-relaxed">{e.details ? JSON.stringify(e.details, null, 0) : '—'}</pre>
                 </td>

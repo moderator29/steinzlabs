@@ -66,7 +66,7 @@ export function DocsSection12() {
         {GROUPS.map(({ id, icon: Icon, title, items }) => (
           <div id={id} key={id} className="scroll-mt-20 bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-[#0A1EFF]/10 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#0066FF]/10 rounded-lg flex items-center justify-center">
                 <Icon className="w-4 h-4 text-[#4D6BFF]" />
               </div>
               <h3 className="text-sm font-semibold text-white">{title}</h3>

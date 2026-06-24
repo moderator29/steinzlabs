@@ -37,7 +37,7 @@ export function RouteErrorState({ error, reset, context = 'page' }: Props) {
         <div className="flex gap-2">
           <button
             onClick={reset}
-            className="flex-1 inline-flex items-center justify-center gap-2 py-2 bg-[#0A1EFF] hover:bg-[#0918D0] rounded-lg text-sm font-semibold text-white transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 py-2 bg-[#0066FF] hover:bg-[#0918D0] rounded-lg text-sm font-semibold text-white transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Try again
           </button>

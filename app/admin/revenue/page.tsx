@@ -122,7 +122,7 @@ export default function AdminRevenuePage() {
           data={data.revenue.dailyFeesChart}
           xKey="date"
           yKey="fees"
-          color="#0A1EFF"
+          color="#0066FF"
           height={200}
           formatY={(v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
         />

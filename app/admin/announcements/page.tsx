@@ -131,7 +131,7 @@ export default function AnnouncementsPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={() => setShowForm(p => !p)}
-            className="flex items-center gap-2 text-xs bg-[#0A1EFF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium">
+            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium">
             <Plus className="w-3.5 h-3.5" /> New Announcement
           </button>
         </div>
@@ -141,9 +141,9 @@ export default function AnnouncementsPage() {
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Announcement</h3>
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Announcement title"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40" />
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
           <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={3} placeholder="Announcement body..."
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0A1EFF]/40 resize-none" />
+            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as AnnType }))}
               className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
@@ -155,7 +155,7 @@ export default function AnnouncementsPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={save} disabled={saving} className="bg-[#0A1EFF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white text-xs px-4 py-2 rounded-lg hover:bg-[#1E2433] transition-colors">Cancel</button>
@@ -165,7 +165,7 @@ export default function AnnouncementsPage() {
 
       {loading && items.length === 0 && (
         <div className="flex items-center justify-center py-12 gap-2">
-          <div className="w-4 h-4 border-2 border-[#0A1EFF]/30 border-t-[#0A1EFF] rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span className="text-xs text-gray-500">Loading announcements...</span>
         </div>
       )}
@@ -183,7 +183,7 @@ export default function AnnouncementsPage() {
           <div key={ann.id} className={`bg-[#141824] border rounded-xl p-4 transition-all ${ann.active ? 'border-[#1E2433]' : 'border-[#1E2433] opacity-50'}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1">
-                <Bell className={`w-4 h-4 mt-0.5 flex-shrink-0 ${ann.active ? 'text-[#0A1EFF]' : 'text-gray-600'}`} />
+                <Bell className={`w-4 h-4 mt-0.5 flex-shrink-0 ${ann.active ? 'text-[#0066FF]' : 'text-gray-600'}`} />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-semibold text-white">{ann.title}</span>

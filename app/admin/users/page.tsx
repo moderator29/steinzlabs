@@ -36,7 +36,7 @@ type ActivityFilter = 'all' | 'active7d' | 'active30d' | 'dormant30d' | 'never';
 const TIER_BADGE: Record<Tier, string> = {
   free: 'bg-gray-500/25 text-gray-200 border border-gray-500/40',
   mini: 'bg-cyan-500/25 text-cyan-100 border border-cyan-400/50',
-  pro:  'bg-[#0A1EFF]/30 text-[#C7D2FE] border border-[#0A1EFF]/60',
+  pro:  'bg-[#0066FF]/30 text-[#C7D2FE] border border-[#0066FF]/60',
   max:  'bg-amber-500/25 text-amber-100 border border-amber-400/50',
 };
 
@@ -146,7 +146,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
         </div>
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#0A1EFF]/15 rounded-full flex items-center justify-center" aria-hidden="true">
+            <div className="w-12 h-12 bg-[#0066FF]/15 rounded-full flex items-center justify-center" aria-hidden="true">
               <span className="text-lg font-bold text-[#9EAFFF]">{initials(user)}</span>
             </div>
             <div className="min-w-0">
@@ -178,7 +178,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value as Tier)}
-                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
               >
                 <option value="free">Free — $0</option>
                 <option value="mini">Mini — $5/mo</option>
@@ -195,7 +195,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
                   max={60}
                   value={months}
                   onChange={(e) => setMonths(parseInt(e.target.value) || 1)}
-                  className="flex-1 bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+                  className="flex-1 bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                   aria-label="Months of tier override"
                 />
               </label>
@@ -207,13 +207,13 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
                 placeholder="Reason (optional — audit trail)"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]"
+                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
               />
             </label>
             <button
               onClick={applyTier}
               disabled={saving}
-              className="w-full py-2 rounded-lg text-xs font-bold bg-[#0A1EFF] hover:bg-[#0818CC] text-white disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] focus:ring-offset-2 focus:ring-offset-[#0d1120]"
+              className="w-full py-2 rounded-lg text-xs font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#0d1120]"
             >
               {saving ? 'Saving…' : 'Apply tier'}
             </button>
@@ -229,7 +229,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
             {user.email && (
               <a href={`mailto:${user.email}`}
                 aria-label={`Email ${user.email}`}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-[#1E2433] hover:bg-[#2E3443] text-gray-200 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-[#1E2433] hover:bg-[#2E3443] text-gray-200 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <Mail className="w-4 h-4" aria-hidden="true" /> Email User
               </a>
             )}
@@ -333,7 +333,7 @@ export default function AdminUsersPage() {
               <span className="sr-only">Search users</span>
               <input value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search by name, email, or username..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0A1EFF] focus:border-[#0A1EFF]/40 transition-colors" />
+                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]/40 transition-colors" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -341,7 +341,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Tier filter</span>
               <select value={tierFilter} onChange={e => setTierFilter(e.target.value as TierFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <option value="all">All tiers</option>
                 <option value="free">Free</option>
                 <option value="mini">Mini</option>
@@ -352,7 +352,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Signup window filter</span>
               <select value={signupFilter} onChange={e => setSignupFilter(e.target.value as SignupFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <option value="all">All signups</option>
                 <option value="24h">Joined &lt;24h</option>
                 <option value="7d">Joined &lt;7d</option>
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Activity filter</span>
               <select value={activityFilter} onChange={e => setActivityFilter(e.target.value as ActivityFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0A1EFF]">
+                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <option value="all">Any activity</option>
                 <option value="active7d">Active &lt;7d</option>
                 <option value="active30d">Active &lt;30d</option>
@@ -399,7 +399,7 @@ export default function AdminUsersPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={user.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-white/10" />
                         ) : (
-                          <div className="w-7 h-7 bg-[#0A1EFF]/15 rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                          <div className="w-7 h-7 bg-[#0066FF]/15 rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                             <span className="text-[10px] font-bold text-[#9EAFFF]">{initials(user)}</span>
                           </div>
                         )}

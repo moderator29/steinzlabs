@@ -47,7 +47,7 @@ function getAlertIcon(type: string) {
 
 function getAlertColor(type: string): string {
   switch (type) {
-    case 'whale': return '#0A1EFF';
+    case 'whale': return '#0066FF';
     case 'price': return '#10B981';
     case 'launch': return '#F59E0B';
     case 'wallet_activity': return '#8B5CF6';
@@ -192,7 +192,7 @@ function ChainSelector({ value, onChange }: { value: AlertChain; onChange: (c: A
           onClick={() => onChange(c.value)}
           className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border ${
             value === c.value
-              ? 'bg-[#0A1EFF]/20 border-[#0A1EFF]/40 text-white'
+              ? 'bg-[#0066FF]/20 border-[#0066FF]/40 text-white'
               : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
           }`}
         >
@@ -246,7 +246,7 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
           value={wallet}
           onChange={e => setWallet(e.target.value.trim())}
           placeholder="Enter wallet address to watch"
-          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600 font-mono"
+          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600 font-mono"
         />
       </div>
       <div>
@@ -258,7 +258,7 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             value={threshold}
             onChange={e => setThreshold(e.target.value)}
             min="0"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0066FF]/40"
           />
         </div>
       </div>
@@ -272,13 +272,13 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Whale Watch: 0x1234..."
-          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600"
+          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
         />
       </div>
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="w-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -375,7 +375,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search token by name or symbol..."
-              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-9 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600"
+              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-9 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
             />
             {results.length > 0 && (
               <div className="absolute top-full mt-1 left-0 right-0 bg-[#0D1117] border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
@@ -433,7 +433,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             placeholder="0.00"
             min="0"
             step="any"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-7 text-sm focus:outline-none focus:border-[#0066FF]/40"
           />
         </div>
       </div>
@@ -447,7 +447,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#10B981] to-[#0A1EFF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="w-full bg-gradient-to-r from-[#10B981] to-[#0066FF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -497,7 +497,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
               type="number"
               value={minLiquidity}
               onChange={e => setMinLiquidity(e.target.value)}
-              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-6 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-6 text-sm focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
         </div>
@@ -507,7 +507,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             type="number"
             value={minHolders}
             onChange={e => setMinHolders(e.target.value)}
-            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40"
+            className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40"
           />
         </div>
       </div>
@@ -537,7 +537,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
           value={keywordsRaw}
           onChange={e => setKeywordsRaw(e.target.value)}
           placeholder="pepe, dog, cat (comma separated)"
-          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600"
+          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
         />
         <p className="text-[10px] text-gray-600 mt-1">Leave blank to alert on all new tokens</p>
       </div>
@@ -598,7 +598,7 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
           value={wallet}
           onChange={e => setWallet(e.target.value.trim())}
           placeholder="Enter wallet address to watch"
-          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0A1EFF]/40 placeholder-gray-600 font-mono"
+          className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600 font-mono"
         />
       </div>
       <div>
@@ -617,7 +617,7 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#0A1EFF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#0066FF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -628,7 +628,7 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
 // ── Create Modal ─────────────────────────────────────────────────────────────
 
 const CREATE_TABS: { id: CreateTab; label: string; icon: React.ElementType; color: string; desc: string }[] = [
-  { id: 'whale', label: 'Whale Tracker', icon: Fish, color: '#0A1EFF', desc: 'Track large wallet movements' },
+  { id: 'whale', label: 'Whale Tracker', icon: Fish, color: '#0066FF', desc: 'Track large wallet movements' },
   { id: 'price', label: 'Price Target', icon: TrendingUp, color: '#10B981', desc: 'Alert on price levels' },
   { id: 'launch', label: 'New Launch', icon: Rocket, color: '#F59E0B', desc: 'New token launches' },
   { id: 'wallet_activity', label: 'Wallet Activity', icon: Activity, color: '#8B5CF6', desc: 'Any wallet transaction' },
@@ -817,11 +817,11 @@ export default function AlertsPage() {
       <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <Bell className="w-5 h-5 text-[#0A1EFF]" />
+          <Bell className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
           <button
             onClick={() => setShowCreate(true)}
-            className="ms-auto bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
+            className="ms-auto bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             Create
@@ -836,7 +836,7 @@ export default function AlertsPage() {
               onClick={() => setActiveTab(t)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors capitalize ${
                 activeTab === t
-                  ? 'border-[#0A1EFF] text-white'
+                  ? 'border-[#0066FF] text-white'
                   : 'border-transparent text-gray-500 hover:text-gray-300'
               }`}
             >
@@ -851,7 +851,7 @@ export default function AlertsPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
-            <div className="text-lg font-bold text-[#0A1EFF]">{activeCount}</div>
+            <div className="text-lg font-bold text-[#0066FF]">{activeCount}</div>
             <div className="text-[10px] text-gray-500">Active</div>
           </div>
           <div className="glass rounded-xl p-3 border border-white/10 text-center">
@@ -889,7 +889,7 @@ export default function AlertsPage() {
                 <p className="text-xs text-gray-500 mb-4">Create smart alerts to monitor whale wallets, price targets, new launches, and wallet activity</p>
                 <button
                   onClick={() => setShowCreate(true)}
-                  className="bg-gradient-to-r from-[#0A1EFF] to-[#7C3AED] px-5 py-2.5 rounded-xl text-xs font-bold"
+                  className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-5 py-2.5 rounded-xl text-xs font-bold"
                 >
                   Create First Alert
                 </button>

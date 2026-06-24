@@ -78,13 +78,13 @@ export function LanguageSwitcher({ compact = false, className = '' }: LanguageSw
                 onClick={() => handleSelect(locale)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-start ${
                   current === locale
-                    ? 'bg-[#0A1EFF]/15 text-[#0A1EFF]'
+                    ? 'bg-[#0066FF]/15 text-[#0066FF]'
                     : 'text-gray-300 hover:bg-[#1E2433] hover:text-white'
                 }`}
               >
                 <span className="flex-1 text-xs font-medium">{localeNames[locale]}</span>
                 <span className="text-[10px] font-mono text-gray-600 uppercase">{locale}</span>
-                {current === locale && <Check className="w-3 h-3 text-[#0A1EFF] flex-shrink-0" />}
+                {current === locale && <Check className="w-3 h-3 text-[#0066FF] flex-shrink-0" />}
               </button>
             ))}
           </div>
