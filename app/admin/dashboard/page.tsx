@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Users, Activity, DollarSign, Shield, TrendingUp, TrendingDown, RefreshCw, Zap } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { MicroArea, MicroBar } from '@/components/charts/MicroChart';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { formatUSD, formatLargeNumber, formatTimeAgo } from '@/lib/formatters';
 
@@ -99,33 +99,11 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">User Growth (30d)</h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={CHART_DATA}>
-              <defs>
-                <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0066FF" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#0066FF" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-              <XAxis dataKey="day" hide />
-              <YAxis hide />
-              <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-              <Area type="monotone" dataKey="users" stroke="#0066FF" fill="url(#userGrad)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <MicroArea data={CHART_DATA} xKey="day" yKey="users" color="#0066FF" height={160} />
         </div>
         <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Revenue (30d)</h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={CHART_DATA}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" />
-              <XAxis dataKey="day" hide />
-              <YAxis hide />
-              <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => formatUSD(v)} />
-              <Bar dataKey="revenue" fill="#0066FF" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <MicroBar data={CHART_DATA} xKey="day" yKey="revenue" color="#0066FF" height={160} formatY={(v) => formatUSD(v)} />
         </div>
       </div>
 

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useSwapExecution } from '@/lib/hooks/useSwapExecution';
+import { resolveSwapDecimals } from '@/lib/market/swapTokenMeta';
+import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 
 interface OrderFormProps {
   tokenSymbol: string;
@@ -49,14 +51,23 @@ export function OrderForm({
   const [slippageBps, setSlippageBps] = useState(30);
   const [quoteTimer, setQuoteTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const { quote, loading, executing, error, txHash, mevRisk, getQuote, executeSwap, reset } =
-    useSwapExecution();
+  const { quote, loading, executing, error, txHash, mevRisk, getQuote, executeSwap, reset,
+    unlockRequest, resolveUnlock, cancelUnlock } = useSwapExecution();
 
   const parsedAmount = parseFloat(amount) || 0;
   const usdValue = parsedAmount * priceUsd;
 
   const inputToken = side === 'buy' ? (NATIVE_INPUT[chain] ?? '') : tokenAddress;
   const outputToken = side === 'buy' ? tokenAddress : (NATIVE_INPUT[chain] ?? '');
+
+  // Real decimals for the SELL token. BUY spends the chain stablecoin (6);
+  // SELL spends the token itself, whose decimals we resolve from its symbol.
+  // The old hardcoded `inputDecimals: 6` mis-scaled every non-6-decimal sell
+  // (e.g. an 18-decimal ERC-20) by 10**12, producing wildly wrong quotes.
+  // Falls back to 18 (the EVM default) only when the symbol is unknown.
+  const inputDecimals = side === 'buy'
+    ? 6
+    : (resolveSwapDecimals(tokenSymbol, chain) ?? 18);
 
   // Debounced quote fetch on amount change
   useEffect(() => {
@@ -69,7 +80,7 @@ export function OrderForm({
         inputToken,
         outputToken,
         inputAmount: amount,
-        inputDecimals: 6,
+        inputDecimals,
         userAddress,
         slippageBps,
       });
@@ -87,7 +98,7 @@ export function OrderForm({
       inputToken,
       outputToken,
       inputAmount: amount,
-      inputDecimals: 6,
+      inputDecimals,
       userAddress,
       slippageBps,
     });
@@ -214,7 +225,7 @@ export function OrderForm({
             </span>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-gray-500">Network Fee</span>
+            <span className="text-gray-500">Platform Fee (0.4%)</span>
             <span className="text-gray-300 font-mono">${quote.feeUSD.toFixed(3)}</span>
           </div>
           <div className="flex justify-between text-xs">
@@ -268,6 +279,17 @@ export function OrderForm({
           `${side === 'buy' ? 'Buy' : 'Sell'} ${tokenSymbol.toUpperCase()}`
         )}
       </button>
+
+      {/* Built-in (Naka) wallet unlock — the broadcast hook parks here when a
+          stored key needs the password to decrypt the signing key. */}
+      {unlockRequest && (
+        <UnlockWalletModal
+          encryptedKey={unlockRequest.encryptedKey}
+          addressShort={unlockRequest.addressShort}
+          onUnlocked={resolveUnlock}
+          onClose={cancelUnlock}
+        />
+      )}
     </div>
   );
 }

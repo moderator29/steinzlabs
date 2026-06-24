@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { applyContextFilter, type PersonalContext } from '@/lib/contextFeed/filter';
+import { applyContextFilter, matchesTypeFilter, type PersonalContext, type ContextTypeFilter } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 // Static imports — replaces the dynamic import inside fetchCoingeckoEvents
@@ -11,6 +11,8 @@ import {
   getRecentlyAdded as cgRecentlyAdded,
   getTopTokens as cgTopTokens,
 } from '@/lib/services/coingecko';
+import { getTokenSecurity } from '@/lib/services/goplus';
+import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
   // 1.5 s hard ceiling. Personal context is a nice-to-have re-ranking input;
@@ -174,7 +176,7 @@ async function withSrcTimeout<T>(p: Promise<T[]>, ms: number, label: string): Pr
   }
 }
 
-function getArchivedEvents(chain: string): WhaleEvent[] {
+function getArchivedEventsInMemory(chain: string): WhaleEvent[] {
   const now = Date.now();
   const archived: WhaleEvent[] = [];
   eventStore.forEach(stored => {
@@ -187,6 +189,106 @@ function getArchivedEvents(chain: string): WhaleEvent[] {
   });
   archived.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   return archived;
+}
+
+// §B5 — persist every fetched event so the live feed and (critically) the
+// 24–72h archive are deterministic across serverless instances. The in-memory
+// eventStore is per-lambda, so the old getArchivedEvents returned whatever
+// THIS instance happened to have seen — a random subset. Writes are
+// fire-and-forget: they never block the response and never fail the feed.
+let lastArchiveCleanup = 0;
+function persistEvents(events: WhaleEvent[]): void {
+  if (events.length === 0) return;
+  const admin = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const rows = events.map((e) => {
+    const t = e.timestamp ? new Date(e.timestamp) : null;
+    return {
+      id: e.id,
+      chain: e.chain,
+      type: e.type,
+      event_ts: t && Number.isFinite(t.getTime()) ? t.toISOString() : null,
+      fetched_at: nowIso,
+      payload: e as unknown as Record<string, unknown>,
+    };
+  });
+  // ignoreDuplicates keeps the original fetched_at (first-seen time), matching
+  // the in-memory archive-window semantics.
+  void admin
+    .from('context_feed_events')
+    .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+    .then(({ error }) => {
+      if (error) console.warn('[context-feed] persist failed:', error.message);
+    });
+  // Throttled cleanup (≤ every 5 min) — drop rows past the 72h archive window.
+  const now = Date.now();
+  if (now - lastArchiveCleanup > 5 * 60 * 1000) {
+    lastArchiveCleanup = now;
+    const cutoff = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString();
+    void admin
+      .from('context_feed_events')
+      .delete()
+      .lt('fetched_at', cutoff)
+      .then(({ error }) => {
+        if (error) console.warn('[context-feed] archive cleanup failed:', error.message);
+      });
+  }
+}
+
+// Archive read — pulls the 24–72h window from the persisted table (deterministic
+// across instances). Falls back to the per-lambda in-memory scan if the query
+// errors or returns nothing, so behaviour never regresses below the old path.
+async function getArchivedEvents(chain: string): Promise<WhaleEvent[]> {
+  const now = Date.now();
+  const minAge = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString(); // 72h ago
+  const maxAge = new Date(now - TWENTY_FOUR_HOURS).toISOString();     // 24h ago
+  try {
+    const admin = getSupabaseAdmin();
+    let q = admin
+      .from('context_feed_events')
+      .select('payload')
+      .gte('fetched_at', minAge)
+      .lte('fetched_at', maxAge)
+      .order('fetched_at', { ascending: false })
+      .limit(300);
+    if (chain !== 'all') q = q.eq('chain', chain);
+    const { data, error } = await q;
+    if (!error && data && data.length > 0) {
+      const events = data.map((r) => (r as { payload: WhaleEvent }).payload);
+      events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return events;
+    }
+  } catch (err) {
+    console.warn('[context-feed] archive read failed, using in-memory:', err instanceof Error ? err.message : String(err));
+  }
+  return getArchivedEventsInMemory(chain);
+}
+
+// Cheap, 60s-cached "is there an archive?" flag for the live-feed responses,
+// so the hot cache-hit path doesn't run a full archive query per request.
+const archiveFlagCache: Record<string, { has: boolean; ts: number }> = {};
+async function hasArchivedEvents(chain: string): Promise<boolean> {
+  const cached = archiveFlagCache[chain];
+  if (cached && Date.now() - cached.ts < 60_000) return cached.has;
+  const now = Date.now();
+  const minAge = new Date(now - TWENTY_FOUR_HOURS * 3).toISOString();
+  const maxAge = new Date(now - TWENTY_FOUR_HOURS).toISOString();
+  let has = false;
+  try {
+    const admin = getSupabaseAdmin();
+    let q = admin
+      .from('context_feed_events')
+      .select('id', { count: 'exact', head: true })
+      .gte('fetched_at', minAge)
+      .lte('fetched_at', maxAge);
+    if (chain !== 'all') q = q.eq('chain', chain);
+    const { count, error } = await q;
+    has = !error && (count ?? 0) > 0;
+  } catch {
+    has = getArchivedEventsInMemory(chain).length > 0;
+  }
+  archiveFlagCache[chain] = { has, ts: Date.now() };
+  return has;
 }
 
 async function fetchPrices(): Promise<void> {
@@ -612,6 +714,171 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
   }
 }
 
+// §B5 — GoPlus rug alerts. Scans the freshest boosted/trending EVM tokens for
+// honeypot / rug signatures and emits high-confidence `rug_alert` events (the
+// feed filter weights these 90, but nothing was emitting them). GoPlus results
+// are mem+Redis cached, so repeat scans of the same trending set are cheap.
+// Real data only — a token with no confirmed risk is dropped, never invented.
+const RUG_EVM_CHAINS = new Set(['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'avalanche', 'optimism']);
+const EVM_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+
+async function fetchRugAlerts(): Promise<WhaleEvent[]> {
+  try {
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1', { cache: 'no-store' });
+    if (!res.ok) return [];
+    const boosts = await res.json();
+    if (!Array.isArray(boosts)) return [];
+
+    const seen = new Set<string>();
+    const candidates = boosts
+      .filter((b: { chainId?: string; tokenAddress?: string }) =>
+        b.chainId && b.tokenAddress && RUG_EVM_CHAINS.has(b.chainId) && EVM_ADDR_RE.test(b.tokenAddress))
+      .filter((b: { chainId?: string; tokenAddress?: string }) => {
+        const k = `${b.chainId}-${b.tokenAddress!.toLowerCase()}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .slice(0, 8) as Array<{ chainId: string; tokenAddress: string }>;
+    if (candidates.length === 0) return [];
+
+    const scans = await Promise.all(
+      candidates.map(async (c) => {
+        try {
+          // Security scan (cached) + a token meta lookup for symbol/mcap, in parallel.
+          const [sec, metaRes] = await Promise.all([
+            getTokenSecurity(c.tokenAddress, c.chainId),
+            fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.tokenAddress}`, { cache: 'no-store' })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ]);
+          return { c, sec, metaRes };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    const alerts: WhaleEvent[] = [];
+    for (const s of scans) {
+      if (!s?.sec) continue;
+      const { sec } = s;
+      const reasons: string[] = [];
+      if (sec.isHoneypot) reasons.push('honeypot');
+      if (sec.cannotSellAll) reasons.push('cannot sell all');
+      if (sec.sellTax >= 0.3) reasons.push(`${Math.round(sec.sellTax * 100)}% sell tax`);
+      if (sec.hasHiddenOwner) reasons.push('hidden owner');
+      if (sec.canTakeBackOwnership) reasons.push('reclaimable ownership');
+      if (sec.ownerCanChangeBalance) reasons.push('owner can edit balances');
+      if (sec.selfDestruct) reasons.push('self-destruct');
+      if (sec.creatorIsTopHolder && sec.creatorHoldingPct > 0.2) reasons.push(`creator holds ${Math.round(sec.creatorHoldingPct * 100)}%`);
+
+      // Only surface genuine danger: a confirmed honeypot, GoPlus DANGER, or
+      // two+ independent red flags. Mild "caution" tokens are not rug alerts.
+      const danger = sec.isHoneypot || sec.safetyLevel === 'DANGER' || reasons.length >= 2;
+      if (!danger || reasons.length === 0) continue;
+
+      const pair = (s.metaRes?.pairs ?? [])[0];
+      const symbol = pair?.baseToken?.symbol || '';
+      const name = pair?.baseToken?.name || symbol || 'Token';
+      const mcap = pair?.marketCap || pair?.fdv || 0;
+
+      alerts.push({
+        id: `rug-${s.c.chainId}-${s.c.tokenAddress.toLowerCase()}`,
+        type: 'rug_alert',
+        sentiment: 'BEARISH',
+        title: symbol ? `Rug risk: $${symbol} — ${reasons[0]}` : `Rug risk — ${reasons[0]}`,
+        summary: `${name} flagged by security scan: ${reasons.join(', ')}. GoPlus safety: ${sec.safetyLevel}.${mcap > 0 ? ` MCap ${fmtUsd(mcap)}.` : ''} Avoid until cleared.`,
+        from: 'GoPlus Security',
+        to: s.c.tokenAddress.slice(0, 12),
+        value: 0,
+        valueUsd: mcap,
+        chain: s.c.chainId,
+        // High trustScore = high CONFIDENCE in the ALERT (honeypot confirmed),
+        // not token safety — drives the prominent "STRONG signal" treatment.
+        trustScore: sec.isHoneypot ? 95 : 82,
+        txHash: s.c.tokenAddress,
+        blockNumber: 0,
+        timestamp: recentTimestamp(),
+        tokenName: name,
+        tokenSymbol: symbol,
+        // Intentionally NO tokenMarketCap — the $500k mcap gate in
+        // applyContextFilter would otherwise drop low-cap scam tokens, which
+        // are exactly the ones a rug alert must surface. MCap lives in the
+        // summary instead.
+        pairAddress: pair?.pairAddress || '',
+        dexUrl: pair?.url || '',
+        platform: 'GoPlus',
+      });
+    }
+    return alerts;
+  } catch {
+    return [];
+  }
+}
+
+// §B5 — LunarCrush social-velocity events, given real on-chain values. LunarCrush
+// surfaces what's spiking SOCIALLY (galaxy score + post velocity) but has no
+// contract/chain; we resolve each symbol through DexScreener to attach the real
+// pair (address, chain, price, vol, liq, mcap). A symbol with no on-chain match
+// is dropped — never emitted with fabricated chain data.
+async function fetchSocialVelocity(): Promise<WhaleEvent[]> {
+  try {
+    const trends = await lcTrendingTokens(15);
+    if (!Array.isArray(trends) || trends.length === 0) return [];
+
+    const top = trends
+      .filter((t) => t.symbol && t.galaxyScore >= 55)
+      .sort((a, b) => b.socialVolume - a.socialVolume)
+      .slice(0, 6);
+    if (top.length === 0) return [];
+
+    const built = await Promise.all(
+      top.map(async (t) => {
+        try {
+          const [vel, dexRes] = await Promise.all([
+            lcSocialVelocity(t.symbol).catch(() => null),
+            fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(t.symbol)}`, { cache: 'no-store' })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ]);
+          const pairs = (dexRes?.pairs ?? []).filter(
+            (p: { baseToken?: { symbol?: string }; liquidity?: { usd?: number } }) =>
+              (p.baseToken?.symbol || '').toUpperCase() === t.symbol.toUpperCase(),
+          );
+          const best = pairs.sort(
+            (a: { liquidity?: { usd?: number } }, b: { liquidity?: { usd?: number } }) =>
+              (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0),
+          )[0];
+          if (!best) return null; // no on-chain match → skip, don't fabricate
+          const base = mapDexPairToEvent(best, 'lunarcrush');
+          if (!base) return null;
+
+          const velPct = vel?.velocity_pct ?? 0;
+          const shift = vel?.sentiment_shift ?? 0;
+          return {
+            ...base,
+            id: `social-${base.chain}-${t.symbol}-${(best.baseToken?.address || '').toLowerCase()}`,
+            type: 'trending',
+            title: velPct >= 50
+              ? `${t.name} social velocity +${Math.round(velPct)}% — buzz spiking`
+              : `${t.name} trending socially · Galaxy ${Math.round(t.galaxyScore)}`,
+            summary: `${base.summary} · Social: ${t.socialVolume.toLocaleString()} posts, velocity ${velPct >= 0 ? '+' : ''}${Math.round(velPct)}%, Galaxy ${Math.round(t.galaxyScore)}.`,
+            sentiment: shift > 5 ? 'BULLISH' : shift < -5 ? 'BEARISH' : base.sentiment,
+            platform: 'LunarCrush',
+            trustScore: Math.min(92, base.trustScore + Math.round(t.galaxyScore / 10)),
+          } as WhaleEvent;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return built.filter((e): e is WhaleEvent => e !== null);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchDexScreenerTrending(): Promise<WhaleEvent[]> {
   try {
     const boostsRes = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
@@ -815,23 +1082,16 @@ function deduplicateEvents(events: WhaleEvent[]): WhaleEvent[] {
 // §S2.2 — server-side event-type filter. Was applied client-side after a
 // 200-row fetch; pushing it into the query keeps the same UX but lets the
 // server hand back only the rows the user asked for.
-type FilterKind = 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+type FilterKind = ContextTypeFilter;
 const VALID_FILTERS: ReadonlySet<FilterKind> = new Set(['all', 'news', 'coins', 'new_coins', 'volume', 'trending']);
 
 function applyTypeFilter(events: WhaleEvent[], filter: FilterKind): WhaleEvent[] {
   if (filter === 'all') return events;
-  // Event.type values produced by the source fetchers (whale, new-listing,
-  // large-transfer, news, trending, volume-spike, coingecko-*). Map the UI
-  // pills to the underlying type predicates.
-  return events.filter((e) => {
-    const t = (e.type || '').toLowerCase();
-    if (filter === 'news') return t.includes('news') || t.startsWith('coingecko');
-    if (filter === 'coins') return t.includes('coin') || t.includes('listing') || t.includes('trending');
-    if (filter === 'new_coins') return t.includes('new-listing') || t.includes('new_coin') || t.includes('new-coin');
-    if (filter === 'volume') return t.includes('volume') || t.includes('large-transfer') || t.includes('whale');
-    if (filter === 'trending') return t.includes('trending');
-    return true;
-  });
+  // §B5 — delegate to the ONE shared matcher in lib/contextFeed/filter.ts.
+  // The old inline predicates matched a hyphenated/coingecko taxonomy that NO
+  // fetcher emits (real types are underscored: new_listing, token_launch,
+  // whale_accumulation, …), so `news` and `new_coins` returned zero rows.
+  return events.filter((e) => matchesTypeFilter(e.type, filter));
 }
 
 export async function GET(request: Request) {
@@ -851,7 +1111,7 @@ export async function GET(request: Request) {
     const archived = searchParams.get('archived') === 'true';
 
     if (archived) {
-      const archivedEvents = applyTypeFilter(getArchivedEvents(chain), filter);
+      const archivedEvents = applyTypeFilter(await getArchivedEvents(chain), filter);
       return NextResponse.json({
         events: archivedEvents.slice(0, limit),
         total: archivedEvents.length,
@@ -881,7 +1141,7 @@ export async function GET(request: Request) {
         source: cached.sources.join('+'),
         chain,
         cached: true,
-        hasArchive: getArchivedEvents(chain).length > 0,
+        hasArchive: await hasArchivedEvents(chain),
       }, {
         headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
       });
@@ -896,7 +1156,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -910,13 +1170,19 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchArbitrumDexEvents(), SRC_TIMEOUT, 'dex-arbitrum'),
         withSrcTimeout(fetchOptimismDexEvents(), SRC_TIMEOUT, 'dex-optimism'),
         withSrcTimeout(fetchCoingeckoEvents(), SRC_TIMEOUT, 'coingecko'),
+        // §B5 — give rug alerts + social velocity a longer leash (GoPlus +
+        // cross-referenced lookups), but still time-capped so a slow upstream
+        // can't stall the feed.
+        withSrcTimeout(fetchRugAlerts(), 7000, 'goplus-rug'),
+        withSrcTimeout(fetchSocialVelocity(), 7000, 'lunarcrush-social'),
       ]);
 
-      // Order matters: whale > smart-money > rug > new-listing > large-transfer.
-      // CoinGecko events are interleaved alongside on-chain ones — the score
-      // function in /lib/contextFeed/filter.ts re-ranks by trustScore + USD,
-      // so this is just the de-dupe input order.
-      events = [...cgEvents, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      // Order matters: rug alerts + smart-money first (highest type weight),
+      // then trending. The score function in /lib/contextFeed/filter.ts
+      // re-ranks by type/trust/USD, so this is just the de-dupe input order.
+      events = [...rugAlerts, ...cgEvents, ...socialVel, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      if (rugAlerts.length > 0) sources.push('goplus');
+      if (socialVel.length > 0) sources.push('lunarcrush');
       if (cgEvents.length > 0) sources.push('coingecko');
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
@@ -988,6 +1254,10 @@ export async function GET(request: Request) {
     responseCache[chain] = { data: events, ts: Date.now(), sources };
 
     storeEvents(events);
+    // §B5 — persist this fresh batch so the cross-instance archive stays
+    // deterministic. Only the fresh path persists (≤ every 5s via CACHE_TTL),
+    // not the hot cache-hit path.
+    persistEvents(events);
 
     const liveEvents = getLiveEvents(chain);
     const personal = await buildPersonalContext(request);
@@ -1019,12 +1289,12 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       source: sources.join('+'),
       chain,
-      hasArchive: getArchivedEvents(chain).length > 0,
+      hasArchive: await hasArchivedEvents(chain),
     }, {
       headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
     });
   } catch (error) {
-
+    console.error('[context-feed] request failed:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: 'Failed to fetch context feed' }, { status: 500 });
   }
 }

@@ -1,7 +1,22 @@
 'use client';
 
+/**
+ * useSwapExecution — quote + execute for the OrderForm / TradeTerminal stack.
+ *
+ * Rewired to the platform's REAL swap architecture. It used to POST to
+ * `/api/swap/quote` (a GET route → 405) and `/api/swap/execute` (never
+ * existed → 404) and expected a server-returned txHash — none of which
+ * matched how swaps actually settle (the client signs + broadcasts). It now:
+ *   - getQuote → GET /api/swap/price (normalised display quote)
+ *   - executeSwap → GET /api/swap/quote (executable blob) → broadcast via the
+ *     shared useSwapBroadcast signer → REAL on-chain tx hash.
+ * Built-in (Naka) wallets surface the unlock modal through the re-exposed
+ * unlockRequest/resolveUnlock/cancelUnlock.
+ */
+
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
+import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
 
 interface SwapExecutionParams {
   chain: string;
@@ -19,19 +34,8 @@ interface MevRisk {
   warning?: string;
 }
 
-interface UseSwapExecutionReturn {
-  quote: SwapQuote | null;
-  loading: boolean;
-  executing: boolean;
-  error: string | null;
-  txHash: string | null;
-  mevRisk: MevRisk | null;
-  getQuote: (params: SwapExecutionParams) => Promise<void>;
-  executeSwap: (params: SwapExecutionParams) => Promise<void>;
-  reset: () => void;
-}
-
-export function useSwapExecution(): UseSwapExecutionReturn {
+export function useSwapExecution() {
+  const { broadcast, unlockRequest, resolveUnlock, cancelUnlock } = useSwapBroadcast();
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
@@ -53,27 +57,20 @@ export function useSwapExecution(): UseSwapExecutionReturn {
     setError(null);
     setQuote(null);
 
-    try {
-      const amountUsd =
-        parseFloat(params.inputAmount) > 0
-          ? parseFloat(params.inputAmount)
-          : 0;
+    const amountUsd = parseFloat(params.inputAmount) > 0 ? parseFloat(params.inputAmount) : 0;
+    const priceParams = new URLSearchParams({
+      chain: params.chain,
+      from: params.inputToken,
+      to: params.outputToken,
+      amount: params.inputAmount,
+      taker: params.userAddress,
+      slippageBps: String(params.slippageBps),
+      fromDecimals: String(params.inputDecimals),
+    });
 
+    try {
       const [quoteRes, mevRes] = await Promise.allSettled([
-        fetch('/api/swap/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chain: params.chain,
-            inputToken: params.inputToken,
-            outputToken: params.outputToken,
-            inputAmount: params.inputAmount,
-            inputDecimals: params.inputDecimals,
-            userAddress: params.userAddress,
-            slippageBps: params.slippageBps,
-          }),
-          signal: AbortSignal.timeout(15_000),
-        }),
+        fetch(`/api/swap/price?${priceParams.toString()}`, { signal: AbortSignal.timeout(15_000) }),
         fetch(
           `/api/mev-protection?token=${encodeURIComponent(params.outputToken)}&chain=${encodeURIComponent(params.chain)}&amount=${amountUsd}`,
           { signal: AbortSignal.timeout(10_000) },
@@ -81,27 +78,25 @@ export function useSwapExecution(): UseSwapExecutionReturn {
       ]);
 
       if (quoteRes.status === 'fulfilled' && quoteRes.value.ok) {
-        const data = (await quoteRes.value.json()) as SwapQuote;
-        setQuote(data);
+        const data = await quoteRes.value.json();
+        setQuote({
+          amountOut: typeof data?.toAmount === 'number' ? String(data.toAmount) : '0',
+          priceImpact: typeof data?.priceImpactPct === 'string' ? parseFloat(data.priceImpactPct) || 0 : 0,
+          route: data?.provider === 'jupiter' ? 'Jupiter' : '0x',
+          // Platform fee is a flat 0.4% (PLATFORM_FEE_BPS=40) on the trade USD.
+          feeUSD: amountUsd * 0.004,
+        });
       } else {
         const errMsg =
           quoteRes.status === 'rejected'
-            ? quoteRes.reason instanceof Error
-              ? quoteRes.reason.message
-              : 'Quote request failed'
-            : quoteRes.value.ok
-            ? 'Unknown error'
-            : `Quote failed (${quoteRes.value.status})`;
+            ? quoteRes.reason instanceof Error ? quoteRes.reason.message : 'Quote request failed'
+            : await quoteRes.value.json().then((b) => b.error).catch(() => `Quote failed (${quoteRes.value.status})`);
         setError(errMsg);
       }
 
       if (mevRes.status === 'fulfilled' && mevRes.value.ok) {
         const mevData = await mevRes.value.json();
-        setMevRisk({
-          level: mevData.level ?? 'low',
-          score: mevData.score ?? 0,
-          warning: mevData.warning,
-        });
+        setMevRisk({ level: mevData.level ?? 'low', score: mevData.score ?? 0, warning: mevData.warning });
       } else {
         setMevRisk({ level: 'low', score: 0 });
       }
@@ -118,39 +113,34 @@ export function useSwapExecution(): UseSwapExecutionReturn {
     setTxHash(null);
 
     try {
-      const res = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chain: params.chain,
-          inputToken: params.inputToken,
-          outputToken: params.outputToken,
-          inputAmount: params.inputAmount,
-          inputDecimals: params.inputDecimals,
-          userAddress: params.userAddress,
-          slippageBps: params.slippageBps,
-          quote,
-        }),
-        signal: AbortSignal.timeout(60_000),
+      // Fresh executable quote, then sign + broadcast through the wallet.
+      const qp = new URLSearchParams({
+        chain: params.chain,
+        from: params.inputToken,
+        to: params.outputToken,
+        amount: params.inputAmount,
+        taker: params.userAddress,
+        slippageBps: String(params.slippageBps),
+        fromDecimals: String(params.inputDecimals),
       });
+      const res = await fetch(`/api/swap/quote?${qp.toString()}`, { signal: AbortSignal.timeout(20_000) });
+      const data = await res.json().catch(() => ({} as { error?: string }));
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? `Quote failed (${res.status})`);
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error((errBody as { error?: string }).error ?? `Execute failed (${res.status})`);
-      }
-
-      const data = await res.json();
-      if (data.success === false) {
-        throw new Error(data.error ?? data.blockReason ?? 'Swap failed');
-      }
-
-      setTxHash(data.txHash ?? null);
+      const walletKind = detectWalletKind(params.chain, null);
+      const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
+      setTxHash(hash);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Swap execution failed');
+      const msg = err instanceof Error ? err.message : 'Swap execution failed';
+      if (!/unlock cancelled/i.test(msg)) setError(msg);
     } finally {
       setExecuting(false);
     }
-  }, [quote]);
+  }, [broadcast]);
 
-  return { quote, loading, executing, error, txHash, mevRisk, getQuote, executeSwap, reset };
+  return {
+    quote, loading, executing, error, txHash, mevRisk,
+    getQuote, executeSwap, reset,
+    unlockRequest, resolveUnlock, cancelUnlock,
+  };
 }

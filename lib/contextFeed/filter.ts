@@ -57,7 +57,10 @@ const SENTIMENT_WEIGHT: Record<string, number> = {
 
 export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): number {
   const typeBase = TYPE_WEIGHT[event.type] ?? 40;
-  const sentimentAdj = SENTIMENT_WEIGHT[event.sentiment] ?? 0;
+  // Producers emit sentiment in UPPERCASE ("BULLISH"), but the weight keys
+  // are lowercase — so this lookup silently scored every event as neutral.
+  // Normalise the case so the sentiment weighting actually applies.
+  const sentimentAdj = SENTIMENT_WEIGHT[event.sentiment?.toLowerCase()] ?? 0;
   const trust = Math.min(100, Math.max(0, event.trustScore)) * 0.5;
   const usdLog = event.valueUsd > 0 ? Math.log10(event.valueUsd) * 6 : 0;
   const recencyMs = Date.now() - new Date(event.timestamp).getTime();
@@ -77,6 +80,41 @@ export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): 
   }
 
   return typeBase + sentimentAdj + trust + usdLog + recencyAdj + personalBoost;
+}
+
+// ─── Shared event-type pill matcher ────────────────────────────────────────
+// The UI exposes filter pills (news / coins / new_coins / volume / trending),
+// but the source fetchers emit a DIFFERENT, underscored taxonomy
+// (new_listing, token_launch, whale_accumulation, trade, trending,
+// network_activity). Two call sites matched this independently and BOTH were
+// wrong: the server route matched 'new-listing' (hyphen — no event has it) and
+// 'coingecko'/'news' (no event emits them), so `news` and `new_coins` returned
+// EMPTY; the archive page did `e.type.includes(pill)` which also never matched.
+// This ONE matcher is the single source of truth — import it on both sides.
+export type ContextTypeFilter = 'all' | 'news' | 'coins' | 'new_coins' | 'volume' | 'trending';
+
+export const CONTEXT_TYPE_FILTERS: readonly ContextTypeFilter[] = [
+  'all', 'news', 'coins', 'new_coins', 'volume', 'trending',
+] as const;
+
+// Pill → the canonical underscored event types it should surface.
+const FILTER_TYPE_MAP: Record<Exclude<ContextTypeFilter, 'all'>, readonly string[]> = {
+  news:      ['new_listing', 'trending', 'token_launch'],
+  coins:     ['new_listing', 'token_launch', 'trade', 'trending'],
+  new_coins: ['new_listing', 'token_launch'],
+  volume:    ['whale_accumulation', 'whale_sell', 'large_transfer', 'trade'],
+  trending:  ['trending'],
+};
+
+/**
+ * Does an event of `type` belong under the given UI filter pill? Normalises
+ * hyphens → underscores and any source prefix (e.g. `coingecko_trending`) so
+ * the match is robust to taxonomy drift across fetchers.
+ */
+export function matchesTypeFilter(type: string | undefined, filter: ContextTypeFilter): boolean {
+  if (filter === 'all') return true;
+  const t = (type || '').toLowerCase().replace(/-/g, '_');
+  return FILTER_TYPE_MAP[filter].some((allowed) => t.includes(allowed));
 }
 
 export function applyContextFilter<T extends FilterableEvent>(

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 
-interface ContextEvent {
+export interface ContextEvent {
   id: string;
   type: string;
   sentiment: string;

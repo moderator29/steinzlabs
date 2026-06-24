@@ -980,12 +980,20 @@ export async function POST(request: NextRequest) {
       skipRateLimit?: boolean;
       context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
       stream?: boolean;
+      // §model-picker — VTX Fast/Balanced/Deepest reasoning-depth toggle.
+      model?: string;
     };
 
     const {
       message, history, tier, personality, language, depth,
       riskAppetite, responseStyle, skipRateLimit, context, stream: wantsStream,
+      model: vtxModel,
     } = body;
+
+    // Map the neutral picker label → Anthropic output_config.effort on the
+    // executor. Unknown / absent → undefined (model default = high).
+    const vtxEffort: 'low' | 'medium' | 'high' | undefined =
+      vtxModel === 'fast' ? 'low' : vtxModel === 'deepest' ? 'high' : vtxModel === 'balanced' ? 'medium' : undefined;
 
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -1235,7 +1243,7 @@ export async function POST(request: NextRequest) {
           try {
             let streamIterations = 0;
             while (true) {
-              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt });
+              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled, effort: vtxEffort });
               for await (const event of stream) {
                 if (
                   event.type === 'content_block_delta' &&
@@ -1307,6 +1315,8 @@ export async function POST(request: NextRequest) {
       const vtxResponse = await vtxQuery({
         messages: loopMessages,
         system: systemPrompt,
+        webSearch: webSearchEnabled,
+        effort: vtxEffort,
       });
 
       if (vtxResponse.stop_reason === 'tool_use') {
@@ -1488,15 +1498,25 @@ export async function POST(request: NextRequest) {
     logger.error({ msg, stack: err instanceof Error ? err.stack : undefined }, '[VTX] Error:');
     Sentry.captureException(err);
 
-    // Surface specific errors
-    if (msg.includes('API key')) {
-      return NextResponse.json({ error: 'AI service not configured. ANTHROPIC_API_KEY missing.' }, { status: 500 });
+    // §C4 — typed Anthropic SDK errors, most-specific class first. The SDK
+    // throws structured error subclasses; matching on `instanceof` is robust
+    // where the old `msg.includes(...)` string sniffing missed localized or
+    // reworded provider messages. The string checks remain as a fallback for
+    // errors that bubble up as plain Error (e.g. fetch-layer failures).
+    if (err instanceof Anthropic.AuthenticationError || msg.includes('API key')) {
+      return NextResponse.json({ error: 'AI service not configured. ANTHROPIC_API_KEY missing or invalid.' }, { status: 500 });
     }
-    if (msg.includes('rate_limit') || msg.includes('429')) {
+    if (err instanceof Anthropic.RateLimitError || msg.includes('rate_limit') || msg.includes('429')) {
       return NextResponse.json({ error: 'AI service is busy. Please try again in a moment.' }, { status: 429 });
     }
-    if (msg.includes('overloaded') || msg.includes('529')) {
+    // OverloadedError surfaces as HTTP 529; InternalServerError as 5xx.
+    if (err instanceof Anthropic.InternalServerError || msg.includes('overloaded') || msg.includes('529')) {
       return NextResponse.json({ error: 'AI service is temporarily overloaded. Please try again shortly.' }, { status: 503 });
+    }
+    if (err instanceof Anthropic.APIError && typeof err.status === 'number' && err.status >= 400 && err.status < 500) {
+      // Other client-side API errors (bad request, invalid model, etc.) —
+      // don't masquerade as a 500; surface the provider status.
+      return NextResponse.json({ error: 'AI request was rejected. Please rephrase and try again.' }, { status: err.status });
     }
 
     return NextResponse.json({

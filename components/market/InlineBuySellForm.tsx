@@ -26,6 +26,9 @@ import { formatPrice } from '@/lib/market/formatters';
 import { Settings, Shield, Info } from 'lucide-react';
 import ChainMismatchBanner from './ChainMismatchBanner';
 import FirstTradeRiskModal, { hasAcknowledgedTradeRisk } from '@/components/legal/FirstTradeRiskModal';
+import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
+import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
+import { resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
 
 const QUICK = [0, 25, 50, 75, 100];
 const SLIPPAGE_PRESETS = ['0.1', '0.5', '1', '3'];
@@ -84,6 +87,7 @@ function writeMevProtect(chain: string, on: boolean): void {
 
 export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUSD, userId }: Props) {
   const { address: walletAddr, balance, provider, walletPlatformChain } = useWallet();
+  const { broadcast, unlockRequest, resolveUnlock, cancelUnlock } = useSwapBroadcast();
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
   const [amount, setAmount] = useState('');
   const [executing, setExecuting] = useState(false);
@@ -203,9 +207,23 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   };
 
   const execute = async (slipNum: number) => {
+    if (!walletAddr) { setStatus({ kind: 'err', msg: 'Connect a wallet first' }); return; }
     setExecuting(true);
     setStatus(null);
     try {
+      // §swap-real-broadcast — compute the authoritative BASE-UNIT sell
+      // amount. BUY sells USDC (≈ the USD input, 6 decimals); SELL sells the
+      // token (estTokens of it, at the token's decimals). Without this the
+      // route used to pass the human USD figure straight to 0x → quotes were
+      // off by 10**decimals. Unknown SELL-token decimals → refuse honestly.
+      const sellSymbol = mode === 'BUY' ? 'USDC' : symbol;
+      const sellDecimals = resolveSwapDecimals(sellSymbol, chain);
+      if (sellDecimals === null) {
+        throw new Error(`Selling ${sellSymbol} isn't supported on ${chain} yet — unknown token decimals.`);
+      }
+      const sellQty = mode === 'BUY' ? amountNum : estTokens;
+      const sellAmountBase = toBaseUnits(sellQty, sellDecimals);
+
       const res = await fetch('/api/market/trade/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -213,8 +231,10 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           chain,
           tokenIn: mode === 'BUY' ? 'USDC' : tokenAddress,
           tokenOut: mode === 'BUY' ? tokenAddress : 'USDC',
-          amountIn: amount,
+          amountIn: String(sellQty),
           amountInUSD: amountNum,
+          sellAmountBase,
+          tokenInDecimals: sellDecimals,
           slippage: slipNum,
           mevProtect,
           walletAddress: walletAddr,
@@ -223,11 +243,33 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      setStatus({ kind: 'ok', msg: `${mode === 'BUY' ? 'Bought' : 'Sold'} ${estTokens.toFixed(4)} ${symbol}` });
+      // Security / OFAC gates return 200 with `blocked: true` — surface the
+      // reason rather than silently proceeding.
+      if (data.blocked) {
+        throw new Error(data.blockReason || 'Trade blocked by the security scanner.');
+      }
+      if (!data.transaction) {
+        throw new Error('No signable transaction returned. Please try again.');
+      }
+
+      // Actually sign + broadcast — success is set ONLY from a real tx hash.
+      const walletKind = detectWalletKind(chain, provider);
+      const hash = await broadcast({
+        quote: { transaction: data.transaction },
+        chain,
+        walletKind,
+        address: walletAddr,
+      });
+
+      const verb = mode === 'BUY' ? 'Bought' : 'Sold';
+      setStatus({ kind: 'ok', msg: `${verb} ${estTokens.toFixed(4)} ${symbol} · ${hash.slice(0, 6)}…${hash.slice(-4)}` });
       window.dispatchEvent(new Event('steinz:balance-changed'));
       setAmount('');
     } catch (e: unknown) {
-      setStatus({ kind: 'err', msg: e instanceof Error ? e.message : 'Trade failed' });
+      const msg = e instanceof Error ? e.message : 'Trade failed';
+      // Backing out of the unlock modal isn't an error — clear silently.
+      if (/unlock cancelled/i.test(msg)) { setStatus(null); }
+      else setStatus({ kind: 'err', msg });
     } finally {
       setExecuting(false);
     }
@@ -481,6 +523,17 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           if (Number.isFinite(slipNum) && slipNum > 0) void execute(slipNum);
         }}
       />
+
+      {/* Built-in (Naka) wallet unlock — the broadcast hook parks here when a
+          stored key needs the password to decrypt the signing key. */}
+      {unlockRequest && (
+        <UnlockWalletModal
+          encryptedKey={unlockRequest.encryptedKey}
+          addressShort={unlockRequest.addressShort}
+          onUnlocked={resolveUnlock}
+          onClose={cancelUnlock}
+        />
+      )}
     </div>
   );
 }

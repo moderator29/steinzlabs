@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { MicroBar } from '@/components/charts/MicroChart';
 import { Search, TrendingUp, Inbox } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/formatters';
 
@@ -84,14 +84,7 @@ export default function SearchLogsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Searches by Hour (Today)</h3>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={data.hourly}>
-                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: '#6B7280' }} interval={5} />
-                  <YAxis hide />
-                  <Tooltip contentStyle={{ background: '#141824', border: '1px solid #1E2433', borderRadius: 8, fontSize: 11 }} />
-                  <Bar dataKey="searches" fill="#0066FF" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <MicroBar data={data.hourly} xKey="hour" yKey="searches" color="#0066FF" height={160} />
             </div>
             <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Top Search Queries</h3>

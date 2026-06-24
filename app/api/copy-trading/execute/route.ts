@@ -6,6 +6,7 @@ import { getTokenSecurity, getAddressSecurity } from "@/lib/services/goplus";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
+import { checkTierServer } from "@/lib/subscriptions/serverTierCheck";
 import { logAdminAction } from "@/lib/admin/auditLog";
 import { guardRoute } from "@/lib/api/guardRoute";
 
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
   const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Copy trading is a Pro-tier feature (per the pricing page).
+  const gate = await checkTierServer('pro');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
 
   const body = (await request.json()) as ExecuteBody;
   if (!body.source_whale || !body.source_tx_hash || !body.token_address || !body.chain || !body.action) {

@@ -1,5 +1,6 @@
 import 'server-only';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 
 /**
  * SSE wrapper for the whale-tracker feed. Mirrors the pattern proven on
@@ -24,6 +25,9 @@ interface FeedRow {
 }
 
 export async function GET(request: NextRequest) {
+  // Whale tracker view is a Mini-tier feature (per the pricing page).
+  const gate = await checkTierServer('mini');
+  if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const url = request.nextUrl;
   // Forward every query param the underlying feed endpoint accepts so
   // the SSE stream stays in lock-step with the page filters.
