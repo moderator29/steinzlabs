@@ -1436,7 +1436,14 @@ export async function POST(request: NextRequest) {
             fdv: p.fdv ?? 0,
             pairAddress: p.pairAddress,
             dexId: p.dexId,
-            logo: p.info?.imageUrl || null,
+            // Fall back to the DexScreener token-image CDN (allow-listed in
+            // next.config images) when the pair has no embedded imageUrl —
+            // majors like SOL arrive with info.imageUrl null otherwise.
+            // TokenLogo degrades to the symbol initial if even this 404s.
+            logo: p.info?.imageUrl
+              || (p.baseToken.address && p.chainId
+                ? `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`
+                : null),
           };
         }
       } catch (err) {

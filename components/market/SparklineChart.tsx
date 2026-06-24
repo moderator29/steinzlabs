@@ -25,7 +25,10 @@ export function SparklineChart({ data, isPositive, height = 48 }: SparklineChart
       chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
         height,
-        layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: 'transparent' },
+        // attributionLogo:false drops the TradingView watermark lightweight-charts
+        // paints by default — it showed on the larger PriceCard chart (clipped on
+        // the tiny watchlist sparkline). Keep our charts clean + unbranded.
+        layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: 'transparent', attributionLogo: false },
         grid: { vertLines: { visible: false }, horzLines: { visible: false } },
         rightPriceScale: { visible: false },
         leftPriceScale: { visible: false },
