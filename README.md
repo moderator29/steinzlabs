@@ -8,7 +8,7 @@
 
 ## Overview
 
-Steinz Labs is a Next.js 15 multi-chain platform delivering on-chain intelligence, AI-assisted trading analysis, whale tracking, sniper bot automation, and a non-custodial wallet across **Ethereum, Solana, BNB Chain, Polygon, Base, Arbitrum, Optimism, Avalanche, and TON**. Every tool is wired to real on-chain data — no mock feeds, no synthetic numbers.
+Steinz Labs is a Next.js 16 multi-chain platform delivering on-chain intelligence, AI-assisted trading analysis, whale tracking, sniper bot automation, and a non-custodial wallet across **Ethereum, Solana, BNB Chain, Polygon, Base, Arbitrum, Optimism, and Avalanche**. Tools are wired to real on-chain data sources (CoinGecko, DexScreener, Alchemy, Helius, GoPlus, Jupiter, 0x); when data is unavailable the UI shows an honest empty state rather than a fabricated number.
 
 The product is split across four layers:
 
@@ -24,7 +24,7 @@ The product is split across four layers:
 ### Intelligence Layer
 
 - **VTX Agent** — Claude-powered AI analyst with live on-chain context, slash commands, token cards, and swap shortcuts. Sonnet for fast queries, Opus on advisor escalation.
-- **Whale Tracker** — Live feed of 15K+ verified whale wallets across 8 chains. Profiles, watchlist, AI summaries, and one-click copy trading.
+- **Whale Tracker** — Live feed over a curated set of 400+ tracked whale wallets (290+ verified) across major chains. Profiles, watchlist, AI summaries, and one-click copy trading.
 - **Wallet Clusters** — 5 clustering algorithms (direct transfer, common funding, coordinated trading, behavioral fingerprint, Sybil pattern) surface connected wallet groups.
 - **Smart Money** — Continuously curated set of consistently profitable on-chain wallets with full transaction fingerprints and convergence alerts.
 - **On-Chain Trends** — Real-time narrative and sector momentum tracking with historical context (7d / 30d) and percentile ranking.

@@ -357,23 +357,40 @@ export default function ViewProofPage() {
               On-chain Assessment
             </h3>
             <div className="space-y-3 text-sm text-gray-300 leading-relaxed">
+              {/* Factual metrics only. We present the real on-chain values we
+                  actually fetched and a neutral cap-size bucket; we do NOT
+                  editorialize ("institutional-grade", slippage guarantees,
+                  "passes our security checks") about data we never measured. */}
               <p>
-                {event.tokenSymbol} on {chainId} chain is showing {event.sentiment?.toLowerCase()} signals.
-                {event.tokenPrice ? ` Currently trading at ${event.tokenPrice}.` : ''}
-                {event.tokenPriceChange24h ? ` 24-hour price change: ${event.tokenPriceChange24h > 0 ? '+' : ''}${event.tokenPriceChange24h.toFixed(2)}%.` : ''}
+                {event.tokenSymbol} on {chainId} chain — {event.sentiment?.toLowerCase()} signal.
+                {event.tokenPrice ? ` Price ${event.tokenPrice}.` : ''}
+                {event.tokenPriceChange24h ? ` 24h change ${event.tokenPriceChange24h > 0 ? '+' : ''}${event.tokenPriceChange24h.toFixed(2)}%.` : ''}
               </p>
-              {event.tokenVolume24h && event.tokenVolume24h > 0 && (
-                <p>24-hour trading volume stands at ${event.tokenVolume24h.toLocaleString()}, {event.tokenVolume24h > 1000000 ? 'indicating strong institutional-grade market activity with deep order book depth' : 'suggesting moderate retail trading interest with some volatility potential'}. Volume-to-market-cap ratio {event.tokenMarketCap && event.tokenMarketCap > 0 ? `is ${((event.tokenVolume24h / event.tokenMarketCap) * 100).toFixed(1)}%` : 'suggests active trading'}, which is {event.tokenVolume24h > (event.tokenMarketCap || 1) * 0.1 ? 'above average, signaling heightened interest' : 'within normal range'}.</p>
-              )}
-              {event.tokenLiquidity && event.tokenLiquidity > 0 && (
-                <p>Liquidity pool depth: ${event.tokenLiquidity.toLocaleString()}. {event.tokenLiquidity > 500000 ? 'Deep liquidity pools ensure minimal slippage for trades up to $50K. Multiple LP providers are contributing to price stability.' : 'Lower liquidity detected. Trades above $5K may experience 1-3% slippage. Consider splitting larger orders across multiple transactions.'}</p>
-              )}
-              {event.tokenMarketCap && event.tokenMarketCap > 0 && (
-                <p>Market capitalization: ${event.tokenMarketCap.toLocaleString()}. {event.tokenMarketCap > 1e9 ? 'Large-cap asset with established market presence and institutional coverage.' : event.tokenMarketCap > 100e6 ? 'Mid-cap asset with growth potential and increasing market attention.' : 'Small-cap asset with higher volatility. Risk-reward ratio is elevated.'}</p>
-              )}
+              <div className="bg-white/[0.03] rounded-lg p-3">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">On-chain metrics</div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  {event.tokenVolume24h && event.tokenVolume24h > 0 ? (
+                    <div className="flex justify-between"><span className="text-gray-500">24h volume</span><span className="font-semibold text-white">${event.tokenVolume24h.toLocaleString()}</span></div>
+                  ) : null}
+                  {event.tokenLiquidity && event.tokenLiquidity > 0 ? (
+                    <div className="flex justify-between"><span className="text-gray-500">Liquidity</span><span className="font-semibold text-white">${event.tokenLiquidity.toLocaleString()}</span></div>
+                  ) : null}
+                  {event.tokenMarketCap && event.tokenMarketCap > 0 ? (
+                    <div className="flex justify-between"><span className="text-gray-500">Market cap</span><span className="font-semibold text-white">${event.tokenMarketCap.toLocaleString()}</span></div>
+                  ) : null}
+                  {event.tokenVolume24h && event.tokenMarketCap && event.tokenMarketCap > 0 ? (
+                    <div className="flex justify-between"><span className="text-gray-500">Vol / mcap</span><span className="font-semibold text-white">{((event.tokenVolume24h / event.tokenMarketCap) * 100).toFixed(1)}%</span></div>
+                  ) : null}
+                </div>
+                {event.tokenMarketCap && event.tokenMarketCap > 0 ? (
+                  <p className="text-[11px] text-gray-400 mt-2">
+                    {event.tokenMarketCap > 1e9 ? 'Large-cap' : event.tokenMarketCap > 100e6 ? 'Mid-cap' : 'Small-cap'} by market capitalization.
+                  </p>
+                ) : null}
+              </div>
               <p>
-                Trust assessment: {event.trustScore}% confidence rating ({trustLabel}).
-                {event.trustScore >= 70 ? ' On-chain indicators support the reliability of this signal. Contract verification, holder distribution, and trading patterns all pass our security checks.' : event.trustScore >= 40 ? ' Exercise standard due diligence before acting on this signal. Some on-chain metrics show mixed signals that warrant closer monitoring.' : ' Multiple risk factors detected. Holder concentration, contract permissions, or trading patterns show concerning patterns. Proceed with extreme caution and use small position sizes.'}
+                Trust assessment: {event.trustScore}% ({trustLabel}). This score summarizes the signal&apos;s
+                on-chain metrics above; it is not a contract security audit. Always do your own due diligence.
               </p>
               <div className="bg-white/[0.03] rounded-lg p-3 mt-2">
                 <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">Signal Assessment</div>
@@ -384,7 +401,7 @@ export default function ViewProofPage() {
                   <div className="flex justify-between"><span className="text-gray-500">Value</span><span className="font-semibold text-white">${event.valueUsd?.toLocaleString()}</span></div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-500">Rule-based assessment from live on-chain metrics — not AI-generated, and not financial advice.</p>
+              <p className="text-[10px] text-gray-500">Derived from live on-chain price/volume/liquidity metrics — not a security audit, and not financial advice.</p>
             </div>
           </div>
         )}

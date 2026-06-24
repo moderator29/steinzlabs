@@ -96,7 +96,7 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 
 ### 11. Whale Tracker
 
-- **What it does:** Live feed of 15K+ verified whale wallets across 8 chains. Profiles, watchlist, AI summary cards, copy-trading deeplink.
+- **What it does:** Live feed over a curated set of 400+ tracked whale wallets (290+ verified) across major chains. Profiles, watchlist, AI summary cards, copy-trading deeplink.
 - **How to access:** `/dashboard/whales`. Detail at `/dashboard/whales/[address]`.
 - **Tier:** Free (top-20 + profiles). Mini+ for watchlist (`/follow`). Pro+ for AI summaries and copy-trade prefill.
 - **How it works:** Inbound webhook events from Alchemy (EVM) and Helius (Solana) — see [supabase-architecture.md §5](./supabase-architecture.md). `whale_activity` (36k+ rows live), `whale_transactions`, `whale_ai_summaries`. SSE stream at `/api/whale-activity/stream`.
