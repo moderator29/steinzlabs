@@ -82,6 +82,37 @@ export async function resolveWalletEntitlements(addresses: string[]): Promise<Wa
 }
 
 /**
+ * Sum a user's verified on-chain $NAKA balance across their EVM addresses.
+ * Never throws — a chain hiccup degrades to 0 rather than blocking the caller.
+ */
+export async function resolveNakaBalance(addresses: string[]): Promise<number> {
+  const evm = Array.from(new Set(addresses.filter(isEvm).map((a) => a.toLowerCase())));
+  let nakaBalance = 0;
+  for (const addr of evm) {
+    try {
+      const balances = await getTokenBalances(addr, 'ethereum');
+      const match = balances.find((b) => b.contractAddress.toLowerCase() === NAKA_TOKEN);
+      if (match?.tokenBalance) nakaBalance += Number(BigInt(match.tokenBalance)) / 1e18;
+    } catch {
+      /* per-address read failed — sum the rest */
+    }
+  }
+  return nakaBalance;
+}
+
+/**
+ * Holdings-weighted Conclave vote weight, sqrt-scaled so whales can't dominate:
+ *   weight = max(1, floor(sqrt(nakaBalance / threshold)))
+ * Every cult member weighs at least 1 (NIPPO holders with little/no $NAKA), and
+ * a holder at the entry threshold weighs 1, 4x → 2, 9x → 3, etc. This replaces
+ * the old fabricated `isChosen ? 2 : 1` constant with real on-chain holdings.
+ */
+export async function resolveNakaVoteWeight(addresses: string[]): Promise<number> {
+  const balance = await resolveNakaBalance(addresses);
+  return Math.max(1, Math.floor(Math.sqrt(balance / NAKA_THRESHOLD)));
+}
+
+/**
  * Resolve + persist entitlements for a user across their verified wallets.
  *
  * Idempotent and non-destructive of unrelated state:
