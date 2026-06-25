@@ -18,6 +18,7 @@ import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentTokenPriceUsd } from "@/lib/sniper/priceFeed";
+import { usdcForChain } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
 import type { SniperChain } from "@/lib/sniper/chains";
 
@@ -196,6 +197,13 @@ export async function GET(request: NextRequest) {
       summary.push({ id: pos.id, action: "skip", reason: "tokens_received unknown" });
       continue;
     }
+    // Resolve the real USDC contract for the chain — "USDC" the literal string
+    // is not an address and would break the relayer/GoPlus downstream.
+    const usdcAddress = usdcForChain(pos.chain);
+    if (!usdcAddress) {
+      summary.push({ id: pos.id, action: "skip", reason: `no USDC address for chain ${pos.chain}` });
+      continue;
+    }
 
     // Schema fix: pending_trades has from_token_address / to_token_address /
     // source_reason / source_order_id / source_order_table, NOT the older
@@ -212,9 +220,9 @@ export async function GET(request: NextRequest) {
         wallet_source: "builtin",
         from_token_address: pos.token_address,
         from_token_symbol: pos.token_symbol,
-        to_token_address: "USDC",
+        to_token_address: usdcAddress,
         to_token_symbol: "USDC",
-        amount_in: pos.tokens_received,
+        amount_in: String(pos.tokens_received),
         slippage_bps: c.max_slippage_bps ?? 200,
         source_reason: "sniper_autosell",
         source_order_id: pos.id,
@@ -240,7 +248,10 @@ export async function GET(request: NextRequest) {
         sell_pending_trade_id: pending.id,
         sell_dispatched_at: new Date().toISOString(),
       })
-      .eq("id", pos.id);
+      .eq("id", pos.id)
+      // Only claim the sell if one isn't already in flight — guards against a
+      // second cron tick dispatching a duplicate sell before confirmation.
+      .is("sell_pending_trade_id", null);
 
     summary.push({
       id: pos.id,
