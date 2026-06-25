@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { verifyCron, cronResponse } from '../_shared';
+import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getHyperliquidFundingRates } from '@/lib/services/hyperliquid';
 
@@ -51,9 +51,13 @@ export async function GET(req: NextRequest) {
     rows = await getHyperliquidFundingRates();
   } catch (e) {
     Sentry.captureException(e, { tags: { cron: 'funding-rates-snapshot' } });
+    await logCronExecution('funding-rates-snapshot', 'failed', Date.now() - startedAt, e instanceof Error ? e.message : 'fetch_failed');
     return cronResponse('funding-rates-snapshot', startedAt, { skipped: 'fetch_failed' });
   }
-  if (rows.length === 0) return cronResponse('funding-rates-snapshot', startedAt, { rows: 0 });
+  if (rows.length === 0) {
+    await logCronExecution('funding-rates-snapshot', 'success', Date.now() - startedAt, undefined, 0);
+    return cronResponse('funding-rates-snapshot', startedAt, { rows: 0 });
+  }
 
   // Pull spot prices for the symbols we know about so divergence_pct
   // is actually meaningful (vs mark only).
@@ -78,7 +82,9 @@ export async function GET(req: NextRequest) {
     .from('funding_rate_snapshots')
     .upsert(inserts, { onConflict: 'exchange,symbol' });
   if (error) {
+    await logCronExecution('funding-rates-snapshot', 'failed', Date.now() - startedAt, error.message, 0);
     return cronResponse('funding-rates-snapshot', startedAt, { error: error.message });
   }
+  await logCronExecution('funding-rates-snapshot', 'success', Date.now() - startedAt, undefined, inserts.length);
   return cronResponse('funding-rates-snapshot', startedAt, { rows: inserts.length });
 }
