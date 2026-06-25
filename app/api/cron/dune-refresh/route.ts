@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { verifyCron, cronResponse } from '../_shared';
+import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { runDuneQuery, isDuneConfigured, getBudgetStatus } from '@/lib/services/dune';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -222,6 +222,7 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response!;
 
   if (!isDuneConfigured()) {
+    await logCronExecution('dune-refresh', 'success', Date.now() - startedAt, 'skipped: dune_unconfigured', 0);
     return cronResponse('dune-refresh', startedAt, { skipped: 'dune_unconfigured' });
   }
 
@@ -276,6 +277,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  await logCronExecution('dune-refresh', 'success', Date.now() - startedAt, undefined, totalRefreshed);
   return cronResponse('dune-refresh', startedAt, {
     total_refreshed: totalRefreshed,
     budget_utilization: budget.utilization,
