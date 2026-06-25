@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     ] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id, first_name, last_name, username, email, created_at').order('created_at', { ascending: false }).limit(20),
+      supabase.from('profiles').select('id, first_name, last_name, username, created_at').order('created_at', { ascending: false }).limit(20),
       supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_verified_entity', true),
     ]);
 
