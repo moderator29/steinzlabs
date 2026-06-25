@@ -80,7 +80,6 @@ export interface UsePortfolioState {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_WALLETS = 10;
-const SNAPSHOT_DAYS = 90;
 const CACHE_TTL_MS = 60_000; // 1 minute
 const LOCAL_KEY = 'portfolio_wallets_v2';
 
@@ -130,39 +129,6 @@ function riskLevelFromPositions(positions: PortfolioPosition[]): PortfolioMetric
   if (avgRisk >= 50) return 'high';
   if (avgRisk >= 30) return 'moderate';
   return 'low';
-}
-
-// ─── Snapshot generation ──────────────────────────────────────────────────────
-
-function generateEstimatedSnapshots(currentValue: number, days: number): PortfolioSnapshot[] {
-  // Generate estimated history based on current value — real history requires tx data
-  const snapshots: PortfolioSnapshot[] = [];
-  const today = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    // Gradual approach to current value
-    const progress = (days - i) / days;
-    const value = currentValue * (0.85 + 0.15 * progress);
-    const prevValue = i < days - 1 ? currentValue * (0.85 + 0.15 * ((days - i - 1) / days)) : value;
-    const dailyChangePct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : 0;
-
-    snapshots.push({
-      date: dateStr,
-      valueUsd: parseFloat(value.toFixed(2)),
-      dailyChangePct: parseFloat(dailyChangePct.toFixed(2)),
-    });
-  }
-
-  // Ensure last snapshot matches current value
-  if (snapshots.length > 0) {
-    snapshots[snapshots.length - 1].valueUsd = currentValue;
-  }
-
-  return snapshots;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -301,8 +267,11 @@ export function usePortfolio() {
         walletCount: wallets.length,
       };
 
-      // Generate 90-day snapshots
-      const snapshots = generateEstimatedSnapshots(totalValue, SNAPSHOT_DAYS);
+      // Historical snapshots require a real EOD-snapshot/tx-history source that
+      // does not exist yet. We do NOT fabricate a 90-day curve from the current
+      // value (no-mock-data rule) — the chart shows "Historical data
+      // unavailable" on an empty series until a real snapshot writer lands.
+      const snapshots: PortfolioSnapshot[] = [];
 
       cacheRef.current = {
         positions: allPositions,
