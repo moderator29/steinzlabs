@@ -89,7 +89,7 @@ export default async function NakaCultLanding() {
               <li>Decrees — binding proposals</li>
               <li>Whispers — temperature checks</li>
               <li>Treasury panel — real-time, on-chain</li>
-              <li>Chosen weight ×2 governance</li>
+              <li>Weighted sigil voting</li>
             </ul>
           </article>
 
@@ -141,7 +141,7 @@ export default async function NakaCultLanding() {
         <div className="nakacult-features">
           {[
             { n: '01', t: 'Early calls, in writing', b: 'The Daily Seal lands before the open. Public-facing research lags by hours, so the cult always moves first.' },
-            { n: '02', t: 'Governance with weight', b: 'One vote per sigil. Chosen members vote twice. Decrees that pass move the treasury without committee delay.' },
+            { n: '02', t: 'Governance with weight', b: 'Members author Decrees and vote with weighted sigils. Decrees that pass move the treasury in the open, without committee delay.' },
             { n: '03', t: 'Private comms', b: 'The Whisper Network is libsodium end-to-end encrypted. Keys ship to your device only — the server cannot read a word.' },
             { n: '04', t: 'A permanent identity', b: 'The Mantle and Annals turn the cult into an on-record stage. Achievements stick to your sigil, not your wallet balance.' },
             { n: '05', t: 'Sound, by Ddergo', b: 'The Library plays inside the Vault — a soundtrack scored for the chamber. The cult sounds nothing like the dashboard.' },
@@ -205,10 +205,14 @@ export default async function NakaCultLanding() {
         <div className="nakacult-faq">
           {[
             { q: 'What is the Naka Cult?', a: 'The inner ring of Naka Labs — a private surface of three chambers behind one sigil, built for members who watched before the noise. Membership is verified by what your wallet holds, not by a subscription.' },
+            { q: 'What are the three chambers?', a: 'The Conclave (governance — Decrees, Whispers, an on-chain treasury panel), the Oracle (signal — the dawn Daily Seal, the cult-context Sage AI, the encrypted Whisper Network, and the Echo Chamber of early calls), and the Sanctum (identity — your Mantle, the Annals record, the Forge sigil collection, and the Library soundtrack).' },
             { q: 'Is membership a platform tier?', a: 'No. Cult membership is a separate, on-chain entitlement — completely independent of the Free/Mini/Pro/Max platform plans. You can be a cult member on any plan, and a paid member without being in the cult.' },
-            { q: 'How do I get in?', a: 'Hold the NIPPO NFT, or hold ≥ 1,227,000 $NAKA. Connect your wallet to Naka Labs and the resolver detects either one and opens the Vault automatically.' },
+            { q: 'How do I get in?', a: 'Hold the NIPPO NFT, or hold ≥ 1,227,000 $NAKA. Connect your wallet to Naka Labs and the resolver detects either one and opens the Vault automatically — no application, no waitlist.' },
+            { q: 'What is the NIPPO NFT?', a: 'The perpetual key. While the NIPPO sits in your wallet you are of the cult — no threshold to maintain and nothing to renew. Supply is intentionally small, so the NIPPO path is the permanent seat at the table.' },
+            { q: 'Does the cult cost a subscription?', a: 'Never. There is no monthly fee, no staking lock, and no churn. The key is your wallet: hold the NIPPO or carry the $NAKA threshold and the chambers open; let the key go and they go quiet until you return.' },
             { q: 'What if I drop below the NAKA threshold?', a: 'The next daily resolver run closes the chambers. The instant you hold the threshold again, the next run restores you. Your Annals entries and Mantle persist — only access goes dark. NIPPO holders never face a threshold.' },
             { q: 'Can my DMs be read by the server?', a: 'No. The Whisper Network uses libsodium end-to-end encryption. Conversation keys are sealed to participant public keys; private keys never leave the device. Even Naka Labs cannot decrypt your messages.' },
+            { q: 'How often is access checked?', a: 'The resolver runs daily against the live chain. NIPPO ownership and the $NAKA balance are both read on-chain — there is nothing to self-report and no way to fake the sigil.' },
             { q: 'Is the Founder Pass a way into the cult?', a: 'No — the Founder Pass grants Max-tier access on the main platform, not cult membership. The cult is the NIPPO and the NAKA threshold. They are deliberately separate keys.' },
           ].map((f) => (
             <details key={f.q} className="nakacult-faq__item">
