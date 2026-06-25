@@ -46,7 +46,6 @@ export async function GET(_req: NextRequest) {
   return NextResponse.json({
     catalog: catalog ?? [],
     earnings: earnings ?? [],
-    isChosen: access.isChosen,
   });
 }
 
@@ -58,9 +57,6 @@ export async function POST(req: NextRequest) {
   const access = await getCultAccess();
   if (!access.allowed || !access.userId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
-  if (!access.isChosen) {
-    return NextResponse.json({ error: 'chosen_only' }, { status: 403 });
   }
 
   let payload: GrantPayload;

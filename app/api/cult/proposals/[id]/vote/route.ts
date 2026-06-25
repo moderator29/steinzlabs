@@ -52,9 +52,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: 'expired' }, { status: 409 });
   }
 
-  // Until the on-chain holdings read lands, weight is 1 per cultist
-  // and 2 per Chosen (per the spec's Elder-Decree double-weight rule).
-  const weight = access.isChosen ? 2 : 1;
+  // The retired Chosen double-weight is gone — every member weighs equally
+  // here. (Holdings-weighted voting is implemented on
+  // feat/cult-holdings-weighted-voting; this branch only retires Chosen.)
+  const weight = 1;
 
   // Upsert the vote (allows changing your mind while active).
   const { error: upsertErr } = await admin
@@ -65,7 +66,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         voter_id: access.userId,
         choice,
         weight,
-        is_chosen: access.isChosen,
       },
       { onConflict: 'proposal_id,voter_id' },
     );

@@ -41,8 +41,6 @@ export interface CultAccess {
   allowed: boolean;
   userId: string | null;
   tier: Tier;
-  /** True when user has Development NFT path → Chosen Seal benefits. */
-  isChosen: boolean;
   username: string | null;
   displayName: string | null;
 }
@@ -51,7 +49,6 @@ const DENIED: CultAccess = {
   allowed: false,
   userId: null,
   tier: "free",
-  isChosen: false,
   username: null,
   displayName: null,
 };
@@ -91,7 +88,7 @@ export async function getCultAccess(): Promise<CultAccess> {
 
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
-    .select("tier, cult_member, cult_source, username, display_name, is_chosen")
+    .select("tier, cult_member, cult_source, username, display_name")
     .eq("id", user.id)
     .maybeSingle<{
       tier: string | null;
@@ -99,7 +96,6 @@ export async function getCultAccess(): Promise<CultAccess> {
       cult_source: string | null;
       username: string | null;
       display_name: string | null;
-      is_chosen: boolean | null;
     }>();
 
   const allowed = !!profile?.cult_member;
@@ -117,7 +113,6 @@ export async function getCultAccess(): Promise<CultAccess> {
     allowed,
     userId: user.id,
     tier: normalizeTier(profile?.tier),
-    isChosen: !!profile?.is_chosen,
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,
   };

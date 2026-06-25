@@ -19,7 +19,6 @@ export async function GET() {
   return NextResponse.json(
     {
       tier: access.tier,
-      isChosen: access.isChosen,
     },
     {
       headers: {

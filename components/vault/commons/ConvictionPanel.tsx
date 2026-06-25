@@ -12,7 +12,7 @@ interface Conviction {
   status: 'open' | 'scored' | 'closed';
   score: number | null;
   created_at: string;
-  author: { name: string; isChosen: boolean };
+  author: { name: string };
 }
 
 function DirBadge({ d }: { d: 'long' | 'short' }) {
@@ -140,7 +140,7 @@ export function ConvictionPanel() {
                 </div>
                 {c.thesis && <p className="mt-1.5 text-[13px] leading-relaxed text-[#B4C0E0]">{c.thesis}</p>}
                 <p className="mt-1.5 text-[11px] text-[#6B779C]">
-                  {c.author.isChosen && '◈ '}{c.author.name}
+                  {c.author.name}
                 </p>
               </li>
             ))}

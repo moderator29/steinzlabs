@@ -15,7 +15,6 @@ interface Slot {
 interface EchoResponse {
   slots: Slot[];
   capacity: number;
-  isChosen: boolean;
 }
 
 function shortAddr(addr: string): string {
@@ -24,9 +23,9 @@ function shortAddr(addr: string): string {
 }
 
 /**
- * Echo Chamber — twenty-five communal stealth-wallet slots. Cult-only read,
- * Chosen-only mutate. Replaces the SubChamberPlaceholder of the same name
- * inside OracleHubClient.
+ * Echo Chamber — twenty-five communal stealth-wallet slots. Any cult member
+ * may read and seat/remove wallets (the retired Chosen-only gate is gone).
+ * Replaces the SubChamberPlaceholder of the same name inside OracleHubClient.
  *
  * v1 lists wallets as plain rows. Live holdings enrichment (USD totals,
  * top positions) is the obvious next pass — keep the UI compact so adding
@@ -152,17 +151,15 @@ export function EchoChamberPanel() {
                   {s.label ? ` · ${s.label}` : ''}
                 </span>
               </span>
-              {state.isChosen ? (
-                <button
-                  type="button"
-                  onClick={() => remove(s.id)}
-                  disabled={busy}
-                  aria-label={`Remove ${shortAddr(s.address)} from the Echo Chamber`}
-                  className="rounded-md border border-[#FF1744]/30 px-2 py-1 text-[11px] text-[#FF1744] hover:bg-[#FF1744]/10 disabled:opacity-30"
-                >
-                  ✕
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => remove(s.id)}
+                disabled={busy}
+                aria-label={`Remove ${shortAddr(s.address)} from the Echo Chamber`}
+                className="rounded-md border border-[#FF1744]/30 px-2 py-1 text-[11px] text-[#FF1744] hover:bg-[#FF1744]/10 disabled:opacity-30"
+              >
+                ✕
+              </button>
             </li>
           ))}
         </ul>
@@ -170,10 +167,10 @@ export function EchoChamberPanel() {
         <p className="mt-4 text-[12px] text-[#7F8AA8]">The chamber is empty.</p>
       )}
 
-      {state.isChosen && slotsUsed < state.capacity ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-lg border border-[#FFD86B]/30 bg-white/[0.02] p-3">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[#FFD86B]">
-            Chosen path — seat a new wallet
+      {slotsUsed < state.capacity ? (
+        <div className="mt-4 flex flex-col gap-2 rounded-lg border border-[#00C8FF]/30 bg-white/[0.02] p-3">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[#00C8FF]">
+            Seat a new wallet
           </span>
           <input
             type="text"
