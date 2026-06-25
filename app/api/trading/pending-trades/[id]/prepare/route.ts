@@ -113,6 +113,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       buyToken: pending.to_token_address,
       sellAmount: pending.amount_in,
       taker,
+      slippageBps: pending.slippage_bps,
     });
 
     // Risk #6 — slippage re-validation. The pending row was created with a

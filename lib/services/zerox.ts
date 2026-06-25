@@ -168,6 +168,11 @@ export async function getSwapQuote(params: {
   // one click). Callers set this when the from-token has no pre-existing
   // allowance against the 0x AllowanceHolder.
   permit2?: boolean;
+  // User-selected slippage tolerance in basis points. When omitted, 0x
+  // applies its own default (100 bps); the user's choice was previously
+  // dropped here, so the slippage control on the swap card had no effect
+  // on EVM trades. Callers should cap this server-side before passing.
+  slippageBps?: number;
 }): Promise<ZxQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
   const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.005';
@@ -182,6 +187,9 @@ export async function getSwapQuote(params: {
   if (feeRecipient) {
     qs.set('feeRecipient', feeRecipient);
     qs.set('buyTokenPercentageFee', feePct);
+  }
+  if (typeof params.slippageBps === 'number' && Number.isFinite(params.slippageBps)) {
+    qs.set('slippageBps', String(Math.round(params.slippageBps)));
   }
 
   const path = params.permit2 ? '/swap/permit2/quote' : '/swap/allowance-holder/quote';

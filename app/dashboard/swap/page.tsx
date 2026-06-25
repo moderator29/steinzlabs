@@ -881,12 +881,17 @@ export default function SwapPage() {
       const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
       const decimals = getTokenInfo(fromToken).decimals;
       const rawAmount = BigInt(Math.round(parseFloat(fromAmount) * (10 ** decimals))).toString();
+      // Carry the user's slippage tolerance through to the quote so it
+      // actually applies on-chain. `slippage` is a percent string (e.g.
+      // "0.5"); the server caps it again.
+      const slippageBps = Math.max(1, Math.min(5000, Math.round((parseFloat(slippage) || 0.5) * 100)));
       const quoteParams = new URLSearchParams({
         chain,
         sellToken: tokenAddresses.sellToken,
         buyToken: tokenAddresses.buyToken,
         sellAmount: rawAmount,
         taker: connectedAddress,
+        slippageBps: String(slippageBps),
       });
       const useGasless = gaslessEnabled && isGaslessAvailable;
       const quoteEndpoint = useGasless ? '/api/gasless/quote' : '/api/swap/quote';

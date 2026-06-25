@@ -19,6 +19,10 @@ interface ExecuteBody {
   amountIn: string;
   amountInUSD: number;
   slippage: number;
+  /** Preferred: slippage tolerance in basis points. Falls back to `slippage`
+   *  (a percent) when absent. Forwarded to 0x so the user's tolerance
+   *  actually applies to the on-chain quote instead of 0x's default. */
+  slippageBps?: number;
   walletAddress: string;
   userId?: string;
   // §3 P1-E (carry-over from P0 #1) — multi-aggregator wiring. When the
@@ -48,7 +52,16 @@ interface ExecuteBody {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as ExecuteBody;
-    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, walletAddress, userId, selectedProvider, routeQuoteData, sellAmountBase, tokenInDecimals } = body;
+    const { chain, tokenIn, tokenOut, amountIn, amountInUSD, slippage, slippageBps: slippageBpsRaw, walletAddress, userId, selectedProvider, routeQuoteData, sellAmountBase, tokenInDecimals } = body;
+
+    // Resolve the user's slippage tolerance to a server-capped bps value.
+    // Prefer an explicit `slippageBps`; otherwise treat `slippage` as a
+    // percent (the swap card sends e.g. 0.5 for 0.5%). Cap to [1, 5000] bps
+    // so a malicious client can't widen tolerance to drain the trade.
+    const requestedSlippageBps = typeof slippageBpsRaw === 'number'
+      ? slippageBpsRaw
+      : (typeof slippage === 'number' ? Math.round(slippage * 100) : 50);
+    const slippageBps = Math.max(1, Math.min(5000, requestedSlippageBps || 50));
 
     if (!chain || !tokenIn || !tokenOut || !amountIn || !walletAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -173,6 +186,7 @@ export async function POST(req: NextRequest) {
       sellAmount,
       taker: walletAddress,
       permit2,
+      slippageBps,
     });
 
     await recordSwapLog(db, {

@@ -18,7 +18,6 @@ export * from './arkham';
 // jupiter: skip getTokenPrice/getTokenPrices (conflicts with coingecko export)
 export { SOL_MINT, USDC_MINT, getQuote as getJupiterQuote, buildSwapTransaction, formatQuoteSummary } from './jupiter';
 export type { JupiterQuote, JupiterRoutePlan, JupiterSwapTransaction, JupiterTokenPrice } from './jupiter';
-export * from './swap';
 export * from './resend';
 export * from './supabase';
 export * from './birdeye';
@@ -28,7 +27,9 @@ export * from './zerion';
 export * from './solana-intelligence';
 export * from './etherscan';
 export * from './contract-intelligence';
-// zerox: skip getSwapQuote (re-exported via swap as get0xQuote)
+// zerox: getSwapQuote is imported directly from '@/lib/services/zerox' by its
+// callers (swap/quote, market/trade/execute, pending-trades/prepare), so it's
+// intentionally not re-exported here.
 export { ZX_CHAIN_IDS, isNativeToken, getSwapPrice, getGaslessPrice, getGaslessQuote, submitGasless, getGaslessStatus, getSwapTrades, getGaslessTrades, getChainId, getExplorerUrl } from './zerox';
 export type { ZxPriceResponse, ZxQuoteResponse, ZxGaslessQuoteResponse, ZxTradeRecord } from './zerox';
 
