@@ -108,6 +108,7 @@ export async function GET(request: NextRequest) {
       buyToken: buyAddress,
       sellAmount: baseAmount,
       taker,
+      slippageBps,
     });
     return NextResponse.json({
       provider: '0x',
