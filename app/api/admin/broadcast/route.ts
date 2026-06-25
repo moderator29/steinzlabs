@@ -28,30 +28,44 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    let query = supabase.from('profiles').select('email, first_name, username');
-    // Audience selection (was a no-op when the form's value never reached here):
+    // Audience selection. Emails live in auth.users (profiles has NO email
+    // column — the previous profiles.select('email') 500'd, so broadcast never
+    // sent). Select the matching profile IDs by tier/activity, then resolve
+    // their emails from the auth admin API.
     //   free     → free tier (incl. NULL tier)
     //   pro      → any paid tier (mini / pro / max)
     //   inactive → no profile activity in 30 days
-    //   all      → no filter
+    //   all      → every profile
+    let profQuery = supabase.from('profiles').select('id');
     if (targetTier === 'free') {
-      query = query.or('tier.eq.free,tier.is.null');
+      profQuery = profQuery.or('tier.eq.free,tier.is.null');
     } else if (targetTier === 'pro') {
-      query = query.in('tier', ['mini', 'pro', 'max']);
+      profQuery = profQuery.in('tier', ['mini', 'pro', 'max']);
     } else if (targetTier === 'inactive') {
-      query = query.lt('updated_at', new Date(Date.now() - INACTIVE_AFTER_MS).toISOString());
+      profQuery = profQuery.lt('updated_at', new Date(Date.now() - INACTIVE_AFTER_MS).toISOString());
     }
 
-    const { data: users, error } = await query;
-
+    const { data: profRows, error } = await profQuery;
     if (error) {
-
-      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch audience' }, { status: 500 });
     }
+    const targetIds = new Set((profRows ?? []).map((p: { id: string }) => p.id));
 
-    const emails = (users || [])
-      .map((u: any) => u.email)
-      .filter((e: string) => e && e.includes('@'));
+    // Resolve emails from auth.users (paginated). Skip synthesized wallet-auth
+    // addresses (@wallet.nakalabs.com) — those mailboxes don't exist.
+    const emails: string[] = [];
+    const PAGE = 1000;
+    for (let page = 1; page <= 50; page++) {
+      const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ page, perPage: PAGE });
+      if (listErr) break;
+      const batch = list?.users ?? [];
+      for (const u of batch) {
+        if (u.email && u.email.includes('@') && !u.email.endsWith('@wallet.nakalabs.com') && targetIds.has(u.id)) {
+          emails.push(u.email);
+        }
+      }
+      if (batch.length < PAGE) break;
+    }
 
     if (emails.length === 0) {
       return NextResponse.json({ error: 'No eligible recipients found' }, { status: 400 });

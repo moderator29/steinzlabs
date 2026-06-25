@@ -38,21 +38,34 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    let query = supabase.from('profiles').select('email').not('email', 'is', null);
+    // Emails live in auth.users (profiles has NO email column — the previous
+    // profiles.select('email') 500'd). Select matching profile IDs by tier,
+    // then resolve emails from the auth admin API.
+    let profQuery = supabase.from('profiles').select('id');
     if (audience === 'pro' || audience === 'free') {
-      query = query.eq('tier', audience);
+      profQuery = profQuery.eq('tier', audience);
     }
-
-    const { data: rows, error: queryError } = await query;
+    const { data: profRows, error: queryError } = await profQuery;
     if (queryError) {
       console.error('[admin/newsletter] Profile query failed:', queryError);
       Sentry.captureException(queryError);
       return NextResponse.json({ error: 'Failed to fetch recipients' }, { status: 500 });
     }
+    const targetIds = new Set((profRows ?? []).map((p: { id: string }) => p.id));
 
-    const recipients = (rows || [])
-      .map((r: { email: string | null }) => r.email)
-      .filter((e: string | null): e is string => !!e && e.includes('@'));
+    const recipients: string[] = [];
+    const PAGE = 1000;
+    for (let page = 1; page <= 50; page++) {
+      const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ page, perPage: PAGE });
+      if (listErr) break;
+      const batch = list?.users ?? [];
+      for (const u of batch) {
+        if (u.email && u.email.includes('@') && !u.email.endsWith('@wallet.nakalabs.com') && targetIds.has(u.id)) {
+          recipients.push(u.email);
+        }
+      }
+      if (batch.length < PAGE) break;
+    }
 
     if (recipients.length === 0) {
       return NextResponse.json({ sent: 0, failed: 0, message: 'No eligible recipients' });
