@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron } from "../_shared";
+import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
 
@@ -103,9 +103,11 @@ export async function GET(request: NextRequest) {
         .eq("chain", whale.chain);
     }
 
+    await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, inserted);
     return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled, inserted });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
+    await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
