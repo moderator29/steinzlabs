@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, logCronExecution } from "../_shared";
+import { verifyCron, logCronExecution, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getTokenSecurity } from "@/lib/services/goplus";
 
@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response!;
   const startedAt = Date.now();
   let processed = 0;
+  // Demand gate: no watchlisted tokens -> no GoPlus calls.
+  if (!(await cronHasWork("watchlist"))) {
+    await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
+    return NextResponse.json({ ok: true, skipped: "empty-watchlist", processed: 0 });
+  }
   try {
     const supabase = getSupabaseAdmin();
     const { data: rows } = await supabase
