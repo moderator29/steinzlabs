@@ -52,7 +52,7 @@ export default function BroadcastPage() {
       const res = await fetch('/api/admin/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject, body, audience }),
+        body: JSON.stringify({ subject, body, targetTier: audience }),
       });
       setStatus(res.ok ? 'sent' : 'error');
     } catch {
