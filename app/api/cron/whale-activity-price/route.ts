@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron } from "../_shared";
+import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { priceActivityUsd } from "@/lib/whales/priceActivity";
 
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       .limit(200);
     if (error) {
       Sentry.captureException(error, { tags: { cron: NAME } });
+      await logCronExecution(NAME, "failed", Date.now() - startedAt, error.message, 0);
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
@@ -58,9 +59,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, priced);
     return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, scanned, priced });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
+    await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
