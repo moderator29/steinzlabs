@@ -22,6 +22,7 @@ export interface UserListRowProps {
     success_rate: number | null;
     i_follow: boolean;
     pending_outgoing?: boolean;
+    they_follow_me?: boolean;
   };
   showFollowButton?: boolean;
   onFollowChange?: (next: 'not_following' | 'pending' | 'accepted') => void;
@@ -55,6 +56,7 @@ export function UserListRow({ user, showFollowButton = true, onFollowChange }: U
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-white truncate">{user.display_name || user.username}</span>
+            {user.they_follow_me ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-white/10 text-slate-300 border border-white/15 uppercase">Follows you</span> : null}
             {/* Gold verified badge → render the gold Max badge icon; other
                 verified-badge values keep the small text chip. */}
             {user.verified_badge === 'gold'
