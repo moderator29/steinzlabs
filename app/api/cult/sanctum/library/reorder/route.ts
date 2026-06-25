@@ -24,9 +24,6 @@ export async function PATCH(req: NextRequest) {
   if (!access.allowed || !access.userId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-  if (!access.isChosen) {
-    return NextResponse.json({ error: 'chosen_only' }, { status: 403 });
-  }
 
   let payload: ReorderPayload;
   try {

@@ -27,7 +27,6 @@ export default async function VaultLayout({ children }: { children: ReactNode })
       <header className="vault-header">
         <IdentityStrip
           username={access.displayName ?? access.username ?? 'Cultist'}
-          isChosen={access.isChosen}
         />
       </header>
       <main className="vault-main">{children}</main>

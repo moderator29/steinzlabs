@@ -20,9 +20,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!access.allowed || !access.userId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-  if (!access.isChosen) {
-    return NextResponse.json({ error: 'chosen_only' }, { status: 403 });
-  }
 
   const admin = getSupabaseAdmin();
   const { data, error } = await admin

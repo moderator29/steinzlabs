@@ -19,7 +19,7 @@ interface ApeState {
   myVote: 'ape' | 'nope' | null;
   me: { points: number; streak: number; bestStreak: number };
   last: { symbol: string; outcome: 'ape' | 'nope' | 'flat' | null; move_pct: number | null } | null;
-  leaderboard: { name: string; isChosen: boolean; points: number; streak: number; mine: boolean }[];
+  leaderboard: { name: string; points: number; streak: number; mine: boolean }[];
 }
 
 function countdown(iso: string): string {
@@ -197,7 +197,7 @@ export function ApePanel() {
               <li key={`${p.name}-${i}`} className={`flex items-center gap-3 rounded-lg px-3 py-1.5 ${p.mine ? 'bg-[#3D5AFE]/12' : ''}`}>
                 <span className="w-5 text-[12px] font-bold text-[#6B779C]">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">
-                  {p.isChosen && '◈ '}{p.name}
+                  {p.name}
                 </span>
                 {p.streak > 0 && <span className="text-[11px] text-[#FF8A3D]">{p.streak}🔥</span>}
                 <span className="text-[13px] font-bold text-[#FFD86B]">{p.points}</span>

@@ -8,7 +8,7 @@ interface Msg {
   body: string;
   created_at: string;
   mine: boolean;
-  author: { name: string; isChosen: boolean };
+  author: { name: string };
 }
 
 function timeAgo(iso: string): string {
@@ -84,8 +84,8 @@ export function HallPanel() {
           messages.map((m) => (
             <div key={m.id} className={`flex flex-col ${m.mine ? 'items-end' : 'items-start'}`}>
               <div className="mb-1 flex items-center gap-2 px-1">
-                <span className={`text-[12px] font-semibold ${m.author.isChosen ? 'text-[#FFD86B]' : 'text-[#C8D6FF]'}`}>
-                  {m.author.isChosen && '◈ '}{m.author.name}
+                <span className="text-[12px] font-semibold text-[#C8D6FF]">
+                  {m.author.name}
                 </span>
                 <span className="text-[10px] text-[#6B779C]">{timeAgo(m.created_at)}</span>
               </div>
