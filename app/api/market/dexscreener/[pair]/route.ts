@@ -37,16 +37,20 @@ export async function GET(
     const p = data.pair ?? data.pairs?.[0];
     if (!p) return NextResponse.json({ error: 'Pair not found' }, { status: 404 });
 
-    const buys = p.txns?.h24?.buys ?? 50;
-    const sells = p.txns?.h24?.sells ?? 50;
-    const total = buys + sells || 1;
-
-    const orderBook: OrderBookData = {
-      buyersPercent: Math.round((buys / total) * 100),
-      sellersPercent: Math.round((sells / total) * 100),
-      buyCount: buys,
-      sellCount: sells,
-    };
+    // Honest buy/sell ratio: only report it when DexScreener actually returns
+    // 24h txn counts. The old code defaulted missing data to 50/50, fabricating
+    // a balanced market that never existed. No data → null, not a fake split.
+    const buys = p.txns?.h24?.buys;
+    const sells = p.txns?.h24?.sells;
+    const hasFlow = typeof buys === 'number' && typeof sells === 'number' && buys + sells > 0;
+    const orderBook: OrderBookData | null = hasFlow
+      ? {
+          buyersPercent: Math.round((buys! / (buys! + sells!)) * 100),
+          sellersPercent: Math.round((sells! / (buys! + sells!)) * 100),
+          buyCount: buys!,
+          sellCount: sells!,
+        }
+      : null;
 
     // Recent trades: DexScreener's free API exposes only aggregate hourly
     // counts, not individual swaps. We pull the REAL per-trade tape from

@@ -20,10 +20,19 @@ export default function RecentTradesRail({ pairAddress, chain }: Props) {
     <div className="rounded-xl border border-slate-800/70 bg-slate-950/60 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/70">
         <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Recent Trades</span>
-        <span className="inline-flex items-center gap-1 text-[9px] uppercase font-semibold text-emerald-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          LIVE
-        </span>
+        {/* Only claim LIVE (pulsing) when we actually have a trade tape; an
+            empty tape shows a muted Idle state, not a fake-live pulse. */}
+        {trades.length > 0 ? (
+          <span className="inline-flex items-center gap-1 text-[9px] uppercase font-semibold text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            LIVE
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[9px] uppercase font-semibold text-slate-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+            Idle
+          </span>
+        )}
       </div>
 
       {/* Column headers */}
