@@ -14,7 +14,6 @@ import { MiniVtxPanel } from "@/components/dashboard/MiniVtxPanel";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { VerifiedGoldBadge } from "@/components/ui/VerifiedGoldBadge";
 import { TierBadge } from "@/components/ui/TierBadge";
-import { useChosenStatus } from "@/lib/hooks/useChosenStatus";
 import { TelegramConnectBanner } from "@/components/dashboard/TelegramConnectBanner";
 import { toast } from "sonner";
 
@@ -115,7 +114,6 @@ export function PersonalizedHome() {
     "trader";
   const isVerified = data?.user.isVerified ?? authUser?.is_verified ?? false;
   const userTier = (data?.user.tier ?? authUser?.tier ?? "free") as string;
-  const { isChosen } = useChosenStatus();
   const walletsCount = data?.wallets.length ?? 0;
   const watchlistCount = data?.watchlist.length ?? 0;
 
@@ -133,7 +131,7 @@ export function PersonalizedHome() {
           {/* Bug §4 — size matches ProfileTab (16) so the Welcome badge
               and the profile-header badge are visually identical. */}
           {userTier !== "free" ? (
-            <TierBadge tier={userTier} size={16} isChosen={isChosen} />
+            <TierBadge tier={userTier} size={16} />
           ) : isVerified ? (
             <VerifiedGoldBadge size={16} title="Verified by Naka Labs" />
           ) : null}

@@ -4,7 +4,6 @@ import { LibraryPlayer } from './LibraryPlayer';
 import { ForgePanel } from './ForgePanel';
 import { MantlePanel } from './MantlePanel';
 import { AnnalsPanel } from './AnnalsPanel';
-import { ChosenLibraryCurator } from './ChosenLibraryCurator';
 
 /**
  * Sanctum hub — the chamber's landing surface.
@@ -34,7 +33,6 @@ export function SanctumHubClient() {
           <LibraryPlayer />
         </motion.div>
 
-        <ChosenLibraryCurator />
 
         <MantlePanel />
         <AnnalsPanel />
