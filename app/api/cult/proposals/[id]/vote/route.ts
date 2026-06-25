@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { resolveNakaVoteWeight } from '@/lib/cult/entitlements';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -9,13 +11,40 @@ const VoteBody = z.object({
   choice: z.enum(['yes', 'no', 'abstain']),
 });
 
+const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
+
+/** Gather a user's EVM addresses across both wallet stores (wallet_identities +
+ *  user_wallets_v2) for the holdings read. */
+async function gatherEvmAddresses(admin: SupabaseClient, userId: string): Promise<string[]> {
+  const out = new Set<string>();
+  const [idents, v2] = await Promise.all([
+    admin.from('wallet_identities').select('address').eq('user_id', userId),
+    admin.from('user_wallets_v2').select('wallets, default_address').eq('user_id', userId),
+  ]);
+  for (const r of idents.data ?? []) {
+    const a = (r as { address?: string }).address;
+    if (a && EVM_RE.test(a)) out.add(a.toLowerCase());
+  }
+  for (const row of v2.data ?? []) {
+    const wallets = (row as { wallets?: unknown }).wallets;
+    if (Array.isArray(wallets)) {
+      for (const w of wallets as Array<{ address?: string }>) {
+        if (w?.address && EVM_RE.test(w.address)) out.add(w.address.toLowerCase());
+      }
+    }
+    const def = (row as { default_address?: string }).default_address;
+    if (def && EVM_RE.test(def)) out.add(def.toLowerCase());
+  }
+  return Array.from(out);
+}
+
 /**
  * POST /api/cult/proposals/:id/vote — cast or change a vote.
  *
- * Vote weight is the user's claimed $NAKA holdings. Until the on-chain
- * resolver lands, every voter weighs 1 (the spec calls for sqrt-scaled
- * weight by holdings to avoid whales dominating; we'll fold that in
- * once `wallet_identities` + on-chain balance reads are wired).
+ * Vote weight is sqrt-scaled by the voter's REAL on-chain $NAKA holdings
+ * (resolveNakaVoteWeight, summed across their linked wallets) so whales can't
+ * dominate and every member weighs at least 1. This replaces the old
+ * fabricated `isChosen ? 2 : 1` constant (the Chosen lineage is retired).
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const access = await getCultAccess();
@@ -52,10 +81,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: 'expired' }, { status: 409 });
   }
 
-  // The retired Chosen double-weight is gone — every member weighs equally
-  // here. (Holdings-weighted voting is implemented on
-  // feat/cult-holdings-weighted-voting; this branch only retires Chosen.)
-  const weight = 1;
+  // Real holdings-weighted vote: sum the voter's on-chain $NAKA across their
+  // linked wallets and sqrt-scale it (>=1 for every member).
+  const addresses = await gatherEvmAddresses(admin, access.userId);
+  const weight = await resolveNakaVoteWeight(addresses);
 
   // Upsert the vote (allows changing your mind while active).
   const { error: upsertErr } = await admin

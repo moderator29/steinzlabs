@@ -7,7 +7,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import { buildSiweMessage, resolveSiweOrigin } from "@/lib/auth/siwe";
 import { generateWalletProfileName } from "@/lib/auth/walletProfileName";
-import { applyWalletEntitlements } from "@/lib/cult/entitlements";
+import { applyWalletEntitlements, type WalletEntitlements } from "@/lib/cult/entitlements";
+import { getUserEvmAddresses } from "@/lib/cult/walletAddresses";
 
 export const runtime = "nodejs";
 
@@ -16,12 +17,25 @@ interface VerifyBody {
   signature: string;
   nonce: string;
   chain: "evm" | "solana";
+  /** Optional same-origin relative path to land on after the magic link is
+   *  consumed (e.g. "/vault" for the Enter-NakaCult flow). Validated to a safe
+   *  relative path; anything else is ignored. */
+  redirectTo?: string;
+}
+
+// Only allow same-origin relative paths so a caller can't turn the magic link
+// into an open redirect.
+function safeRelativePath(p: unknown): string | null {
+  if (typeof p !== "string") return null;
+  if (!/^\/[A-Za-z0-9/_-]*$/.test(p)) return null;
+  return p;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as VerifyBody;
     const { address, signature, nonce, chain } = body;
+    const redirectTo = safeRelativePath(body.redirectTo);
     if (!address || !signature || !nonce || !["evm", "solana"].includes(chain)) {
       return NextResponse.json({ error: "Invalid params" }, { status: 400 });
     }
@@ -148,9 +162,16 @@ export async function POST(request: NextRequest) {
 
     // Grant on-chain entitlements immediately on connect so the user lands with
     // their cult / Max access already applied (NIPPO → cult, Founder Pass → Max,
-    // NAKA → cult). Non-fatal: a chain hiccup must never block sign-in.
+    // NAKA → cult). Resolve across ALL of the user's linked EVM wallets — not
+    // just the one they signed in with — so a Founder Pass / NIPPO held on a
+    // different linked wallet still grants. Non-fatal: a chain hiccup must
+    // never block sign-in.
+    let unlocked: WalletEntitlements | null = null;
     try {
-      await applyWalletEntitlements(userId, [normalized]);
+      const linked = await getUserEvmAddresses(userId);
+      const addrs = new Set(linked);
+      if (chain === "evm") addrs.add(normalized.toLowerCase());
+      unlocked = await applyWalletEntitlements(userId, Array.from(addrs));
     } catch (entErr) {
       Sentry.captureException(entErr, {
         tags: { route: "auth/wallet-verify", phase: "entitlements" },
@@ -160,6 +181,9 @@ export async function POST(request: NextRequest) {
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email,
+      ...(redirectTo
+        ? { options: { redirectTo: `${new URL(request.url).origin}${redirectTo}` } }
+        : {}),
     });
     if (linkErr || !linkData?.properties?.action_link) {
       return NextResponse.json(
@@ -171,6 +195,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       userId,
       actionLink: linkData.properties.action_link,
+      // What the connect unlocked, so the client can route/celebrate. The
+      // durable first-time Max welcome is gated server-side by
+      // profiles.max_welcomed_at, not by this flag.
+      unlocked,
     });
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "auth/wallet-verify" } });

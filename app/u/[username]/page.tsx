@@ -106,7 +106,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{p.display_name || p.username}</h1>
             <TierBadge tier={p.tier} size={20} />
-            {p.verified_badge ? <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{p.verified_badge}</span> : null}
+            {/* The gold 'verified_badge' is already represented by the gold Max
+                TierBadge above, so only render a chip for other badge values. */}
+            {p.verified_badge && p.verified_badge !== 'gold' ? <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{p.verified_badge}</span> : null}
             {p.is_private ? <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 border border-white/10 uppercase">Private</span> : null}
           </div>
           <div className="text-[13px] text-slate-400">@{p.username}</div>

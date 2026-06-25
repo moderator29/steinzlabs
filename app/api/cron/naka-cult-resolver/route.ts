@@ -32,25 +32,36 @@ export async function GET(request: NextRequest) {
   return await withCronErrorReporting('naka-cult-resolver', startedAt, async () => {
     const supabase = getSupabaseAdmin();
 
-    // Collect every (user_id, evm_address) tuple. user_wallets_v2.wallets is
-    // JSONB; addresses live inside the JSON (per CLAUDE.md schema gotchas).
-    const { data: walletsV2 } = await supabase
-      .from('user_wallets_v2')
-      .select('user_id, wallets, default_address');
-
+    // Collect every (user_id, evm_address) tuple from BOTH wallet stores:
+    //   user_wallets_v2  — built-in Naka wallet(s); addresses live inside the
+    //                      JSONB `wallets` array (per CLAUDE.md schema gotchas)
+    //   wallet_identities — wallets the user signed IN with (SIWE)
+    // Reading only user_wallets_v2 (the prior behaviour) meant a Founder Pass
+    // / NIPPO / $NAKA wallet a user signed in with was never re-checked daily.
+    const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
     const addrsByUser = new Map<string, Set<string>>();
+    const addFor = (userId: string, address: string | undefined | null) => {
+      if (!address || typeof address !== 'string' || !EVM_RE.test(address)) return;
+      const set = addrsByUser.get(userId) ?? new Set<string>();
+      set.add(address.toLowerCase());
+      addrsByUser.set(userId, set);
+    };
+
+    const [{ data: walletsV2 }, { data: identities }] = await Promise.all([
+      supabase.from('user_wallets_v2').select('user_id, wallets, default_address'),
+      supabase.from('wallet_identities').select('user_id, address, chain'),
+    ]);
+
     for (const row of walletsV2 ?? []) {
       const userId = (row as { user_id: string }).user_id;
       const wallets = (row as { wallets: unknown }).wallets;
-      if (!Array.isArray(wallets)) continue;
-      for (const w of wallets as Array<{ address?: string }>) {
-        if (!w?.address || typeof w.address !== 'string') continue;
-        // EVM only — both NFTs and $NAKA live on Ethereum mainnet.
-        if (!/^0x[a-fA-F0-9]{40}$/.test(w.address)) continue;
-        const set = addrsByUser.get(userId) ?? new Set<string>();
-        set.add(w.address.toLowerCase());
-        addrsByUser.set(userId, set);
+      if (Array.isArray(wallets)) {
+        for (const w of wallets as Array<{ address?: string }>) addFor(userId, w?.address);
       }
+      addFor(userId, (row as { default_address?: string }).default_address);
+    }
+    for (const row of identities ?? []) {
+      addFor((row as { user_id: string }).user_id, (row as { address?: string }).address);
     }
 
     if (addrsByUser.size === 0) {

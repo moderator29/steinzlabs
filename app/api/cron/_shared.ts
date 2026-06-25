@@ -74,6 +74,35 @@ export async function cronHasWork(tableName: string, filter?: { column: string; 
   }
 }
 
+/**
+ * Demand gate for the whale crons. The whale set is SEEDED (hundreds of rows),
+ * so cronHasWork('whales') is always true and never short-circuits — yet only a
+ * handful of whales are actually followed by a user. These crons (poll / price /
+ * pnl-backfill) should spend external-API budget ONLY on whales someone tracks.
+ * Returns the distinct followed addresses (original casing from
+ * user_whale_follows). Empty array => no demand => the cron should skip.
+ * Match case-insensitively against whale tables (addresses are checksum-cased).
+ */
+export async function getFollowedWhaleAddresses(): Promise<string[]> {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin.from("user_whale_follows").select("whale_address");
+    const set = new Set<string>();
+    for (const r of (data ?? []) as Array<{ whale_address: string | null }>) {
+      if (r.whale_address) set.add(r.whale_address);
+    }
+    return Array.from(set);
+  } catch {
+    return [];
+  }
+}
+
+/** Build a PostgREST `.or()` filter that matches `column` against any of the
+ *  given addresses case-insensitively (ilike, no wildcards). */
+export function ilikeAnyFilter(column: string, addresses: string[]): string {
+  return addresses.map((a) => `${column}.ilike.${a}`).join(",");
+}
+
 export function cronResponse(
   jobName: string,
   startedAt: number,

@@ -10,6 +10,7 @@ import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { MaxWelcomeJourney } from '@/components/onboarding/MaxWelcomeJourney';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -33,6 +34,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <PlatformEventMonitor />
         <PendingSignerProvider />
         <PendingTradesBanner />
+        <MaxWelcomeJourney />
         {children}
       </div>
     </AuroraBackground>
