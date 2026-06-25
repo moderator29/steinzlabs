@@ -37,8 +37,11 @@ export default function SniperOversightPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.flags) {
-          const sniperFlag = data.flags.find?.((f: { key: string; enabled: boolean }) => f.key === 'sniper_enabled');
-          if (sniperFlag !== undefined) setKillSwitch(sniperFlag.enabled === false);
+          // /api/admin/settings returns flags as an object { key: enabled },
+          // not an array — .find() was always undefined, so the kill switch
+          // never reflected real state.
+          const sniperEnabled = (data.flags as Record<string, boolean | undefined>).sniper_enabled;
+          if (typeof sniperEnabled === 'boolean') setKillSwitch(sniperEnabled === false);
         }
       })
       .catch(err => console.error('[sniper-oversight] Settings load failed:', err));
