@@ -15,7 +15,6 @@ export const metadata = {
 
 interface CultStatsRow {
   active_members: number | null;
-  chosen_count: number | null;
   total_naka_held: string | null;
   decrees_passed: number | null;
 }
@@ -62,7 +61,6 @@ export default async function VaultPage() {
           tagline="Power"
           description="Vote on Decrees, hold the treasury, shape the platform."
           sigil={<ConclaveSigil size={88} />}
-          comingSoon
         />
         <ChamberPortal
           href="/vault/oracle"
@@ -70,7 +68,6 @@ export default async function VaultPage() {
           tagline="Sight"
           description="Daily Seal briefings, VTX Sage, the Whisper Network, stealth tracking."
           sigil={<OracleSigil size={88} />}
-          comingSoon
         />
         <ChamberPortal
           href="/vault/sanctum"
@@ -78,7 +75,6 @@ export default async function VaultPage() {
           tagline="Soul"
           description="Identity, achievements, lore, music, the cult NFT showcase."
           sigil={<SanctumSigil size={88} />}
-          comingSoon
         />
       </section>
 
@@ -134,7 +130,6 @@ export default async function VaultPage() {
             { label: 'Active Cultists', value: stats?.active_members ?? null },
             { label: '$NAKA Held',      value: totalNaka, formatKind: 'compact' },
             { label: 'Decrees Passed',  value: stats?.decrees_passed ?? null },
-            { label: 'Chosen Seals',    value: stats?.chosen_count ?? null },
           ]}
         />
       </section>

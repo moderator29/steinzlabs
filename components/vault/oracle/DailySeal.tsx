@@ -22,6 +22,7 @@ type Seal = {
 export function DailySeal() {
   const [seal, setSeal] = useState<Seal | null | 'loading'>('loading');
   const [broken, setBroken] = useState(false);
+  const [staleDays, setStaleDays] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,6 +33,9 @@ export function DailySeal() {
         if (cancelled) return;
         const next: Seal | null = j.seal ?? null;
         setSeal(next);
+        // Only mark stale when the seal is older than 48h, so a weeks-old
+        // seal is never presented as today's briefing.
+        setStaleDays(j.stale ? (typeof j.age_days === 'number' ? j.age_days : null) : null);
         if (next) {
           const lsKey = `naka_oracle_seal_broken_${next.seal_date}`;
           if (typeof window !== 'undefined' && window.localStorage.getItem(lsKey) === '1') {
@@ -83,8 +87,18 @@ export function DailySeal() {
   return (
     <article className={`oracle-seal ${broken ? 'oracle-seal--broken' : 'oracle-seal--sealed'}`}>
       <header className="oracle-seal__date">
-        <span className="text-[10px] uppercase tracking-[0.24em] text-[#FFD86B]">Daily Seal</span>
+        <span className="text-[10px] uppercase tracking-[0.24em] text-[#FFD86B]">
+          {staleDays != null ? 'Last Seal' : 'Daily Seal'}
+        </span>
         <span className="text-[11px] text-[#B4C0E0]">{formatDate(seal.seal_date)}</span>
+        {staleDays != null && (
+          <span
+            className="rounded-full border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#FBBF24]"
+            title="The Oracle has not cast a new seal recently."
+          >
+            {staleDays}d ago · awaiting dawn
+          </span>
+        )}
       </header>
 
       <AnimatePresence mode="wait" initial={false}>
