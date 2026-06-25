@@ -8,8 +8,11 @@ import { logAdminAction } from '@/lib/admin/auditLog';
 const BroadcastBody = z.object({
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(20_000),
-  targetTier: z.enum(['all', 'free', 'pro', 'cult']).default('all').optional(),
+  targetTier: z.enum(['all', 'free', 'pro', 'inactive']).default('all').optional(),
 });
+
+// 30 days with no profile update = "inactive" for broadcast targeting.
+const INACTIVE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const adminId = await verifyAdminRequest(request);
@@ -26,8 +29,17 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
 
     let query = supabase.from('profiles').select('email, first_name, username');
-    if (targetTier && targetTier !== 'all') {
-      query = query.eq('tier', targetTier);
+    // Audience selection (was a no-op when the form's value never reached here):
+    //   free     → free tier (incl. NULL tier)
+    //   pro      → any paid tier (mini / pro / max)
+    //   inactive → no profile activity in 30 days
+    //   all      → no filter
+    if (targetTier === 'free') {
+      query = query.or('tier.eq.free,tier.is.null');
+    } else if (targetTier === 'pro') {
+      query = query.in('tier', ['mini', 'pro', 'max']);
+    } else if (targetTier === 'inactive') {
+      query = query.lt('updated_at', new Date(Date.now() - INACTIVE_AFTER_MS).toISOString());
     }
 
     const { data: users, error } = await query;
