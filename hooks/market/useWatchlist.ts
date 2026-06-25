@@ -21,19 +21,32 @@ export function useWatchlist(userId: string | null) {
   const addToWatchlist = useCallback(async (tokenId: string) => {
     if (!userId) return;
     setWatchlist((prev) => [...new Set([...prev, tokenId])]);
-    await window.fetch('/api/market/watchlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, tokenId }),
-    }).catch(() => {});
+    try {
+      const res = await window.fetch('/api/market/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, tokenId }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      // Roll back the optimistic add so the star doesn't claim a saved state
+      // that never persisted (it would otherwise flip back on reload).
+      setWatchlist((prev) => prev.filter((id) => id !== tokenId));
+    }
   }, [userId]);
 
   const removeFromWatchlist = useCallback(async (tokenId: string) => {
     if (!userId) return;
     setWatchlist((prev) => prev.filter((id) => id !== tokenId));
-    await window.fetch(`/api/market/watchlist?userId=${userId}&tokenId=${tokenId}`, {
-      method: 'DELETE',
-    }).catch(() => {});
+    try {
+      const res = await window.fetch(`/api/market/watchlist?userId=${userId}&tokenId=${tokenId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      // Roll back the optimistic remove.
+      setWatchlist((prev) => [...new Set([...prev, tokenId])]);
+    }
   }, [userId]);
 
   const isWatched = useCallback((tokenId: string) => watchlist.includes(tokenId), [watchlist]);

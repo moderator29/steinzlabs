@@ -916,7 +916,9 @@ function PnlLeaderboardPanel({
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/whales?limit=10&offset=0')
+    // This is the PnL Leaderboard — rank by 30d PnL, not the default
+    // whale_score, otherwise it duplicates the score board.
+    fetch('/api/whales?limit=10&offset=0&sort=pnl')
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then((data: { whales?: PnlWhaleRow[] }) => {
         if (cancelled) return;
