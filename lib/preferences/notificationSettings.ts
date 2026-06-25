@@ -97,27 +97,34 @@ export function useNotificationSettings(userId: string | null | undefined): Hook
     }
     setLoading(true);
     try {
-      // Try selecting the extended columns. If the migration isn't
-      // applied yet, Postgres returns 42703 (undefined column) — we
-      // catch and re-select only the legacy columns so the panel
-      // still loads.
-      let extendedAvailable = true;
+      // Probe the extended columns. A clean (error-free) select is the
+      // authoritative signal that the migration is live — if any extended
+      // column is missing, PostgREST fails the whole select, so success
+      // means every listed column exists. We previously keyed only off the
+      // exact 42703 code, which mis-reported the schema as "pending" on any
+      // other transient error even though the columns exist in prod; basing
+      // it on success removes that fragility.
+      let extendedAvailable = false;
       let row: NotificationSettings | null = null;
       const tryExtended = await supabase
         .from('notification_settings')
         .select('user_id, push_enabled, email_enabled, telegram_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
-      if (tryExtended.error && tryExtended.error.code === '42703') {
-        extendedAvailable = false;
+      if (!tryExtended.error) {
+        extendedAvailable = true;
+        row = (tryExtended.data as NotificationSettings | null) ?? null;
+      } else {
+        // Any error (missing columns pre-migration, or a transient failure):
+        // fall back to the always-present legacy columns so the panel loads.
+        // The extended toggles render in a 'coming soon' state until a later
+        // reload confirms the schema.
         const fallback = await supabase
           .from('notification_settings')
           .select('user_id, push_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, updated_at')
           .eq('user_id', userId)
           .maybeSingle();
         row = (fallback.data as NotificationSettings | null) ?? null;
-      } else {
-        row = (tryExtended.data as NotificationSettings | null) ?? null;
       }
       setHasExtendedSchema(extendedAvailable);
       if (!row) {
