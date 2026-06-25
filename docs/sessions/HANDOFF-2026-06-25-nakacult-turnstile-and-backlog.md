@@ -22,7 +22,9 @@ Work **fully autonomously** — pick item → do it → **self-audit (re-grep, r
 - **Swap fee is 0.5%** (50 bps) to the treasury wallet on every buy and sell (single source = `lib/trading/swapLogging.PLATFORM_FEE_BPS`). Treasury wallet env unchanged. NOTE: `NEXT_PUBLIC_STEINZ_FEE_PERCENT` env, if set, overrides 0x's fee — must be `0.005` or unset.
 - **The Chosen badge/lineage is retired** — keep the `naka_cult` tier badge + vault mechanics, but no "Chosen" badge anywhere.
 
-**Bootstrap:** Node 20+, npm. Windows 11, PowerShell 5.1 (prefer the **Bash** tool for sweeps). `npm ci --legacy-peer-deps && npx tsc --noEmit` must exit 0. Local prod build needs `RESEND_API_KEY=re_dummy_build npm run build`. After switching branches `rm -rf .next` before tsc. **Supabase MCP ✅ connected** (you can apply migrations + execute_sql). **Vercel MCP** scope-limited — owner does env changes (e.g. `CRONS_PAUSED`).
+**Bootstrap:** Node 20+, npm. Windows 11, PowerShell 5.1 (prefer the **Bash** tool for sweeps). `npm ci --legacy-peer-deps && npx tsc --noEmit` must exit 0. Local prod build needs `RESEND_API_KEY=re_dummy_build npm run build`. After switching branches `rm -rf .next` before tsc.
+- **Supabase MCP ✅ connected** — run **any** Supabase work or reads you need to hammer things out: `list_tables`/`execute_sql` to verify schema against the LIVE DB (migrations are stale), and `apply_migration` (mirror SQL into `supabase/migrations/`) for new/missing tables. Don't guess schema — query it.
+- **Vercel MCP** — the **owner will RECONNECT it in this new session before you start.** Load it and USE it: that's how you **run and verify the app** for every UI fix (NakaCult scroll, the wallet-connect entry, the Turnstile widget). Pair with the `/run` and `/verify` skills. **No UI fix is "done" until you've actually loaded the page and seen it work** — the owner is done with unverified "fixed" claims.
 
 ---
 
@@ -30,8 +32,10 @@ Work **fully autonomously** — pick item → do it → **self-audit (re-grep, r
 
 The owner wants NakaCult to feel **institutional, 2030, "unbelievable" — worth $300 but it's $27 lifetime.** Dedicate the session to NakaCult end-to-end: landing page **and** every feature inside the vault. Both **frontend (UI/UX)** and **backend (pipelines, realtime, data, filters, all features functional)**.
 
-### 1a. Launch a brutal-honest NakaCult audit FIRST (10+ agents)
-Before building, fan out **≥10 read-only audit agents** (Workflow tool / Agent run_in_background) across the entire NakaCult surface — **backend AND frontend** — instructed to be **brutally honest, no lies, verify against the live DB**, and benchmark vs best-in-class institutional/members-only product design. Cover: the landing (`app/naka-cult/page.tsx` + `app/naka-cult/landing.css`), the Vault and all chambers — **Conclave** (governance: Decrees, Whispers, treasury panel, weighted voting — `app/vault/conclave`, `app/api/cult/proposals/*`, `app/api/cult/conviction`), **Oracle** (Daily Seal, the Sage AI, Whisper Network E2E DMs, Echo Chamber — `app/vault/oracle`, `app/api/cult/oracle/*`), **Sanctum** (Mantle, Annals, the Library/**Ddergo player**, the Forge — `app/vault/sanctum`, `app/api/cult/sanctum/*`), **Ape/Hall/Conviction** panels (`components/vault/commons/*`, `app/api/cult/ape|hall|conviction`), access/membership (`lib/cult/access.ts`, `lib/cult/holdings.ts`, `app/api/cult/me`, cron `cult-verify-membership`). For each: which filters/toggles are dead, which data is real vs stale/empty vs fabricated, which pipelines aren't connected, what's not realtime, what to BUILD for a 2030 feel. Then fix everything they surface.
+### 1a. Launch a brutal-honest NakaCult audit FIRST (15 agents) — and DO NOT IDLE while it runs
+Before building, fan out **15 read-only audit agents** (Workflow tool, in the background) across the entire NakaCult surface — **backend AND frontend** — instructed to be **brutally honest, no lies, verify against the live DB**, and benchmark vs best-in-class institutional/members-only product design.
+
+**While those 15 agents run, you do NOT wait idle — work the §4 remaining-backlog items the whole time.** The moment the NakaCult audit returns, **immediately commit its report (every issue, every fix, the full upgrade plan) to `docs/sessions/`, then automatically start fixing it** — no pausing to ask "what next". **Work fully autonomously start-to-finish: never stop until EVERY item in this session (NakaCult rebuild + Turnstile + the backlog) is done.** Acknowledge and obey every rule in §0. Quality bar: brutal, clean, verified work — no fake "fixed" claims. Cover: the landing (`app/naka-cult/page.tsx` + `app/naka-cult/landing.css`), the Vault and all chambers — **Conclave** (governance: Decrees, Whispers, treasury panel, weighted voting — `app/vault/conclave`, `app/api/cult/proposals/*`, `app/api/cult/conviction`), **Oracle** (Daily Seal, the Sage AI, Whisper Network E2E DMs, Echo Chamber — `app/vault/oracle`, `app/api/cult/oracle/*`), **Sanctum** (Mantle, Annals, the Library/**Ddergo player**, the Forge — `app/vault/sanctum`, `app/api/cult/sanctum/*`), **Ape/Hall/Conviction** panels (`components/vault/commons/*`, `app/api/cult/ape|hall|conviction`), access/membership (`lib/cult/access.ts`, `lib/cult/holdings.ts`, `app/api/cult/me`, cron `cult-verify-membership`). For each: which filters/toggles are dead, which data is real vs stale/empty vs fabricated, which pipelines aren't connected, what's not realtime, what to BUILD for a 2030 feel. Then fix everything they surface.
 
 ### 1b. Three confirmed bugs (must-fix)
 1. **No wallet-connect "Enter NakaCult" entry.** Today `app/naka-cult/page.tsx` lines **54, 234, 236** render `<Link href="/vault">Enter the Vault →</Link>` and `<Link href="/dashboard/pricing">See the path →</Link>` — i.e. they route into the platform/login. **WRONG.** NakaCult must NOT be coupled to platform login. The CTA should be a **Connect-Wallet button** ("Enter NakaCult") that: connects the wallet (AppKit `useAppKit().open()` / WalletConnect — same stack the swap card uses), reads on-chain holdings, and **unlocks the Vault iff the wallet holds the NIPPO NFT OR ≥ 1,227,000 $NAKA** (logic already in `lib/cult/access.ts` / `lib/cult/holdings.ts` / `app/api/cult/me`). The only relationship to the platform is that it's built on it — no login redirect.
@@ -56,6 +60,13 @@ Investigate deeply and design it the way **industry-standard platforms** impleme
 - The "stuck on Verifying, no button" is a classic **render-mode / sitekey-domain / appearance** misconfig (or the widget rendering off-screen / `display:none` until interactive). Fix it to reliably show the interactive widget, with a visible container (bordered card, correct contrast) on both **login and signup**, plus a graceful error/retry state. **Verify by running the app.**
 
 ---
+
+## 2.5 · 🔴 PRIORITY 3 — Cron COST audit (do this BEFORE the owner unpauses)
+
+The owner paused the whole cron fleet (`CRONS_PAUSED`) **on purpose, for cost.** The platform has **only a few members**; if you unpause as-is, ~53 crons all start hammering external APIs (Alchemy/Helius/0x/Dune/CoinGecko/Birdeye) + Vercel invocations on a near-empty platform and the bill spikes. **Deep-audit every cron in `app/api/cron/*` for cost** and make each one **cheap-when-idle**:
+- Every cron must short-circuit early (return in <100ms, zero external calls) **when there is no real work** — i.e. nobody is using that feature. Use/extend the `cronHasWork(table, filter)` guard in `app/api/cron/_shared.ts` so e.g. copy-trade/sniper/limit/stop-loss/DCA monitors exit instantly when there are 0 active rules/positions, alert-monitor exits when 0 active alerts, etc.
+- Per-user/feature work should scale to **actual demand**, not run a full scan every tick. Gate the heavy whale/Dune/intelligence crons (whale-activity-poll/price, dune-refresh, smart-money-convergence, cluster-analysis, first-buyer-performance, insider-wallet-detector, pumpfun-velocity-poll, funding-rates-snapshot) so they only do expensive fetches when there are consumers, and right-size their cadence/batch limits in `vercel.json`.
+- Produce a **cost table** per cron (external calls/run × cadence × expected rows) and flag the few that would dominate the bill; cap or defer those. Goal: unpausing is **safe and cheap** because idle features cost ~nothing. **Only after this lands should the owner flip `CRONS_PAUSED`.**
 
 ## 3 · WHAT SHIPPED THIS SESSION (don't redo — all on unmerged branches awaiting owner merge)
 
@@ -92,7 +103,7 @@ Two deep audits committed: `docs/sessions/AUDIT-2026-06-24-20agent.md` (20-agent
 
 ## 5 · 🚩 HUMAN-GATED (owner action — flag, don't attempt)
 
-1. **Flip `CRONS_PAUSED`** in Vercel → steinzlabs → Settings → Env Vars (set `false` or delete it) → **Redeploy**. The whole cron fleet is frozen; the Dune tables + funding + whale pricing now exist and are wired and fill the moment crons run. **Single biggest unblock.**
+1. **Flip `CRONS_PAUSED` — but ONLY after the §2.5 cron-cost audit lands.** In Vercel → steinzlabs → Settings → Env Vars, **set `CRONS_PAUSED=false`** (or delete the variable entirely — both work; the code only treats the literal string `"true"` as paused) → **Redeploy**. The whole cron fleet is frozen; the Dune tables + funding + whale pricing exist and are wired and fill the moment crons run. **Single biggest unblock — but unpausing before the cost audit will spike the bill on a near-empty platform, which is exactly why it's paused. Make crons cheap-when-idle first (§2.5), then flip.**
 2. **Set `DUNE_API_KEY` + the `DUNE_QUERY_*` env vars** + publish the Dune queries so `dune-refresh` populates the tables (owner says these are in env — verify).
 3. **Confirm `NEXT_PUBLIC_STEINZ_FEE_PERCENT` is `0.005` or unset** so the 0.5% fee actually applies on 0x.
 4. **Real-money swap signing/execute + gasless + MEV routing** — need the owner's wallet to test before merge.
@@ -107,9 +118,15 @@ Two deep audits committed: `docs/sessions/AUDIT-2026-06-24-20agent.md` (20-agent
 cd "C:\Users\DELL LATITUDE 5320\Downloads\steinzlabs"
 git fetch --prune origin && git checkout main && git pull --ff-only
 npm ci --legacy-peer-deps && npx tsc --noEmit            # baseline must exit 0
-# 1) Launch the ≥10-agent brutal-honest NakaCult audit (backend+frontend) in the background.
-# 2) Fix the 3 NakaCult bugs (wallet-connect Enter button, scroll root-cause, redesign) — VERIFY by running the app.
-# 3) Then the full NakaCult UI/UX redesign (3D branded icons, Ddergo player, institutional 2030 feel).
-# 4) Then Turnstile: find every usage, fix render-mode/sitekey/theme so the interactive widget reliably shows + is visible on login/signup. VERIFY by running.
-# 5) Only after NakaCult + Turnstile: pick up §4 backlog.
+# 1) Confirm the owner has reconnected Vercel MCP; load it (run/verify the app with it + /run /verify skills).
+# 2) Launch the 15-agent brutal-honest NakaCult audit (backend+frontend) in the BACKGROUND.
+# 3) While it runs, do NOT idle — work the §4 backlog. When the audit returns, immediately commit its
+#    report (issues + fixes + upgrade plan) and auto-start fixing it.
+# 4) NakaCult: wallet-connect "Enter NakaCult" entry (no login redirect) + scroll-bug root fix + full
+#    institutional 2030 redesign (3D branded icons, Ddergo player). VERIFY every UI fix by running the app.
+# 5) Turnstile: find every usage, fix render-mode/sitekey/theme so the interactive widget reliably shows +
+#    is visible on login/signup. VERIFY by running.
+# 6) Cron COST audit (§2.5): make every cron cheap-when-idle so unpausing is safe; THEN tell owner to flip.
+# 7) Finish the rest of the §4 backlog. NEVER STOP until everything in this session is done.
+# Run any Supabase reads/migrations you need throughout. Work autonomously, brutally honest, audit before commit.
 ```
