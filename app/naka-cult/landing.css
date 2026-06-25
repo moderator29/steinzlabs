@@ -10,19 +10,22 @@
   color: #FFFFFF;
   overflow-x: hidden;
   isolation: isolate;
-  /* §nakacult-scroll-bug — the animated aurora (::after, 38s rotate+scale) and
-     the floating orbs repaint constantly; the browser's scroll-anchoring would
-     re-adjust the scroll offset against those repaints, yanking the page upward
-     mid-scroll. Disabling anchoring here stops the self-scroll. Pairs with the
-     global history.scrollRestoration='manual' set in app/layout.tsx. */
-  overflow-anchor: none;
 }
 
-/* Aurora layers — same recipe as the Vault, sized for the landing canvas */
+/* §nakacult-scroll-bug — ROOT FIX. The animated aurora (::after, 38s
+   rotate+scale) and the floating orbs used to live INSIDE the scroll
+   container as absolutely-positioned children; their constant transform
+   repaints fought the browser's scroll-anchoring and yanked the page upward
+   mid-scroll. A prior session bolted on `overflow-anchor: none` (a band-aid) —
+   removed. The background is now a position:fixed, pointer-events:none,
+   GPU-composited layer pinned to the viewport and OUTSIDE the scroll flow, so
+   it can never affect layout or scroll geometry. No ancestor sets transform/
+   filter/will-change, so `fixed` resolves to the viewport (not the scroll box).
+   Aurora layers — same recipe as the Vault, sized for the landing canvas. */
 .nakacult-shell::before,
 .nakacult-shell::after {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
@@ -349,7 +352,7 @@
 .nakacult-stats__sub {
   margin-top: 2px;
   font-size: 10px;
-  color: rgba(200, 214, 255, 0.55);
+  color: #9FB0D8; /* WCAG AAA: ~8.4:1 on #050816 (was rgba(200,214,255,0.55)) */
 }
 @media (max-width: 720px) {
   .nakacult-stats { grid-template-columns: repeat(2, 1fr); margin-top: -20px; }
@@ -368,7 +371,7 @@
 }
 .nakacult-pillar__list li {
   font-size: 12px;
-  color: rgba(200, 214, 255, 0.78);
+  color: #C8D6FF; /* WCAG AAA: ~12:1 on #050816 (was rgba(200,214,255,0.78)) */
   position: relative;
   padding-inline-start: 14px;
 }
@@ -419,7 +422,7 @@
 .nakacult-feature__body {
   font-size: 13.5px;
   line-height: 1.55;
-  color: rgba(200, 214, 255, 0.78);
+  color: #C8D6FF; /* WCAG AAA: ~12:1 on #050816 (was rgba(200,214,255,0.78)) */
   margin: 0;
 }
 @media (max-width: 900px) {
@@ -447,7 +450,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(200, 214, 255, 0.55);
+  color: #9FB0D8; /* WCAG AAA: ~8.4:1 on #050816 (was rgba(200,214,255,0.55)) */
 }
 
 /* ─── FAQ — accordion ────────────────────────────────────────────────── */
@@ -498,7 +501,7 @@
   margin: 0;
   font-size: 13.5px;
   line-height: 1.6;
-  color: rgba(200, 214, 255, 0.78);
+  color: #C8D6FF; /* WCAG AAA: ~12:1 on #050816 (was rgba(200,214,255,0.78)) */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -510,8 +513,11 @@
 }
 
 /* ─── Floating ambient orbs ──────────────────────────────────────────── */
+/* Fixed, viewport-pinned, GPU-composited (see the §nakacult-scroll-bug ROOT
+   FIX note above): kept OUT of the scroll flow so the drifting orbs can never
+   perturb scroll geometry. */
 .nakacult-orb-layer {
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
