@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { DailySeal } from './DailySeal';
 import { VtxSagePanel } from './VtxSagePanel';
 import { WhisperNetworkPanel } from './WhisperNetworkPanel';
-import { ChosenSealDraftPanel } from './ChosenSealDraftPanel';
 import { EchoChamberPanel } from './EchoChamberPanel';
 
 /**
@@ -36,7 +35,6 @@ export function OracleHubClient() {
           <DailySeal />
         </motion.div>
 
-        <ChosenSealDraftPanel />
 
         <VtxSagePanel />
         <WhisperNetworkPanel />
