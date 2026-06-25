@@ -1,6 +1,7 @@
 import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isHolderOfContract, getTokenBalances } from '@/lib/services/alchemy';
+import { normalizeTier } from '@/lib/subscriptions/tierCheck';
 
 /**
  * Wallet → entitlement resolver for the new (decoupled) model.
@@ -103,7 +104,7 @@ export async function applyWalletEntitlements(
 
   const { data: prof } = await sb
     .from('profiles')
-    .select('cult_member, cult_source, tier, tier_source, tier_expires_at')
+    .select('cult_member, cult_source, tier, tier_source, tier_expires_at, verified_badge')
     .eq('id', userId)
     .maybeSingle<{
       cult_member: boolean | null;
@@ -111,6 +112,7 @@ export async function applyWalletEntitlements(
       tier: string | null;
       tier_source: string | null;
       tier_expires_at: string | null;
+      verified_badge: string | null;
     }>();
 
   const update: Record<string, unknown> = {};
@@ -133,21 +135,29 @@ export async function applyWalletEntitlements(
 
   // ── Founder Pass → Max platform grant ────────────────────────────────────
   if (ent.max) {
-    // Grant only when not already NFT-granted and not on a paid Stripe tier
-    // (don't clobber a subscription; the user keeps what they pay for).
-    if (prof?.tier_source !== 'founder_pass_nft' && prof?.tier_source !== 'stripe') {
+    // Grant only when the user is NOT already on a Max plan from any source.
+    // This protects a paid Stripe sub, a comped legacy/admin grant (some are
+    // permanent, expiry NULL), and an existing Founder-Pass grant — clobbering
+    // any of them would wrongly re-stamp a 180-day expiry over a permanent
+    // grant. Only a non-Max user is upgraded; Founder-Pass holders who are
+    // already Max keep their existing expiry (never re-extended).
+    if (normalizeTier(prof?.tier) !== 'max') {
       update.tier = 'max';
       update.tier_source = 'founder_pass_nft';
       update.tier_expires_at = new Date(Date.now() + FOUNDER_GRANT_DAYS * 86_400_000).toISOString();
       update.tier_nft_token_id = FOUNDER_PASS_CONTRACT;
+      // Automatic gold "NAKA MAX" badge for Founder Pass holders.
+      update.verified_badge = 'gold';
     }
-    // already NFT-granted → leave the existing expiry (never re-extend)
   } else if (prof?.tier_source === 'founder_pass_nft') {
     // No longer holds a Founder Pass → revoke the NFT-granted Max only.
     update.tier = 'free';
     update.tier_source = null;
     update.tier_expires_at = null;
     update.tier_nft_token_id = null;
+    // Clear the auto gold badge only if it's the one we set (never wipe a
+    // manually-assigned badge of another value).
+    if (prof.verified_badge === 'gold') update.verified_badge = null;
   }
 
   if (Object.keys(update).length > 0) {

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tier, tier_expires_at, verified_badge, role, cult_member')
+      .select('tier, tier_expires_at, verified_badge, role, cult_member, tier_source, cult_source, max_welcomed_at')
       .eq('id', user.id)
       .single();
 
@@ -48,6 +48,12 @@ export async function GET(request: NextRequest) {
         verifiedBadge: profile?.verified_badge || null,
         tierExpiresAt: profile?.tier_expires_at || null,
         expired: isAdmin ? false : result.expired,
+        // Onboarding signals for the first-time Max welcome. tierSource lets the
+        // banner say WHY (founder_pass_nft vs stripe); maxWelcomedAt being null
+        // while isMax is true means this is a first-time Max unlock to celebrate.
+        tierSource: profile?.tier_source || null,
+        cultSource: profile?.cult_source || null,
+        maxWelcomedAt: profile?.max_welcomed_at || null,
       },
       { headers: { 'Cache-Control': 'private, max-age=10' } },
     );
