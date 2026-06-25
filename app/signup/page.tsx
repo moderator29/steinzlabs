@@ -89,7 +89,7 @@ export default function SignUpPage() {
       try {
         widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          theme: 'dark',
+          theme: 'light',
           // See login/page.tsx for the size='flexible' regression note —
           // mirror the fixed 'normal' size + always appearance here.
           size: 'normal',
@@ -486,7 +486,7 @@ export default function SignUpPage() {
                   style={{
                     minHeight: 78,
                     minWidth: 300,
-                    colorScheme: 'dark',
+                    colorScheme: 'light',
                     display: 'flex',
                     justifyContent: 'center',
                   }}

@@ -77,7 +77,7 @@ function LoginPageInner() {
       try {
         widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          theme: 'dark',
+          theme: 'light',
           // Reverted from 'flexible' — that size leaves the widget stuck on the
           // verifying spinner when the parent flex column is briefly narrower
           // than 300px during first paint or mobile autocomplete reflow.
@@ -498,7 +498,7 @@ function LoginPageInner() {
                   style={{
                     minHeight: 78,
                     minWidth: 300,
-                    colorScheme: 'dark',
+                    colorScheme: 'light',
                     display: 'flex',
                     justifyContent: 'center',
                     pointerEvents: 'auto',
