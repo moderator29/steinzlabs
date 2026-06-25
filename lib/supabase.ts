@@ -38,7 +38,7 @@ function getClient(): SupabaseClient {
   // self-delete instead of accumulating indefinitely. autoRefreshToken
   // rewrites the cookie every ~55 min while the user is active, so
   // active users are never logged out. Only idle >1 h sessions expire.
-  _supabase = createBrowserClient(
+  const client = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -57,6 +57,21 @@ function getClient(): SupabaseClient {
     }
   );
 
+  // Realtime RLS authenticates the websocket connection with the JWT we hand
+  // it, NOT the auth cookie. Without realtime.setAuth(token) the socket
+  // connects as anon, auth.uid() is NULL, and RLS drops every postgres_changes
+  // event for DMs and other user-scoped channels — messages only appear on a
+  // full reload. Push the access token into the realtime socket on the initial
+  // session and on every refresh / sign-in, and clear it on sign-out. This
+  // fires before any feature calls channel.subscribe() because the listener is
+  // attached the moment the singleton client is created.
+  if (typeof window !== 'undefined') {
+    client.auth.onAuthStateChange((_event, session) => {
+      client.realtime.setAuth(session?.access_token ?? null);
+    });
+  }
+
+  _supabase = client;
   return _supabase;
 }
 
