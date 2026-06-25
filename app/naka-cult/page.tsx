@@ -6,6 +6,7 @@ import { SanctumSigil } from '@/components/vault/sigils/SanctumSigil';
 import { LivingSigil } from '@/components/naka-cult/LivingSigil';
 import { CultStatsStrip } from '@/components/naka-cult/CultStatsStrip';
 import { PauseAnimationsOnHidden } from '@/components/perf/PauseAnimationsOnHidden';
+import { EnterNakaCultButton } from '@/components/cult/EnterNakaCultButton';
 import './landing.css';
 
 export const metadata = {
@@ -56,7 +57,7 @@ export default async function NakaCultLanding() {
             </>
           ) : (
             <>
-              <a href="#enter" className="nakacult-cta">How to enter →</a>
+              <EnterNakaCultButton className="nakacult-cta" />
               <a href="#chambers" className="nakacult-cta nakacult-cta--ghost">See the chambers</a>
             </>
           )}
@@ -237,7 +238,7 @@ export default async function NakaCultLanding() {
         {isMember ? (
           <Link href="/vault" className="nakacult-cta">Enter the Vault →</Link>
         ) : (
-          <Link href="/dashboard/pricing" className="nakacult-cta">See the path →</Link>
+          <EnterNakaCultButton className="nakacult-cta" />
         )}
       </section>
     </div>

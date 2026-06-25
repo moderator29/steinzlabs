@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, logCronExecution } from "../_shared";
+import { verifyCron, logCronExecution, getFollowedWhaleAddresses, ilikeAnyFilter } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { priceActivityUsd } from "@/lib/whales/priceActivity";
 
@@ -24,10 +24,23 @@ export async function GET(request: NextRequest) {
 
   try {
     const sb = getSupabaseAdmin();
+
+    // Demand gate: only price activity for whales someone actually follows.
+    // The whale_activity table carries a large backlog of unpriced rows for
+    // SEEDED whales nobody tracks; pricing those burns CoinGecko/DexScreener
+    // budget for data no user will ever see. Scope to followed whales so cost
+    // scales with real demand (and is zero when nobody follows any whale).
+    const followed = await getFollowedWhaleAddresses();
+    if (followed.length === 0) {
+      await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
+      return NextResponse.json({ ok: true, skipped: "no-followed-whales", priced: 0 });
+    }
+
     const { data: rows, error } = await sb
       .from("whale_activity")
       .select("id, chain, token_address, token_symbol, amount")
       .or("value_usd.is.null,value_usd.eq.0")
+      .or(ilikeAnyFilter("whale_address", followed))
       .order("timestamp", { ascending: false })
       .limit(200);
     if (error) {
