@@ -21,17 +21,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
   const { flags } = parsed.data;
 
-  try {
-    const supabase = getSupabaseAdmin();
-    const upserts = Object.entries(flags).map(([key, enabled]) => ({
-      key,
-      enabled,
-      updated_at: new Date().toISOString(),
-    }));
-    await supabase.from('platform_settings').upsert(upserts, { onConflict: 'key' });
-  } catch (err) {
-    console.error('[admin/settings] Failed to persist to Supabase:', err);
-    // Non-fatal — return ok so the UI doesn't show a failure
+  const supabase = getSupabaseAdmin();
+  // Feature flags live in feature_flags (PK = key). The old code upserted into
+  // platform_settings (a singleton with no `key` column), which failed, and
+  // then returned ok:true anyway — so the admin saw "saved" while nothing
+  // persisted. Write the right table and surface a real failure.
+  const upserts = Object.entries(flags).map(([key, enabled]) => ({
+    key,
+    enabled,
+    updated_by: adminId,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error: upsertErr } = await supabase
+    .from('feature_flags')
+    .upsert(upserts, { onConflict: 'key' });
+  if (upsertErr) {
+    console.error('[admin/settings] Failed to persist feature flags:', upsertErr.message);
+    return NextResponse.json({ error: 'Failed to save feature flags' }, { status: 500 });
   }
 
   void logAdminAction({
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const supabase = getSupabaseAdmin();
-    const { data } = await supabase.from('platform_settings').select('key, enabled');
+    const { data } = await supabase.from('feature_flags').select('key, enabled');
     const flags = Object.fromEntries((data ?? []).map(r => [r.key, r.enabled]));
     return NextResponse.json({ flags });
   } catch {

@@ -145,6 +145,8 @@ function adminHeaders(): HeadersInit {
   // the static ADMIN_BEARER_TOKEN never lands in localStorage. Read it
   // defensively — the auth route returns 401 if absent.
   if (typeof window === 'undefined') return {};
-  const tok = sessionStorage.getItem('admin_bearer');
+  // The admin layout stores the bearer under 'admin_token'; this page read
+  // 'admin_bearer', so every request 401'd and the monitor stayed blank.
+  const tok = sessionStorage.getItem('admin_token');
   return tok ? { Authorization: `Bearer ${tok}` } : {};
 }
