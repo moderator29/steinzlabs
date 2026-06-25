@@ -385,6 +385,39 @@ export default function WalletPage() {
     };
   }, []);
 
+  // Cross-device sync for custom tokens. localStorage is the offline cache;
+  // user_custom_tokens (server) is the durable record. On mount we union the
+  // two, render the union, and push any local-only additions up to the server
+  // so a token added on one device shows up on the next.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/wallet/custom-tokens', { credentials: 'include' });
+        if (!res.ok || cancelled) return;
+        const { tokens } = (await res.json()) as { tokens: string[] };
+        const serverTokens = Array.isArray(tokens) ? tokens : [];
+        const localRaw = localStorage.getItem('steinz_custom_tokens');
+        const localTokens: string[] = localRaw ? JSON.parse(localRaw) : [];
+        const union = Array.from(new Set([...localTokens, ...serverTokens]));
+        if (cancelled) return;
+        setCustomTokens(union);
+        localStorage.setItem('steinz_custom_tokens', JSON.stringify(union));
+        for (const key of localTokens.filter((t) => !serverTokens.includes(t))) {
+          void fetch('/api/wallet/custom-tokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ key }),
+          });
+        }
+      } catch {
+        /* offline or signed out — the localStorage cache still works */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const fetchPrices = async () => {
     setPricesLoading(true);
     try {
@@ -725,7 +758,19 @@ export default function WalletPage() {
       onChangeChain={(c) => setActiveChain(c)}
     />
   );
-  if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
+  if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => {
+    const updated = [...customTokens, t];
+    setCustomTokens(updated);
+    localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated));
+    // Persist server-side too so the token survives a cache clear / new device.
+    void fetch('/api/wallet/custom-tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ key: t }),
+    });
+    setView('main');
+  }} />;
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
     enabled={enabledChains}

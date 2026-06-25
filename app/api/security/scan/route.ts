@@ -54,6 +54,16 @@ export async function POST(request: NextRequest) {
         scanned_by: user?.id ?? null,
       });
 
+      // Also cache the raw GoPlus payload keyed by (token_address, chain) so the
+      // Swap pre-trade intelligence strip (lib/dune/useSurfaces.ts) can read
+      // honeypot / buy-sell-tax without re-hitting GoPlus on every quote.
+      await admin.from("goplus_security_cache").upsert({
+        token_address: body.target,
+        chain,
+        payload: rawObj,
+        fetched_at: new Date().toISOString(),
+      }, { onConflict: "token_address,chain" });
+
       return NextResponse.json({ scan_type: "token", target: body.target, chain, ...assessment, raw: rawObj });
     }
 
