@@ -296,10 +296,10 @@ export async function GET(request: NextRequest) {
       triggered++;
     } else if (v.outcome === "blocked") {
       ruleBlocked++;
-      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? v.sizeUsd) - v.sizeUsd);
+      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? 0) - v.sizeUsd);
     } else {
       failed++;
-      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? v.sizeUsd) - v.sizeUsd);
+      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? 0) - v.sizeUsd);
     }
   }
 
