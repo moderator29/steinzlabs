@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getSwapTrades, getGaslessTrades } from '@/lib/services/zerox';
+import { verifyAdminContext } from '@/lib/auth/adminAuth';
 
 let _supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient {
@@ -17,18 +18,15 @@ function getSupabase(): SupabaseClient {
 
 export async function GET(request: NextRequest) {
   try {
-    // Admin auth check
-    const authHeader = request.headers.get('authorization');
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await getSupabase().auth.getUser(token);
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      const role = user.user_metadata?.role;
-      if (role !== 'admin') {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-      }
+    // Admin auth — MANDATORY. This route returns platform revenue data; the
+    // previous `if (authHeader)` guard skipped the check entirely when no
+    // Authorization header was sent, so the data was readable unauthenticated.
+    // Gate with the canonical verifyAdminContext (admin_roles / legacy
+    // profiles.role / static ADMIN_BEARER_TOKEN) like the rest of the admin
+    // surface. Callers must send `Authorization: Bearer <token>`.
+    const admin = await verifyAdminContext(request);
+    if (!admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const [swapTrades, gaslessTrades] = await Promise.allSettled([
