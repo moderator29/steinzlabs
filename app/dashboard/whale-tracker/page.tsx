@@ -43,6 +43,9 @@ interface FeedRow {
   timestamp: string;
   label: string | null;
   entity_type: string | null;
+  // Resolved WhaleLabel (cex/smart_money/insider/...) bridged from the
+  // whales.entity_type vocabulary, so the colored label pill renders.
+  whale_label: WhaleLabel;
   // §whale-tracker-grade — surfaced from whales table so feed cards
   // can render Accumulator / Distributor / Sniper / High-win-rate
   // badges without an extra round-trip.
@@ -291,9 +294,29 @@ export default function WhaleTrackerPage() {
           <BackButton href="/dashboard" />
           <div className="flex items-center gap-2">
             <h1 className="text-lg md:text-xl font-bold">Whale Tracker</h1>
-            <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
-            </span>
+            {(() => {
+              // Honest status pill: only claim "Live" (pulsing) when the newest
+              // feed row is genuinely recent. Otherwise show how stale the feed
+              // is instead of a permanent fake-live pulse over empty/old data.
+              const newestMs = feed.length > 0 ? new Date(feed[0].timestamp).getTime() : 0;
+              const ageMs = newestMs ? Date.now() - newestMs : Infinity;
+              const isLive = ageMs < 10 * 60 * 1000;
+              if (isLive) {
+                return (
+                  <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                  </span>
+                );
+              }
+              return (
+                <span
+                  className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500"
+                  title={newestMs ? `Newest activity ${timeAgo(feed[0].timestamp)}` : 'No recent activity'}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> {newestMs ? 'Delayed' : 'Idle'}
+                </span>
+              );
+            })()}
             <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
               PRO
             </span>
@@ -611,12 +634,11 @@ function FeedCard({
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-xs flex-wrap">
             <span className="font-mono text-slate-300">{short(row.whale_address)}</span>
-            {row.entity_type && (() => {
-              // Audit B5 / P1 #24 — styled entity badge from label taxonomy.
-              const meta = LABEL_META[row.entity_type as WhaleLabel];
-              if (!meta) {
-                return <span className="text-[10px] uppercase text-slate-500">{row.entity_type}</span>;
-              }
+            {(() => {
+              // Styled entity badge from the resolved WhaleLabel (server bridges
+              // whales.entity_type → WhaleLabel so this always maps to a pill).
+              const meta = LABEL_META[row.whale_label];
+              if (!meta) return null;
               return (
                 <span
                   className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border"

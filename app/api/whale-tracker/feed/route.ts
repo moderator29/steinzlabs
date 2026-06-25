@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
-import { classifyAddress, type WhaleLabel } from "@/lib/whales/labels";
+import { classifyAddress, entityTypeToLabel, canonicalAction, dbActionsForCanonical, type WhaleLabel } from "@/lib/whales/labels";
 
 const VALID_LABELS: ReadonlySet<WhaleLabel> = new Set([
   'cex', 'mm', 'smart_money', 'bot', 'insider', 'whale', 'bridge', 'mev',
@@ -23,6 +23,7 @@ interface FeedRow {
   timestamp: string;
   label: string | null;
   entity_type: string | null;
+  whale_label: WhaleLabel;
 }
 
 /**
@@ -92,7 +93,10 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         .range(offset, offset + limit - 1);
 
       if (chains.length > 0) q = q.in("chain", chains);
-      if (actionFilter) q = q.eq("action", actionFilter);
+      // The DB stores raw actions (transfer_out/transfer_in/buy/sell/...); the
+      // UI filter sends a canonical buy|sell|transfer. Translate so picking
+      // "Transfer" matches the real transfer_out rows instead of zero rows.
+      if (actionFilter) q = q.in("action", dbActionsForCanonical(actionFilter));
       if (tokenSearch) q = q.ilike("token_symbol", `%${tokenSearch}%`);
 
       const { data: rowsData, error, count } = await q;
@@ -152,31 +156,38 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
 
       const enriched: FeedRow[] = rows.map((r) => {
         const meta = labels.get(`${r.chain}:${r.whale_address.toLowerCase()}`) ?? null;
-        // Audit B5 / P1 #24 — fall back to the curated registry when
-        // the whales table doesn't have an entity_type for this row.
-        // Returns at minimum 'whale' so every row carries one label.
-        let entity_type = meta?.entity_type ?? null;
+        const entity_type = meta?.entity_type ?? null;
         let label = meta?.label ?? null;
-        if (!entity_type) {
-          const cls = classifyAddress(r.whale_address, r.chain);
-          entity_type = cls.labels[0] ?? null;
-          if (!label && cls.name) label = cls.name;
-        }
+
+        // Resolve a WhaleLabel for the filter pills + badge. The curated
+        // registry wins (it knows specific CEX/MM/bridge addresses); otherwise
+        // map the whales.entity_type vocabulary onto the WhaleLabel taxonomy.
+        // Before this the pills compared a WhaleLabel against entity_type
+        // strings ('institutional' etc.) and matched zero rows.
+        const cls = classifyAddress(r.whale_address, r.chain);
+        const registryLabel = cls.labels[0];
+        const whale_label: WhaleLabel = registryLabel && registryLabel !== 'whale'
+          ? registryLabel
+          : entityTypeToLabel(entity_type);
+        if (!label && cls.name) label = cls.name;
+
         return {
           ...r,
+          action: canonicalAction(r.action),
           label,
           entity_type,
+          whale_label,
           pnl_30d_usd: meta?.pnl_30d_usd ?? null,
           win_rate: meta?.win_rate ?? null,
           avg_hold_hours: meta?.avg_hold_hours ?? null,
         };
       });
 
-      // Apply label filter after enrichment so registry-classified rows
-      // (not yet in the whales table) are still respected by the
+      // Apply label filter after enrichment on the resolved WhaleLabel so both
+      // whales-table rows and registry-classified rows are respected by the
       // Smart Money / CEX / Bot pills.
       const filtered = requestedLabels.length > 0
-        ? enriched.filter((r) => r.entity_type !== null && requestedLabels.includes(r.entity_type as WhaleLabel))
+        ? enriched.filter((r) => requestedLabels.includes(r.whale_label))
         : enriched;
 
       return { rows: filtered, total: requestedLabels.length > 0 ? filtered.length : (count ?? enriched.length) };
