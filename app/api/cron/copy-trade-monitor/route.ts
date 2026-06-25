@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
 
-  if (!(await cronHasWork("copy_trade_rules", { column: "enabled", value: true }))) {
+  if (!(await cronHasWork("user_copy_rules", { column: "enabled", value: true }))) {
     return cronResponse("copy-trade-monitor", startedAt, { skipped: "no-active-copy-rules" });
   }
 
