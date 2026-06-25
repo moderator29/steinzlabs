@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, logCronExecution } from "../_shared";
+import { verifyCron, logCronExecution, getFollowedWhaleAddresses, ilikeAnyFilter } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
 
@@ -62,13 +62,25 @@ export async function GET(request: NextRequest) {
   let inserted = 0;
   try {
     const supabase = getSupabaseAdmin();
+
+    // Demand gate: poll only whales a user actually follows. The whales table
+    // is seeded with hundreds of addresses; polling them all via Alchemy every
+    // tick spends RPC budget on whales nobody tracks. Scoping to followed
+    // whales makes cost scale with real demand (zero when no follows).
+    const followed = await getFollowedWhaleAddresses();
+    if (followed.length === 0) {
+      await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
+      return NextResponse.json({ ok: true, skipped: "no-followed-whales", polled: 0 });
+    }
+
     const { data: whales } = await supabase
       .from("whales")
       .select("address, chain")
       .eq("is_active", true)
       .eq("chain", "ethereum")
+      .or(ilikeAnyFilter("address", followed))
       .order("last_active_at", { ascending: true, nullsFirst: true })
-      .limit(15);
+      .limit(25);
 
     for (const whale of (whales ?? []) as Array<{ address: string; chain: string }>) {
       const transfers = await pollEthereumWhale(whale.address);

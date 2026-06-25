@@ -26,7 +26,7 @@
  *   GET /api/cron/whale-backfill-pnl?dryRun=1&limit=3   (admin preview)
  */
 import { NextRequest } from 'next/server';
-import { verifyCron, cronResponse, logCronExecution } from '../_shared';
+import { verifyCron, cronResponse, logCronExecution, getFollowedWhaleAddresses, ilikeAnyFilter } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -240,6 +240,13 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
+  // Demand gate: only backfill PnL (Arkham/Alchemy spend) for whales someone
+  // follows, so cost scales with real demand instead of the seeded whale set.
+  const followed = await getFollowedWhaleAddresses();
+  if (followed.length === 0) {
+    return cronResponse('whale-backfill-pnl', startedAt, { processed: 0, skipped: 'no-followed-whales' });
+  }
+
   // Prefer whales never backfilled OR stale >24h.
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: whales, error } = await supabase
@@ -247,6 +254,7 @@ export async function GET(request: NextRequest) {
     .select('id, address, chain, last_active_at')
     .eq('is_active', true)
     .or(`last_active_at.is.null,last_active_at.lt.${twentyFourHoursAgo}`)
+    .or(ilikeAnyFilter('address', followed))
     .order('last_active_at', { ascending: true, nullsFirst: true })
     .limit(limit);
 
