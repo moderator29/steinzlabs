@@ -502,7 +502,7 @@ function VtxAiPageInner() {
     }
   }, [messages]);
 
-  const isPro = tier === 'pro';
+  const isPro = tier === 'pro' || tier === 'max';
 
   const updateSettings = (partial: Partial<AgentSettings>) => {
     const updated = { ...settings, ...partial };

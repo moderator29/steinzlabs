@@ -325,7 +325,7 @@ export default function AdminDocsPage() {
 
             <H3 children={<><Repeat className="inline w-4 h-4 me-1 text-[#06B6D4]" />Swap Engine</>} />
             <p>
-              The swap engine aggregates every major DEX on each chain and picks the best route. 0x Protocol handles EVM; Jupiter handles Solana. The user sees a single quote; underneath, the quote is assembled from multiple liquidity sources. A 0.4% platform fee is charged on each swap, disclosed upfront and included in the displayed receive amount.
+              The swap engine aggregates every major DEX on each chain and picks the best route. 0x Protocol handles EVM; Jupiter handles Solana. The user sees a single quote; underneath, the quote is assembled from multiple liquidity sources. A 0.5% platform fee is charged on each swap, disclosed upfront and included in the displayed receive amount.
             </p>
 
             <H3 children={<><BarChart3 className="inline w-4 h-4 me-1 text-[#10B981]" />On-Chain Trends</>} />

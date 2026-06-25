@@ -131,7 +131,7 @@ export async function getSwapPrice(params: {
   taker?: string;
 }): Promise<ZxPriceResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.004';
+  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.005';
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),
@@ -170,7 +170,7 @@ export async function getSwapQuote(params: {
   permit2?: boolean;
 }): Promise<ZxQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.004';
+  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.005';
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),

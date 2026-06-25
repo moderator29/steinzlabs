@@ -73,7 +73,7 @@ Full feature parity for the most-used flows. Slash commands include `/price`, `/
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS |
 | State | Zustand + React hooks |
@@ -82,7 +82,7 @@ Full feature parity for the most-used flows. Slash commands include `/price`, `/
 | AI | Anthropic Claude (Sonnet executor + Opus advisor) with prompt caching |
 | EVM RPC | Alchemy SDK + Ethers.js + Viem |
 | Solana RPC | Helius + @solana/web3.js |
-| Wallet | Wagmi v5 + Reown AppKit + native BIP39 / AES-256-GCM |
+| Wallet | Wagmi v2 + Reown AppKit + native BIP39 / AES-256-GCM |
 | EVM Swap | 0x Protocol (Swap + Gasless) |
 | Solana Swap | Jupiter Aggregator |
 | Market Data | CoinGecko + DexScreener + Birdeye |
