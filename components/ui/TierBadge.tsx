@@ -24,14 +24,14 @@ interface TierBadgeProps {
   /** Disable the click-popover (e.g. when the badge sits inside another button). */
   nonInteractive?: boolean;
   /**
-   * When true and `tier === 'naka_cult'`, renders the Chosen variant
-   * (gold trim + Dev-NFT lineage copy). Server-resolved from
-   * `profiles.is_chosen` via /api/cult/me — never trust client state.
+   * @deprecated The Chosen badge variant has been retired from Naka Labs.
+   * This prop is accepted for back-compat but no longer changes rendering —
+   * naka_cult tier always shows the standard Naka Cult badge.
    */
   isChosen?: boolean;
 }
 
-type Variant = 'mini' | 'pro' | 'max' | 'naka_cult' | 'chosen';
+type Variant = 'mini' | 'pro' | 'max' | 'naka_cult';
 
 const VARIANTS: Record<Variant, { src: string; label: string; message: string; ringRgba: string; goldTrim?: boolean }> = {
   mini: {
@@ -58,24 +58,17 @@ const VARIANTS: Record<Variant, { src: string; label: string; message: string; r
     message: 'Naka Cult — the lineage. Vault entry, the Conclave, the Oracle, the Sanctum.',
     ringRgba: 'rgba(220,20,60,0.6)',
   },
-  chosen: {
-    src: '/branding/badge-naka-cult.png',
-    label: 'Naka Cult — Chosen',
-    message: 'Chosen — Dev-NFT lineage. Conclave 2x weight, Oracle write-access, Sanctum curation.',
-    ringRgba: 'rgba(255,216,107,0.85)',
-    goldTrim: true,
-  },
 };
 
-function resolveVariant(tier: TierBadgeProps['tier'], isChosen?: boolean): Variant | null {
+function resolveVariant(tier: TierBadgeProps['tier']): Variant | null {
   const t = (tier ?? 'free').toString().toLowerCase();
-  if (t === 'naka_cult') return isChosen ? 'chosen' : 'naka_cult';
+  if (t === 'naka_cult') return 'naka_cult';
   if (t === 'max' || t === 'mini' || t === 'pro') return t;
   return null;
 }
 
-export function TierBadge({ tier, size = 16, title, className, nonInteractive, isChosen }: TierBadgeProps) {
-  const variant = resolveVariant(tier, isChosen);
+export function TierBadge({ tier, size = 16, title, className, nonInteractive }: TierBadgeProps) {
+  const variant = resolveVariant(tier);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
 

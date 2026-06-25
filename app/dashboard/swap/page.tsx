@@ -1064,8 +1064,6 @@ export default function SwapPage() {
             toToken,
             fromAmount: parseFloat(savedFromAmount),
             toAmount: parseFloat(savedToAmount),
-            platformFeeBps: 40,
-            swapType: useGasless ? 'gasless' : 'standard',
             status: 'confirmed',
           }),
         });

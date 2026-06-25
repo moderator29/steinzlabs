@@ -129,31 +129,39 @@ export async function scoreWhalePickAccuracy(userId: string): Promise<number | n
 
 export async function scorePortfolioPerformancePct(userId: string): Promise<number | null> {
   const sb = getSupabaseAdmin();
-  // Pull the user's 30d realized PnL from swap_logs/sniper_executions.
-  // For platform-wide percentile we sample the population (LIMIT 500
-  // most-recent active users) so this stays cheap.
+  // Realized PnL is NOT on swap_logs (that table has no pnl column). It lives
+  // in the two executed-trade ledgers: sniper_executions (realized_at) and
+  // user_copy_trades (receipt_reconciled_at). Aggregate the user's 30d total
+  // across both and rank it against the active population for the percentile.
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: myPnl } = await sb
-    .from('swap_logs')
-    .select('pnl_usd')
-    .eq('user_id', userId)
-    .gte('created_at', since);
-  const myTotal = (myPnl ?? []).reduce((s, r) => s + Number(r.pnl_usd ?? 0), 0);
-  if (!myPnl || myPnl.length === 0) return null;
 
-  // Sample the population: aggregate per-user totals from swap_logs.
-  // RPC would be cheaper; the client-side aggregation is correct.
-  const { data: pop } = await sb
-    .from('swap_logs')
-    .select('user_id, pnl_usd, created_at')
-    .gte('created_at', since)
-    .limit(5000);
+  const [sniperPop, copyPop] = await Promise.all([
+    sb
+      .from('sniper_executions')
+      .select('user_id, pnl_usd, realized_at')
+      .not('pnl_usd', 'is', null)
+      .not('realized_at', 'is', null)
+      .gte('realized_at', since)
+      .limit(5000),
+    sb
+      .from('user_copy_trades')
+      .select('user_id, pnl_usd, receipt_reconciled_at')
+      .not('pnl_usd', 'is', null)
+      .not('receipt_reconciled_at', 'is', null)
+      .gte('receipt_reconciled_at', since)
+      .limit(5000),
+  ]);
+
   const totals = new Map<string, number>();
-  for (const row of pop ?? []) {
+  for (const row of [...(sniperPop.data ?? []), ...(copyPop.data ?? [])]) {
     const uid = row.user_id;
     if (!uid) continue;
     totals.set(uid, (totals.get(uid) ?? 0) + Number(row.pnl_usd ?? 0));
   }
+
+  // No realized trades for this user → no honest portfolio axis to score.
+  if (!totals.has(userId)) return null;
+  const myTotal = totals.get(userId) as number;
   const all = Array.from(totals.values()).sort((a, b) => a - b);
   if (all.length === 0) return null;
   const rankIdx = all.findIndex((v) => v >= myTotal);

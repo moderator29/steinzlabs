@@ -57,7 +57,26 @@ export async function GET(request: Request) {
       console.error('[admin/stats] Engagement fetch failed:', err);
     }
 
+    // Broadcast recipient counts — the broadcast page reads these flat fields to
+    // show "N recipients" per audience. Must match the audience filters in
+    // /api/admin/broadcast (free incl. NULL tier; pro = mini/pro/max; inactive
+    // = no profile update in 30 days).
+    const inactiveCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const [
+      { count: proUsers },
+      { count: freeUsers },
+      { count: inactiveUsers },
+    ] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).in('tier', ['mini', 'pro', 'max']),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).or('tier.eq.free,tier.is.null'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).lt('updated_at', inactiveCutoff),
+    ]);
+
     return NextResponse.json({
+      totalUsers: totalUsers || 0,
+      proUsers: proUsers || 0,
+      freeUsers: freeUsers || 0,
+      inactiveUsers: inactiveUsers || 0,
       users: {
         total: totalUsers || 0,
         profiles: totalProfiles || 0,

@@ -100,27 +100,6 @@ export async function getDexPrice(tokenAddress: string): Promise<number> {
 }
 
 /**
- * Get buyer/seller ratio from 24h transaction data.
- * Returns { buyersPercent, sellersPercent, buyCount, sellCount }
- */
-export function getOrderBookRatio(pair: DexPair): {
-  buyersPercent: number;
-  sellersPercent: number;
-  buyCount: number;
-  sellCount: number;
-} {
-  const { buys, sells } = pair.txns.h24;
-  const total = buys + sells;
-  if (total === 0) return { buyersPercent: 50, sellersPercent: 50, buyCount: 0, sellCount: 0 };
-  return {
-    buyersPercent: Math.round((buys / total) * 100),
-    sellersPercent: Math.round((sells / total) * 100),
-    buyCount: buys,
-    sellCount: sells,
-  };
-}
-
-/**
  * Batch fetch token data for up to 30 token addresses at once.
  * Returns a map of mintAddress → best pair (highest liquidity).
  * Used for logo resolution and identity verification.

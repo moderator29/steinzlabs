@@ -24,6 +24,7 @@ import { NftTab } from '@/components/wallet/NftTab';
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
 import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
+import { normalizeAddress, isEvmChain, isSolanaAddress } from '@/lib/utils/addressNormalize';
 
 interface TokenBalance {
   symbol: string;
@@ -147,7 +148,9 @@ const TOKEN_SORT_PRIORITY: Array<{ chain: string; symbol?: string; contract?: st
   { chain: 'polygon',  contract: '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19' }, // Pleasure Coin
 ];
 function priorityIndex(chain: string, symbol: string, contract: string | null | undefined): number {
-  const c = (contract || '').toLowerCase();
+  // Chain-aware: EVM contracts fold to lowercase (matching the seeded
+  // entries), Solana addresses keep their case. Never bare .toLowerCase().
+  const c = contract ? normalizeAddress(contract, chain) : '';
   for (let i = 0; i < TOKEN_SORT_PRIORITY.length; i++) {
     const p = TOKEN_SORT_PRIORITY[i];
     if (p.chain !== chain) continue;
@@ -307,8 +310,10 @@ export default function WalletPage() {
         // Union local + cloud by address; cloud is the durable record but
         // local may have wallets not yet synced (offline-create case).
         const byAddr = new Map<string, StoredWallet>();
-        for (const w of cloudWallets) byAddr.set(w.address.toLowerCase(), w);
-        for (const w of localWallets) byAddr.set(w.address.toLowerCase(), w);
+        // Shape-aware key: EVM folds to lowercase, Solana keeps its case, so
+        // two distinct Solana wallets can't collide into one map entry.
+        for (const w of cloudWallets) byAddr.set(normalizeAddress(w.address), w);
+        for (const w of localWallets) byAddr.set(normalizeAddress(w.address), w);
         const merged = Array.from(byAddr.values());
 
         if (cancelled) return;
@@ -378,6 +383,39 @@ export default function WalletPage() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Cross-device sync for custom tokens. localStorage is the offline cache;
+  // user_custom_tokens (server) is the durable record. On mount we union the
+  // two, render the union, and push any local-only additions up to the server
+  // so a token added on one device shows up on the next.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/wallet/custom-tokens', { credentials: 'include' });
+        if (!res.ok || cancelled) return;
+        const { tokens } = (await res.json()) as { tokens: string[] };
+        const serverTokens = Array.isArray(tokens) ? tokens : [];
+        const localRaw = localStorage.getItem('steinz_custom_tokens');
+        const localTokens: string[] = localRaw ? JSON.parse(localRaw) : [];
+        const union = Array.from(new Set([...localTokens, ...serverTokens]));
+        if (cancelled) return;
+        setCustomTokens(union);
+        localStorage.setItem('steinz_custom_tokens', JSON.stringify(union));
+        for (const key of localTokens.filter((t) => !serverTokens.includes(t))) {
+          void fetch('/api/wallet/custom-tokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ key }),
+          });
+        }
+      } catch {
+        /* offline or signed out — the localStorage cache still works */
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const fetchPrices = async () => {
@@ -548,7 +586,7 @@ export default function WalletPage() {
       const rows = await Promise.all(customTokens.map(async (entry) => {
         const [chainId, contract] = entry.split(':');
         if (!chainId || !contract) return null;
-        const seed = SEEDED_META[contract.toLowerCase()];
+        const seed = SEEDED_META[normalizeAddress(contract, chainId)];
         try {
           const res = await fetch(`/api/market/token/${contract}`);
           const data = res.ok ? await res.json() as {
@@ -720,7 +758,19 @@ export default function WalletPage() {
       onChangeChain={(c) => setActiveChain(c)}
     />
   );
-  if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => { const updated = [...customTokens, t]; setCustomTokens(updated); localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated)); setView('main'); }} />;
+  if (view === 'add-token') return <AddTokenView onBack={() => setView('main')} tokens={customTokens} onAdd={(t) => {
+    const updated = [...customTokens, t];
+    setCustomTokens(updated);
+    localStorage.setItem('steinz_custom_tokens', JSON.stringify(updated));
+    // Persist server-side too so the token survives a cache clear / new device.
+    void fetch('/api/wallet/custom-tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ key: t }),
+    });
+    setView('main');
+  }} />;
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
     enabled={enabledChains}
@@ -759,9 +809,14 @@ export default function WalletPage() {
       ...t,
       chain: activeChain.id,
     })) as Array<TokenBalance & { chain: string }>;
-    const seen = new Set(onChain.map((t) => `${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`));
+    // Identity key for a holding: chain + contract (chain-aware normalized so
+    // Solana keeps its case) or, for native assets with no contract, the
+    // lowercased symbol (matches the native-placeholder key below).
+    const tokenKey = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
+      `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
+    const seen = new Set(onChain.map((t) => tokenKey(t.chain, t.contractAddress, t.symbol)));
     const customOnly = customTokenRows.filter((t) =>
-      !seen.has(`${t.chain}:${(t.contractAddress || t.symbol).toLowerCase()}`)
+      !seen.has(tokenKey(t.chain, t.contractAddress, t.symbol))
     );
     // Native-asset placeholders for every enabled chain that hasn't been
     // fetched yet (user hasn't activated that chain pill). Without this,
@@ -773,7 +828,7 @@ export default function WalletPage() {
       if (chainId === activeChain.id) continue;
       const c = SUPPORTED_CHAINS.find((x) => x.id === chainId);
       if (!c) continue;
-      const key = `${chainId}:${c.symbol.toLowerCase()}`;
+      const key = tokenKey(chainId, null, c.symbol);
       if (seen.has(key)) continue;
       nativePlaceholders.push({
         symbol: c.symbol,
@@ -1133,7 +1188,7 @@ export default function WalletPage() {
                   // per-token logo the hydrator pulled from CoinGecko (gives
                   // Naka Go / Pleasure Coin their real branded icons), then
                   // per-contract overrides as a final safety net.
-                  const contractKey = (token.contractAddress || '').toLowerCase();
+                  const contractKey = token.contractAddress ? normalizeAddress(token.contractAddress, token.chain) : '';
                   const CONTRACT_LOGOS: Record<string, string> = {
                     '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898':
                       'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
@@ -2071,8 +2126,14 @@ function ReceiveView({
   );
 }
 
-function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: string[]; onAdd: (addr: string) => void }) {
+// Chains a custom token can be imported on. EVM chains validate as 0x-hex;
+// Solana validates as base58. Bitcoin/Sui are excluded — they don't expose
+// the ERC-20/SPL contract model the hydrator + price lookup understand.
+const ADD_TOKEN_CHAINS = SUPPORTED_CHAINS.filter((c) => c.id !== 'bitcoin' && c.id !== 'sui');
+
+function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: string[]; onAdd: (key: string) => void }) {
   const [address, setAddress] = useState('');
+  const [chain, setChain] = useState('ethereum');
   const [error, setError] = useState('');
   // Audit B4 / P1 #12 — GoPlus pre-add scan. Without this, users can
   // import any contract address as a custom token, including outright
@@ -2106,14 +2167,16 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     }
   };
 
-  const runScan = async (addr: string) => {
+  const runScan = async (addr: string, scanChain: string) => {
     setScanning(true);
     setScanVerdict(null);
     try {
       const res = await fetch('/api/security/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scan_type: 'token', target: addr, chain: 'ethereum' }),
+        // Scan on the SAME chain the token is being added on — a hardcoded
+        // 'ethereum' scanned the wrong network for Base/Solana/etc. tokens.
+        body: JSON.stringify({ scan_type: 'token', target: addr, chain }),
       });
       if (!res.ok) throw new Error(`Scan failed (${res.status})`);
       const json = (await res.json()) as { score: number; level: string; reasons: string[] };
@@ -2129,14 +2192,26 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   };
 
   const handleAdd = async () => {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { setError('Invalid ERC-20 contract address'); return; }
-    const lower = address.toLowerCase();
-    if (tokens.includes(lower)) { setError('Token already added'); return; }
+    // Chain-aware validation: EVM contracts are 0x + 40 hex, Solana is base58.
+    const trimmed = address.trim();
+    if (isEvmChain(chain)) {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) { setError('Invalid EVM contract address'); return; }
+    } else if (chain === 'solana') {
+      if (!isSolanaAddress(trimmed)) { setError('Invalid Solana mint address'); return; }
+    } else if (!trimmed) {
+      setError('Enter a contract address'); return;
+    }
+    // Persist chain-aware: EVM folds to lowercase, Solana keeps its case. The
+    // stored key is "<chain>:<contract>" to match the hydrator, which splits on
+    // ':' — storing a bare address meant the token never hydrated.
+    const normalized = normalizeAddress(trimmed, chain);
+    const key = `${chain}:${normalized}`;
+    if (tokens.includes(key)) { setError('Token already added'); return; }
     if (!scanVerdict) {
-      await runScan(lower);
+      await runScan(normalized, chain);
       return; // First click runs the scan; user confirms with second click.
     }
-    onAdd(lower);
+    onAdd(key);
   };
 
   // Static class map — Tailwind needs literal class names at build
@@ -2164,11 +2239,23 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold">Add Custom Token</h1>
-            <p className="text-gray-400 text-xs">Import any ERC-20 token by contract</p>
+            <p className="text-gray-400 text-xs">Import any token by contract — EVM or Solana</p>
           </div>
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1.5 block font-medium">Network</label>
+            <select
+              value={chain}
+              onChange={(e) => { setChain(e.target.value); setError(''); setScanVerdict(null); }}
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50"
+            >
+              {ADD_TOKEN_CHAINS.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block font-medium">Token Contract Address</label>
             <div className="relative">
@@ -2176,7 +2263,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
                 value={address}
                 onChange={e => { setAddress(e.target.value); setError(''); setScanVerdict(null); }}
                 className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 pe-20 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
-                placeholder="0x..."
+                placeholder={chain === 'solana' ? 'Mint address…' : '0x…'}
               />
               <button
                 type="button"
@@ -2219,12 +2306,21 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
             <div className="mt-4">
               <h3 className="text-xs font-semibold text-gray-400 mb-2">Custom Tokens ({tokens.length})</h3>
               <div className="space-y-1.5">
-                {tokens.map(t => (
-                  <div key={t} className="flex items-center justify-between bg-[#111827] rounded-xl px-4 py-3 text-xs font-mono text-gray-400 border border-white/5">
-                    <span>{t.slice(0, 10)}...{t.slice(-8)}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </div>
-                ))}
+                {tokens.map(t => {
+                  // Stored as "<chain>:<contract>"; show the chain + a short address.
+                  const sep = t.indexOf(':');
+                  const tChain = sep > 0 ? t.slice(0, sep) : '';
+                  const tAddr = sep > 0 ? t.slice(sep + 1) : t;
+                  return (
+                    <div key={t} className="flex items-center justify-between bg-[#111827] rounded-xl px-4 py-3 text-xs font-mono text-gray-400 border border-white/5">
+                      <span>
+                        {tChain && <span className="text-slate-500 uppercase me-2">{tChain}</span>}
+                        {tAddr.slice(0, 8)}…{tAddr.slice(-6)}
+                      </span>
+                      <ExternalLink className="w-3 h-3" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

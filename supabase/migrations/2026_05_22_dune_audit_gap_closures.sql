@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS public.dune_token_age_buyers (
 CREATE INDEX IF NOT EXISTS dune_token_age_buyers_age_idx
   ON public.dune_token_age_buyers (fetched_at);
 ALTER TABLE public.dune_token_age_buyers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_token_age_buyers_public_read"
+DROP POLICY IF EXISTS "dune_token_age_buyers_public_read" ON public.dune_token_age_buyers;
+CREATE POLICY "dune_token_age_buyers_public_read"
   ON public.dune_token_age_buyers FOR SELECT USING (true);
 
 -- 3. dune_smart_money_token_flow — the missing token-level rollup from
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS public.dune_smart_money_token_flow (
 CREATE INDEX IF NOT EXISTS dune_smart_money_token_flow_idx
   ON public.dune_smart_money_token_flow (chain, net_inflow_usd_24h DESC);
 ALTER TABLE public.dune_smart_money_token_flow ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_smart_money_token_flow_public_read"
+DROP POLICY IF EXISTS "dune_smart_money_token_flow_public_read" ON public.dune_smart_money_token_flow;
+CREATE POLICY "dune_smart_money_token_flow_public_read"
   ON public.dune_smart_money_token_flow FOR SELECT USING (true);
 
 -- 4. dune_stablecoin_pulse — §5.6 Context Feed stablecoin_pulse card data.
@@ -69,7 +71,8 @@ CREATE TABLE IF NOT EXISTS public.dune_stablecoin_pulse (
 CREATE INDEX IF NOT EXISTS dune_stablecoin_pulse_recent_idx
   ON public.dune_stablecoin_pulse (hour_bucket DESC);
 ALTER TABLE public.dune_stablecoin_pulse ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_stablecoin_pulse_public_read"
+DROP POLICY IF EXISTS "dune_stablecoin_pulse_public_read" ON public.dune_stablecoin_pulse;
+CREATE POLICY "dune_stablecoin_pulse_public_read"
   ON public.dune_stablecoin_pulse FOR SELECT USING (true);
 
 -- 5. dune_cex_flow — §5.6 Context Feed cex_drain card data + tier-2 tool.
@@ -84,14 +87,21 @@ CREATE TABLE IF NOT EXISTS public.dune_cex_flow (
 CREATE INDEX IF NOT EXISTS dune_cex_flow_recent_idx
   ON public.dune_cex_flow (hour_bucket DESC);
 ALTER TABLE public.dune_cex_flow ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_cex_flow_public_read"
+DROP POLICY IF EXISTS "dune_cex_flow_public_read" ON public.dune_cex_flow;
+CREATE POLICY "dune_cex_flow_public_read"
   ON public.dune_cex_flow FOR SELECT USING (true);
 
 -- 6. rug_contract_signatures shingle bitmap — §3 P1-D.5 Tier-2 Jaccard
 -- comparison. Stored as comma-joined 8-byte hex tokens so the scanner
 -- can compute Jaccard live without re-fetching bytecode.
-ALTER TABLE public.rug_contract_signatures
-  ADD COLUMN IF NOT EXISTS shingles text;
+-- Guarded: rug_contract_signatures does not exist on every environment.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema='public' AND table_name='rug_contract_signatures') THEN
+    ALTER TABLE public.rug_contract_signatures ADD COLUMN IF NOT EXISTS shingles text;
+  END IF;
+END $$;
 
 -- 7. dune_mev_loss_aggregate — per-wallet MEV loss over 30d for the
 -- mev_loss_report tier-2 tool.
@@ -105,5 +115,6 @@ CREATE TABLE IF NOT EXISTS public.dune_mev_loss_aggregate (
   PRIMARY KEY (wallet_address, chain)
 );
 ALTER TABLE public.dune_mev_loss_aggregate ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_mev_loss_aggregate_public_read"
+DROP POLICY IF EXISTS "dune_mev_loss_aggregate_public_read" ON public.dune_mev_loss_aggregate;
+CREATE POLICY "dune_mev_loss_aggregate_public_read"
   ON public.dune_mev_loss_aggregate FOR SELECT USING (true);

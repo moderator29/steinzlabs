@@ -119,6 +119,7 @@ export default function FeatureFlagsPage() {
 
 function adminHeaders(): HeadersInit {
   if (typeof window === 'undefined') return {};
-  const tok = sessionStorage.getItem('admin_bearer');
+  // Admin layout stores the bearer under 'admin_token' (not 'admin_bearer').
+  const tok = sessionStorage.getItem('admin_token');
   return tok ? { Authorization: `Bearer ${tok}` } : {};
 }

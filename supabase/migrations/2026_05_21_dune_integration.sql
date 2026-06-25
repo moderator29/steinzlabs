@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS public.dune_holder_concentration (
 );
 CREATE INDEX IF NOT EXISTS dune_holder_conc_age_idx ON public.dune_holder_concentration (fetched_at);
 ALTER TABLE public.dune_holder_concentration ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_holder_conc_public_read"
+DROP POLICY IF EXISTS "dune_holder_conc_public_read" ON public.dune_holder_concentration;
+CREATE POLICY "dune_holder_conc_public_read"
   ON public.dune_holder_concentration FOR SELECT USING (true);
 
 CREATE TABLE IF NOT EXISTS public.dune_smart_money_score (
@@ -73,7 +74,8 @@ CREATE TABLE IF NOT EXISTS public.dune_smart_money_score (
 );
 CREATE INDEX IF NOT EXISTS dune_smart_money_score_idx ON public.dune_smart_money_score (score DESC);
 ALTER TABLE public.dune_smart_money_score ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_smart_money_score_public_read"
+DROP POLICY IF EXISTS "dune_smart_money_score_public_read" ON public.dune_smart_money_score;
+CREATE POLICY "dune_smart_money_score_public_read"
   ON public.dune_smart_money_score FOR SELECT USING (true);
 
 CREATE TABLE IF NOT EXISTS public.dune_cluster_aggregates (
@@ -87,7 +89,8 @@ CREATE TABLE IF NOT EXISTS public.dune_cluster_aggregates (
   PRIMARY KEY (cluster_id, chain)
 );
 ALTER TABLE public.dune_cluster_aggregates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_cluster_agg_public_read"
+DROP POLICY IF EXISTS "dune_cluster_agg_public_read" ON public.dune_cluster_aggregates;
+CREATE POLICY "dune_cluster_agg_public_read"
   ON public.dune_cluster_aggregates FOR SELECT USING (true);
 
 CREATE TABLE IF NOT EXISTS public.dune_bridge_flows (
@@ -102,7 +105,8 @@ CREATE TABLE IF NOT EXISTS public.dune_bridge_flows (
 CREATE INDEX IF NOT EXISTS dune_bridge_flows_recent_idx
   ON public.dune_bridge_flows (hour_bucket DESC);
 ALTER TABLE public.dune_bridge_flows ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_bridge_flows_public_read"
+DROP POLICY IF EXISTS "dune_bridge_flows_public_read" ON public.dune_bridge_flows;
+CREATE POLICY "dune_bridge_flows_public_read"
   ON public.dune_bridge_flows FOR SELECT USING (true);
 
 CREATE TABLE IF NOT EXISTS public.dune_wash_trade_score (
@@ -114,7 +118,8 @@ CREATE TABLE IF NOT EXISTS public.dune_wash_trade_score (
   PRIMARY KEY (token_address, chain)
 );
 ALTER TABLE public.dune_wash_trade_score ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_wash_trade_public_read"
+DROP POLICY IF EXISTS "dune_wash_trade_public_read" ON public.dune_wash_trade_score;
+CREATE POLICY "dune_wash_trade_public_read"
   ON public.dune_wash_trade_score FOR SELECT USING (true);
 
 CREATE TABLE IF NOT EXISTS public.dune_deployer_history (
@@ -128,7 +133,8 @@ CREATE TABLE IF NOT EXISTS public.dune_deployer_history (
   PRIMARY KEY (deployer_address, chain)
 );
 ALTER TABLE public.dune_deployer_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_deployer_history_public_read"
+DROP POLICY IF EXISTS "dune_deployer_history_public_read" ON public.dune_deployer_history;
+CREATE POLICY "dune_deployer_history_public_read"
   ON public.dune_deployer_history FOR SELECT USING (true);
 
 -- §5.8 system alerts feed for ops when failure-ladder tier reaches 2+.
@@ -160,6 +166,7 @@ CREATE TABLE IF NOT EXISTS public.dune_alerts (
   created_at     timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.dune_alerts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "dune_alerts_own"
+DROP POLICY IF EXISTS "dune_alerts_own" ON public.dune_alerts;
+CREATE POLICY "dune_alerts_own"
   ON public.dune_alerts FOR ALL TO authenticated
   USING (user_id = auth.uid());

@@ -29,9 +29,14 @@ export interface UserListRowProps {
 
 const TIER_COLOR: Record<string, string> = {
   free: 'text-slate-400 border-white/10',
+  mini: 'text-[#00C8FF] border-[#00C8FF]/30',
   pro:  'text-[var(--nl-blue,#0066FF)] border-[var(--nl-blue,#0066FF)]/30',
   max:  'text-amber-300 border-amber-500/30',
+  naka_cult: 'text-[#DC143C] border-[#DC143C]/40',
 };
+
+// naka_cult would otherwise render as the raw "NAKA_CULT" handle; show "Cult".
+const TIER_LABEL: Record<string, string> = { naka_cult: 'Cult' };
 
 export function UserListRow({ user, showFollowButton = true, onFollowChange }: UserListRowProps) {
   const initial = (user.display_name || user.username || '?').slice(0, 1).toUpperCase();
@@ -51,12 +56,11 @@ export function UserListRow({ user, showFollowButton = true, onFollowChange }: U
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-white truncate">{user.display_name || user.username}</span>
             {user.they_follow_me ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-white/10 text-slate-300 border border-white/15 uppercase">Follows you</span> : null}
-            {user.is_chosen ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Chosen</span> : null}
             {user.verified_badge ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{user.verified_badge}</span> : null}
           </div>
           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
             <span className="truncate">@{user.username}</span>
-            {user.tier ? <span className={`px-1.5 py-[1px] rounded border text-[9px] uppercase ${tierClass}`}>{user.tier}</span> : null}
+            {user.tier ? <span className={`px-1.5 py-[1px] rounded border text-[9px] uppercase ${tierClass}`}>{TIER_LABEL[user.tier] ?? user.tier}</span> : null}
             {typeof user.success_rate === 'number' ? <span className="tabular-nums">{user.success_rate}/100</span> : null}
           </div>
         </div>

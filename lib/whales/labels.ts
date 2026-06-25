@@ -32,6 +32,70 @@ export type WhaleLabel =
   | 'bridge'      // Cross-chain bridge contract
   | 'mev';        // MEV searcher / Flashbots builder
 
+/**
+ * The `whales.entity_type` column uses a DB vocabulary
+ * (dev/exchange/fund/influencer/institutional/trader/unknown/vc) that has
+ * ZERO overlap with the WhaleLabel taxonomy the feed's filter pills use.
+ * Before this map the Smart Money / CEX / Insider pills matched zero rows
+ * because they compared a WhaleLabel against an entity_type string.
+ *
+ * This is the canonical bridge: it lets a feed row carry a WhaleLabel derived
+ * from the whales table's entity_type so the pills (and badges) work.
+ */
+const ENTITY_TYPE_TO_LABEL: Record<string, WhaleLabel> = {
+  exchange: 'cex',
+  institutional: 'smart_money',
+  fund: 'smart_money',
+  vc: 'smart_money',
+  trader: 'whale',
+  influencer: 'insider',
+  dev: 'insider',
+  unknown: 'whale',
+};
+
+/**
+ * Map a whales.entity_type string onto a WhaleLabel. Unknown/empty values
+ * fall back to the generic 'whale' so every row still carries one label.
+ */
+export function entityTypeToLabel(entityType: string | null | undefined): WhaleLabel {
+  if (!entityType) return 'whale';
+  return ENTITY_TYPE_TO_LABEL[entityType.toLowerCase()] ?? 'whale';
+}
+
+/** The three canonical activity directions the feed UI colors + filters by. */
+export type CanonicalAction = 'buy' | 'sell' | 'transfer';
+
+/**
+ * Normalize the free-text whale_activity.action (buy/sell/transfer_in/
+ * transfer_out/transfer/swap/...) to one of three canonical directions.
+ * The live table is currently 100% `transfer_out`; anything that isn't an
+ * explicit buy/sell is treated as a transfer.
+ */
+export function canonicalAction(action: string | null | undefined): CanonicalAction {
+  const a = (action ?? '').toLowerCase();
+  if (a === 'buy' || a === 'bought' || a === 'mint') return 'buy';
+  if (a === 'sell' || a === 'sold' || a === 'burn') return 'sell';
+  return 'transfer';
+}
+
+/**
+ * Translate a canonical action filter into the set of raw DB action strings
+ * to match with `.in('action', ...)`. Lets a user picking "Transfer" match
+ * the real `transfer_out`/`transfer_in` rows instead of zero rows.
+ */
+export function dbActionsForCanonical(canonical: string): string[] {
+  switch (canonical.toLowerCase()) {
+    case 'buy':
+      return ['buy', 'bought', 'mint'];
+    case 'sell':
+      return ['sell', 'sold', 'burn'];
+    case 'transfer':
+      return ['transfer', 'transfer_in', 'transfer_out'];
+    default:
+      return [canonical];
+  }
+}
+
 interface RegistryEntry {
   /** Lowercased address. */
   address: string;

@@ -8,6 +8,17 @@ the top.
 
 ## [Unreleased]
 
+### Data-integrity & honesty fixes (June 2026)
+
+- **Reputation** — `scorePortfolioPerformancePct` queried `swap_logs.pnl_usd`, a column that does not exist; the throw was swallowed and the portfolio axis silently dropped from every score. Now sources realized PnL from the real trade ledgers (`sniper_executions.pnl_usd` / `user_copy_trades.pnl_usd`).
+- **Whale tracker** — dropped the synthetic 24h-volume fallback in Top Whales Today (portfolio × turnover presented as real volume). The feed action filter now matches real `transfer_out`/`transfer_in` rows, label pills bridge `whales.entity_type` → the `WhaleLabel` taxonomy (previously zero overlap → zero matches), and the "Live" badge only pulses when the newest activity is under 10 minutes old (otherwise "Delayed"/"Idle").
+- **Market** — the DexScreener pair route no longer fabricates a 50/50 buy/sell split when txn data is missing (reports null); the Recent Trades rail shows "Idle" instead of a permanent "LIVE" pulse over an empty tape.
+- **Copy-trade monitor** — the no-work guard probed a non-existent `copy_trade_rules` table (so it never short-circuited and rescanned every minute); pointed at the real `user_copy_rules`.
+- **Naka Wallet** — replaced bare `.toLowerCase()` on token/wallet addresses with chain-aware `normalizeAddress` (Solana is case-sensitive); Add Custom Token now works end-to-end across chains (network selector, per-chain validation incl. Solana, chain-prefixed storage key the hydrator expects, GoPlus scan on the selected chain).
+- **Social** — `/api/social/search` now returns real per-caller follow state and a "Follows you" hint instead of hardcoded `not_following`; surfaced on the discover list.
+- **DMs** — the realtime websocket now authenticates via `realtime.setAuth` on session/refresh, so RLS stops dropping every `postgres_changes` event (messages previously appeared only on reload).
+- **Profile** — the public `/u/[username]` header now shows the tier badge.
+
 ### Final deliverables (May 2026)
 
 - `docs/architecture.md` — system-level architecture with request lifecycle, trust boundaries, observability, background work, and key architectural decisions (server-trusted tier, non-custodial invariant, address normalization, inflight-Map dedup, write-on-read snapshots, fail-closed webhooks).
