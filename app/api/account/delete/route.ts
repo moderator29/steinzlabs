@@ -43,14 +43,29 @@ export async function POST(request: NextRequest) {
 
     const admin = getSupabaseAdmin();
 
-    // Delete user data from all tables
+    // Delete user data from every table that stores it (GDPR Art. 17). The
+    // preference/settings tables were previously left behind, so a "deleted"
+    // account kept its notification/trading/display/privacy prefs, custom
+    // tokens, chart drawings, follows and copy rules. allSettled tolerates a
+    // table being absent in any environment.
     await Promise.allSettled([
       admin.from('profiles').delete().eq('id', user.id),
       admin.from('user_preferences').delete().eq('user_id', user.id),
       admin.from('watchlist').delete().eq('user_id', user.id),
       admin.from('alerts').delete().eq('user_id', user.id),
+      admin.from('price_alerts').delete().eq('user_id', user.id),
       admin.from('vtx_conversations').delete().eq('user_id', user.id),
       admin.from('wallets').delete().eq('user_id', user.id),
+      admin.from('notification_settings').delete().eq('user_id', user.id),
+      admin.from('user_trading_preferences').delete().eq('user_id', user.id),
+      admin.from('user_display_preferences').delete().eq('user_id', user.id),
+      admin.from('user_security_preferences').delete().eq('user_id', user.id),
+      admin.from('privacy_settings').delete().eq('user_id', user.id),
+      admin.from('social_notification_preferences').delete().eq('user_id', user.id),
+      admin.from('user_chart_drawings').delete().eq('user_id', user.id),
+      admin.from('user_custom_tokens').delete().eq('user_id', user.id),
+      admin.from('user_whale_follows').delete().eq('user_id', user.id),
+      admin.from('user_copy_rules').delete().eq('user_id', user.id),
     ]);
 
     // Delete the auth user
