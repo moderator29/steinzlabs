@@ -313,7 +313,7 @@ export default function WhitepaperPage() {
               Every inbound API is wrapped with timeouts, retries, and fallbacks. If CoinGecko is rate-limited, we degrade gracefully instead of blanking the UI. If a cache miss happens, we serve stale data with a short TTL rather than hang the page. Users don’t see the plumbing — but the plumbing is why the experience stays snappy even when a vendor has a bad day.
             </p>
             <Callout color="#8B5CF6" icon={Cpu} title="Runtime">
-              Built on Next.js 14 and deployed on Vercel’s edge. Database + auth on Supabase with Row-Level Security on every table. Client-side state is hydrated from server props; real-time streams use SSE. The whole thing runs in a browser — no installs, no extensions beyond the wallets you already have.
+              Built on Next.js 16 and deployed on Vercel’s edge. Database + auth on Supabase with Row-Level Security on every table. Client-side state is hydrated from server props; real-time streams use SSE. The whole thing runs in a browser — no installs, no extensions beyond the wallets you already have.
             </Callout>
           </WpSection>
 
@@ -659,7 +659,7 @@ export default function WhitepaperPage() {
               {[
                 {
                   name: 'Free', price: '$0', color: '#9CA3AF',
-                  bullets: ['25 VTX messages / day', 'Basic wallet intelligence (EVM)', '3 price alerts', 'Standard swap (0.4% fee)', 'Market + charts access', 'Basic security scanner', '1 connected wallet'],
+                  bullets: ['25 VTX messages / day', 'Basic wallet intelligence (EVM)', '3 price alerts', 'Standard swap (0.5% fee)', 'Market + charts access', 'Basic security scanner', '1 connected wallet'],
                 },
                 {
                   name: 'Mini', price: '$5 / mo', color: '#0066FF',

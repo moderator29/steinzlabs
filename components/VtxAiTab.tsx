@@ -662,7 +662,7 @@ export default function VtxAiTab() {
     toastTimerRef.current = setTimeout(() => setSettingsToast(false), 1800);
   };
 
-  const isPro = tier === 'pro';
+  const isPro = tier === 'pro' || tier === 'max';
 
   const personalityLabels: Record<string, string> = {
     professional: 'Professional Analyst',

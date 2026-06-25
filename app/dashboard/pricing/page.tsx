@@ -23,7 +23,7 @@ const TIERS = [
       '25 VTX AI messages per day',
       'Basic wallet intelligence (EVM only)',
       '3 price alerts',
-      'Standard swap (0.4% fee)',
+      'Standard swap (0.5% fee)',
       'Access to market data and charts',
       'Basic security scanner',
       '1 connected wallet',
