@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { scoreUser } from '@/lib/reputation/scorer';
+import { logCronExecution } from '../_shared';
 
 /**
  * GET /api/cron/recompute-reputation
@@ -22,9 +23,13 @@ export async function GET(req: NextRequest) {
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+  const startedAt = Date.now();
   const sb = getSupabaseAdmin();
   const { data: users, error } = await sb.from('profiles').select('id');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    await logCronExecution('recompute-reputation', 'failed', Date.now() - startedAt, error.message, 0);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   const ids = (users ?? []).map((u) => u.id);
   let succeeded = 0;
@@ -70,5 +75,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  await logCronExecution('recompute-reputation', 'success', Date.now() - startedAt, undefined, succeeded);
   return NextResponse.json({ scanned: ids.length, succeeded, failed, ranked: succeeded > 0 });
 }
