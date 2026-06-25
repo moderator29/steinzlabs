@@ -8,7 +8,30 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const NAME = 'cult-generate-daily-seal';
-const MODEL = 'claude-opus-4-7';
+// claude-opus-4-7 was not a valid Anthropic model id — the single stored seal
+// was produced against it. Use the current Opus id (the route intends Opus,
+// and this matches the repo's other Opus callers).
+const MODEL = 'claude-opus-4-8';
+
+// Anthropic occasionally returns 529 (Overloaded). The 2026-05-12 seal failed
+// on a 529 with no retry and left a gap. Retry transient overloads with
+// backoff before giving up.
+async function createWithRetry(
+  client: Anthropic,
+  params: Anthropic.MessageCreateParamsNonStreaming,
+): Promise<Anthropic.Message> {
+  const delays = [1000, 3000, 6000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await client.messages.create(params);
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      const transient = status === 529 || status === 429 || (typeof status === 'number' && status >= 500);
+      if (!transient || attempt >= delays.length) throw err;
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
+}
 
 /**
  * Cron — generates the Oracle's Daily Seal for today's UTC date if missing.
@@ -103,7 +126,7 @@ export async function GET(request: NextRequest) {
       `{ "title": "<6-12 word title>", "body": "<the briefing>" }`,
     ].join('\n');
 
-    const response = await client.messages.create({
+    const response = await createWithRetry(client, {
       model: MODEL,
       max_tokens: 600,
       messages: [{ role: 'user', content: userPrompt }],
