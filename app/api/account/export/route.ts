@@ -38,13 +38,22 @@ async function getUserId(): Promise<string | null> {
 const TABLES: Array<{ table: string; column: string }> = [
   { table: 'profiles', column: 'id' },
   { table: 'alerts', column: 'user_id' },
+  { table: 'price_alerts', column: 'user_id' },
   { table: 'user_watchlist', column: 'user_id' },
   { table: 'user_follow_list', column: 'user_id' },
+  { table: 'user_whale_follows', column: 'user_id' },
   { table: 'sniper_rules', column: 'user_id' },
   { table: 'user_copy_rules', column: 'user_id' },
   { table: 'login_activity', column: 'user_id' },
   { table: 'notification_settings', column: 'user_id' },
+  { table: 'social_notification_preferences', column: 'user_id' },
   { table: 'user_preferences', column: 'user_id' },
+  { table: 'user_trading_preferences', column: 'user_id' },
+  { table: 'user_display_preferences', column: 'user_id' },
+  { table: 'user_security_preferences', column: 'user_id' },
+  { table: 'privacy_settings', column: 'user_id' },
+  { table: 'user_chart_drawings', column: 'user_id' },
+  { table: 'user_custom_tokens', column: 'user_id' },
   { table: 'user_telegram_links', column: 'user_id' },
 ];
 
