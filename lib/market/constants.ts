@@ -37,7 +37,10 @@ export const CHAIN_IDS = [
   { id: 'optimism', label: 'Optimism' },
 ] as const;
 
-export const PLATFORM_FEE_BPS = 20; // 0.2% for market trades
+// Canonical Naka platform fee: 0.5% on every swap (buy and sell), matching
+// lib/trading/swapLogging.PLATFORM_FEE_BPS. Kept as a plain literal here because
+// this module is imported on the client (swapLogging is server-only).
+export const PLATFORM_FEE_BPS = 50; // 0.5%
 
 export const SWAP_RISK_THRESHOLD = 70;
 
