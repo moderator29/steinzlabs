@@ -54,7 +54,6 @@ export function UserListRow({ user, showFollowButton = true, onFollowChange }: U
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-white truncate">{user.display_name || user.username}</span>
-            {user.is_chosen ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Chosen</span> : null}
             {user.verified_badge ? <span className="text-[9px] px-1.5 py-[1px] rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{user.verified_badge}</span> : null}
           </div>
           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
