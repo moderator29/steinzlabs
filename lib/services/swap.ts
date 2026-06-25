@@ -3,7 +3,7 @@ import { getQuote, buildSwapTransaction, SOL_MINT, JupiterQuote } from './jupite
 import { getSwapQuote as get0xQuote, getChainId } from './zerox';
 import { isHighRisk } from './goplus';
 import { getSupabaseAdmin } from '../supabaseAdmin';
-import { recordSwapLog, recordFeeRevenue } from '../trading/swapLogging';
+import { recordSwapLog, recordFeeRevenue, PLATFORM_FEE_BPS } from '../trading/swapLogging';
 
 /**
  * Unified Swap Router
@@ -14,8 +14,9 @@ import { recordSwapLog, recordFeeRevenue } from '../trading/swapLogging';
  * Logs: swap_logs + fee_revenue tables
  */
 
-// Platform fee: 0.4%
-export const PLATFORM_FEE_BPS = 40; // 40 / 10000 = 0.004
+// Re-export the single canonical platform fee (0.5%) so existing importers of
+// this module keep working without a second, drifting definition.
+export { PLATFORM_FEE_BPS };
 
 export interface SwapRequest {
   chain: 'solana' | string;     // 'solana' or EVM chain name
