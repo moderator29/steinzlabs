@@ -11,9 +11,9 @@ type Track = {
 };
 
 /**
- * LibraryPlayer — Sanctum's Library headline. Renders the cult ambient
+ * LibraryPlayer · Sanctum's Library headline. Renders the cult ambient
  * catalog plus an embedded player. If every track shares the same
- * spotify:playlist:<id> source (current state — see seed in cult_ambient_tracks),
+ * spotify:playlist:<id> source (current state · see seed in cult_ambient_tracks),
  * we render a single Spotify embed. Once individual MP3 tracks land in
  * /public/audio, the catalog flips to per-track <audio> with playback queue.
  */
@@ -89,7 +89,7 @@ export function LibraryPlayer() {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds) return '—';
+  if (!seconds) return '·';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, '0')}`;

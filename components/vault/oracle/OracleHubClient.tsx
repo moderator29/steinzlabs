@@ -6,7 +6,7 @@ import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 import { EchoChamberPanel } from './EchoChamberPanel';
 
 /**
- * Oracle hub — the chamber's landing surface.
+ * Oracle hub · the chamber's landing surface.
  *
  * Headline: the Daily Seal (fully wired).
  * Below: three styled placeholder cards for the remaining sub-features

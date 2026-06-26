@@ -11,10 +11,10 @@ type Seal = {
 };
 
 /**
- * DailySeal — the Oracle's headline component.
+ * DailySeal · the Oracle's headline component.
  *
  * Renders a wax-seal SVG over the day's briefing. Click "Break the seal" and
- * the wax cracks open with a cinematic reveal — the title fades in first,
+ * the wax cracks open with a cinematic reveal · the title fades in first,
  * then the body in an ink-writing line-by-line cadence. The "broken" state
  * persists per-day in localStorage so returning visitors see the briefing
  * straight away and can re-seal it manually if they want the ritual back.
@@ -175,7 +175,7 @@ function WaxSealSVG({ sealed }: { sealed: boolean }) {
       </defs>
       <g filter="url(#oracle-glow)">
         <circle cx="60" cy="60" r="46" fill="url(#oracle-wax)" />
-        {/* Sigil — concentric octagonal mark */}
+        {/* Sigil · concentric octagonal mark */}
         <polygon points="60,28 80,40 88,60 80,80 60,92 40,80 32,60 40,40"
           fill="none" stroke="#FFD86B" strokeWidth="1.5" opacity={sealed ? 1 : 0.4} />
         <circle cx="60" cy="60" r="14" fill="none" stroke="#FFD86B" strokeWidth="1.5" opacity={sealed ? 1 : 0.4} />

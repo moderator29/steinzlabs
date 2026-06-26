@@ -11,7 +11,7 @@ interface Props {
   tagline: string;
   description: string;
   sigil: ReactNode;
-  /** Lock badge — shown when the chamber isn't built yet ("Coming soon"). */
+  /** Lock badge · shown when the chamber isn't built yet ("Coming soon"). */
   comingSoon?: boolean;
 }
 

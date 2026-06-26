@@ -19,7 +19,7 @@ interface Props {
  * Click anywhere to skip. Subsequent visits this session use the
  * abbreviated form (just the seal pulse + door split). Persists "seen"
  * in localStorage so revisiting the Vault on a new tab still reads as
- * "returning member" — the first-time epic only fires once per device.
+ * "returning member" · the first-time epic only fires once per device.
  *
  * Pure CSS + Framer Motion. No external animation deps. Respects
  * prefers-reduced-motion: a single fade replaces the entire sequence.
@@ -74,7 +74,7 @@ export function VaultEntryAnimation({ abbreviated, onComplete }: Props) {
         exit={{ opacity: 0, transition: { duration: 0.4 } }}
         className="vault-entry"
       >
-        {/* Two halves of the door — slide outwards on phase 'open' */}
+        {/* Two halves of the door · slide outwards on phase 'open' */}
         <motion.div
           className="vault-entry__door vault-entry__door--left"
           initial={{ x: 0 }}
@@ -88,7 +88,7 @@ export function VaultEntryAnimation({ abbreviated, onComplete }: Props) {
           transition={{ duration: skipMode === 'full' ? 0.9 : 0.3, ease: [0.65, 0, 0.35, 1] }}
         />
 
-        {/* Naka sigil — materialises, rotates, then pulses on 'seal' */}
+        {/* Naka sigil · materialises, rotates, then pulses on 'seal' */}
         <motion.div
           className="vault-entry__sigil"
           initial={{ opacity: 0, scale: 0.6, rotate: -120 }}

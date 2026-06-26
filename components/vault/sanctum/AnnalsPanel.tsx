@@ -29,7 +29,7 @@ const TIER_COLOR: Record<CatalogEntry['tier'], { ring: string; label: string }> 
 };
 
 /**
- * The Annals — every cult member sees the catalog plus their own earnings.
+ * The Annals · every cult member sees the catalog plus their own earnings.
  * Earned rows highlight in tier colour; locked rows render dimmed so the
  * surface communicates the climb without an explicit progress bar.
  */

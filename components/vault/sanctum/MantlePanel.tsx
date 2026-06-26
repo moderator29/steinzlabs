@@ -37,7 +37,7 @@ const SLOT_TITLE: Record<Slot, string> = {
 };
 
 /**
- * The Mantle — dressing room. Six slots, swatches drawn from
+ * The Mantle · dressing room. Six slots, swatches drawn from
  * preview_color when asset_url isn't ready yet. Tabs switch the focused
  * slot; equipping is one click and writes through to cult_member_loadouts.
  */

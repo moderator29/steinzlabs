@@ -113,7 +113,7 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
       }
       onVoted?.();
     } catch {
-      // Swallow — UI surfaces vote count refresh; toast can be added later.
+      // Swallow · UI surfaces vote count refresh; toast can be added later.
     } finally {
       setBusy(null);
     }

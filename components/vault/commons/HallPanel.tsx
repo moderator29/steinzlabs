@@ -61,7 +61,7 @@ export function HallPanel() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ body }),
       });
-      if (res.status === 429) { setError('Slow down — the Hall is listening.'); return; }
+      if (res.status === 429) { setError('Slow down · the Hall is listening.'); return; }
       if (!res.ok) throw new Error('send');
       setDraft('');
       setError(null);

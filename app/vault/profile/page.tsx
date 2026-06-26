@@ -5,12 +5,12 @@ import { AnnalsPanel } from '@/components/vault/sanctum/AnnalsPanel';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
-  title: 'Your Profile — The Vault',
+  title: 'Your Profile · The Vault',
   description: 'Your cult identity, mantle, and annals in one place.',
 };
 
 /**
- * Member profile surface — the one place that aggregates a cultist's identity.
+ * Member profile surface · the one place that aggregates a cultist's identity.
  * The vault layout already gates access (non-members are bounced), so here we
  * just resolve the display name and compose the existing, proven Mantle (worn
  * loadout) and Annals (earned achievements) panels rather than re-implement

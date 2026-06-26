@@ -9,7 +9,7 @@ interface Message {
 }
 
 /**
- * VTX Sage — the cult's private oracle voice. A focused chat surface that
+ * VTX Sage · the cult's private oracle voice. A focused chat surface that
  * sits inside the Oracle hub, separate from /dashboard/vtx-ai. Persona +
  * history live on the server; the client only renders.
  */
@@ -87,7 +87,7 @@ export function VtxSagePanel() {
   return (
     <article
       className="oracle-subchamber oracle-subchamber--sage"
-      aria-label="VTX Sage — cult oracle voice"
+      aria-label="VTX Sage · cult oracle voice"
     >
       <header className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.18em] text-[#00C8FF]">VTX Sage</span>
@@ -95,7 +95,7 @@ export function VtxSagePanel() {
       </header>
       <h3 className="oracle-subchamber__title">The oracle&apos;s voice</h3>
       <p className="oracle-subchamber__tagline">
-        Ask the Sage. Ink, parchment, framings — no prices fabricated, no advice given.
+        Ask the Sage. Ink, parchment, framings · no prices fabricated, no advice given.
       </p>
 
       <div

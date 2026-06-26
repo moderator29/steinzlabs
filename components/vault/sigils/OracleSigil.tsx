@@ -1,5 +1,5 @@
 /**
- * Oracle sigil — visor / helmet form. Deep blue gradient with electric
+ * Oracle sigil · visor / helmet form. Deep blue gradient with electric
  * highlights. Matches the brand reference's middle icon. Represents
  * sight: Daily Seal, VTX Sage, Whisper Network.
  */

@@ -1,5 +1,5 @@
 /**
- * HeroSigil — the giant cult sigil at the top of /naka-cult.
+ * HeroSigil · the giant cult sigil at the top of /naka-cult.
  *
  * Inline SVG: octagonal mask + concentric rings + central diamond, gold-on-
  * crimson gradient with electric-blue accent edges. Same family as the wax

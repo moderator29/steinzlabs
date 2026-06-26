@@ -20,12 +20,12 @@ interface ForgeResponse {
 }
 
 /**
- * The Forge — auto-discovered NFT gallery for the caller's connected EVM
+ * The Forge · auto-discovered NFT gallery for the caller's connected EVM
  * wallets. Real Alchemy data only; the chamber shows an explicit empty /
  * offline state instead of mock pieces when keys are missing or wallets
  * carry nothing.
  *
- * The "3D rotation" lives in pure CSS — a slow Y-axis tilt on hover/focus
+ * The "3D rotation" lives in pure CSS · a slow Y-axis tilt on hover/focus
  * via transform: rotateY(). No three.js, no extra dep; the brand spec
  * just wants the gallery to feel alive when you hover a piece.
  */
@@ -69,7 +69,7 @@ export function ForgePanel() {
 
       {state.offline ? (
         <p className="mt-4 text-[12px] text-[#FFD86B]">
-          The forge is offline — wallet intelligence keys are not configured.
+          The forge is offline · wallet intelligence keys are not configured.
         </p>
       ) : state.pieces.length === 0 ? (
         <p className="mt-4 text-[12px] text-[#7F8AA8]">
@@ -154,7 +154,7 @@ export function ForgePanel() {
                   </div>
                   <p className="mt-1.5 text-[11px] text-white truncate">{p.name}</p>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-[#B4C0E0] truncate">
-                    {p.chain} · {p.collection || '—'}
+                    {p.chain} · {p.collection || '·'}
                   </p>
                 </a>
               </li>

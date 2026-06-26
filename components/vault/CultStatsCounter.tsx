@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * §vault-server-client-function-prop — was `format?: (n: number) => string`.
+ * §vault-server-client-function-prop · was `format?: (n: number) => string`.
  * /vault page is an async Server Component, and passing a function reference
  * across the server↔client boundary triggers the App Router error
  * "Functions cannot be passed directly to Client Components unless you
@@ -83,7 +83,7 @@ function StatCell({ stat }: { stat: Stat }) {
   }, [stat.value, seen]);
 
   const display = stat.value == null
-    ? '—'
+    ? '·'
     : stat.formatKind === 'compact'
     ? formatCompact(shown)
     : shown.toLocaleString();

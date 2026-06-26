@@ -61,7 +61,7 @@ export function OfferingPanel() {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#070A16]/80 p-10 text-center">
         <Gift className="mx-auto mb-3 text-[#FFD86B]" size={28} />
-        <p className="text-sm text-[#8C9AC0]">No offerings open right now. The treasury moves on its own cadence — watch this chamber.</p>
+        <p className="text-sm text-[#8C9AC0]">No offerings open right now. The treasury moves on its own cadence · watch this chamber.</p>
       </div>
     );
   }

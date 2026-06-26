@@ -12,7 +12,7 @@ const NAKA_THRESHOLD = 1_227_000;
 /**
  * Live stats strip for the /naka-cult landing.
  *
- * Server component — fetches once per request via SSR (the page is
+ * Server component · fetches once per request via SSR (the page is
  * `force-dynamic` so this re-runs on every visit). Every number is real
  * from Supabase or the on-chain config; absent data renders an em-dash,
  * never fabricated.
