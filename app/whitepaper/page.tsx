@@ -500,7 +500,7 @@ export default function WhitepaperPage() {
           {/* 07 — Whales */}
           <WpSection id="whales" n="07" title="Whales & Smart Money" kicker="Where the money actually moves">
             <p>
-              Understanding what professional capital is doing is one of the strongest edges available on-chain. Naka Labs tracks 1,000+ high-performance wallets across 10 chains in real time, classifies them by behaviour, and surfaces their moves as they happen.
+              Understanding what professional capital is doing is one of the strongest edges available on-chain. Naka Labs tracks hundreds of high-performance wallets across 9 chains in real time, classifies them by behaviour, and surfaces their moves as they happen.
             </p>
 
             <H3>Smart Money Classification</H3>

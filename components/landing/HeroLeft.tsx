@@ -25,14 +25,16 @@ function useCountUp(target: number, duration = 1800) {
 }
 
 function StatBar() {
-  const chains = useCountUp(12);
-  const txns   = useCountUp(1000000);
-  const tokens = useCountUp(50000);
+  // Real, defensible numbers only (the previous 12 chains / 1M txns / 50K tokens
+  // were hardcoded fabrications): 8 supported chains, 400+ tracked smart-money
+  // wallets (449 live), and the real 0.5% swap fee.
+  const chains  = useCountUp(8);
+  const wallets = useCountUp(400);
 
   const stats = [
-    { num: `${chains}+`,                         label: 'Chains Supported'       },
-    { num: `${Math.floor(txns / 1e6)}M+`,         label: 'Transactions Analyzed'  },
-    { num: `${Math.floor(tokens / 1000)}K+`,       label: 'Tokens Scanned'         },
+    { num: `${chains}`,     label: 'Chains Supported' },
+    { num: `${wallets}+`,   label: 'Wallets Tracked'  },
+    { num: '0.5%',          label: 'Swap Fee'         },
   ];
 
   return (

@@ -163,7 +163,7 @@ const FEATURES: Feature[] = [
     icon: Network,
     kicker: 'Whale Tracker + Copy',
     title: 'Follow the smart money. Mirror the winners.',
-    desc: '1,000+ tracked wallets across 10 chains. Alerts on Mini, one-click copy on Pro, auto-copy on Max. Verified on-chain P&L.',
+    desc: 'Hundreds of tracked wallets across 9 chains. Alerts on Mini, one-click copy on Pro, auto-copy on Max. Verified on-chain P&L.',
     color: '#F59E0B',
     bullets: ['Real-time whale feed (SSE)', 'Convergence signal alerts', 'Configurable copy parameters', 'Safety filters built-in'],
     badge: 'live',
