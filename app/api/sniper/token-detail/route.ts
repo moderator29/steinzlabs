@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getBestPair, searchPairs, type DexPair } from '@/lib/services/dexscreener';
+import { getTokenPairs, searchPairs, type DexPair } from '@/lib/services/dexscreener';
 
 /**
  * GET /api/sniper/token-detail?chain=&address=&symbol=
@@ -42,7 +42,9 @@ function mapHolders(raw: unknown): RelatedWallet[] {
   const holders = Array.isArray(r?.holders) ? (r!.holders as Array<Record<string, unknown>>) : [];
   return holders.slice(0, 10).map((h) => ({
     address: String(h.address ?? ''),
-    percent: parseFloat(String(h.percent ?? '0')) || 0,
+    // GoPlus returns percent as a 0..1 fraction; surface it as a real percent
+    // (matches creatorHoldingPct below — was rendering 5.23% as 0.05%).
+    percent: (parseFloat(String(h.percent ?? '0')) || 0) * 100,
     tag: h.tag ? String(h.tag) : null,
     isContract: h.is_contract === 1 || h.is_contract === '1',
     isLocked: h.is_locked === 1 || h.is_locked === '1',
@@ -94,12 +96,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'address and chain are required' }, { status: 400 });
   }
 
-  // Run the three sources concurrently; each is independently fault-tolerant.
-  const [sec, bestPair, searchRes] = await Promise.all([
+  // Run the sources concurrently; each is independently fault-tolerant.
+  const [sec, tokenPairs, searchRes] = await Promise.all([
     getTokenSecurity(address, chain).catch(() => null),
-    getBestPair(address).catch(() => null),
+    getTokenPairs(address).catch(() => [] as DexPair[]),
     symbol ? searchPairs(symbol).catch(() => [] as DexPair[]) : Promise.resolve([] as DexPair[]),
   ]);
+  // Pick the highest-liquidity pair ON THE REQUESTED CHAIN (getBestPair ignored
+  // chain and could return a same-symbol token's pool on a different network).
+  const onChain = tokenPairs.filter((p) => p.chainId === chain);
+  const bestPair = (onChain.length ? onChain : tokenPairs)
+    .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0] ?? null;
 
   const security = sec
     ? {

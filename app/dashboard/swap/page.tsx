@@ -587,22 +587,43 @@ export default function SwapPage() {
     const buyToken = searchParams.get('buyToken');
     const sellToken = searchParams.get('sellToken');
     const chainParam = searchParams.get('chain');
+    const effectiveChain = chainParam || chain;
+    const isEvmAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
+
     if (chainParam) {
       setChain(chainParam);
       const c = CHAINS.find(ch => ch.id === chainParam);
       if (c && !sellToken) setFromToken(c.symbol);
     }
+
+    // Resolve an address-shaped deep-link param into a real imported token
+    // (the sniper drawer links by contract address). Uppercasing an address —
+    // as the old code did — produced an unresolvable symbol and broke quotes.
+    const resolveParam = async (raw: string, set: (sym: string) => void) => {
+      if (isEvmAddress(raw)) {
+        try {
+          const res = await fetch(`/api/swap/token-meta?chain=${encodeURIComponent(effectiveChain)}&address=${encodeURIComponent(raw)}`);
+          const data = await res.json();
+          if (res.ok && typeof data.decimals === 'number') {
+            registerImportedToken({ symbol: data.symbol, name: data.name, decimals: data.decimals, logo: data.logo ?? undefined, color: '#6B7280', address: data.address, chain: effectiveChain });
+            set(data.symbol.toUpperCase());
+            return;
+          }
+        } catch { /* fall through to raw */ }
+      }
+      set(raw.toUpperCase());
+    };
+
     if (sellToken) {
-      const upper = sellToken.toUpperCase();
-      if (upper === 'NATIVE') {
-        const c = CHAINS.find(ch => ch.id === (chainParam || chain));
+      if (sellToken.toUpperCase() === 'NATIVE') {
+        const c = CHAINS.find(ch => ch.id === effectiveChain);
         if (c) setFromToken(c.symbol);
       } else {
-        setFromToken(upper);
+        void resolveParam(sellToken, setFromToken);
       }
     }
     if (buyToken) {
-      setToToken(buyToken.toUpperCase());
+      void resolveParam(buyToken, setToToken);
     } else if (symbol) {
       setToToken(symbol.toUpperCase());
     }

@@ -64,19 +64,26 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
   const [alertDir, setAlertDir] = useState<'above' | 'below'>('above');
   const [alertState, setAlertState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  const [err, setErr] = useState<string | null>(null);
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setErr(null);
     const params = new URLSearchParams({ chain: token.chain, address: token.address, symbol: token.symbol });
     fetch(`/api/sniper/token-detail?${params.toString()}`)
-      .then((r) => r.json())
-      .then((j) => {
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
         if (!alive) return;
+        if (!r.ok) {
+          setErr(r.status === 403 ? 'Sniper is a MAX-tier feature.' : (j?.error || 'Could not load token details.'));
+          return;
+        }
         setSecurity(j.security ?? null);
         setMarket(j.market ?? null);
         setSimilar(Array.isArray(j.similar) ? j.similar : []);
       })
-      .catch(() => {})
+      .catch(() => { if (alive) setErr('Network error loading token details.'); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [token.chain, token.address, token.symbol]);
@@ -193,6 +200,8 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
 
         {loading ? (
           <div className="py-10 text-center"><Loader2 className="w-5 h-5 mx-auto animate-spin text-blue-400" /></div>
+        ) : err ? (
+          <div className="py-8 text-center text-sm text-white/55 rounded-xl border border-white/10 bg-white/[0.02]">{err}</div>
         ) : (
           <>
             {/* Shadow Guardian */}

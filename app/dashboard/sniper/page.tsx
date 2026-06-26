@@ -66,6 +66,10 @@ interface ExecutionRow {
 
 type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history';
 
+// EVM-only: Solana/TON return an empty GeckoTerminal feed, so they must not
+// appear as selectable chains (they were dead filter options).
+const EVM_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
+
 // Early-entry liquidity presets — catch coins at 5k/10k/15k.
 const LIQ_PRESETS: { label: string; value: number }[] = [
   { label: 'Any', value: 0 },
@@ -131,9 +135,11 @@ export default function SniperPage() {
 
   const loadKillSwitch = useCallback(async () => {
     try {
-      const res = await fetch('/api/sniper/state', { cache: 'no-store' });
+      // Per-user kill state (same source the toggle writes), so it round-trips
+      // across reloads instead of reflecting the unrelated admin platform state.
+      const res = await fetch('/api/sniper/kill-switch', { cache: 'no-store' });
       const j = await res.json();
-      setKillSwitchOn(j?.enabled === false);
+      setKillSwitchOn(j?.killed === true);
     } catch { /* keep default */ }
   }, []);
 
@@ -142,8 +148,15 @@ export default function SniperPage() {
     try {
       const params = new URLSearchParams({ limit: '30' });
       if (chainFilter !== 'all') params.set('chain', chainFilter);
-      if (minLiq > 0) params.set('minLiquidity', String(minLiq));
+      // Always send minLiquidity — '0' means "no floor". Omitting it let the
+      // server apply a hidden $3000 default, so the "Any" preset silently
+      // filtered out sub-$3k pairs.
+      params.set('minLiquidity', String(minLiq));
       if (sourceFilter.length) params.set('source', sourceFilter.join(','));
+      // Forward an address-shaped query so pasting a contract resolves it
+      // server-side instead of filtering only the newest-30 client rows.
+      const qTrim = feedQuery.trim();
+      if (/^0x[a-fA-F0-9]{40}$/.test(qTrim)) params.set('q', qTrim);
       const res = await fetch(`/api/sniper?${params.toString()}`, { cache: 'no-store' });
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
@@ -153,7 +166,7 @@ export default function SniperPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, [chainFilter, minLiq, sourceFilter]);
+  }, [chainFilter, minLiq, sourceFilter, feedQuery]);
 
   // ── Initial + reactive loads ─────────────────────────────────────────────
   useEffect(() => {
@@ -162,8 +175,12 @@ export default function SniperPage() {
   }, [authLoading, user, loadSnipers, loadExecutions, loadKillSwitch]);
 
   useEffect(() => {
-    if (tab === 'discover') loadFeed();
-  }, [tab, chainFilter, loadFeed]);
+    if (tab !== 'discover') return;
+    // Debounce so typing in the search box (which feeds loadFeed) doesn't fire
+    // a request per keystroke; address paste still resolves within 350ms.
+    const t = window.setTimeout(() => loadFeed(), 350);
+    return () => window.clearTimeout(t);
+  }, [tab, loadFeed]);
 
   // Realtime execution fills (Photon/BullX parity — instant, with flash).
   useEffect(() => {
@@ -172,19 +189,24 @@ export default function SniperPage() {
       .channel(`sniper-executions-${user.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
+        // '*' so PnL backfill / realized_at / peak-price UPDATEs reach the UI,
+        // not just new fills (INSERT). Merge updates by id; prepend inserts.
+        { event: '*', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
         (payload) => {
           const row = payload.new as ExecutionRow;
-          setExecutions((prev) => [row, ...prev].slice(0, 100));
-          if (row.id) {
-            setFreshIds((prev) => new Set(prev).add(row.id));
-            window.setTimeout(() => {
-              setFreshIds((prev) => {
-                if (!prev.has(row.id)) return prev;
-                const next = new Set(prev); next.delete(row.id); return next;
-              });
-            }, 2400);
+          if (!row?.id) return;
+          if (payload.eventType === 'UPDATE') {
+            setExecutions((prev) => prev.map((e) => (e.id === row.id ? { ...e, ...row } : e)));
+            return;
           }
+          setExecutions((prev) => (prev.some((e) => e.id === row.id) ? prev : [row, ...prev].slice(0, 100)));
+          setFreshIds((prev) => new Set(prev).add(row.id));
+          window.setTimeout(() => {
+            setFreshIds((prev) => {
+              if (!prev.has(row.id)) return prev;
+              const next = new Set(prev); next.delete(row.id); return next;
+            });
+          }, 2400);
         },
       )
       .subscribe((status) => setLiveConnected(status === 'SUBSCRIBED'));
@@ -214,7 +236,12 @@ export default function SniperPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !next, reason: next ? 'User killed all snipers' : null }),
       });
-      if (res.ok) setKillSwitchOn(next);
+      if (res.ok) {
+        setKillSwitchOn(next);
+        // Refresh the snipers list so the cards + Active stat reflect the new
+        // paused state instead of contradicting the killed banner.
+        await loadSnipers();
+      }
     } finally {
       setKillToggling(false);
     }
@@ -320,8 +347,8 @@ export default function SniperPage() {
             <SelectMenu
               value={chainFilter}
               options={[
-                { id: 'all', label: 'All chains' } as SelectOption,
-                ...SNIPER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
+                { id: 'all', label: 'All EVM chains' } as SelectOption,
+                ...EVM_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
               ]}
               onChange={(id) => setChainFilter(id as SniperChain | 'all')}
             />
