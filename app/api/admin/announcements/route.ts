@@ -8,7 +8,7 @@ import { logAdminAction } from '@/lib/admin/auditLog';
 const CreateBody = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(20_000),
-  type: z.enum(['info', 'warning', 'success', 'critical']).optional(),
+  type: z.enum(['info', 'warning', 'success', 'critical', 'maintenance', 'feature']).optional(),
   active: z.boolean().optional(),
   target_audience: z.string().min(1).max(64).optional(),
   expires_at: z.string().datetime().nullish(),
