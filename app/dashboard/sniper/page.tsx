@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
 import { PageHeader } from '@/components/common/PageHeader';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
+import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { NewSniperModal } from './NewSniperModal';
 
 interface SniperCriteriaRow {
@@ -352,18 +353,19 @@ export default function SniperPage() {
           />
         </div>
 
-        {/* Chain filter */}
-        <div className="mt-6 flex items-center gap-2 overflow-x-auto pb-2">
-          <span className="text-xs uppercase tracking-wider text-white/50 font-semibold me-2 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5" /> Chain:
+        {/* Chain filter — single vertical dropdown (real chain logos) */}
+        <div className="mt-6 flex items-center gap-2">
+          <span className="text-xs uppercase tracking-wider text-white/50 font-semibold flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5" /> Chain
           </span>
-          <ChainPill active={chainFilter === 'all'} onClick={() => setChainFilter('all')}>All</ChainPill>
-          {SNIPER_CHAINS.map(c => (
-            <ChainPill key={c} active={chainFilter === c} onClick={() => setChainFilter(c)}>
-              <img src={CHAIN_CONFIGS[c].logo} alt="" className="w-4 h-4 rounded-full" />
-              {CHAIN_CONFIGS[c].symbol}
-            </ChainPill>
-          ))}
+          <SelectMenu
+            value={chainFilter}
+            options={[
+              { id: 'all', label: 'All chains' } as SelectOption,
+              ...SNIPER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
+            ]}
+            onChange={(id) => setChainFilter(id as SniperChain | 'all')}
+          />
         </div>
 
         {/* Tabs */}
@@ -401,7 +403,7 @@ export default function SniperPage() {
             />
           )}
           {tab === 'feed' && (
-            <FeedTab tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter} />
+            <FeedTab tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter} onSnipe={() => setShowNewModal(true)} />
           )}
           {tab === 'history' && (
             <HistoryTab executions={executions} chainFilter={chainFilter} freshIds={freshIds} />
@@ -430,19 +432,6 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
       </div>
       <div className="text-2xl font-bold">{value}</div>
     </div>
-  );
-}
-
-function ChainPill({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition ${
-        active ? 'bg-blue-500/20 border-2 border-blue-400/50 text-blue-200' : 'bg-white/[0.04] border border-white/10 text-white/70 hover:bg-white/[0.08]'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -535,7 +524,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function FeedTab({ tokens, loading, onRefresh, chainFilter }: { tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all' }) {
+function FeedTab({ tokens, loading, onRefresh, chainFilter, onSnipe }: { tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all'; onSnipe: (t: DetectedToken) => void }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -550,14 +539,14 @@ function FeedTab({ tokens, loading, onRefresh, chainFilter }: { tokens: Detected
         <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match the filter right now.</div>
       ) : (
         <div className="grid gap-2">
-          {tokens.map(t => <TokenRow key={t.id} t={t} />)}
+          {tokens.map(t => <TokenRow key={t.id} t={t} onSnipe={onSnipe} />)}
         </div>
       )}
     </div>
   );
 }
 
-function TokenRow({ t }: { t: DetectedToken }) {
+function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void }) {
   const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
     : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-red-300 bg-red-500/15 border-red-500/30';
@@ -575,7 +564,7 @@ function TokenRow({ t }: { t: DetectedToken }) {
         </div>
       </div>
       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>{t.status}</span>
-      <button className="px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs font-bold hover:bg-blue-500/30 transition">
+      <button onClick={() => onSnipe(t)} className="px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs font-bold hover:bg-blue-500/30 transition">
         Snipe
       </button>
     </div>
