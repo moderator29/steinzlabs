@@ -47,15 +47,13 @@ export async function GET(request: NextRequest) {
 
   let processed = 0;
   let demoted = 0;
-  let chosenChanged = 0;
-
   try {
     const admin = getSupabaseAdmin();
 
     // Pull every current cult member + their default wallet address.
     const { data: members, error: selErr } = await admin
       .from('profiles')
-      .select('id, is_chosen, cult_source')
+      .select('id, cult_source')
       .eq('cult_member', true);
     if (selErr) throw selErr;
     if (!members || members.length === 0) {
@@ -93,26 +91,19 @@ export async function GET(request: NextRequest) {
         if (member.cult_source === 'naka_holdings' || member.cult_source === 'nippo_nft') {
           await admin
             .from('profiles')
-            .update({ cult_member: false, cult_source: null, cult_member_since: null, is_chosen: false })
+            .update({ cult_member: false, cult_source: null, cult_member_since: null })
             .eq('id', member.id);
           demoted += 1;
         }
         continue;
       }
 
-      // Sync is_chosen if it drifted (e.g. Dev NFT was sold).
-      if (holdings.isChosen !== member.is_chosen) {
-        await admin
-          .from('profiles')
-          .update({ is_chosen: holdings.isChosen })
-          .eq('id', member.id);
-        chosenChanged += 1;
-      }
+      // The Chosen lineage is retired — never re-sync is_chosen back to true.
     }
 
     const duration = Date.now() - startedAt;
     await logCronExecution(NAME, 'success', duration, undefined, processed);
-    return NextResponse.json({ ok: true, durationMs: duration, processed, demoted, chosenChanged });
+    return NextResponse.json({ ok: true, durationMs: duration, processed, demoted });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     Sentry.captureException(err, { tags: { cron: NAME } });
