@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getNewPairs } from "@/lib/services/dexscreener";
+import { getNewEvmPairs } from "@/lib/services/geckoterminal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
   const newTokens: TokenRow[] = [];
   for (const chain of chainsNeeded) {
     try {
-      const pairs = await getNewPairs(fetchFloor, chain);
+      const pairs = await getNewEvmPairs(fetchFloor, chain);
       for (const p of pairs) {
         newTokens.push({
           token_address: p.baseToken.address,

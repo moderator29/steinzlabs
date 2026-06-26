@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getNewPairs } from '@/lib/services/dexscreener';
+import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import type { DexPair } from '@/lib/services/dexscreener';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,10 +83,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 30);
   const chainFilter = searchParams.get('chain') || undefined;
-  const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '5000');
+  const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '3000');
 
   try {
-    const pairs = await getNewPairs(minLiquidity, chainFilter);
+    // Real freshly-created EVM pools (GeckoTerminal). EVM-only for now.
+    const pairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
 
     const tokens: SniperToken[] = pairs.slice(0, limit).map(pair => {
       const score = scoreFromPair(pair);
