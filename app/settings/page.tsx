@@ -247,7 +247,7 @@ export default function SettingsPage() {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Enter your name..."
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                      className="w-full nl-glass rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                     />
                   </div>
                   <div>
@@ -256,7 +256,7 @@ export default function SettingsPage() {
                       type="email"
                       value={userEmail}
                       readOnly
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
+                      className="w-full nl-glass rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
                     />
                     <p className="text-xs text-gray-600 mt-1">Email cannot be changed from this page.</p>
                   </div>
@@ -266,7 +266,7 @@ export default function SettingsPage() {
                       type="text"
                       placeholder="0x..."
                       readOnly
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-gray-400 placeholder-gray-600 cursor-not-allowed"
+                      className="w-full nl-glass rounded-lg px-4 py-3 text-gray-400 placeholder-gray-600 cursor-not-allowed"
                     />
                   </div>
 
@@ -281,7 +281,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBio(e.target.value.slice(0, 280))}
                       placeholder="A short description of who you are and what you trade."
                       rows={3}
-                      className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] resize-y"
+                      className="w-full nl-glass rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] resize-y"
                     />
                     <p className="text-[10px] text-gray-600 mt-1 text-end">{bio.length} / 280</p>
                   </div>
@@ -300,7 +300,7 @@ export default function SettingsPage() {
                           onChange={(e) => setTwitter(e.target.value)}
                           placeholder="handle"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                          className="w-full nl-glass rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                         />
                       </div>
                     </div>
@@ -312,7 +312,7 @@ export default function SettingsPage() {
                         onChange={(e) => setDiscord(e.target.value)}
                         placeholder="username"
                         maxLength={32}
-                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                        className="w-full nl-glass rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                       />
                     </div>
                     <div>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
                           onChange={(e) => setGithub(e.target.value)}
                           placeholder="username"
                           maxLength={32}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                          className="w-full nl-glass rounded-lg ps-7 pe-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                         />
                       </div>
                     </div>
@@ -356,7 +356,7 @@ export default function SettingsPage() {
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           placeholder="Min. 8 characters"
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] pe-10"
+                          className="w-full nl-glass rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF] pe-10"
                         />
                         <button onClick={() => setShowNewPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                           {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -370,7 +370,7 @@ export default function SettingsPage() {
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
                         placeholder="Repeat new password"
-                        className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                        className="w-full nl-glass rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                       />
                     </div>
                     <button
@@ -420,7 +420,7 @@ export default function SettingsPage() {
                 <h3 className="text-white font-bold text-lg mb-6">Notification Preferences</h3>
                 <div className="space-y-3">
                   {/* Browser push notifications */}
-                  <div className="flex items-center justify-between p-4 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
+                  <div className="flex items-center justify-between p-4 nl-glass rounded-lg">
                     <div>
                       <div className="text-white font-medium">Browser Push Notifications</div>
                       <div className="text-gray-400 text-sm">
@@ -444,7 +444,7 @@ export default function SettingsPage() {
                     </button>
                   </div>
                   {Object.entries(notifications).map(([key, enabled]) => (
-                    <div key={key} className="flex items-center justify-between p-4 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
+                    <div key={key} className="flex items-center justify-between p-4 nl-glass rounded-lg">
                       <div>
                         <div className="text-white font-medium capitalize">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -489,7 +489,7 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-4 p-4 bg-[#0A0E1A] rounded-lg border border-[#1E2433]">
+                  <div className="flex items-center justify-between gap-4 p-4 nl-glass rounded-lg">
                     <div className="min-w-0">
                       <div className="text-white font-medium">Expert Mode</div>
                       <div className="text-gray-400 text-sm">Disable confirmation dialogs</div>
