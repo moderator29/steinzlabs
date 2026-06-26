@@ -56,7 +56,7 @@ export function DocsSection08() {
           <Fish className="w-4 h-4 text-[#0066FF]" />Whale Tracker
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Monitors 1,000+ wallets across 10 chains in real time · ranking them by volume, win rate, and tier. The Live Feed tab streams large wallet movements as they happen via server-sent events.
+          Monitors hundreds of wallets across 9 chains in real time · ranking them by volume, win rate, and tier. The Live Feed tab streams large wallet movements as they happen via server-sent events.
         </p>
         <div className="space-y-2 mb-5">
           {WHALE_TIERS.map(w => (
