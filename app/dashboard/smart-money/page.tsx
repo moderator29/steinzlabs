@@ -225,7 +225,7 @@ export default function SmartMoneyPage() {
         </div>
 
         {activeTab === 'leaderboard' && <div className="px-4 pb-3">
-          <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 focus-within:border-[#0066FF]/30 transition-colors">
+          <div className="flex items-center gap-2 nl-glass rounded-xl px-3 py-2 focus-within:border-[#0066FF]/30 transition-colors">
             <Search className="w-3.5 h-3.5 text-gray-600" />
             <input
               type="text"
@@ -535,7 +535,7 @@ export default function SmartMoneyPage() {
                       </button>
                       <button
                         onClick={() => toggleWatch(wallet.id)}
-                        className="flex-1 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl text-[10px] font-semibold text-gray-400 hover:bg-white/[0.06] transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 nl-glass rounded-xl text-[10px] font-semibold text-gray-400 hover:bg-white/[0.06] transition-colors flex items-center justify-center gap-1.5"
                       >
                         <Bell className="w-3 h-3" /> {watching.includes(wallet.id) ? 'Unwatch' : 'Watch'}
                       </button>

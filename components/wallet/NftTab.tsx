@@ -53,7 +53,7 @@ export function NftTab({ address, chain }: Props) {
     </div>
   );
   if (nfts.length === 0) return (
-    <div className="text-sm text-slate-400 italic p-6 text-center rounded-xl bg-white/[0.025] border border-white/[0.06]">
+    <div className="text-sm text-slate-400 italic p-6 text-center rounded-xl nl-glass">
       No NFTs found in this wallet on {chain}.
     </div>
   );

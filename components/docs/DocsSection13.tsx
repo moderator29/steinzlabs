@@ -40,7 +40,7 @@ export function DocsSection13() {
             { title: 'Execution', desc: 'Multi-chain Swap, Copy Trading, Sniper Bot, Limit Orders, Stop-Loss, Take-Profit.' },
             { title: 'Analytics', desc: 'Portfolio tracker, Whale Tracker, Smart Money leaderboards, Bubble Map.' },
           ].map((b) => (
-            <div key={b.title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <div key={b.title} className="nl-glass rounded-xl p-4">
               <div className="text-sm font-semibold text-white mb-1">{b.title}</div>
               <div className="text-xs text-gray-400 leading-relaxed">{b.desc}</div>
             </div>
@@ -53,7 +53,7 @@ export function DocsSection13() {
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <Lock className="w-4 h-4 text-[#10B981]" /> Naka Wallet · non-custodial by design
         </h3>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="nl-glass rounded-xl p-4">
           <ul className="space-y-2 text-xs text-gray-400 leading-relaxed">
             <li>— Your private key is stored on your device, encrypted with your password using AES-256-GCM.</li>
             <li>— Naka Labs never sees your key. No keyserver, no custody, no recovery by us.</li>
@@ -73,21 +73,21 @@ export function DocsSection13() {
           Most questions have an answer somewhere in these docs · use the sidebar to jump to a feature. For anything else:
         </p>
         <div className="space-y-2 text-xs text-gray-400">
-          <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+          <div className="flex items-start gap-3 nl-glass rounded-lg p-3">
             <Sparkles className="w-3.5 h-3.5 text-[#4D6BFF] mt-0.5 shrink-0" />
             <div>
               <div className="text-white font-semibold">Ask VTX</div>
               <div>Open the VTX Agent and ask &quot;how does the sniper bot work&quot; or &quot;why is my swap showing 2% slippage&quot;. It answers with live context.</div>
             </div>
           </div>
-          <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+          <div className="flex items-start gap-3 nl-glass rounded-lg p-3">
             <Users className="w-3.5 h-3.5 text-[#0066FF] mt-0.5 shrink-0" />
             <div>
               <div className="text-white font-semibold">AI Customer Service</div>
               <div>In Profile → AI Customer Service you get a dedicated account-support chat that can see your plan, wallets, and recent activity so it can unstick you faster.</div>
             </div>
           </div>
-          <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+          <div className="flex items-start gap-3 nl-glass rounded-lg p-3">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#229ED9] mt-0.5 shrink-0"><path d="M21.6 4.1L2.6 11.3c-1 .3-1 1.7 0 2l4.9 1.8 1.9 6.1c.2.7 1.1.9 1.6.4l2.7-2.4 5 3.7c.6.4 1.4.1 1.6-.6L23 5.8c.2-.9-.7-1.7-1.4-1.7z" fill="currentColor" /></svg>
             <div>
               <div className="text-white font-semibold">Telegram bot</div>

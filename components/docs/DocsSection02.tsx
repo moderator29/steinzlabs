@@ -57,7 +57,7 @@ export function DocsSection02() {
         <h3 className="text-sm font-semibold text-white mb-4">Feature Categories</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {FEATURE_GROUPS.map(({ icon: Icon, color, title, features }) => (
-            <div key={title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
+            <div key={title} className="nl-glass rounded-xl p-4 hover:border-white/[0.10] transition-colors">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: color + '20' }}>
                   <Icon className="w-3.5 h-3.5" style={{ color }} />
@@ -83,7 +83,7 @@ export function DocsSection02() {
         </h3>
         <div className="flex flex-wrap gap-2">
           {CHAINS.map(c => (
-            <div key={c.name} className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5">
+            <div key={c.name} className="flex items-center gap-1.5 nl-glass rounded-lg px-3 py-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: c.color }} />
               <span className="text-xs font-semibold text-gray-300">{c.symbol}</span>
             </div>

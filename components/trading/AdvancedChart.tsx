@@ -162,7 +162,7 @@ export function AdvancedChart({
     const container = containerRef.current;
 
     const chart: IChartApi = createChart(container, {
-      layout: { background: { color: "transparent" }, textColor: "#94a3b8", fontSize: 11, fontFamily: "ui-monospace, SFMono-Regular, monospace" },
+      layout: { attributionLogo: false, background: { color: "transparent" }, textColor: "#94a3b8", fontSize: 11, fontFamily: "ui-monospace, SFMono-Regular, monospace" },
       grid: { vertLines: { color: "rgba(148,163,184,0.06)" }, horzLines: { color: "rgba(148,163,184,0.06)" } },
       rightPriceScale: { borderColor: "rgba(148,163,184,0.1)", scaleMargins: { top: 0.1, bottom: indicators.volume ? 0.25 : 0.05 } },
       timeScale: { borderColor: "rgba(148,163,184,0.1)", timeVisible: true, secondsVisible: tf === "1m" },

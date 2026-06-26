@@ -108,7 +108,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
       ) : rows.length === 0 ? (
         <div className="text-sm text-slate-400">No entries yet.</div>
       ) : (
-        <ol className="rounded-2xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+        <ol className="rounded-2xl nl-glass divide-y divide-white/[0.05]">
           {rows.map((r, idx) => (
             <li key={r.id} className="flex items-center gap-3 p-3">
               <span className="w-8 text-[12px] tabular-nums text-slate-400 text-end">{idx + 1}.</span>

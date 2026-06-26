@@ -533,7 +533,7 @@ export default function ResearchPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 text-xs font-semibold bg-white/[0.04] border border-white/[0.08] rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                  className="px-4 py-2 text-xs font-semibold nl-glass rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
                 >
                   Previous
                 </button>
@@ -541,7 +541,7 @@ export default function ResearchPage() {
                 <button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * 20 >= total}
-                  className="px-4 py-2 text-xs font-semibold bg-white/[0.04] border border-white/[0.08] rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                  className="px-4 py-2 text-xs font-semibold nl-glass rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
                 >
                   Next
                 </button>

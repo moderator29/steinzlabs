@@ -40,7 +40,7 @@ export function WhaleCard({ whale }: { whale: WhaleSummary }) {
   return (
     <Link
       href={`/dashboard/whale-tracker/${whale.address}?chain=${whale.chain}`}
-      className="block p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/40 transition group"
+      className="block p-4 rounded-xl nl-glass hover:border-blue-500/40 transition group"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">

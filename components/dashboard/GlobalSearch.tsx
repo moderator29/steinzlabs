@@ -127,7 +127,7 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           placeholder="Search tokens, wallets, entities..."
-          className="w-full ps-9 pe-16 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+          className="w-full ps-9 pe-16 py-2 rounded-lg nl-glass text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
         />
         {query && (
           <button
@@ -146,7 +146,7 @@ export function GlobalSearch() {
         </kbd>
       </div>
       {open && (query.length >= 2 || loading) && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50">
+        <div className="absolute top-full left-0 right-0 mt-2 nl-glass rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50">
           {loading ? (
             <div className="p-4">
               <NakaLoader size={24} subtle text="Searching..." />

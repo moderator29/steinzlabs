@@ -64,7 +64,7 @@ export function RouteComparison({
   const bestNet = best?.netOutputUsd ?? Number(best?.amountOut ?? 0);
 
   return (
-    <div className="rounded-xl bg-slate-900/40 border border-slate-800 overflow-hidden">
+    <div className="rounded-xl nl-glass overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition"

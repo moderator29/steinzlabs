@@ -58,7 +58,7 @@ export default function WhaleActivityChart({ activity, height = 220, className =
     if (!container) return;
 
     const chart = createChart(container, {
-      layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: '#94a3b8', fontSize: 11, fontFamily: 'ui-monospace, SFMono-Regular, monospace' },
+      layout: { attributionLogo: false, background: { type: ColorType.Solid, color: 'transparent' }, textColor: '#94a3b8', fontSize: 11, fontFamily: 'ui-monospace, SFMono-Regular, monospace' },
       grid: { vertLines: { color: 'rgba(148,163,184,0.06)' }, horzLines: { color: 'rgba(148,163,184,0.06)' } },
       rightPriceScale: { borderColor: 'rgba(148,163,184,0.1)' },
       timeScale: { borderColor: 'rgba(148,163,184,0.1)', timeVisible: true, secondsVisible: false },

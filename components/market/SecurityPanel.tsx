@@ -443,7 +443,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
           {facts.map((f) => (
             <div
               key={f.label}
-              className="flex items-start justify-between gap-2 rounded-lg bg-slate-950/40 border border-slate-800/60 px-2.5 py-2"
+              className="flex items-start justify-between gap-2 rounded-lg nl-glass/60 px-2.5 py-2"
               title={f.hint}
             >
               <div className="min-w-0">
@@ -567,7 +567,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
       })()}
 
       {data.reasons.length > 0 && (
-        <div className="rounded-lg bg-slate-950/40 border border-slate-800/60 px-3 py-2 mb-3">
+        <div className="rounded-lg nl-glass/60 px-3 py-2 mb-3">
           <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Findings</div>
           <ul className="space-y-1">
             {data.reasons.map((r, i) => (

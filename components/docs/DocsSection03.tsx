@@ -17,7 +17,7 @@ export function DocsSection03() {
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
         Your real-time on-chain intelligence stream · a continuous flow of curated signals from whale movements, smart money entries, token launches, large transfers, and security events. AI-filtered and ranked so you only see what matters.
       </p>
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 mb-8 flex items-center gap-3">
+      <div className="nl-glass rounded-xl p-4 mb-8 flex items-center gap-3">
         <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse flex-shrink-0" />
         <p className="text-sm text-gray-300">Live · streams new events every few seconds, no refresh needed.</p>
       </div>
@@ -27,7 +27,7 @@ export function DocsSection03() {
         </h3>
         <div className="space-y-3">
           {SIGNAL_TYPES.map(s => (
-            <div key={s.tag} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <div key={s.tag} className="flex items-start gap-3 nl-glass rounded-xl p-4">
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 mt-0.5" style={{ color: s.color, background: s.bg }}>{s.tag}</span>
               <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
             </div>
@@ -36,7 +36,7 @@ export function DocsSection03() {
       </div>
       <div id="context-trust" className="scroll-mt-20 mb-10">
         <h3 className="text-sm font-semibold text-white mb-4">Trust Score</h3>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="nl-glass rounded-xl p-4">
           <p className="text-sm text-gray-400 leading-relaxed mb-4">
             Every signal carries a <span className="text-white font-semibold">Trust Score (0–100)</span>, reflecting source wallet quality, corroborating on-chain events, and historical signal accuracy.
           </p>

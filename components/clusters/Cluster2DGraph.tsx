@@ -150,7 +150,7 @@ export function Cluster2DGraph({ rootAddress, members, edges, height = 480 }: Cl
   return (
     <svg
       ref={svgRef}
-      className="w-full rounded-xl bg-slate-950/40 border border-slate-800"
+      className="w-full rounded-xl nl-glass"
       style={{ height }}
     />
   );

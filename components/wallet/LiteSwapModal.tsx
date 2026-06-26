@@ -168,7 +168,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
         </div>
 
         <label className="block text-[10px] uppercase tracking-wider text-slate-300 mb-1">You pay</label>
-        <div className="flex items-center gap-2 rounded-lg bg-slate-900/70 border border-slate-800 px-3 py-2 mb-3">
+        <div className="flex items-center gap-2 rounded-lg nl-glass px-3 py-2 mb-3">
           <input
             type="number"
             inputMode="decimal"
@@ -186,7 +186,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
         </div>
 
         <label className="block text-[10px] uppercase tracking-wider text-slate-300 mb-1">You receive</label>
-        <div className="rounded-lg bg-slate-900/70 border border-slate-800 px-3 py-2 mb-3 min-h-[42px] flex items-center justify-between">
+        <div className="rounded-lg nl-glass px-3 py-2 mb-3 min-h-[42px] flex items-center justify-between">
           <span className="text-base font-mono text-white">
             {loading ? <Loader2 className="w-4 h-4 animate-spin inline" aria-hidden /> : (outAmountStr ?? '—')}
           </span>

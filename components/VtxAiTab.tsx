@@ -1167,7 +1167,7 @@ export default function VtxAiTab() {
                 <button
                   key={entry.id}
                   onClick={() => loadHistoryEntry(entry)}
-                  className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0066FF]/20 transition-all"
+                  className="w-full text-start p-2.5 nl-glass rounded-lg hover:border-[#0066FF]/20 transition-all"
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <Clock className="w-2.5 h-2.5 text-gray-600 flex-shrink-0" />

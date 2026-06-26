@@ -78,18 +78,40 @@ export async function POST(req: NextRequest) {
   const sb = getSupabaseAdmin();
   const { data: conv } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id')
+    .select('id, user_a_id, user_b_id, request_state, requested_by')
     .eq('id', parsed.data.conversation_id)
     .maybeSingle();
   if (!conv || (conv.user_a_id !== user.id && conv.user_b_id !== user.id)) {
     return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
   }
 
-  // Re-verify DM permission on every send: receiver may have changed
-  // settings or blocked the sender between conversation create and now.
+  // Replying to a pending request implicitly accepts it (X/IG behavior) —
+  // only the recipient (not the original requester) can accept this way.
+  if (conv.request_state === 'pending' && conv.requested_by && conv.requested_by !== user.id) {
+    await sb.from('dm_conversations').update({ request_state: 'accepted' }).eq('id', conv.id);
+  }
+
   const peerId = conv.user_a_id === user.id ? conv.user_b_id : conv.user_a_id;
-  const decision = await canUserDM(user.id, peerId);
-  if (!decision.allowed) return NextResponse.json({ error: `DM not permitted: ${decision.reason}` }, { status: 403 });
+
+  // Direction-aware block handling (shadow-block, X-style):
+  //  - if the SENDER blocked the peer → they can't message them (hard stop).
+  //  - if the PEER blocked the sender → the send silently "succeeds" for the
+  //    sender but is never delivered or notified. The peer's inbox + history
+  //    already hide blocked conversations, so they never see it.
+  const [iBlocked, theyBlocked] = await Promise.all([
+    sb.from('social_blocks').select('id').eq('blocker_id', user.id).eq('blocked_id', peerId).maybeSingle(),
+    sb.from('social_blocks').select('id').eq('blocker_id', peerId).eq('blocked_id', user.id).maybeSingle(),
+  ]);
+  if (iBlocked.data) return NextResponse.json({ error: 'You blocked this user. Unblock to message them.' }, { status: 403 });
+  const shadow = !!theyBlocked.data;
+
+  // Re-verify DM permission on every send (settings can change between
+  // conversation create and now). Skipped for shadow sends — the recipient
+  // blocked the sender, so permission is moot and the message won't be seen.
+  if (!shadow) {
+    const decision = await canUserDM(user.id, peerId);
+    if (!decision.allowed) return NextResponse.json({ error: `DM not permitted: ${decision.reason}` }, { status: 403 });
+  }
 
   const nowIso = new Date().toISOString();
   const { data, error } = await sb
@@ -107,18 +129,27 @@ export async function POST(req: NextRequest) {
 
   await sb.from('dm_conversations').update({ last_message_at: nowIso }).eq('id', parsed.data.conversation_id);
 
-  // Fire-and-forget social notification to peer. Honors recipient prefs
-  // and social_suspended_until inside notifySocialEvent.
-  notifySocialEvent({
-    recipient_id: peerId,
-    event: 'dm_received',
-    metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
-  }).catch(() => {});
+  // Fire-and-forget social notification to peer. A first message in a
+  // still-pending request (sent by the requester) notifies as a "Message
+  // request"; everything else is a normal "New message". Honors recipient
+  // prefs + social_suspended_until inside notifySocialEvent.
+  const isPendingRequest = conv.request_state === 'pending' && conv.requested_by === user.id;
+  if (!shadow) {
+    notifySocialEvent({
+      recipient_id: peerId,
+      event: isPendingRequest ? 'dm_request' : 'dm_received',
+      metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ message: data });
 }
 
-const PatchBody = z.object({ message_id: z.string().uuid(), action: z.enum(['read', 'delete']) });
+const PatchBody = z.object({
+  message_id: z.string().uuid().optional(),
+  conversation_id: z.string().uuid().optional(),
+  action: z.enum(['read', 'delete', 'read_all']),
+});
 
 export async function PATCH(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -127,6 +158,28 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   const sb = getSupabaseAdmin();
+
+  // Bulk: mark every received message in a conversation as read (on thread open).
+  if (parsed.data.action === 'read_all') {
+    if (!parsed.data.conversation_id) return NextResponse.json({ error: 'conversation_id required' }, { status: 400 });
+    const { data: c } = await sb
+      .from('dm_conversations')
+      .select('user_a_id, user_b_id')
+      .eq('id', parsed.data.conversation_id)
+      .maybeSingle();
+    if (!c || (c.user_a_id !== user.id && c.user_b_id !== user.id)) {
+      return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+    }
+    await sb
+      .from('dm_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', parsed.data.conversation_id)
+      .neq('sender_id', user.id)
+      .is('read_at', null);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!parsed.data.message_id) return NextResponse.json({ error: 'message_id required' }, { status: 400 });
   const { data: msg } = await sb
     .from('dm_messages')
     .select('id, conversation_id, sender_id')

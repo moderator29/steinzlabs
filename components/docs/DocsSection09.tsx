@@ -35,7 +35,7 @@ export function DocsSection09() {
         </p>
         <div className="space-y-2 mb-6">
           {PORTFOLIO_FEATURES.map(f => (
-            <div key={f.title} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={f.title} className="flex items-start gap-3 p-3 nl-glass rounded-xl">
               <BarChart3 className="w-3.5 h-3.5 text-[#0066FF] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs font-semibold text-white">{f.title}</div>
@@ -61,7 +61,7 @@ export function DocsSection09() {
         </p>
         <div className="space-y-2 mb-5">
           {PREDICTION_MECHANICS.map(s => (
-            <div key={s.step} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={s.step} className="flex gap-3 p-3 nl-glass rounded-xl">
               <div className="w-6 h-6 rounded-full bg-[#8B5CF6]/15 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-[#8B5CF6]">{s.step}</span>
               </div>
@@ -75,7 +75,7 @@ export function DocsSection09() {
       </div>
 
       {/* Research Lab */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      <div className="nl-glass rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <BookOpen className="w-4 h-4 text-[#F59E0B]" />
           <span className="text-sm font-semibold text-white">Research Lab</span>

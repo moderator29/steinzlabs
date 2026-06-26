@@ -174,7 +174,7 @@ function WalletPanel({ node, chain, onClose }: { node: BubbleNode; chain: string
 
         {/* Address */}
         {addr && (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+          <div className="nl-glass rounded-xl p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-gray-500">Wallet Address</span>
               <button onClick={copy} className="text-[10px] text-gray-500 hover:text-white flex items-center gap-1">
@@ -687,7 +687,7 @@ function BubbleMapInner() {
             </div>
           ) : !mapData ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
-              <div className="w-20 h-20 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex items-center justify-center">
+              <div className="w-20 h-20 nl-glass rounded-2xl flex items-center justify-center">
                 <Layers className="w-10 h-10 text-gray-700" />
               </div>
               <p className="text-sm font-semibold text-gray-400">No token loaded</p>
@@ -817,7 +817,7 @@ function BubbleMapInner() {
                       key={q}
                       type="button"
                       onClick={() => setChatInput(q)}
-                      className="text-[10px] px-2 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-[#0066FF]/40 transition-colors"
+                      className="text-[10px] px-2 py-1 rounded-full nl-glass text-gray-400 hover:text-white hover:bg-white/[0.06] hover:border-[#0066FF]/40 transition-colors"
                     >
                       {q}
                     </button>
@@ -828,7 +828,7 @@ function BubbleMapInner() {
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
                   placeholder="Ask about holders, risk, dev wallets, cluster patterns…"
-                  className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30 transition-colors" />
+                  className="flex-1 nl-glass rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30 transition-colors" />
                 <button onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
                   className="w-8 h-8 bg-[#0066FF] hover:bg-[#0918D0] rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 flex-shrink-0">
                   <Send className="w-3.5 h-3.5" />

@@ -35,6 +35,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
         width: containerRef.current.clientWidth,
         height: fullscreen ? window.innerHeight - 100 : height,
         layout: {
+          attributionLogo: false,
           background: { type: ColorType.Solid, color: 'transparent' },
           textColor: '#9ca3af',
         },

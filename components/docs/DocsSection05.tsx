@@ -38,7 +38,7 @@ export function DocsSection05() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
           {DNA_METRICS.map(m => (
-            <div key={m.label} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+            <div key={m.label} className="nl-glass rounded-xl p-3">
               <div className="text-xs font-semibold text-white mb-0.5">{m.label}</div>
               <div className="text-xs text-gray-500 leading-relaxed">{m.desc}</div>
             </div>
@@ -48,7 +48,7 @@ export function DocsSection05() {
           <div className="text-xs font-semibold text-white mb-3">Wallet Archetypes</div>
           <div className="space-y-2">
             {ARCHETYPES.map(a => (
-              <div key={a.name} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div key={a.name} className="flex items-start gap-3 p-3 nl-glass rounded-xl">
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ color: a.color, background: a.color + '20' }}>{a.name}</span>
                 <span className="text-xs text-gray-400 leading-relaxed">{a.desc}</span>
               </div>
@@ -71,7 +71,7 @@ export function DocsSection05() {
             { title: 'Funding Trace', desc: 'Visual map of how wallets in the cluster received initial funds.' },
             { title: 'Cluster Timeline', desc: 'Chronological view of key signals that triggered cluster classification.' },
           ].map(c => (
-            <div key={c.title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+            <div key={c.title} className="nl-glass rounded-xl p-3">
               <div className="text-xs font-semibold text-white mb-1">{c.title}</div>
               <div className="text-xs text-gray-500">{c.desc}</div>
             </div>
@@ -87,7 +87,7 @@ export function DocsSection05() {
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           Visualize wallet relationships as an interactive force graph. The <strong className="text-gray-300">Network Graph</strong> shows fund flows and connections between entities. The <strong className="text-gray-300">Bubble Map</strong> shows token holder distributions · each bubble represents a holder, sized by their share, color-coded by entity type (exchange, whale, smart money, retail).
         </p>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="nl-glass rounded-xl p-4">
           <div className="text-xs font-semibold text-white mb-2">Bubble Map View Modes</div>
           <div className="space-y-2">
             {[

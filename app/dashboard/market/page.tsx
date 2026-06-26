@@ -184,7 +184,7 @@ export default function DashboardMarketPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, ticker, or paste a contract address…"
-            className="w-full bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0066FF]/40 focus:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all"
+            className="w-full nl-glass/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0066FF]/40 focus:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all"
           />
           {resolving && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" size={14} />
@@ -251,7 +251,7 @@ export default function DashboardMarketPage() {
         <ErrorState message={error} onRetry={refetch} />
       ) : (
         <>
-          <div className="hidden md:block bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl overflow-hidden">
+          <div className="hidden md:block nl-glass/50 rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="text-slate-500 text-xs uppercase tracking-wide border-b border-slate-800/60">
@@ -283,7 +283,7 @@ export default function DashboardMarketPage() {
             </table>
           </div>
 
-          <div className="md:hidden bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl overflow-hidden">
+          <div className="md:hidden nl-glass/50 rounded-xl overflow-hidden">
             {filtered.map((token, i) => (
               <TokenRow
                 key={token.id}

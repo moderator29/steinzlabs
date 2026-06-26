@@ -925,7 +925,7 @@ export default function WalletPage() {
               <button onClick={() => setView('create')} className="w-full py-4 bg-gradient-to-r from-blue-600 to-violet-600 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
                 <Plus className="w-5 h-5" /> Create New Wallet
               </button>
-              <button onClick={() => setView('import')} className="w-full py-4 bg-slate-900 border border-slate-800 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-slate-800/80">
+              <button onClick={() => setView('import')} className="w-full py-4 nl-glass rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:bg-slate-800/80">
                 <Download className="w-5 h-5" /> Import Existing Wallet
               </button>
             </div>
@@ -1084,7 +1084,7 @@ export default function WalletPage() {
 
             {/* ── SEARCH + SORT BAR ────────────────────────── */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex-1 flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5">
+              <div className="flex-1 flex items-center gap-2 nl-glass rounded-xl px-3 py-2.5">
                 <Search className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   value={assetSearch}
@@ -1096,7 +1096,7 @@ export default function WalletPage() {
               <select
                 value={assetSort}
                 onChange={e => setAssetSort(e.target.value as typeof assetSort)}
-                className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-400 focus:outline-none focus:border-blue-500/40 shrink-0"
+                className="nl-glass rounded-xl px-3 py-2.5 text-xs text-slate-400 focus:outline-none focus:border-blue-500/40 shrink-0"
               >
                 <option value="value">By Value</option>
                 <option value="change">By Change</option>
@@ -1122,7 +1122,7 @@ export default function WalletPage() {
             </div>
 
             {/* ── TAB SWITCHER: Holdings / NFTs / Activity ─────────── */}
-            <div className="flex items-center gap-1 mb-3 rounded-xl bg-slate-900/60 border border-slate-800/50 p-1" role="tablist" aria-label="Wallet content">
+            <div className="flex items-center gap-1 mb-3 rounded-xl nl-glass/50 p-1" role="tablist" aria-label="Wallet content">
               {([
                 { id: 'crypto' as const, label: 'Holdings' },
                 { id: 'nfts' as const, label: 'NFTs' },
@@ -1151,7 +1151,7 @@ export default function WalletPage() {
                 role="tabpanel"
                 id="wallet-panel-nfts"
                 aria-labelledby="wallet-tab-nfts"
-                className="mb-6 rounded-xl bg-slate-900/30 border border-slate-800/40 overflow-hidden"
+                className="mb-6 rounded-xl nl-glass/40 overflow-hidden"
               >
                 <NftTab address={activeWallet.address} chain={activeChain.id} />
               </div>
@@ -1162,7 +1162,7 @@ export default function WalletPage() {
                 role="tabpanel"
                 id="wallet-panel-activity"
                 aria-labelledby="wallet-tab-activity"
-                className="mb-6 rounded-xl bg-slate-900/30 border border-slate-800/40 p-3"
+                className="mb-6 rounded-xl nl-glass/40 p-3"
               >
                 <ActivityTab address={activeWallet.address} chain={activeChain} />
               </div>
@@ -1252,7 +1252,7 @@ export default function WalletPage() {
                 dedicated Transactions page (/dashboard/transactions). */}
 
             {/* ── SECURITY SECTION ─────────────────────────── */}
-            <div className="mb-5 bg-slate-900/40 border border-slate-800/30 rounded-xl overflow-hidden">
+            <div className="mb-5 nl-glass/30 rounded-xl overflow-hidden">
               <button
                 onClick={() => setShowSecuritySection(!showSecuritySection)}
                 className="w-full flex items-center justify-between p-4 hover:bg-slate-800/20 transition-colors"
@@ -1305,14 +1305,14 @@ export default function WalletPage() {
                 <button
                   onClick={() => setView('create')}
                   disabled={wallets.length >= MAX_WALLETS}
-                  className="flex-1 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Account
                 </button>
                 <button
                   onClick={() => setView('import')}
                   disabled={wallets.length >= MAX_WALLETS}
-                  className="flex-1 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" /> Import Wallet
                 </button>
@@ -1329,7 +1329,7 @@ export default function WalletPage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative w-full max-w-[320px] mx-4 bg-slate-950 border border-slate-800/50 rounded-2xl p-5 shadow-2xl">
+          <div className="relative w-full max-w-[320px] mx-4 nl-glass/50 rounded-2xl p-5 shadow-2xl">
             <h3 className="text-sm font-bold mb-2 text-white">Delete Wallet?</h3>
             <p className="text-xs text-slate-400 mb-4">
               This removes the wallet from this device. Make sure your seed phrase is backed up first.
@@ -2057,7 +2057,7 @@ function ReceiveView({
           <div className="grid grid-cols-3 gap-3 mb-4">
             <button
               onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              className="flex flex-col items-center gap-1.5 py-3 nl-glass hover:bg-slate-800 rounded-xl transition-colors">
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-300" />}
               <span className="text-[11px] font-semibold text-slate-200">{copied ? 'Copied' : 'Copy'}</span>
             </button>
@@ -2074,7 +2074,7 @@ function ReceiveView({
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              className="flex flex-col items-center gap-1.5 py-3 nl-glass hover:bg-slate-800 rounded-xl transition-colors">
               <DollarSign className="w-4 h-4 text-slate-300" />
               <span className="text-[11px] font-semibold text-slate-200">Set Amount</span>
             </button>
@@ -2094,7 +2094,7 @@ function ReceiveView({
                   }
                 } catch { /* user cancelled */ }
               }}
-              className="flex flex-col items-center gap-1.5 py-3 bg-slate-900/60 border border-slate-800 hover:bg-slate-800 rounded-xl transition-colors">
+              className="flex flex-col items-center gap-1.5 py-3 nl-glass hover:bg-slate-800 rounded-xl transition-colors">
               <Share2 className="w-4 h-4 text-slate-300" />
               <span className="text-[11px] font-semibold text-slate-200">Share</span>
             </button>
@@ -2345,7 +2345,7 @@ function SecretReveal({ label, value, icon }: { label: string; value: string; ic
   return (
     <div className="space-y-2">
       <div className="relative">
-        <div className={`p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono break-all leading-relaxed text-slate-300 select-all min-h-[80px] flex items-center transition-all ${!revealed ? 'blur-md select-none' : ''}`}>
+        <div className={`p-4 nl-glass rounded-xl text-xs font-mono break-all leading-relaxed text-slate-300 select-all min-h-[80px] flex items-center transition-all ${!revealed ? 'blur-md select-none' : ''}`}>
           {value}
         </div>
         {!revealed && (
@@ -2523,7 +2523,7 @@ function WalletSettingsView({
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6 p-4 bg-slate-900/60 border border-slate-800/50 rounded-2xl">
+        <div className="flex items-center gap-4 mb-6 p-4 nl-glass/50 rounded-2xl">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/20 border border-blue-500/20 flex items-center justify-center shrink-0">
             <SteinzLogo size={32} />
           </div>
@@ -2537,7 +2537,7 @@ function WalletSettingsView({
         {/* Section Accordion */}
         <div className="space-y-2">
           {SECTIONS.map(s => (
-            <div key={s.id} className="bg-slate-900/60 border border-slate-800/50 rounded-2xl overflow-hidden">
+            <div key={s.id} className="nl-glass/50 rounded-2xl overflow-hidden">
               <button
                 onClick={() => setActiveSection(activeSection === s.id ? null : s.id)}
                 className="w-full flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors"
@@ -2566,7 +2566,7 @@ function WalletSettingsView({
                       </div>
                       <div>
                         <label className="text-xs text-slate-400 mb-2 block font-medium">Wallet Address</label>
-                        <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                        <div className="flex items-center gap-2 p-3 nl-glass rounded-xl">
                           <span className="flex-1 text-xs font-mono text-slate-300 break-all">{wallet.address}</span>
                           <button onClick={() => navigator.clipboard.writeText(wallet.address)} className="shrink-0 p-1.5 hover:bg-slate-700 rounded-lg transition-colors">
                             <Copy className="w-3.5 h-3.5 text-slate-400" />
@@ -2608,9 +2608,9 @@ function WalletSettingsView({
                         {revealError && <p className="text-xs text-red-400 mb-2">{revealError}</p>}
                         {revealedPhrase && (
                           <div className="space-y-3">
-                            <div className="grid grid-cols-3 gap-2 p-4 bg-slate-950 border border-slate-800 rounded-xl">
+                            <div className="grid grid-cols-3 gap-2 p-4 nl-glass rounded-xl">
                               {revealedPhrase.split(' ').map((word, i) => (
-                                <div key={i} className="flex items-center gap-1.5 py-1.5 px-2 bg-slate-900 border border-slate-800 rounded-lg">
+                                <div key={i} className="flex items-center gap-1.5 py-1.5 px-2 nl-glass rounded-lg">
                                   <span className="text-[9px] text-slate-500 font-mono w-4">{i + 1}.</span>
                                   <span className="text-xs font-mono text-white">{word}</span>
                                 </div>
@@ -2746,11 +2746,11 @@ function WalletSettingsView({
                   {/* ── ADVANCED ── */}
                   {s.id === 'advanced' && (
                     <>
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
+                      <div className="p-3 nl-glass rounded-xl space-y-2">
                         <p className="text-xs font-semibold text-slate-300">Connected DApps</p>
                         <p className="text-xs text-slate-500">No DApps connected — connection management coming in Phase 2</p>
                       </div>
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                      <div className="p-3 nl-glass rounded-xl">
                         <p className="text-xs font-semibold text-slate-300 mb-2">Wallet Info</p>
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs"><span className="text-slate-500">Encryption</span><span className="text-slate-300">AES-256-GCM</span></div>

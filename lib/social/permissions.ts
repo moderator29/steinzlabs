@@ -36,11 +36,13 @@ export async function canUserDM(senderId: string, receiverId: string): Promise<D
     return { allowed: false, reason: 'suspended' };
   }
 
+  // Open-DM model (X / Instagram style): anyone can message anyone unless the
+  // recipient has EXPLICITLY restricted DMs, or there's a block. Users who
+  // never set a preference (null/unset) default to OPEN. Explicit 'mutual' /
+  // 'following' / 'nobody' choices are still honored.
   switch (receiver.dm_permission) {
     case 'nobody':
       return { allowed: false, reason: 'nobody' };
-    case 'everyone':
-      return { allowed: true };
     case 'following': {
       const { data: rel } = await sb
         .from('social_follows')
@@ -51,14 +53,16 @@ export async function canUserDM(senderId: string, receiverId: string): Promise<D
         .maybeSingle();
       return rel ? { allowed: true } : { allowed: false, reason: 'not-following' };
     }
-    case 'mutual':
-    default: {
+    case 'mutual': {
       const [aToB, bToA] = await Promise.all([
         sb.from('social_follows').select('id').eq('follower_id', senderId).eq('following_id', receiverId).eq('status', 'accepted').maybeSingle(),
         sb.from('social_follows').select('id').eq('follower_id', receiverId).eq('following_id', senderId).eq('status', 'accepted').maybeSingle(),
       ]);
       return aToB.data && bToA.data ? { allowed: true } : { allowed: false, reason: 'not-mutual' };
     }
+    case 'everyone':
+    default:
+      return { allowed: true };
   }
 }
 

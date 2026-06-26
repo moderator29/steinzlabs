@@ -36,13 +36,13 @@ export function DocsSection08() {
         </p>
         <div className="space-y-2 mb-5">
           {ARCHETYPES.map(a => (
-            <div key={a.name} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={a.name} className="flex items-center gap-3 p-3 nl-glass rounded-xl">
               <span className="text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0" style={{ color: a.color, background: a.color + '20' }}>{a.name}</span>
               <span className="text-xs text-gray-400">{a.desc}</span>
             </div>
           ))}
         </div>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div className="nl-glass rounded-xl p-4">
           <div className="text-xs font-semibold text-white mb-3">Convergence Signal</div>
           <p className="text-xs text-gray-400 leading-relaxed">
             When multiple top-performing wallets buy the same token within a short time window, the platform surfaces a <span className="text-[#F59E0B] font-semibold">Convergence Signal</span> · historically one of the strongest leading indicators of short-term price momentum.
@@ -60,7 +60,7 @@ export function DocsSection08() {
         </p>
         <div className="space-y-2 mb-5">
           {WHALE_TIERS.map(w => (
-            <div key={w.tier} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl" style={{ borderColor: w.color + '20' }}>
+            <div key={w.tier} className="flex items-start gap-3 p-3 nl-glass rounded-xl" style={{ borderColor: w.color + '20' }}>
               <span className="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style={{ color: w.color, background: w.color + '20' }}>{w.tier}</span>
               <div>
                 <div className="text-xs text-gray-300 font-semibold">{w.threshold}</div>

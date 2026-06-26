@@ -84,7 +84,7 @@ function KpiPill({
 }) {
   const up = change !== null && change >= 0;
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800/50 flex-shrink-0">
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full nl-glass/50 flex-shrink-0">
       <span className="text-slate-500">{icon}</span>
       <span className="text-xs text-slate-400">{label}</span>
       <span className="text-xs font-medium text-white">{value}</span>

@@ -56,7 +56,7 @@ export default function SecurityScannerPage() {
   }
 
   const input =
-    "w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm font-mono focus:outline-none focus:border-blue-500/40";
+    "w-full px-3 py-2 rounded-lg nl-glass text-sm font-mono focus:outline-none focus:border-blue-500/40";
 
   return (
     <div className="min-h-screen text-white pb-20">
@@ -71,7 +71,7 @@ export default function SecurityScannerPage() {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 mb-6 space-y-3">
+        <div className="p-4 rounded-xl nl-glass mb-6 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setScanType("token")}
@@ -124,7 +124,7 @@ export default function SecurityScannerPage() {
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Risk report</p>
               <button
                 onClick={subscribe}
-                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/30 text-slate-300 transition"
+                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:nl-glass hover:border-blue-500/30 text-slate-300 transition"
               >
                 <BellPlus size={11} /> Alert me on changes
               </button>

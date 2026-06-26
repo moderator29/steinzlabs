@@ -22,10 +22,12 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  */
 
 export type SocialEvent =
-  | 'new_follower'        // someone followed you
-  | 'follow_request'      // someone wants to follow your private account
-  | 'dm_received'         // new DM (no plaintext preview — encrypted)
-  | 'mentioned';          // someone @-mentioned you in a post / DM
+  | 'new_follower'           // someone followed you
+  | 'follow_request'         // someone wants to follow your private account
+  | 'dm_received'            // new DM in an accepted conversation
+  | 'dm_request'             // a message request from someone you don't follow
+  | 'dm_request_accepted'    // your message request was accepted
+  | 'mentioned';             // someone @-mentioned you in a post / DM
 
 interface NotifyInput {
   recipient_id: string;
@@ -33,27 +35,54 @@ interface NotifyInput {
   metadata?: Record<string, unknown>;
 }
 
+// Maps each event to the social_notification_preferences toggle column.
 const PREF_COLUMN: Record<SocialEvent, string> = {
-  new_follower:   'notify_new_follower',
-  follow_request: 'notify_follow_request',
-  dm_received:    'notify_dm_received',
-  mentioned:      'notify_mentioned',
+  new_follower:        'notify_new_follower',
+  follow_request:      'notify_follow_request',
+  dm_received:         'notify_dm_received',
+  dm_request:          'notify_dm_received',
+  dm_request_accepted: 'notify_dm_received',
+  mentioned:           'notify_mentioned',
 };
 
 const TITLE: Record<SocialEvent, string> = {
-  new_follower:   'New follower',
-  follow_request: 'Follow request',
-  dm_received:    'New message',
-  mentioned:      'Mentioned you',
+  new_follower:        'New follower',
+  follow_request:      'Follow request',
+  dm_received:         'New message',
+  dm_request:          'Message request',
+  dm_request_accepted: 'Request accepted',
+  mentioned:           'Mentioned you',
 };
 
 // notifications.body is NOT NULL — every insert must supply it.
 const BODY: Record<SocialEvent, string> = {
-  new_follower:   'Someone started following you.',
-  follow_request: 'Someone requested to follow you.',
-  dm_received:    'You received a new message.',
-  mentioned:      'Someone mentioned you.',
+  new_follower:        'Someone started following you.',
+  follow_request:      'Someone requested to follow you.',
+  dm_received:         'You received a new message.',
+  dm_request:          'Someone wants to message you.',
+  dm_request_accepted: 'Your message request was accepted.',
+  mentioned:           'Someone mentioned you.',
 };
+
+/** Build the in-app click-through URL for a social notification so the bell
+ *  and notifications page route the user to the right surface. */
+function urlForEvent(event: SocialEvent, metadata?: Record<string, unknown>): string {
+  const m = metadata ?? {};
+  const senderId = (m.sender_id ?? m.peer_id ?? m.follower_id) as string | undefined;
+  switch (event) {
+    case 'dm_received':
+      return senderId ? `/dashboard/messages/${senderId}` : '/dashboard/messages';
+    case 'dm_request':
+      return '/dashboard/messages'; // Requests tab lives in the inbox
+    case 'dm_request_accepted':
+      return senderId ? `/dashboard/messages/${senderId}` : '/dashboard/messages';
+    case 'new_follower':
+    case 'follow_request':
+      return m.follower_username ? `/u/${m.follower_username}` : '/dashboard/notifications';
+    default:
+      return '/dashboard/notifications';
+  }
+}
 
 export async function notifySocialEvent({ recipient_id, event, metadata }: NotifyInput): Promise<void> {
   const sb = getSupabaseAdmin();
@@ -81,6 +110,7 @@ export async function notifySocialEvent({ recipient_id, event, metadata }: Notif
     type: `social.${event}`,
     title: TITLE[event],
     body: BODY[event],
+    url: urlForEvent(event, metadata),
     metadata: metadata ?? {},
     read: false,
   });

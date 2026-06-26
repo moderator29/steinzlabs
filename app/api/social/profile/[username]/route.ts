@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { isBlockedBetween } from '@/lib/social/permissions';
 
 /**
  * GET /api/social/profile/[username]
@@ -49,8 +48,26 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   }
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  if (caller && (await isBlockedBetween(caller.id, profile.id))) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  // Block direction matters: if THEY blocked the caller, the profile is
+  // invisible (404). If the CALLER blocked them, return a minimal payload so
+  // the UI can render a "User blocked / Unblock" state instead of 404.
+  if (caller && caller.id !== profile.id) {
+    const [bMe, bThem] = await Promise.all([
+      sb.from('social_blocks').select('id').eq('blocker_id', caller.id).eq('blocked_id', profile.id).maybeSingle(),
+      sb.from('social_blocks').select('id').eq('blocker_id', profile.id).eq('blocked_id', caller.id).maybeSingle(),
+    ]);
+    if (bThem.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (bMe.data) {
+      return NextResponse.json({
+        blocked_by_me: true,
+        profile: {
+          id: profile.id,
+          username: profile.username,
+          display_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+        },
+      });
+    }
   }
 
   const [{ count: followers }, { count: following }] = await Promise.all([

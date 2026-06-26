@@ -53,7 +53,7 @@ function Inner() {
         : data === null ? (id ? <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div> : null)
         : (
         <div className="space-y-4">
-          <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+          <section className="rounded-2xl nl-glass p-4">
             <div className="text-sm font-semibold text-white">@{data.profile.username}</div>
             <div className="text-[11px] text-slate-400">Role: {data.profile.role} · Joined {new Date(data.profile.created_at).toLocaleDateString()}</div>
             {data.profile.social_suspended_until && new Date(data.profile.social_suspended_until) > new Date() && (
@@ -70,11 +70,11 @@ function Inner() {
             </section>
           )}
 
-          <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+          <section className="rounded-2xl nl-glass p-4">
             <h2 className="text-sm font-bold text-white mb-2">Counts</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
               {Object.entries(data.counts).map(([k, v]) => (
-                <div key={k} className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+                <div key={k} className="rounded-lg nl-glass px-3 py-2">
                   <div className="text-[10px] uppercase text-slate-400">{k.replace(/_/g, ' ')}</div>
                   <div className="text-base font-bold text-white tabular-nums">{v}</div>
                 </div>
@@ -82,7 +82,7 @@ function Inner() {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+          <section className="rounded-2xl nl-glass p-4">
             <h2 className="text-sm font-bold text-white mb-3">Moderator actions</h2>
             <div className="flex flex-wrap gap-2">
               <button disabled={busy} onClick={() => moderate('suspend_social', 24)} className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[12px] font-semibold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldX className="w-3.5 h-3.5" />Suspend social 24h</button>

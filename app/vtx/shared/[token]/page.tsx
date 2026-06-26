@@ -83,7 +83,7 @@ export default function SharedConversationPage({ params }: { params: Promise<{ t
           ))}
         </div>
 
-        <div className="mt-8 p-4 rounded-xl bg-slate-900/50 border border-slate-800 text-xs text-slate-500">
+        <div className="mt-8 p-4 rounded-xl nl-glass text-xs text-slate-500">
           This is a read-only snapshot shared by a Naka Labs user.{" "}
           <Link href="/signup" className="text-blue-400 hover:underline">
             Create an account

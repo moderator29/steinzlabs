@@ -92,7 +92,7 @@ export function ChartToolbar({
           </span>
         </button>
         {indicatorsOpen && (
-          <div className="absolute top-full left-0 mt-1 w-44 bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 p-1">
+          <div className="absolute top-full left-0 mt-1 w-44 nl-glass rounded-lg shadow-2xl z-30 p-1">
             {INDICATOR_OPTIONS.map(({ key, label }) => {
               const active = indicators[key];
               return (

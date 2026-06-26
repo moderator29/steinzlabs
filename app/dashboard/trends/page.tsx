@@ -142,7 +142,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
           </div>
 
           {/* Large sparkline */}
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 mb-4">
+          <div className="nl-glass rounded-2xl p-4 mb-4">
             <div className="text-[10px] text-gray-500 mb-3 uppercase tracking-wider">7-Day Trend</div>
             <Sparkline points={card.sparkline} color={sparkColor} height={80} />
           </div>
@@ -167,7 +167,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
           )}
 
           <button onClick={onClose}
-            className="w-full py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
+            className="w-full py-3 nl-glass rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
             Close
           </button>
         </div>

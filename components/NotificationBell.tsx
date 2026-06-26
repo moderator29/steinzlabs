@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, X, CheckCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, X, CheckCheck, UserPlus, MessageCircle } from 'lucide-react';
 import {
   getLocalNotifications,
   markNotificationRead,
@@ -15,7 +16,8 @@ interface NotificationRowPayload {
   id: string;
   type: string;
   title: string;
-  message: string;
+  body: string;
+  url: string | null;
   read: boolean;
   created_at: string;
 }
@@ -32,6 +34,7 @@ interface DisplayNotification {
   message: string;
   time: string;
   read: boolean;
+  href?: string;
 }
 
 function formatTimeAgo(ts: number): string {
@@ -44,7 +47,7 @@ function formatTimeAgo(ts: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function getNotifIcon(type: DisplayNotification['type']) {
+function getNotifIcon(type: string) {
   switch (type) {
     case 'welcome':         return <span className="text-sm leading-none font-bold text-[#0066FF]">W</span>;
     case 'wallet_created':
@@ -62,11 +65,17 @@ function getNotifIcon(type: DisplayNotification['type']) {
     case 'prediction':      return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
     case 'alert':           return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
     case 'system':          return <Info className="w-4 h-4 text-gray-400" />;
+    case 'social.new_follower':
+    case 'social.follow_request': return <UserPlus className="w-4 h-4 text-[#0066FF]" />;
+    case 'social.dm_received':
+    case 'social.dm_request':
+    case 'social.dm_request_accepted': return <MessageCircle className="w-4 h-4 text-[#0066FF]" />;
     default:                return <Bell className="w-4 h-4 text-gray-400" />;
   }
 }
 
 export default function NotificationBell() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<DisplayNotification[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
@@ -105,6 +114,7 @@ export default function NotificationBell() {
             message: n.message,
             time: n.time || 'Just now',
             read: readIds.includes(n.id),
+            href: n.href,
           }));
           // Deduplicate: local overrides API for same id
           const localIds = new Set(localMapped.map(n => n.id));
@@ -188,9 +198,10 @@ export default function NotificationBell() {
               id: row.id,
               type: row.type as DisplayNotification['type'],
               title: row.title,
-              message: row.message,
+              message: row.body,
               time: 'Just now',
               read: row.read || readIds.includes(row.id),
+              href: row.url ?? undefined,
             };
             setNotifications((prev) => (prev.some((n) => n.id === next.id) ? prev : [next, ...prev]));
           },
@@ -260,7 +271,7 @@ export default function NotificationBell() {
         // background. The other three already use bg-white/[0.04] + border
         // border-white/[0.08] (see GlobalControls). Match exactly so the
         // cluster reads as a single visual row.
-        className="relative p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+        className="relative p-2 rounded-lg nl-glass hover:bg-white/[0.08] transition-colors"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-gray-300" />
@@ -322,7 +333,7 @@ export default function NotificationBell() {
               notifications.map(n => (
                 <button
                   key={n.id}
-                  onClick={() => handleMarkRead(n.id)}
+                  onClick={() => { handleMarkRead(n.id); if (n.href) { setOpen(false); router.push(n.href); } }}
                   className={`w-full flex items-start gap-3 px-4 py-3 text-start border-b border-white/[0.04] last:border-0 transition-colors ${
                     n.read ? 'opacity-50 hover:opacity-70 hover:bg-white/[0.02]' : 'hover:bg-white/[0.04]'
                   }`}

@@ -176,7 +176,7 @@ function CreateModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-lg bg-slate-950 border border-slate-800/50 rounded-2xl overflow-hidden"
+        className="w-full max-w-lg nl-glass/50 rounded-2xl overflow-hidden"
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-slate-800/50">
@@ -395,7 +395,7 @@ function CreateModal({
 
           {step === 4 && (
             <div className="space-y-3">
-              <div className="bg-slate-900/60 border border-slate-800/50 rounded-xl p-4 space-y-2">
+              <div className="nl-glass/50 rounded-xl p-4 space-y-2">
                 <Row label="Name" value={form.name} />
                 <Row label="Trigger" value={TRIGGER_LABELS[form.trigger_type]} />
                 <Row label="Chains" value={form.chains_allowed.join(", ")} />
@@ -518,7 +518,7 @@ function CriteriaCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-5"
+      className="nl-glass/50 rounded-2xl p-5"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -714,7 +714,7 @@ export default function SniperBotPage() {
         </div>
 
         {/* Tab Bar */}
-        <div className="flex gap-1 bg-slate-900/60 border border-slate-800/50 rounded-xl p-1 mb-6">
+        <div className="flex gap-1 nl-glass/50 rounded-xl p-1 mb-6">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -838,7 +838,7 @@ export default function SniperBotPage() {
                 <p className="text-slate-400">No executions yet</p>
               </div>
             ) : (
-              <div className="bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-2xl overflow-x-auto">
+              <div className="nl-glass/50 rounded-2xl overflow-x-auto">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-800/50">

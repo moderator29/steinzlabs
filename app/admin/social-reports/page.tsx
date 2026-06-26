@@ -88,7 +88,7 @@ export default function SocialReportsAdminPage() {
       ) : rows.length === 0 ? (
         <div className="text-sm text-slate-400 italic">No reports match this filter.</div>
       ) : (
-        <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+        <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
           {rows.map((r) => (
             <div key={r.id} className="p-4 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
               <div className="space-y-1.5 min-w-0">

@@ -89,7 +89,7 @@ function Troubleshoot({
   symptom, checks, action,
 }: { symptom: string; checks: string[]; action: string }) {
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 my-3">
+    <div className="nl-glass rounded-xl p-4 my-3">
       <div className="text-sm font-bold text-white mb-2">&ldquo;{symptom}&rdquo;</div>
       <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Check, in order:</div>
       <ol className="text-[13px] text-gray-300 space-y-1 list-decimal ps-5 mb-3">
@@ -151,7 +151,7 @@ export default function AdminDocsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search this doc…"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/40"
+              className="w-full nl-glass rounded-xl px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
         </div>
@@ -415,7 +415,7 @@ export default function AdminDocsPage() {
                 { title: 'PostHog',    role: 'Product analytics',              why: 'Self-hostable, privacy-compliant analytics.' },
                 { title: 'Resend',     role: 'Transactional email',            why: 'Developer-friendly email API with high deliverability.' },
               ].map((p) => (
-                <div key={p.title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+                <div key={p.title} className="nl-glass rounded-xl p-4">
                   <div className="text-sm font-bold text-white">{p.title}</div>
                   <div className="text-[11px] text-gray-500 uppercase tracking-wide mt-0.5">{p.role}</div>
                   <div className="text-[12.5px] text-gray-400 mt-2 leading-relaxed">{p.why}</div>

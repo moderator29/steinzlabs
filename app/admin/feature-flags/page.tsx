@@ -100,7 +100,7 @@ export default function FeatureFlagsPage() {
                           max={100}
                           value={f.rollout_pct}
                           onChange={(e) => void setRollout(f.key, Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                          className="w-14 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-0.5 text-slate-200"
+                          className="w-14 nl-glass rounded px-2 py-0.5 text-slate-200"
                         />
                         %
                       </label>

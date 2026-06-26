@@ -56,7 +56,7 @@ export default function SubmitWhalePage() {
   }
 
   const input =
-    "w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 text-sm focus:outline-none focus:border-blue-500/40";
+    "w-full px-3 py-2 rounded-lg nl-glass text-sm focus:outline-none focus:border-blue-500/40";
 
   return (
     <div className="min-h-screen text-white pb-20">

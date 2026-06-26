@@ -176,7 +176,7 @@ export default function SupportPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* List */}
-          <div className="lg:col-span-1 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+          <div className="lg:col-span-1 nl-glass rounded-2xl overflow-hidden">
             <div className="px-4 py-2.5 text-[11px] uppercase tracking-wide text-gray-500 border-b border-white/[0.05]">
               Your tickets
             </div>
@@ -214,7 +214,7 @@ export default function SupportPage() {
           </div>
 
           {/* Detail / Form */}
-          <div className="lg:col-span-2 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 min-h-[60vh]">
+          <div className="lg:col-span-2 nl-glass rounded-2xl p-5 min-h-[60vh]">
             {showForm ? (
               <form
                 onSubmit={(e) => { e.preventDefault(); void createTicket(e.currentTarget); }}
@@ -249,7 +249,7 @@ export default function SupportPage() {
                     minLength={3}
                     maxLength={200}
                     placeholder="Quick summary of the issue"
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export default function SupportPage() {
                     maxLength={5000}
                     rows={8}
                     placeholder="Include what you were doing, what happened, and any tx hashes or wallet addresses involved."
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                   />
                 </div>
 
@@ -353,7 +353,7 @@ export default function SupportPage() {
                       onChange={(e) => setReplyInput(e.target.value)}
                       rows={3}
                       placeholder="Add a reply…"
-                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
+                      className="w-full nl-glass rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                     />
                     <div className="flex justify-end">
                       <button

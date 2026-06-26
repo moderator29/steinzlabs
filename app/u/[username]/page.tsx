@@ -55,13 +55,18 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   const [data, setData] = useState<ProfileResponse | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<{ id: string; username: string; display_name: string | null } | null>(null);
+  const [unblocking, setUnblocking] = useState(false);
 
   const load = useCallback(async () => {
     try {
+      setBlocked(null);
       const res = await fetch(`/api/social/profile/${encodeURIComponent(username)}`);
       if (res.status === 404) { setError('User not found'); return; }
       const json = await res.json();
+      if (json?.blocked_by_me) { setBlocked(json.profile); setData(null); return; }
       if (!res.ok) { setError(json.error ?? 'Failed'); return; }
+      setBlocked(null);
       setData(json);
     } catch {
       setError('Network error');
@@ -70,23 +75,58 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
   useEffect(() => { void load(); }, [load]);
 
+  const unblock = async () => {
+    if (!blocked) return;
+    setUnblocking(true);
+    try {
+      await fetch(`/api/social/block?target_id=${blocked.id}`, { method: 'DELETE' });
+      await load();
+    } finally {
+      setUnblocking(false);
+    }
+  };
+
   if (error) return <div className="min-h-screen flex items-center justify-center text-slate-400">{error}</div>;
+
+  // Caller has blocked this user — show a blocked state with an Unblock action
+  // instead of the full profile (industry-standard).
+  if (blocked) {
+    return (
+      <div className="min-h-screen p-4 sm:p-6 max-w-md mx-auto">
+        <div className="mb-4"><BackButton /></div>
+        <GlassCard className="p-8 text-center">
+          <div className="text-base font-semibold text-white">You blocked @{blocked.username}</div>
+          <p className="text-sm text-slate-400 mt-2">You can&apos;t see their profile or messages, and they can&apos;t message you. Unblock to restore.</p>
+          <button
+            onClick={unblock}
+            disabled={unblocking}
+            className="mt-5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0066FF)] text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {unblocking ? 'Unblocking…' : 'Unblock'}
+          </button>
+        </GlassCard>
+      </div>
+    );
+  }
+
   if (!data) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>;
 
   const p = data.profile;
   const rel = data.relationship;
   const initial = (p.display_name || p.username || '?').slice(0, 1).toUpperCase();
   const mutual = !!rel?.i_follow && !!rel?.they_follow_me;
+  // Open-DM model — anyone can message unless the user explicitly restricted
+  // DMs (mutual/following/nobody) or there's a block. Default (unset) is open.
   const dmPermissionView: 'allowed' | 'not_mutual' | 'not_following' | 'nobody' | 'blocked' =
     rel?.i_blocked
       ? 'blocked'
       : p.dm_permission === 'nobody'
       ? 'nobody'
-      : p.dm_permission === 'everyone'
-      ? 'allowed'
       : p.dm_permission === 'following'
       ? rel?.they_follow_me ? 'allowed' : 'not_following'
-      : mutual ? 'allowed' : 'not_mutual';
+      : p.dm_permission === 'mutual'
+      ? mutual ? 'allowed' : 'not_mutual'
+      : 'allowed';
 
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto">
@@ -169,7 +209,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         </div>
       )}
 
-      <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl mb-4">
+      <div className="flex gap-1 p-1 nl-glass rounded-xl mb-4">
         {(['overview', 'following', 'followers'] as Tab[]).map((t) => (
           <button
             key={t}

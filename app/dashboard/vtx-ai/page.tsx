@@ -856,7 +856,7 @@ function VtxAiPageInner() {
                   <button
                     key={session.id}
                     onClick={() => loadChatSession(session)}
-                    className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0066FF]/20 transition-all flex items-center gap-2"
+                    className="w-full text-start p-2.5 nl-glass rounded-lg hover:border-[#0066FF]/20 transition-all flex items-center gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -1051,7 +1051,7 @@ function VtxAiPageInner() {
 
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
               {QUICK_ACTIONS.map((action) => (
-                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
+                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 nl-glass rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
                   {action.label}
                 </button>
               ))}
@@ -1067,7 +1067,7 @@ function VtxAiPageInner() {
                 <button
                   key={card.label}
                   onClick={() => handleSend(card.query)}
-                  className="text-start p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-[#0066FF]/30 hover:bg-slate-900/80 transition-all group"
+                  className="text-start p-3 nl-glass rounded-xl hover:border-[#0066FF]/30 hover:bg-slate-900/80 transition-all group"
                 >
                   <card.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0066FF] mb-1.5 transition-colors" />
                   <p className="text-xs font-semibold text-gray-200">{card.label}</p>
@@ -1084,7 +1084,7 @@ function VtxAiPageInner() {
             {showTools && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {TOOLS.slice(4).map((tool) => (
-                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.03] transition-all group">
+                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 nl-glass rounded-xl hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.03] transition-all group">
                     <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0066FF] mb-1.5 transition-colors" />
                     <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
                     <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
@@ -1106,7 +1106,7 @@ function VtxAiPageInner() {
               <div className={`max-w-[82%] min-w-0 rounded-2xl px-4 py-3 text-xs leading-relaxed relative overflow-hidden ${
                 msg.role === 'user'
                   ? 'bg-[#0066FF]/10 border border-[#0066FF]/15 text-white'
-                  : 'bg-white/[0.02] border border-white/[0.06] text-gray-300'
+                  : 'nl-glass text-gray-300'
               }`}>
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-1.5 mb-2">
@@ -1141,7 +1141,7 @@ function VtxAiPageInner() {
                                 <button
                                   key={a.label}
                                   onClick={() => { if (a.send) handleSend(a.send); else if (a.prefill) setInput(a.prefill); }}
-                                  className="px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.06] transition-all"
+                                  className="px-2.5 py-1.5 nl-glass rounded-lg text-[10px] font-semibold text-gray-300 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.06] transition-all"
                                 >
                                   {a.label}
                                 </button>
@@ -1213,7 +1213,7 @@ function VtxAiPageInner() {
               <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15">
                 <SteinzLogo size={18} animated={false} />
               </div>
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
+              <div className="nl-glass rounded-2xl px-5 py-4">
                 <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Naka Intelligence...'} />
               </div>
             </div>
@@ -1241,7 +1241,7 @@ function VtxAiPageInner() {
           <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0066FF]/10 border-[#0066FF]/20 text-[#0066FF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
             <Wrench className="w-4 h-4" />
           </button>
-          <div className="flex-1 flex items-start bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
+          <div className="flex-1 flex items-start nl-glass/50 rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
             {settings.webSearch && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0066FF]/10 rounded text-[9px] text-[#0066FF] font-semibold me-2 mt-1.5 flex-shrink-0">
                 <Globe className="w-2.5 h-2.5" /> WEB

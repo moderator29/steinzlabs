@@ -27,11 +27,13 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdmin();
 
   const escaped = parsed.data.q.replace(/[%_]/g, (m) => `\\${m}`);
-  const { data, error } = await sb
+  let queryBuilder = sb
     .from('profiles')
     .select('id, username, display_name, avatar_url, tier, verified_badge, is_chosen')
-    .or(`username.ilike.%${escaped}%,display_name.ilike.%${escaped}%`)
-    .limit(parsed.data.limit);
+    .or(`username.ilike.%${escaped}%,display_name.ilike.%${escaped}%`);
+  // Never surface the caller in their own search results (can't DM yourself).
+  if (caller) queryBuilder = queryBuilder.neq('id', caller.id);
+  const { data, error } = await queryBuilder.limit(parsed.data.limit);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   interface SearchUser {

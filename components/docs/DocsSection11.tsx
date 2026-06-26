@@ -52,7 +52,7 @@ function CommandList({ items, accent }: { items: { cmd: string; desc: string }[]
   return (
     <div className="space-y-1.5">
       {items.map(c => (
-        <div key={c.cmd} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg px-3 py-2.5">
+        <div key={c.cmd} className="flex items-start gap-3 nl-glass rounded-lg px-3 py-2.5">
           <code className="text-xs font-mono px-2 py-0.5 rounded flex-shrink-0" style={{ background: accent + '20', color: accent }}>{c.cmd}</code>
           <span className="text-xs text-gray-400 leading-relaxed pt-0.5">{c.desc}</span>
         </div>
@@ -79,7 +79,7 @@ export function DocsSection11() {
         </h3>
         <div className="space-y-2">
           {CONNECT_STEPS.map(s => (
-            <div key={s.n} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={s.n} className="flex gap-3 p-3 nl-glass rounded-xl">
               <div className="w-6 h-6 rounded-full bg-[#229ED9]/15 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-[#229ED9]">{s.n}</span>
               </div>
@@ -134,7 +134,7 @@ export function DocsSection11() {
         </p>
         <div className="space-y-2">
           {OUTBOUND_NOTIFS.map(n => (
-            <div key={n.type} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg px-3 py-2.5">
+            <div key={n.type} className="flex items-start gap-3 nl-glass rounded-lg px-3 py-2.5">
               <Zap className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs font-semibold text-white">{n.type}</div>
@@ -146,7 +146,7 @@ export function DocsSection11() {
       </div>
 
       {/* Privacy note */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      <div className="nl-glass rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Send className="w-4 h-4 text-[#229ED9]" />
           <span className="text-sm font-semibold text-white">Privacy & Disconnect</span>
