@@ -1,5 +1,5 @@
 /**
- * Sanctum sigil — pentagon / faceted gem form. Cool blues with violet
+ * Sanctum sigil · pentagon / faceted gem form. Cool blues with violet
  * inner facets. Matches the brand reference's right icon. Represents
  * soul: identity, achievements, lore, music.
  */
@@ -45,31 +45,31 @@ export function SanctumSigil({ size = 96, className }: { size?: number; classNam
           stroke="rgba(120,170,255,0.45)"
           strokeWidth="1.2"
         />
-        {/* Inner facet — top triangle */}
+        {/* Inner facet · top triangle */}
         <polygon
           points="48,14 82,38 48,48"
           fill="url(#sanctum-facet)"
           opacity="0.9"
         />
-        {/* Inner facet — bottom-right */}
+        {/* Inner facet · bottom-right */}
         <polygon
           points="48,48 82,38 70,78"
           fill="#1230B3"
           opacity="0.8"
         />
-        {/* Inner facet — bottom-left */}
+        {/* Inner facet · bottom-left */}
         <polygon
           points="48,48 70,78 26,78"
           fill="#0A1A66"
           opacity="0.85"
         />
-        {/* Inner facet — left */}
+        {/* Inner facet · left */}
         <polygon
           points="48,48 26,78 14,38"
           fill="#1230B3"
           opacity="0.7"
         />
-        {/* Inner facet — top-left */}
+        {/* Inner facet · top-left */}
         <polygon
           points="48,48 14,38 48,14"
           fill="url(#sanctum-facet)"

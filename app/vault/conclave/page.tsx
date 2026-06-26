@@ -5,7 +5,7 @@ import { TreasuryPanel } from './TreasuryPanel';
 import { ConclaveClient } from './ConclaveClient';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'The Conclave — Vault — Naka Labs' };
+export const metadata = { title: 'The Conclave · Vault · Naka Labs' };
 
 export default function ConclavePage() {
   return (

@@ -33,7 +33,7 @@ export function VoteOrbs({ proposalId }: { proposalId: string }) {
         const j = await res.json();
         if (!cancelled) setVotes((j.votes ?? []) as Vote[]);
       } catch {
-        /* swallow — empty state renders */
+        /* swallow · empty state renders */
       }
     };
     load();
@@ -60,7 +60,7 @@ export function VoteOrbs({ proposalId }: { proposalId: string }) {
     );
   }
 
-  // Sorted: yes left, abstain center, no right — reads at a glance.
+  // Sorted: yes left, abstain center, no right · reads at a glance.
   const ordered = [
     ...votes.filter(v => v.choice === 'yes'),
     ...votes.filter(v => v.choice === 'abstain'),

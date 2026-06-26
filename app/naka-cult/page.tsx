@@ -15,14 +15,14 @@ export const metadata = {
     'Three chambers behind one living sigil. Private intel, member governance, and a permanent on-chain identity. For the wallets that held before the noise.',
 };
 
-// Dynamic — the per-user CTA (isMember) depends on session cookies via
+// Dynamic · the per-user CTA (isMember) depends on session cookies via
 // getCultAccess(). CultStatsStrip caches its own query for 60s.
 export const dynamic = 'force-dynamic';
 
 /**
- * /naka-cult — the cinematic, public landing for the cult. Rebrand: "The
+ * /naka-cult · the cinematic, public landing for the cult. Rebrand: "The
  * Living Sigil". Membership is the decoupled cult entitlement (NIPPO NFT or
- * a NAKA balance) — NOT a platform tier. Members route straight to /vault.
+ * a NAKA balance) · NOT a platform tier. Members route straight to /vault.
  */
 export default async function NakaCultLanding() {
   const access = await getCultAccess();

@@ -23,12 +23,12 @@ function shortAddr(addr: string): string {
 }
 
 /**
- * Echo Chamber — twenty-five communal stealth-wallet slots. Any cult member
+ * Echo Chamber · twenty-five communal stealth-wallet slots. Any cult member
  * may read and seat/remove wallets (the retired Chosen-only gate is gone).
  * Replaces the SubChamberPlaceholder of the same name inside OracleHubClient.
  *
  * v1 lists wallets as plain rows. Live holdings enrichment (USD totals,
- * top positions) is the obvious next pass — keep the UI compact so adding
+ * top positions) is the obvious next pass · keep the UI compact so adding
  * a holdings preview later doesn't require reflow.
  */
 export function EchoChamberPanel() {
@@ -121,7 +121,7 @@ export function EchoChamberPanel() {
   return (
     <article
       className="oracle-subchamber oracle-subchamber--echo"
-      aria-label="Echo Chamber — stealth wallets"
+      aria-label="Echo Chamber · stealth wallets"
     >
       <header className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.18em] text-[#00C8FF]">Echo Chamber</span>

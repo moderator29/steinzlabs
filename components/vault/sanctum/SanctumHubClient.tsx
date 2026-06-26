@@ -6,7 +6,7 @@ import { MantlePanel } from './MantlePanel';
 import { AnnalsPanel } from './AnnalsPanel';
 
 /**
- * Sanctum hub — the chamber's landing surface.
+ * Sanctum hub · the chamber's landing surface.
  *
  * Headline: the Library (Ddergo Sanctuary, fully wired via Spotify embed).
  * Below: three styled placeholder cards for the remaining sub-features

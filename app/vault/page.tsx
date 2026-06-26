@@ -10,7 +10,7 @@ import { MessagesSquare, Gift, TrendingUp, Radar, Rocket } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
-  title: 'The Vault — Naka Labs',
+  title: 'The Vault · Naka Labs',
   description: 'Three sealed chambers: the Conclave, the Oracle, the Sanctum.',
 };
 
@@ -30,7 +30,7 @@ async function loadCultStats(): Promise<CultStatsRow | null> {
   }
 }
 
-// §vault-server-client-function-prop — `compactNumber` used to be passed
+// §vault-server-client-function-prop · `compactNumber` used to be passed
 // as a `format` prop to <CultStatsCounter />. That triggered the App
 // Router error "Functions cannot be passed directly to Client
 // Components" (Sentry-captured as the real cause of the /vault retry
@@ -57,7 +57,7 @@ export default async function VaultPage() {
           href="/vault/profile"
           className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[12px] font-semibold text-[#9FB0D8] transition hover:border-white/20 hover:text-white"
         >
-          ◈ Your profile — mantle &amp; annals →
+          ◈ Your profile · mantle &amp; annals →
         </Link>
       </section>
 
@@ -94,7 +94,7 @@ export default async function VaultPage() {
             href="/vault/ape"
             name="Ape or Nope"
             tagline="Instinct"
-            description="A trending coin a day — call it, build your streak. 🚀💀"
+            description="A trending coin a day · call it, build your streak. 🚀💀"
             sigil={<Rocket size={64} className="text-emerald-300" />}
           />
           <ChamberPortal

@@ -36,30 +36,40 @@ export async function TreasuryPanel() {
   const naka = fmtNum(snap?.balance_naka ?? null);
   const usd  = fmtNum(snap?.balance_usd ?? null);
 
+  // Only treat a snapshot as a live reading when it has a real balance and is
+  // recent (the cron refreshes every 6h). A NULL/stale placeholder must never
+  // render as the current treasury with a real-looking date · that's the "fake
+  // date" the panel was showing.
+  const ageMs = snap ? Date.now() - new Date(snap.captured_at).getTime() : Infinity;
+  const isLive = snap != null && naka != null && Number.isFinite(ageMs) && ageMs < 48 * 3_600_000;
+
   return (
     <section className="vault-portal mb-8">
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#00C8FF]">
           <Diamond size={14} /> THE TREASURY
         </span>
-        {snap && (
+        {isLive && (
           <span className="text-[11px] text-[#B4C0E0]">
-            Snapshot · {new Date(snap.captured_at).toLocaleString()}
+            Snapshot · {new Date(snap!.captured_at).toLocaleString()}
           </span>
         )}
       </header>
 
       <div className="text-center py-2">
-        <div className="cinematic-stat text-[40px] leading-none"
-             style={{ fontFamily: 'JetBrains Mono, SF Mono, monospace', fontWeight: 700 }}>
-          {naka != null ? `${compact(naka)} $NAKA` : '—'}
-        </div>
-        {usd != null && (
-          <div className="mt-2 text-[14px] text-[#B4C0E0]">≈ ${compact(usd)} USD</div>
-        )}
-        {!snap && (
+        {isLive ? (
+          <>
+            <div className="cinematic-stat text-[40px] leading-none"
+                 style={{ fontFamily: 'JetBrains Mono, SF Mono, monospace', fontWeight: 700 }}>
+              {compact(naka!)} $NAKA
+            </div>
+            {usd != null && (
+              <div className="mt-2 text-[14px] text-[#B4C0E0]">≈ ${compact(usd)} USD</div>
+            )}
+          </>
+        ) : (
           <p className="mt-3 text-[13px] text-[#B4C0E0]">
-            No treasury snapshot yet. Owner: insert into <code className="text-[#00C8FF]">cult_treasury_snapshots</code> from the on-chain treasury wallet.
+            Awaiting the first live treasury snapshot. The on-chain balance refreshes automatically.
           </p>
         )}
       </div>

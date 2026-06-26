@@ -1,7 +1,7 @@
 import { OfferingPanel } from '@/components/vault/commons/OfferingPanel';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'The Offering — Naka Cult' };
+export const metadata = { title: 'The Offering · Naka Cult' };
 
 export default function OfferingPage() {
   return (

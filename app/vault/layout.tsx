@@ -17,7 +17,7 @@ interface LoadoutCosmetic {
  * Resolve the member's worn identity from their equipped loadout so it actually
  * renders somewhere (the loadout was write-only before): the equipped `title`
  * cosmetic becomes the rank text, and the first of glow/frame/sigil with a
- * colour becomes the strip accent. Best-effort — falls back to the plain
+ * colour becomes the strip accent. Best-effort · falls back to the plain
  * Cultist identity on any error.
  */
 async function resolveWornIdentity(userId: string | null | undefined): Promise<{ rank: string; accentColor: string | null }> {
@@ -58,7 +58,7 @@ export const dynamic = 'force-dynamic';
 export default async function VaultLayout({ children }: { children: ReactNode }) {
   const access = await getCultAccess();
   if (!access.allowed) {
-    // /naka-cult is the dramatic landing — explains the cult and how to
+    // /naka-cult is the dramatic landing · explains the cult and how to
     // enter. Replaces the previous /dashboard?denied=cult fallback now
     // that the landing exists.
     redirect('/naka-cult');

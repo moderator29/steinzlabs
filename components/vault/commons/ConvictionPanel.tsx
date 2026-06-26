@@ -63,7 +63,7 @@ export function ConvictionPanel() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ asset, chain, direction, thesis }),
       });
-      if (res.status === 429) { setError('Slow down — convictions are weighed, not spammed.'); return; }
+      if (res.status === 429) { setError('Slow down · convictions are weighed, not spammed.'); return; }
       if (!res.ok && res.status !== 201) throw new Error('post');
       setAsset(''); setChain(''); setThesis(''); setDirection('long');
       setError(null);
@@ -164,7 +164,7 @@ export function ConvictionPanel() {
                   <p className="truncate text-[13px] font-semibold text-white">{c.asset}</p>
                   <p className="truncate text-[11px] text-[#8C9AC0]">{c.author.name}</p>
                 </div>
-                <span className="text-[13px] font-bold text-[#FFD86B]">{c.score != null ? (c.score > 0 ? '+' : '') + c.score : '—'}</span>
+                <span className="text-[13px] font-bold text-[#FFD86B]">{c.score != null ? (c.score > 0 ? '+' : '') + c.score : '·'}</span>
               </li>
             ))}
           </ol>

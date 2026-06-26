@@ -7,19 +7,19 @@ import { Loader2, KeyRound } from 'lucide-react';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
 
 /**
- * EnterNakaCultButton — wallet-connect entry to the NakaCult Vault.
+ * EnterNakaCultButton · wallet-connect entry to the NakaCult Vault.
  *
  * NakaCult is NOT coupled to a platform login. This button connects the wallet
- * (AppKit / WalletConnect — the same stack the swap card uses), proves
+ * (AppKit / WalletConnect · the same stack the swap card uses), proves
  * ownership via SIWE, and the server reads on-chain holdings and unlocks the
  * Vault iff the wallet holds the NIPPO NFT OR >= 1,227,000 $NAKA. On success it
  * lands the user directly in /vault. A connected wallet that doesn't qualify
- * gets an honest "not eligible yet" message — never a redirect to a pricing or
+ * gets an honest "not eligible yet" message · never a redirect to a pricing or
  * login page.
  *
  * Reuses the existing SIWE flow (/api/auth/wallet-nonce + /api/auth/wallet-verify)
  * which already auto-creates/links the account and applies entitlements, so the
- * wallet IS the identity — no email/password step.
+ * wallet IS the identity · no email/password step.
  */
 
 interface Props {
@@ -63,7 +63,7 @@ export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Pro
       const { actionLink, unlocked } = await verifyRes.json();
 
       if (unlocked?.cult) {
-        // Eligible — consume the magic link (lands directly in /vault).
+        // Eligible · consume the magic link (lands directly in /vault).
         window.location.href = actionLink;
         return;
       }
@@ -128,7 +128,7 @@ export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Pro
         <p className="max-w-xs text-center text-[12.5px] leading-relaxed text-[#C8D6FF]">
           This wallet doesn&apos;t hold a <span className="font-semibold text-white">NIPPO</span> NFT
           or <span className="font-semibold text-white">1,227,000 $NAKA</span> yet. Acquire either and
-          connect again — the sigil will know you.
+          connect again · the sigil will know you.
         </p>
       )}
       {status.kind === 'error' && (

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Disc3, ChevronDown } from 'lucide-react';
 
 /**
- * CultPlayer — the Vault's ambient player (Ddergo, scored for the chamber).
+ * CultPlayer · the Vault's ambient player (Ddergo, scored for the chamber).
  *
  * Mounts once in /vault/layout so playback survives chamber-to-chamber nav.
  * Surface: a circular ORB pinned bottom-right that opens a rectangle PANEL
@@ -18,7 +18,7 @@ import { Disc3, ChevronDown } from 'lucide-react';
  */
 
 const KEY = 'naka_cult_player_v3';
-const DEFAULT_PLAYLIST = '4ZjnNBKs9x7XdHPLQJmsiK'; // Ddergo — owner-provided
+const DEFAULT_PLAYLIST = '4ZjnNBKs9x7XdHPLQJmsiK'; // Ddergo · owner-provided
 
 interface Persist {
   expanded: boolean;
@@ -59,7 +59,7 @@ export function CultPlayer() {
         if (cancelled) return;
         const sp = (json.tracks ?? []).find((t) => t.storage_path?.startsWith('spotify:playlist:'));
         if (sp) setPlaylistId(sp.storage_path.replace('spotify:playlist:', ''));
-      } catch { /* library unavailable — keep the default playlist */ }
+      } catch { /* library unavailable · keep the default playlist */ }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -93,7 +93,7 @@ export function CultPlayer() {
       role="region"
       aria-label="Cult Library player"
     >
-      {/* Rectangle panel — the Spotify embed. Mounted only after consent. */}
+      {/* Rectangle panel · the Spotify embed. Mounted only after consent. */}
       {persist.consented && (
         <div className="cult-player__panel" aria-hidden={!persist.expanded}>
           <div className="cult-player__panel-head">
@@ -118,14 +118,14 @@ export function CultPlayer() {
               height="352"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
-              title="Ddergo — the cult Library"
+              title="Ddergo · the cult Library"
               style={{ border: 0, borderRadius: 12 }}
             />
           </div>
         </div>
       )}
 
-      {/* Circle orb — persistent handle */}
+      {/* Circle orb · persistent handle */}
       <button
         type="button"
         className={`cult-player__orb ${persist.consented ? 'cult-player__orb--playing' : ''}`}

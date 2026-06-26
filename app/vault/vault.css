@@ -12,11 +12,17 @@
   isolation: isolate;
 }
 
-/* Aurora layers — pure CSS, no JS cost. */
+/* Aurora layers · pure CSS, no JS cost.
+   position:FIXED (not absolute): .vault-shell is min-height:100vh and grows with
+   content, so an absolutely-positioned inset:-50% layer became a 1.5x-page-tall
+   always-animating element glued to the scroll flow · that caused scroll
+   stutter/jump/stick on mobile. Fixed to the viewport, it's small, cheap, and
+   decoupled from scroll geometry. (.vault-shell has no transform/filter, so
+   `fixed` resolves to the viewport.) */
 .vault-shell::before,
 .vault-shell::after {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
@@ -158,7 +164,7 @@
   border-radius: inherit;
   padding: 1px;
   /* Brand-gradient frame (var(--nl-grad-bluecrimson)), subtly always-on so
-     every chamber reads as a branded, framed object — brightens on hover. */
+     every chamber reads as a branded, framed object · brightens on hover. */
   background: linear-gradient(135deg, var(--nl-blue, #0066FF), var(--nl-crimson, #DC143C), var(--nl-blue-ice, #00C8FF));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -179,7 +185,7 @@
   50%      { transform: scale(1.012);}
 }
 
-/* 3D branded icon pedestal — the chamber sigil sits on a raised, glowing
+/* 3D branded icon pedestal · the chamber sigil sits on a raised, glowing
    plinth with an inset top highlight + bottom depth + a soft conic glow ring,
    so the icons read as tactile 3D objects in the Naka brand palette. */
 .vault-portal__sigil {
@@ -570,7 +576,7 @@
   overflow: hidden;
   transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 320ms ease, border-color 320ms ease;
 }
-/* Brand-gradient hairline frame — same institutional treatment as the chamber
+/* Brand-gradient hairline frame · same institutional treatment as the chamber
    portals, so every Oracle/Sanctum panel reads as a framed, branded object. */
 .oracle-subchamber::after,
 .sanctum-subchamber::after {
@@ -752,7 +758,7 @@
   background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.4), transparent);
 }
 
-/* ─── CultPlayer — global Vault Library bar + expandable pane ─────────── */
+/* ─── CultPlayer · global Vault Library bar + expandable pane ─────────── */
 .cult-player {
   position: fixed;
   inset-block-end: calc(16px + env(safe-area-inset-bottom));
@@ -855,7 +861,7 @@
   flex-shrink: 0;
 }
 
-/* Expanded pane — slides up above the bar */
+/* Expanded pane · slides up above the bar */
 .cult-player__pane {
   width: 380px;
   max-width: calc(100vw - 32px);
@@ -968,14 +974,14 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   CultPlayer — rebuilt self-hosted player (circle ORB + rectangle PANEL).
+   CultPlayer · rebuilt self-hosted player (circle ORB + rectangle PANEL).
    Supersedes the Spotify-embed bar styles above (__bar/__sigil/__cta/__pane/
    __embed are no longer rendered). Reuses __eyebrow/__icon-btn/__tracklist/
    __track* from above.
    ════════════════════════════════════════════════════════════════════════ */
 .cult-player { align-items: flex-end; }
 
-/* Circle orb — persistent handle, pinned bottom-right */
+/* Circle orb · persistent handle, pinned bottom-right */
 .cult-player__orb {
   position: relative;
   width: 60px;

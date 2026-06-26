@@ -13,7 +13,7 @@ interface Props {
  * Member identity strip across the top of the Vault. Shows the cult member's
  * username, their rank, and the cult sigil mark. When the member has equipped a
  * loadout in the Sanctum, the rank reflects their equipped title and the strip
- * picks up the cosmetic's accent colour — so worn identity actually appears
+ * picks up the cosmetic's accent colour · so worn identity actually appears
  * (the loadout used to be write-only). Always-visible inside Vault routes. (The
  * retired Chosen lineage no longer applies.)
  */

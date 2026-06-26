@@ -1,7 +1,7 @@
 import { PulsePanel } from '@/components/vault/commons/PulsePanel';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Signal Pulse — Naka Cult' };
+export const metadata = { title: 'Signal Pulse · Naka Cult' };
 
 export default function PulsePage() {
   return (

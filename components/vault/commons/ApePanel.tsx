@@ -104,7 +104,7 @@ export function ApePanel() {
       {!round ? (
         <div className="rounded-2xl border border-white/10 bg-[#070A16]/80 p-10 text-center">
           <div className="mb-2 text-3xl">🜂</div>
-          <p className="text-sm text-[#8C9AC0]">No round live right now. The next coin drops soon — check back.</p>
+          <p className="text-sm text-[#8C9AC0]">No round live right now. The next coin drops soon · check back.</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0B1024] to-[#070A16]">

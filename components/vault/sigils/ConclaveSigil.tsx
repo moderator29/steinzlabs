@@ -1,5 +1,5 @@
 /**
- * Conclave sigil — rocket form. Pink-to-purple body with blue thrust glow.
+ * Conclave sigil · rocket form. Pink-to-purple body with blue thrust glow.
  * Matches the brand reference's leftmost icon. Pure inline SVG: no asset
  * fetch, scales to any size via the `size` prop, picks up cult colors
  * from `--vault-blue` / `--vault-crimson` if present (with literal

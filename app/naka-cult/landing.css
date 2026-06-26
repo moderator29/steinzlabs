@@ -1,4 +1,4 @@
-/* /naka-cult dramatic landing — self-contained styles.
+/* /naka-cult dramatic landing · self-contained styles.
    Uses raw color values (no dependency on the nl-* brand layer) so this
    branch merges independently of feat/brand-foundation. A follow-up branch
    can swap these for .nl-* tokens once brand-foundation is on main. */
@@ -12,16 +12,16 @@
   isolation: isolate;
 }
 
-/* §nakacult-scroll-bug — ROOT FIX. The animated aurora (::after, 38s
+/* §nakacult-scroll-bug · ROOT FIX. The animated aurora (::after, 38s
    rotate+scale) and the floating orbs used to live INSIDE the scroll
    container as absolutely-positioned children; their constant transform
    repaints fought the browser's scroll-anchoring and yanked the page upward
-   mid-scroll. A prior session bolted on `overflow-anchor: none` (a band-aid) —
+   mid-scroll. A prior session bolted on `overflow-anchor: none` (a band-aid) ·
    removed. The background is now a position:fixed, pointer-events:none,
    GPU-composited layer pinned to the viewport and OUTSIDE the scroll flow, so
    it can never affect layout or scroll geometry. No ancestor sets transform/
    filter/will-change, so `fixed` resolves to the viewport (not the scroll box).
-   Aurora layers — same recipe as the Vault, sized for the landing canvas. */
+   Aurora layers · same recipe as the Vault, sized for the landing canvas. */
 .nakacult-shell::before,
 .nakacult-shell::after {
   content: '';
@@ -47,7 +47,7 @@
     transparent 240deg,
     rgba(0, 200, 255, 0.14) 300deg,
     transparent 360deg);
-  /* §perf-6 — hint compositor to put this on a GPU layer so the 38s
+  /* §perf-6 · hint compositor to put this on a GPU layer so the 38s
      conic-gradient rotation doesn't trigger main-thread paints every
      frame. Was the #1 reason laptops fan-spun on /naka-cult per audit. */
   animation: nakacult-drift 38s linear infinite;
@@ -237,7 +237,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 26px 64px -22px rgba(0, 200, 255, 0.45);
 }
 .nakacult-pillar:hover::after { opacity: 0.7; }
-/* 3D branded sigil pedestal — the chamber sigil sits on a raised, glowing
+/* 3D branded sigil pedestal · the chamber sigil sits on a raised, glowing
    plinth (matches the in-vault chamber portals). */
 .nakacult-pillar__sigil {
   display: flex;
@@ -436,7 +436,7 @@
   font-size: 9px;
 }
 
-/* ─── What members get — feature grid ────────────────────────────────── */
+/* ─── What members get · feature grid ────────────────────────────────── */
 .nakacult-features {
   display: grid;
   /* Fluid columns so the tablet band reflows cleanly instead of holding 3
@@ -491,7 +491,7 @@
   .nakacult-features { grid-template-columns: 1fr; }
 }
 
-/* ─── Entry card — chosen variant ────────────────────────────────────── */
+/* ─── Entry card · chosen variant ────────────────────────────────────── */
 .nakacult-entry--chosen {
   border-color: rgba(255, 216, 107, 0.42) !important;
   background: linear-gradient(180deg, rgba(255, 216, 107, 0.06), rgba(5, 8, 22, 0.55)) !important;
@@ -512,7 +512,7 @@
   color: #9FB0D8; /* WCAG AAA: ~8.4:1 on #050816 (was rgba(200,214,255,0.55)) */
 }
 
-/* ─── FAQ — accordion ────────────────────────────────────────────────── */
+/* ─── FAQ · accordion ────────────────────────────────────────────────── */
 .nakacult-faq {
   max-width: 820px;
   margin: 0 auto;
@@ -723,7 +723,7 @@
    width on small screens, and adds a hairline divider between sections
    so they don't feel like a single endless scroll. */
 
-/* Hero Naka Go mascot — background-removal pass.
+/* Hero Naka Go mascot · background-removal pass.
    The source asset is a JPG (no alpha), so we approximate transparency
    via mix-blend-mode + a radial fade mask. mix-blend-mode: screen lifts
    the JPG's near-black background out against the page's deep navy +
@@ -781,7 +781,7 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   REBRAND — The Living Sigil
+   REBRAND · The Living Sigil
    The hero mark is now an animated SVG (components/naka-cult/LivingSigil),
    not the old JPG. Drop the container's own breathe/glow so the sigil owns it.
    ════════════════════════════════════════════════════════════════════════ */
@@ -840,7 +840,7 @@
   50%      { opacity: 1;   transform: scale(1.07); }
 }
 
-/* ─── Entry note — Founder Pass clarifier ─────────────────────────────── */
+/* ─── Entry note · Founder Pass clarifier ─────────────────────────────── */
 .nakacult-entry__note {
   max-width: 62ch;
   margin: 28px auto 0;

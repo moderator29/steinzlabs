@@ -37,7 +37,7 @@ function timeAgo(iso: string): string {
 }
 
 /**
- * Whisper Network — anonymous intel surfaced by the cult.
+ * Whisper Network · anonymous intel surfaced by the cult.
  *
  * Any cult member can post a whisper (server stores the author for moderation
  * but never returns it). Members vote echo or silence; thresholds at 5 / 3
@@ -132,7 +132,7 @@ export function WhisperNetworkPanel() {
   return (
     <article
       className="oracle-subchamber oracle-subchamber--whisper"
-      aria-label="Whisper Network — anonymous intel"
+      aria-label="Whisper Network · anonymous intel"
     >
       <header className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.18em] text-[#00C8FF]">Whisper Network</span>

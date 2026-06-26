@@ -3,11 +3,11 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * The Living Sigil — the kinetic mark at the heart of the NakaCult rebrand.
+ * The Living Sigil · the kinetic mark at the heart of the NakaCult rebrand.
  *
  * Pure inline SVG + CSS animation (no WebGL, no deps) so it's light and
  * reliable. Concentric rune-rings counter-rotate, the octagon breathes, and a
- * gradient sweep crawls the outer ring — the mark reads as *alive* rather than
+ * gradient sweep crawls the outer ring · the mark reads as *alive* rather than
  * a static logo. A subtle pointer-parallax tilts the whole sigil toward the
  * cursor on fine-pointer devices; everything freezes under
  * prefers-reduced-motion (handled in landing.css).
@@ -69,7 +69,7 @@ export function LivingSigil({ size = 360 }: { size?: number }) {
           </linearGradient>
         </defs>
 
-        {/* Outer rune ring — slow spin + gradient sweep */}
+        {/* Outer rune ring · slow spin + gradient sweep */}
         <g className="living-sigil__ring living-sigil__ring--outer">
           <circle cx="100" cy="100" r="94" fill="none" stroke="url(#ls-edge)" strokeWidth="1" opacity="0.5" />
           <circle
@@ -78,7 +78,7 @@ export function LivingSigil({ size = 360 }: { size?: number }) {
           />
         </g>
 
-        {/* Mid ring — counter-rotates */}
+        {/* Mid ring · counter-rotates */}
         <g className="living-sigil__ring living-sigil__ring--mid">
           <circle cx="100" cy="100" r="78" fill="none" stroke="url(#ls-gold)" strokeWidth="0.8" strokeDasharray="2 7" opacity="0.7" />
         </g>
