@@ -39,9 +39,24 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 text-[15px] leading-[1.75] text-gray-300">
         <div className="mb-12 pb-8 border-b border-white/[0.06]">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">Terms of Service</h1>
-          <p className="text-gray-500 text-sm">Last updated: April 2026 · Version 1.0</p>
+          <p className="text-gray-500 text-sm">Last updated: June 2026 · Version 1.1</p>
           <p className="text-gray-400 mt-4">
             These Terms govern your access to and use of the Naka Labs platform (<strong>&quot;Naka Labs&quot;</strong>, <strong>&quot;we&quot;</strong>, <strong>&quot;our&quot;</strong>). By creating an account or using the platform you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree, do not use the platform.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-5 sm:p-6 mb-4">
+          <p className="text-amber-200/90 font-bold text-sm mb-2">⚠ Important disclaimer — read first</p>
+          <p className="text-gray-300 text-[14px] leading-relaxed">
+            Nothing on Naka Labs is financial, legal, investment, or tax advice. Trust Scores,
+            whale data, AI responses, and every other tool are provided for educational and
+            informational purposes only. Crypto trading carries substantial risk including total
+            loss of funds; security tools reduce but never eliminate that risk; and past
+            performance never predicts future results. You are solely responsible for your
+            decisions, for safeguarding your own keys (which we cannot recover), and for ensuring
+            your use complies with the laws of your jurisdiction. Naka Labs is non-custodial and is
+            not a broker-dealer, investment adviser, or custodian. The full disclaimer and
+            limitation of liability are set out in §06 and §10 below.
           </p>
         </div>
 
