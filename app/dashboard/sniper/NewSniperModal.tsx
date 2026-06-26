@@ -37,10 +37,15 @@ interface Props {
 
 type Trigger = 'new_pair' | 'whale_buy' | 'price_target' | 'manual';
 
+// EVM-only: Solana/TON can't do capped, revocable session-key automation.
+const EVM_SNIPER_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
+
 export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [name, setName] = useState('');
   const [trigger, setTrigger] = useState<Trigger>('new_pair');
-  const [chains, setChains] = useState<SniperChain[]>(['solana']);
+  // EVM-only non-custodial sniping — Solana/TON can't do capped session-key
+  // automation, so the config is restricted to EVM chains.
+  const [chains, setChains] = useState<SniperChain[]>(['ethereum']);
   const [tokenAddress, setTokenAddress] = useState('');
   const [whaleAddress, setWhaleAddress] = useState('');
   const [priceTarget, setPriceTarget] = useState('');
@@ -199,9 +204,9 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
           </Field>
 
           {/* Chains */}
-          <Field label="Chains" required hint="Pick one or more. The first chain's defaults populate priority fee.">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {SNIPER_CHAINS.map(c => {
+          <Field label="Chains" required hint="EVM-only — non-custodial session-key automation. The first chain's defaults populate priority fee.">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {EVM_SNIPER_CHAINS.map(c => {
                 const cfg = CHAIN_CONFIGS[c];
                 const active = chains.includes(c);
                 return (
