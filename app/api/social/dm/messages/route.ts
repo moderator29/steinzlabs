@@ -78,11 +78,17 @@ export async function POST(req: NextRequest) {
   const sb = getSupabaseAdmin();
   const { data: conv } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id')
+    .select('id, user_a_id, user_b_id, request_state, requested_by')
     .eq('id', parsed.data.conversation_id)
     .maybeSingle();
   if (!conv || (conv.user_a_id !== user.id && conv.user_b_id !== user.id)) {
     return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+  }
+
+  // Replying to a pending request implicitly accepts it (X/IG behavior) —
+  // only the recipient (not the original requester) can accept this way.
+  if (conv.request_state === 'pending' && conv.requested_by && conv.requested_by !== user.id) {
+    await sb.from('dm_conversations').update({ request_state: 'accepted' }).eq('id', conv.id);
   }
 
   // Re-verify DM permission on every send: receiver may have changed

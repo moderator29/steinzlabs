@@ -20,8 +20,9 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdmin();
   const { data, error } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, last_message_at, user_a_archived, user_b_archived, created_at')
+    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, last_message_at, user_a_archived, user_b_archived, created_at, request_state, requested_by')
     .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+    .neq('request_state', 'declined')
     .order('last_message_at', { ascending: false, nullsFirst: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -30,6 +31,9 @@ export async function GET(req: NextRequest) {
     const peerId = isUserA ? row.user_b_id : row.user_a_id;
     const sealedKey = isUserA ? row.conversation_key_a : row.conversation_key_b;
     const archived = isUserA ? row.user_a_archived : row.user_b_archived;
+    // A pending conversation is a "request" only for the recipient (the one
+    // who did NOT initiate it). The initiator sees it in their normal inbox.
+    const isRequest = row.request_state === 'pending' && row.requested_by !== user.id;
     return {
       id: row.id,
       peer_id: peerId,
@@ -37,6 +41,8 @@ export async function GET(req: NextRequest) {
       last_message_at: row.last_message_at,
       archived,
       created_at: row.created_at,
+      request_state: row.request_state,
+      is_request: isRequest,
     };
   });
   return NextResponse.json({ conversations: shaped });
@@ -61,6 +67,20 @@ export async function POST(req: NextRequest) {
   const isUserA = pair.user_a_id === user.id;
   const sb = getSupabaseAdmin();
 
+  // Decide whether this conversation goes straight to the peer's inbox or
+  // lands in their Requests tab (X/IG model). It's accepted when the peer
+  // already follows the sender (or they're mutual); otherwise it's a pending
+  // request initiated by the sender. Only applied on INSERT (ignoreDuplicates
+  // keeps an existing conversation's state untouched).
+  const { data: peerFollowsMe } = await sb
+    .from('social_follows')
+    .select('id')
+    .eq('follower_id', parsed.data.peer_id)
+    .eq('following_id', user.id)
+    .eq('status', 'accepted')
+    .maybeSingle();
+  const requestState = peerFollowsMe ? 'accepted' : 'pending';
+
   // Insert the conversation only if it does not exist yet. ignoreDuplicates
   // (ON CONFLICT DO NOTHING) means an existing row KEEPS its original keys —
   // reopening a thread must never overwrite the conversation key, or every
@@ -75,6 +95,8 @@ export async function POST(req: NextRequest) {
         user_b_id: pair.user_b_id,
         conversation_key_a: isUserA ? parsed.data.sealed_key_self : parsed.data.sealed_key_peer,
         conversation_key_b: isUserA ? parsed.data.sealed_key_peer : parsed.data.sealed_key_self,
+        request_state: requestState,
+        requested_by: requestState === 'pending' ? user.id : null,
       },
       { onConflict: 'user_a_id,user_b_id', ignoreDuplicates: true },
     );
@@ -98,4 +120,40 @@ export async function POST(req: NextRequest) {
     created_at: data.created_at,
     last_message_at: data.last_message_at,
   });
+}
+
+const PatchBody = z.object({
+  conversation_id: z.string().uuid(),
+  action: z.enum(['accept', 'decline']),
+});
+
+/** Accept or decline a pending message request. Only the recipient (the
+ *  participant who did NOT initiate the request) may act on it. */
+export async function PATCH(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const parsed = PatchBody.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+
+  const sb = getSupabaseAdmin();
+  const { data: convo } = await sb
+    .from('dm_conversations')
+    .select('id, user_a_id, user_b_id, request_state, requested_by')
+    .eq('id', parsed.data.conversation_id)
+    .maybeSingle();
+  if (!convo) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const isParticipant = convo.user_a_id === user.id || convo.user_b_id === user.id;
+  // The recipient is the participant who didn't send the request.
+  if (!isParticipant || convo.requested_by === user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const next = parsed.data.action === 'accept' ? 'accepted' : 'declined';
+  const { error } = await sb
+    .from('dm_conversations')
+    .update({ request_state: next })
+    .eq('id', convo.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, request_state: next });
 }
