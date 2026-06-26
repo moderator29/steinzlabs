@@ -20,12 +20,18 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { getAccount } from '@wagmi/core';
+import { ProviderController } from '@reown/appkit-controllers';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 import { wagmiAdapter } from '@/lib/wallet/appkit';
 
 /** Minimal EIP-1193 surface we use for EVM signing. */
 type Eip1193 = { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+
+/** Minimal Solana wallet surface we use for signing. Phantom and the AppKit/
+ *  WalletConnect Solana provider both expose signAndSendTransaction; the return
+ *  shape varies ({ signature } or a bare string), so callers normalize it. */
+type SolanaSigner = { signAndSendTransaction: (tx: unknown) => Promise<{ signature?: string } | string> };
 
 /**
  * Resolve the active EVM provider. Prefers the wagmi/AppKit connector — which
@@ -50,6 +56,24 @@ async function getEvmProvider(): Promise<Eip1193 | null> {
   }
   const win = typeof window !== 'undefined' ? window : null;
   return (win?.ethereum as Eip1193 | undefined) ?? null;
+}
+
+/**
+ * Resolve the active Solana signer. Prefers the AppKit-managed provider (which
+ * is what a WalletConnect session on mobile/tablet uses — there is no
+ * window.solana there), and falls back to an injected window.solana (Phantom on
+ * desktop, the path the app's own Solana connect button uses). Mirrors
+ * getEvmProvider so Solana swaps work on the same set of devices as EVM.
+ */
+async function getSolanaProvider(): Promise<SolanaSigner | null> {
+  try {
+    const p = ProviderController.state.providers?.solana as SolanaSigner | undefined;
+    if (p && typeof p.signAndSendTransaction === 'function') return p;
+  } catch {
+    /* fall back to an injected provider below */
+  }
+  const win = typeof window !== 'undefined' ? window : null;
+  return (win?.solana as SolanaSigner | undefined) ?? null;
 }
 
 /** Which signer drives the signature for a given leg. */
@@ -253,7 +277,6 @@ export function useSwapBroadcast() {
       setStatus('signing');
       try {
         let hash = '';
-        const win = typeof window !== 'undefined' ? window : null;
 
         if (useGasless && quote.trade) {
           hash = await broadcastGasless(quote);
@@ -273,14 +296,17 @@ export function useSwapBroadcast() {
           setStatus('submitted');
           hash = (await provider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
         } else if (walletKind === 'solana') {
-          if (!win?.solana) throw new Error('Connect a Solana wallet (Phantom) to sign this swap.');
+          const sol = await getSolanaProvider();
+          if (!sol) throw new Error('Connect a Solana wallet (Phantom or WalletConnect) to sign this swap.');
           if (!quote.swapTransaction) throw new Error('No Solana transaction data received from the quote.');
           const { Transaction } = await import('@solana/web3.js');
           const txBytes = Buffer.from(quote.swapTransaction, 'base64');
           const tx = Transaction.from(txBytes);
           setStatus('submitted');
-          const signed = await win.solana.signAndSendTransaction(tx);
-          hash = signed.signature;
+          const signed = await sol.signAndSendTransaction(tx);
+          // Phantom returns { signature }; the WalletConnect/AppKit provider may
+          // return a bare signature string — normalize both.
+          hash = typeof signed === 'string' ? signed : signed?.signature ?? '';
         } else if (walletKind === 'builtin') {
           setStatus('submitted');
           hash = await broadcastBuiltin(quote, chain, address);
