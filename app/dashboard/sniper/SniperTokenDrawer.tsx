@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   X, Loader2, ShieldCheck, ExternalLink, Copy, Check, ArrowUpRight, ArrowDownRight,
-  Users, Layers, TrendingUp, TrendingDown, Bell,
+  Users, Layers, TrendingUp, TrendingDown, Bell, Clock3,
 } from 'lucide-react';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { type DetectedToken, fmtCompact, shortAddr } from './sniperShared';
@@ -63,6 +63,11 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
   const [alertPrice, setAlertPrice] = useState('');
   const [alertDir, setAlertDir] = useState<'above' | 'below'>('above');
   const [alertState, setAlertState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [limitOpen, setLimitOpen] = useState(false);
+  const [limitAmount, setLimitAmount] = useState('');
+  const [limitPrice, setLimitPrice] = useState('');
+  const [limitDir, setLimitDir] = useState<'above' | 'below'>('below');
+  const [limitState, setLimitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const [err, setErr] = useState<string | null>(null);
 
@@ -93,6 +98,35 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     }).catch(() => {});
+  };
+
+  const saveLimit = async () => {
+    const amt = parseFloat(limitAmount);
+    const trig = parseFloat(limitPrice);
+    if (!isFinite(amt) || amt <= 0 || !isFinite(trig) || trig <= 0) { setLimitState('error'); return; }
+    setLimitState('saving');
+    try {
+      const res = await fetch('/api/trading/limit-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chain: token.chain,
+          from_token_address: 'USDC', // monitor resolves to the chain's real USDC contract
+          from_token_symbol: 'USDC',
+          to_token_address: token.address,
+          to_token_symbol: token.symbol,
+          from_amount: amt,
+          trigger_price_usd: trig,
+          trigger_direction: limitDir,
+          wallet_source: 'external_evm',
+        }),
+      });
+      if (!res.ok) throw new Error('failed');
+      setLimitState('saved');
+      window.setTimeout(() => { setLimitOpen(false); setLimitState('idle'); setLimitAmount(''); setLimitPrice(''); }, 1200);
+    } catch {
+      setLimitState('error');
+    }
   };
 
   const goBuy = () => router.push(`/dashboard/swap?buyToken=${token.address}&chain=${token.chain}`);
@@ -206,6 +240,31 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
                 {alertState === 'saving' ? 'Saving…' : alertState === 'saved' ? 'Saved ✓' : alertState === 'error' ? 'Try again' : 'Save Alert'}
               </button>
               <button onClick={() => { setAlertOpen(false); setAlertState('idle'); }} className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white/60 text-xs font-semibold">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Set Limit Order (buy USDC → token when price triggers) */}
+        {!limitOpen ? (
+          <button onClick={() => setLimitOpen(true)} className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white/70 font-semibold text-sm hover:text-white hover:border-white/20 transition mb-4">
+            <Clock3 className="w-4 h-4" /> Set Limit Order
+          </button>
+        ) : (
+          <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-4">
+            <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Buy {token.symbol} with USDC when price</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="inline-flex rounded-lg overflow-hidden border border-white/10">
+                <button onClick={() => setLimitDir('below')} className={`px-2.5 py-1.5 text-xs font-bold ${limitDir === 'below' ? 'bg-emerald-500/20 text-emerald-300' : 'text-white/50'}`}>Below</button>
+                <button onClick={() => setLimitDir('above')} className={`px-2.5 py-1.5 text-xs font-bold ${limitDir === 'above' ? 'bg-red-500/20 text-red-300' : 'text-white/50'}`}>Above</button>
+              </div>
+              <input type="number" value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} placeholder={price ? String(price) : 'Trigger price $'} className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-[#0066FF]/50 min-w-0" />
+            </div>
+            <input type="number" value={limitAmount} onChange={(e) => setLimitAmount(e.target.value)} placeholder="Spend amount (USDC)" className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-[#0066FF]/50 mb-2" />
+            <div className="flex items-center gap-2">
+              <button onClick={saveLimit} disabled={limitState === 'saving'} className="nl-btn-neon flex-1 py-2 rounded-lg font-bold text-xs disabled:opacity-50">
+                {limitState === 'saving' ? 'Placing…' : limitState === 'saved' ? 'Placed ✓' : limitState === 'error' ? 'Try again' : 'Place Limit Order'}
+              </button>
+              <button onClick={() => { setLimitOpen(false); setLimitState('idle'); }} className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white/60 text-xs font-semibold">Cancel</button>
             </div>
           </div>
         )}

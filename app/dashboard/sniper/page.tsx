@@ -60,6 +60,9 @@ interface ExecutionRow {
   tx_hash: string | null;
   pnl_usd: number | null;
   buy_amount_usd?: number | null;
+  entry_price_usd?: number | null;
+  tokens_received?: number | null;
+  realized_at?: string | null;
   executed_at: string;
   execution_time_ms: number | null;
 }
@@ -128,7 +131,7 @@ export default function SniperPage() {
     if (!user?.id) return;
     const { data } = await supabase
       .from('sniper_executions')
-      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, buy_amount_usd, executed_at, execution_time_ms')
+      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, buy_amount_usd, entry_price_usd, tokens_received, realized_at, executed_at, execution_time_ms')
       .eq('user_id', user.id).order('executed_at', { ascending: false }).limit(100);
     if (data) setExecutions(data as ExecutionRow[]);
   }, [user?.id]);
@@ -556,53 +559,65 @@ function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: Detec
 
 // ─── Positions (aggregated from real executions) ─────────────────────────────
 
-interface Position { key: string; symbol: string; chain: string | null; trades: number; spent: number; pnl: number; last: string; }
-
 function PositionsTab({ executions }: { executions: ExecutionRow[] }) {
-  const positions = useMemo<Position[]>(() => {
-    const map = new Map<string, Position>();
-    for (const e of executions) {
-      const key = `${e.chain ?? ''}:${e.token_address}`;
-      const spent = Number(e.buy_amount_usd ?? e.amount_native ?? e.amount_sol ?? 0) || 0;
-      const pnl = Number(e.pnl_usd) || 0;
-      const cur = map.get(key);
-      if (cur) {
-        cur.trades += 1; cur.spent += spent; cur.pnl += pnl;
-        if (e.executed_at > cur.last) cur.last = e.executed_at;
-      } else {
-        map.set(key, { key, symbol: e.token_symbol ?? e.token_address.slice(0, 6), chain: e.chain, trades: 1, spent, pnl, last: e.executed_at });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => new Date(b.last).getTime() - new Date(a.last).getTime());
-  }, [executions]);
+  // Only confirmed buys are real positions. Open = not yet realized; Realized =
+  // sold (carries pnl_usd from the sell-confirm / receipt-reconciliation).
+  const confirmed = executions.filter((e) => e.status === 'confirmed' || e.status === 'sniped' || e.realized_at);
+  const open = confirmed.filter((e) => !e.realized_at).sort((a, b) => new Date(b.executed_at).getTime() - new Date(a.executed_at).getTime());
+  const realized = confirmed.filter((e) => !!e.realized_at).sort((a, b) => new Date(b.realized_at!).getTime() - new Date(a.realized_at!).getTime());
 
-  if (positions.length === 0) {
+  if (open.length === 0 && realized.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center">
         <TrendingUp className="w-10 h-10 mx-auto mb-3 text-white/25" />
         <h3 className="text-base font-bold mb-1">No positions yet</h3>
-        <p className="text-white/50 text-sm">Positions appear here once your snipers start filling. PnL updates in real time.</p>
+        <p className="text-white/50 text-sm">Positions appear here once your snipers fill. Open positions show your entry; realized PnL updates after exits.</p>
       </div>
     );
   }
   return (
-    <div className="grid gap-2">
-      {positions.map((p) => {
-        const cfg = p.chain ? CHAIN_CONFIGS[p.chain as SniperChain] : null;
-        return (
-          <div key={p.key} className="nl-glass rounded-xl p-3 flex items-center gap-3">
-            {cfg ? <img src={cfg.logo} alt="" className="w-9 h-9 rounded-full shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2"><span className="font-bold truncate">{p.symbol}</span>{p.chain && <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain}</span>}</div>
-              <div className="text-[11px] text-white/50">{p.trades} {p.trades === 1 ? 'fill' : 'fills'} · spent {fmtUSD(p.spent)} · {timeAgo(p.last)}</div>
-            </div>
-            <div className={`text-right shrink-0 font-bold ${p.pnl > 0 ? 'text-emerald-300' : p.pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
-              <div className="text-sm">{fmtUSD(p.pnl)}</div>
-              <div className="text-[10px] font-medium text-white/40">{p.spent > 0 ? `${((p.pnl / p.spent) * 100).toFixed(1)}%` : '—'}</div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="space-y-4">
+      {open.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Open · {open.length}</div>
+          <div className="grid gap-2">{open.map((e) => <PositionRow key={e.id} e={e} />)}</div>
+        </div>
+      )}
+      {realized.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Realized · {realized.length}</div>
+          <div className="grid gap-2">{realized.map((e) => <PositionRow key={e.id} e={e} realized />)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PositionRow({ e, realized }: { e: ExecutionRow; realized?: boolean }) {
+  const cfg = e.chain ? CHAIN_CONFIGS[e.chain as SniperChain] : null;
+  const spent = Number(e.buy_amount_usd ?? 0) || 0;
+  const pnl = e.pnl_usd != null ? Number(e.pnl_usd) : null;
+  return (
+    <div className="nl-glass rounded-xl p-3 flex items-center gap-3">
+      {cfg ? <img src={cfg.logo} alt="" className="w-9 h-9 rounded-full shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-[10px] font-bold text-white/60">{(e.token_symbol ?? '?').slice(0, 2)}</div>}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold truncate">{e.token_symbol ?? e.token_address.slice(0, 6)}</span>
+          {e.chain && <span className="text-[10px] uppercase tracking-wider text-white/40">{e.chain}</span>}
+          {!realized && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase border border-emerald-500/30 bg-emerald-500/15 text-emerald-300">Open</span>}
+        </div>
+        <div className="text-[11px] text-white/50">
+          {spent > 0 ? `Spent ${fmtUSD(spent)}` : ''}{e.entry_price_usd ? ` · entry $${Number(e.entry_price_usd).toPrecision(3)}` : ''} · {timeAgo(realized ? (e.realized_at ?? e.executed_at) : e.executed_at)}
+        </div>
+      </div>
+      {realized ? (
+        <div className={`text-right shrink-0 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
+          <div className="text-sm">{pnl != null ? fmtUSD(pnl) : '—'}</div>
+          <div className="text-[10px] font-medium text-white/40">{pnl != null && spent > 0 ? `${((pnl / spent) * 100).toFixed(1)}%` : 'settling…'}</div>
+        </div>
+      ) : (
+        <span className="shrink-0 text-[10px] text-white/40">held</span>
+      )}
     </div>
   );
 }

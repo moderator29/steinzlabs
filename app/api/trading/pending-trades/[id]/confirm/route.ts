@@ -197,15 +197,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             })
             .eq("id", pending.source_order_id);
         } else {
-          // SELL confirm — mark the position realized so the autosell cron
-          // doesn't redispatch it. Authoritative settled price + PnL arrive via
-          // the receipt-reconciliation cron.
+          // SELL confirm — mark realized and compute realized PnL now (the
+          // receipt-reconciliation cron only writes PnL for copy-trades, not
+          // sniper). The sell routes token → USDC, so client-reported proceeds
+          // ≈ USD; pnl = proceeds − buy cost (mirrors reconciliation's
+          // user_copy_trades convention).
+          const { data: posRow } = await admin
+            .from("sniper_executions")
+            .select("buy_amount_usd")
+            .eq("id", pending.source_order_id)
+            .single<{ buy_amount_usd: number | null }>();
+          const proceedsUsd = body.clientReportedAmountOut ? Number(body.clientReportedAmountOut) : null;
+          const buyCost = posRow?.buy_amount_usd != null ? Number(posRow.buy_amount_usd) : null;
+          const pnlUsd = proceedsUsd != null && buyCost != null && Number.isFinite(proceedsUsd) ? proceedsUsd - buyCost : null;
           await admin
             .from("sniper_executions")
             .update({
               realized_at: nowIso,
               sell_tx_hash: body.txHash,
               sell_pending_trade_id: null,
+              ...(pnlUsd != null ? { pnl_usd: pnlUsd } : {}),
             })
             .eq("id", pending.source_order_id);
         }
