@@ -129,7 +129,7 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
     );
     let query = adminClient
       .from('notifications')
-      .select('id, type, title, body, read, created_at, metadata')
+      .select('id, type, title, body, read, created_at, metadata, url')
       .order('created_at', { ascending: false })
       .limit(50);
     if (userId) query = query.eq('user_id', userId);
@@ -143,6 +143,7 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
       time: timeAgo(new Date(String(row.created_at || Date.now()))),
       read: (row.read as boolean) ?? false,
       createdAt: String(row.created_at),
+      href: (row.url as string) || undefined,
       metadata: (row.metadata as Record<string, unknown>) || {},
     }));
   } catch { return []; }

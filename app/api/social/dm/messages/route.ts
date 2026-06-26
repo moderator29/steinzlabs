@@ -113,11 +113,14 @@ export async function POST(req: NextRequest) {
 
   await sb.from('dm_conversations').update({ last_message_at: nowIso }).eq('id', parsed.data.conversation_id);
 
-  // Fire-and-forget social notification to peer. Honors recipient prefs
-  // and social_suspended_until inside notifySocialEvent.
+  // Fire-and-forget social notification to peer. A first message in a
+  // still-pending request (sent by the requester) notifies as a "Message
+  // request"; everything else is a normal "New message". Honors recipient
+  // prefs + social_suspended_until inside notifySocialEvent.
+  const isPendingRequest = conv.request_state === 'pending' && conv.requested_by === user.id;
   notifySocialEvent({
     recipient_id: peerId,
-    event: 'dm_received',
+    event: isPendingRequest ? 'dm_request' : 'dm_received',
     metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
   }).catch(() => {});
 

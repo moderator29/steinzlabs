@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { canUserDM, canonicalizePair } from '@/lib/social/permissions';
+import { notifySocialEvent } from '@/lib/social/notify';
 
 /**
  * GET  /api/social/dm/conversations          -> list caller's conversations
@@ -155,5 +156,14 @@ export async function PATCH(req: NextRequest) {
     .update({ request_state: next })
     .eq('id', convo.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Tell the requester their message request was accepted (links to the thread).
+  if (next === 'accepted' && convo.requested_by) {
+    notifySocialEvent({
+      recipient_id: convo.requested_by,
+      event: 'dm_request_accepted',
+      metadata: { peer_id: user.id, conversation_id: convo.id },
+    }).catch(() => {});
+  }
   return NextResponse.json({ ok: true, request_state: next });
 }
