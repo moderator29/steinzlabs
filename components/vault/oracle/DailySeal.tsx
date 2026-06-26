@@ -56,6 +56,9 @@ export function DailySeal() {
     try {
       window.localStorage.setItem(`naka_oracle_seal_broken_${seal.seal_date}`, '1');
     } catch { /* localStorage unavailable */ }
+    // Grant "First Seal" on the wax-break (idempotent server-side); fire-and-
+    // forget so it never blocks the reveal animation.
+    void fetch('/api/cult/oracle/daily-seal/read', { method: 'POST' }).catch(() => {});
   }
 
   function reseal() {

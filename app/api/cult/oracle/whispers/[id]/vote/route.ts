@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { grantAchievement } from '@/lib/cult/achievements';
 
 export const runtime = 'nodejs';
 
@@ -95,6 +96,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .update(update)
     .eq('id', id)
     .eq('status', 'pending');
+
+  // Earn "Carried Forward" for the whisper's author when it crosses the echo
+  // threshold (idempotent; no-op for an anonymous/null author).
+  if (newStatus === 'echoed') {
+    await grantAchievement(whisper.author_id, 'whisper_echoed');
+  }
 
   return NextResponse.json({
     whisper_id: id,
