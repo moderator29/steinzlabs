@@ -19,8 +19,62 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
+import { getAccount } from '@wagmi/core';
+import { ProviderController } from '@reown/appkit-controllers';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { wagmiAdapter } from '@/lib/wallet/appkit';
+
+/** Minimal EIP-1193 surface we use for EVM signing. */
+type Eip1193 = { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+
+/** Minimal Solana wallet surface we use for signing. Phantom and the AppKit/
+ *  WalletConnect Solana provider both expose signAndSendTransaction; the return
+ *  shape varies ({ signature } or a bare string), so callers normalize it. */
+type SolanaSigner = { signAndSendTransaction: (tx: unknown) => Promise<{ signature?: string } | string> };
+
+/**
+ * Resolve the active EVM provider. Prefers the wagmi/AppKit connector — which
+ * covers an injected extension on desktop (MetaMask/Rabby) AND a WalletConnect
+ * session on macOS/Windows/tablet/mobile — and falls back to an injected
+ * window.ethereum when AppKit isn't configured. This is the fix that lets a
+ * phone connected via the WalletConnect QR actually sign: window.ethereum is
+ * undefined there, so the old code could only sign with a desktop extension.
+ */
+async function getEvmProvider(): Promise<Eip1193 | null> {
+  try {
+    const cfg = wagmiAdapter?.wagmiConfig;
+    if (cfg) {
+      const acct = getAccount(cfg);
+      if (acct.isConnected && acct.connector?.getProvider) {
+        const p = (await acct.connector.getProvider()) as Eip1193 | undefined;
+        if (p && typeof p.request === 'function') return p;
+      }
+    }
+  } catch {
+    /* fall back to an injected provider below */
+  }
+  const win = typeof window !== 'undefined' ? window : null;
+  return (win?.ethereum as Eip1193 | undefined) ?? null;
+}
+
+/**
+ * Resolve the active Solana signer. Prefers the AppKit-managed provider (which
+ * is what a WalletConnect session on mobile/tablet uses — there is no
+ * window.solana there), and falls back to an injected window.solana (Phantom on
+ * desktop, the path the app's own Solana connect button uses). Mirrors
+ * getEvmProvider so Solana swaps work on the same set of devices as EVM.
+ */
+async function getSolanaProvider(): Promise<SolanaSigner | null> {
+  try {
+    const p = ProviderController.state.providers?.solana as SolanaSigner | undefined;
+    if (p && typeof p.signAndSendTransaction === 'function') return p;
+  } catch {
+    /* fall back to an injected provider below */
+  }
+  const win = typeof window !== 'undefined' ? window : null;
+  return (win?.solana as SolanaSigner | undefined) ?? null;
+}
 
 /** Which signer drives the signature for a given leg. */
 export type WalletKind = 'ethereum' | 'solana' | 'builtin';
@@ -118,18 +172,18 @@ export function useSwapBroadcast() {
   }, []);
 
   const broadcastGasless = useCallback(async (quote: SwapBroadcastQuote): Promise<string> => {
-    const win = typeof window !== 'undefined' ? window : null;
-    if (!win?.ethereum) throw new Error('Gasless swaps require MetaMask or a compatible EVM wallet.');
-    const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+    const provider = await getEvmProvider();
+    if (!provider) throw new Error('Gasless swaps require an EVM wallet (extension or WalletConnect).');
+    const accounts = (await provider.request({ method: 'eth_accounts' })) as string[];
     if (!accounts.length) throw new Error('No Ethereum wallet connected');
 
-    const tradeSignature = await win.ethereum.request({
+    const tradeSignature = await provider.request({
       method: 'eth_signTypedData_v4',
       params: [accounts[0], JSON.stringify(quote.trade)],
     });
     let approvalSignature: string | undefined;
     if (quote.approval) {
-      approvalSignature = (await win.ethereum.request({
+      approvalSignature = (await provider.request({
         method: 'eth_signTypedData_v4',
         params: [accounts[0], JSON.stringify(quote.approval)],
       })) as string;
@@ -223,14 +277,14 @@ export function useSwapBroadcast() {
       setStatus('signing');
       try {
         let hash = '';
-        const win = typeof window !== 'undefined' ? window : null;
 
         if (useGasless && quote.trade) {
           hash = await broadcastGasless(quote);
         } else if (walletKind === 'ethereum') {
-          if (!win?.ethereum) throw new Error('Connect an EVM wallet (MetaMask / Reown) to sign this swap.');
+          const provider = await getEvmProvider();
+          if (!provider) throw new Error('Connect an EVM wallet (extension or WalletConnect) to sign this swap.');
           if (!quote.transaction) throw new Error('No transaction data received from the quote.');
-          const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+          const accounts = (await provider.request({ method: 'eth_accounts' })) as string[];
           if (!accounts.length) throw new Error('No Ethereum wallet connected');
           const txParams = {
             from: accounts[0],
@@ -240,16 +294,19 @@ export function useSwapBroadcast() {
             gas: quote.transaction.gas,
           };
           setStatus('submitted');
-          hash = (await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
+          hash = (await provider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
         } else if (walletKind === 'solana') {
-          if (!win?.solana) throw new Error('Connect a Solana wallet (Phantom) to sign this swap.');
+          const sol = await getSolanaProvider();
+          if (!sol) throw new Error('Connect a Solana wallet (Phantom or WalletConnect) to sign this swap.');
           if (!quote.swapTransaction) throw new Error('No Solana transaction data received from the quote.');
           const { Transaction } = await import('@solana/web3.js');
           const txBytes = Buffer.from(quote.swapTransaction, 'base64');
           const tx = Transaction.from(txBytes);
           setStatus('submitted');
-          const signed = await win.solana.signAndSendTransaction(tx);
-          hash = signed.signature;
+          const signed = await sol.signAndSendTransaction(tx);
+          // Phantom returns { signature }; the WalletConnect/AppKit provider may
+          // return a bare signature string — normalize both.
+          hash = typeof signed === 'string' ? signed : signed?.signature ?? '';
         } else if (walletKind === 'builtin') {
           setStatus('submitted');
           hash = await broadcastBuiltin(quote, chain, address);
@@ -280,8 +337,21 @@ export function useSwapBroadcast() {
  */
 export function detectWalletKind(chain: string, provider: string | null): WalletKind {
   if (chain.toLowerCase() === 'solana') return 'solana';
-  if (provider === 'metamask' || (typeof window !== 'undefined' && window.ethereum && provider !== 'naka')) {
-    return 'ethereum';
+  if (provider === 'metamask') return 'ethereum';
+  // An external EVM wallet connected through wagmi/AppKit signs via the
+  // 'ethereum' path — whether it's an injected extension (desktop) or a
+  // WalletConnect session (mobile/tablet, where window.ethereum is undefined).
+  // We must NOT gate this on window.ethereum: a phone WC session has none, and
+  // misrouting it to 'builtin' would fail (there's no stored key for an
+  // external wallet).
+  if (provider !== 'naka') {
+    try {
+      const cfg = wagmiAdapter?.wagmiConfig;
+      if (cfg && getAccount(cfg).isConnected) return 'ethereum';
+    } catch {
+      /* fall through to the injected check */
+    }
+    if (typeof window !== 'undefined' && window.ethereum) return 'ethereum';
   }
   return 'builtin';
 }
