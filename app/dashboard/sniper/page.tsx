@@ -18,6 +18,7 @@ import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/cha
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { NewSniperModal } from './NewSniperModal';
 import { SniperWalletModal } from './SniperWalletModal';
+import { SniperTokenDrawer } from './SniperTokenDrawer';
 import { WalletStatus } from './WalletStatus';
 import {
   type DetectedToken, fmtUSD, fmtCompact, timeAgo, useTokenAudit, GuardianBadges,
@@ -103,6 +104,7 @@ export default function SniperPage() {
   const [killToggling, setKillToggling] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [drawerToken, setDrawerToken] = useState<DetectedToken | null>(null);
   const [walletRefresh, setWalletRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [liveConnected, setLiveConnected] = useState(false);
@@ -324,7 +326,7 @@ export default function SniperPage() {
           {tab === 'discover' && (
             <DiscoverTab
               tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter}
-              onSnipe={() => setShowNewModal(true)} minLiq={minLiq} setMinLiq={setMinLiq}
+              onSnipe={() => setShowNewModal(true)} onOpen={setDrawerToken} minLiq={minLiq} setMinLiq={setMinLiq}
               sources={feedSources} sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
               query={feedQuery} setQuery={setFeedQuery} ogOnly={ogOnly} setOgOnly={setOgOnly}
             />
@@ -342,6 +344,13 @@ export default function SniperPage() {
       )}
       {showWalletModal && (
         <SniperWalletModal userId={user.id} onClose={() => setShowWalletModal(false)} onConnected={() => setWalletRefresh((n) => n + 1)} />
+      )}
+      {drawerToken && (
+        <SniperTokenDrawer
+          token={drawerToken}
+          onClose={() => setDrawerToken(null)}
+          onSnipe={(t) => { setDrawerToken(null); void t; setShowNewModal(true); }}
+        />
       )}
     </div>
   );
@@ -398,11 +407,11 @@ function NavPill({ id, current, onClick, count, icon: Icon, children }: { id: Ta
 // ─── Discover (feed) ────────────────────────────────────────────────────────
 
 function DiscoverTab({
-  tokens, loading, onRefresh, chainFilter, onSnipe,
+  tokens, loading, onRefresh, chainFilter, onSnipe, onOpen,
   minLiq, setMinLiq, sources, sourceFilter, setSourceFilter, query, setQuery, ogOnly, setOgOnly,
 }: {
   tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all';
-  onSnipe: (t: DetectedToken) => void;
+  onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void;
   minLiq: number; setMinLiq: (n: number) => void;
   sources: string[]; sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
   query: string; setQuery: (s: string) => void; ogOnly: boolean; setOgOnly: (b: boolean) => void;
@@ -462,21 +471,21 @@ function DiscoverTab({
         <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match these filters right now.</div>
       ) : (
         <div className="grid gap-2">
-          {shown.map((t) => <TokenRow key={t.id} t={t} onSnipe={onSnipe} />)}
+          {shown.map((t) => <TokenRow key={t.id} t={t} onSnipe={onSnipe} onOpen={onOpen} />)}
         </div>
       )}
     </div>
   );
 }
 
-function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void }) {
+function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void }) {
   const { audit, loading: auditLoading } = useTokenAudit(t.chain, t.address);
   const snipeBlocked = audit?.blocked ?? false;
   const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
     : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-red-300 bg-red-500/15 border-red-500/30';
   return (
-    <div className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition">
+    <div onClick={() => onOpen(t)} role="button" tabIndex={0} className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition cursor-pointer">
       {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white/70">{t.symbol.slice(0, 2)}</div>}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
@@ -499,7 +508,7 @@ function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken
         <div className="mt-1.5"><GuardianBadges audit={audit} loading={auditLoading} /></div>
       </div>
       <button
-        onClick={() => onSnipe(t)}
+        onClick={(e) => { e.stopPropagation(); onSnipe(t); }}
         disabled={snipeBlocked}
         title={snipeBlocked ? 'Blocked by Shadow Guardian — failed security checks' : 'Snipe this token'}
         className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${snipeBlocked ? 'bg-red-500/10 border-red-500/30 text-red-300/70 cursor-not-allowed' : 'bg-[#0066FF]/15 border-[#0066FF]/40 text-blue-200 hover:bg-[#0066FF]/25'}`}
