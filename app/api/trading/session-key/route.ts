@@ -115,17 +115,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `signature verification failed: ${e instanceof Error ? e.message : 'unknown'}` }, { status: 400 });
   }
 
+  // §audit scope-integrity: store the SIGNED scope from auth_payload, not the
+  // separate body fields. Otherwise a client could sign cap=50 but POST
+  // cap=99999 and the signature still verifies, letting a relayer over-spend.
+  const signed = body.auth_payload as Record<string, unknown>;
+  const signedSession = String(signed.sessionAddress ?? '');
+  const signedChain = String(signed.chain ?? '');
+  const signedMaxPerTrade = Number(signed.maxPerTradeUsd ?? NaN);
+  const signedDailyCap = Number(signed.dailyCapUsd ?? NaN);
+  const signedExpiresAt = Number(signed.expiresAt ?? NaN);
+  if (
+    signedSession.toLowerCase() !== body.session_address.toLowerCase() ||
+    signedChain.toLowerCase() !== body.chain.toLowerCase() ||
+    !Number.isFinite(signedMaxPerTrade) || signedMaxPerTrade <= 0 ||
+    !Number.isFinite(signedDailyCap) || signedDailyCap <= 0 ||
+    !Number.isFinite(signedExpiresAt)
+  ) {
+    return NextResponse.json({ error: 'auth_payload does not match the authorized scope' }, { status: 400 });
+  }
+
   const admin = getSupabaseAdmin();
-  const expiresAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+  // Expiry comes from the SIGNED payload (seconds → ISO), falling back to the
+  // requested window only if the signed value is somehow absent.
+  const expiresAt = Number.isFinite(signedExpiresAt)
+    ? new Date(signedExpiresAt * 1000).toISOString()
+    : new Date(Date.now() + hours * 3600 * 1000).toISOString();
   const { data, error } = await admin
     .from('user_session_keys')
     .insert({
       user_id: user.id,
-      session_address: body.session_address,
+      session_address: signedSession,
       main_address: body.main_address,
-      chain: body.chain.toLowerCase(),
-      max_per_trade_usd: body.max_per_trade_usd,
-      daily_cap_usd: body.daily_cap_usd,
+      chain: signedChain.toLowerCase(),
+      max_per_trade_usd: signedMaxPerTrade,
+      daily_cap_usd: signedDailyCap,
       allowed_tokens: body.allowed_tokens ?? null,
       auth_signature: body.auth_signature,
       auth_payload: body.auth_payload,
