@@ -356,7 +356,9 @@
 /* ─── Live stats strip ───────────────────────────────────────────────── */
 .nakacult-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Intrinsically fluid so the 641-900px tablet band doesn't cram 4 columns
+     before the explicit small-screen overrides below take over. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   max-width: 1120px;
   margin: -40px auto 80px;
@@ -423,7 +425,9 @@
 /* ─── What members get — feature grid ────────────────────────────────── */
 .nakacult-features {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Fluid columns so the tablet band reflows cleanly instead of holding 3
+     cramped columns down to the 2-col breakpoint. */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   max-width: 1120px;
   margin: 0 auto;
