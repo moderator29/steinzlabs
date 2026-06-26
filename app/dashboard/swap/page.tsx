@@ -109,8 +109,22 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'ADA', name: 'Cardano', color: '#0033AD', decimals: 6, coingeckoId: 'cardano', logo: 'https://assets.coingecko.com/coins/images/975/small/cardano.png' },
 ];
 
+// Runtime registry of user-imported tokens (pasted contract addresses),
+// keyed by uppercase symbol. Stores the on-chain address + decimals per chain
+// so the quote/execution path resolves the real token, not a guess.
+interface ImportedToken extends TokenInfo { address: string; chain: string; }
+const IMPORTED_TOKENS: Record<string, ImportedToken> = {};
+
+function registerImportedToken(t: ImportedToken): void {
+  IMPORTED_TOKENS[t.symbol.toUpperCase()] = t;
+}
+
 function getTokenInfo(symbol: string): TokenInfo {
-  return TOKEN_LIST.find(t => t.symbol === symbol) || { symbol, name: symbol, color: '#6B7280', decimals: 18 };
+  return (
+    TOKEN_LIST.find(t => t.symbol === symbol) ||
+    IMPORTED_TOKENS[(symbol || '').toUpperCase()] ||
+    { symbol, name: symbol, color: '#6B7280', decimals: 18 }
+  );
 }
 
 const NATIVE_TOKEN_0X = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
@@ -126,9 +140,14 @@ const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
 
 function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: string): { sellToken: string; buyToken: string } {
   const nativeTokens = ['ETH', 'MATIC', 'BNB', 'AVAX', 'SOL'];
-  const sellToken = nativeTokens.includes(sellSymbol) ? NATIVE_TOKEN_0X : (TOKEN_ADDRESSES[sellSymbol]?.[chainId] || sellSymbol);
-  const buyToken = nativeTokens.includes(buySymbol) ? NATIVE_TOKEN_0X : (TOKEN_ADDRESSES[buySymbol]?.[chainId] || buySymbol);
-  return { sellToken, buyToken };
+  const resolve = (sym: string): string => {
+    if (nativeTokens.includes(sym)) return NATIVE_TOKEN_0X;
+    // User-imported token (pasted address) takes precedence on its chain.
+    const imp = IMPORTED_TOKENS[(sym || '').toUpperCase()];
+    if (imp && imp.chain === chainId) return imp.address;
+    return TOKEN_ADDRESSES[sym]?.[chainId] || sym;
+  };
+  return { sellToken: resolve(sellSymbol), buyToken: resolve(buySymbol) };
 }
 
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
@@ -157,21 +176,58 @@ function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   );
 }
 
-function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
+function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (symbol: string) => void;
   exclude: string;
+  chain: string;
 }) {
   const [search, setSearch] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<ImportedToken | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
       setSearch('');
+      setImported(null);
+      setImportError(null);
     }
   }, [isOpen]);
+
+  // When the query is a contract address not already in the list, resolve its
+  // real metadata (symbol/name/decimals/logo) so the user can import + swap it.
+  const isEvmAddr = /^0x[a-fA-F0-9]{40}$/.test(search.trim());
+  const isSolAddr = chain.toLowerCase() === 'solana' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(search.trim());
+  const looksLikeAddress = isEvmAddr || isSolAddr;
+
+  useEffect(() => {
+    if (!looksLikeAddress) { setImported(null); setImportError(null); return; }
+    const addr = search.trim();
+    if (TOKEN_LIST.some(t => t.symbol.toLowerCase() === addr.toLowerCase())) return;
+    let cancelled = false;
+    setImporting(true); setImportError(null); setImported(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/swap/token-meta?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(addr)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && typeof data.decimals === 'number') {
+          setImported({ symbol: data.symbol, name: data.name, decimals: data.decimals, logo: data.logo ?? undefined, color: '#6B7280', address: data.address, chain });
+        } else {
+          setImportError('Token not found on this chain');
+        }
+      } catch {
+        if (!cancelled) setImportError('Could not resolve token');
+      } finally {
+        if (!cancelled) setImporting(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search, chain, looksLikeAddress]);
 
   if (!isOpen) return null;
 
@@ -181,6 +237,13 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
   );
 
   const popular = filtered.filter(t => t.popular);
+
+  const chooseImported = () => {
+    if (!imported) return;
+    registerImportedToken(imported);
+    onSelect(imported.symbol);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -221,7 +284,32 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude }: {
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {filtered.length === 0 ? (
+          {looksLikeAddress && (
+            <div className="px-2 pb-1">
+              {importing && <p className="text-center text-xs text-gray-500 py-4">Resolving token…</p>}
+              {importError && <p className="text-center text-xs text-amber-400 py-4">{importError}</p>}
+              {imported && (
+                <button
+                  onClick={chooseImported}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.04] border border-[#0066FF]/30 transition-colors"
+                >
+                  {imported.logo
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={imported.logo} alt="" className="w-9 h-9 rounded-full object-cover" />
+                    : <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{imported.symbol.slice(0, 2)}</div>}
+                  <div className="text-start flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white flex items-center gap-1.5">
+                      {imported.symbol}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Unverified</span>
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">{imported.name}</div>
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>
+                </button>
+              )}
+            </div>
+          )}
+          {filtered.length === 0 && !looksLikeAddress ? (
             <p className="text-center text-sm text-gray-500 py-10">No tokens found</p>
           ) : (
             filtered.map(t => (
@@ -258,7 +346,7 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
   if (!isOpen) return null;
 
   return (
-    <div className="bg-[#0f1320] border border-white/[0.06] rounded-2xl p-4 space-y-4 shadow-xl">
+    <div className="nl-glass rounded-2xl p-4 space-y-4 shadow-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Settings className="w-4 h-4 text-gray-400" />
@@ -664,6 +752,10 @@ export default function SwapPage() {
           sellToken: tokenAddresses.sellToken,
           buyToken: tokenAddresses.buyToken,
           sellAmount: rawAmount,
+          // decimals hints so the server can resolve imported/arbitrary tokens
+          // (its symbol table only covers the curated set).
+          fromDecimals: String(getTokenInfo(f).decimals),
+          toDecimals: String(getTokenInfo(t).decimals),
         });
         if (connectedAddress) params.set('taker', connectedAddress);
         const res = await fetch(`/api/swap/price?${params}`);
@@ -838,6 +930,9 @@ export default function SwapPage() {
         sellAmount: rawAmount,
         taker: connectedAddress,
         slippageBps: String(slippageBps),
+        // decimals hints so imported/arbitrary tokens resolve server-side.
+        fromDecimals: String(getTokenInfo(fromToken).decimals),
+        toDecimals: String(getTokenInfo(toToken).decimals),
       });
       const useGasless = gaslessEnabled && isGaslessAvailable;
       const quoteEndpoint = useGasless ? '/api/gasless/quote' : '/api/swap/quote';
@@ -1212,7 +1307,7 @@ export default function SwapPage() {
           />
           {showSettings && <div className="h-3" />}
 
-          <div className="bg-[#0f1320]/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/20">
+          <div className="nl-glass rounded-2xl overflow-hidden shadow-2xl shadow-black/20">
             <div className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
@@ -1417,7 +1512,7 @@ export default function SwapPage() {
 
             {/* Connect Wallet prompt if no wallet detected */}
             {!connectedAddress && (
-              <div className="mb-3 rounded-2xl p-4 bg-[#0f1320] border border-white/[0.06] flex items-center gap-3">
+              <div className="mb-3 rounded-2xl p-4 nl-glass flex items-center gap-3">
                 <Wallet className="w-5 h-5 text-gray-500 shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-gray-300">
@@ -1530,7 +1625,7 @@ export default function SwapPage() {
                 tabs but had no entry point. Surface it here as a
                 collapsible block so the user can place advanced orders
                 without leaving the swap page. */}
-            <div className="mt-3 bg-[#0f1320]/60 rounded-2xl border border-white/[0.04] overflow-hidden">
+            <div className="mt-3 nl-glass rounded-2xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowAdvancedOrders((v) => !v)}
@@ -1559,7 +1654,7 @@ export default function SwapPage() {
           </div>
 
           {hasQuote && (
-            <div className="mt-3 bg-[#0f1320]/60 rounded-2xl border border-white/[0.04] p-4">
+            <div className="mt-3 nl-glass rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
                 <span className="text-xs text-gray-400 font-medium">Order routing</span>
@@ -1614,6 +1709,7 @@ export default function SwapPage() {
           }
         }}
         exclude={showTokenSelect === 'from' ? toToken : fromToken}
+        chain={chain}
       />
 
       {showReview && (() => {
