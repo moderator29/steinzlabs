@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 type Vote = {
   choice: 'yes' | 'no' | 'abstain';
   weight: number;
-  is_chosen: boolean;
   created_at: string;
 };
 
@@ -81,12 +80,12 @@ export function VoteOrbs({ proposalId }: { proposalId: string }) {
           <span
             key={`${v.choice}-${v.created_at}-${i}`}
             className="vault-vote-orb"
-            title={`${v.choice} · weight ${v.weight}${v.is_chosen ? ' · Chosen' : ''}`}
+            title={`${v.choice} · weight ${v.weight}`}
             style={{
               width: size,
               height: size,
               background: `radial-gradient(circle at 30% 30%, ${c.fill}, ${c.fill}99 60%, ${c.fill}33 100%)`,
-              boxShadow: `0 0 ${Math.max(8, size * 0.6)}px ${c.glow}${v.is_chosen ? ', 0 0 0 1.5px #FFD700' : ''}`,
+              boxShadow: `0 0 ${Math.max(8, size * 0.6)}px ${c.glow}`,
             }}
           />
         );

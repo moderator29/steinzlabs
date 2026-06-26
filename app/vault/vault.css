@@ -59,7 +59,7 @@
   backdrop-filter: blur(10px);
   background: rgba(2, 5, 14, 0.55);
 }
-.vault-main { padding-bottom: 80px; }
+.vault-main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 
 /* ─── Identity strip ────────────────────────────────────────────────────── */
 .vault-identity {
@@ -93,11 +93,6 @@
   letter-spacing: 0.12em;
 }
 .vault-identity__divider { color: rgba(255,255,255,0.35); }
-.vault-identity--chosen {
-  border-color: rgba(255, 216, 107, 0.55);
-  box-shadow: 0 4px 24px rgba(255, 216, 107, 0.28);
-}
-.vault-identity--chosen .vault-identity__rank { color: #FFD86B; }
 
 /* ─── Chamber portal cards ──────────────────────────────────────────────── */
 .vault-portal {
@@ -727,7 +722,7 @@
 /* ─── CultPlayer — global Vault Library bar + expandable pane ─────────── */
 .cult-player {
   position: fixed;
-  inset-block-end: 16px;
+  inset-block-end: calc(16px + env(safe-area-inset-bottom));
   inset-inline-end: 16px;
   z-index: 60;
   display: flex;
@@ -927,7 +922,7 @@
 }
 
 @media (max-width: 520px) {
-  .cult-player { inset-inline-end: 12px; inset-block-end: 80px; }
+  .cult-player { inset-inline-end: 12px; inset-block-end: calc(80px + env(safe-area-inset-bottom)); }
   .cult-player__bar { min-width: 200px; padding: 10px 12px; gap: 10px; }
   .cult-player__sigil { width: 32px; height: 32px; }
   .cult-player__pane { width: calc(100vw - 24px); }

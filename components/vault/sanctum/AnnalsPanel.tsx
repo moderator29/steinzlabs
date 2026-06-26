@@ -19,7 +19,6 @@ interface EarnedEntry {
 interface AnnalsResponse {
   catalog: CatalogEntry[];
   earnings: EarnedEntry[];
-  isChosen: boolean;
 }
 
 const TIER_COLOR: Record<CatalogEntry['tier'], { ring: string; label: string }> = {

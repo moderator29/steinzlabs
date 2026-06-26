@@ -213,13 +213,11 @@ export function EchoChamberPanel() {
           />
           {error ? (
             <p className="text-[11px] text-[#FF1744]" role="alert">
-              {error === 'chosen_only'
-                ? 'Only the Chosen may seat wallets.'
-                : error === 'address_format_unknown'
-                  ? 'Address must be EVM (0x…) or Solana base58.'
-                  : error === 'chamber_full'
-                    ? 'All twenty-five slots are taken.'
-                    : 'Add failed. Try again.'}
+              {error === 'address_format_unknown'
+                ? 'Address must be EVM (0x…) or Solana base58.'
+                : error === 'chamber_full'
+                  ? 'All twenty-five slots are taken.'
+                  : 'Add failed. Try again.'}
             </p>
           ) : null}
           <button
