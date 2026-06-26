@@ -32,6 +32,11 @@ interface GtToken {
   type: 'token';
   attributes?: { address?: string; name?: string; symbol?: string; image_url?: string | null };
 }
+interface GtDex {
+  id: string;
+  type: 'dex';
+  attributes?: { name?: string };
+}
 interface GtPool {
   id: string;
   attributes?: {
@@ -42,11 +47,16 @@ interface GtPool {
     fdv_usd?: string | null;
     market_cap_usd?: string | null;
     pool_created_at?: string | null;
+    volume_usd?: { h24?: string | null };
   };
-  relationships?: { base_token?: { data?: { id?: string } }; quote_token?: { data?: { id?: string } } };
+  relationships?: {
+    base_token?: { data?: { id?: string } };
+    quote_token?: { data?: { id?: string } };
+    dex?: { data?: { id?: string } };
+  };
 }
 
-async function gtFetch(path: string): Promise<{ data?: GtPool[]; included?: GtToken[] }> {
+async function gtFetch(path: string): Promise<{ data?: GtPool[]; included?: (GtToken | GtDex)[] }> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { Accept: 'application/json;version=20230302' },
     signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -55,9 +65,13 @@ async function gtFetch(path: string): Promise<{ data?: GtPool[]; included?: GtTo
   return res.json();
 }
 
-function mapPoolsToPairs(chain: string, body: { data?: GtPool[]; included?: GtToken[] }): DexPair[] {
+function mapPoolsToPairs(chain: string, body: { data?: GtPool[]; included?: (GtToken | GtDex)[] }): DexPair[] {
   const tokensById = new Map<string, GtToken>();
-  for (const t of body.included ?? []) tokensById.set(t.id, t);
+  const dexById = new Map<string, GtDex>();
+  for (const inc of body.included ?? []) {
+    if (inc.type === 'token') tokensById.set(inc.id, inc as GtToken);
+    else if (inc.type === 'dex') dexById.set(inc.id, inc as GtDex);
+  }
 
   const out: DexPair[] = [];
   for (const pool of body.data ?? []) {
@@ -68,9 +82,11 @@ function mapPoolsToPairs(chain: string, body: { data?: GtPool[]; included?: GtTo
     const quoteTok = quoteId ? tokensById.get(quoteId) : undefined;
     const baseAddr = baseTok?.attributes?.address ?? (baseId ? baseId.split('_')[1] : '');
     if (!baseAddr) continue;
+    const dexId = pool.relationships?.dex?.data?.id;
+    const dexName = (dexId ? dexById.get(dexId)?.attributes?.name : undefined) ?? 'dex';
     out.push({
       chainId: chain,
-      dexId: 'geckoterminal',
+      dexId: dexName,
       url: `https://www.geckoterminal.com/${GT_NETWORK[chain]}/pools/${a.address ?? ''}`,
       pairAddress: a.address ?? '',
       baseToken: {
@@ -86,7 +102,7 @@ function mapPoolsToPairs(chain: string, body: { data?: GtPool[]; included?: GtTo
       priceNative: '0',
       priceUsd: a.base_token_price_usd ?? '0',
       txns: { m5: { buys: 0, sells: 0 }, h1: { buys: 0, sells: 0 }, h6: { buys: 0, sells: 0 }, h24: { buys: 0, sells: 0 } },
-      volume: { h24: 0, h6: 0, h1: 0, m5: 0 },
+      volume: { h24: a.volume_usd?.h24 ? parseFloat(a.volume_usd.h24) : 0, h6: 0, h1: 0, m5: 0 },
       priceChange: { m5: 0, h1: 0, h6: 0, h24: 0 },
       liquidity: { usd: a.reserve_in_usd ? parseFloat(a.reserve_in_usd) : 0, base: 0, quote: 0 },
       fdv: a.fdv_usd ? parseFloat(a.fdv_usd) : undefined,
@@ -104,7 +120,7 @@ async function newPoolsForChain(chain: string, minLiquidityUsd: number): Promise
   const key = cacheKey('geckoterminal', 'new_pools', { chain, minLiquidityUsd });
   return withCache(key, TTL.NEW_TOKEN, async () => {
     try {
-      const body = await gtFetch(`/networks/${network}/new_pools?include=base_token,quote_token&page=1`);
+      const body = await gtFetch(`/networks/${network}/new_pools?include=base_token,quote_token,dex&page=1`);
       return mapPoolsToPairs(chain, body).filter(p => (p.liquidity?.usd ?? 0) >= minLiquidityUsd);
     } catch {
       return [];

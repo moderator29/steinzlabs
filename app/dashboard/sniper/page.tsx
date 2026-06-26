@@ -10,9 +10,10 @@ import {
   Plus, TrendingUp, Trash2, Filter,
 } from '@/components/icons/brand';
 import {
-  Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
+  Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target, Search, RefreshCw,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { ChainLogo } from '@/components/common/ChainLogo';
 import { useNavState } from '@/lib/nav/useNavState';
 import { supabase } from '@/lib/supabase';
 import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
@@ -63,6 +64,7 @@ interface DetectedToken {
   id: string; address: string; symbol: string; name: string; chain: string;
   liquidity: number; securityScore: number; status: 'safe' | 'risky' | 'blocked' | 'scanning' | 'sniped';
   detectedAt: number; price?: number; pairAge?: string; logo?: string;
+  marketCap?: number; volume24h?: number; source?: string;
 }
 
 type Tab = 'snipers' | 'feed' | 'history';
@@ -111,6 +113,11 @@ export default function SniperPage() {
   const [executions, setExecutions] = useState<ExecutionRow[]>([]);
   const [feedTokens, setFeedTokens] = useState<DetectedToken[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
+  // Feed filters (early-entry tuning + source/keyword).
+  const [minLiq, setMinLiq] = useState(0);
+  const [feedSources, setFeedSources] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [feedQuery, setFeedQuery] = useState('');
   const [killSwitchOn, setKillSwitchOn] = useState(false);
   const [killToggling, setKillToggling] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -150,11 +157,14 @@ export default function SniperPage() {
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '20' });
+      const params = new URLSearchParams({ limit: '30' });
       if (chainFilter !== 'all') params.set('chain', chainFilter);
+      if (minLiq > 0) params.set('minLiquidity', String(minLiq));
+      if (sourceFilter.length) params.set('source', sourceFilter.join(','));
       const res = await fetch(`/api/sniper?${params.toString()}`, { cache: 'no-store' });
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
+      if (Array.isArray(j?.sources)) setFeedSources(j.sources);
     } catch (err) {
       // CLAUDE.md: no console.error in production. Sentry capture so
       // sniper-feed outages are tracked; UI degrades gracefully via
@@ -163,7 +173,7 @@ export default function SniperPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, [chainFilter]);
+  }, [chainFilter, minLiq, sourceFilter]);
 
   // ── Initial + reactive loads ─────────────────────────────────────────────
   useEffect(() => {
@@ -403,7 +413,20 @@ export default function SniperPage() {
             />
           )}
           {tab === 'feed' && (
-            <FeedTab tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter} onSnipe={() => setShowNewModal(true)} />
+            <FeedTab
+              tokens={feedTokens}
+              loading={feedLoading}
+              onRefresh={loadFeed}
+              chainFilter={chainFilter}
+              onSnipe={() => setShowNewModal(true)}
+              minLiq={minLiq}
+              setMinLiq={setMinLiq}
+              sources={feedSources}
+              sourceFilter={sourceFilter}
+              setSourceFilter={setSourceFilter}
+              query={feedQuery}
+              setQuery={setFeedQuery}
+            />
           )}
           {tab === 'history' && (
             <HistoryTab executions={executions} chainFilter={chainFilter} freshIds={freshIds} />
@@ -524,26 +547,102 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function FeedTab({ tokens, loading, onRefresh, chainFilter, onSnipe }: { tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all'; onSnipe: (t: DetectedToken) => void }) {
+// Early-entry liquidity presets — the owner wants to catch coins at 5k/10k/15k.
+const LIQ_PRESETS: { label: string; value: number }[] = [
+  { label: 'Any', value: 0 },
+  { label: '≥5K', value: 5000 },
+  { label: '≥10K', value: 10000 },
+  { label: '≥15K', value: 15000 },
+  { label: '≥50K', value: 50000 },
+];
+
+function FeedTab({
+  tokens, loading, onRefresh, chainFilter, onSnipe,
+  minLiq, setMinLiq, sources, sourceFilter, setSourceFilter, query, setQuery,
+}: {
+  tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all';
+  onSnipe: (t: DetectedToken) => void;
+  minLiq: number; setMinLiq: (n: number) => void;
+  sources: string[]; sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
+  query: string; setQuery: (s: string) => void;
+}) {
+  const toggleSource = (s: string) =>
+    setSourceFilter(sourceFilter.includes(s) ? sourceFilter.filter(x => x !== s) : [...sourceFilter, s]);
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? tokens.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.toLowerCase() === q)
+    : tokens;
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-white/60 font-medium">
-          {loading ? 'Scanning…' : `${tokens.length} new pairs detected${chainFilter !== 'all' ? ` on ${CHAIN_CONFIGS[chainFilter].name}` : ''}`}
+      {/* Filter bar */}
+      <div className="nl-glass rounded-xl p-3 mb-3 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 min-w-0">
+            <Search className="w-4 h-4 text-white/40 shrink-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, symbol or paste token address…"
+              className="flex-1 bg-transparent outline-none text-sm text-white placeholder-white/40 min-w-0"
+            />
+          </div>
+          <button onClick={onRefresh} className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/10 text-xs font-semibold text-white/80 hover:text-white hover:border-white/20">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
         </div>
-        <button onClick={onRefresh} className="text-xs font-semibold text-blue-300 hover:text-blue-200">↻ Refresh</button>
+        {/* Liquidity presets (early-entry) */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Min Liq</span>
+          {LIQ_PRESETS.map(p => (
+            <button
+              key={p.label}
+              onClick={() => setMinLiq(p.value)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                minLiq === p.value ? 'bg-[#0066FF]/20 border border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'
+              }`}
+            >{p.label}</button>
+          ))}
+        </div>
+        {/* Source / DEX filter (from live feed) */}
+        {sources.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Source</span>
+            {sources.map(s => (
+              <button
+                key={s}
+                onClick={() => toggleSource(s)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize transition ${
+                  sourceFilter.includes(s) ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'
+                }`}
+              >{s.replace(/_/g, ' ')}</button>
+            ))}
+          </div>
+        )}
       </div>
+
+      <div className="text-xs text-white/50 font-medium mb-2">
+        {loading ? 'Scanning new pairs…' : `${shown.length} live ${shown.length === 1 ? 'pair' : 'pairs'}${chainFilter !== 'all' ? ` on ${CHAIN_CONFIGS[chainFilter].name}` : ' across EVM'}`}
+      </div>
+
       {loading ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
-      ) : tokens.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match the filter right now.</div>
+        <div className="nl-glass rounded-xl p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
+      ) : shown.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match these filters right now.</div>
       ) : (
         <div className="grid gap-2">
-          {tokens.map(t => <TokenRow key={t.id} t={t} onSnipe={onSnipe} />)}
+          {shown.map(t => <TokenRow key={t.id} t={t} onSnipe={onSnipe} />)}
         </div>
       )}
     </div>
   );
+}
+
+function fmtCompact(n: number | undefined | null): string {
+  if (n == null || !isFinite(n) || n === 0) return '—';
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void }) {
@@ -551,20 +650,28 @@ function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken
     : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-red-300 bg-red-500/15 border-red-500/30';
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex items-center gap-3 hover:border-white/20 transition">
-      {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0" />}
+    <div className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition">
+      {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white/70">{t.symbol.slice(0, 2)}</div>}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="font-bold truncate">{t.symbol}</span>
-          <span className="text-xs text-white/50 truncate">{t.name}</span>
-          <span className="text-[10px] uppercase tracking-wider text-white/40">{t.chain}</span>
+          <span className="text-xs text-white/50 truncate hidden sm:inline">{t.name}</span>
+          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/40 shrink-0"><ChainLogo chain={t.chain} size={11} />{t.chain}</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border shrink-0 ${statusColor}`}>{t.status}</span>
         </div>
-        <div className="text-xs text-white/60 mt-0.5">
-          Liq ${(t.liquidity / 1000).toFixed(1)}K · {t.pairAge ?? 'new'} · Score {t.securityScore}
+        <div className="flex items-center gap-2 text-[11px] text-white/55 mt-0.5 flex-wrap">
+          <span>Liq {fmtCompact(t.liquidity)}</span>
+          {t.marketCap ? <span className="text-white/30">·</span> : null}
+          {t.marketCap ? <span>MC {fmtCompact(t.marketCap)}</span> : null}
+          {t.volume24h ? <span className="text-white/30">·</span> : null}
+          {t.volume24h ? <span>Vol {fmtCompact(t.volume24h)}</span> : null}
+          <span className="text-white/30">·</span>
+          <span>{t.pairAge ?? 'new'}</span>
+          {t.source ? <span className="text-white/30 hidden sm:inline">·</span> : null}
+          {t.source ? <span className="capitalize text-white/40 hidden sm:inline">{t.source.replace(/_/g, ' ')}</span> : null}
         </div>
       </div>
-      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>{t.status}</span>
-      <button onClick={() => onSnipe(t)} className="px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs font-bold hover:bg-blue-500/30 transition">
+      <button onClick={() => onSnipe(t)} className="shrink-0 px-3 py-1.5 rounded-lg bg-[#0066FF]/15 border border-[#0066FF]/40 text-blue-200 text-xs font-bold hover:bg-[#0066FF]/25 transition">
         Snipe
       </button>
     </div>
