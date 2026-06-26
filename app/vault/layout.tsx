@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { IdentityStrip } from '@/components/vault/IdentityStrip';
+import { VaultNav } from '@/components/vault/VaultNav';
 import { CultPlayer } from '@/components/vault/CultPlayer';
 import './vault.css';
 
@@ -73,6 +74,7 @@ export default async function VaultLayout({ children }: { children: ReactNode })
           rank={worn.rank}
           accentColor={worn.accentColor}
         />
+        <VaultNav />
       </header>
       <main className="vault-main">{children}</main>
       <CultPlayer />
