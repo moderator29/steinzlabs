@@ -7,7 +7,7 @@ import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
 } from '@/components/icons/brand';
 import {
-  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame,
+  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame, Clock, Bell,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -20,6 +20,7 @@ import { NewSniperModal } from './NewSniperModal';
 import { SniperWalletModal } from './SniperWalletModal';
 import { SniperTokenDrawer } from './SniperTokenDrawer';
 import { WalletStatus } from './WalletStatus';
+import { LimitOrdersTab, AlertsTab, useAlertSound } from './OrdersAlerts';
 import {
   type DetectedToken, fmtUSD, fmtCompact, timeAgo, useTokenAudit, GuardianBadges,
 } from './sniperShared';
@@ -63,7 +64,7 @@ interface ExecutionRow {
   execution_time_ms: number | null;
 }
 
-type Tab = 'discover' | 'positions' | 'snipers' | 'history';
+type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history';
 
 // Early-entry liquidity presets — catch coins at 5k/10k/15k.
 const LIQ_PRESETS: { label: string; value: number }[] = [
@@ -226,6 +227,9 @@ export default function SniperPage() {
 
   const totalPnl = useMemo(() => executions.reduce((s, e) => s + (Number(e.pnl_usd) || 0), 0), [executions]);
 
+  // Realtime alert-trigger sound (Photon/BullX parity).
+  useAlertSound(user?.id);
+
   // ── Render gates ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-400" /></div>;
@@ -306,6 +310,8 @@ export default function SniperPage() {
           <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 self-start">
             <NavPill id="discover" current={tab} onClick={setTab} icon={Radar}>Discover</NavPill>
             <NavPill id="positions" current={tab} onClick={setTab} icon={TrendingUp}>Positions</NavPill>
+            <NavPill id="limit" current={tab} onClick={setTab} icon={Clock}>Limit</NavPill>
+            <NavPill id="alerts" current={tab} onClick={setTab} icon={Bell}>Alerts</NavPill>
             <NavPill id="snipers" current={tab} onClick={setTab} icon={Crosshair} count={visibleSnipers.length}>Snipers</NavPill>
             <NavPill id="history" current={tab} onClick={setTab} icon={Zap}>History</NavPill>
           </div>
@@ -332,6 +338,8 @@ export default function SniperPage() {
             />
           )}
           {tab === 'positions' && <PositionsTab executions={executions} />}
+          {tab === 'limit' && <LimitOrdersTab />}
+          {tab === 'alerts' && <AlertsTab />}
           {tab === 'snipers' && (
             <SnipersTab snipers={visibleSnipers} onPause={togglePause} onDelete={removeSniper} onCreate={() => setShowNewModal(true)} />
           )}

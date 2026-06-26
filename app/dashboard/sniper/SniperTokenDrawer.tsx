@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   X, Loader2, ShieldCheck, ExternalLink, Copy, Check, ArrowUpRight, ArrowDownRight,
-  Users, Layers, TrendingUp, TrendingDown,
+  Users, Layers, TrendingUp, TrendingDown, Bell,
 } from 'lucide-react';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { type DetectedToken, fmtCompact, shortAddr } from './sniperShared';
@@ -59,6 +59,10 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
   const [market, setMarket] = useState<MarketDetail | null>(null);
   const [similar, setSimilar] = useState<SimilarToken[]>([]);
   const [copied, setCopied] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertPrice, setAlertPrice] = useState('');
+  const [alertDir, setAlertDir] = useState<'above' | 'below'>('above');
+  const [alertState, setAlertState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
     let alive = true;
@@ -86,6 +90,24 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
 
   const goBuy = () => router.push(`/dashboard/swap?buyToken=${token.address}&chain=${token.chain}`);
   const goSell = () => router.push(`/dashboard/swap?sellToken=${token.address}&chain=${token.chain}`);
+
+  const saveAlert = async () => {
+    const target = parseFloat(alertPrice);
+    if (!isFinite(target) || target <= 0) { setAlertState('error'); return; }
+    setAlertState('saving');
+    try {
+      const res = await fetch('/api/market/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_id: token.address, token_symbol: token.symbol, target_price: target, direction: alertDir, notify_email: false }),
+      });
+      if (!res.ok) throw new Error('failed');
+      setAlertState('saved');
+      window.setTimeout(() => { setAlertOpen(false); setAlertState('idle'); setAlertPrice(''); }, 1200);
+    } catch {
+      setAlertState('error');
+    }
+  };
 
   const price = market?.priceUsd ?? token.price ?? null;
   const change24 = market?.priceChange24h ?? 0;
@@ -144,7 +166,30 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
           <button onClick={goBuy} className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 font-bold text-sm hover:bg-emerald-500/25 transition"><ArrowUpRight className="w-4 h-4" /> Buy</button>
           <button onClick={goSell} className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/12 border border-red-500/35 text-red-200 font-bold text-sm hover:bg-red-500/22 transition"><ArrowDownRight className="w-4 h-4" /> Sell</button>
         </div>
-        <button onClick={() => onSnipe(token)} className="nl-btn-neon w-full py-2.5 rounded-xl font-bold text-sm mb-4">Create Sniper for {token.symbol}</button>
+        <button onClick={() => onSnipe(token)} className="nl-btn-neon w-full py-2.5 rounded-xl font-bold text-sm mb-2">Create Sniper for {token.symbol}</button>
+
+        {/* Set Alert */}
+        {!alertOpen ? (
+          <button onClick={() => setAlertOpen(true)} className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white/70 font-semibold text-sm hover:text-white hover:border-white/20 transition mb-4">
+            <Bell className="w-4 h-4" /> Set Price Alert
+          </button>
+        ) : (
+          <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="inline-flex rounded-lg overflow-hidden border border-white/10">
+                <button onClick={() => setAlertDir('above')} className={`px-2.5 py-1.5 text-xs font-bold ${alertDir === 'above' ? 'bg-emerald-500/20 text-emerald-300' : 'text-white/50'}`}>Above</button>
+                <button onClick={() => setAlertDir('below')} className={`px-2.5 py-1.5 text-xs font-bold ${alertDir === 'below' ? 'bg-red-500/20 text-red-300' : 'text-white/50'}`}>Below</button>
+              </div>
+              <input type="number" value={alertPrice} onChange={(e) => setAlertPrice(e.target.value)} placeholder={price ? String(price) : 'Target price $'} className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-[#0066FF]/50 min-w-0" />
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={saveAlert} disabled={alertState === 'saving'} className="nl-btn-neon flex-1 py-2 rounded-lg font-bold text-xs disabled:opacity-50">
+                {alertState === 'saving' ? 'Saving…' : alertState === 'saved' ? 'Saved ✓' : alertState === 'error' ? 'Try again' : 'Save Alert'}
+              </button>
+              <button onClick={() => { setAlertOpen(false); setAlertState('idle'); }} className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white/60 text-xs font-semibold">Cancel</button>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-10 text-center"><Loader2 className="w-5 h-5 mx-auto animate-spin text-blue-400" /></div>
