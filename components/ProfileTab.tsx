@@ -521,8 +521,10 @@ export default function ProfileTab() {
   // Downscale + compress in the browser before upload — the standard way to keep
   // profile media small and fast (a phone photo is 5-10MB; an avatar needs only
   // a few hundred KB). The longest side is clamped to maxDim and the result is
-  // re-encoded as WebP at ~0.85 quality. Animated GIFs pass through untouched
-  // (a canvas would flatten them); any failure falls back to the original file.
+  // re-encoded as WebP (JPEG fallback) at ~0.85 quality. Decoding honours EXIF
+  // orientation so portrait phone photos don't save sideways. Animated GIFs pass
+  // through untouched (a canvas would flatten them); any failure falls back to
+  // the original file so an upload never hard-fails here.
   const downscaleImage = async (
     file: File,
     maxDim: number,
@@ -530,31 +532,48 @@ export default function ProfileTab() {
     const ext0 = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
     const passthrough = { blob: file as Blob, ext: ext0, contentType: file.type || 'image/png' };
     if (typeof document === 'undefined' || file.type === 'image/gif') return passthrough;
+
+    // createImageBitmap({ imageOrientation: 'from-image' }) decodes with EXIF
+    // rotation applied; fall back to an <img> element where it isn't supported.
+    let source: ImageBitmap | HTMLImageElement | null = null;
     let objectUrl = '';
     try {
-      objectUrl = URL.createObjectURL(file);
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const i = new Image();
-        i.onload = () => resolve(i);
-        i.onerror = () => reject(new Error('decode failed'));
-        i.src = objectUrl;
-      });
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const w = Math.max(1, Math.round(img.width * scale));
-      const h = Math.max(1, Math.round(img.height * scale));
+      if (typeof createImageBitmap === 'function') {
+        try {
+          source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        } catch {
+          source = null;
+        }
+      }
+      if (!source) {
+        objectUrl = URL.createObjectURL(file);
+        source = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('decode failed'));
+          i.src = objectUrl;
+        });
+      }
+      const scale = Math.min(1, maxDim / Math.max(source.width, source.height));
+      const w = Math.max(1, Math.round(source.width * scale));
+      const h = Math.max(1, Math.round(source.height * scale));
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d');
       if (!ctx) return passthrough;
-      ctx.drawImage(img, 0, 0, w, h);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
-      if (!blob) return passthrough;
-      return { blob, ext: 'webp', contentType: 'image/webp' };
+      ctx.drawImage(source, 0, 0, w, h);
+      const encode = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
+      const webp = await encode('image/webp');
+      if (webp) return { blob: webp, ext: 'webp', contentType: 'image/webp' };
+      const jpeg = await encode('image/jpeg');
+      if (jpeg) return { blob: jpeg, ext: 'jpg', contentType: 'image/jpeg' };
+      return passthrough;
     } catch {
       return passthrough;
     } finally {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (source && 'close' in source && typeof source.close === 'function') source.close();
     }
   };
 
