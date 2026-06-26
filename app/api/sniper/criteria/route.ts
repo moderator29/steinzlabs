@@ -47,6 +47,18 @@ interface CriteriaBody {
   auto_execute?: boolean;
   wallet_source: "metamask" | "phantom" | "builtin";
   wallet_addresses?: string[];
+  // Execution + risk-management fields the config modal sets. Previously the
+  // route silently dropped these, so TP/SL/trailing never persisted and the
+  // autosell engine had nothing to act on.
+  max_slippage_bps?: number;
+  priority_fee_native?: number | null;
+  mev_protect?: boolean;
+  take_profit_pct?: number | null;
+  stop_loss_pct?: number | null;
+  trailing_stop_pct?: number | null;
+  auto_sell_on_target?: boolean;
+  paused?: boolean;
+  expiry_hours?: number | null;
 }
 
 interface UserWalletEntry {
@@ -182,6 +194,15 @@ export const POST = withTierGate("max", async (request: NextRequest) => {
     daily_max_spend_usd: body.daily_max_spend_usd ?? 500,
     auto_execute: body.auto_execute ?? false,
     wallet_source: body.wallet_source,
+    max_slippage_bps: body.max_slippage_bps ?? 100,
+    priority_fee_native: body.priority_fee_native ?? null,
+    mev_protect: body.mev_protect ?? true,
+    take_profit_pct: body.take_profit_pct ?? null,
+    stop_loss_pct: body.stop_loss_pct ?? null,
+    trailing_stop_pct: body.trailing_stop_pct ?? null,
+    auto_sell_on_target: body.auto_sell_on_target ?? false,
+    paused: body.paused ?? false,
+    expiry_hours: body.expiry_hours ?? null,
     ...(walletAddresses !== null ? { wallet_addresses: walletAddresses } : {}),
   };
 

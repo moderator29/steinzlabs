@@ -6,6 +6,7 @@ import { X, Loader2, Zap, Shield, Target, AlertTriangle, ChevronDown, ChevronUp 
 import { supabase } from '@/lib/supabase';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
 import { SecurityGate } from '@/components/security/SecurityGate';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // §11 — lazy-loaded so the chart bundle only ships when the user
 // actually opens the modal AND enters a token address.
@@ -35,14 +36,16 @@ interface Props {
   userId: string;
 }
 
-type Trigger = 'new_pair' | 'whale_buy' | 'price_target' | 'manual';
+// Canonical trigger values — must match the live sniper_criteria.trigger_type
+// CHECK constraint (new_token_launch, whale_buy, price_target).
+type Trigger = 'new_token_launch' | 'whale_buy' | 'price_target';
 
 // EVM-only: Solana/TON can't do capped, revocable session-key automation.
 const EVM_SNIPER_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
 
 export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [name, setName] = useState('');
-  const [trigger, setTrigger] = useState<Trigger>('new_pair');
+  const [trigger, setTrigger] = useState<Trigger>('new_token_launch');
   // EVM-only non-custodial sniping — Solana/TON can't do capped session-key
   // automation, so the config is restricted to EVM chains.
   const [chains, setChains] = useState<SniperChain[]>(['ethereum']);
@@ -136,20 +139,23 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
     setSaving(true);
     setError(null);
     try {
+      // Route through the API so the server enforces the tier gate, wallet
+      // ownership, address canonicalization, and the DB-valid enums. A direct
+      // client insert bypassed all of that AND sent enum values the live CHECK
+      // constraints reject (trigger_type / wallet_source), so every save failed.
       const payload = {
-        user_id: userId,
         name: name.trim(),
         enabled: true,
         paused: false,
         trigger_type: trigger,
         chains_allowed: chains,
-        min_liquidity_usd: minLiqUsd || null,
+        min_liquidity_usd: minLiqUsd || undefined,
         max_buy_tax_bps: Math.round(maxBuyTaxPct * 100),
         max_sell_tax_bps: Math.round(maxSellTaxPct * 100),
-        min_holder_count: minHolders || null,
-        min_security_score: minSecurityScore || null,
+        min_holder_count: minHolders || undefined,
+        min_security_score: minSecurityScore || undefined,
         block_honeypots: blockHoneypots,
-        trigger_whale_address: trigger === 'whale_buy' ? whaleAddress.trim().toLowerCase() : null,
+        trigger_whale_address: trigger === 'whale_buy' ? (normalizeAddress(whaleAddress.trim()) ?? whaleAddress.trim()) : null,
         trigger_price_target: trigger === 'price_target' ? Number(priceTarget) : null,
         amount_per_snipe_usd: amountUsd,
         max_slippage_bps: Math.round(slippagePct * 100),
@@ -162,14 +168,21 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         stop_loss_pct: sl === '' ? null : Number(sl),
         trailing_stop_pct: trailingStop === '' ? null : Number(trailingStop),
         auto_sell_on_target: autoSellOnTarget,
-        wallet_source: walletAddresses.length > 0 ? 'selected' : 'primary',
+        // External EVM wallets that authorized a non-custodial session key sign
+        // as 'metamask'; with no wallet picked we fall back to the built-in.
+        wallet_source: walletAddresses.length > 0 ? 'metamask' : 'builtin',
         wallet_addresses: walletAddresses,
         expiry_hours: expiryHours === '' ? null : Number(expiryHours),
       };
 
-      const { error: insErr } = await supabase.from('sniper_criteria').insert(payload);
-      if (insErr) {
-        setError(insErr.message);
+      const res = await fetch('/api/sniper/criteria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(j?.error || 'Save failed');
         return;
       }
       onSaved();
@@ -229,10 +242,9 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
           <Field label="Trigger" hint="What event should fire this sniper?">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {([
-                { id: 'new_pair', label: 'New Pair' },
+                { id: 'new_token_launch', label: 'New Pair' },
                 { id: 'whale_buy', label: 'Whale Buys' },
                 { id: 'price_target', label: 'Price Target' },
-                { id: 'manual', label: 'Manual' },
               ] as { id: Trigger; label: string }[]).map(t => (
                 <button
                   key={t.id}
