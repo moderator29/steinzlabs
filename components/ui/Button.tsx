@@ -26,10 +26,13 @@ const VARIANT: Record<Variant, string> = {
     'bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30',
 };
 
+// §UI — buttons trimmed to a tighter, more professional scale (smaller
+// padding + radius). md is the default; sizes step up modestly so CTAs no
+// longer dominate the layout.
 const SIZE: Record<Size, string> = {
-  sm: 'text-xs px-3 py-1.5 rounded-lg gap-1.5',
-  md: 'text-sm px-4 py-2 rounded-xl gap-2',
-  lg: 'text-sm px-5 py-2.5 rounded-xl gap-2',
+  sm: 'text-[11px] px-2.5 py-1 rounded-lg gap-1.5',
+  md: 'text-xs px-3 py-1.5 rounded-lg gap-1.5',
+  lg: 'text-[13px] px-4 py-2 rounded-lg gap-2',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

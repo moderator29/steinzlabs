@@ -13,20 +13,19 @@ import {
   TrendingUp,
   TrendingDown,
   CheckCircle2,
-  Filter,
   SlidersHorizontal,
   ChevronRight,
   X,
   Users,
   Crown,
   Building2,
-  Coins,
-  Bot,
   Code2,
   Loader2,
 } from 'lucide-react';
 import WhaleDetailDrawer from '@/components/whales/WhaleDetailDrawer';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
+import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
+import { getChainMeta } from '@/lib/chains/chainMeta';
 
 interface WhaleRow {
   id: string;
@@ -215,6 +214,24 @@ export default function WhaleDirectoryPage() {
     [rows],
   );
 
+  const chainOptions: SelectOption[] = CHAIN_PILLS.map((c) => ({
+    id: c.id,
+    label: c.id ? (getChainMeta(c.id)?.label ?? c.label) : 'All chains',
+    chain: c.id || undefined,
+    count: c.id
+      ? facets.byChain[c.id] || 0
+      : Object.values(facets.byChain).reduce((s, v) => s + v, 0),
+  }));
+  const entityOptions: SelectOption[] = ENTITY_PILLS.map((e) => ({
+    id: e.id,
+    label: e.label,
+    Icon: e.Icon,
+    count: e.id ? facets.byEntity[e.id] || 0 : total,
+  }));
+  const timeframeOptions: SelectOption[] = TIMEFRAME_PILLS.map((t) => ({ id: t.id, label: t.label }));
+  const performanceOptions: SelectOption[] = PERFORMANCE_PILLS.map((p) => ({ id: p.id, label: p.label }));
+  const volumeOptions: SelectOption[] = VOLUME_PILLS.map((v) => ({ id: String(v.id), label: v.label }));
+
   return (
     <div className="min-h-screen bg-[#05081E] text-white pb-20">
       {/* Top bar */}
@@ -285,101 +302,40 @@ export default function WhaleDirectoryPage() {
             </div>
           </div>
 
-          {/* Chain pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-            {CHAIN_PILLS.map((c) => {
-              const active = chain === c.id;
-              const count = c.id ? facets.byChain[c.id] || 0 : Object.values(facets.byChain).reduce((s, v) => s + v, 0);
-              return (
-                <button
-                  key={c.id || 'all'}
-                  onClick={() => { setChain(c.id); setOffset(0); }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'
-                  }`}
-                >
-                  {c.label}
-                  {count > 0 && <span className="text-slate-500 text-[10px]">{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Entity pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-            {ENTITY_PILLS.map((e) => {
-              const active = entityType === e.id;
-              const count = e.id ? facets.byEntity[e.id] || 0 : total;
-              const Icon = e.Icon;
-              return (
-                <button
-                  key={e.id || 'all'}
-                  onClick={() => { setEntityType(e.id); setOffset(0); }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-3 h-3" />
-                  {e.label}
-                  {count > 0 && <span className="text-slate-500 text-[9px]">{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* §2.10 advanced filter pill rows */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Timeframe</span>
-            {TIMEFRAME_PILLS.map((t) => {
-              const active = timeframe === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setTimeframe(t.id); setOffset(0); }}
-                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Performance</span>
-            {PERFORMANCE_PILLS.map((p) => {
-              const active = performance === p.id;
-              return (
-                <button
-                  key={p.id || 'all'}
-                  onClick={() => { setPerformance(p.id); setOffset(0); }}
-                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-            <span className="text-slate-500 uppercase tracking-wider me-1 shrink-0">Min portfolio</span>
-            {VOLUME_PILLS.map((v) => {
-              const active = minPortfolio === v.id;
-              return (
-                <button
-                  key={String(v.id)}
-                  onClick={() => { setMinPortfolio(v.id); setOffset(0); }}
-                  className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-purple-500/15 text-purple-300 border border-purple-500/40' : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
-                  }`}
-                >
-                  {v.label}
-                </button>
-              );
-            })}
+          {/* Faceted filters — one compact dropdown each (real chain logos,
+              vertical menus) instead of scattered horizontal chip rows. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <SelectMenu
+              value={chain}
+              options={chainOptions}
+              onChange={(id) => { setChain(id); setOffset(0); }}
+            />
+            <SelectMenu
+              value={entityType}
+              options={entityOptions}
+              onChange={(id) => { setEntityType(id); setOffset(0); }}
+              accentClass="text-emerald-300"
+            />
+            <SelectMenu
+              value={timeframe}
+              options={timeframeOptions}
+              onChange={(id) => { setTimeframe(id); setOffset(0); }}
+              prefix="Time"
+            />
+            <SelectMenu
+              value={performance}
+              options={performanceOptions}
+              onChange={(id) => { setPerformance(id); setOffset(0); }}
+              prefix="Perf"
+              accentClass="text-amber-300"
+            />
+            <SelectMenu
+              value={String(minPortfolio)}
+              options={volumeOptions}
+              onChange={(id) => { setMinPortfolio(Number(id)); setOffset(0); }}
+              prefix="Min"
+              accentClass="text-purple-300"
+            />
           </div>
         </div>
       </div>
@@ -493,29 +449,29 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
   const pnlPositive = pnl >= 0;
 
   return (
-    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all cursor-pointer" onClick={onOpen}>
+    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
-        <WhaleAvatar label={row.label} address={row.address} size={44} />
+        <WhaleAvatar label={row.label} address={row.address} size={40} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-white text-sm truncate">{row.label || short(row.address)}</span>
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
           </div>
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}>{row.chain.toUpperCase()}</span>
-            {row.archetype && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">{row.archetype}</span>}
+            {row.archetype && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 truncate max-w-[140px]">{row.archetype}</span>}
           </div>
-          <div className="text-[10px] text-slate-500 font-mono mt-1 truncate">{short(row.address)}</div>
+          <div className="text-[10px] text-slate-500 font-mono mt-1.5 truncate">{short(row.address)}</div>
         </div>
-        <div className="text-end shrink-0">
+        <div className="text-end shrink-0 ps-2">
           <div className="text-[9px] uppercase tracking-wider text-slate-500">Score</div>
-          <div className={`text-lg font-black font-mono ${score >= 90 ? 'text-emerald-400' : score >= 75 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>
+          <div className={`text-lg font-black font-mono leading-tight ${score >= 90 ? 'text-emerald-400' : score >= 75 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>
             {score}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 mt-3">
+      <div className="grid grid-cols-3 gap-2 mt-4">
         <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
         <Metric
           label="PnL 30d"
@@ -526,15 +482,15 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
       </div>
 
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-        <div className="flex items-center gap-1 text-[10px] text-slate-500">
-          <Users className="w-3 h-3" />
-          {row.follower_count || 0} followers
+      <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-1 text-[10px] text-slate-500 min-w-0">
+          <Users className="w-3 h-3 shrink-0" />
+          <span className="truncate">{row.follower_count || 0} followers</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onFollow(); }}
-            className="px-2.5 py-1 rounded-lg bg-[#0066FF]/15 hover:bg-[#0066FF]/25 text-[#8FA3FF] text-[10px] font-semibold"
+            className="px-2 py-0.5 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 text-[#8FA3FF] text-[10px] font-semibold"
           >
             Follow
           </button>

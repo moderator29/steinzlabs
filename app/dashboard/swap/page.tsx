@@ -10,7 +10,8 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
-import { MetaMaskLogo, PhantomLogo, NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
+import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
+import { SelectMenu } from '@/components/ui/SelectMenu';
 import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSecurityWarnings';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
@@ -422,8 +423,6 @@ export default function SwapPage() {
   const { open: openAppKitModal } = useAppKit();
   const { address: appKitAddress, isConnected: appKitConnected, caipAddress } = useAppKitAccount();
   const onMobileDevice = typeof window !== 'undefined' ? isMobile() : false;
-  const [metamaskConnected, setMetamaskConnected] = useState(false);
-  const [phantomConnected, setPhantomConnected] = useState(false);
   const [metamaskAddress, setMetamaskAddress] = useState('');
   const [phantomAddress, setPhantomAddress] = useState('');
   const quoteTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -523,64 +522,15 @@ export default function SwapPage() {
 
   const [walletConnectError, setWalletConnectError] = useState('');
 
-  const handleSelectWalletMode = async (mode: 'naka' | 'metamask' | 'phantom') => {
+  // Only the built-in Naka Wallet is a directly-selectable mode now —
+  // external wallets (MetaMask, Phantom, etc.) connect exclusively through
+  // the WalletConnect / AppKit modal, whose connected account is mirrored
+  // into metamask/phantom state by the effect below.
+  const handleSelectNakaWallet = () => {
     setWalletConnectError('');
-    if (mode === 'naka') {
-      safeLocalSet('swap_wallet_mode', 'naka');
-      setWalletMode('naka');
-      setDetectedWallet('builtin');
-      return;
-    }
-    if (mode === 'metamask') {
-      const win = typeof window !== 'undefined' ? window : null;
-      if (!win?.ethereum) {
-        // FIX 5A.1: was a bare error message; now a CTA that links to the extension store.
-        setWalletConnectError('metamask-not-installed');
-        return;
-      }
-      try {
-        const accounts = (await win.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-        if (accounts[0]) {
-          setMetamaskAddress(accounts[0]);
-          setMetamaskConnected(true);
-          setDetectedWallet('ethereum');
-          setWalletMode('metamask');
-          safeLocalSet('swap_wallet_mode', 'metamask');
-          // Sync chain from MetaMask
-          const chainId = (await win.ethereum.request({ method: 'eth_chainId' })) as string;
-          const chainIdNum = parseInt(chainId, 16);
-          const chainMap: Record<number, string> = { 1: 'ethereum', 8453: 'base', 137: 'polygon', 42161: 'arbitrum', 56: 'bsc', 43114: 'avalanche', 10: 'optimism' };
-          if (chainMap[chainIdNum]) setChain(chainMap[chainIdNum]);
-        }
-      } catch (err: unknown) {
-        const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
-        if (!msg.includes('rejected')) setWalletConnectError('MetaMask connection failed. Try again.');
-      }
-      return;
-    }
-    if (mode === 'phantom') {
-      const win = typeof window !== 'undefined' ? window : null;
-      if (!win?.solana?.isPhantom) {
-        setWalletConnectError('phantom-not-installed');
-        return;
-      }
-      try {
-        const resp = await win.solana!.connect();
-        const pk = resp.publicKey?.toString();
-        if (pk) {
-          setPhantomAddress(pk);
-          setPhantomConnected(true);
-          setDetectedWallet('solana');
-          setWalletMode('phantom');
-          safeLocalSet('swap_wallet_mode', 'phantom');
-          setChain('solana');
-          setFromToken('SOL');
-        }
-      } catch (err: unknown) {
-        const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
-        if (!msg.includes('rejected')) setWalletConnectError('Phantom connection failed. Try again.');
-      }
-    }
+    safeLocalSet('swap_wallet_mode', 'naka');
+    setWalletMode('naka');
+    setDetectedWallet('builtin');
   };
 
   // §10 — When AppKit connects a wallet (via WalletConnect QR or mobile
@@ -602,7 +552,6 @@ export default function SwapPage() {
     const ns = caipAddress?.split(':')[0];
     if (ns === 'solana') {
       setPhantomAddress(appKitAddress);
-      setPhantomConnected(true);
       setDetectedWallet('solana');
       if (walletMode !== 'phantom') {
         setWalletMode('phantom');
@@ -612,7 +561,6 @@ export default function SwapPage() {
       lastAppKitMirror.current = { address: appKitAddress, ns: 'solana' };
     } else if (ns === 'eip155') {
       setMetamaskAddress(appKitAddress);
-      setMetamaskConnected(true);
       setDetectedWallet('ethereum');
       if (walletMode !== 'metamask') {
         setWalletMode('metamask');
@@ -639,10 +587,8 @@ export default function SwapPage() {
     if (!last) return;
     if (last.ns === 'solana') {
       setPhantomAddress('');
-      setPhantomConnected(false);
     } else {
       setMetamaskAddress('');
-      setMetamaskConnected(false);
     }
     lastAppKitMirror.current = null;
   }, [appKitConnected]);
@@ -655,14 +601,14 @@ export default function SwapPage() {
     // MetaMask: check existing connection
     if (win.ethereum) {
       void (win.ethereum.request({ method: 'eth_accounts' }) as Promise<string[]>).then(accs => {
-        if (accs[0]) { setMetamaskAddress(accs[0]); setMetamaskConnected(true); }
+        if (accs[0]) { setMetamaskAddress(accs[0]); }
       }).catch(() => {});
 
       // Listen for account changes
       const onAccChange = (accs: unknown) => {
         const accounts = accs as string[];
-        if (accounts[0]) { setMetamaskAddress(accounts[0]); setMetamaskConnected(true); }
-        else { setMetamaskAddress(''); setMetamaskConnected(false); if (walletMode === 'metamask') setWalletMode('naka'); }
+        if (accounts[0]) { setMetamaskAddress(accounts[0]); }
+        else { setMetamaskAddress(''); if (walletMode === 'metamask') setWalletMode('naka'); }
       };
       const onChainChange = (chainId: unknown) => {
         const chainIdNum = parseInt(chainId as string, 16);
@@ -677,7 +623,7 @@ export default function SwapPage() {
     if (win.solana?.isPhantom) {
       try {
         const pk = (win.solana as { publicKey?: { toString(): string } }).publicKey?.toString();
-        if (pk) { setPhantomAddress(pk); setPhantomConnected(true); }
+        if (pk) { setPhantomAddress(pk); }
       } catch { /* not connected */ }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1187,40 +1133,8 @@ export default function SwapPage() {
             </div>
           </div>
 
-          {/* Wallet Selector Pills */}
-          {/* FIX 5A.1: was a red error banner dead-ending users; now an inline CTA
-              linking to the correct extension store. */}
-          {walletConnectError === 'metamask-not-installed' && (
-            <div className="mb-3 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
-              <MetaMaskLogo size={16} />
-              <span className="text-xs text-amber-300 flex-1">MetaMask isn't installed in this browser.</span>
-              <a
-                href="https://metamask.io/download/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-[10px] font-bold text-amber-200 transition-colors"
-              >
-                Install
-              </a>
-              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet warning" className="text-amber-300 hover:text-amber-100"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
-            </div>
-          )}
-          {walletConnectError === 'phantom-not-installed' && (
-            <div className="mb-3 flex items-center gap-2 bg-[#551BF9]/10 border border-[#551BF9]/30 rounded-xl px-3 py-2.5">
-              <PhantomLogo size={16} />
-              <span className="text-xs text-[#c9c2ff] flex-1">Phantom isn't installed in this browser.</span>
-              <a
-                href="https://phantom.app/download"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1 rounded-lg bg-[#551BF9]/30 hover:bg-[#551BF9]/40 text-[10px] font-bold text-white transition-colors"
-              >
-                Install
-              </a>
-              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet warning" className="text-[#c9c2ff] hover:text-white"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
-            </div>
-          )}
-          {walletConnectError && walletConnectError !== 'metamask-not-installed' && walletConnectError !== 'phantom-not-installed' && (
+          {/* Wallet selector — Naka Wallet (built-in) + WalletConnect only. */}
+          {walletConnectError && (
             <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span className="text-xs text-red-400">{walletConnectError}</span>
@@ -1228,41 +1142,32 @@ export default function SwapPage() {
             </div>
           )}
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {/* FIX 5A.1: was emoji (🦊 👻); now inline-SVG brand marks. */}
-            {([
-              { id: 'naka', label: 'Naka Wallet', connected: !!nakaAddress },
-              { id: 'metamask', label: 'MetaMask', connected: metamaskConnected },
-              { id: 'phantom', label: 'Phantom', connected: phantomConnected },
-            ] as const).map(w => (
-              <button
-                key={w.id}
-                onClick={() => handleSelectWalletMode(w.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
-                  walletMode === w.id
-                    ? 'bg-[#0066FF]/15 text-blue-400 border-[#0066FF]/40'
-                    : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
-                }`}
-                aria-pressed={walletMode === w.id}
-              >
-                {w.id === 'naka' && <NakaLogo size={16} />}
-                {w.id === 'metamask' && <MetaMaskLogo size={16} />}
-                {w.id === 'phantom' && <PhantomLogo size={16} />}
-                {w.label}
-                {walletMode === w.id && !w.connected && (
-                  <span className="text-[9px] text-amber-400 font-normal ms-0.5">Connect</span>
-                )}
-                {w.connected && walletMode === w.id && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 ms-0.5" />
-                )}
-              </button>
-            ))}
+            {/* Naka Wallet (built-in) — selecting it surfaces the create /
+                unlock flow and mirrors the active address live. */}
+            <button
+              onClick={handleSelectNakaWallet}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                walletMode === 'naka'
+                  ? 'bg-[#0066FF]/15 text-blue-400 border-[#0066FF]/40'
+                  : 'bg-slate-950/60 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-slate-300'
+              }`}
+              aria-pressed={walletMode === 'naka'}
+            >
+              <NakaLogo size={16} />
+              Naka Wallet
+              {walletMode === 'naka' && !nakaAddress && (
+                <span className="text-[9px] text-amber-400 font-normal ms-0.5">Connect</span>
+              )}
+              {!!nakaAddress && walletMode === 'naka' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 ms-0.5" />
+              )}
+            </button>
 
             {/* §10 — WalletConnect pill: opens the AppKit modal which
                 handles browser extensions, the WC v2 QR (desktop), and
-                mobile deep-links to MetaMask / Phantom (Android/iOS).
-                The connected account is mirrored into metamask/phantom
-                state by the useEffect above; no further wiring needed.
-                On phones we promote this to first place visually.
+                mobile deep-links to external wallets (Android/iOS). The
+                connected account is mirrored into wallet state by the
+                useEffect above; no further wiring needed.
                 Hidden when NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not
                 configured — the AppKit instance and wagmi adapter are
                 both null in that case so the modal would be a no-op. */}
@@ -1279,21 +1184,21 @@ export default function SwapPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
-            {CHAINS.map(c => (
-              <button
-                key={c.id}
-                onClick={() => { setChain(c.id); setFromToken(c.symbol); simulateQuote(fromAmount, c.symbol, toToken, c.id); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  chain === c.id
-                    ? 'bg-white/10 text-white border border-[#1a1f2e]'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
-                }`}
-              >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                {c.label}
-              </button>
-            ))}
+          {/* Network selector — single dropdown with real chain logos
+              instead of a scattered, overflowing chip row. */}
+          <div className="mb-4">
+            <SelectMenu
+              value={chain}
+              prefix="Network"
+              options={CHAINS.map(c => ({ id: c.id, label: c.label, chain: c.id }))}
+              onChange={(id) => {
+                const c = CHAINS.find(x => x.id === id);
+                if (!c) return;
+                setChain(c.id);
+                setFromToken(c.symbol);
+                simulateQuote(fromAmount, c.symbol, toToken, c.id);
+              }}
+            />
           </div>
 
           <SettingsPanel
@@ -1519,25 +1424,24 @@ export default function SwapPage() {
                     {walletMode === 'metamask' ? 'MetaMask not connected' : walletMode === 'phantom' ? 'Phantom not connected' : 'No Naka Wallet found'}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5">
-                    {walletMode === 'naka' ? 'Create or import a wallet to swap' : `Tap the ${walletMode === 'metamask' ? 'MetaMask' : 'Phantom'} pill above to connect`}
+                    {walletMode === 'naka' ? 'Create or import a wallet to swap' : 'Reconnect via WalletConnect to continue'}
                   </p>
                 </div>
-                {walletMode === 'naka' && (
+                {walletMode === 'naka' ? (
                   <button
                     onClick={() => router.push('/dashboard/wallet-page')}
                     className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
                   >
                     Create
                   </button>
-                )}
-                {walletMode !== 'naka' && (
+                ) : HAS_APPKIT ? (
                   <button
-                    onClick={() => handleSelectWalletMode(walletMode)}
+                    onClick={() => openAppKitModal()}
                     className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
                   >
                     Connect
                   </button>
-                )}
+                ) : null}
               </div>
             )}
 
