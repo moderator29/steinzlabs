@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, memo } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
@@ -13,7 +13,7 @@ import {
 import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History, MessageCircle, Compass, Sun, Moon,
+  Crosshair, Network, Globe, History, MessageCircle, Compass, Sun, Moon, Gem,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme/ThemeProvider';
@@ -94,9 +94,13 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },
-  // §12 — Naka Cult / The Vault are NOT part of the in-platform app. They
-  // live only on the standalone /naka-cult landing (reached from the main
-  // marketing landing), so the in-app sidebar no longer links into them.
+  // §12 — NakaCult / The Vault remain a standalone token-gated surface; the
+  // sidebar links into them ONLY for confirmed cult members (rendered
+  // conditionally below, not in this static list). Non-members never see it and
+  // still reach NakaCult solely via the /naka-cult landing. This gives a
+  // logged-in member (e.g. an email/Google account that holds the entitlement)
+  // a direct in-app door to /vault — the /naka-cult landing is wallet-connect
+  // only and has no email/password field.
   {
     title: 'Account',
     items: [
@@ -108,6 +112,18 @@ const NAV_CATEGORIES: NavCategory[] = [
 export default function SidebarMenu({ onClose }: SidebarMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
+  // Only confirmed cult members get the in-app Vault link (see §12). Resolved
+  // server-side via /api/cult/me so we never trust client state; defaults
+  // hidden for anonymous/non-members.
+  const [isCultMember, setIsCultMember] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/cult/me', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.cult === true) setIsCultMember(true); })
+      .catch(() => { /* non-fatal — link stays hidden */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -136,6 +152,22 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5 scrollbar-hide">
+          {isCultMember && (
+            <div>
+              <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-3 mb-1.5">
+                NakaCult
+              </h3>
+              <div className="space-y-0.5">
+                <SidebarNavItem
+                  icon={Gem}
+                  label="Enter the Vault"
+                  isActive={pathname.startsWith('/vault')}
+                  onClick={() => handleNavigation('/vault')}
+                  onHover={() => router.prefetch('/vault')}
+                />
+              </div>
+            </div>
+          )}
           {NAV_CATEGORIES.map((category) => (
             <div key={category.title}>
               <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-3 mb-1.5">

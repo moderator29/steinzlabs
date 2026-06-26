@@ -19,6 +19,10 @@ export async function GET() {
   return NextResponse.json(
     {
       tier: access.tier,
+      // Whether the caller currently has cult access (member flag). Lets in-app
+      // surfaces (e.g. the sidebar) show a members-only "Enter the Vault" link
+      // without leaking auth state — false for anonymous/non-members.
+      cult: access.allowed === true,
     },
     {
       headers: {
