@@ -134,6 +134,108 @@
 .nl-card--featured::after { opacity: 0.6; }
 .nl-card--featured:hover::after { opacity: 1; }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   .nl-glass — the platform glass card. Dark, near-black glass body with a
+   neon-blue edge-lit ring (bright on the top-left edge, fading to black on
+   the opposite edge) + a soft ambient blue glow bleeding from the lit
+   corner. This is the "side black, side shining" look, in brand neon-blue.
+   Use <GlassCard> (components/ui/GlassCard) or the class directly.
+   ───────────────────────────────────────────────────────────────────────── */
+.nl-glass {
+  position: relative;
+  border-radius: var(--nl-r-lg);
+  /* ambient corner glow (top layer) over a deep glass gradient (bottom). */
+  background:
+    radial-gradient(125% 90% at 0% 0%, rgba(0, 102, 255, 0.16) 0%, transparent 44%),
+    linear-gradient(160deg, rgba(12, 18, 44, 0.72) 0%, rgba(5, 8, 22, 0.86) 64%, rgba(2, 4, 12, 0.92) 100%);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
+              border-color var(--nl-dur-base) ease,
+              transform var(--nl-dur-base) var(--nl-ease-cine);
+}
+/* edge-lit ring — gradient border via mask, bright neon-blue at the
+   top-left, decaying to transparent (black) toward the bottom-right. */
+.nl-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.25px;
+  background: linear-gradient(135deg,
+    rgba(0, 200, 255, 0.85) 0%,
+    rgba(0, 102, 255, 0.55) 20%,
+    rgba(0, 102, 255, 0.06) 46%,
+    transparent 68%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+/* keep real children above the background glow */
+.nl-glass > * { position: relative; z-index: 1; }
+
+.nl-glass--interactive { cursor: pointer; }
+.nl-glass--interactive:hover {
+  border-color: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 28px rgba(0, 102, 255, 0.22);
+}
+/* crimson edge variant — for the Vault / NakaCult surfaces only. */
+.nl-glass--crimson {
+  background:
+    radial-gradient(125% 90% at 0% 0%, rgba(220, 20, 60, 0.16) 0%, transparent 44%),
+    linear-gradient(160deg, rgba(28, 10, 18, 0.72) 0%, rgba(14, 5, 10, 0.86) 64%, rgba(8, 2, 5, 0.92) 100%);
+}
+.nl-glass--crimson::before {
+  background: linear-gradient(135deg,
+    rgba(255, 23, 68, 0.85) 0%,
+    rgba(220, 20, 60, 0.5) 20%,
+    rgba(220, 20, 60, 0.06) 46%,
+    transparent 68%);
+}
+.nl-glass--crimson.nl-glass--interactive:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 28px rgba(220, 20, 60, 0.22);
+}
+
+/* .nl-btn-neon — outline-glow button: black body, neon-blue lit edge (not a
+   full fill), brightens on hover. The "neon around the edge then black" CTA. */
+.nl-btn-neon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--nl-r-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nl-text);
+  background: linear-gradient(180deg, rgba(8, 12, 28, 0.9), rgba(3, 5, 14, 0.95));
+  border: 1px solid rgba(0, 102, 255, 0.55);
+  box-shadow: 0 0 10px rgba(0, 102, 255, 0.28), inset 0 0 10px rgba(0, 102, 255, 0.12);
+  cursor: pointer;
+  transition: box-shadow var(--nl-dur-base) var(--nl-ease-std),
+              border-color var(--nl-dur-base) ease;
+}
+.nl-btn-neon:hover {
+  border-color: rgba(0, 102, 255, 0.9);
+  box-shadow: 0 0 18px rgba(0, 102, 255, 0.45), inset 0 0 14px rgba(0, 102, 255, 0.18);
+}
+.nl-btn-neon:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
 .nl-button {
   display: inline-flex;
   align-items: center;
