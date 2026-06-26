@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -50,12 +51,19 @@ export async function GET(_req: NextRequest) {
 }
 
 /**
- * POST — Chosen-only grant. Body: { user_id, code, note? }. Idempotent —
- * the PK (user_id, achievement_id) means a re-grant returns 409 cleanly.
+ * POST — ADMIN-only manual achievement grant. Body: { user_id, code, note? }.
+ * Idempotent — the PK (user_id, achievement_id) means a re-grant returns 409
+ * cleanly.
+ *
+ * Authz: granting an achievement is a privileged action. This was previously
+ * documented "Chosen-only" but only checked cult membership, so ANY cult member
+ * could grant ANY achievement to anyone (including themselves) — a
+ * privilege-escalation hole, made worse now that "Chosen" is retired. Gate it
+ * to platform admins via the admin bearer, like every other privileged write.
  */
 export async function POST(req: NextRequest) {
-  const access = await getCultAccess();
-  if (!access.allowed || !access.userId) {
+  const adminUserId = await verifyAdminRequest(req);
+  if (!adminUserId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
@@ -99,7 +107,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id: targetUser,
       achievement_id: achievement.id,
-      granted_by: access.userId,
+      granted_by: adminUserId,
       note: note || null,
     })
     .select('user_id,achievement_id,earned_at,note')
