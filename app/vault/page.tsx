@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { ChamberPortal } from '@/components/vault/ChamberPortal';
 import { CultStatsCounter } from '@/components/vault/CultStatsCounter';
@@ -52,6 +53,12 @@ export default async function VaultPage() {
             style={{ textShadow: '0 0 40px rgba(0, 153, 255, 0.45)' }}>
           Three sealed chambers.<br />Power. Sight. Soul.
         </h1>
+        <Link
+          href="/vault/profile"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[12px] font-semibold text-[#9FB0D8] transition hover:border-white/20 hover:text-white"
+        >
+          ◈ Your profile — mantle &amp; annals →
+        </Link>
       </section>
 
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-5 py-10 md:grid-cols-3">
