@@ -167,7 +167,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
           )}
 
           <button onClick={onClose}
-            className="w-full py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
+            className="w-full py-3 nl-glass rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
             Close
           </button>
         </div>

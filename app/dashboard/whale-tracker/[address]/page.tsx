@@ -568,7 +568,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
 
 function StatCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
   return (
-    <div className="rounded-xl bg-slate-900/50 border border-slate-800 p-3">
+    <div className="rounded-xl nl-glass p-3">
       <p className="text-[9px] uppercase text-slate-500 tracking-wide mb-1">{label}</p>
       <p className={`text-base font-mono ${tone === "up" ? "text-green-400" : tone === "down" ? "text-red-400" : "text-white"}`}>
         {value}

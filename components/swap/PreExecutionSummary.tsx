@@ -28,7 +28,7 @@ export function PreExecutionSummary({
   const lowLiq = liquidityUsd !== null && liquidityUsd !== undefined && liquidityUsd < 50_000;
 
   return (
-    <div className="rounded-xl bg-slate-900/40 border border-slate-800 p-4 space-y-2.5">
+    <div className="rounded-xl nl-glass p-4 space-y-2.5">
       <Row label="Expected output" value={`${expectedOutput} ${outputSymbol}`} mono />
       <Row
         label="Price impact"

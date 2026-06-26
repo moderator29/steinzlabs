@@ -117,7 +117,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
           <SecurityBadge score={whale.whale_score} size="md" />
           <button
             onClick={createAlert}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/30 text-[11px] text-slate-300 transition"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:nl-glass hover:border-blue-500/30 text-[11px] text-slate-300 transition"
           >
             <BellPlus size={11} /> Alert
           </button>
@@ -239,7 +239,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
   return (
-    <div className="rounded-xl bg-slate-900/50 border border-slate-800 p-3">
+    <div className="rounded-xl nl-glass p-3">
       <p className="text-[9px] uppercase text-slate-500 tracking-wide mb-1">{label}</p>
       <p className={`text-base font-mono ${tone === "up" ? "text-green-400" : tone === "down" ? "text-red-400" : "text-white"}`}>
         {value}

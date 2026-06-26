@@ -169,7 +169,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         </div>
       )}
 
-      <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl mb-4">
+      <div className="flex gap-1 p-1 nl-glass rounded-xl mb-4">
         {(['overview', 'following', 'followers'] as Tab[]).map((t) => (
           <button
             key={t}

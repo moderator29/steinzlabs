@@ -178,16 +178,16 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
 
         {tab === "labels" && (
           <div className="space-y-4">
-            <form onSubmit={submitLabel} className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
+            <form onSubmit={submitLabel} className="p-4 rounded-xl nl-glass">
               <p className="text-xs uppercase tracking-wide text-slate-500 mb-3 font-semibold">Propose a label</p>
               <input
-                className="w-full px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm mb-2 focus:outline-none focus:border-blue-500/40"
+                className="w-full px-3 py-2 rounded-lg nl-glass text-sm mb-2 focus:outline-none focus:border-blue-500/40"
                 placeholder="e.g. a16z Crypto Fund"
                 value={labelForm.label}
                 onChange={(e) => setLabelForm({ ...labelForm, label: e.target.value })}
               />
               <textarea
-                className="w-full px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm mb-3 focus:outline-none focus:border-blue-500/40"
+                className="w-full px-3 py-2 rounded-lg nl-glass text-sm mb-3 focus:outline-none focus:border-blue-500/40"
                 rows={2}
                 placeholder="Why this label? (optional)"
                 value={labelForm.description}
@@ -207,7 +207,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
             ) : (
               <div className="space-y-2">
                 {data.labels.map((l) => (
-                  <div key={l.id} className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-start gap-3">
+                  <div key={l.id} className="p-3 rounded-xl nl-glass flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-white text-sm">{l.label}</span>

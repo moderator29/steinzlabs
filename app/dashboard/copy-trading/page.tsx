@@ -186,7 +186,7 @@ export default function CopyTradingPage() {
           ) : (
             <div className="space-y-2">
               {rules.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+                <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl nl-glass">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <code className="text-xs font-mono text-white truncate">{r.whale_address.slice(0, 8)}…{r.whale_address.slice(-4)}</code>
@@ -304,7 +304,7 @@ function ModeBadge({ mode }: { mode: CopyMode }) {
 
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "up" | "down" | "warn" }) {
   return (
-    <div className="rounded-xl bg-slate-900/50 border border-slate-800 p-3">
+    <div className="rounded-xl nl-glass p-3">
       <p className="text-[9px] uppercase text-slate-500 tracking-wide mb-1">{label}</p>
       <p className={`text-lg font-mono ${
         tone === "up" ? "text-green-400" : tone === "down" ? "text-red-400" : tone === "warn" ? "text-amber-400" : "text-white"

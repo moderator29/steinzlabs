@@ -180,7 +180,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           // 7d sparkline fallback is empty (e.g. CoinGecko has no chart for
           // a freshly listed token), keep showing the chart container with a
           // clear empty state instead of rendering a blank Sparkline.
-          <div className="h-48 rounded-xl bg-slate-900/40 border border-slate-800/50 flex items-center justify-center text-sm text-slate-500">
+          <div className="h-48 rounded-xl nl-glass/50 flex items-center justify-center text-sm text-slate-500">
             Chart data unavailable for this timeframe.
           </div>
         )}

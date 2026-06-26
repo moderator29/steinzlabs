@@ -120,7 +120,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                   <select
                     value={settings.language}
                     onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
                     {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select>
@@ -129,7 +129,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                   <select
                     value={settings.response_style}
                     onChange={(e) => setSettings({ ...settings, response_style: e.target.value as VtxSettings['response_style'] })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="concise">Concise — 1-2 paragraphs</option>
                     <option value="detailed">Detailed — standard</option>
@@ -144,7 +144,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                   <select
                     value={settings.risk_appetite}
                     onChange={(e) => setSettings({ ...settings, risk_appetite: e.target.value as VtxSettings['risk_appetite'] })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="conservative">Conservative — prioritise capital preservation</option>
                     <option value="balanced">Balanced — show both sides</option>
@@ -158,7 +158,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                   <select
                     value={settings.default_chain}
                     onChange={(e) => setSettings({ ...settings, default_chain: e.target.value as VtxSettings['default_chain'] })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="ethereum">Ethereum</option>
                     <option value="solana">Solana</option>

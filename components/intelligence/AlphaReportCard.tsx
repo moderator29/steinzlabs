@@ -46,7 +46,7 @@ export function AlphaReportCard({ report }: { report: AlphaReportView }) {
         <Panel icon={<AlertTriangle size={11} className="text-red-400" />} title="Risks" items={report.risks} emptyLabel="No critical risks detected" tone="down" />
       </div>
 
-      <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+      <div className="p-3 rounded-xl nl-glass">
         <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Current thesis</p>
         <p className="text-xs text-slate-300 leading-relaxed">{report.recent_thesis}</p>
       </div>
@@ -68,7 +68,7 @@ function Panel({
   tone: "up" | "down";
 }) {
   return (
-    <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+    <div className="p-3 rounded-xl nl-glass">
       <div className="flex items-center gap-1.5 mb-2">
         {icon}
         <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{title}</p>

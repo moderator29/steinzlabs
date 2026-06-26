@@ -225,13 +225,13 @@ export default function SupportPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-gray-500 block mb-1">Category</label>
-                    <select name="category" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm">
+                    <select name="category" className="w-full nl-glass rounded-lg px-3 py-2 text-sm">
                       {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-gray-500 block mb-1">Priority</label>
-                    <select name="priority" defaultValue="normal" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm">
+                    <select name="priority" defaultValue="normal" className="w-full nl-glass rounded-lg px-3 py-2 text-sm">
                       <option value="low">Low</option>
                       <option value="normal">Normal</option>
                       <option value="high">High</option>
@@ -249,7 +249,7 @@ export default function SupportPage() {
                     minLength={3}
                     maxLength={200}
                     placeholder="Quick summary of the issue"
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export default function SupportPage() {
                     maxLength={5000}
                     rows={8}
                     placeholder="Include what you were doing, what happened, and any tx hashes or wallet addresses involved."
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
+                    className="w-full nl-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                   />
                 </div>
 
@@ -353,7 +353,7 @@ export default function SupportPage() {
                       onChange={(e) => setReplyInput(e.target.value)}
                       rows={3}
                       placeholder="Add a reply…"
-                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
+                      className="w-full nl-glass rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none"
                     />
                     <div className="flex justify-end">
                       <button

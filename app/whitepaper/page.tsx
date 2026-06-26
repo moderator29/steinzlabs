@@ -205,7 +205,7 @@ export default function WhitepaperPage() {
               <a href="#overview" className="inline-flex items-center gap-2 text-sm bg-[#0066FF] hover:bg-[#0818CC] text-white px-5 py-3 rounded-xl font-semibold transition-colors">
                 Start reading
               </a>
-              <Link href="/docs" className="inline-flex items-center gap-2 text-sm bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-gray-300 px-5 py-3 rounded-xl font-semibold transition-colors">
+              <Link href="/docs" className="inline-flex items-center gap-2 text-sm nl-glass hover:bg-white/[0.08] text-gray-300 px-5 py-3 rounded-xl font-semibold transition-colors">
                 Product Docs
               </Link>
             </div>

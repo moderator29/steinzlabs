@@ -221,7 +221,7 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900/80 transition group"
+      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl nl-glass hover:border-blue-500/50 hover:bg-slate-900/80 transition group"
     >
       <span className="text-blue-400 group-hover:scale-110 transition">{icon}</span>
       <span className="text-xs font-medium text-slate-300 group-hover:text-white">{label}</span>
@@ -259,7 +259,7 @@ function InsightCard({
   } as const;
 
   return (
-    <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition flex flex-col min-h-[160px]">
+    <div className="p-4 rounded-xl nl-glass hover:border-slate-700 transition flex flex-col min-h-[160px]">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{title}</h3>
         {count > 0 && (

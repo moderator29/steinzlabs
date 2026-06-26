@@ -67,7 +67,7 @@ export function ResearchPostCard(props: ResearchPostCardProps) {
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           {props.category ? (
-            <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.08]">
+            <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 px-1.5 py-0.5 rounded nl-glass">
               {props.category}
             </span>
           ) : null}

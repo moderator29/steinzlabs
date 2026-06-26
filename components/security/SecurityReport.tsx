@@ -36,7 +36,7 @@ export function SecurityReport({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3 p-4 rounded-xl bg-slate-900/50 border border-slate-800">
+      <div className="flex items-start justify-between gap-3 p-4 rounded-xl nl-glass">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-slate-500">{scanType} scan</p>
           <code className="text-sm font-mono text-white truncate block">{target}</code>

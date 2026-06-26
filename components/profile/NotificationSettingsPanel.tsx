@@ -63,7 +63,7 @@ function ChannelRow({ icon, label, description, enabled, onToggle, trailingActio
         ? 'bg-slate-950/40 border-slate-800/40 opacity-60'
         : 'bg-slate-950/60 border-slate-800/70 hover:border-slate-700/80'
     }`}>
-      <div className="mt-0.5 w-9 h-9 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-center flex-shrink-0 text-slate-300">
+      <div className="mt-0.5 w-9 h-9 rounded-lg nl-glass flex items-center justify-center flex-shrink-0 text-slate-300">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -256,7 +256,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
       {/* Events */}
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">Events</h3>
-        <div className="space-y-1 rounded-xl bg-slate-950/40 border border-slate-800/60 p-1.5">
+        <div className="space-y-1 rounded-xl nl-glass/60 p-1.5">
           <EventRow
             icon={<Bell size={14} />}
             label="Whale alerts"
@@ -331,7 +331,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
                   value={minutesToTimeString(settings.quiet_hours_start_minute ?? 1320)}
                   onChange={(e) => void update({ quiet_hours_start_minute: timeStringToMinutes(e.target.value) })}
                   disabled={!settings.quiet_hours_enabled}
-                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
+                  className="mt-1 w-full nl-glass rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
                 />
               </label>
               <label className="text-[11px] text-slate-400">
@@ -341,7 +341,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
                   value={minutesToTimeString(settings.quiet_hours_end_minute ?? 420)}
                   onChange={(e) => void update({ quiet_hours_end_minute: timeStringToMinutes(e.target.value) })}
                   disabled={!settings.quiet_hours_enabled}
-                  className="mt-1 w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
+                  className="mt-1 w-full nl-glass rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#0066FF]/40 disabled:opacity-60"
                 />
               </label>
               <div className="col-span-2 flex items-center gap-2 mt-1 text-[11px]">

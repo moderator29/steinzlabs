@@ -240,7 +240,7 @@ export function FeatureShowcase() {
       <div className={`relative transition-all duration-1000 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-xs text-white/60 font-semibold mb-5">
+          <div className="inline-flex items-center gap-2 nl-glass rounded-full px-3 py-1 text-xs text-white/60 font-semibold mb-5">
             <Sparkles className="w-3 h-3 text-[#4D6BFF]" /> Every feature, in one platform
           </div>
           <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tight mb-5 leading-[1.05]">

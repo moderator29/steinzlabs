@@ -398,13 +398,13 @@ export default function WhaleTrackerPage() {
               value={tokenSearch}
               onChange={(e) => setTokenSearch(e.target.value)}
               placeholder="Token symbol…"
-              className="w-full ps-8 pe-3 py-1.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs focus:outline-none focus:border-blue-500/40"
+              className="w-full ps-8 pe-3 py-1.5 rounded-lg nl-glass text-xs focus:outline-none focus:border-blue-500/40"
             />
           </div>
           <select
             value={actionFilter ?? ""}
             onChange={(e) => setActionFilter((e.target.value || null) as Action)}
-            className="px-2 py-1.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs"
+            className="px-2 py-1.5 rounded-lg nl-glass text-xs"
           >
             <option value="">All actions</option>
             <option value="buy">Buy</option>
@@ -616,7 +616,7 @@ function FeedCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`bg-slate-950/60 backdrop-blur-xl border border-slate-800 border-l-4 ${borderColor} rounded-xl p-4 hover:border-blue-500/30 transition-all cursor-pointer`}
+      className={`nl-glass border-l-4 ${borderColor} rounded-xl p-4 hover:border-blue-500/30 transition-all cursor-pointer`}
       onClick={onOpenWhale}
     >
       <div className="flex items-start justify-between gap-3">
@@ -1096,7 +1096,7 @@ function AddWhaleModal({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="0x… or Solana base58"
-              className="mt-1 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500/40"
+              className="mt-1 w-full nl-glass rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500/40"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1105,7 +1105,7 @@ function AddWhaleModal({
               <select
                 value={chain}
                 onChange={(e) => setChain(e.target.value)}
-                className="mt-1 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs"
+                className="mt-1 w-full nl-glass rounded-lg px-3 py-2 text-xs"
               >
                 <option value="ethereum">Ethereum</option>
                 <option value="solana">Solana</option>
@@ -1121,7 +1121,7 @@ function AddWhaleModal({
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. Jump Trading"
-                className="mt-1 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500/40"
+                className="mt-1 w-full nl-glass rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500/40"
               />
             </div>
           </div>

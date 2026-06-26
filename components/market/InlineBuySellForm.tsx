@@ -312,7 +312,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       )}
 
       {/* Amount */}
-      <div className="rounded-lg bg-slate-900/60 border border-slate-800 px-3 py-2 mb-2">
+      <div className="rounded-lg nl-glass px-3 py-2 mb-2">
         <div className="flex items-baseline gap-2">
           <input
             type="number"
@@ -393,7 +393,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
             onBlur={(e) => onSlippageCustom(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
             placeholder="Custom %"
-            className="mt-1.5 w-full px-2 py-1 rounded bg-slate-900/60 border border-slate-800 text-[11px] focus:outline-none focus:border-[#0066FF]/50"
+            className="mt-1.5 w-full px-2 py-1 rounded nl-glass text-[11px] focus:outline-none focus:border-[#0066FF]/50"
             autoFocus
           />
         )}

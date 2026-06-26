@@ -65,7 +65,7 @@ function Field({
 }
 
 const INPUT_CLS =
-  "w-full px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/40 font-mono tabular-nums";
+  "w-full px-3 py-2 rounded-lg nl-glass text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/40 font-mono tabular-nums";
 
 function MarketTab({ tokenSymbol }: { chain: string; tokenAddress: string; tokenSymbol: string }) {
   return (

@@ -253,7 +253,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
                 <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                   mine
                     ? 'bg-[var(--nl-blue,#0066FF)]/15 border border-[var(--nl-blue,#0066FF)]/25 text-white'
-                    : 'bg-white/[0.04] border border-white/[0.06] text-slate-100'
+                    : 'nl-glass text-slate-100'
                 }`}>
                   <div className="whitespace-pre-wrap">{sanitizeMessageBody(m.body)}</div>
                   <div className="text-[9px] text-slate-400 mt-1">{new Date(m.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
