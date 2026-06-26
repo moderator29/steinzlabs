@@ -39,9 +39,9 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 text-[15px] leading-[1.75] text-gray-300">
         <div className="mb-12 pb-8 border-b border-white/[0.06]">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">Privacy Policy</h1>
-          <p className="text-gray-500 text-sm">Last updated: April 2026 · Version 1.0</p>
+          <p className="text-gray-500 text-sm">Last updated: June 2026 · Version 1.1</p>
           <p className="text-gray-400 mt-4">
-            This Privacy Policy explains what personal data Naka Labs collects, how we use it, how we protect it, and the rights you have. It applies to every part of the Naka Labs platform, including the web app, the Telegram bot, and any API access.
+            This Privacy Policy explains what personal data Naka Labs collects, how we use it, how we protect it, and the rights you have. It applies to every part of the Naka Labs platform, including the web app, the Telegram bot, and any API access. It works alongside our <Link href="/terms" className="text-[#4D6BFF] hover:underline">Terms of Service</Link> and the risk <Link href="/terms#06" className="text-[#4D6BFF] hover:underline">disclaimer</Link> set out there.
           </p>
         </div>
 
