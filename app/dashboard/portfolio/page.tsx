@@ -461,6 +461,8 @@ function PerformanceChart({
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "#94A3B8",
         fontSize: 11,
+        // Remove the TradingView/lightweight-charts watermark logo.
+        attributionLogo: false,
       },
       grid: { vertLines: { visible: false }, horzLines: { color: "rgba(148,163,184,0.08)" } },
       timeScale: { borderColor: "rgba(148,163,184,0.12)", timeVisible: true },

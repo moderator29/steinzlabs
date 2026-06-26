@@ -27,8 +27,20 @@ export async function GET(req: NextRequest) {
     .order('last_message_at', { ascending: false, nullsFirst: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Hide conversations with users the caller has blocked — the blocker should
+  // never see the blocked person's (shadow) messages in their inbox.
+  const { data: myBlocks } = await sb
+    .from('social_blocks')
+    .select('blocked_id')
+    .eq('blocker_id', user.id);
+  const blockedSet = new Set((myBlocks ?? []).map((b) => (b as { blocked_id: string }).blocked_id));
+  const rows = (data ?? []).filter((r) => {
+    const peerId = r.user_a_id === user.id ? r.user_b_id : r.user_a_id;
+    return !blockedSet.has(peerId);
+  });
+
   // Per-conversation unread counts: received messages (not mine) still unread.
-  const convoIds = (data ?? []).map((r) => r.id);
+  const convoIds = rows.map((r) => r.id);
   const unreadByConvo: Record<string, number> = {};
   if (convoIds.length) {
     const { data: unreadRows } = await sb
@@ -44,7 +56,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const shaped = (data ?? []).map((row) => {
+  const shaped = rows.map((row) => {
     const isUserA = row.user_a_id === user.id;
     const peerId = isUserA ? row.user_b_id : row.user_a_id;
     const sealedKey = isUserA ? row.conversation_key_a : row.conversation_key_b;
