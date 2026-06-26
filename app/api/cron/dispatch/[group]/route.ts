@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { verifyCron } from '../../_shared';
+import { verifyCron, logCronExecution } from '../../_shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -93,11 +93,28 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
     );
   }
 
+  // Self-log every dispatch tick to cron_execution_log. This is the diagnostic
+  // that makes the scheduler observable from the DB alone: the moment Vercel's
+  // scheduler invokes a dispatcher a `dispatch-<group>` row appears here. If the
+  // row is present but the downstream handler rows are not, the scheduler IS
+  // firing and the fault is downstream (e.g. CRON_SECRET mismatch → handler
+  // 401s); if no dispatch row ever appears, the scheduler itself is not running
+  // (plan/limit/deploy). Without this, both failure modes looked identical
+  // (an empty log), which is how the 43-day outage stayed invisible.
+  const durationMs = Date.now() - startedAt;
+  const ok2xx = Object.values(results).filter((s) => typeof s === 'number' && s >= 200 && s < 300).length;
+  const failed = paths.length - ok2xx;
+  const errorSummary = failed > 0
+    ? Object.entries(results).filter(([, s]) => !(typeof s === 'number' && s >= 200 && s < 300)).map(([n, s]) => `${n}:${s}`).join(',')
+    : undefined;
+  await logCronExecution(`dispatch-${group}`, failed > 0 ? 'failed' : 'success', durationMs, errorSummary, ok2xx);
+
   return NextResponse.json({
     ok: true,
     group,
     dispatched: paths.length,
-    durationMs: Date.now() - startedAt,
+    succeeded: ok2xx,
+    durationMs,
     results,
   });
 }

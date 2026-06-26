@@ -22,6 +22,14 @@ export function verifyCron(request: NextRequest): { ok: boolean; response?: Resp
     // preview / staging deploy that forgets to set it must NOT silently
     // accept unauthenticated requests — anyone could spam the cron surface.
     if (process.env.NODE_ENV !== "development") {
+      // Page Sentry — loudly. A missing CRON_SECRET makes EVERY cron 500 at
+      // this gate before doing any work or writing cron_execution_log, so the
+      // whole data plane goes dark with no DB trace. That silent failure mode
+      // is exactly how a 43-day cron outage stayed invisible. Surface it.
+      Sentry.captureMessage(
+        "CRON_SECRET not configured in a non-development environment — ALL crons are returning 500 and the data plane is dark. Set CRON_SECRET in the Vercel project env.",
+        { level: "fatal", tags: { cron: "auth", reason: "missing_cron_secret" } },
+      );
       return {
         ok: false,
         response: new Response("CRON_SECRET not configured", { status: 500 }),
