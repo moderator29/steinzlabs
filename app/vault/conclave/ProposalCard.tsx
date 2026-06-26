@@ -1,8 +1,23 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Minus, Loader2 } from 'lucide-react';
 import { VoteOrbs } from './VoteOrbs';
+
+// Mirrors MIN_VOTERS_FOR_PASS in app/api/cron/cult-resolve-proposals: a decree
+// needs at least this many distinct voters to pass (quorum), not just a yes
+// majority. Surfaced so members can see how close a proposal is to quorum.
+const QUORUM_MIN_VOTERS = 5;
+
+/** Re-render every second while a proposal is active so the countdown ticks. */
+function useTick(active: boolean) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+}
 
 export interface Proposal {
   id: string;
@@ -29,7 +44,48 @@ function timeRemaining(endsAt: string): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h left`;
+  // Show seconds in the final hour so the countdown reads as live.
+  if (h < 1) {
+    const s = Math.floor((ms % 60_000) / 1000);
+    return `${m}m ${s}s left`;
+  }
   return `${h}h ${m}m left`;
+}
+
+/** Stacked yes / abstain / no conviction bar, sized by vote weight. */
+function ConvictionBar({ yes, abstain, no }: { yes: number; abstain: number; no: number }) {
+  const total = yes + abstain + no;
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+  return (
+    <div
+      className="flex h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
+      role="img"
+      aria-label={`Conviction: ${Math.round(pct(yes))}% yes, ${Math.round(pct(abstain))}% abstain, ${Math.round(pct(no))}% no`}
+    >
+      <div style={{ width: `${pct(yes)}%` }} className="bg-[#10B981]" />
+      <div style={{ width: `${pct(abstain)}%` }} className="bg-[#7F8AA8]" />
+      <div style={{ width: `${pct(no)}%` }} className="bg-[#FF1744]" />
+    </div>
+  );
+}
+
+/** Quorum progress toward QUORUM_MIN_VOTERS distinct voters. */
+function QuorumMeter({ voters }: { voters: number }) {
+  const met = voters >= QUORUM_MIN_VOTERS;
+  const pct = Math.min(100, (voters / QUORUM_MIN_VOTERS) * 100);
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.14em]">
+        <span className="text-[#9FB0D8]">Quorum</span>
+        <span className={met ? 'text-[#10B981]' : 'text-[#9FB0D8]'}>
+          {voters}/{QUORUM_MIN_VOTERS}{met ? ' · met' : ''}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div style={{ width: `${pct}%` }} className={`h-full ${met ? 'bg-[#10B981]' : 'bg-[#00C8FF]'}`} />
+      </div>
+    </div>
+  );
 }
 
 export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVoted?: () => void }) {
@@ -37,10 +93,8 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
   const yes = Number(proposal.yes_weight);
   const no = Number(proposal.no_weight);
   const abstain = Number(proposal.abstain_weight);
-  const total = yes + no + abstain;
-  const pctYes = total > 0 ? (yes / total) * 100 : 0;
-  const pctNo  = total > 0 ? (no  / total) * 100 : 0;
   const isActive = proposal.status === 'active';
+  useTick(isActive); // live countdown while active
   const remaining = timeRemaining(proposal.ends_at);
   const closingSoon = isActive && new Date(proposal.ends_at).getTime() - Date.now() < 60 * 60 * 1000;
 
@@ -87,13 +141,15 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
         <p className="text-[14px] leading-relaxed text-[#D5DEFF] line-clamp-3">{proposal.body}</p>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <VoteOrbs proposalId={proposal.id} />
+        <ConvictionBar yes={yes} abstain={abstain} no={no} />
         <div className="flex items-center justify-between text-[12px] font-semibold">
           <span className="text-[#10B981]">✓ {yes.toLocaleString()} yes</span>
           <span className="text-[#B4C0E0]">{proposal.voter_count} voters</span>
           <span className="text-[#FF1744]">✗ {no.toLocaleString()} no</span>
         </div>
+        <QuorumMeter voters={proposal.voter_count} />
       </div>
 
       {isActive && (
