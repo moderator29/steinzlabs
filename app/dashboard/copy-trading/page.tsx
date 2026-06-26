@@ -235,8 +235,8 @@ export default function CopyTradingPage() {
         ) : trades.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">No copy trades yet</div>
         ) : (
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="rounded-xl border border-slate-800 overflow-x-auto">
+            <table className="w-full min-w-[520px] text-xs">
               <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
                 <tr>
                   <th className="text-start px-3 py-2">When</th>
