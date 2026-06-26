@@ -64,11 +64,11 @@ export default function DocsPage() {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
-              className="lg:hidden p-2 rounded-lg hover:bg-white/[0.06] transition-colors flex-shrink-0"
+              className="lg:hidden -ms-1 p-1 text-gray-400 hover:text-white transition-colors flex-shrink-0"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
-              <Menu className="w-5 h-5 text-gray-400" />
+              <Menu className="w-5 h-5" />
             </button>
             <BackButton href="/" label="Back" className="hidden sm:inline-flex" />
             <span className="hidden sm:block w-px h-4 bg-white/[0.08] flex-shrink-0" />

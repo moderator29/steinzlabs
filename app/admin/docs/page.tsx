@@ -310,7 +310,7 @@ export default function AdminDocsPage() {
 
             <H3 children={<><TrendingUp className="inline w-4 h-4 me-1 text-[#F59E0B]" />Whale Tracker</>} />
             <p>
-              We monitor about 1,000 wallets across 10 chains. When any of them transact, the event is pushed to our backend via Alchemy/Helius webhooks. Our server classifies the wallet (mega/large/mid/small), calculates the 24h PnL, and fans out the event to every user who follows that wallet via Supabase Realtime.
+              We monitor about 450 wallets across 9 chains. When any of them transact, the event is pushed to our backend via Alchemy/Helius webhooks. Our server classifies the wallet (mega/large/mid/small), calculates the 24h PnL, and fans out the event to every user who follows that wallet via Supabase Realtime.
             </p>
 
             <H3 children={<><Users className="inline w-4 h-4 me-1 text-[#8B5CF6]" />Smart Money & Wallet Clusters</>} />
