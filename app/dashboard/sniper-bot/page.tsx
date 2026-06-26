@@ -838,8 +838,8 @@ export default function SniperBotPage() {
                 <p className="text-slate-400">No executions yet</p>
               </div>
             ) : (
-              <div className="bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-2xl overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-slate-950/80 backdrop-blur-xl border border-slate-800/50 rounded-2xl overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-800/50">
                       <th className="text-start px-4 py-3 text-slate-400 font-medium">Token</th>
